@@ -1,80 +1,65 @@
 <template>
-	<TheHeader />
-	<div class="container mx-auto p-6 space-y-6">
-		<UploadComponent
-			v-if="file1 === null"
-			@file-selected="handleFile1"
-		/>
-		<CompleteUpload
-			v-if="file1 !== null"
-			mssg="File 1 had been accepted"
-		/>
-		<UploadComponent
-			v-if="file2 === null"
-			@file-selected="handleFile2"
-		/>
-		<CompleteUpload
-			v-if="file2 !== null"
-			mssg="File 2 had been accepted"
-		/>
-		<button
-			@click="compareFiles"
-			class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-		>
-			Compare Files
-		</button>
-		<!-- <ReportComponent v-if="comparisonResult.length" :results="comparisonResult" /> -->
-	</div>
+  <TheHeader />
+  <div class="container mx-auto p-6 space-y-6">
+    <UploadComponent v-if="file1 === null" @file-selected="handleFile1" />
+    <CompleteUpload v-if="file1 !== null" mssg="File 1 has been accepted" />
+    <UploadComponent v-if="file2 === null" @file-selected="handleFile2" />
+    <CompleteUpload v-if="file2 !== null" mssg="File 2 has been accepted" />
+    <button  @click="compareFiles" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
+      Compare Files
+    </button>
+    <GenerateReport v-if="report" :report="report" />
+  </div>
 </template>
 
 <script setup lang="ts">
-	import { ref, computed } from 'vue';
-	import UploadComponent from './components/UploadComponent.vue';
-	import CompleteUpload from './components/CompleteUpload.vue';
-	// import ReportComponent from './components/ReportComponent.vue';
-	import TheHeader from './components/TheHeader.vue';
+import { ref, computed } from 'vue';
+import UploadComponent from './components/UploadComponent.vue';
+import CompleteUpload from './components/CompleteUpload.vue';
+import GenerateReport from './components/GenerateReport.vue';
+import TheHeader from './components/TheHeader.vue';
 
-	interface StandardizedData {
-		destName: string;
-		dialCode: string;
-		rate: number;
-	}
+interface StandardizedData {
+  destName: string;
+  dialCode: string;
+  rate: number;
+}
 
-	interface FileEmit {
-		file: File;
-		data: StandardizedData[];
-	}
+interface FileEmit {
+  file: File;
+  data: StandardizedData[];
+}
 
-	interface ComparisonReport {
-		higherRatesForFile1: {
-			[destCode: string]: {
-				dialCode: string;
-				destName: string;
-				rateFile1: number;
-				rateFile2: number;
-				percentageDifference: number;
-			};
-		};
-		higherRatesForFile2: {
-			[destCode: string]: {
-				dialCode: string;
-				destName: string;
-				rateFile1: number;
-				rateFile2: number;
-				percentageDifference: number;
-			};
-		};
-		sameRates: {
-			[dialCode: string]: {
-				destName: string;
-				rateFile1: number;
-				rateFile2: number;
-			};
-		};
-	}
+interface ComparisonReport {
+  higherRatesForFile1: {
+    [dialCode: string]: {
+      dialCode: string;
+      destName: string;
+      rateFile1: number;
+      rateFile2: number;
+      percentageDifference: number;
+    };
+  };
+  higherRatesForFile2: {
+    [dialCode: string]: {
+      dialCode: string;
+      destName: string;
+      rateFile1: number;
+      rateFile2: number;
+      percentageDifference: number;
+    };
+  };
+  sameRates: {
+    [dialCode: string]: {
+      destName: string;
+      rateFile1: number;
+      rateFile2: number;
+    };
+  };
+}
 
-	const testData1 = [
-		{ destName: 'Canada - MB', dialCode: '1204201', rate: 0.0032 },
+const testData1 = [
+		{ destName: 'Canada - MB', dialCode: '1204201', rate: 0.0055 },
 		{ destName: 'Canada - MB', dialCode: '1204202', rate: 0.0033 },
 		{ destName: 'Canada - MB', dialCode: '1204203', rate: 0.0028 },
 		{ destName: 'Canada - MB', dialCode: '1204204', rate: 0.0146 },
@@ -99,103 +84,89 @@
 		{ destName: 'Canada - MB', dialCode: '1204210', rate: 0.0047 },
 	];
 
-	const file1 = ref<FileEmit | null>(null);
-	const file2 = ref<FileEmit | null>(null);
+const file1 = ref<FileEmit | null>(null);
+const file2 = ref<FileEmit | null>(null);
 
-	const comparisonResult = ref<
-		{
-			dialCode: string;
-			difference: number;
-			direction: 'higher' | 'lower';
-		}[]
-	>([]);
+const report = ref<ComparisonReport | null>(null);
 
-	const filesReady = computed(
-		() => file1.value !== null && file2.value !== null
-	);
+const filesReady = computed(() => file1.value !== null && file2.value !== null);
 
-	function handleFile1(fileData: FileEmit) {
-		console.log('got file 1', fileData);
-		file1.value = fileData;
-	}
+function handleFile1(fileData: FileEmit) {
+  console.log('got file 1', fileData);
+  file1.value = fileData;
+}
 
-	function handleFile2(fileData: FileEmit) {
-		console.log('got file 2', fileData);
-		file2.value = fileData;
-	}
+function handleFile2(fileData: FileEmit) {
+  console.log('got file 2', fileData);
+  file2.value = fileData;
+}
 
-	function compareFiles() {
-		const map1 = convertToMap(testData1);
-		const map2 = convertToMap(testData2);
-		console.log('got this map for file1 ', map1);
-		console.log('got this map for file2 ', map2);
-		const report: ComparisonReport = {
-			higherRatesForFile1: {},
-			higherRatesForFile2: {},
-			sameRates: {},
-		};
+function compareFiles() {
+  // if (!filesReady.value) {
+  //   alert('Please select both files');
+  //   return;
+  // }
 
-		// Iterate over keys in map1 (or map2, since they should have the same keys)
-		// Iterate over keys in map1 (or map2, since they should have the same keys)
-    map1.forEach((file1Data, dialCode) => {
-        const file2Data = map2.get(dialCode);
-        if (file2Data) {
-            const rate1 = file1Data.rate;
-            const rate2 = file2Data.rate;
+  // const map1 = convertToMap(testData1);
+  // const map2 = convertToMap(file2.value!.data);
+  const map1 = convertToMap(testData1);
+  const map2 = convertToMap(testData2);
+  const comparisonReport: ComparisonReport = {
+    higherRatesForFile1: {},
+    higherRatesForFile2: {},
+    sameRates: {},
+  };
 
-            // Determine which file has the higher rate
-            if (rate1 > rate2) {
-                // File 1 should buy from File 2
-                report.higherRatesForFile1[dialCode] = {
-                    dialCode: dialCode,
-                    destName: file1Data.destName,
-                    rateFile1: rate1,
-                    rateFile2: rate2,
-                    percentageDifference: calculatePercentageDifference(rate1, rate2)
-                };
-            } else if (rate2 > rate1) {
-                // File 1 should sell to File 2
-                report.higherRatesForFile2[dialCode] = {
-                    dialCode: dialCode,
-                    destName: file1Data.destName,
-                    rateFile1: rate1,
-                    rateFile2: rate2,
-                    percentageDifference: calculatePercentageDifference(rate2, rate1)
-                };
-            } else {
-                // Same rate for both files
-                report.sameRates[dialCode] = {
-                    destName: file1Data.destName,
-                    rateFile1: rate1,
-                    rateFile2: rate2
-                };
-            }
-        }
-    });
-		console.log('the report is ', report)
-    return report;
-	}
+  map1.forEach((file1Data, dialCode) => {
+    const file2Data = map2.get(dialCode);
+    if (file2Data) {
+      const rate1 = file1Data.rate;
+      const rate2 = file2Data.rate;
 
-	function calculatePercentageDifference(
-		rate1: number,
-		rate2: number
-	): number {
-		return ((rate1 - rate2) / ((rate1 + rate2) / 2)) * 100;
-	}
+      if (rate1 > rate2) {
+        comparisonReport.higherRatesForFile1[dialCode] = {
+          dialCode: dialCode,
+          destName: file1Data.destName,
+          rateFile1: rate1,
+          rateFile2: rate2,
+          percentageDifference: calculatePercentageDifference(rate1, rate2),
+        };
+      } else if (rate2 > rate1) {
+        comparisonReport.higherRatesForFile2[dialCode] = {
+          dialCode: dialCode,
+          destName: file1Data.destName,
+          rateFile1: rate1,
+          rateFile2: rate2,
+          percentageDifference: calculatePercentageDifference(rate2, rate1),
+        };
+      } else {
+        comparisonReport.sameRates[dialCode] = {
+          destName: file1Data.destName,
+          rateFile1: rate1,
+          rateFile2: rate2,
+        };
+      }
+    }
+  });
+	console.log(comparisonReport)
+  report.value = comparisonReport;
+}
 
-	function convertToMap(
-		fileData: StandardizedData[]
-	): Map<string, StandardizedData> {
-		const dataMap = new Map<string, StandardizedData>();
-		fileData.forEach((item) => {
-			dataMap.set(item.dialCode, item);
-		});
-		return dataMap;
-	}
+function calculatePercentageDifference(rate1: number, rate2: number): number {
+  return ((rate1 - rate2) / ((rate1 + rate2) / 2)) * 100;
+}
+
+function convertToMap(fileData: StandardizedData[]): Map<string, StandardizedData> {
+  const dataMap = new Map<string, StandardizedData>();
+  fileData.forEach((item) => {
+    dataMap.set(item.dialCode, item);
+  });
+  return dataMap;
+}
 </script>
 
 <style>
-	.container {
-		max-width: 600px;
-	}
+.container {
+  max-width: 600px;
+}
 </style>

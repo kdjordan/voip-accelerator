@@ -1,5 +1,25 @@
-<option value="">Select Role</option>
-                              <option value="dialCode">Dial Code</option>
-                              <option value="rate">Rate</option>
-                              <option value="desinationName">Destination</option>
-                              <option value="none">None</option>
+const testData1 = [
+		{ destName: 'Canada - MB', dialCode: '1204201', rate: 0.0055 },
+		{ destName: 'Canada - MB', dialCode: '1204202', rate: 0.0033 },
+		{ destName: 'Canada - MB', dialCode: '1204203', rate: 0.0028 },
+		{ destName: 'Canada - MB', dialCode: '1204204', rate: 0.0146 },
+		{ destName: 'Canada - MB', dialCode: '1204205', rate: 0.0035 },
+		{ destName: 'Canada - MB', dialCode: '1204206', rate: 0.0029 },
+		{ destName: 'Canada - MB', dialCode: '1204207', rate: 0.0048 },
+		{ destName: 'Canada - MB', dialCode: '1204208', rate: 0.0024 },
+		{ destName: 'Canada - MB', dialCode: '1204209', rate: 0.0028 },
+		{ destName: 'Canada - MB', dialCode: '1204210', rate: 0.0027 },
+	];
+
+	const testData2 = [
+		{ destName: 'Canada - MB', dialCode: '1204201', rate: 0.0042 },
+		{ destName: 'Canada - MB', dialCode: '1204202', rate: 0.0043 },
+		{ destName: 'Canada - MB', dialCode: '1204203', rate: 0.0048 },
+		{ destName: 'Canada - MB', dialCode: '1204204', rate: 0.0146 },
+		{ destName: 'Canada - MB', dialCode: '1204205', rate: 0.0045 },
+		{ destName: 'Canada - MB', dialCode: '1204206', rate: 0.0049 },
+		{ destName: 'Canada - MB', dialCode: '1204207', rate: 0.0048 },
+		{ destName: 'Canada - MB', dialCode: '1204208', rate: 0.0044 },
+		{ destName: 'Canada - MB', dialCode: '1204209', rate: 0.0048 },
+		{ destName: 'Canada - MB', dialCode: '1204210', rate: 0.0047 },
+	];
