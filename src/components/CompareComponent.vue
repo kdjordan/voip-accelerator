@@ -30,12 +30,8 @@ interface ComparisonResult {
 }
 
 interface Props {
-  file1: File;
-  dialCodeColumnFile1: string;
-  rateColumnFile1: string;
-  file2: File;
-  dialCodeColumnFile2: string;
-  rateColumnFile2: string;
+  file1: FileEmit | null;
+  file2: FileEmit | null;
 }
 
 const props = defineProps<Props>();
@@ -51,42 +47,44 @@ function parseCSV(file: File, callback: (data: Record<string, string>[]) => void
 }
 
 function compareFiles() {
-  if (props.file1 && props.file2) {
-    parseCSV(props.file1, (data1) => {
-      parseCSV(props.file2, (data2) => {
-        const map1 = new Map<string, number>();
-        const map2 = new Map<string, number>();
+  console.log('comparing files in Compare Component 1 ::', props.file1)
+  console.log('comparing files in Compare Component 2 ::', props.file2)
+  // if (props.file1 && props.file2) {
+  //   parseCSV(props.file1, (data1) => {
+  //     parseCSV(props.file2, (data2) => {
+  //       const map1 = new Map<string, number>();
+  //       const map2 = new Map<string, number>();
 
-        data1.forEach(row => {
-          const dialCode = row[props.dialCodeColumnFile1];
-          const rate = parseFloat(row[props.rateColumnFile1]);
-          if (dialCode && !isNaN(rate)) {
-            map1.set(dialCode, rate);
-          }
-        });
+  //       data1.forEach(row => {
+  //         const dialCode = row[props.dialCodeColumnFile1];
+  //         const rate = parseFloat(row[props.rateColumnFile1]);
+  //         if (dialCode && !isNaN(rate)) {
+  //           map1.set(dialCode, rate);
+  //         }
+  //       });
 
-        data2.forEach(row => {
-          const dialCode = row[props.dialCodeColumnFile2];
-          const rate = parseFloat(row[props.rateColumnFile2]);
-          if (dialCode && !isNaN(rate)) {
-            map2.set(dialCode, rate);
-          }
-        });
+  //       data2.forEach(row => {
+  //         const dialCode = row[props.dialCodeColumnFile2];
+  //         const rate = parseFloat(row[props.rateColumnFile2]);
+  //         if (dialCode && !isNaN(rate)) {
+  //           map2.set(dialCode, rate);
+  //         }
+  //       });
 
-        const results: ComparisonResult[] = [];
+  //       const results: ComparisonResult[] = [];
 
-        map1.forEach((rate1, dialCode) => {
-          if (map2.has(dialCode)) {
-            const rate2 = map2.get(dialCode)!;
-            const rateDifference = rate1 - rate2;
-            results.push({ dialCode, rateDifference });
-          }
-        });
+  //       map1.forEach((rate1, dialCode) => {
+  //         if (map2.has(dialCode)) {
+  //           const rate2 = map2.get(dialCode)!;
+  //           const rateDifference = rate1 - rate2;
+  //           results.push({ dialCode, rateDifference });
+  //         }
+  //       });
 
-        comparisonResults.value = results;
-      });
-    });
-  }
+  //       comparisonResults.value = results;
+  //     });
+  //   });
+  // }
 }
 
 watchEffect(() => {

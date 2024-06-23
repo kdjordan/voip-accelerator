@@ -229,6 +229,7 @@
 										<table class="min-w-full bg-white">
 											<thead>
 												<tr>
+													<th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Row</th>
 													<th
 														v-for="(col, index) in columns"
 														:key="index"
@@ -257,6 +258,7 @@
 													)"
 													:key="rowIndex"
 												>
+												<td class="border px-4 py-2">{{ rowIndex + 1 }}</td>
 													<td
 														v-for="(cell, cellIndex) in row"
 														:key="cellIndex"
