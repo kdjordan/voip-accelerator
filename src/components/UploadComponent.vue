@@ -8,8 +8,7 @@
 
 	interface FileEmit {
 		file: File;
-		dialCodeColumn: string;
-		rateColumn: string;
+		data: Array<{ [key: string]: string | number }>;
 	}
 
 	const emit = defineEmits(['file-selected']);
@@ -78,7 +77,6 @@
 					return standardizedRow;
 				});
 
-			console.log('file emitting ', standardizedData);
 			emit('file-selected', {
 				file: file.value,
 				// dialCodeColumn: columns.value[columnRoles.value.indexOf('dialCode')],
