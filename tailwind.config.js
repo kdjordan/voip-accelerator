@@ -17,6 +17,17 @@ export default {
 				size5xl: 'clamp(3.81rem, 5.18vi + 2.52rem, 6.66rem)',
 				size6xl: 'clamp(4.77rem, 7.48vi + 2.9rem, 8.88rem)',
 			},
+      colors: {
+        primary: '#2ecc71',       // Deep Green
+        secondary: '#e67e22',     // Sand Beige
+        accent: '#34495e',        // Dark Slate
+        text: '#2c3e50',          // Charcoal Gray
+        background: '#ecf0f1',    // Soft Sky
+      },
+      fontFamily: {
+        primary: ['Raleway', 'sans-serif'],
+        secondary: ['Nunito', 'sans-serif'],
+      },
     },
   },
   plugins: [],

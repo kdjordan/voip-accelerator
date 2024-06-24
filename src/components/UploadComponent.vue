@@ -64,7 +64,7 @@
 	function confirmColumnRoles() {
 		if (file.value) {
 			const standardizedData = csvData.value
-				.slice(startLine.value)
+				.slice(startLine.value - 1)
 				.map((row) => {
 					const standardizedRow: { [key: string]: string | number } =
 						{};

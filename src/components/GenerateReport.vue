@@ -1,64 +1,103 @@
 <template>
-  <div>
-    <h2>Comparison Report</h2>
+  <div class="bg-background rounded min-w-[950px] m-auto w-full p-6">
+    <h2 class="text-center text-sizeXl uppercase pb-4 font-primary">Report</h2>
+
     <div>
-      <h3>Higher Rates for File 1</h3>
-      <ul>
-        <li v-for="(item, dialCode) in report.higherRatesForFile1" :key="dialCode">
-          Dial Code: {{ item.dialCode }}, Destination: {{ item.destName }}, File 1 Rate: {{ item.rateFile1 }}, File 2 Rate: {{ item.rateFile2 }}, Difference: {{ item.percentageDifference.toFixed(2) }}%
-        </li>
-      </ul>
+      <h3>Higher Rates for {{ details?.fileName1 }}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Dial Code</th>
+            <th>Destination</th>
+            <th>{{ details?.fileName1 }} Rate</th>
+            <th>{{ details?.fileName2 }} Rate</th>
+            <th>Difference (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, dialCode) in report.higherRatesForFile1" :key="dialCode">
+            <td>{{ item.dialCode }}</td>
+            <td>{{ item.destName }}</td>
+            <td>{{ item.rateFile1 }}</td>
+            <td>{{ item.rateFile2 }}</td>
+            <td>{{ item.percentageDifference.toFixed(2) }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
     <div>
-      <h3>Higher Rates for File 2</h3>
-      <ul>
-        <li v-for="(item, dialCode) in report.higherRatesForFile2" :key="dialCode">
-          Dial Code: {{ item.dialCode }}, Destination: {{ item.destName }}, File 1 Rate: {{ item.rateFile1 }}, File 2 Rate: {{ item.rateFile2 }}, Difference: {{ item.percentageDifference.toFixed(2) }}%
-        </li>
-      </ul>
+      <h3>Higher Rates for {{ details?.fileName2 }}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Dial Code</th>
+            <th>Destination</th>
+            <th>{{ details?.fileName1 }} Rate</th>
+            <th>{{ details?.fileName2 }} Rate</th>
+            <th>Difference (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, dialCode) in report.higherRatesForFile2" :key="dialCode">
+            <td>{{ item.dialCode }}</td>
+            <td>{{ item.destName }}</td>
+            <td>{{ item.rateFile1 }}</td>
+            <td>{{ item.rateFile2 }}</td>
+            <td>{{ item.percentageDifference.toFixed(2) }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
     <div>
       <h3>Same Rates</h3>
-      <ul>
-        <li v-for="(item, dialCode) in report.sameRates" :key="dialCode">
-          Dial Code: {{ dialCode }}, Destination: {{ item.destName }}, Rate: {{ item.rateFile1 }}
-        </li>
-      </ul>
+      <table>
+        <thead>
+          <tr>
+            <th>Dial Code</th>
+            <th>Destination</th>
+            <th>{{ details?.fileName1 }} Rate</th>
+            <th>{{ details?.fileName2 }} Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, dialCode) in report.sameRates" :key="dialCode">
+            <td>{{ dialCode }}</td>
+            <td>{{ item.destName }}</td>
+            <td>{{ item.rateFile1 }}</td>
+            <td>{{ item.rateFile2 }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-interface ComparisonReport {
-  higherRatesForFile1: {
-    [dialCode: string]: {
-      dialCode: string;
-      destName: string;
-      rateFile1: number;
-      rateFile2: number;
-      percentageDifference: number;
-    };
-  };
-  higherRatesForFile2: {
-    [dialCode: string]: {
-      dialCode: string;
-      destName: string;
-      rateFile1: number;
-      rateFile2: number;
-      percentageDifference: number;
-    };
-  };
-  sameRates: {
-    [dialCode: string]: {
-      destName: string;
-      rateFile1: number;
-      rateFile2: number;
-    };
-  };
-}
-import { defineProps } from 'vue';
+import { ComparisonReport } from '@/types/app-types';
+  
 
-const props = defineProps<{
+defineProps<{
   report: ComparisonReport;
+  details: { fileName1: string; fileName2: string } | null;
 }>();
 </script>
+
+<style scoped>
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+</style>

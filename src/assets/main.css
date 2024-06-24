@@ -2,6 +2,10 @@
 
 @tailwind base;
 
+#app {
+  min-height: 100vh;
+}
+
 /*
  * Oldschool, top left anchored repeating backgrounds should be opt-in instead
  * of opt-out in 2022, lol.
