@@ -1,6 +1,6 @@
 <template>
 	<TheHeader />
-	<div class="container mx-auto p-6 space-y-6 pt-32">
+	<div class="mx-auto p-6 space-y-6 pt-32">
 		<div v-if="!isReporting" class="flex flex-col gap-4">
 			<UploadComponent
 				mssg="Upload YOUR rates as CSV. <br /><br /> You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer."
@@ -148,8 +148,8 @@
 		console.log(comparisonReport);
 		report.value = comparisonReport;
 		details.value = {
-			fileName1: file1.value.file.name,
-			fileName2: file2.value.file.name,
+			fileName1: file1.value.file.name.split('.')[0],
+			fileName2: file2.value.file.name.split('.')[0],
 		};
 	}
 	function calculatePercentageDifference(

@@ -3,7 +3,7 @@
     <h2 class="text-center text-sizeXl uppercase pb-4 font-primary">Report</h2>
 
     <div>
-      <h3>Higher Rates for {{ details?.fileName1 }}</h3>
+      <h3 class="pb-4 uppercase"><span class="text-accent">{{ details?.fileName1 }}</span> :: should buy these destinations from :: <span class="text-accent">{{ details?.fileName2 }}</span></h3>
       <table>
         <thead>
           <tr>
@@ -27,7 +27,7 @@
     </div>
 
     <div>
-      <h3>Higher Rates for {{ details?.fileName2 }}</h3>
+      <h3 class="pb-4 uppercase">{{ details?.fileName1 }} :: should sell these destinations to :: <span class="text-accent">{{ details?.fileName2 }}</span></h3>
       <table>
         <thead>
           <tr>
@@ -51,7 +51,7 @@
     </div>
 
     <div>
-      <h3>Same Rates</h3>
+      <h3 class="pb-4 uppercase">Same Rates</h3>
       <table>
         <thead>
           <tr>
