@@ -1,7 +1,7 @@
 <template>
 	<TheHeader />
 	<div class="mx-auto p-6 space-y-6 pt-32">
-		<div v-if="!isReporting" class="flex flex-col gap-4">
+		<div v-if="!isReporting" class="max-w-[1200px] mx-auto flex flex-col gap-4">
 			<UploadComponent
 				mssg="Upload YOUR rates as CSV. <br /><br /> You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer."
 				v-if="file1 === null"
