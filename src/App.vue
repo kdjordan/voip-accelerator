@@ -3,20 +3,22 @@
 	<div class="container mx-auto p-6 space-y-6 pt-32">
 		<div v-if="!isReporting" class="flex flex-col gap-4">
 			<UploadComponent
+				mssg="Upload YOUR rates as CSV. <br /><br /> You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer."
 				v-if="file1 === null"
 				@file-selected="handleFile1"
 			/>
 			<CompleteUpload
 				v-if="file1 !== null"
-				mssg="File 1 has been accepted"
+				mssg="Your rates have been accepted"
 			/>
 			<UploadComponent
+				mssg="Upload your CLIENT rates as CSV. <br /><br /> You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer."
 				v-if="file2 === null"
 				@file-selected="handleFile2"
 			/>
 			<CompleteUpload
 				v-if="file2 !== null"
-				mssg="File 2 has been accepted"
+				mssg="The carrier rates been accepted"
 			/>
 			<button
 				v-if="filesReady"
@@ -46,6 +48,7 @@
 		FileEmit,
 		ComparisonReport,
 		StandardizedData,
+		RateComparison
 	} from '@/types/app-types';
 
 	import { data1, data2 } from './assets/test-values';
@@ -77,19 +80,18 @@
 	}
 
 	function compareFiles() {
-    isReporting.value = true
+		isReporting.value = true;
 		if (!filesReady.value) {
-		  alert('Please select both files');
-		  return;
+			alert('Please select both files');
+			return;
 		}
 
 		const map1 = convertToMap(file1.value!.data);
 		const map2 = convertToMap(file2.value!.data);
-		// const map1 = convertToMap(data1.data);
-		// const map2 = convertToMap(data2.data);
+
 		const comparisonReport: ComparisonReport = {
-			higherRatesForFile1: {},
-			higherRatesForFile2: {},
+			higherRatesForFile1: [],
+			higherRatesForFile2: [],
 			sameRates: {},
 		};
 
@@ -100,7 +102,7 @@
 				const rate2 = file2Data.rate;
 
 				if (rate1 > rate2) {
-					comparisonReport.higherRatesForFile1[dialCode] = {
+					comparisonReport.higherRatesForFile1.push({
 						dialCode: dialCode,
 						destName: file1Data.destName,
 						rateFile1: rate1,
@@ -109,9 +111,9 @@
 							rate1,
 							rate2
 						),
-					};
+					});
 				} else if (rate2 > rate1) {
-					comparisonReport.higherRatesForFile2[dialCode] = {
+					comparisonReport.higherRatesForFile2.push({
 						dialCode: dialCode,
 						destName: file1Data.destName,
 						rateFile1: rate1,
@@ -120,7 +122,7 @@
 							rate2,
 							rate1
 						),
-					};
+					});
 				} else {
 					comparisonReport.sameRates[dialCode] = {
 						destName: file1Data.destName,
@@ -130,6 +132,19 @@
 				}
 			}
 		});
+
+		// Sort higherRatesForFile1 by percentageDifference descending
+		comparisonReport.higherRatesForFile1.sort(
+			(a: RateComparison, b: RateComparison) =>
+				b.percentageDifference - a.percentageDifference
+		);
+
+		// Sort higherRatesForFile2 by percentageDifference descending
+		comparisonReport.higherRatesForFile2.sort(
+			(a: RateComparison, b: RateComparison) =>
+				b.percentageDifference - a.percentageDifference
+		);
+
 		console.log(comparisonReport);
 		report.value = comparisonReport;
 		details.value = {
@@ -137,7 +152,6 @@
 			fileName2: file2.value.file.name,
 		};
 	}
-
 	function calculatePercentageDifference(
 		rate1: number,
 		rate2: number

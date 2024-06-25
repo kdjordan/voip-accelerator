@@ -1,5 +1,5 @@
 <script setup lang="ts">
-	import { ref, type Ref } from 'vue';
+	import { ref, type Ref, defineProps } from 'vue';
 	import Papa from 'papaparse';
 
 	interface ParsedResults {
@@ -10,6 +10,10 @@
 		file: File;
 		data: Array<{ [key: string]: string | number }>;
 	}
+
+	defineProps<{
+		mssg: string;
+	}>();
 
 	const emit = defineEmits(['file-selected']);
 
@@ -152,7 +156,7 @@
 			:class="{ 'border-gray-500': isDragOver }"
 			@click="selectFile"
 		>
-			Drag and drop a CSV file here or click to select
+			<div v-html="mssg"></div>
 			<input
 				type="file"
 				@change="handleFileUpload"
