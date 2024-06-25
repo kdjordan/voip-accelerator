@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref } from 'vue';
 import Papa from 'papaparse';
 
 interface ParsedResults {
@@ -57,7 +57,7 @@ function parseCSV(uploadedFile: File) {
   Papa.parse(uploadedFile, {
     header: false,
     complete(results: ParsedResults) {
-      csvData.value = results.data.slice(0, 50); // Slice to get only the first 100 rows
+      csvData.value = results.data.slice(0, 1000); // Slice to get only the first 100 rows
       columns.value = results.data[startLine.value - 1];
       columnRoles.value = Array(columns.value.length).fill('');
       showModal.value = true;

@@ -48,7 +48,8 @@
 		FileEmit,
 		ComparisonReport,
 		StandardizedData,
-		RateComparison
+		RateComparison,
+		NonMatchingCode
 	} from '@/types/app-types';
 
 	import { data1, data2 } from './assets/test-values';
@@ -80,78 +81,94 @@
 	}
 
 	function compareFiles() {
-		isReporting.value = true;
-		if (!filesReady.value) {
-			alert('Please select both files');
-			return;
-		}
+  isReporting.value = true;
+  if (!filesReady.value) {
+    alert('Please select both files');
+    return;
+  }
 
-		const map1 = convertToMap(file1.value!.data);
-		const map2 = convertToMap(file2.value!.data);
+  const map1 = convertToMap(file1.value!.data);
+  const map2 = convertToMap(file2.value!.data);
 
-		const comparisonReport: ComparisonReport = {
-			higherRatesForFile1: [],
-			higherRatesForFile2: [],
-			sameRates: {},
-		};
+  const comparisonReport: ComparisonReport = {
+    higherRatesForFile1: [],
+    higherRatesForFile2: [],
+    sameRates: {},
+    nonMatchingCodes: [],
+  };
 
-		map1.forEach((file1Data, dialCode) => {
-			const file2Data = map2.get(dialCode);
-			if (file2Data) {
-				const rate1 = file1Data.rate;
-				const rate2 = file2Data.rate;
+  // Compare rates and find matching and non-matching dial codes
+  map1.forEach((file1Data, dialCode) => {
+    const file2Data = map2.get(dialCode);
+    if (file2Data) {
+      const rate1 = file1Data.rate;
+      const rate2 = file2Data.rate;
 
-				if (rate1 > rate2) {
-					comparisonReport.higherRatesForFile1.push({
-						dialCode: dialCode,
-						destName: file1Data.destName,
-						rateFile1: rate1,
-						rateFile2: rate2,
-						percentageDifference: calculatePercentageDifference(
-							rate1,
-							rate2
-						),
-					});
-				} else if (rate2 > rate1) {
-					comparisonReport.higherRatesForFile2.push({
-						dialCode: dialCode,
-						destName: file1Data.destName,
-						rateFile1: rate1,
-						rateFile2: rate2,
-						percentageDifference: calculatePercentageDifference(
-							rate2,
-							rate1
-						),
-					});
-				} else {
-					comparisonReport.sameRates[dialCode] = {
-						destName: file1Data.destName,
-						rateFile1: rate1,
-						rateFile2: rate2,
-					};
-				}
-			}
-		});
+      if (rate1 > rate2) {
+        comparisonReport.higherRatesForFile1.push({
+          dialCode: dialCode,
+          destName: file1Data.destName,
+          rateFile1: rate1,
+          rateFile2: rate2,
+          percentageDifference: calculatePercentageDifference(rate1, rate2),
+        });
+      } else if (rate2 > rate1) {
+        comparisonReport.higherRatesForFile2.push({
+          dialCode: dialCode,
+          destName: file1Data.destName,
+          rateFile1: rate1,
+          rateFile2: rate2,
+          percentageDifference: calculatePercentageDifference(rate2, rate1),
+        });
+      } else {
+        comparisonReport.sameRates[dialCode] = {
+          destName: file1Data.destName,
+          rateFile1: rate1,
+          rateFile2: rate2,
+        };
+      }
+    } else {
+      comparisonReport.nonMatchingCodes.push({
+        dialCode: dialCode,
+        destName: file1Data.destName,
+        rate: file1Data.rate,
+        file: 'file1',
+      });
+    }
+  });
 
-		// Sort higherRatesForFile1 by percentageDifference descending
-		comparisonReport.higherRatesForFile1.sort(
-			(a: RateComparison, b: RateComparison) =>
-				b.percentageDifference - a.percentageDifference
-		);
+  // Find non-matching dial codes in file2
+  map2.forEach((file2Data, dialCode) => {
+    if (!map1.has(dialCode)) {
+      comparisonReport.nonMatchingCodes.push({
+        dialCode: dialCode,
+        destName: file2Data.destName,
+        rate: file2Data.rate,
+        file: 'file2',
+      });
+    }
+  });
 
-		// Sort higherRatesForFile2 by percentageDifference descending
-		comparisonReport.higherRatesForFile2.sort(
-			(a: RateComparison, b: RateComparison) =>
-				b.percentageDifference - a.percentageDifference
-		);
+  // Sort higherRatesForFile1 by percentageDifference descending
+  comparisonReport.higherRatesForFile1.sort(
+    (a: RateComparison, b: RateComparison) =>
+      b.percentageDifference - a.percentageDifference
+  );
 
-		console.log(comparisonReport);
-		report.value = comparisonReport;
-		details.value = {
-			fileName1: file1.value.file.name.split('.')[0],
-			fileName2: file2.value.file.name.split('.')[0],
-		};
-	}
+  // Sort higherRatesForFile2 by percentageDifference descending
+  comparisonReport.higherRatesForFile2.sort(
+    (a: RateComparison, b: RateComparison) =>
+      b.percentageDifference - a.percentageDifference
+  );
+
+  console.log(comparisonReport);
+  report.value = comparisonReport;
+  details.value = {
+    fileName1: file1.value.file.name.split('.')[0],
+    fileName2: file2.value.file.name.split('.')[0],
+  };
+}
+
 	function calculatePercentageDifference(
 		rate1: number,
 		rate2: number

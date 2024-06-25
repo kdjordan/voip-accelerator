@@ -23,3 +23,10 @@ export interface ComparisonReport {
   higherRatesForFile2: RateComparison[];
   sameRates: { [dialCode: string]: { destName: string; rateFile1: number; rateFile2: number } };
 }
+
+export interface NonMatchingCode {
+  dialCode: string;
+  destName: string;
+  rate: number;
+  file: 'file1' | 'file2';
+}

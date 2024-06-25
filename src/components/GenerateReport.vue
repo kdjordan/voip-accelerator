@@ -71,8 +71,31 @@
         </tbody>
       </table>
     </div>
+
+    <div>
+      <h3 class="pb-4 uppercase">Non-Matching Codes</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Dial Code</th>
+            <th>Destination</th>
+            <th>Rate</th>
+            <th>File</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, index) in report.nonMatchingCodes" :key="index">
+            <td>{{ item.dialCode }}</td>
+            <td>{{ item.destName }}</td>
+            <td>{{ item.rate }}</td>
+            <td>{{ item.file }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ComparisonReport } from '@/types/app-types';
