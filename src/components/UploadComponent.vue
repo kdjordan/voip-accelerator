@@ -1,113 +1,12 @@
-<script setup lang="ts">
-import { ref } from 'vue';
-import Papa from 'papaparse';
-
-interface ParsedResults {
-  data: string[][];
-}
-
-interface FileEmit {
-  file: File;
-  data: Array<{ [key: string]: string | number }>;
-}
-
-defineProps<{
-  mssg: string;
-}>();
-
-const emit = defineEmits(['file-selected']);
-
-const file = ref<File | null>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
-const columns = ref<string[]>([]);
-const csvData = ref<string[][]>([]);
-const columnRoles = ref<string[]>([]);
-const isDragOver = ref<boolean>(false);
-const showModal = ref<boolean>(false);
-const startLine = ref<number>(1);
-const loading = ref<boolean>(false);
-
-function handleFileUpload(event: Event) {
-  const target = event.target as HTMLInputElement;
-  const uploadedFile = target.files?.[0] ?? null;
-  if (uploadedFile) {
-    file.value = uploadedFile;
-    parseCSV(uploadedFile);
-  }
-}
-
-function handleDrop(event: DragEvent) {
-  const uploadedFile = event.dataTransfer?.files[0] ?? null;
-  if (uploadedFile) {
-    file.value = uploadedFile;
-    parseCSV(uploadedFile);
-  }
-  isDragOver.value = false;
-}
-
-function dragEnter() {
-  isDragOver.value = true;
-}
-
-function dragLeave() {
-  isDragOver.value = false;
-}
-
-function parseCSV(uploadedFile: File) {
-  Papa.parse(uploadedFile, {
-    header: false,
-    complete(results: ParsedResults) {
-      csvData.value = results.data.slice(0, 1000); // Slice to get only the first 100 rows
-      columns.value = results.data[startLine.value - 1];
-      columnRoles.value = Array(columns.value.length).fill('');
-      showModal.value = true;
-    },
-  });
-}
-
-function confirmColumnRoles() {
-  if (file.value) {
-    const standardizedData = csvData.value
-      .slice(startLine.value - 1)
-      .map((row) => {
-        const standardizedRow: { [key: string]: string | number } = {};
-        columnRoles.value.forEach((role, index) => {
-          if (role) {
-            standardizedRow[role] =
-              role === 'rate' ? parseFloat(row[index]) : row[index];
-          }
-        });
-        return standardizedRow;
-      });
-
-    emit('file-selected', {
-      file: file.value,
-      data: standardizedData,
-    });
-  }
-  showModal.value = false;
-}
-
-function cancelModal() {
-  showModal.value = false;
-}
-
-function selectFile(): void {
-  const input = fileInput.value;
-  if (input) {
-    input.click();
-  }
-}
-</script>
-
 <template>
   <div class="space-y-6">
+    <!-- Drop zone for file upload -->
     <div
       class="drop-zone border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer rounded hover:border-gray-500 transition"
-      @dragover.prevent
-      @drop.prevent="handleDrop"
-      @dragenter="dragEnter"
-      @dragleave="dragLeave"
+      @dragover.prevent="onDragOver"
+      @drop.prevent="onDrop"
+      @dragenter="onDragEnter"
+      @dragleave="onDragLeave"
       :class="{ 'border-gray-500': isDragOver }"
       @click="selectFile"
     >
@@ -121,14 +20,12 @@ function selectFile(): void {
       />
     </div>
 
-    <!-- Spinner -->
+    <!-- Loading spinner -->
     <div v-if="loading" class="flex justify-center mt-4">
-      <div
-        class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"
-      ></div>
+      <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"></div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal for column roles assignment -->
     <transition name="modal">
       <div v-if="showModal" class="fixed z-10 inset-0 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 text-center">
@@ -175,12 +72,13 @@ function selectFile(): void {
                               <option value="destName">Name</option>
                               <option value="dialCode">Dial Code</option>
                               <option value="rate">Rate</option>
+                              <!-- Add more options as needed -->
                             </select>
                           </th>
                         </tr>
                       </thead>
                       <tbody class="bg-white divide-y divide-gray-200">
-                        <tr v-for="(row, rowIndex) in csvData" :key="rowIndex">
+                        <tr v-for="(row, rowIndex) in previewData" :key="rowIndex">
                           <td class="border px-4 py-2">{{ rowIndex + 1 }}</td>
                           <td
                             v-for="(cell, cellIndex) in row"
@@ -218,6 +116,125 @@ function selectFile(): void {
     </transition>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import Papa from 'papaparse';
+
+interface ParsedResults {
+  data: string[][];
+}
+
+interface FileEmit {
+  file: File;
+  data: Array<{ [key: string]: string | number }>;
+}
+
+defineProps<{
+  mssg: string;
+}>();
+
+const emit = defineEmits(['file-selected']);
+
+const file = ref<File | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const columns = ref<string[]>([]);
+const previewData = ref<string[][]>([]);
+const columnRoles = ref<string[]>([]);
+const isDragOver = ref<boolean>(false);
+const showModal = ref<boolean>(false);
+const startLine = ref<number>(1);
+const loading = ref<boolean>(false);
+
+function handleFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const uploadedFile = target.files?.[0] ?? null;
+  if (uploadedFile) {
+    file.value = uploadedFile;
+    parseCSVForPreview(uploadedFile);
+  }
+}
+
+function onDrop(event: DragEvent) {
+  const uploadedFile = event.dataTransfer?.files[0] ?? null;
+  if (uploadedFile) {
+    file.value = uploadedFile;
+    parseCSVForPreview(uploadedFile);
+  }
+  isDragOver.value = false;
+}
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault();
+}
+
+function onDragEnter(event: DragEvent) {
+  isDragOver.value = true;
+}
+
+function onDragLeave(event: DragEvent) {
+  isDragOver.value = false;
+}
+
+function parseCSVForPreview(uploadedFile: File) {
+  console.log('parsing preview')
+  Papa.parse(uploadedFile, {
+    header: false,
+    complete(results: ParsedResults) {
+      previewData.value = results.data.slice(0, 50); // Slice to get only the first 50 rows for preview
+      columns.value = results.data[startLine.value - 1];
+      columnRoles.value = Array(columns.value.length).fill('');
+      showModal.value = true;
+    },
+  });
+}
+
+function parseCSVForFullProcessing() {
+  console.log('parsing full', )
+  if (file.value) {
+    Papa.parse(file.value, {
+      header: false,
+      skipEmptyLines: true,
+      complete(results: ParsedResults) {
+        const dataStartIndex = startLine.value - 1;
+        const fullData = results.data.slice(dataStartIndex);
+        const standardizedData = fullData.map((row) => {
+          const standardizedRow: { [key: string]: string | number } = {};
+          columnRoles.value.forEach((role, index) => {
+            if (role) {
+              standardizedRow[role] =
+                role === 'rate' ? parseFloat(row[index]) : row[index];
+            }
+          });
+          console.log('did this row ', standardizedRow)
+          return standardizedRow;
+        });
+
+        emit('file-selected', {
+          file: file.value,
+          data: standardizedData,
+        });
+        showModal.value = false;
+      },
+    });
+  }
+}
+
+function confirmColumnRoles() {
+  parseCSVForFullProcessing();
+}
+
+function cancelModal() {
+  showModal.value = false;
+}
+
+function selectFile(): void {
+  const input = fileInput.value;
+  if (input) {
+    input.click();
+  }
+}
+</script>
 
 <style scoped>
   .drop-zone {
