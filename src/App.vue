@@ -44,10 +44,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import UploadComponent from './components/UploadComponent.vue';
-import CompleteUpload from './components/CompleteUpload.vue';
 import GenerateReport from './components/GenerateReport.vue';
 import TheHeader from './components/TheHeader.vue';
-import { ComparisonReport, StandardizedData } from './types';
+import { type ComparisonReport, type StandardizedData } from '../types/app-types';
+import { storeInIndexedDB }  from './composables/useIndexDB'
 
 const file1 = ref<File | null>(null);
 const file2 = ref<File | null>(null);
@@ -184,49 +184,49 @@ async function loadFromIndexedDB(storeName: string): Promise<StandardizedData[]>
   });
 }
 
-async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
-  const request = indexedDB.open('CSVDatabase', DBversion.value);
-  DBversion.value++;
+// async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
+//   const request = indexedDB.open('CSVDatabase', DBversion.value);
+//   DBversion.value++;
 
-  request.onupgradeneeded = (event) => {
-    const db = (event.target as IDBOpenDBRequest).result;
-    if (db) {
-      if (!db.objectStoreNames.contains(storeName)) {
-        db.createObjectStore(storeName, {
-          keyPath: 'id',
-          autoIncrement: true,
-        });
-      }
-    }
-  };
+//   request.onupgradeneeded = (event) => {
+//     const db = (event.target as IDBOpenDBRequest).result;
+//     if (db) {
+//       if (!db.objectStoreNames.contains(storeName)) {
+//         db.createObjectStore(storeName, {
+//           keyPath: 'id',
+//           autoIncrement: true,
+//         });
+//       }
+//     }
+//   };
 
-  request.onsuccess = (event) => {
-    const db = (event.target as IDBOpenDBRequest).result as IDBDatabase;
-    if (db) {
-      const transaction = db.transaction(storeName, 'readwrite');
-      const store = transaction.objectStore(storeName);
+//   request.onsuccess = (event) => {
+//     const db = (event.target as IDBOpenDBRequest).result as IDBDatabase;
+//     if (db) {
+//       const transaction = db.transaction(storeName, 'readwrite');
+//       const store = transaction.objectStore(storeName);
 
-      data.forEach((row) => {
-        store.add(row);
-      });
+//       data.forEach((row) => {
+//         store.add(row);
+//       });
 
-      transaction.oncomplete = () => {
-        console.log('Data stored successfully');
-        db.close();
-      };
+//       transaction.oncomplete = () => {
+//         console.log('Data stored successfully');
+//         db.close();
+//       };
 
-      transaction.onerror = (event) => {
-        console.error('Transaction error:', transaction.error);
-      };
-    } else {
-      console.error('Failed to open IndexedDB');
-    }
-  };
+//       transaction.onerror = (event) => {
+//         console.error('Transaction error:', transaction.error);
+//       };
+//     } else {
+//       console.error('Failed to open IndexedDB');
+//     }
+//   };
 
-  request.onerror = (event) => {
-    const requestError = (event.target as IDBRequest<IDBDatabase>).error;
-    console.error('IndexedDB error:', requestError);
-  };
-}
+//   request.onerror = (event) => {
+//     const requestError = (event.target as IDBRequest<IDBDatabase>).error;
+//     console.error('IndexedDB error:', requestError);
+//   };
+// }
 
 </script>
