@@ -11,25 +11,17 @@
           v-if="file1 === null"
           @file-selected="handleFile"
         />
-        <CompleteUpload
-          v-if="file1 !== null"
-          :mssg="`Your rates from ${details?.fileName1} have been accepted`"
-        />
         <UploadComponent
           mssg="Upload your CLIENT rates as CSV. <br /><br /> You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer."
           v-if="file2 === null"
           @file-selected="handleFile"
         />
-        <CompleteUpload
-          v-if="file2 !== null"
-          :mssg="`The carrier rates from ${details?.fileName2} have been accepted`"
-        />
-        <button
+        <!-- <button
           @click="dumpDB"
           class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition text-center"
         >
           DUMP
-        </button>
+        </button> -->
         <button
           v-if="filesReady"
           @click="compareFiles"
@@ -238,9 +230,3 @@ async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
 }
 
 </script>
-
-<style>
-.container {
-  max-width: 600px;
-}
-</style>

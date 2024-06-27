@@ -94,6 +94,7 @@
 						});
 						return standardizedRow;
 					});
+					console.log(standardizedData)
 
 					emit('file-selected', {
 						file: file.value,

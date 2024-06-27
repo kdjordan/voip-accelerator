@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import TheWelcome from '../components/TheWelcome.vue'
+import AZPricing from '../components/AZPricing.vue'
 </script>
 
 <template>
-  <main class="border">
-    <TheWelcome />
+  <main>
+    <AZPricing />
   </main>
 </template>
