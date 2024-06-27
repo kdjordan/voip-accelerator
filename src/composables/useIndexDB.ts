@@ -1,15 +1,20 @@
-import { ref } from 'vue';
+import { ref, reactive } from 'vue';
 import { type StandardizedData } from '../../types/app-types';
 
+const DBstate = reactive({
+  DBVersion: 1,
+  DBprogress: 0
+})
+
 export function useIndexedDB() {
-  const DBversion = ref<number>(1);
+  const DBloading = ref<boolean>(false)
 
   async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
-    console.log('running ', data, storeName);
-    const request = indexedDB.open('CSVDatabase', DBversion.value);
-    DBversion.value++;
+    console.log('running ', storeName, DBstate.DBVersion);
+    const request = indexedDB.open('CSVDatabase', DBstate.DBVersion);
 
     request.onupgradeneeded = (event) => {
+      DBloading.value = true
       const db = (event.target as IDBOpenDBRequest).result;
       if (db) {
         if (!db.objectStoreNames.contains(storeName)) {
@@ -22,16 +27,18 @@ export function useIndexedDB() {
     };
 
     request.onsuccess = (event) => {
+      console.log('settting DBLoading to true')
       const db = (event.target as IDBOpenDBRequest).result as IDBDatabase;
       if (db) {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
-
         data.forEach((row) => {
           store.add(row);
         });
 
         transaction.oncomplete = () => {
+          DBstate.DBVersion++
+          DBloading.value = false
           console.log('Data stored successfully');
           db.close();
         };
@@ -50,9 +57,9 @@ export function useIndexedDB() {
     };
   }
 
-  async function loadFromIndexedDB(storeName: string): Promise<StandardizedData[]> {
+  async function loadFromIndexedDB(storeName: string, DBversion: number): Promise<StandardizedData[]> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('CSVDatabase', DBversion.value);
+      const request = indexedDB.open('CSVDatabase', DBversion);
 
       request.onupgradeneeded = function (event) {
         const db = (event.target as IDBOpenDBRequest).result;
@@ -102,6 +109,7 @@ export function useIndexedDB() {
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
-    DBversion,
+    DBstate,
+    DBloading
   };
 }

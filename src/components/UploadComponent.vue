@@ -2,7 +2,7 @@
 	<div class="space-y-6">
 		<!-- Drop zone for file upload -->
 		<div
-			class="drop-zone border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer rounded hover:border-gray-500 transition"
+			class="drop-zone border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer rounded hover:border-gray-500 transition relative"
 			@dragover.prevent="onDragOver"
 			@drop.prevent="onDrop"
 			@dragenter="onDragEnter"
@@ -10,7 +10,7 @@
 			:class="{ 'border-gray-500': isDragOver, loaded: loaded }"
 			@click="selectFile"
 		>
-			<div v-if="!loading" v-html="displayMessage"></div>
+			<div v-html="displayMessage"></div>
 			<input
 				type="file"
 				@change="handleFileUpload"
@@ -18,17 +18,14 @@
 				hidden
 				ref="fileInput"
 			/>
-			<!-- Loading spinner -->
+			<!-- Progress overlay -->
 			<div
-				v-if="loading"
-				class="flex justify-center mt-4 bg-green-100"
-			>
-				<div
-					class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"
-				></div>
-			</div>
+				v-if="DBloading"
+				
+				class="absolute top-0 left-0 h-full bg-green-500 opacity-50"
+			></div>
 		</div>
-
+		{{ DBloading }}
 		<!-- Modal for column roles assignment -->
 		<transition name="modal">
 			<div
@@ -177,7 +174,7 @@
 		type ParsedResults,
 	} from '../../types/app-types';
 
-	const { storeInIndexedDB } = useIndexedDB();
+	const { storeInIndexedDB, DBstate, DBloading } = useIndexedDB();
 
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
@@ -187,13 +184,15 @@
 	const isDragOver = ref<boolean>(false);
 	const showModal = ref<boolean>(false);
 	const startLine = ref<number>(1);
-	const loading = ref<boolean>(false);
 	const loaded = ref<boolean>(false);
+	const progress = ref<number>(0);
 	const successMessage = '<p>We Got it. Nice.</p>';
 
 	const props = defineProps<{
 		mssg: string;
 	}>();
+
+	const emit = defineEmits(['fileProcessed']);
 
 	const displayMessage = computed(() => {
 		return loaded.value ? successMessage : props.mssg;
@@ -260,7 +259,7 @@
 	}
 
 	async function parseCSVForFullProcessing() {
-		loading.value = true; // Show loading indicator
+		progress.value = 0; // Reset progress
 		if (file.value) {
 			Papa.parse(file.value, {
 				header: false,
@@ -311,38 +310,21 @@
 					standardizedData,
 					file.value.name.split('.')[0]
 				);
-				// Emit event that file processing and storing is complete
-				const event = new Event('file-processed');
-				window.dispatchEvent(event);
-				loading.value = false; // Hide loading indicator
-				loaded.value = true; // Hide loading indicator
+
 			}
 		} catch (error) {
 			console.error('Error storing data in IndexedDB:', error);
 		}
+		emit('fileProcessed');
 	}
 </script>
 
 <style scoped>
-	.loaded {
-		background-color: green;
-	}
 	.drop-zone {
-		min-height: 200px;
-		display: flex;
-		justify-content: center;
-		align-items: center;
+		position: relative;
+		overflow: hidden;
 	}
-	.loader {
-		border-top-color: transparent;
-		border-right-color: transparent;
-		animation: spin 1s linear infinite;
-		border-bottom-color: currentColor;
-		margin-top: 20px;
-	}
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
+	.drop-zone .absolute {
+		transition: width 0.3s ease-in-out;
 	}
 </style>
