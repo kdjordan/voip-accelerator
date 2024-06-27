@@ -9,6 +9,10 @@ export interface FileEmit {
   data: StandardizedData[];
 }
 
+export interface ParsedResults {
+  data: string[][];
+}
+
 
 export interface RateComparison {
   dialCode: string;
