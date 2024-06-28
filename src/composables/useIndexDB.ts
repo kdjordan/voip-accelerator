@@ -2,7 +2,8 @@ import { ref, reactive } from 'vue';
 import { type StandardizedData } from '../../types/app-types';
 
 const DBstate = reactive({
-  DBVersion: 1,
+  globalDBVersion: 1,
+  globalIsAfileUploading: false
 })
 
 export function useIndexedDB() {
@@ -10,11 +11,12 @@ export function useIndexedDB() {
   const DBloaded = ref<boolean>(false)
 
   async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
-    console.log('running ', storeName, DBstate.DBVersion);
-    const request = indexedDB.open('CSVDatabase', DBstate.DBVersion);
+    console.log('running ', storeName, DBstate.globalDBVersion);
+    const request = indexedDB.open('CSVDatabase', DBstate.globalDBVersion);
 
     request.onupgradeneeded = (event) => {
       DBloading.value = true
+      DBstate.globalIsAfileUploading = true
       const db = (event.target as IDBOpenDBRequest).result;
       if (db) {
         if (!db.objectStoreNames.contains(storeName)) {
@@ -38,10 +40,11 @@ export function useIndexedDB() {
         });
 
         transaction.oncomplete = () => {
-          DBstate.DBVersion++
+          DBstate.globalDBVersion++
+          DBstate.globalIsAfileUploading = false
           DBloading.value = false
           DBloaded.value = true
-          console.log('Data stored successfully');
+          console.log('Data stored successfully', DBloaded.value );
           db.close();
         };
 

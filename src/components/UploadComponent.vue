@@ -1,5 +1,5 @@
 <template>
-	<div class="space-y-6">
+	<div>
 		<!-- Drop zone for file upload -->
 		<div
 			class="drop-zone border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer rounded hover:border-gray-500 transition relative"
@@ -7,7 +7,12 @@
 			@drop.prevent="onDrop"
 			@dragenter="onDragEnter"
 			@dragleave="onDragLeave"
-			:class="{ 'border-gray-500': isDragOver, loaded: loaded }"
+			:class="{
+				'border-gray-500': isDragOver,
+				loaded: loaded,
+				'no-hover': DBstate.globalIsAfileUploading,
+				'bg-green-100': DBloaded,
+			}"
 			@click="selectFile"
 		>
 			<div v-if="!DBloading" v-html="displayMessage"></div>
@@ -16,6 +21,7 @@
 				@change="handleFileUpload"
 				accept=".csv"
 				hidden
+				:disabled="DBstate.globalIsAfileUploading"
 				ref="fileInput"
 			/>
 			<!-- Progress overlay -->
@@ -23,7 +29,8 @@
 				<div class="spinner"></div>
 			</div>
 		</div>
-		{{ DBloading }}
+		<!-- {{ DBloading }} :: {{ DBloaded }}<br />
+		State: {{ DBstate }} -->
 
 		<!-- Modal for column roles assignment -->
 		<transition name="modal">
@@ -191,7 +198,8 @@
 
 	const emit = defineEmits(['fileProcessed']);
 
-	const { storeInIndexedDB, DBloading, DBloaded } = useIndexedDB();
+	const { storeInIndexedDB, DBloading, DBloaded, DBstate } =
+		useIndexedDB();
 
 	const displayMessage = computed(() => {
 		return DBloaded.value ? successMessage : props.mssg;
@@ -218,15 +226,21 @@
 	}
 
 	function onDragOver(event: DragEvent) {
-		event.preventDefault();
+		if (!DBstate.globalIsAfileUploading) {
+			isDragOver.value = false;
+		}
 	}
 
 	function onDragEnter(event: DragEvent) {
-		isDragOver.value = true;
+		if (!DBstate.globalIsAfileUploading) {
+			isDragOver.value = true;
+		}
 	}
 
 	function onDragLeave(event: DragEvent) {
-		isDragOver.value = false;
+		if (!DBstate.globalIsAfileUploading) {
+			isDragOver.value = false;
+		}
 	}
 
 	function parseCSVForPreview(uploadedFile: File) {
@@ -251,9 +265,11 @@
 	}
 
 	function selectFile(): void {
-		const input = fileInput.value;
-		if (input) {
-			input.click();
+		if (!DBstate.globalIsAfileUploading) {
+			const input = fileInput.value;
+			if (input) {
+				input.click();
+			}
 		}
 	}
 
@@ -262,6 +278,7 @@
 		if (file.value) {
 			Papa.parse(file.value, {
 				header: false,
+				fastMode: true,
 				skipEmptyLines: true,
 				complete(results: ParsedResults) {
 					const dataStartIndex = startLine.value - 1;
@@ -324,6 +341,10 @@
 	}
 	.drop-zone .absolute {
 		transition: width 0.3s ease-in-out;
+	}
+	.drop-zone.no-hover:hover {
+		border-color: inherit; /* Disable hover effect */
+		cursor: not-allowed; /* Optionally change the cursor to indicate disabled state */
 	}
 	.spinner {
 		border: 4px solid rgba(0, 0, 0, 0.1);

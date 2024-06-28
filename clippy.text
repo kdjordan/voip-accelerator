@@ -1,0 +1,1 @@
+:class="{ 'border-gray-500': isDragOver, loaded: loaded }"
