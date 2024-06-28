@@ -3,11 +3,11 @@ import { type StandardizedData } from '../../types/app-types';
 
 const DBstate = reactive({
   DBVersion: 1,
-  DBprogress: 0
 })
 
 export function useIndexedDB() {
   const DBloading = ref<boolean>(false)
+  const DBloaded = ref<boolean>(false)
 
   async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
     console.log('running ', storeName, DBstate.DBVersion);
@@ -32,6 +32,7 @@ export function useIndexedDB() {
       if (db) {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
+        
         data.forEach((row) => {
           store.add(row);
         });
@@ -39,6 +40,7 @@ export function useIndexedDB() {
         transaction.oncomplete = () => {
           DBstate.DBVersion++
           DBloading.value = false
+          DBloaded.value = true
           console.log('Data stored successfully');
           db.close();
         };
@@ -106,10 +108,13 @@ export function useIndexedDB() {
     });
   }
 
+
+
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
     DBstate,
-    DBloading
+    DBloading,
+    DBloaded
   };
 }

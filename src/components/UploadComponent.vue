@@ -10,7 +10,7 @@
 			:class="{ 'border-gray-500': isDragOver, loaded: loaded }"
 			@click="selectFile"
 		>
-			<div v-html="displayMessage"></div>
+			<div v-if="!DBloading" v-html="displayMessage"></div>
 			<input
 				type="file"
 				@change="handleFileUpload"
@@ -19,13 +19,12 @@
 				ref="fileInput"
 			/>
 			<!-- Progress overlay -->
-			<div
-				v-if="DBloading"
-				
-				class="absolute top-0 left-0 h-full bg-green-500 opacity-50"
-			></div>
+			<div v-if="DBloading">
+				<div class="spinner"></div>
+			</div>
 		</div>
 		{{ DBloading }}
+
 		<!-- Modal for column roles assignment -->
 		<transition name="modal">
 			<div
@@ -166,15 +165,13 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, computed } from 'vue';
+	import { ref, computed, watch } from 'vue';
 	import Papa from 'papaparse';
 	import { useIndexedDB } from '../composables/useIndexDB';
 	import {
 		type StandardizedData,
 		type ParsedResults,
 	} from '../../types/app-types';
-
-	const { storeInIndexedDB, DBstate, DBloading } = useIndexedDB();
 
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
@@ -194,8 +191,10 @@
 
 	const emit = defineEmits(['fileProcessed']);
 
+	const { storeInIndexedDB, DBloading, DBloaded } = useIndexedDB();
+
 	const displayMessage = computed(() => {
-		return loaded.value ? successMessage : props.mssg;
+		return DBloaded.value ? successMessage : props.mssg;
 	});
 
 	function handleFileUpload(event: Event) {
@@ -310,7 +309,6 @@
 					standardizedData,
 					file.value.name.split('.')[0]
 				);
-
 			}
 		} catch (error) {
 			console.error('Error storing data in IndexedDB:', error);
@@ -326,5 +324,19 @@
 	}
 	.drop-zone .absolute {
 		transition: width 0.3s ease-in-out;
+	}
+	.spinner {
+		border: 4px solid rgba(0, 0, 0, 0.1);
+		border-left-color: #fff;
+		border-radius: 50%;
+		width: 40px;
+		height: 40px;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>
