@@ -1,6 +1,7 @@
 import { ref, reactive } from 'vue';
 import { type StandardizedData } from '../../types/app-types';
 
+//global state - might become Pinia
 const DBstate = reactive({
   globalDBVersion: 1,
   globalIsAfileUploading: false,
@@ -8,6 +9,7 @@ const DBstate = reactive({
 })
 
 export function useIndexedDB() {
+  //local state for components
   const DBloading = ref<boolean>(false)
   const DBloaded = ref<boolean>(false)
 

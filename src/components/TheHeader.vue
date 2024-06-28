@@ -4,6 +4,7 @@
 			<div>
 				<h1 class="uppercase lg:text-sizeXl">Telecom Toolkit</h1>
 			</div>
+			<DumpBtn />
 			<div class="ml-auto">
 				<ul class="flex gap-8 whitespace-nowrap text-sizeSm uppercase">
 					<li><router-link to="/azpricing">AZ Pricing Tool</router-link></li>
@@ -14,3 +15,6 @@
 		</div>
 	</nav>
 </template>
+<script setup lang="ts">
+import DumpBtn from './DumpDbButton.vue'
+</script>
