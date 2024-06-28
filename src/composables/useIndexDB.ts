@@ -3,7 +3,8 @@ import { type StandardizedData } from '../../types/app-types';
 
 const DBstate = reactive({
   globalDBVersion: 1,
-  globalIsAfileUploading: false
+  globalIsAfileUploading: false,
+  AZFilesUploadedCount: 0
 })
 
 export function useIndexedDB() {
@@ -41,6 +42,7 @@ export function useIndexedDB() {
 
         transaction.oncomplete = () => {
           DBstate.globalDBVersion++
+          DBstate.AZFilesUploadedCount++
           DBstate.globalIsAfileUploading = false
           DBloading.value = false
           DBloaded.value = true

@@ -6,9 +6,9 @@
 			</div>
 			<div class="ml-auto">
 				<ul class="flex gap-8 whitespace-nowrap text-sizeSm uppercase">
-					<li>AZ Pricing Tool</li>
-					<li>LCR Generator</li>
-					<li>Dispute Resolution</li>
+					<li><router-link to="/azpricing">AZ Pricing Tool</router-link></li>
+					<li><router-link to="/lcr">LCR Generator</router-link></li>
+					<li><router-link to="/dispute">Dispute Resolution</router-link></li>
 				</ul>
 			</div>
 		</div>
