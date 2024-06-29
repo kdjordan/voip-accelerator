@@ -29,6 +29,8 @@ export function useIndexedDB() {
 
     request.onsuccess = (event) => {
       console.log('settting DBLoading to true')
+      const length = data.length
+      let progress = 0
       const db = (event.target as IDBOpenDBRequest).result as IDBDatabase;
       if (db) {
         const transaction = db.transaction(storeName, 'readwrite');
@@ -37,6 +39,7 @@ export function useIndexedDB() {
         data.forEach((row) => {
           store.add(row);
         });
+        
 
         transaction.oncomplete = () => {
           DBstore.incrementGlobalDBVersion()

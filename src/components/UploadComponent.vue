@@ -27,12 +27,14 @@
 				ref="fileInput"
 			/>
 			<!-- Progress overlay -->
-			<div v-if="localDBloading">
-				<div class="spinner"></div>
+			<div v-if="localDBloading" class="pulse-overlay">
+				<div class="pulse">
+					<h2>Working on it...</h2>
+				</div>
 			</div>
 		</div>
 		global :: {{ DBstore.globalFileIsUploading }}<br />
-		local :: {{ localDBloading }}
+		local :: {{ localDBloading }}<br />
 
 		<!-- Column Roles Modal -->
 		<TheModal
@@ -60,7 +62,8 @@
 	import { useDBstore } from '@/stores/db';
 
 	const DBstore = useDBstore();
-	// const { globalFileIsUploading, setGlobalFileIsUploading } = DBstore
+	const { storeInIndexedDB, localDBloading, localDBloaded } =
+		useIndexedDB();
 
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
@@ -79,9 +82,6 @@
 	}>();
 
 	const emit = defineEmits(['fileProcessed']);
-
-	const { storeInIndexedDB, localDBloading, localDBloaded } =
-		useIndexedDB();
 
 	const displayMessage = computed(() => {
 		return localDBloaded.value ? successMessage : props.mssg;
@@ -228,18 +228,37 @@
 		border-color: inherit; /* Disable hover effect */
 		cursor: not-allowed; /* Optionally change the cursor to indicate disabled state */
 	}
-	.spinner {
-		border: 4px solid rgba(0, 0, 0, 0.1);
-		border-left-color: #fff;
-		border-radius: 50%;
-		width: 40px;
-		height: 40px;
-		animation: spin 1s linear infinite;
+
+	.pulse {
+		width: 100%;
+		height: 100%;
+		display: block;
+		background-color: #4caf50; /* Initial background color */
+		animation: pulse 2s infinite;
 	}
 
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
+	.pulse-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background: rgba(255, 255, 255, 0.8);
+		z-index: 10;
+	}
+
+	@keyframes pulse {
+		0% {
+			background-color: #4caf50; /* Initial color */
+		}
+		50% {
+			background-color: #81c784; /* Midpoint color */
+		}
+		100% {
+			background-color: #4caf50; /* Initial color */
 		}
 	}
 </style>
