@@ -8,12 +8,12 @@
         <UploadComponent
           mssg="<h2 class='text-sizeLg'>Upload YOUR rates as CSV.</h2><br /><br /> (You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer.)"
           v-if="file1 === null"
-          DBname="az"
+          DBname="us"
         />
         <UploadComponent
-          v-if="file2 === null"
           mssg="<h2 class='text-sizeLg'>Upload CARRIER rates as CSV.</h2><br /><br /> (You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer.)"
-          DBname="az"
+          v-if="file2 === null"
+          DBname="us"
         />
        
         <button

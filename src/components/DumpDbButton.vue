@@ -9,7 +9,7 @@
 <script setup lang="ts">
 
 function dumpDB() {
-  const deleteRequest = indexedDB.deleteDatabase('CSVDatabase');
+  const deleteRequest = indexedDB.deleteDatabase('AZ');
 
   deleteRequest.onsuccess = function () {
     console.log(`Deleted database 'CSVDatabase' successfully.`);

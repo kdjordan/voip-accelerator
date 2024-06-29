@@ -69,6 +69,7 @@
 
 	const props = defineProps<{
 		mssg: string;
+		DBname: string;
 	}>();
 
 	const emit = defineEmits(['fileProcessed']);
@@ -199,6 +200,7 @@
 
 				await storeInIndexedDB(
 					standardizedData,
+					props.DBname,
 					file.value.name.split('.')[0]
 				);
 			}

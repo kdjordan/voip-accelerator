@@ -13,9 +13,9 @@ export function useIndexedDB() {
   const DBloading = ref<boolean>(false)
   const DBloaded = ref<boolean>(false)
 
-  async function storeInIndexedDB(data: StandardizedData[], storeName: string) {
+  async function storeInIndexedDB(data: StandardizedData[], DBname: string, storeName: string) {
     console.log('running ', storeName, DBstate.globalDBVersion);
-    const request = indexedDB.open('CSVDatabase', DBstate.globalDBVersion);
+    const request = indexedDB.open(DBname, DBstate.globalDBVersion);
 
     request.onupgradeneeded = (event) => {
       DBloading.value = true
