@@ -7,28 +7,32 @@
 			@drop.prevent="onDrop"
 			@dragenter="onDragEnter"
 			@dragleave="onDragLeave"
+			:disabled="DBstore.globalFileIsUploading"
 			:class="{
 				'border-gray-500': isDragOver,
 				loaded: loaded,
-				'no-hover': DBstate.globalIsAfileUploading,
-				'bg-green-100': DBloaded,
+				'no-hover': localDBloading || localDBloaded,
+				'bg-green-100': localDBloaded,
+				'cursor-not-allowed': DBstore.globalFileIsUploading,
 			}"
 			@click="selectFile"
 		>
-			<div v-if="!DBloading" v-html="displayMessage"></div>
+			<div v-if="!localDBloading" v-html="displayMessage"></div>
 			<input
 				type="file"
 				@change="handleFileUpload"
 				accept=".csv"
 				hidden
-				:disabled="DBstate.globalIsAfileUploading"
+				:disabled="DBstore.globalFileIsUploading"
 				ref="fileInput"
 			/>
 			<!-- Progress overlay -->
-			<div v-if="DBloading">
+			<div v-if="localDBloading">
 				<div class="spinner"></div>
 			</div>
 		</div>
+		global :: {{ DBstore.globalFileIsUploading }}<br />
+		local :: {{ localDBloading }}
 
 		<!-- Column Roles Modal -->
 		<TheModal
@@ -45,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+	import TheModal from './TheModal.vue';
 	import { ref, computed } from 'vue';
 	import Papa from 'papaparse';
 	import { useIndexedDB } from '../composables/useIndexDB';
@@ -52,8 +57,10 @@
 		type StandardizedData,
 		type ParsedResults,
 	} from '../../types/app-types';
-	
-	import TheModal from './TheModal.vue';
+	import { useDBstore } from '@/stores/db';
+
+	const DBstore = useDBstore();
+	// const { globalFileIsUploading, setGlobalFileIsUploading } = DBstore
 
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
@@ -64,7 +71,6 @@
 	const showModal = ref<boolean>(false);
 	const startLine = ref<number>(1);
 	const loaded = ref<boolean>(false);
-	const progress = ref<number>(0);
 	const successMessage = '<p>We Got it. Nice.</p>';
 
 	const props = defineProps<{
@@ -74,11 +80,11 @@
 
 	const emit = defineEmits(['fileProcessed']);
 
-	const { storeInIndexedDB, DBloading, DBloaded, DBstate } =
+	const { storeInIndexedDB, localDBloading, localDBloaded } =
 		useIndexedDB();
 
 	const displayMessage = computed(() => {
-		return DBloaded.value ? successMessage : props.mssg;
+		return localDBloaded.value ? successMessage : props.mssg;
 	});
 
 	function handleFileUpload(event: Event) {
@@ -102,19 +108,19 @@
 	}
 
 	function onDragOver(event: DragEvent) {
-		if (!DBstate.globalIsAfileUploading) {
+		if (!DBstore.globalFileIsUploading) {
 			isDragOver.value = false;
 		}
 	}
 
 	function onDragEnter(event: DragEvent) {
-		if (!DBstate.globalIsAfileUploading) {
+		if (!DBstore.globalFileIsUploading) {
 			isDragOver.value = true;
 		}
 	}
 
 	function onDragLeave(event: DragEvent) {
-		if (!DBstate.globalIsAfileUploading) {
+		if (!DBstore.globalFileIsUploading) {
 			isDragOver.value = false;
 		}
 	}
@@ -141,7 +147,7 @@
 	}
 
 	function selectFile(): void {
-		if (!DBstate.globalIsAfileUploading) {
+		if (!DBstore.globalFileIsUploading) {
 			const input = fileInput.value;
 			if (input) {
 				input.click();
@@ -150,7 +156,6 @@
 	}
 
 	async function parseCSVForFullProcessing() {
-		progress.value = 0; // Reset progress
 		if (file.value) {
 			Papa.parse(file.value, {
 				header: false,

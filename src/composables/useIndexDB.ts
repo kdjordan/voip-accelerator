@@ -1,25 +1,21 @@
-import { ref, reactive } from 'vue';
+import { ref } from 'vue';
 import { type StandardizedData } from '../../types/app-types';
+import { useDBstore } from '@/stores/db';
 
-//global state - might become Pinia
-const DBstate = reactive({
-  globalDBVersion: 1,
-  globalIsAfileUploading: false,
-  AZFilesUploadedCount: 0
-})
+const DBstore = useDBstore()
 
 export function useIndexedDB() {
   //local state for components
-  const DBloading = ref<boolean>(false)
-  const DBloaded = ref<boolean>(false)
+  const localDBloading = ref<boolean>(false)
+  const localDBloaded = ref<boolean>(false)
 
   async function storeInIndexedDB(data: StandardizedData[], DBname: string, storeName: string) {
-    console.log('running ', storeName, DBstate.globalDBVersion);
-    const request = indexedDB.open(DBname, DBstate.globalDBVersion);
+    console.log('running ', storeName, DBstore.globalDBVersion);
+    const request = indexedDB.open(DBname, DBstore.globalDBVersion);
 
     request.onupgradeneeded = (event) => {
-      DBloading.value = true
-      DBstate.globalIsAfileUploading = true
+      localDBloading.value = true
+      DBstore.setGlobalFileIsUploading(true)
       const db = (event.target as IDBOpenDBRequest).result;
       if (db) {
         if (!db.objectStoreNames.contains(storeName)) {
@@ -43,12 +39,12 @@ export function useIndexedDB() {
         });
 
         transaction.oncomplete = () => {
-          DBstate.globalDBVersion++
-          DBstate.AZFilesUploadedCount++
-          DBstate.globalIsAfileUploading = false
-          DBloading.value = false
-          DBloaded.value = true
-          console.log('Data stored successfully', DBloaded.value );
+          DBstore.incrementGlobalDBVersion()
+          DBstore.incrementAzFileCount()
+          localDBloading.value = false
+          localDBloaded.value = true
+          DBstore.setGlobalFileIsUploading(false)
+          console.log('Data stored successfully', localDBloaded.value );
           db.close();
         };
 
@@ -120,8 +116,7 @@ export function useIndexedDB() {
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
-    DBstate,
-    DBloading,
-    DBloaded
+    localDBloading,
+    localDBloaded
   };
 }

@@ -17,13 +17,13 @@
         />
        
         <button
-          v-if="DBstate.AZFilesUploadedCount === 2"
+          v-if="AZfilesUploadedCount === 2"
           @click="makeReport"
           class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition text-center"
         >
           Compare Files
         </button>
-      {{ DBstate.AZFilesUploadedCount }}
+      {{ AZfilesUploadedCount }}
       </div>
       <div v-else>
         <GenerateReport
@@ -41,10 +41,13 @@ import { ref } from 'vue';
 import UploadComponent from '../components/UploadComponent.vue';
 import GenerateReport from '../components/GenerateReport.vue';
 import { type ComparisonReport } from '../../types/app-types';
-import { useIndexedDB } from '../composables/useIndexDB';
 
-const { DBstate } =
-		useIndexedDB();
+import { useDBstore } from '@/stores/db';
+
+const DBstore = useDBstore()
+
+const { AZfilesUploadedCount } = DBstore
+
 
 const file1 = ref<File | null>(null);
 const file2 = ref<File | null>(null);
