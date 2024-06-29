@@ -27,7 +27,7 @@
 				ref="fileInput"
 			/>
 			<!-- Progress overlay -->
-			<div v-if="localDBloading" class="pulse-overlay">
+			<div v-if="localDBloading" class="pulseOverlay">
 				<div class="pulse">
 					<h2>Working on it...</h2>
 				</div>
@@ -79,6 +79,7 @@
 	const props = defineProps<{
 		mssg: string;
 		DBname: string;
+		compName: string;
 	}>();
 
 	const emit = defineEmits(['fileProcessed']);
@@ -212,7 +213,7 @@
 		} catch (error) {
 			console.error('Error storing data in IndexedDB:', error);
 		}
-		emit('fileProcessed');
+		emit('fileProcessed', props.compName);
 	}
 </script>
 
@@ -237,7 +238,7 @@
 		animation: pulse 2s infinite;
 	}
 
-	.pulse-overlay {
+	.pulseOverlay {
 		position: absolute;
 		top: 0;
 		left: 0;

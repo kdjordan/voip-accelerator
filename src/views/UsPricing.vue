@@ -1,9 +1,10 @@
 <template>
   <div>
+    <h1 class="text-sizeLg">US Pricing</h1>
     <div class="mx-auto p-6 space-y-6 pt-32">
       <div
         v-if="!isReporting"
-        class="max-w-[1200px] mx-auto flex flex-col gap-4"
+        class="flex flex-col gap-4"
       >
         <UploadComponent
           mssg="<h2 class='text-sizeLg'>Upload YOUR rates as CSV.</h2><br /><br /> (You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer.)"
@@ -17,13 +18,13 @@
         />
        
         <button
-          v-if="AZfilesUploadedCount === 2"
+          v-if="DBstore.USfilesUploaded.fileCount === 2"
           @click="makeReport"
           class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition text-center"
         >
           Compare Files
         </button>
-      {{ AZfilesUploadedCount }}
+      {{ DBstore.USfilesUploaded.fileCount }}
       </div>
       <div v-else>
         <GenerateReport
@@ -43,10 +44,7 @@ import GenerateReport from '../components/GenerateReport.vue';
 import { type ComparisonReport } from '../../types/app-types';
 
 import { useDBstore } from '@/stores/db';
-
 const DBstore = useDBstore()
-
-const { AZfilesUploadedCount } = DBstore
 
 const file1 = ref<File | null>(null);
 const file2 = ref<File | null>(null);

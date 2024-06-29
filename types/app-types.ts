@@ -34,3 +34,9 @@ export interface NonMatchingCode {
   rate: number;
   file: 'file1' | 'file2';
 }
+
+export interface UploadedFileTracker {
+  file1: string;
+  file2: string;
+  fileCount: number;
+}

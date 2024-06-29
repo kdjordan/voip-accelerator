@@ -1,3 +1,4 @@
+import { createPinia } from 'pinia';
 import { ref } from 'vue';
 import { type StandardizedData } from '../../types/app-types';
 import { useDBstore } from '@/stores/db';
@@ -8,9 +9,11 @@ export function useIndexedDB() {
   //local state for components
   const localDBloading = ref<boolean>(false)
   const localDBloaded = ref<boolean>(false)
+  
 
-  async function storeInIndexedDB(data: StandardizedData[], DBname: string, storeName: string) {
-    console.log('running ', storeName, DBstore.globalDBVersion);
+  async function storeInIndexedDB(data: StandardizedData[], DBname: string, fileName: string) {
+    console.log('running ', fileName, DBstore.globalDBVersion);
+    
     const request = indexedDB.open(DBname, DBstore.globalDBVersion);
 
     request.onupgradeneeded = (event) => {
@@ -18,8 +21,8 @@ export function useIndexedDB() {
       DBstore.setGlobalFileIsUploading(true)
       const db = (event.target as IDBOpenDBRequest).result;
       if (db) {
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, {
+        if (!db.objectStoreNames.contains(fileName)) {
+          db.createObjectStore(fileName, {
             keyPath: 'id',
             autoIncrement: true,
           });
@@ -29,12 +32,11 @@ export function useIndexedDB() {
 
     request.onsuccess = (event) => {
       console.log('settting DBLoading to true')
-      const length = data.length
-      let progress = 0
+    
       const db = (event.target as IDBOpenDBRequest).result as IDBDatabase;
       if (db) {
-        const transaction = db.transaction(storeName, 'readwrite');
-        const store = transaction.objectStore(storeName);
+        const transaction = db.transaction(fileName, 'readwrite');
+        const store = transaction.objectStore(fileName);
         
         data.forEach((row) => {
           store.add(row);
@@ -42,11 +44,13 @@ export function useIndexedDB() {
         
 
         transaction.oncomplete = () => {
-          DBstore.incrementGlobalDBVersion()
-          DBstore.incrementAzFileCount()
           localDBloading.value = false
           localDBloaded.value = true
           DBstore.setGlobalFileIsUploading(false)
+          DBstore.incrementGlobalDBVersion()
+          DBname === 'az' ? DBstore.incrementAzFileCount() : DBstore.incrementUsFileCount()
+          //set file names into createPinia
+          DBstore.addFilenameTracking(DBname, fileName)
           console.log('Data stored successfully', localDBloaded.value );
           db.close();
         };
