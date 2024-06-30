@@ -1,41 +1,33 @@
 <template>
-	<div class="aborder">
-		<!-- Drop zone for file upload -->
+	<div class="max-w-md">
 		<div
-			class="drop-zone border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer rounded hover:border-gray-500 transition relative"
-			@dragover.prevent="onDragOver"
-			@drop.prevent="onDrop"
-			@dragenter="onDragEnter"
-			@dragleave="onDragLeave"
-			:disabled="DBstore.globalFileIsUploading"
-			:class="{
-				'border-gray-500': isDragOver,
-				loaded: loaded,
-				'no-hover': localDBloading || localDBloaded,
-				'bg-green-100': localDBloaded,
-				'cursor-not-allowed': DBstore.globalFileIsUploading,
-			}"
-			@click="selectFile"
+			class="px-6 rounded-lg shadow-md flex flex-col items-center justify-center space-y-4 h-96"
 		>
-			<div v-if="!localDBloading" v-html="displayMessage" class="h-32"></div>
-			<input
-				type="file"
-				@change="handleFileUpload"
-				accept=".csv"
-				hidden
-				:disabled="DBstore.globalFileIsUploading"
-				ref="fileInput"
-			/>
-			<!-- Progress overlay -->
-			<div v-if="localDBloading" class="pulseOverlay h-32">
-				<div class="pulse">
-					<h2>Working on it...</h2>
+			<UploadIcon class="w-8 h-8 text-primary" />
+			<p class="text-muted-foreground">{{ mssg }}</p>
+			<div
+				class="w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+				@dragover.prevent="onDragOver"
+				@drop.prevent="onDrop"
+				@dragenter="onDragEnter"
+				@dragleave="onDragLeave"
+				@click="selectFile"
+			>
+				<p v-if="!localDBloading">Drop file here or click.</p>
+				<div v-if="localDBloading" class="pulseOverlay h-32">
+					<div class="pulse">
+						<h2>Working on it...</h2>
+					</div>
 				</div>
+				<input
+					type="file"
+					@change="handleFileUpload"
+					accept=".csv"
+					hidden
+					ref="fileInput"
+				/>
 			</div>
 		</div>
-		global :: {{ DBstore.globalFileIsUploading }}<br />
-		local :: {{ localDBloading }}<br />
-
 		<!-- Column Roles Modal -->
 		<TheModal
 			v-if="showModal"
@@ -52,6 +44,7 @@
 
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
+	import UploadIcon from './UploadIcon.vue';
 	import { ref, computed } from 'vue';
 	import Papa from 'papaparse';
 	import { useIndexedDB } from '../composables/useIndexDB';
@@ -232,18 +225,16 @@
 	}
 
 	.pulse {
-		width: 100%;
-		height: 100%;
 		background-color: #4caf50; /* Initial background color */
 		animation: pulse 2s infinite;
 	}
 
 	.pulseOverlay {
-		position: absolute;
+		/* position: absolute;
 		top: 0;
-		left: 0;
+		left: 0;*/
 		width: 100%;
-		height: 100%;
+		height: 100%; 
 		display: flex;
 		justify-content: center;
 		align-items: center;
