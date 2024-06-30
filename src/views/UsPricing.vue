@@ -1,64 +1,86 @@
 <template>
-  <div>
-    <h1 class="text-sizeLg">US Pricing</h1>
-    <div class="mx-auto p-6 space-y-6 pt-32">
-      <div
-        v-if="!isReporting"
-        class="flex flex-col gap-4"
-      >
-        <UploadComponent
-          mssg="<h2 class='text-sizeLg'>Upload YOUR rates as CSV.</h2><br /><br /> (You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer.)"
-          v-if="file1 === null"
-          DBname="us"
-        />
-        <UploadComponent
-          mssg="<h2 class='text-sizeLg'>Upload CARRIER rates as CSV.</h2><br /><br /> (You can drag and drop or click <span style='color:blue;'>here</span> to select from your computer.)"
-          v-if="file2 === null"
-          DBname="us"
-        />
-       
-        <button
-          v-if="DBstore.USfilesUploaded.fileCount === 2"
-          @click="makeReport"
-          class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition text-center"
-        >
-          Compare Files
-        </button>
-      {{ DBstore.USfilesUploaded.fileCount }}
-      </div>
-      <div v-else>
+	<div class="flex flex-col items-center pt-32 gap-8">
+		<h1 class="text-sizeLg">US Pricing</h1>
+
+		<div class="flex items-center justify-center gap-8">
+			<UploadComponent
+				mssg="Upload YOUR rates as CSV"
+				DBname="us"
+				compName="us1"
+				@fileProcessed="handleFileProcessedEmit"
+				:class="{
+					'bg-green-100': DBstore.USfilesUploaded.file1 !== '',
+				}"
+			/>
+			<UploadComponent
+				mssg="Upload CARRIER rates as CSV"
+				DBname="us"
+				compName="us2"
+				@fileProcessed="handleFileProcessedEmit"
+				:class="{
+					'bg-green-100': DBstore.USfilesUploaded.file2 !== '',
+				}"
+			/>
+		</div>
+		<div>
+			<button
+				@click="makeReport"
+				:disabled="DBstore.USfilesUploaded.fileCount !== 2"
+				:class="{
+					'bg-blue-500 hover:bg-blue-600 text-white':
+						DBstore.USfilesUploaded.fileCount === 2,
+					'bg-gray-500 text-gray-300 cursor-not-allowed':
+						DBstore.USfilesUploaded.fileCount !== 2,
+				}"
+				class="py-2 px-4 rounded transition text-center"
+			>
+				Compare Files
+			</button>
+		</div>
+		:: {{ DBstore.USfilesUploaded.fileCount }}<br />
+		::{{ DBstore.USfilesUploaded.file1 }}<br />
+		:: {{ DBstore.USfilesUploaded.file2 }}
+		<!-- <div v-else>
         <GenerateReport
           v-if="report"
           :report="report"
           :details="details"
         />
-      </div>
-    </div>
-  </div>
+      </div> -->
+	</div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import UploadComponent from '../components/UploadComponent.vue';
-import GenerateReport from '../components/GenerateReport.vue';
-import { type ComparisonReport } from '../../types/app-types';
+	import { ref } from 'vue';
+	import UploadComponent from '../components/UploadComponent.vue';
+	import GenerateReport from '../components/GenerateReport.vue';
+	import { type ComparisonReport } from '../../types/app-types';
 
-import { useDBstore } from '@/stores/db';
-const DBstore = useDBstore()
+	import { useDBstore } from '@/stores/db';
 
-const file1 = ref<File | null>(null);
-const file2 = ref<File | null>(null);
+	const DBstore = useDBstore();
 
-const isReporting = ref<boolean>(false);
-const report = ref<ComparisonReport | null>(null);
-const details = ref<{
-  fileName1: string;
-  fileName2: string;
-} | null>(null);
+	const file1Loaded = ref<boolean>(false);
+	const file2Loaded = ref<boolean>(false);
 
-function makeReport() {
-  //start the web worker to generate report
-}
+	function handleFileProcessedEmit(fileName: string) {
+		console.log('caught it', fileName);
+		file1Loaded.value
+			? (file1Loaded.value = true)
+			: (file2Loaded.value = true);
+	}
 
+	// const file1 = ref<File | null>(null);
+	// const file2 = ref<File | null>(null);
 
+	// const isReporting = ref<boolean>(false);
+	// const report = ref<ComparisonReport | null>(null);
+	// const details = ref<{
+	//   fileName1: string;
+	//   fileName2: string;
+	// } | null>(null);
+
+	function makeReport() {
+		//start the web worker to generate report
+	}
 </script>
