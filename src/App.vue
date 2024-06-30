@@ -11,3 +11,8 @@
 <script setup>
 	import Header from './components/TheHeader.vue'
 </script>
+<style>
+.aborder {
+	border: 1px solid red;
+}
+</style>

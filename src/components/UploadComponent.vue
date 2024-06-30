@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="aborder">
 		<!-- Drop zone for file upload -->
 		<div
 			class="drop-zone border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer rounded hover:border-gray-500 transition relative"
@@ -17,7 +17,7 @@
 			}"
 			@click="selectFile"
 		>
-			<div v-if="!localDBloading" v-html="displayMessage"></div>
+			<div v-if="!localDBloading" v-html="displayMessage" class="h-32"></div>
 			<input
 				type="file"
 				@change="handleFileUpload"
@@ -27,7 +27,7 @@
 				ref="fileInput"
 			/>
 			<!-- Progress overlay -->
-			<div v-if="localDBloading" class="pulseOverlay">
+			<div v-if="localDBloading" class="pulseOverlay h-32">
 				<div class="pulse">
 					<h2>Working on it...</h2>
 				</div>
@@ -219,6 +219,7 @@
 
 <style scoped>
 	.drop-zone {
+		min-height: 150px;
 		position: relative;
 		overflow: hidden;
 	}
@@ -233,7 +234,6 @@
 	.pulse {
 		width: 100%;
 		height: 100%;
-		display: block;
 		background-color: #4caf50; /* Initial background color */
 		animation: pulse 2s infinite;
 	}
