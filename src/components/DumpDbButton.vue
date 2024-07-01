@@ -10,7 +10,9 @@
 	function dumpDB() {
 		deleteUS();
 		deleteAZ();
-		window.location.reload();
+		setTimeout(() => {
+			window.location.reload();
+		}, 1000)
 	}
 
 	function deleteUS() {

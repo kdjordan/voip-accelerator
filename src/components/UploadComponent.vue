@@ -1,24 +1,23 @@
 <template>
-	<div class="max-w-md">
+	<div class="min-w-[300px] max-w-md rounded">
 		<div
 			class="px-6 rounded-lg shadow-md flex flex-col items-center justify-center space-y-4 h-96"
 		>
 			<UploadIcon class="w-8 h-8 text-primary" />
-			<p class="text-muted-foreground">{{ mssg }}</p>
+			<p class="text-muted-foreground">{{ displayMessage }}</p>
 			<div
-				class="w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+				:class="[
+					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/10 transition-colors',
+					{ pulse: false,'bg-green-100': props.disabled },
+				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
 				@dragenter="onDragEnter"
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<p v-if="!localDBloading">Drop file here or click.</p>
-				<div v-if="localDBloading" class="pulseOverlay h-32">
-					<div class="pulse">
-						<h2>Working on it...</h2>
-					</div>
-				</div>
+				<p>{{ statusMessage }}</p>
+
 				<input
 					type="file"
 					@change="handleFileUpload"
@@ -27,6 +26,7 @@
 					ref="fileInput"
 				/>
 			</div>
+			<DeleteButton />
 		</div>
 		<!-- Column Roles Modal -->
 		<TheModal
@@ -40,12 +40,16 @@
 			@cancel="cancelModal"
 		/>
 	</div>
+	<!-- {{ DBstore.AZfilesUploaded.file1 }}
+	{{ props.compName }} -->
+	<!-- {{ file.name }} -->
 </template>
 
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
 	import UploadIcon from './UploadIcon.vue';
-	import { ref, computed } from 'vue';
+	import DeleteButton	from './DeleteButton.vue'
+	import { ref, computed, watch } from 'vue';
 	import Papa from 'papaparse';
 	import { useIndexedDB } from '../composables/useIndexDB';
 	import {
@@ -55,9 +59,8 @@
 	import { useDBstore } from '@/stores/db';
 
 	const DBstore = useDBstore();
-	const { storeInIndexedDB, localDBloading, localDBloaded } =
+	const { storeInIndexedDB } =
 		useIndexedDB();
-
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
 	const columns = ref<string[]>([]);
@@ -66,20 +69,34 @@
 	const isDragOver = ref<boolean>(false);
 	const showModal = ref<boolean>(false);
 	const startLine = ref<number>(1);
-	const loaded = ref<boolean>(false);
-	const successMessage = '<p>We Got it. Nice.</p>';
+	const successMessage = 'We Got it. Nice.';
 
 	const props = defineProps<{
 		mssg: string;
 		DBname: string;
-		compName: string;
+		componentName: string;
+		disabled: boolean;
 	}>();
+	// console.log('props', props)
+
+	const statusMessage = ref('Drag file here or click.');
 
 	const emit = defineEmits(['fileProcessed']);
 
 	const displayMessage = computed(() => {
-		return localDBloaded.value ? successMessage : props.mssg;
+		return props.disabled ? successMessage : props.mssg;
 	});
+
+	// watch([localDBloading, localDBloaded, () => props.mssg], () => {
+	// 	if (localDBloading.value) {
+	// 		statusMessage.value = 'Working on it...';
+	// 	} else if (localDBloaded.value) {
+	// 		statusMessage.value = 'Success!';
+	// 	} else {
+	// 		statusMessage.value = props.mssg;
+	// 	}
+	// });
+
 
 	function handleFileUpload(event: Event) {
 		const target = event.target as HTMLInputElement | null;
@@ -200,17 +217,22 @@
 				await storeInIndexedDB(
 					standardizedData,
 					props.DBname,
-					file.value.name.split('.')[0]
+					file.value.name,
+					props.componentName,
 				);
+				// console.log('emitting ', file.value, props.componentName)
+				emit('fileProcessed', file.value, props.componentName);
 			}
 		} catch (error) {
 			console.error('Error storing data in IndexedDB:', error);
 		}
-		emit('fileProcessed', props.compName);
 	}
 </script>
 
 <style scoped>
+.loaded {
+	background-color: green;
+}
 	.drop-zone {
 		min-height: 150px;
 		position: relative;
@@ -227,19 +249,6 @@
 	.pulse {
 		background-color: #4caf50; /* Initial background color */
 		animation: pulse 2s infinite;
-	}
-
-	.pulseOverlay {
-		/* position: absolute;
-		top: 0;
-		left: 0;*/
-		width: 100%;
-		height: 100%; 
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		background: rgba(255, 255, 255, 0.8);
-		z-index: 10;
 	}
 
 	@keyframes pulse {

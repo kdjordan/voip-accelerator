@@ -6,16 +6,6 @@
 
 
 
-<!-- Column Roles Modal -->
-		<TheModal
-			v-if="showModal"
-			:showModal="showModal"
-			:columns="columns"
-			:previewData="previewData"
-			:columnRoles="columnRoles"
-			:startLine="startLine"
-			@confirm="confirmColumnRoles"
-			@cancel="cancelModal"
-		/>
+
 
          

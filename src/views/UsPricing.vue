@@ -2,44 +2,39 @@
 	<div class="flex flex-col items-center pt-32 gap-8">
 		<h1 class="text-sizeLg">US Pricing</h1>
 
-		<div class="flex items-center justify-center gap-8">
+		<div class="flex items-center justify-center gap-8 flex-wrap">
 			<UploadComponent
 				mssg="Upload YOUR rates as CSV"
 				DBname="us"
-				compName="us1"
-				@fileProcessed="handleFileProcessedEmit"
-				:class="{
-					'bg-green-100': DBstore.USfilesUploaded.file1 !== '',
-				}"
+				componentName="us1"
+				:disabled="DBstore.isComponentDisabled('us1')"
 			/>
 			<UploadComponent
 				mssg="Upload CARRIER rates as CSV"
 				DBname="us"
-				compName="us2"
-				@fileProcessed="handleFileProcessedEmit"
-				:class="{
-					'bg-green-100': DBstore.USfilesUploaded.file2 !== '',
-				}"
+				componentName="us2"
+				:disabled="DBstore.isComponentDisabled('us2')"
 			/>
 		</div>
 		<div>
 			<button
 				@click="makeReport"
-				:disabled="DBstore.USfilesUploaded.fileCount !== 2"
+				:disabled="!DBstore.getIsUSfull"
 				:class="{
 					'bg-blue-500 hover:bg-blue-600 text-white':
-						DBstore.USfilesUploaded.fileCount === 2,
+					DBstore.getIsUSfull,
 					'bg-gray-500 text-gray-300 cursor-not-allowed':
-						DBstore.USfilesUploaded.fileCount !== 2,
+						!DBstore.getIsUSfull,
 				}"
 				class="py-2 px-4 rounded transition text-center"
 			>
 				Compare Files
 			</button>
 		</div>
-		:: {{ DBstore.USfilesUploaded.fileCount }}<br />
-		::{{ DBstore.USfilesUploaded.file1 }}<br />
-		:: {{ DBstore.USfilesUploaded.file2 }}
+		:: {{ DBstore.getUSFileNames }}<br />
+		::{{ DBstore.getIsUSfull }}<br />
+		:: {{ DBstore.isComponentDisabled('us1') }}
+		:: {{ DBstore.isComponentDisabled('us2') }}
 		<!-- <div v-else>
         <GenerateReport
           v-if="report"

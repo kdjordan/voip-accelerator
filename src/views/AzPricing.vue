@@ -2,44 +2,40 @@
 	<div class="flex flex-col items-center pt-32 gap-8">
 		<h1 class="text-sizeLg">AZ Pricing</h1>
 
-		<div class="flex items-center justify-center gap-8">
+		<div class="flex items-center justify-center gap-8 flex-wrap">
 			<UploadComponent
 				mssg="Upload YOUR rates as CSV"
 				DBname="az"
-				compName="az1"
-				@fileProcessed="handleFileProcessedEmit"
-				:class="{
-					'bg-green-100': DBstore.AZfilesUploaded.file1 !== '',
-				}"
+				componentName="az1"
+				:disabled="DBstore.isComponentDisabled('az1')"
 			/>
+
 			<UploadComponent
 				mssg="Upload CARRIER rates as CSV"
 				DBname="az"
-				compName="az2"
-				@fileProcessed="handleFileProcessedEmit"
-				:class="{
-					'bg-green-100': DBstore.AZfilesUploaded.file2 !== '',
-				}"
+				componentName="az2"
+				:disabled="DBstore.isComponentDisabled('az2')"
 			/>
 		</div>
 		<div>
 			<button
 				@click="makeReport"
-				:disabled="DBstore.AZfilesUploaded.fileCount !== 2"
+				:disabled="!DBstore.getIsAZfull"
 				:class="{
 					'bg-blue-500 hover:bg-blue-600 text-white':
-						DBstore.AZfilesUploaded.fileCount === 2,
+						DBstore.getIsAZfull,
 					'bg-gray-500 text-gray-300 cursor-not-allowed':
-						DBstore.AZfilesUploaded.fileCount !== 2,
+						!DBstore.getIsAZfull,
 				}"
 				class="py-2 px-4 rounded transition text-center"
 			>
 				Compare Files
 			</button>
 		</div>
-		:: {{ DBstore.AZfilesUploaded.fileCount }}<br />
-		::{{ DBstore.AZfilesUploaded.file1 }}<br />
-		:: {{ DBstore.AZfilesUploaded.file2 }}
+		file names::{{ DBstore.getAZFileNames }}<br />
+		full::{{ DBstore.getIsAZfull }}<br />
+		az1::{{ DBstore.isComponentDisabled('az1') }}<br />
+		az1::{{ DBstore.isComponentDisabled('az2') }}<br />
 		<!-- <div v-else>
         <GenerateReport
           v-if="report"
@@ -51,27 +47,23 @@
 </template>
 
 <script setup lang="ts">
+	import { onMounted } from 'vue';
 	import { ref } from 'vue';
 	import UploadComponent from '../components/UploadComponent.vue';
 	import GenerateReport from '../components/GenerateReport.vue';
 	import { type ComparisonReport } from '../../types/app-types';
-
 	import { useDBstore } from '@/stores/db';
-
+	// const {getters} = useDBstore();
 	const DBstore = useDBstore();
 
-	const file1Loaded = ref<boolean>(false);
-	const file2Loaded = ref<boolean>(false);
+	import { useIndexedDB } from '../composables/useIndexDB';
+	// const { getIndexedDBStatus } = useIndexedDB();
 
-	function handleFileProcessedEmit(fileName: string) {
-		console.log('caught it', fileName);
-		file1Loaded.value
-			? (file1Loaded.value = true)
-			: (file2Loaded.value = true);
-	}
-
-	// const file1 = ref<File | null>(null);
-	// const file2 = ref<File | null>(null);
+	onMounted(async () => {
+		// const dbStatus = await getIndexedDBStatus();
+		// console.log('got db status ', dbStatus);
+		// indexedDBStore.setDBStatus(dbStatus);
+	});
 
 	// const isReporting = ref<boolean>(false);
 	// const report = ref<ComparisonReport | null>(null);
@@ -82,5 +74,6 @@
 
 	function makeReport() {
 		//start the web worker to generate report
+		console.log('clickin');
 	}
 </script>

@@ -35,8 +35,9 @@ export interface NonMatchingCode {
   file: 'file1' | 'file2';
 }
 
-export interface UploadedFileTracker {
-  file1: string;
-  file2: string;
-  fileCount: number;
-}
+export type FileUpload = {
+  dbName: string;
+  fileName: string;
+};
+
+export type UploadedFileTracker = Map<string, FileUpload>;
