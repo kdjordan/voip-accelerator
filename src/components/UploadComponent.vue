@@ -8,25 +8,35 @@
 			<div
 				:class="[
 					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/10 transition-colors',
-					{ pulse: false,'bg-green-100': props.disabled },
+					{ pulse: false, 'bg-stone-300': props.disabled },
 				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
 				@dragenter="onDragEnter"
 				@dragleave="onDragLeave"
 				@click="selectFile"
+				
 			>
 				<p>{{ statusMessage }}</p>
+				<p>{{ props.disabled }}</p>
 
 				<input
 					type="file"
 					@change="handleFileUpload"
 					accept=".csv"
 					hidden
+					:disabled="props.disabled"
 					ref="fileInput"
 				/>
 			</div>
-			<DeleteButton />
+			<DeleteButton
+				v-if="DBstore.isComponentDisabled(props.componentName)"
+				@click="removeFromDB"
+			/>
+			data: {{ previewData }}<br />
+			cols: {{ columns }}<br />
+			colroles: {{ columnRoles }}<br />
+			file: {{ fileInput }} 
 		</div>
 		<!-- Column Roles Modal -->
 		<TheModal
@@ -48,7 +58,7 @@
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
 	import UploadIcon from './UploadIcon.vue';
-	import DeleteButton	from './DeleteButton.vue'
+	import DeleteButton from './DeleteButton.vue';
 	import { ref, computed, watch } from 'vue';
 	import Papa from 'papaparse';
 	import { useIndexedDB } from '../composables/useIndexDB';
@@ -59,8 +69,7 @@
 	import { useDBstore } from '@/stores/db';
 
 	const DBstore = useDBstore();
-	const { storeInIndexedDB } =
-		useIndexedDB();
+	const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
 	const columns = ref<string[]>([]);
@@ -77,14 +86,22 @@
 		componentName: string;
 		disabled: boolean;
 	}>();
-	// console.log('props', props)
 
 	const statusMessage = ref('Drag file here or click.');
 
-	const emit = defineEmits(['fileProcessed']);
-
 	const displayMessage = computed(() => {
+		if (DBstore.isComponentDisabled(props.componentName)) {
+			return props.componentName;
+		}
 		return props.disabled ? successMessage : props.mssg;
+	});
+
+	const getStoreNameFromDBstore = computed(() => {
+		console.log(
+			'storeName',
+			DBstore.getStoreNameByComponent(props.componentName)
+		);
+		return DBstore.getStoreNameByComponent(props.componentName);
 	});
 
 	// watch([localDBloading, localDBloaded, () => props.mssg], () => {
@@ -97,7 +114,6 @@
 	// 	}
 	// });
 
-
 	function handleFileUpload(event: Event) {
 		const target = event.target as HTMLInputElement | null;
 		if (target && target.files) {
@@ -107,6 +123,22 @@
 				parseCSVForPreview(uploadedFile);
 			}
 		}
+	}
+
+	async function removeFromDB() {
+		let storeName = DBstore.getStoreNameByComponent(
+			props.componentName
+		);
+		await deleteObjectStore(props.DBname, storeName);
+		resetModalState();
+	}
+
+	function resetModalState() {
+		file.value = null;
+		fileInput.value = null;
+		columns.value = [];
+		previewData.value = [];
+		columnRoles.value = [];
 	}
 
 	function onDrop(event: DragEvent) {
@@ -143,6 +175,7 @@
 				previewData.value = results.data.slice(0, 25) as string[][];
 				columns.value = results.data[startLine.value - 1] as string[];
 				columnRoles.value = Array(columns.value.length).fill('');
+
 				showModal.value = true;
 			},
 		});
@@ -158,11 +191,10 @@
 	}
 
 	function selectFile(): void {
-		if (!DBstore.globalFileIsUploading) {
-			const input = fileInput.value;
-			if (input) {
-				input.click();
-			}
+		const input = fileInput.value;
+		if (input) {
+			input.value = '';
+			input.click();
 		}
 	}
 
@@ -218,10 +250,8 @@
 					standardizedData,
 					props.DBname,
 					file.value.name,
-					props.componentName,
+					props.componentName
 				);
-				// console.log('emitting ', file.value, props.componentName)
-				emit('fileProcessed', file.value, props.componentName);
 			}
 		} catch (error) {
 			console.error('Error storing data in IndexedDB:', error);
@@ -230,9 +260,9 @@
 </script>
 
 <style scoped>
-.loaded {
-	background-color: green;
-}
+	.loaded {
+		background-color: green;
+	}
 	.drop-zone {
 		min-height: 150px;
 		position: relative;

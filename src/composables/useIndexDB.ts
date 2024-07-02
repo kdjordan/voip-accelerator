@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { type StandardizedData } from '../../types/app-types';
 import { useDBstore } from '@/stores/db';
-import { openDB } from 'idb';
+import { openDB, type DBSchema } from 'idb';
 
 const DBstore = useDBstore()
 
@@ -35,59 +35,47 @@ export function useIndexedDB() {
 
 
   async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string) {
-    console.log('running ', dbName, fileName, componentName);
+    try {
 
-    const request = indexedDB.open(dbName, DBstore.globalDBVersion);
-
-    request.onupgradeneeded = (event) => {
-      // localDBloading.value = true
-      DBstore.setGlobalFileIsUploading(true)
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (db) {
-        if (!db.objectStoreNames.contains(fileName)) {
-          db.createObjectStore(fileName, {
-            keyPath: 'id',
-            autoIncrement: true,
-          });
-        }
-      }
-    };
-
-    request.onsuccess = (event) => {
-      console.log('settting DBLoading to true')
-
-      const db = (event.target as IDBOpenDBRequest).result as IDBDatabase;
-      if (db) {
-        const transaction = db.transaction(fileName, 'readwrite');
-        const store = transaction.objectStore(fileName);
-
-        data.forEach((row) => {
-          store.add(row);
-        });
-
-
-        transaction.oncomplete = () => {
-          // localDBloading.value = false
-          DBstore.setGlobalFileIsUploading(false)
-          //set file names into createPinia
-          DBstore.addFileUploaded(componentName, dbName, fileName)
-          console.log('would add this to store ', fileName, dbName,  componentName )
-          
-          db.close();
-        };
-
-        transaction.onerror = (event) => {
-          console.error('Transaction error:', transaction.error);
-        };
-      } else {
-        console.error('Failed to open IndexedDB');
-      }
-    };
-
-    request.onerror = (event) => {
-      const requestError = (event.target as IDBRequest<IDBDatabase>).error;
-      console.error('IndexedDB error:', requestError);
-    };
+      const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
+        upgrade(db, oldVersion, newVersion, transaction) {
+          // Perform upgrade actions if needed
+          console.log('Upgrade needed for IndexedDB');
+          DBstore.setGlobalFileIsUploading(true);
+  
+          if (!db.objectStoreNames.contains(fileName)) {
+            const store = db.createObjectStore(fileName, {
+              keyPath: 'id',
+              autoIncrement: true,
+            });
+  
+            // You can define indexes or additional store options here if needed
+            // store.createIndex('indexName', 'indexKey', { unique: false });
+          }
+        },
+      });
+  
+      const transaction = db.transaction(fileName, 'readwrite');
+      const store = transaction.objectStore(fileName);
+  
+      data.forEach((row) => {
+        store.add(row);
+      });
+  
+      transaction.oncomplete = () => {
+        DBstore.setGlobalFileIsUploading(false);
+        DBstore.addFileUploaded(componentName, dbName, fileName);
+        console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
+  
+        db.close();
+      };
+  
+      transaction.onerror = (event) => {
+        console.error('Transaction error:', transaction.error);
+      };
+    } catch (error) {
+      console.error('Error opening IndexedDB:', error);
+    }
   }
 
   async function loadFromIndexedDB(storeName: string, DBversion: number): Promise<StandardizedData[]> {
@@ -139,11 +127,47 @@ export function useIndexedDB() {
     });
   }
 
+  async function deleteObjectStore(dbName: string, objectStoreName: string): Promise<void> {
+    console.log('called delete', dbName, objectStoreName)
+    try {
+      // Open the database
+      const db = await openDB(dbName, undefined);
+  
+      // Check if the object store exists
+      if (db.objectStoreNames.contains(objectStoreName)) {
+        // Close the database to prepare for version change
+        db.close();
+  
+        // Open a new connection with a higher version to delete the object store
+        const upgradeDb = await openDB(dbName, db.version + 1, {
+          upgrade(upgradeDb) {
+            if (upgradeDb.objectStoreNames.contains(objectStoreName)) {
+              upgradeDb.deleteObjectStore(objectStoreName);
+              //delete from Pinia
+              DBstore.removeFileNameFilesUploaded(objectStoreName)
+              console.log(`Object store "${objectStoreName}" deleted.`);
+            } else {
+              console.log(`Object store "${objectStoreName}" does not exist.`);
+            }
+          },
+        });
+  
+        // Close the upgraded database connection
+        upgradeDb.close();
+      } else {
+        console.log(`Object store "${objectStoreName}" does not exist in database "${dbName}".`);
+      }
+    } catch (error) {
+      console.error('Error deleting object store:', error);
+      throw error; // Rethrow the error to handle it at the caller level if needed
+    }
+  }
 
 
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
     localDBloading,
+    deleteObjectStore
   };
 }

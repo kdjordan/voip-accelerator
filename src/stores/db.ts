@@ -11,13 +11,25 @@ export const useDBstore = defineStore('DBstate', {
     }
   },
   getters: {
+    //will be disabled if componentName had is a key of filesUploaded
     isComponentDisabled: (state) => (componentName: string): boolean => {
-      for (const comp of state.filesUploaded) {
-        if (comp[0] === componentName) {
+      for (const [key, ] of state.filesUploaded) {
+        if (key === componentName) {
           return true;
         }
       }
       return false;
+    },
+    getStoreNameByComponent: (state) => (componentName: string): string => {
+      console.log('being callled ',componentName )
+      for (const [key, value] of state.filesUploaded) {
+        console.log('key ', key, value)
+        if (key === componentName) {
+          return value.fileName
+        }
+      }
+      return '';
+      
     },
     getIsAZfull(state) {
       let azFileCount = 0;
@@ -32,7 +44,7 @@ export const useDBstore = defineStore('DBstate', {
       const azFileNames: string[] = [];
       state.filesUploaded.forEach((file, fileName) => {
         if (file.dbName === 'az') {
-          azFileNames.push(fileName);
+          azFileNames.push(file.fileName);
         }
       });
       return azFileNames;
@@ -57,6 +69,15 @@ export const useDBstore = defineStore('DBstate', {
     },
   },
   actions: {
+    removeFileNameFilesUploaded(fileName: string) {
+      for (const [key, value] of this.filesUploaded) {
+        console.log('key ', key, value)
+        if (value.fileName === fileName) {
+          this.filesUploaded.delete(key);
+          this.incrementGlobalDBVersion()
+        }
+      }
+    },
     setGlobalFileIsUploading(isUploading: boolean) {
       this.globalFileIsUploading = isUploading;
       console.log('in store setting globalUploading', this.globalFileIsUploading)
