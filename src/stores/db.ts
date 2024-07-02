@@ -80,7 +80,6 @@ export const useDBstore = defineStore('DBstate', {
     },
     setGlobalFileIsUploading(isUploading: boolean) {
       this.globalFileIsUploading = isUploading;
-      console.log('in store setting globalUploading', this.globalFileIsUploading)
     },
     incrementGlobalDBVersion() {
       this.globalDBVersion++

@@ -7,18 +7,18 @@
 			<p class="text-muted-foreground">{{ displayMessage }}</p>
 			<div
 				:class="[
-					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/10 transition-colors',
-					{ pulse: false, 'bg-stone-300': props.disabled },
+					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/80 transition-colors',
+					{ pulse: localDBloading, 'bg-green-500 text-white': props.disabled },
 				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
 				@dragenter="onDragEnter"
 				@dragleave="onDragLeave"
 				@click="selectFile"
-				
 			>
-				<p>{{ statusMessage }}</p>
-				<p>{{ props.disabled }}</p>
+				<p :class="{'text-white': localDBloading}">
+					{{ statusMessage }}
+				</p>
 
 				<input
 					type="file"
@@ -33,10 +33,6 @@
 				v-if="DBstore.isComponentDisabled(props.componentName)"
 				@click="removeFromDB"
 			/>
-			data: {{ previewData }}<br />
-			cols: {{ columns }}<br />
-			colroles: {{ columnRoles }}<br />
-			file: {{ fileInput }} 
 		</div>
 		<!-- Column Roles Modal -->
 		<TheModal
@@ -50,6 +46,7 @@
 			@cancel="cancelModal"
 		/>
 	</div>
+	<!-- ::{{ localDBloading }} -->
 	<!-- {{ DBstore.AZfilesUploaded.file1 }}
 	{{ props.compName }} -->
 	<!-- {{ file.name }} -->
@@ -69,7 +66,8 @@
 	import { useDBstore } from '@/stores/db';
 
 	const DBstore = useDBstore();
-	const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
+	const { storeInIndexedDB, deleteObjectStore, localDBloading } =
+		useIndexedDB();
 	const file = ref<File | null>(null);
 	const fileInput = ref<HTMLInputElement | null>(null);
 	const columns = ref<string[]>([]);
@@ -78,7 +76,9 @@
 	const isDragOver = ref<boolean>(false);
 	const showModal = ref<boolean>(false);
 	const startLine = ref<number>(1);
-	const successMessage = 'We Got it. Nice.';
+	const statusMessage = ref<string>(
+		'Drag file here or click to load.'
+	);
 
 	const props = defineProps<{
 		mssg: string;
@@ -87,32 +87,18 @@
 		disabled: boolean;
 	}>();
 
-	const statusMessage = ref('Drag file here or click.');
+	const displayMessage = ref(props.mssg);
 
-	const displayMessage = computed(() => {
-		if (DBstore.isComponentDisabled(props.componentName)) {
-			return props.componentName;
+	watch(
+		[localDBloading, () => props.disabled],
+		([localDBloadingVal, disabledVal]) => {
+			if (localDBloadingVal) {
+				statusMessage.value = 'Working on it...';
+			} else if (disabledVal) {
+				statusMessage.value = 'Success!';
+			}
 		}
-		return props.disabled ? successMessage : props.mssg;
-	});
-
-	const getStoreNameFromDBstore = computed(() => {
-		console.log(
-			'storeName',
-			DBstore.getStoreNameByComponent(props.componentName)
-		);
-		return DBstore.getStoreNameByComponent(props.componentName);
-	});
-
-	// watch([localDBloading, localDBloaded, () => props.mssg], () => {
-	// 	if (localDBloading.value) {
-	// 		statusMessage.value = 'Working on it...';
-	// 	} else if (localDBloaded.value) {
-	// 		statusMessage.value = 'Success!';
-	// 	} else {
-	// 		statusMessage.value = props.mssg;
-	// 	}
-	// });
+	);
 
 	function handleFileUpload(event: Event) {
 		const target = event.target as HTMLInputElement | null;
@@ -129,16 +115,17 @@
 		let storeName = DBstore.getStoreNameByComponent(
 			props.componentName
 		);
+		resetLocalState();
 		await deleteObjectStore(props.DBname, storeName);
-		resetModalState();
 	}
 
-	function resetModalState() {
+	function resetLocalState() {
 		file.value = null;
 		fileInput.value = null;
 		columns.value = [];
 		previewData.value = [];
 		columnRoles.value = [];
+		statusMessage.value = 'Drag file here or click to load.';
 	}
 
 	function onDrop(event: DragEvent) {
@@ -263,11 +250,11 @@
 	.loaded {
 		background-color: green;
 	}
-	.drop-zone {
+	/* .drop-zone {
 		min-height: 150px;
 		position: relative;
 		overflow: hidden;
-	}
+	} */
 	.drop-zone .absolute {
 		transition: width 0.3s ease-in-out;
 	}

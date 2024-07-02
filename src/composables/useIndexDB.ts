@@ -36,13 +36,12 @@ export function useIndexedDB() {
 
   async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string) {
     try {
-
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
-        upgrade(db, oldVersion, newVersion, transaction) {
+        upgrade(db) {
           // Perform upgrade actions if needed
           console.log('Upgrade needed for IndexedDB');
           DBstore.setGlobalFileIsUploading(true);
-  
+          localDBloading.value = true
           if (!db.objectStoreNames.contains(fileName)) {
             const store = db.createObjectStore(fileName, {
               keyPath: 'id',
@@ -63,14 +62,16 @@ export function useIndexedDB() {
       });
   
       transaction.oncomplete = () => {
-        DBstore.setGlobalFileIsUploading(false);
         DBstore.addFileUploaded(componentName, dbName, fileName);
         console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
+        DBstore.setGlobalFileIsUploading(false);
+        localDBloading.value = false
   
         db.close();
       };
   
       transaction.onerror = (event) => {
+        localDBloading.value = true
         console.error('Transaction error:', transaction.error);
       };
     } catch (error) {
