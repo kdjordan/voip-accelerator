@@ -54,7 +54,7 @@ export function useIndexedDB() {
   
       const transaction = db.transaction(fileName, 'readwrite');
       const store = transaction.objectStore(fileName);
-      // console.log('got data ', data)
+      // console.log('got data for row ', data)
       data.forEach((row) => {
         // console.log('adding', row)
         store.add(row);

@@ -172,6 +172,7 @@
 		columnRoles: string[];
 		startLine: number;
 	}) {
+		console.log('column roles ', columnRoles)
 		columnRoles.value = event.columnRoles;
 		startLine.value = event.startLine;
 		parseCSVForFullProcessing();
@@ -191,7 +192,6 @@
 	}
 
 	async function parseCSVForFullProcessing() {
-		console.log('the file ', file.value);
 		if (file.value) {
 			Papa.parse(file.value, {
 				header: false,

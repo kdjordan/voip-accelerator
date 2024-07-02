@@ -109,9 +109,12 @@
 					>
 						<button
 							@click="confirmColumnRoles"
-							
+							:disabled="!allRequiredRolesSelected"
+							:class="{
+								'opacity-50 cursor-not-allowed':
+									!allRequiredRolesSelected,
+							}"
 							type="button"
-						
 							class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
 						>
 							Confirm
@@ -148,12 +151,18 @@
 
 	// Compute available roles for each column
 	const availableRoles = (currentIndex: number) => {
-  const usedRoles = new Set(
-    columnRoles.value.filter(role => role !== '' && role !== undefined)
-  );
-  const allRoles = ['Destination', 'Code', 'Rate']; // Example roles; replace with your actual roles
-  return allRoles.filter(role => !usedRoles.has(role) || role === columnRoles.value[currentIndex]);
-};
+		const usedRoles = new Set(
+			columnRoles.value.filter(
+				(role) => role !== '' && role !== undefined
+			)
+		);
+		const allRoles = ['Destination', 'Code', 'Rate']; // Example roles; replace with your actual roles
+		return allRoles.filter(
+			(role) =>
+				!usedRoles.has(role) ||
+				role === columnRoles.value[currentIndex]
+		);
+	};
 
 	const displayedData = computed(() => {
 		return props.previewData.slice(startLine.value - 1);
@@ -161,13 +170,18 @@
 
 	// Check if all column roles are selected
 	const allRequiredRolesSelected = computed(() => {
-  const requiredRoles = ['Destination', 'Code', 'Rate'];
-  return requiredRoles.every(role => columnRoles.value.includes(role));
-});
-
+		const requiredRoles = ['Destination', 'Code', 'Rate'];
+		return requiredRoles.every((role) =>
+			columnRoles.value.includes(role)
+		);
+	});
 
 	function confirmColumnRoles() {
-		console.log('sending in emit', columnRoles.value, startLine.value)
+		console.log(
+			'sending in emit',
+			columnRoles.value,
+			startLine.value
+		);
 		emit('confirm', {
 			columnRoles: columnRoles.value,
 			startLine: startLine.value,
