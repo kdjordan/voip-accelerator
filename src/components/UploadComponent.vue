@@ -7,8 +7,8 @@
 			<p class="text-muted-foreground">{{ displayMessage }}</p>
 			<div
 				:class="[
-					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center text-primary hover:bg-primary/80 transition-colors',
-					{ pulse: localDBloading, 'bg-green-500 text-white': props.disabled },
+					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-primary/80 transition-colors',
+					{ pulse: localDBloading, fileLoaded: props.disabled },
 				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
@@ -16,7 +16,7 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<p :class="{'text-white': localDBloading}">
+				<p :class="{ 'text-white': localDBloading }">
 					{{ statusMessage }}
 				</p>
 
@@ -76,6 +76,7 @@
 	const isDragOver = ref<boolean>(false);
 	const showModal = ref<boolean>(false);
 	const startLine = ref<number>(1);
+
 	const statusMessage = ref<string>(
 		'Drag file here or click to load.'
 	);
@@ -162,13 +163,17 @@
 				previewData.value = results.data.slice(0, 25) as string[][];
 				columns.value = results.data[startLine.value - 1] as string[];
 				columnRoles.value = Array(columns.value.length).fill('');
-
 				showModal.value = true;
 			},
 		});
 	}
 
-	function confirmColumnRoles() {
+	function confirmColumnRoles(event: {
+		columnRoles: string[];
+		startLine: number;
+	}) {
+		columnRoles.value = event.columnRoles;
+		startLine.value = event.startLine;
 		parseCSVForFullProcessing();
 		showModal.value = false;
 	}
@@ -186,6 +191,7 @@
 	}
 
 	async function parseCSVForFullProcessing() {
+		console.log('the file ', file.value);
 		if (file.value) {
 			Papa.parse(file.value, {
 				header: false,
@@ -212,7 +218,6 @@
 						});
 						standardizedData.push(standardizedRow);
 					});
-
 					storeDataInIndexedDB(standardizedData);
 				},
 			});
@@ -222,6 +227,8 @@
 	async function storeDataInIndexedDB(
 		data: { [key: string]: string | number }[]
 	) {
+
+		//here is where we left off
 		try {
 			if (file.value) {
 				const standardizedData: StandardizedData[] = data.map(
@@ -247,8 +254,9 @@
 </script>
 
 <style scoped>
-	.loaded {
-		background-color: green;
+	.fileLoaded {
+		background-color: #81c784;
+		color: white;
 	}
 	/* .drop-zone {
 		min-height: 150px;

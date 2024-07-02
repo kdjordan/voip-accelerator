@@ -167,6 +167,7 @@
 
 
 	function confirmColumnRoles() {
+		console.log('sending in emit', columnRoles.value, startLine.value)
 		emit('confirm', {
 			columnRoles: columnRoles.value,
 			startLine: startLine.value,

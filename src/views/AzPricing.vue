@@ -29,7 +29,7 @@
 				}"
 				class="py-2 px-4 rounded transition text-center"
 			>
-				Compare Files
+				Get Report
 			</button>
 		</div>
 		file names::{{ DBstore.getAZFileNames }}<br />

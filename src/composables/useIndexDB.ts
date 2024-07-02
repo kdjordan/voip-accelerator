@@ -1,5 +1,5 @@
+import { type StandardizedData } from './../../types/app-types';
 import { ref } from 'vue';
-import { type StandardizedData } from '../../types/app-types';
 import { useDBstore } from '@/stores/db';
 import { openDB, type DBSchema } from 'idb';
 
@@ -35,6 +35,7 @@ export function useIndexedDB() {
 
 
   async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string) {
+    console.log('received ', data, dbName, fileName, componentName)
     try {
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
         upgrade(db) {
@@ -43,35 +44,33 @@ export function useIndexedDB() {
           DBstore.setGlobalFileIsUploading(true);
           localDBloading.value = true
           if (!db.objectStoreNames.contains(fileName)) {
-            const store = db.createObjectStore(fileName, {
+            db.createObjectStore(fileName, {
               keyPath: 'id',
               autoIncrement: true,
             });
-  
-            // You can define indexes or additional store options here if needed
-            // store.createIndex('indexName', 'indexKey', { unique: false });
           }
         },
       });
   
       const transaction = db.transaction(fileName, 'readwrite');
       const store = transaction.objectStore(fileName);
-  
+      // console.log('got data ', data)
       data.forEach((row) => {
+        // console.log('adding', row)
         store.add(row);
       });
   
       transaction.oncomplete = () => {
         DBstore.addFileUploaded(componentName, dbName, fileName);
-        console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
+        // console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
         DBstore.setGlobalFileIsUploading(false);
         localDBloading.value = false
   
         db.close();
       };
   
-      transaction.onerror = (event) => {
-        localDBloading.value = true
+      transaction.onerror = () => {
+        localDBloading.value = false
         console.error('Transaction error:', transaction.error);
       };
     } catch (error) {
