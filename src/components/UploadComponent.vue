@@ -44,6 +44,7 @@
 			:startLine="startLine"
 			@confirm="confirmColumnRoles"
 			@cancel="cancelModal"
+			:columnRoleOptions="[{value: 'destination', label: 'Destination'}, {value: 'dialCode', label: 'Dial Code'}, {value: 'rate', label: 'Rate'}]"
 		/>
 	</div>
 	<!-- ::{{ localDBloading }} -->
@@ -216,6 +217,7 @@
 										: row[index];
 							}
 						});
+						// console.log('pushing standarized row', standardizedRow)
 						standardizedData.push(standardizedRow);
 					});
 					storeDataInIndexedDB(standardizedData);
@@ -233,9 +235,9 @@
 			if (file.value) {
 				const standardizedData: StandardizedData[] = data.map(
 					(row) => ({
-						destName: row.destName as string,
-						dialCode: row.dialCode as string,
-						rate: row.rate as number,
+						destName: row.Destination as string,
+						dialCode: Number(row.Code),
+						rate: Number(row.Rate),
 						// Add more properties as needed
 					})
 				);

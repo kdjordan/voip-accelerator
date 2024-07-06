@@ -1,6 +1,6 @@
 export interface StandardizedData {
   destName: string;
-  dialCode: string;
+  dialCode: number;
   rate: number;
 }
 

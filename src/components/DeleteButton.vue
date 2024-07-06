@@ -5,20 +5,3 @@
     Remove
   </button>
 </template>
-
-<script setup lang="ts">
-import { useIndexedDB } from '../composables/useIndexDB';
-const { deleteObjectStore } = useIndexedDB();
-// const props  = defineProps<{
-//   storeName: string;
-//   dbName: string;
-// }>()
-// console.log('in delete button ', props.storeName, props.dbName)
-
-// async function removeDB() { 
-//   await deleteObjectStore(props.dbName, props.storeName)
-// }
-</script>
-
-<style scoped>
-</style>

@@ -142,6 +142,7 @@
 		previewData: string[][];
 		columnRoles: string[];
 		startLine: number;
+		columnRoleOptions: { value: string; label: string }[];
 	}>();
 
 	const emit = defineEmits(['confirm', 'cancel']);
