@@ -73,10 +73,10 @@
 														<option value="">Select Role</option>
 														<option
 															v-for="role in availableRoles(index)"
-															:key="role"
-															:value="role"
+															:key="role.value"
+															:value="role.value"
 														>
-															{{ role }}
+															{{ role.label }}
 														</option>
 													</select>
 												</th>
@@ -157,12 +157,17 @@
 				(role) => role !== '' && role !== undefined
 			)
 		);
-		const allRoles = ['Destination', 'Code', 'Rate']; // Example roles; replace with your actual roles
-		return allRoles.filter(
-			(role) =>
-				!usedRoles.has(role) ||
-				role === columnRoles.value[currentIndex]
-		);
+		// const allRoles = ['Destination', 'Code', 'Rate']; // Example roles; replace with your actual roles
+		// return allRoles.filter(
+		// 	(role) =>
+		// 		!usedRoles.has(role) ||
+		// 		role === columnRoles.value[currentIndex]
+		// );
+		return props.columnRoleOptions.filter(
+    (role) =>
+      !usedRoles.has(role.value) ||
+      role.value === columnRoles.value[currentIndex]
+  );
 	};
 
 	const displayedData = computed(() => {
@@ -171,11 +176,11 @@
 
 	// Check if all column roles are selected
 	const allRequiredRolesSelected = computed(() => {
-		const requiredRoles = ['Destination', 'Code', 'Rate'];
-		return requiredRoles.every((role) =>
-			columnRoles.value.includes(role)
-		);
-	});
+  const requiredRoles = props.columnRoleOptions.map(option => option.value);
+  return requiredRoles.every((role) =>
+    columnRoles.value.includes(role)
+  );
+});
 
 	function confirmColumnRoles() {
 		console.log(

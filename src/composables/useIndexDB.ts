@@ -35,7 +35,6 @@ export function useIndexedDB() {
 
 
   async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string) {
-    console.log('received ', data, dbName, fileName, componentName)
     try {
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
         upgrade(db) {

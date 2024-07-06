@@ -2,6 +2,7 @@ export interface StandardizedData {
   destName: string;
   dialCode: number;
   rate: number;
+  [key: string]: string | number; // Allow additional properties
 }
 
 export interface FileEmit {

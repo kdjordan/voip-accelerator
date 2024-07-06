@@ -44,7 +44,11 @@
 			:startLine="startLine"
 			@confirm="confirmColumnRoles"
 			@cancel="cancelModal"
-			:columnRoleOptions="[{value: 'destination', label: 'Destination'}, {value: 'dialCode', label: 'Dial Code'}, {value: 'rate', label: 'Rate'}]"
+			:columnRoleOptions="[
+				{ value: 'destName', label: 'Destination' },
+				{ value: 'dialCode', label: 'Dial Code' },
+				{ value: 'rate', label: 'Rate' },
+			]"
 		/>
 	</div>
 	<!-- ::{{ localDBloading }} -->
@@ -173,11 +177,11 @@
 		columnRoles: string[];
 		startLine: number;
 	}) {
-		console.log('column roles ', columnRoles)
+		showModal.value = false;
+		console.log('column roles ', columnRoles);
 		columnRoles.value = event.columnRoles;
 		startLine.value = event.startLine;
 		parseCSVForFullProcessing();
-		showModal.value = false;
 	}
 
 	function cancelModal() {
@@ -198,52 +202,50 @@
 				header: false,
 				fastMode: true,
 				skipEmptyLines: true,
-				complete(results: ParsedResults) {
+				complete(results: Papa.ParseResult<string[]>) {
 					const dataStartIndex = startLine.value - 1;
 					const fullData = results.data.slice(dataStartIndex);
-					const standardizedData: {
-						[key: string]: string | number;
-					}[] = [];
+					const standardizedData: StandardizedData[] = [];
 
 					fullData.forEach((row: string[]) => {
-						const standardizedRow: {
-							[key: string]: string | number;
-						} = {};
+						const standardizedRow: StandardizedData = {
+							destName: '',
+							dialCode: 0,
+							rate: 0,
+						};
+
 						columnRoles.value.forEach((role, index) => {
 							if (role) {
-								standardizedRow[role] =
-									role === 'rate'
-										? parseFloat(row[index])
-										: row[index];
+								console.log(role)
+								switch (role) {
+									case 'destName':
+										standardizedRow.destName = row[index];
+										break;
+									case 'dialCode':
+										standardizedRow.dialCode = parseFloat(row[index]);
+										break;
+									case 'rate':
+										standardizedRow.rate = parseFloat(row[index]);
+										break;
+									default:
+										break
+										
+								}
 							}
 						});
-						// console.log('pushing standarized row', standardizedRow)
 						standardizedData.push(standardizedRow);
 					});
+
 					storeDataInIndexedDB(standardizedData);
 				},
 			});
 		}
 	}
-
-	async function storeDataInIndexedDB(
-		data: { [key: string]: string | number }[]
-	) {
-
-		//here is where we left off
+	async function storeDataInIndexedDB(data: StandardizedData[]) {
 		try {
 			if (file.value) {
-				const standardizedData: StandardizedData[] = data.map(
-					(row) => ({
-						destName: row.Destination as string,
-						dialCode: Number(row.Code),
-						rate: Number(row.Rate),
-						// Add more properties as needed
-					})
-				);
-
 				await storeInIndexedDB(
-					standardizedData,
+					data,
 					props.DBname,
 					file.value.name,
 					props.componentName
@@ -253,6 +255,32 @@
 			console.error('Error storing data in IndexedDB:', error);
 		}
 	}
+
+	// async function storeDataInIndexedDB(
+	// 	data: { [key: string]: string | number }[]
+	// ) {
+	// 	try {
+	// 		if (file.value) {
+	// 			const standardizedData: StandardizedData[] = data.map(
+	// 				(row) => ({
+	// 					destName: row.Destination as string,
+	// 					dialCode: Number(row.Code),
+	// 					rate: Number(row.Rate),
+	// 					// Add more properties as needed
+	// 				})
+	// 			);
+
+	// 			await storeInIndexedDB(
+	// 				standardizedData,
+	// 				props.DBname,
+	// 				file.value.name,
+	// 				props.componentName
+	// 			);
+	// 		}
+	// 	} catch (error) {
+	// 		console.error('Error storing data in IndexedDB:', error);
+	// 	}
+	// }
 </script>
 
 <style scoped>
@@ -260,11 +288,6 @@
 		background-color: #81c784;
 		color: white;
 	}
-	/* .drop-zone {
-		min-height: 150px;
-		position: relative;
-		overflow: hidden;
-	} */
 	.drop-zone .absolute {
 		transition: width 0.3s ease-in-out;
 	}
