@@ -202,6 +202,9 @@
 				header: false,
 				fastMode: true,
 				skipEmptyLines: true,
+				delimiter: ',', // Specify the delimiter (default is auto-detect)
+				quoteChar: '"', // Specify the quote character
+				escapeChar: '\\', // Specify the escape character (optional)
 				complete(results: Papa.ParseResult<string[]>) {
 					const dataStartIndex = startLine.value - 1;
 					const fullData = results.data.slice(dataStartIndex);
@@ -214,25 +217,32 @@
 							rate: 0,
 						};
 
+						// Assuming columnRoles is correctly defined
 						columnRoles.value.forEach((role, index) => {
 							if (role) {
-								console.log(role)
+								// Adjust index to skip empty roles
+								const columnIndex = columnRoles.value.indexOf(role);
+
 								switch (role) {
 									case 'destName':
-										standardizedRow.destName = row[index];
+										standardizedRow.destName = row[columnIndex];
 										break;
 									case 'dialCode':
-										standardizedRow.dialCode = parseFloat(row[index]);
+										standardizedRow.dialCode = parseFloat(
+											row[columnIndex]
+										);
 										break;
 									case 'rate':
-										standardizedRow.rate = parseFloat(row[index]);
+										standardizedRow.rate = parseFloat(
+											row[columnIndex]
+										);
 										break;
 									default:
-										break
-										
+										standardizedRow[role] = row[columnIndex];
 								}
 							}
 						});
+
 						standardizedData.push(standardizedRow);
 					});
 
@@ -241,6 +251,7 @@
 			});
 		}
 	}
+
 	async function storeDataInIndexedDB(data: StandardizedData[]) {
 		try {
 			if (file.value) {
@@ -254,6 +265,18 @@
 		} catch (error) {
 			console.error('Error storing data in IndexedDB:', error);
 		}
+	}
+
+	function preprocessCSV(csvText: string): string {
+		// Enclose every field in double quotes
+		const lines = csvText.split('\n');
+		const processedLines = lines.map((line) => {
+			const columns = line.split(',');
+			const quotedColumns = columns.map((col) => `"${col}"`);
+			return quotedColumns.join(',');
+		});
+
+		return processedLines.join('\n');
 	}
 
 	// async function storeDataInIndexedDB(
@@ -298,7 +321,7 @@
 
 	.pulse {
 		background-color: #4caf50; /* Initial background color */
-		animation: pulse 2s infinite;
+		animation: pulse 1s infinite;
 	}
 
 	@keyframes pulse {

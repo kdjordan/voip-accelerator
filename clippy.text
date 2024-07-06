@@ -1,0 +1,5 @@
+const standardizedRow: StandardizedData = {
+									destName: '',
+									dialCode: 0,
+									rate: 0,
+								};
