@@ -8,7 +8,7 @@
 			<div
 				:class="[
 					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-primary/80 transition-colors',
-					{ pulse: localDBloading, fileLoaded: props.disabled },
+					{ pulse: fileLoading.value, fileLoaded: props.disabled },
 				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
@@ -16,7 +16,7 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<p :class="{ 'text-white': localDBloading }">
+				<p :class="{ 'text-white': fileLoading }">
 					{{ statusMessage }}
 				</p>
 
@@ -52,40 +52,21 @@
 		/>
 	</div>
 	<!-- ::{{ localDBloading }} -->
-	<!-- {{ DBstore.AZfilesUploaded.file1 }}
-	{{ props.compName }} -->
-	<!-- {{ file.name }} -->
+	<!-- {{ DBstore.AZfilesUploaded.file1 }} -->
+	{{ componentName }}
+	{{ fileLoading.value }}
 </template>
 
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
 	import UploadIcon from './UploadIcon.vue';
 	import DeleteButton from './DeleteButton.vue';
-	import { ref, computed, watch } from 'vue';
-	import Papa from 'papaparse';
+	import { ref, watch } from 'vue';
 	import { useIndexedDB } from '../composables/useIndexDB';
-	import {
-		type StandardizedData,
-		type ParsedResults,
-	} from '../../types/app-types';
+	import useCSVProcessing from '../composables/useCsvFilesFunctions';
 	import { useDBstore } from '@/stores/db';
 
-	const DBstore = useDBstore();
-	const { storeInIndexedDB, deleteObjectStore, localDBloading } =
-		useIndexedDB();
-	const file = ref<File | null>(null);
-	const fileInput = ref<HTMLInputElement | null>(null);
-	const columns = ref<string[]>([]);
-	const previewData = ref<string[][]>([]);
-	const columnRoles = ref<string[]>([]);
-	const isDragOver = ref<boolean>(false);
-	const showModal = ref<boolean>(false);
-	const startLine = ref<number>(1);
-
-	const statusMessage = ref<string>(
-		'Drag file here or click to load.'
-	);
-
+	//componenet props
 	const props = defineProps<{
 		mssg: string;
 		DBname: string;
@@ -93,10 +74,39 @@
 		disabled: boolean;
 	}>();
 
+	// Extract functions and reactive properties from useCSVProcessing composable
+	const {
+		file,
+		startLine,
+		columnRoles,
+		columns,
+		DBname,
+		showModal,
+		previewData,
+		componentName,
+		parseCSVForFullProcessing,
+		parseCSVForPreview,
+		removeFromDB
+	} = useCSVProcessing();
+
+	// Define reactive properties
+	const fileInput = ref<HTMLInputElement | null>(null);
+	const isDragOver = ref<boolean>(false);
+	const statusMessage = ref<string>(
+		'Drag file here or click to load.'
+	);
 	const displayMessage = ref(props.mssg);
 
+	// Set DB name and component name from props
+	const DBstore = useDBstore();
+	const { fileLoading } = useIndexedDB();
+
+	DBname.value = props.DBname;
+	componentName.value = props.componentName;
+
+
 	watch(
-		[localDBloading, () => props.disabled],
+		[() => fileLoading.value, () => props.disabled],
 		([localDBloadingVal, disabledVal]) => {
 			if (localDBloadingVal) {
 				statusMessage.value = 'Working on it...';
@@ -115,14 +125,6 @@
 				parseCSVForPreview(uploadedFile);
 			}
 		}
-	}
-
-	async function removeFromDB() {
-		let storeName = DBstore.getStoreNameByComponent(
-			props.componentName
-		);
-		resetLocalState();
-		await deleteObjectStore(props.DBname, storeName);
 	}
 
 	function resetLocalState() {
@@ -161,17 +163,6 @@
 		}
 	}
 
-	function parseCSVForPreview(uploadedFile: File) {
-		Papa.parse(uploadedFile, {
-			header: false,
-			complete(results) {
-				previewData.value = results.data.slice(0, 25) as string[][];
-				columns.value = results.data[startLine.value - 1] as string[];
-				columnRoles.value = Array(columns.value.length).fill('');
-				showModal.value = true;
-			},
-		});
-	}
 
 	function confirmColumnRoles(event: {
 		columnRoles: string[];
@@ -195,115 +186,6 @@
 			input.click();
 		}
 	}
-
-	async function parseCSVForFullProcessing() {
-		if (file.value) {
-			Papa.parse(file.value, {
-				header: false,
-				fastMode: true,
-				skipEmptyLines: true,
-				delimiter: ',', // Specify the delimiter (default is auto-detect)
-				quoteChar: '"', // Specify the quote character
-				escapeChar: '\\', // Specify the escape character (optional)
-				complete(results: Papa.ParseResult<string[]>) {
-					const dataStartIndex = startLine.value - 1;
-					const fullData = results.data.slice(dataStartIndex);
-					const standardizedData: StandardizedData[] = [];
-
-					fullData.forEach((row: string[]) => {
-						const standardizedRow: StandardizedData = {
-							destName: '',
-							dialCode: 0,
-							rate: 0,
-						};
-
-						// Assuming columnRoles is correctly defined
-						columnRoles.value.forEach((role, index) => {
-							if (role) {
-								// Adjust index to skip empty roles
-								const columnIndex = columnRoles.value.indexOf(role);
-
-								switch (role) {
-									case 'destName':
-										standardizedRow.destName = row[columnIndex];
-										break;
-									case 'dialCode':
-										standardizedRow.dialCode = parseFloat(
-											row[columnIndex]
-										);
-										break;
-									case 'rate':
-										standardizedRow.rate = parseFloat(
-											row[columnIndex]
-										);
-										break;
-									default:
-										standardizedRow[role] = row[columnIndex];
-								}
-							}
-						});
-
-						standardizedData.push(standardizedRow);
-					});
-
-					storeDataInIndexedDB(standardizedData);
-				},
-			});
-		}
-	}
-
-	async function storeDataInIndexedDB(data: StandardizedData[]) {
-		try {
-			if (file.value) {
-				await storeInIndexedDB(
-					data,
-					props.DBname,
-					file.value.name,
-					props.componentName
-				);
-			}
-		} catch (error) {
-			console.error('Error storing data in IndexedDB:', error);
-		}
-	}
-
-	function preprocessCSV(csvText: string): string {
-		// Enclose every field in double quotes
-		const lines = csvText.split('\n');
-		const processedLines = lines.map((line) => {
-			const columns = line.split(',');
-			const quotedColumns = columns.map((col) => `"${col}"`);
-			return quotedColumns.join(',');
-		});
-
-		return processedLines.join('\n');
-	}
-
-	// async function storeDataInIndexedDB(
-	// 	data: { [key: string]: string | number }[]
-	// ) {
-	// 	try {
-	// 		if (file.value) {
-	// 			const standardizedData: StandardizedData[] = data.map(
-	// 				(row) => ({
-	// 					destName: row.Destination as string,
-	// 					dialCode: Number(row.Code),
-	// 					rate: Number(row.Rate),
-	// 					// Add more properties as needed
-	// 				})
-	// 			);
-
-	// 			await storeInIndexedDB(
-	// 				standardizedData,
-	// 				props.DBname,
-	// 				file.value.name,
-	// 				props.componentName
-	// 			);
-	// 		}
-	// 	} catch (error) {
-	// 		console.error('Error storing data in IndexedDB:', error);
-	// 	}
-	// }
 </script>
 
 <style scoped>

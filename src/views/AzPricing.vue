@@ -32,15 +32,14 @@
 				Get Report
 			</button>
 		</div>
-		file names::{{ DBstore.getAZFileNames }}<br />
+		<!-- file names::{{ DBstore.getAZFileNames }}<br />
 		full::{{ DBstore.getIsAZfull }}<br />
 		az1 disabled::{{ DBstore.isComponentDisabled('az1') }}<br />
 		az2 disabled::{{ DBstore.isComponentDisabled('az2') }}<br />
 		DBversion::{{ DBstore.globalDBVersion }}<br />
-		File uploading::{{ DBstore.globalFileIsUploading}}<br />
-		<!-- <div v-else>
+		File uploading::{{ DBstore.globalFileIsUploading}}<br /> -->
+		<!-- <div v-if="report">
         <GenerateReport
-          v-if="report"
           :report="report"
           :details="details"
         />

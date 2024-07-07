@@ -1,14 +1,13 @@
 import { type StandardizedData } from './../../types/app-types';
 import { ref } from 'vue';
 import { useDBstore } from '@/stores/db';
-import { openDB, type DBSchema } from 'idb';
+import { openDB } from 'idb';
 
 const DBstore = useDBstore()
 
 export function useIndexedDB() {
-  //local state for components
-  const localDBloading = ref<boolean>(false)
-  // const localDBloaded = ref<boolean>(false)
+  const fileLoading = ref<boolean>(false)
+  
 
   // async function getIndexedDBStatus() {
   //   const dbList = await indexedDB.databases();
@@ -41,7 +40,7 @@ export function useIndexedDB() {
           // Perform upgrade actions if needed
           console.log('Upgrade needed for IndexedDB');
           DBstore.setGlobalFileIsUploading(true);
-          localDBloading.value = true
+          fileLoading.value = true
           if (!db.objectStoreNames.contains(fileName)) {
             db.createObjectStore(fileName, {
               keyPath: 'id',
@@ -63,13 +62,13 @@ export function useIndexedDB() {
         DBstore.addFileUploaded(componentName, dbName, fileName);
         // console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
         DBstore.setGlobalFileIsUploading(false);
-        localDBloading.value = false
+        fileLoading.value = false
   
         db.close();
       };
   
       transaction.onerror = () => {
-        localDBloading.value = false
+        fileLoading.value = false
         console.error('Transaction error:', transaction.error);
       };
     } catch (error) {
@@ -166,7 +165,7 @@ export function useIndexedDB() {
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
-    localDBloading,
-    deleteObjectStore
+    deleteObjectStore,
+    fileLoading
   };
 }
