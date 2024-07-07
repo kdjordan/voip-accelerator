@@ -1,31 +1,33 @@
 import { ref } from 'vue';
-import Papa  from 'papaparse';
+import Papa from 'papaparse';
 import {
-  type StandardizedData,
-  type ParsedResults,
+	type StandardizedData,
+	type ParsedResults,
 } from '../../types/app-types';
 import { useDBstore } from '@/stores/db';
-import { useIndexedDB } from './useIndexDB';
+import useIndexedDB from './useIndexDB';
 
 const { storeInIndexedDB, deleteObjectStore } =
-  useIndexedDB();
+	useIndexedDB();
 
 const DBstore = useDBstore();
 
 
 export default function useCSVProcessing() {
-  const file = ref<File | null>(null);
-  const startLine = ref<number>(1); // Adjust default start line if needed
-  const columnRoles = ref<string[]>([]); // Ensure columnRoles is properly defined
-  const DBname = ref<string>('')
-  const componentName = ref<string>('')
+	const file = ref<File | null>(null);
+	const startLine = ref<number>(1); // Adjust default start line if needed
+	const columnRoles = ref<string[]>([]); // Ensure columnRoles is properly defined
+	const DBname = ref<string>('')
+	const componentName = ref<string>('')
 	const previewData = ref<string[][]>([]);
 	const columns = ref<string[]>([]);
 	const showModal = ref<boolean>(false);
-	
+	const fileLoading = ref<boolean>(false)
 
-  async function parseCSVForFullProcessing(): Promise<void> {
-    if (file.value) {
+
+	async function parseCSVForFullProcessing(): Promise<void> {
+		fileLoading.value = true
+		if (file.value) {
 			Papa.parse(file.value, {
 				header: false,
 				fastMode: true,
@@ -72,13 +74,14 @@ export default function useCSVProcessing() {
 						});
 
 						standardizedData.push(standardizedRow);
-					}); 
+					});
 
 					storeDataInIndexedDB(standardizedData);
+					fileLoading.value = false
 				},
 			});
 		}
-  }
+	}
 
 
 	function parseCSVForPreview(uploadedFile: File) {
@@ -99,8 +102,8 @@ export default function useCSVProcessing() {
 		}
 	}
 
-  async function storeDataInIndexedDB(data: StandardizedData[]) {
-    console.log('storing with ', DBname.value, componentName.value)
+	async function storeDataInIndexedDB(data: StandardizedData[]) {
+		console.log('storing with ', DBname.value, componentName.value)
 		try {
 			if (file.value) {
 				await storeInIndexedDB(
@@ -115,18 +118,18 @@ export default function useCSVProcessing() {
 		}
 	}
 
-  // function preprocessCSV(csvText: string): string {
-  //   const lines = csvText.split('\n');
-  //   const processedLines = lines.map((line) => {
-  //     const columns = line.split(',');
-  //     const quotedColumns = columns.map((col) => `"${col}"`);
-  //     return quotedColumns.join(',');
-  //   });
+	// function preprocessCSV(csvText: string): string {
+	//   const lines = csvText.split('\n');
+	//   const processedLines = lines.map((line) => {
+	//     const columns = line.split(',');
+	//     const quotedColumns = columns.map((col) => `"${col}"`);
+	//     return quotedColumns.join(',');
+	//   });
 
-  //   return processedLines.join('\n');
-  // }
+	//   return processedLines.join('\n');
+	// }
 
-		async function removeFromDB() {
+	async function removeFromDB() {
 		let storeName = DBstore.getStoreNameByComponent(
 			componentName.value
 		);
@@ -134,17 +137,17 @@ export default function useCSVProcessing() {
 		await deleteObjectStore(DBname.value, storeName);
 	}
 
-  return {
-    file,
-    startLine,
+	return {
+		file,
+		startLine,
 		previewData,
 		columns,
-    DBname,
+		DBname,
 		showModal,
-    componentName,
-    columnRoles,
+		componentName,
+		columnRoles,
 		parseCSVForPreview,
-    parseCSVForFullProcessing,
+		parseCSVForFullProcessing,
 		removeFromDB
-  };
+	};
 }

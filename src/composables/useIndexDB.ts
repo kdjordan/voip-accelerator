@@ -5,9 +5,8 @@ import { openDB } from 'idb';
 
 const DBstore = useDBstore()
 
-export function useIndexedDB() {
+export default function useIndexedDB() {
   const fileLoading = ref<boolean>(false)
-  
 
   // async function getIndexedDBStatus() {
   //   const dbList = await indexedDB.databases();
@@ -33,14 +32,14 @@ export function useIndexedDB() {
   // }
 
 
-  async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string) {
+  async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string): Promise<void> {
+    fileLoading.value = true
     try {
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
         upgrade(db) {
           // Perform upgrade actions if needed
           console.log('Upgrade needed for IndexedDB');
           DBstore.setGlobalFileIsUploading(true);
-          fileLoading.value = true
           if (!db.objectStoreNames.contains(fileName)) {
             db.createObjectStore(fileName, {
               keyPath: 'id',
@@ -62,16 +61,16 @@ export function useIndexedDB() {
         DBstore.addFileUploaded(componentName, dbName, fileName);
         // console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
         DBstore.setGlobalFileIsUploading(false);
-        fileLoading.value = false
   
         db.close();
+        fileLoading.value = false
       };
   
       transaction.onerror = () => {
-        fileLoading.value = false
         console.error('Transaction error:', transaction.error);
       };
     } catch (error) {
+      fileLoading.value = false
       console.error('Error opening IndexedDB:', error);
     }
   }

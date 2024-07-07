@@ -8,7 +8,7 @@
 			<div
 				:class="[
 					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-primary/80 transition-colors',
-					{ pulse: fileLoading.value, fileLoaded: props.disabled },
+					{ pulse: fileLoading, fileLoaded: props.disabled },
 				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
@@ -53,8 +53,9 @@
 	</div>
 	<!-- ::{{ localDBloading }} -->
 	<!-- {{ DBstore.AZfilesUploaded.file1 }} -->
-	{{ componentName }}
-	{{ fileLoading.value }}
+	<!-- {{ componentName }} -->
+	{{ fileLoading }}
+	{{ showModal }}
 </template>
 
 <script setup lang="ts">
@@ -62,7 +63,7 @@
 	import UploadIcon from './UploadIcon.vue';
 	import DeleteButton from './DeleteButton.vue';
 	import { ref, watch } from 'vue';
-	import { useIndexedDB } from '../composables/useIndexDB';
+	import useIndexedDB  from '../composables/useIndexDB';
 	import useCSVProcessing from '../composables/useCsvFilesFunctions';
 	import { useDBstore } from '@/stores/db';
 
@@ -89,6 +90,9 @@
 		removeFromDB
 	} = useCSVProcessing();
 
+	const { fileLoading } = useIndexedDB();
+
+
 	// Define reactive properties
 	const fileInput = ref<HTMLInputElement | null>(null);
 	const isDragOver = ref<boolean>(false);
@@ -96,25 +100,33 @@
 		'Drag file here or click to load.'
 	);
 	const displayMessage = ref(props.mssg);
+	const isFileLoading = ref<boolean>(false)
 
 	// Set DB name and component name from props
 	const DBstore = useDBstore();
-	const { fileLoading } = useIndexedDB();
 
 	DBname.value = props.DBname;
 	componentName.value = props.componentName;
 
+// 	watch(
+//   () => isFileLoading.value,
+//   (newValue) => {
+//     isFileLoading.value = newValue;
+//   }
+// );
 
-	watch(
-		[() => fileLoading.value, () => props.disabled],
-		([localDBloadingVal, disabledVal]) => {
-			if (localDBloadingVal) {
-				statusMessage.value = 'Working on it...';
-			} else if (disabledVal) {
-				statusMessage.value = 'Success!';
-			}
-		}
-	);
+
+
+	// watch(
+	// 	[() => fileLoading.value, () => props.disabled],
+	// 	([localDBloadingVal, disabledVal]) => {
+	// 		if (localDBloadingVal) {
+	// 			statusMessage.value = 'Working on it...';
+	// 		} else if (disabledVal) {
+	// 			statusMessage.value = 'Success!';
+	// 		}
+	// 	}
+	// );
 
 	function handleFileUpload(event: Event) {
 		const target = event.target as HTMLInputElement | null;
@@ -164,7 +176,7 @@
 	}
 
 
-	function confirmColumnRoles(event: {
+	async function confirmColumnRoles(event: {
 		columnRoles: string[];
 		startLine: number;
 	}) {
@@ -172,7 +184,7 @@
 		console.log('column roles ', columnRoles);
 		columnRoles.value = event.columnRoles;
 		startLine.value = event.startLine;
-		parseCSVForFullProcessing();
+		await parseCSVForFullProcessing();
 	}
 
 	function cancelModal() {

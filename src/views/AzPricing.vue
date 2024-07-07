@@ -57,7 +57,7 @@
 	// const {getters} = useDBstore();
 	const DBstore = useDBstore();
 
-	import { useIndexedDB } from '../composables/useIndexDB';
+	import useIndexedDB  from '../composables/useIndexDB';
 	// const { getIndexedDBStatus } = useIndexedDB();
 
 	onMounted(async () => {
