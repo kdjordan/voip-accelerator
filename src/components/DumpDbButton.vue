@@ -6,17 +6,19 @@
 		DUMP
 	</button>
 </template>
+
 <script setup lang="ts">
 	function dumpDB() {
 		deleteUS();
 		deleteAZ();
+		localStorage.clear();
 		setTimeout(() => {
 			window.location.reload();
-		}, 1000)
+		}, 1000);
 	}
 
 	function deleteUS() {
-		const deleteRequest = indexedDB.deleteDatabase('us');
+		const deleteRequest = window.indexedDB.deleteDatabase('us');
 
 		deleteRequest.onsuccess = function () {
 			console.log(`Deleted database US successfully.`);
@@ -33,11 +35,11 @@
 			console.warn(
 				`Deletion of database US is blocked. Close all connections.`
 			);
-			indexedDB.close();
 		};
 	}
+
 	function deleteAZ() {
-		const deleteRequest = indexedDB.deleteDatabase('az');
+		const deleteRequest = window.indexedDB.deleteDatabase('az');
 
 		deleteRequest.onsuccess = function () {
 			console.log(`Deleted database AZ successfully.`);
@@ -54,7 +56,6 @@
 			console.warn(
 				`Deletion of database AZ is blocked. Close all connections.`
 			);
-			indexedDB.close();
 		};
 	}
 </script>

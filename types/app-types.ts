@@ -1,3 +1,10 @@
+export interface State {
+  globalDBVersion: number;
+  filesUploaded: UploadedFileTracker;
+  globalFileIsUploading: boolean;
+  componentFileIsUploading: string | undefined; // Allow string or undefined
+}
+
 export interface StandardizedData {
   destName: string;
   dialCode: number;
@@ -13,7 +20,6 @@ export interface FileEmit {
 export interface ParsedResults {
   data: string[][];
 }
-
 
 export interface RateComparison {
   dialCode: string;

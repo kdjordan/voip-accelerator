@@ -1,19 +1,34 @@
-import { type UploadedFileTracker, type FileUpload } from './../../types/app-types';
+import { type UploadedFileTracker, type FileUpload, type State } from '../../types/app-types';
 import { defineStore } from 'pinia'
 
 
-export const useDBstore = defineStore('DBstate', {
-  state: () => {
+
+export const useDBstate = defineStore('useDBstate', {
+  state: (): State => {
     return {
       globalDBVersion: 1,
       filesUploaded: new Map<string, FileUpload>() as UploadedFileTracker,
       globalFileIsUploading: false,
+      componentFileIsUploading: undefined
     }
   },
   getters: {
+    checkFileNameAvailable: (state) => {
+      return (fileName: string) => {
+        for (const fileUpload of state.filesUploaded.values()) {
+          if (fileUpload.fileName === fileName) {
+            return true;
+          }
+        }
+        return false;
+      };
+    },
+    isComponentFileUploading: (state) => (componentName: string): boolean => {
+      return componentName === state.componentFileIsUploading
+    },
     //will be disabled if componentName had is a key of filesUploaded
     isComponentDisabled: (state) => (componentName: string): boolean => {
-      for (const [key, ] of state.filesUploaded) {
+      for (const [key,] of state.filesUploaded) {
         if (key === componentName) {
           return true;
         }
@@ -21,7 +36,6 @@ export const useDBstore = defineStore('DBstate', {
       return false;
     },
     getStoreNameByComponent: (state) => (componentName: string): string => {
-      console.log('being callled ',componentName )
       for (const [key, value] of state.filesUploaded) {
         console.log('key ', key, value)
         if (key === componentName) {
@@ -29,7 +43,7 @@ export const useDBstore = defineStore('DBstate', {
         }
       }
       return '';
-      
+
     },
     getIsAZfull(state) {
       let azFileCount = 0;
@@ -71,12 +85,15 @@ export const useDBstore = defineStore('DBstate', {
   actions: {
     removeFileNameFilesUploaded(fileName: string) {
       for (const [key, value] of this.filesUploaded) {
-        console.log('key ', key, value)
         if (value.fileName === fileName) {
           this.filesUploaded.delete(key);
           this.incrementGlobalDBVersion()
         }
       }
+    },
+    setComponentFileIsUploading(componentName: string | undefined) {
+      console.log(componentName)
+      this.componentFileIsUploading = componentName
     },
     setGlobalFileIsUploading(isUploading: boolean) {
       this.globalFileIsUploading = isUploading;

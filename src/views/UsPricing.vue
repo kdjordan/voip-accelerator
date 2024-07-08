@@ -22,7 +22,7 @@
 				:disabled="!DBstore.getIsUSfull"
 				:class="{
 					'bg-blue-500 hover:bg-blue-600 text-white':
-					DBstore.getIsUSfull,
+						DBstore.getIsUSfull,
 					'bg-gray-500 text-gray-300 cursor-not-allowed':
 						!DBstore.getIsUSfull,
 				}"
@@ -33,8 +33,8 @@
 		</div>
 		:: {{ DBstore.getUSFileNames }}<br />
 		::{{ DBstore.getIsUSfull }}<br />
-		:: {{ DBstore.isComponentDisabled('us1') }}
-		:: {{ DBstore.isComponentDisabled('us2') }}
+		:: {{ DBstore.isComponentDisabled('us1') }} ::
+		{{ DBstore.isComponentDisabled('us2') }}
 		<!-- <div v-else>
         <GenerateReport
           v-if="report"
@@ -51,9 +51,9 @@
 	import GenerateReport from '../components/GenerateReport.vue';
 	import { type ComparisonReport } from '../../types/app-types';
 
-	import { useDBstore } from '@/stores/db';
+	import { useDBstate } from '@/stores/dbStore';
 
-	const DBstore = useDBstore();
+	const DBstore = useDBstate();
 
 	const file1Loaded = ref<boolean>(false);
 	const file2Loaded = ref<boolean>(false);

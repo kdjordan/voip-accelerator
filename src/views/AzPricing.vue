@@ -48,23 +48,12 @@
 </template>
 
 <script setup lang="ts">
-	import { onMounted } from 'vue';
-	import { ref } from 'vue';
 	import UploadComponent from '../components/UploadComponent.vue';
 	import GenerateReport from '../components/GenerateReport.vue';
 	import { type ComparisonReport } from '../../types/app-types';
-	import { useDBstore } from '@/stores/db';
-	// const {getters} = useDBstore();
-	const DBstore = useDBstore();
+	import { useDBstate } from '@/stores/dbStore';
+	const DBstore = useDBstate();
 
-	import useIndexedDB  from '../composables/useIndexDB';
-	// const { getIndexedDBStatus } = useIndexedDB();
-
-	onMounted(async () => {
-		// const dbStatus = await getIndexedDBStatus();
-		// console.log('got db status ', dbStatus);
-		// indexedDBStore.setDBStatus(dbStatus);
-	});
 
 	// const isReporting = ref<boolean>(false);
 	// const report = ref<ComparisonReport | null>(null);

@@ -1,28 +1,27 @@
-export default function useSessionStorage<T>() {
-  const setSessionData = (key: string, data: T) => {
-    sessionStorage.setItem(key, JSON.stringify(data));
-  };
+import { useStorage } from '@vueuse/core';
+import { ref, computed } from 'vue';
 
-  const getSessionData = (key: string): T | null => {
-    const storedData = sessionStorage.getItem(key);
-    if (storedData) {
-      return JSON.parse(storedData);
+export default function useSessionStorage() {
+  function useSessionProperty<T>(key: string, defaultValue: T) {
+    const storageRef = useStorage<T>(key, defaultValue); // Explicitly specify the type
+    const sessionProperty = computed(() => storageRef.value);
+
+    function setSessionProperty(value: T) {
+      storageRef.value = value;
     }
-    return null;
-  };
 
-  const removeSessionData = (key: string) => {
-    sessionStorage.removeItem(key);
-  };
+    function getSessionProperty() {
+      return sessionProperty.value;
+    }
 
-  const clearSessionStorage = () => {
-    sessionStorage.clear();
-  };
+    return {
+      value: sessionProperty,
+      setValue: setSessionProperty,
+      getValue: getSessionProperty,
+    };
+  }
 
   return {
-    setSessionData,
-    getSessionData,
-    removeSessionData,
-    clearSessionStorage,
+    useSessionProperty,
   };
 }

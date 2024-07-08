@@ -8,7 +8,12 @@
 			<div
 				:class="[
 					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-primary/80 transition-colors',
-					{ pulse: fileLoading, fileLoaded: props.disabled },
+					{
+						pulse: DBstore.isComponentFileUploading(
+							props.componentName
+						),
+						fileLoaded: props.disabled,
+					},
 				]"
 				@dragover.prevent="onDragOver"
 				@drop.prevent="onDrop"
@@ -16,7 +21,13 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<p :class="{ 'text-white': fileLoading }">
+				<p
+					:class="{
+						'text-white': DBstore.isComponentFileUploading(
+							props.componentName
+						),
+					}"
+				>
 					{{ statusMessage }}
 				</p>
 
@@ -25,7 +36,7 @@
 					@change="handleFileUpload"
 					accept=".csv"
 					hidden
-					:disabled="props.disabled"
+					:disabled="props.disabled || DBstore.globalFileIsUploading"
 					ref="fileInput"
 				/>
 			</div>
@@ -54,8 +65,8 @@
 	<!-- ::{{ localDBloading }} -->
 	<!-- {{ DBstore.AZfilesUploaded.file1 }} -->
 	<!-- {{ componentName }} -->
-	{{ fileLoading }}
-	{{ showModal }}
+	{{ DBstore.isComponentFileUploading(props.componentName) }}
+	<!-- {{ showModal }} -->
 </template>
 
 <script setup lang="ts">
@@ -63,9 +74,9 @@
 	import UploadIcon from './UploadIcon.vue';
 	import DeleteButton from './DeleteButton.vue';
 	import { ref, watch } from 'vue';
-	import useIndexedDB  from '../composables/useIndexDB';
+	import useIndexedDB from '../composables/useIndexDB';
 	import useCSVProcessing from '../composables/useCsvFilesFunctions';
-	import { useDBstore } from '@/stores/db';
+	import { useDBstate } from '@/stores/dbStore';
 
 	//componenet props
 	const props = defineProps<{
@@ -87,11 +98,8 @@
 		componentName,
 		parseCSVForFullProcessing,
 		parseCSVForPreview,
-		removeFromDB
+		removeFromDB,
 	} = useCSVProcessing();
-
-	const { fileLoading } = useIndexedDB();
-
 
 	// Define reactive properties
 	const fileInput = ref<HTMLInputElement | null>(null);
@@ -100,22 +108,20 @@
 		'Drag file here or click to load.'
 	);
 	const displayMessage = ref(props.mssg);
-	const isFileLoading = ref<boolean>(false)
+	const isFileLoading = ref<boolean>(false);
 
 	// Set DB name and component name from props
-	const DBstore = useDBstore();
+	const DBstore = useDBstate();
 
 	DBname.value = props.DBname;
 	componentName.value = props.componentName;
 
-// 	watch(
-//   () => isFileLoading.value,
-//   (newValue) => {
-//     isFileLoading.value = newValue;
-//   }
-// );
-
-
+	// 	watch(
+	//   () => isFileLoading.value,
+	//   (newValue) => {
+	//     isFileLoading.value = newValue;
+	//   }
+	// );
 
 	// watch(
 	// 	[() => fileLoading.value, () => props.disabled],
@@ -174,7 +180,6 @@
 			isDragOver.value = false;
 		}
 	}
-
 
 	async function confirmColumnRoles(event: {
 		columnRoles: string[];
