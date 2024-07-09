@@ -1,33 +1,10 @@
 // comparison.worker.ts
 import { type ComparisonReport } from '../../types/app-types';
 
-// Define interfaces
-// export interface RateComparison {
-//   dialCode: string;
-//   destName: string;
-//   rateFile1: number;
-//   rateFile2: number;
-//   percentageDifference: number;
-// }
-
-// export interface ComparisonReport {
-//   higherRatesForFile1: RateComparison[];
-//   higherRatesForFile2: RateComparison[];
-//   sameRates: { [dialCode: string]: { destName: string; rateFile1: number; rateFile2: number } };
-//   nonMatchingCodes: NonMatchingCode[];
-// }
-
-// export interface NonMatchingCode {
-//   dialCode: string;
-//   destName: string;
-//   rate: number;
-//   file: 'file1' | 'file2';
-// }
-
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {
-  console.log('got the data')
   const { file1, file2 } = event.data;
+
 
   // Process comparison and generate report
   const report: ComparisonReport = generateComparisonReport(file1, file2);
@@ -38,6 +15,7 @@ self.addEventListener('message', (event) => {
 
 // Function to generate the comparison report
 function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport {
+  console.log('generating')
   const comparisonReport: ComparisonReport = {
     higherRatesForFile1: [],
     higherRatesForFile2: [],
@@ -46,52 +24,63 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
   };
 
   // Mapping dialCode entries of file2 for quick lookup
-  const dialCodeMapFile2 = new Map<string, { destName: string; rate: number }>();
-  file2.forEach(entry => {
-    dialCodeMapFile2.set(entry.dialCode.toString(), { destName: entry.destName, rate: entry.rate });
+  const dialCodeMapFile1 = new Map<number, { destName: string; rate: number }>();
+  file1.forEach(entry => {
+    dialCodeMapFile1.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
   });
 
-  // Process file1 entries
-  file1.forEach(entry => {
-    const dialCode = entry.dialCode.toString();
-    if (dialCodeMapFile2.has(dialCode)) {
-      const file2Entry = dialCodeMapFile2.get(dialCode)!;
-      const percentageDifference = calculatePercentageDifference(entry.rate, file2Entry.rate);
+  const dialCodeMapFile2 = new Map<number, { destName: string; rate: number }>();
+  file2.forEach(entry => {
+    dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
+  });
+  console.log('got the data out', dialCodeMapFile1)
+  console.log('got the data out', dialCodeMapFile2)
 
-      if (entry.rate > file2Entry.rate) {
+  // Process file1 entries
+  // Process file1 entries
+  dialCodeMapFile1.forEach((valueFile1, keyFile1) => {
+
+    if (dialCodeMapFile2.has(keyFile1)) {
+
+      const file2Entry = dialCodeMapFile2.get(keyFile1)!;
+      if (valueFile1.rate > file2Entry.rate) {
+        const percentageDifference = calculatePercentageDifference(valueFile1.rate, file2Entry.rate);
         comparisonReport.higherRatesForFile1.push({
-          dialCode,
-          destName: entry.destName,
-          rateFile1: entry.rate,
+          dialCode: keyFile1,
+          destName: valueFile1.destName,
+          rateFile1: valueFile1.rate,
+          rateFile2: file2Entry.rate,
+          percentageDifference
+        })
+      } else if (valueFile1.rate < file2Entry.rate) {
+        const percentageDifference = calculatePercentageDifference(file2Entry.rate, valueFile1.rate,);
+        comparisonReport.higherRatesForFile1.push({
+          dialCode: keyFile1,
+          destName: valueFile1.destName,
+          rateFile1: valueFile1.rate,
           rateFile2: file2Entry.rate,
           percentageDifference
         });
-      } else if (entry.rate < file2Entry.rate) {
-        comparisonReport.higherRatesForFile2.push({
-          dialCode,
-          destName: entry.destName,
-          rateFile1: entry.rate,
-          rateFile2: file2Entry.rate,
-          percentageDifference
-        });
-      } else {
-        comparisonReport.sameRates[dialCode] = {
-          destName: entry.destName,
-          rateFile1: entry.rate,
+      } else if (valueFile1.rate === file2Entry.rate) {
+        comparisonReport.sameRates[keyFile1] = {
+          destName: valueFile1.destName,
+          rateFile1: valueFile1.rate,
           rateFile2: file2Entry.rate
         };
       }
 
       // Remove from map to track remaining non-matching codes in file2
-      // dialCodeMapFile2.delete(dialCode);
+      dialCodeMapFile2.delete(keyFile1);
     } else {
       comparisonReport.nonMatchingCodes.push({
-        dialCode,
-        destName: entry.destName,
-        rate: entry.rate,
+        dialCode: keyFile1,
+        destName: valueFile1.destName,
+        rate: valueFile1.rate,
         file: 'file1'
       });
     }
+
+    // console.log(comparisonReport.higherRatesForFile1)
   });
 
   // Process remaining entries in file2 not found in file1
@@ -104,6 +93,7 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
     });
   });
 
+  console.log('got report ', comparisonReport)
   return comparisonReport;
 }
 

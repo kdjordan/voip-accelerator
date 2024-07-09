@@ -22,7 +22,7 @@ export interface ParsedResults {
 }
 
 export interface RateComparison {
-  dialCode: string;
+  dialCode: number;
   destName: string;
   rateFile1: number;
   rateFile2: number;
@@ -37,7 +37,7 @@ export interface ComparisonReport {
 }
 
 export interface NonMatchingCode {
-  dialCode: string;
+  dialCode: number;
   destName: string;
   rate: number;
   file: 'file1' | 'file2';
