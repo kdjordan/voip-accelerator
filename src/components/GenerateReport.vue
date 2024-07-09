@@ -98,7 +98,7 @@
 
 
 <script setup lang="ts">
-import { ComparisonReport } from '@/types/app-types';
+import { type ComparisonReport } from '../../types/app-types';
   
 
 defineProps<{

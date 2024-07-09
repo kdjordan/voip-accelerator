@@ -51,6 +51,7 @@
 
 <script setup lang="ts">
 	import UploadComponent from '../components/UploadComponent.vue';
+	import ComparisonWorker from '@/workers/comparison.worker?worker';
 	// import GenerateReport from '../components/GenerateReport.vue';
 	// import { type ComparisonReport } from '../../types/app-types';
 	import { useDBstate } from '@/stores/dbStore';
@@ -67,7 +68,26 @@
 
 
 	function makeReport() {
-		//start the web worker to generate report
-		console.log('clickin');
-	}
+  const worker = new ComparisonWorker();
+
+  // Assuming file1 and file2 are available from DBstore or another source
+  const file1 = DBstore.getFile1Data();
+  const file2 = DBstore.getFile2Data();
+
+  // Post message to the worker
+  worker.postMessage({ file1, file2 });
+
+  // Handle worker messages
+  worker.onmessage = (event) => {
+    const comparisonReport = event.data;
+    console.log('Comparison Report:', comparisonReport);
+    // Update state or UI with the comparison report
+  };
+
+  // Handle errors from the worker
+  worker.onerror = (error) => {
+    console.error('Error from worker:', error);
+    // Handle error condition
+  };
+}
 </script>
