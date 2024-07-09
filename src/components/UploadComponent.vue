@@ -3,7 +3,7 @@
 		<div
 			class="px-6 rounded-lg shadow-md flex flex-col items-center justify-center space-y-4 h-96"
 		>
-			<UploadIcon class="w-8 h-8 text-primary" />
+			<UploadIcon v-if="!props.disabled" class="w-8 h-8 text-primary" />
 			<p class="text-muted-foreground">{{ displayMessage }}</p>
 			<div
 				:class="[
@@ -62,10 +62,10 @@
 			]"
 		/>
 	</div>
-	<!-- ::{{ localDBloading }} -->
+	<!-- ::{{ DBstore.getStoreNameByComponent(props.componentName) }} -->
 	<!-- {{ DBstore.AZfilesUploaded.file1 }} -->
 	<!-- {{ componentName }} -->
-	{{ DBstore.isComponentFileUploading(props.componentName) }}
+	<!-- {{ DBstore.isComponentFileUploading(props.componentName) }} -->
 	<!-- {{ showModal }} -->
 </template>
 
@@ -73,14 +73,13 @@
 	import TheModal from './TheModal.vue';
 	import UploadIcon from './UploadIcon.vue';
 	import DeleteButton from './DeleteButton.vue';
-	import { ref, watch } from 'vue';
-	import useIndexedDB from '../composables/useIndexDB';
+	import { ref, watch, onMounted } from 'vue';
 	import useCSVProcessing from '../composables/useCsvFilesFunctions';
 	import { useDBstate } from '@/stores/dbStore';
 
 	//componenet props
 	const props = defineProps<{
-		mssg: string;
+		typeOfComponent: string;
 		DBname: string;
 		componentName: string;
 		disabled: boolean;
@@ -104,11 +103,8 @@
 	// Define reactive properties
 	const fileInput = ref<HTMLInputElement | null>(null);
 	const isDragOver = ref<boolean>(false);
-	const statusMessage = ref<string>(
-		'Drag file here or click to load.'
-	);
-	const displayMessage = ref(props.mssg);
-	const isFileLoading = ref<boolean>(false);
+	const statusMessage = ref<string>('Drag file or click to upload');
+	const displayMessage = ref<string>('');
 
 	// Set DB name and component name from props
 	const DBstore = useDBstate();
@@ -116,23 +112,52 @@
 	DBname.value = props.DBname;
 	componentName.value = props.componentName;
 
-	// 	watch(
-	//   () => isFileLoading.value,
-	//   (newValue) => {
-	//     isFileLoading.value = newValue;
-	//   }
-	// );
+	//setup displayMessage based on componentType prop
+	const updateDisplayMessage = (type: string) => {
+		if (type === 'owner') {
+			displayMessage.value = 'Upload YOUR rates as CSV';
+		} else if (type === 'client') {
+			displayMessage.value = 'Upload CARRIER rates as CSV';
+		} else if (type === 'complete'){
+			displayMessage.value = DBstore.getStoreNameByComponent(props.componentName)
+		}
+	};
+	
+	// Watch for changes in typeOfComponent prop
+	watch(
+		() => props.typeOfComponent,
+		(newType) => {
+			updateDisplayMessage(newType);
+		},
+		{ immediate: true }
+	);
+	
+	// Watch for changes in fileUploading and disabled prop
+	watch(
+		[
+			() => DBstore.isComponentFileUploading(props.componentName),
+			() => props.disabled,
+		],
+		([localDBloadingVal, disabledVal]) => {
+			if (localDBloadingVal) {
+				statusMessage.value = 'Working on it...';
+			} else if (disabledVal) {
+				statusMessage.value = 'Success!';
+				updateDisplayMessage('complete')
+			}
+		}
+	);
 
-	// watch(
-	// 	[() => fileLoading.value, () => props.disabled],
-	// 	([localDBloadingVal, disabledVal]) => {
-	// 		if (localDBloadingVal) {
-	// 			statusMessage.value = 'Working on it...';
-	// 		} else if (disabledVal) {
-	// 			statusMessage.value = 'Success!';
-	// 		}
-	// 	}
-	// );
+	//if this component has a file that's uploaded make sure stausMessage and displayMessage
+	//are corrrect
+	if(DBstore.getStoreNameByComponent(props.componentName)) {
+		console.log('running')
+		updateDisplayMessage('complete')
+	}
+	if(props.disabled) {
+		console.log(props.disabled)
+		statusMessage.value = 'Success'
+	}
 
 	function handleFileUpload(event: Event) {
 		const target = event.target as HTMLInputElement | null;
@@ -144,6 +169,10 @@
 			}
 		}
 	}
+
+	// onMounted(() => {
+	// 	console.log('mounting', props.disabled)
+	// })
 
 	function resetLocalState() {
 		file.value = null;

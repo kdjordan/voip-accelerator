@@ -12,11 +12,11 @@ export default function useIndexedDB() {
   //   if (dbList.length !== 0) {
   //     for (const dbInfo of dbList) {
   //       const dbName = dbInfo.name
-        
+
   //       if(dbName) {
   //         const db = await openDB(dbName, dbInfo.version);
   //         console.log('got a DB name ', dbName)
-          
+
   //         console.log(`Database: ${dbName}`);
 
   //         for (const fileName of db.objectStoreNames) {
@@ -38,7 +38,7 @@ export default function useIndexedDB() {
           // Perform upgrade actions if needed
           console.log('Upgrade needed for IndexedDB');
           DBstore.setGlobalFileIsUploading(true);
-          
+
           if (!db.objectStoreNames.contains(fileName)) {
             db.createObjectStore(fileName, {
               keyPath: 'id',
@@ -47,7 +47,7 @@ export default function useIndexedDB() {
           }
         },
       });
-  
+
       const transaction = db.transaction(fileName, 'readwrite');
       const store = transaction.objectStore(fileName);
       // console.log('got data for row ', data)
@@ -55,7 +55,7 @@ export default function useIndexedDB() {
         // console.log('adding', row)
         store.add(row);
       });
-  
+
       transaction.oncomplete = () => {
         DBstore.addFileUploaded(componentName, dbName, fileName);
         // console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
@@ -63,7 +63,7 @@ export default function useIndexedDB() {
         DBstore.setComponentFileIsUploading(undefined)
         db.close();
       };
-  
+
       transaction.onerror = () => {
         DBstore.setGlobalFileIsUploading(false);
         DBstore.setComponentFileIsUploading(undefined)
@@ -128,12 +128,12 @@ export default function useIndexedDB() {
     try {
       // Open the database
       const db = await openDB(dbName, undefined);
-  
+
       // Check if the object store exists
       if (db.objectStoreNames.contains(objectStoreName)) {
         // Close the database to prepare for version change
         db.close();
-  
+
         // Open a new connection with a higher version to delete the object store
         const upgradeDb = await openDB(dbName, db.version + 1, {
           upgrade(upgradeDb) {
@@ -147,7 +147,7 @@ export default function useIndexedDB() {
             }
           },
         });
-  
+
         // Close the upgraded database connection
         upgradeDb.close();
       } else {
@@ -158,11 +158,10 @@ export default function useIndexedDB() {
       throw error; // Rethrow the error to handle it at the caller level if needed
     }
   }
-
-
+ 
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
-    deleteObjectStore,
+    deleteObjectStore
   };
 }

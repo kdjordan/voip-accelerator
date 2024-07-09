@@ -10,6 +10,24 @@
 
 <script setup>
 	import Header from './components/TheHeader.vue';
+
+	import { onMounted, onBeforeUnmount } from 'vue';
+	import { deleteIndexedDBDatabases } from './utils/resetIndexDb.ts';
+
+	const dbNames = ['az', 'us', 'can']; // List your database names here
+
+	onMounted(() => {
+		const handleBeforeUnload = () => {
+			deleteIndexedDBDatabases(dbNames);
+		};
+
+		window.addEventListener('beforeunload', handleBeforeUnload);
+
+		// Cleanup event listener when component is unmounted
+		onBeforeUnmount(() => {
+			window.removeEventListener('beforeunload', handleBeforeUnload);
+		});
+	});
 </script>
 
 <style>

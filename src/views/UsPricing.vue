@@ -4,13 +4,13 @@
 
 		<div class="flex items-center justify-center gap-8 flex-wrap">
 			<UploadComponent
-				mssg="Upload YOUR rates as CSV"
+				typeOfComponent="owner"
 				DBname="us"
 				componentName="us1"
 				:disabled="DBstore.isComponentDisabled('us1')"
 			/>
 			<UploadComponent
-				mssg="Upload CARRIER rates as CSV"
+				typeOfComponent="client"
 				DBname="us"
 				componentName="us2"
 				:disabled="DBstore.isComponentDisabled('us2')"

@@ -4,20 +4,22 @@
 
 		<div class="flex items-center justify-center gap-8 flex-wrap">
 			<UploadComponent
-				mssg="Upload YOUR rates as CSV"
+				typeOfComponent="owner"
 				DBname="az"
 				componentName="az1"
 				:disabled="DBstore.isComponentDisabled('az1')"
 			/>
 
 			<UploadComponent
-				mssg="Upload CARRIER rates as CSV"
+				typeOfComponent="client"
 				DBname="az"
 				componentName="az2"
 				:disabled="DBstore.isComponentDisabled('az2')"
 			/>
 		</div>
 		<div>
+		<!-- {{ DBstore.isComponentDisabled('az1') }} -->
+		<!-- {{ DBstore }} -->
 			<button
 				@click="makeReport"
 				:disabled="!DBstore.getIsAZfull"
@@ -49,10 +51,11 @@
 
 <script setup lang="ts">
 	import UploadComponent from '../components/UploadComponent.vue';
-	import GenerateReport from '../components/GenerateReport.vue';
-	import { type ComparisonReport } from '../../types/app-types';
+	// import GenerateReport from '../components/GenerateReport.vue';
+	// import { type ComparisonReport } from '../../types/app-types';
 	import { useDBstate } from '@/stores/dbStore';
 	const DBstore = useDBstate();
+	
 
 
 	// const isReporting = ref<boolean>(false);
@@ -61,6 +64,7 @@
 	//   fileName1: string;
 	//   fileName2: string;
 	// } | null>(null);
+
 
 	function makeReport() {
 		//start the web worker to generate report
