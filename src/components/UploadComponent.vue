@@ -151,11 +151,9 @@
 	//if this component has a file that's uploaded make sure stausMessage and displayMessage
 	//are corrrect
 	if(DBstore.getStoreNameByComponent(props.componentName)) {
-		console.log('running')
 		updateDisplayMessage('complete')
 	}
 	if(props.disabled) {
-		console.log(props.disabled)
 		statusMessage.value = 'Success'
 	}
 

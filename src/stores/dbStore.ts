@@ -37,7 +37,6 @@ export const useDBstate = defineStore('useDBstate', {
     },
     getStoreNameByComponent: (state) => (componentName: string): string => {
       for (const [key, value] of state.filesUploaded) {
-        console.log('key ', key, value)
         if (key === componentName) {
           return value.fileName
         }

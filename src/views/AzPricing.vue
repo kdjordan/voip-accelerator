@@ -5,30 +5,25 @@
 		<div class="flex items-center justify-center gap-8 flex-wrap">
 			<UploadComponent
 				typeOfComponent="owner"
-				DBname="az"
-				componentName="az1"
-				:disabled="DBstore.isComponentDisabled('az1')"
+				:DBname="theDb"
+				:componentName="component1"
+				:disabled="dbStore.isComponentDisabled('az1')"
 			/>
 
 			<UploadComponent
 				typeOfComponent="client"
 				DBname="az"
-				componentName="az2"
-				:disabled="DBstore.isComponentDisabled('az2')"
+				:componentName="component2"
+				:disabled="dbStore.isComponentDisabled('az2')"
 			/>
 		</div>
 		<div>
-		<!-- {{ DBstore.isComponentDisabled('az1') }} -->
-		<!-- {{ DBstore }} -->
+			<!-- {{ dbStore.isComponentDisabled('az1') }} -->
+			<!-- {{ dbStore }} -->
 			<button
 				@click="makeReport"
-				:disabled="!DBstore.getIsAZfull"
-				:class="{
-					'bg-blue-500 hover:bg-blue-600 text-white':
-						DBstore.getIsAZfull,
-					'bg-gray-500 text-gray-300 cursor-not-allowed':
-						!DBstore.getIsAZfull,
-				}"
+				
+				
 				class="py-2 px-4 rounded transition text-center"
 			>
 				Get Report
@@ -38,56 +33,71 @@
 		full::{{ DBstore.getIsAZfull }}<br />
 		az1 disabled::{{ DBstore.isComponentDisabled('az1') }}<br />
 		az2 disabled::{{ DBstore.isComponentDisabled('az2') }}<br />
-		DBversion::{{ DBstore.globalDBVersion }}<br />
-		File uploading::{{ DBstore.globalFileIsUploading}}<br /> -->
-		<!-- <div v-if="report">
+		DBversion::{{ DBstore.globalDBVersion }}<br /> -->
+		File uploading::{{ dbStore }}<br />
+		<!-- <div>
         <GenerateReport
-          :report="report"
-          :details="details"
-        />
+         
+        /> 
       </div> -->
 	</div>
 </template>
 
 <script setup lang="ts">
-	import UploadComponent from '../components/UploadComponent.vue';
-	import ComparisonWorker from '@/workers/comparison.worker?worker';
-	// import GenerateReport from '../components/GenerateReport.vue';
-	// import { type ComparisonReport } from '../../types/app-types';
-	import { useDBstate } from '@/stores/dbStore';
-	const DBstore = useDBstate();
-	
+		import UploadComponent from '../components/UploadComponent.vue';
+		import ComparisonWorker from '@/workers/comparison.worker?worker';
+		import GenerateReport from '../components/GenerateReport.vue';
+		// import { type ComparisonReport } from '../../types/app-types';
+		import useIndexedDB from '../composables/useIndexDB';
 
+	const { loadFromIndexedDB } =
+		useIndexedDB();
+		import { useDBstate } from '@/stores/dbStore';
+		import { ref } from 'vue'
+		const dbStore = useDBstate();
 
-	// const isReporting = ref<boolean>(false);
-	// const report = ref<ComparisonReport | null>(null);
-	// const details = ref<{
-	//   fileName1: string;
-	//   fileName2: string;
-	// } | null>(null);
+		const theDb = ref<string>('az')
+		const component1 = ref<string>('az1')
+		const component2 = ref<string>('az2')
 
+		// const isReporting = ref<boolean>(false);
+		// const report = ref<ComparisonReport | null>(null);
+		// const details = ref<{
+		//   fileName1: string;
+		//   fileName2: string;
+		// } | null>(null);
 
-	function makeReport() {
-  const worker = new ComparisonWorker();
+		async function makeReport() {
+			console.log('getting report')
+			try {
+				const file1 = await loadFromIndexedDB(
+					theDb.value,
+					dbStore.getStoreNameByComponent(component2.value),
+					dbStore.globalDBVersion
+				);
+				const file2 = await loadFromIndexedDB(
+					theDb.value,
+					dbStore.getStoreNameByComponent(component2.value),
+					dbStore.globalDBVersion
+				);
 
-  // Assuming file1 and file2 are available from DBstore or another source
-  const file1 = DBstore.getFile1Data();
-  const file2 = DBstore.getFile2Data();
+				const worker = new ComparisonWorker();
 
-  // Post message to the worker
-  worker.postMessage({ file1, file2 });
+				worker.postMessage({ file1, file2 });
 
-  // Handle worker messages
-  worker.onmessage = (event) => {
-    const comparisonReport = event.data;
-    console.log('Comparison Report:', comparisonReport);
-    // Update state or UI with the comparison report
-  };
+				worker.onmessage = (event) => {
+					const comparisonReport = event.data;
+					console.log('Comparison Report:', comparisonReport);
+					// Update state or UI with the comparison report
+				};
 
-  // Handle errors from the worker
-  worker.onerror = (error) => {
-    console.error('Error from worker:', error);
-    // Handle error condition
-  };
-}
+				worker.onerror = (error) => {
+					console.error('Error from worker:', error);
+					// Handle error condition
+				};
+			} catch (error) {
+				console.error('Failed to load data from IndexedDB:', error);
+				// Handle error loading data from IndexedDB
+			}
+		}
 </script>

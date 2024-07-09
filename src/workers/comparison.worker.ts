@@ -26,6 +26,7 @@ import { type ComparisonReport } from '../../types/app-types';
 
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {
+  console.log('got the data')
   const { file1, file2 } = event.data;
 
   // Process comparison and generate report
@@ -82,7 +83,7 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
       }
 
       // Remove from map to track remaining non-matching codes in file2
-      dialCodeMapFile2.delete(dialCode);
+      // dialCodeMapFile2.delete(dialCode);
     } else {
       comparisonReport.nonMatchingCodes.push({
         dialCode,

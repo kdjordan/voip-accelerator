@@ -2,7 +2,7 @@
   <div class="bg-background rounded min-w-[950px] m-auto w-full p-6">
     <h2 class="text-center text-sizeXl uppercase pb-4 font-primary">Report</h2>
 
-    <div>
+    <!-- <div>
       <h3 class="pb-4 uppercase"><span class="text-accent">{{ details?.fileName1 }}</span> :: should buy these destinations from :: <span class="text-accent">{{ details?.fileName2 }}</span></h3>
       <table>
         <thead>
@@ -92,7 +92,7 @@
           </tr>
         </tbody>
       </table>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -101,10 +101,10 @@
 import { type ComparisonReport } from '../../types/app-types';
   
 
-defineProps<{
-  report: ComparisonReport;
-  details: { fileName1: string; fileName2: string } | null;
-}>();
+// defineProps<{
+//   report: ComparisonReport;
+//   details: { fileName1: string; fileName2: string } | null;
+// }>();
 </script>
 
 <style scoped>

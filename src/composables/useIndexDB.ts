@@ -74,11 +74,13 @@ export default function useIndexedDB() {
     }
   }
 
-  async function loadFromIndexedDB(storeName: string, DBversion: number): Promise<StandardizedData[]> {
+  async function loadFromIndexedDB(dbName: string, storeName: string, DBversion: number): Promise<StandardizedData[]> {
+    
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('CSVDatabase', DBversion);
+      const request = indexedDB.open(dbName, DBversion);
 
       request.onupgradeneeded = function (event) {
+        
         const db = (event.target as IDBOpenDBRequest).result;
         if (db) {
           if (!db.objectStoreNames.contains(storeName)) {
