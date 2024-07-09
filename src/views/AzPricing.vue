@@ -39,7 +39,7 @@
 		az1 disabled::{{ DBstore.isComponentDisabled('az1') }}<br />
 		az2 disabled::{{ DBstore.isComponentDisabled('az2') }}<br />
 		DBversion::{{ DBstore.globalDBVersion }}<br /> -->
-		File uploading::{{ dbStore }}<br />
+		<!-- File uploading::{{ dbStore }}<br /> -->
 		<div>
         <GenerateReport v-if="report"         
 				:report="report"
@@ -64,17 +64,16 @@
 	const theDb = ref<string>('az');
 	const component1 = ref<string>('az1');
 	const component2 = ref<string>('az2');
+	const isGeneratingReport = ref<boolean>(false)
  
 
 	// const isReporting = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
-	// const details = ref<{
-	//   fileName1: string;
-	//   fileName2: string;
-	// } | null>(null);
+	
 
 	async function makeReport() {
 		console.log('going in')
+		
 		try {
 			const file1 = await loadFromIndexedDB(
 				theDb.value,

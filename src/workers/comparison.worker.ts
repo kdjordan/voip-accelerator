@@ -15,7 +15,6 @@ self.addEventListener('message', (event) => {
 
 // Function to generate the comparison report
 function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport {
-  console.log('generating')
   const comparisonReport: ComparisonReport = {
     higherRatesForFile1: [],
     higherRatesForFile2: [],
@@ -33,11 +32,9 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
   file2.forEach(entry => {
     dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
   });
-  console.log('got the data out', dialCodeMapFile1)
-  console.log('got the data out', dialCodeMapFile2)
 
   // Process file1 entries
-  // Process file1 entries
+
   dialCodeMapFile1.forEach((valueFile1, keyFile1) => {
 
     if (dialCodeMapFile2.has(keyFile1)) {
@@ -79,8 +76,6 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
         file: 'file1'
       });
     }
-
-    // console.log(comparisonReport.higherRatesForFile1)
   });
 
   // Process remaining entries in file2 not found in file1
@@ -93,7 +88,10 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
     });
   });
 
-  console.log('got report ', comparisonReport)
+  // Sort higherRatesForFile1 and higherRatesForFile2 by percentageDifference in descending order
+  comparisonReport.higherRatesForFile1.sort((a, b) => b.percentageDifference - a.percentageDifference);
+  comparisonReport.higherRatesForFile2.sort((a, b) => b.percentageDifference - a.percentageDifference);
+  
   return comparisonReport;
 }
 
