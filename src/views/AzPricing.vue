@@ -53,28 +53,29 @@
 			<GenerateReport
 				v-if="report"
 				:report="report"
-				:details="{ fileName1: 'file.csv', fileName2: 'file2.csv' }"
+				:details="{ fileName1: file1, fileName2: file2 }"
 			/>
 		</div>
-		{{ dbStore }}
 	</div>
 </template>
 
 <script setup lang="ts">
+	import { ref } from 'vue';
+	import { type ComparisonReport } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
 	import GenerateReport from '../components/GenerateReport.vue';
-	import { type ComparisonReport } from '../../types/app-types';
 	import useIndexedDB from '../composables/useIndexDB';
 	import { makePricingReport, resetReport } from '@/API/api';
 	const { loadFromIndexedDB } = useIndexedDB();
 	import { useDBstate } from '@/stores/dbStore';
-	import { ref } from 'vue';
 	
 	const dbStore = useDBstate();
 
 	const theDb = ref<string>('az');
 	const component1 = ref<string>('az1');
 	const component2 = ref<string>('az2');
+	const file1 = ref<string>(dbStore.getStoreNameByComponent(component1.value).split('.')[0])
+	const file2 = ref<string>(dbStore.getStoreNameByComponent(component2.value).split('.')[0])
 	const isGeneratingReport = ref<boolean>(false);
 
 	// const isReporting = ref<boolean>(false);
@@ -89,16 +90,16 @@
 	async function makeReport() {
 		console.log('going in');
 		isGeneratingReport.value = true;
-		let dbVersion = dbStore.globalDBVersion
-		let dbName = theDb.value
-		let file1 = await getFilesFromIndexDB(dbName, dbStore.getStoreNameByComponent(component1.value), dbVersion)
-		let file2 = await getFilesFromIndexDB(dbName, dbStore.getStoreNameByComponent(component2.value), dbVersion)
+
+		let file1 = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component1.value), dbStore.globalDBVersion)
+		let file2 = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component2.value), dbStore.globalDBVersion)
 
 		const returnedReport = await makePricingReport(file1, file2)
 		report.value = returnedReport
 		isGeneratingReport.value = false;
 
 	}
+	
 	async function getFilesFromIndexDB(dbName: string, store: string, dbVersion: number) {
 		try {
 			const result = await loadFromIndexedDB(dbName, store, dbVersion)

@@ -17,7 +17,7 @@
 	const dbNames = ['az', 'us', 'can']; // List your database names here
 
 	onMounted(async () => {
-		await loadDb()
+		// await loadDb()
      
     });
 
@@ -78,6 +78,8 @@
         console.error('Error loading CSV into IndexedDB:', error);
       }
 		}
+
+		
 		// const handleBeforeUnload = () => {
 		// 	deleteIndexedDBDatabases(dbNames);
 		// };
