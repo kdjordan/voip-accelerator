@@ -4,7 +4,13 @@
       <div>
         <h1 class="uppercase lg:text-sizeXl">Telecom Toolkit</h1>
       </div>
-      <DumpBtn />
+      <button
+      @click="deleteIndexedDBDatabases(['az', 'us'])"
+			class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition ml-4"
+		>
+			RESET
+		</button>
+
       <div class="ml-auto relative">
         <ul class="flex gap-8 whitespace-nowrap text-sizeSm uppercase">
           <li class="relative">
@@ -47,7 +53,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import DumpBtn from './DumpDbButton.vue';
+import { deleteIndexedDBDatabases } from '@/utils/resetIndexDb';
+// const { deleteDataBase } = useIndexedDB();
 
 const isDropdownOpen = ref(false);
 
@@ -65,6 +72,10 @@ const handleClickOutside = (event: MouseEvent) => {
     closeDropdown();
   }
 };
+
+function deleteAllDBs() {
+
+}
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);

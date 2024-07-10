@@ -164,6 +164,7 @@ export default function useIndexedDB() {
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
-    deleteObjectStore
+    deleteObjectStore,
+    
   };
 }

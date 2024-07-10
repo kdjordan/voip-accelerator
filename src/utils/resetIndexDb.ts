@@ -8,4 +8,7 @@ export async function deleteIndexedDBDatabases(dbNames: string[]) {
       console.error(`Error deleting database ${dbName}:`, (event.target as IDBRequest).error);
     };
   });
+  if (dbNames.length > 1) {
+    window.location.reload();
+  }
 }

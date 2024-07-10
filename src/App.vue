@@ -135,4 +135,20 @@
 	.hover\:bg-blue-600:hover {
 		background-color: #005bb5;
 	}
+	.pulse {
+		background-color: #4caf50; /* Initial background color */
+		animation: pulse 1s infinite;
+	}
+
+	@keyframes pulse {
+		0% {
+			background-color: #4caf50; /* Initial color */
+		}
+		50% {
+			background-color: #81c784; /* Midpoint color */
+		}
+		100% {
+			background-color: #4caf50; /* Initial color */
+		}
+	}
 </style>
