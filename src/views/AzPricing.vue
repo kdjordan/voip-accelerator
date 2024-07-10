@@ -2,7 +2,7 @@
 	<div class="flex flex-col items-center pt-32 gap-8">
 		<h1 class="text-size2xl uppercase">AZ Pricing</h1>
 		<button
-			@click="resetReport"
+			@click="resetThisReport"
 			v-if="report"
 			class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition ml-4"
 		>
@@ -49,12 +49,6 @@
 				Get Report
 			</button>
 		</div>
-		<!-- file names::{{ DBstore.getAZFileNames }}<br />
-		full::{{ DBstore.getIsAZfull }}<br />
-		az1 disabled::{{ DBstore.isComponentDisabled('az1') }}<br />
-		az2 disabled::{{ DBstore.isComponentDisabled('az2') }}<br />
-		DBversion::{{ DBstore.globalDBVersion }}<br /> -->
-		<!-- File uploading::{{ dbStore }}<br /> -->
 		<div>
 			<GenerateReport
 				v-if="report"
@@ -68,14 +62,14 @@
 
 <script setup lang="ts">
 	import UploadComponent from '../components/UploadComponent.vue';
-	import ComparisonWorker from '@/workers/comparison.worker?worker';
 	import GenerateReport from '../components/GenerateReport.vue';
 	import { type ComparisonReport } from '../../types/app-types';
 	import useIndexedDB from '../composables/useIndexDB';
-	import { deleteIndexedDBDatabases } from '@/utils/resetIndexDb';
+	import { makePricingReport, resetReport } from '@/API/api';
 	const { loadFromIndexedDB } = useIndexedDB();
 	import { useDBstate } from '@/stores/dbStore';
 	import { ref } from 'vue';
+	
 	const dbStore = useDBstate();
 
 	const theDb = ref<string>('az');
@@ -86,51 +80,31 @@
 	// const isReporting = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
 
-	async function resetReport() {
-		try {
-			await deleteIndexedDBDatabases(['az'])
-			//reset Pinia
-			dbStore.resetFilesUploadedByDBname('az')
-			report.value = null
-		} catch(e) {
-			console.log('Error resetting AZ pricing report ', e)
-		}
+	async function resetThisReport() {
+		await resetReport('az');
+		dbStore.resetFilesUploadedByDBname('az')
+		report.value = null;
 	}
 
 	async function makeReport() {
 		console.log('going in');
 		isGeneratingReport.value = true;
+		let dbVersion = dbStore.globalDBVersion
+		let dbName = theDb.value
+		let file1 = await getFilesFromIndexDB(dbName, dbStore.getStoreNameByComponent(component1.value), dbVersion)
+		let file2 = await getFilesFromIndexDB(dbName, dbStore.getStoreNameByComponent(component2.value), dbVersion)
+
+		const returnedReport = await makePricingReport(file1, file2)
+		report.value = returnedReport
+		isGeneratingReport.value = false;
+
+	}
+	async function getFilesFromIndexDB(dbName: string, store: string, dbVersion: number) {
 		try {
-			const file1 = await loadFromIndexedDB(
-				theDb.value,
-				dbStore.getStoreNameByComponent(component1.value),
-				dbStore.globalDBVersion
-			);
-			const file2 = await loadFromIndexedDB(
-				theDb.value,
-				dbStore.getStoreNameByComponent(component2.value),
-				dbStore.globalDBVersion
-			);
-			const worker = new ComparisonWorker();
-
-			worker.postMessage({ file1, file2 });
-
-			worker.onmessage = (event) => {
-				const comparisonReport: ComparisonReport = event.data;
-				report.value = comparisonReport;
-				isGeneratingReport.value = false;
-				// Update state or UI with the comparison report
-			};
-
-			worker.onerror = (error) => {
-				isGeneratingReport.value = false;
-				console.error('Error from worker:', error);
-				// Handle error condition
-			};
-		} catch (error) {
-			isGeneratingReport.value = false;
-			console.error('Failed to load data from IndexedDB:', error);
-			// Handle error loading data from IndexedDB
+			const result = await loadFromIndexedDB(dbName, store, dbVersion)
+			return result
+		} catch(e) {
+			console.log(`got an errror getting ${store}`)
 		}
 	}
 </script>

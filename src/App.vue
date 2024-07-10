@@ -12,7 +12,6 @@
 	import Header from './components/TheHeader.vue';
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
-	import { deleteIndexedDBDatabases } from './utils/resetIndexDb.ts';
 	import { useDBstate } from '@/stores/dbStore';
 
 	const dbNames = ['az', 'us', 'can']; // List your database names here

@@ -75,7 +75,6 @@ export default function useIndexedDB() {
   }
 
   async function loadFromIndexedDB(dbName: string, storeName: string, DBversion: number): Promise<StandardizedData[]> {
-    
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(dbName, DBversion);
 
