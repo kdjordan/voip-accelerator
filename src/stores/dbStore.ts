@@ -107,6 +107,14 @@ export const useDBstate = defineStore('useDBstate', {
       this.filesUploaded.set(componentName, { dbName: dbName, fileName: fileName });
       // console.log('File added from initial state:', fileName, { db: dbPrefix, fileName });
     },
+    resetFilesUploadedByDBname(dbName: string) {
+      this.filesUploaded.forEach((value, key) => {
+        // Check if any key's dbName matches the parameter
+        if (value && value.dbName === dbName) {
+          this.filesUploaded.delete(key); // Delete the entry from the map
+        }
+      });
+    }
   },
 
 })

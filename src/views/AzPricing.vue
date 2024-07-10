@@ -2,7 +2,7 @@
 	<div class="flex flex-col items-center pt-32 gap-8">
 		<h1 class="text-size2xl uppercase">AZ Pricing</h1>
 		<button
-			@click="deleteIndexedDBDatabases(['az'])"
+			@click="resetReport"
 			v-if="report"
 			class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition ml-4"
 		>
@@ -62,6 +62,7 @@
 				:details="{ fileName1: 'file.csv', fileName2: 'file2.csv' }"
 			/>
 		</div>
+		{{ dbStore }}
 	</div>
 </template>
 
@@ -84,6 +85,17 @@
 
 	// const isReporting = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
+
+	async function resetReport() {
+		try {
+			await deleteIndexedDBDatabases(['az'])
+			//reset Pinia
+			dbStore.resetFilesUploadedByDBname('az')
+			report.value = null
+		} catch(e) {
+			console.log('Error resetting AZ pricing report ', e)
+		}
+	}
 
 	async function makeReport() {
 		console.log('going in');
