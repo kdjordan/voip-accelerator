@@ -48,7 +48,7 @@ export interface NonMatchingCode {
   dialCode: number;
   destName: string;
   rate: number;
-  file: 'file1' | 'file2';
+  file: string;
 }
 
 export type FileUpload = {

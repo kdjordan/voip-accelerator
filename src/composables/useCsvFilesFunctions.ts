@@ -46,7 +46,7 @@ export default function useCSVProcessing() {
 						const standardizedData: StandardizedData[] = [];
 
 						fullData.forEach((row: string[]) => {
-							console.log('hanging here')
+							
 							const standardizedRow: StandardizedData = {
 								destName: '',
 								dialCode: 0,
@@ -71,6 +71,7 @@ export default function useCSVProcessing() {
 								}
 							});
 							// Validate destName is a string
+							
 							const isValidDestName = typeof standardizedRow.destName === 'string' && standardizedRow.destName.length > 0;
 
 							// Validate dialCode can be cast into a number
@@ -80,12 +81,17 @@ export default function useCSVProcessing() {
 							const isValidRate = !isNaN(parseFloat(standardizedRow.rate.toString()));
 
 							if (isValidDestName && isValidDialCode && isValidRate) {
+								console.log('pushing')
 								standardizedData.push(standardizedRow);
-							}
+							} 
 						});
 
 						storeDataInIndexedDB(standardizedData);
 					},
+					error: function(error) {
+						console.error('Error parsing CSV:', error);
+						// Handle error appropriately, e.g., show a message to the user
+					}
 				});
 			} catch (e) {
 				console.error('Error during CSV parsing', e);
@@ -95,6 +101,51 @@ export default function useCSVProcessing() {
 		}
 	}
 
+
+	function parseCSVForPreview(uploadedFile: File) {
+		try {
+			Papa.parse(uploadedFile, {
+				header: false,
+				complete(results) {
+					previewData.value = results.data.slice(0, 25) as string[][];
+					columns.value = results.data[
+						startLine.value - 1
+					] as string[];
+					columnRoles.value = Array(columns.value.length).fill('');
+					showModal.value = true;
+				},
+			});
+		} catch {
+			console.log('error uploading file');
+		}
+	}
+
+	async function storeDataInIndexedDB(data: StandardizedData[]) {
+		console.log('storing with ', DBname.value, componentName.value)
+		try {
+			if (file.value) {
+				await storeInIndexedDB(
+					data,
+					DBname.value,
+					file.value.name,
+					componentName.value
+				);
+			}
+		} catch (error) {
+			console.error('Error storing data in IndexedDB:', error);
+		}
+	}
+
+	// function preprocessCSV(csvText: string): string {
+	//   const lines = csvText.split('\n');
+	//   const processedLines = lines.map((line) => {
+	//     const columns = line.split(',');
+	//     const quotedColumns = columns.map((col) => `"${col}"`);
+	//     return quotedColumns.join(',');
+	//   });
+
+	//   return processedLines.join('\n');
+	// }
 	// async function parseCSVForFullProcessing(): Promise<void> {
 	// 	DBstore.setComponentFileIsUploading(componentName.value)
 	// 	//check if file.name exists
@@ -155,52 +206,6 @@ export default function useCSVProcessing() {
 	// 		} 
 
 	// 	}
-	// }
-
-
-	function parseCSVForPreview(uploadedFile: File) {
-		try {
-			Papa.parse(uploadedFile, {
-				header: false,
-				complete(results) {
-					previewData.value = results.data.slice(0, 25) as string[][];
-					columns.value = results.data[
-						startLine.value - 1
-					] as string[];
-					columnRoles.value = Array(columns.value.length).fill('');
-					showModal.value = true;
-				},
-			});
-		} catch {
-			console.log('error uploading file');
-		}
-	}
-
-	async function storeDataInIndexedDB(data: StandardizedData[]) {
-		console.log('storing with ', DBname.value, componentName.value)
-		try {
-			if (file.value) {
-				await storeInIndexedDB(
-					data,
-					DBname.value,
-					file.value.name,
-					componentName.value
-				);
-			}
-		} catch (error) {
-			console.error('Error storing data in IndexedDB:', error);
-		}
-	}
-
-	// function preprocessCSV(csvText: string): string {
-	//   const lines = csvText.split('\n');
-	//   const processedLines = lines.map((line) => {
-	//     const columns = line.split(',');
-	//     const quotedColumns = columns.map((col) => `"${col}"`);
-	//     return quotedColumns.join(',');
-	//   });
-
-	//   return processedLines.join('\n');
 	// }
 
 	async function removeFromDB() {
