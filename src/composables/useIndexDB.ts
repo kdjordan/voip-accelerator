@@ -7,30 +7,6 @@ const DBstore = useDBstate()
 
 export default function useIndexedDB() {
 
-  // async function getIndexedDBStatus() {
-  //   const dbList = await indexedDB.databases();
-  //   if (dbList.length !== 0) {
-  //     for (const dbInfo of dbList) {
-  //       const dbName = dbInfo.name
-
-  //       if(dbName) {
-  //         const db = await openDB(dbName, dbInfo.version);
-  //         console.log('got a DB name ', dbName)
-
-  //         console.log(`Database: ${dbName}`);
-
-  //         for (const fileName of db.objectStoreNames) {
-  //           console.log('initializing from DBs ', fileName, dbName)
-  //           DBstore.addFileUploaded(fileName, dbName)
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   return dbList;
-  // }
-
-
   async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string): Promise<void> {
     try {
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
@@ -79,7 +55,7 @@ export default function useIndexedDB() {
       const request = indexedDB.open(dbName, DBversion);
 
       request.onupgradeneeded = function (event) {
-        
+
         const db = (event.target as IDBOpenDBRequest).result;
         if (db) {
           if (!db.objectStoreNames.contains(storeName)) {
@@ -159,11 +135,37 @@ export default function useIndexedDB() {
       throw error; // Rethrow the error to handle it at the caller level if needed
     }
   }
- 
+
+
+  // / async function getIndexedDBStatus() {
+  //   const dbList = await indexedDB.databases();
+  //   if (dbList.length !== 0) {
+  //     for (const dbInfo of dbList) {
+  //       const dbName = dbInfo.name
+
+  //       if(dbName) {
+  //         const db = await openDB(dbName, dbInfo.version);
+  //         console.log('got a DB name ', dbName)
+
+  //         console.log(`Database: ${dbName}`);
+
+  //         for (const fileName of db.objectStoreNames) {
+  //           console.log('initializing from DBs ', fileName, dbName)
+  //           DBstore.addFileUploaded(fileName, dbName)
+  //         }
+  //       }
+  //     }
+  //   }
+
+  //   return dbList;
+  // }
+
+
+
   return {
     storeInIndexedDB,
     loadFromIndexedDB,
     deleteObjectStore,
-    
+
   };
 }

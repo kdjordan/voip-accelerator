@@ -17,7 +17,7 @@
 	const dbNames = ['az', 'us', 'can']; // List your database names here
 
 	onMounted(async () => {
-		// await loadDb()
+		await loadDb()
      
     });
 
@@ -45,20 +45,21 @@
 
 		async function loadDb() {
 			try {
-        // Open or create the 'az' IndexedDB database
+				// Open or create the 'az' IndexedDB database
         const db = await openDB('az', 1, {
-          upgrade(db) {
-            // Create object stores for file1.csv and file2.csv
-            db.createObjectStore('file1.csv', { keyPath: 'id', autoIncrement: true });
+					upgrade(db) {
+						// Create object stores for file1.csv and file2.csv
+            db.createObjectStore('vinculum.csv', { keyPath: 'id', autoIncrement: true });
             db.createObjectStore('file2.csv', { keyPath: 'id', autoIncrement: true });
           },
         });
-
+				console.log('loading and here')
+				
         // Fetch file1.csv
 				const DBstore = useDBstate();
-        const responseFile1 = await fetch('/src/data/file1.csv');
+        const responseFile1 = await fetch('/src/data/vinculum.csv');
         const csvTextFile1 = await responseFile1.text();
-				DBstore.addFileUploaded('az1', 'az', 'file1.csv')
+				DBstore.addFileUploaded('az1', 'az', 'vinculum.csv')
 
         // Fetch file2.csv
         const responseFile2 = await fetch('/src/data/file2.csv');
@@ -67,7 +68,7 @@
 
         // Process and store file1.csv in IndexedDB 'file1' object store
         const dataFile1 = processData(csvTextFile1);
-        await storeData(db, 'file1.csv', dataFile1);
+        await storeData(db, 'vinculum.csv', dataFile1);
 
 
         // Process and store file2.csv in IndexedDB 'file2' object store

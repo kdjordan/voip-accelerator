@@ -46,6 +46,7 @@ export default function useCSVProcessing() {
 						const standardizedData: StandardizedData[] = [];
 
 						fullData.forEach((row: string[]) => {
+							console.log('hanging here')
 							const standardizedRow: StandardizedData = {
 								destName: '',
 								dialCode: 0,

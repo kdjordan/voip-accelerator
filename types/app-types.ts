@@ -28,13 +28,21 @@ export interface RateComparison {
   rateFile2: number;
   percentageDifference: number;
 }
+export interface ConsolidatedData {
+  destName: string;
+  rateFile1: number;
+  rateFile2: number;
+  dialCode: string;
+  percentageDifference: number;
+}
 
 export interface ComparisonReport {
-  higherRatesForFile1: RateComparison[];
-  higherRatesForFile2: RateComparison[];
-  sameRates: { [dialCode: string]: { destName: string; rateFile1: number; rateFile2: number } };
+  higherRatesForFile1: ConsolidatedData[];
+  higherRatesForFile2: ConsolidatedData[];
+  sameRates: ConsolidatedData[];
   nonMatchingCodes: NonMatchingCode[];
 }
+
 
 export interface NonMatchingCode {
   dialCode: number;

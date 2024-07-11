@@ -95,6 +95,7 @@
 		let file2 = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component2.value), dbStore.globalDBVersion)
 
 		const returnedReport = await makePricingReport(file1, file2)
+		console.log('got report ',  returnedReport)
 		report.value = returnedReport
 		isGeneratingReport.value = false;
 

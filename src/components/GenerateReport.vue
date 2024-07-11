@@ -37,8 +37,9 @@
 
 		<div>
 			<h3 class="pb-4 uppercase">
-				<span class="text-accent">{{ details?.fileName1 }}</span> :: should sell these destinations to
-				:: <span class="text-accent">{{ details?.fileName2 }}</span>
+				<span class="text-accent">{{ details?.fileName1 }}</span> ::
+				should sell these destinations to ::
+				<span class="text-accent">{{ details?.fileName2 }}</span>
 			</h3>
 			<table>
 				<thead>
@@ -55,7 +56,7 @@
 						v-for="(item, dialCode) in report.higherRatesForFile2"
 						:key="dialCode"
 					>
-						<td>{{ item.dialCode }}</td>
+						<td class="dial-code-cell">{{ item.dialCode }}</td>
 						<td>{{ item.destName }}</td>
 						<td>{{ item.rateFile1 }}</td>
 						<td>{{ item.rateFile2 }}</td>
@@ -90,9 +91,19 @@
 			</table>
 		</div>
 
-		<div v-if="showUnmatchedCodes">
-			<h3 class="pb-4 uppercase">Non-Matching Codes</h3>
-			<table>
+		<div>
+			<div class="flex align-center">
+				<h3 class="pb-4 uppercase">Non-Matching Codes</h3>
+				<div>
+					<button
+						@click="toggleUnmatchedCodes"
+						class="ml-4 py-2 px-4 rounded transition text-center bg-blue-500 hover:bg-blue-600 text-white"
+					>
+						{{ buttonText }}
+					</button>
+				</div>
+			</div>
+			<table v-if="showUnmatchedCodes">
 				<thead>
 					<tr>
 						<th>Dial Code</th>
@@ -113,14 +124,6 @@
 					</tr>
 				</tbody>
 			</table>
-		</div>
-		<div>
-			<button
-				@click="toggleUnmatchedCodes"
-				class="py-2 px-4 rounded transition text-center bg-blue-500 hover:bg-blue-600 text-white"
-			>
-				{{ buttonText }}
-			</button>
 		</div>
 	</div>
 </template>
@@ -148,6 +151,11 @@
 </script>
 
 <style scoped>
+	.dial-code-cell {
+		max-width: 200px; /* Adjust the max-width as needed */
+		word-wrap: break-word;
+		white-space: normal;
+	}
 	table {
 		width: 100%;
 		border-collapse: collapse;
