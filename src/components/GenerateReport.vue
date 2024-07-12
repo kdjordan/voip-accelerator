@@ -6,17 +6,17 @@
 
 		<div>
 			<h3 class="pb-4 uppercase">
-				<span class="text-accent">{{ details?.fileName1 }}</span> ::
+				<span class="text-accent">{{ report.fileName1 }}</span> ::
 				should buy these destinations from ::
-				<span class="text-accent">{{ details?.fileName2 }}</span>
+				<span class="text-accent">{{ report.fileName2 }}</span>
 			</h3>
 			<table>
 				<thead>
 					<tr>
 						<th>Dial Code</th>
 						<th>Destination</th>
-						<th>{{ details?.fileName1 }} Rate</th>
-						<th>{{ details?.fileName2 }} Rate</th>
+						<th>{{ report.fileName1 }} Rate</th>
+						<th>{{ report.fileName2 }} Rate</th>
 						<th>Difference (%)</th>
 					</tr>
 				</thead>
@@ -37,17 +37,17 @@
 
 		<div>
 			<h3 class="pb-4 uppercase">
-				<span class="text-accent">{{ details?.fileName1 }}</span> ::
+				<span class="text-accent">{{ report.fileName1 }}</span> ::
 				should sell these destinations to ::
-				<span class="text-accent">{{ details?.fileName2 }}</span>
+				<span class="text-accent">{{ report.fileName2 }}</span>
 			</h3>
 			<table>
 				<thead>
 					<tr>
 						<th>Dial Code</th>
 						<th>Destination</th>
-						<th>{{ details?.fileName1 }} - rate</th>
-						<th>{{ details?.fileName2 }} - rate</th>
+						<th>{{ report.fileName1 }} - rate</th>
+						<th>{{ report.fileName2 }} - rate</th>
 						<th>Difference (%)</th>
 					</tr>
 				</thead>
@@ -73,8 +73,8 @@
 					<tr>
 						<th>Dial Code</th>
 						<th>Destination</th>
-						<th>{{ details?.fileName1 }} Rate</th>
-						<th>{{ details?.fileName2 }} Rate</th>
+						<th>{{ report.fileName1 }} Rate</th>
+						<th>{{ report.fileName2 }} Rate</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -82,7 +82,7 @@
 						v-for="(item, dialCode) in report.sameRates"
 						:key="dialCode"
 					>
-						<td>{{ dialCode }}</td>
+						<td>{{ item.dialCode }}</td>
 						<td>{{ item.destName }}</td>
 						<td>{{ item.rateFile1 }}</td>
 						<td>{{ item.rateFile2 }}</td>
@@ -109,7 +109,7 @@
 						<th>Dial Code</th>
 						<th>Destination</th>
 						<th>Rate</th>
-						<th>File</th>
+						<th>Missing</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -136,7 +136,7 @@
 
 	defineProps<{
 		report: ComparisonReport;
-		details: { fileName1: string; fileName2: string } | null;
+	
 	}>();
 
 	function toggleUnmatchedCodes() {

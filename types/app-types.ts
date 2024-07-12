@@ -5,6 +5,13 @@ export interface State {
   componentFileIsUploading: string | undefined; // Allow string or undefined
 }
 
+export interface PricingReportInput {
+  fileName1?: string;
+  fileName2?: string;
+  file1Data: StandardizedData[]; 
+  file2Data: StandardizedData[]; 
+}
+
 export interface StandardizedData {
   destName: string;
   dialCode: number;
@@ -36,16 +43,19 @@ export interface ConsolidatedData {
   percentageDifference: number;
 }
 
+
 export interface ComparisonReport {
   higherRatesForFile1: ConsolidatedData[];
   higherRatesForFile2: ConsolidatedData[];
   sameRates: ConsolidatedData[];
   nonMatchingCodes: NonMatchingCode[];
+  fileName1: string;
+  fileName2: string;
 }
 
 
 export interface NonMatchingCode {
-  dialCode: number;
+  dialCode: string;
   destName: string;
   rate: number;
   file: string;

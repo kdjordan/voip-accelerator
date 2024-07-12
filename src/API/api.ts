@@ -1,9 +1,9 @@
 import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
 import ComparisonWorker from '@/workers/comparison.worker?worker';
-import { type ComparisonReport } from '../../types/app-types';
+import { type PricingReportInput, type ComparisonReport } from '../../types/app-types';
 
 
-export async function resetReport(reportType: string) {
+export async function resetReportApi(reportType: string) {
   await delteDb(reportType)
 
 }
@@ -24,13 +24,14 @@ export async function deleteAllDbs(theDbs: string[]) {
   } catch (e) {
     console.log(`error deleting db in API`, e)
   }
-  forceRefresh()
+  forceRefreshApi()
 }
 
-export async function makePricingReport(file1: any, file2: any ): Promise<ComparisonReport>{
+export async function makePricingReportApi(input: PricingReportInput): Promise<ComparisonReport>{
+  
   const worker = new ComparisonWorker();
 
-  	worker.postMessage({ file1, file2 });
+  	worker.postMessage(input);
   
   return new Promise((resolve, reject) => {
     worker.onmessage = (event) => {
@@ -47,6 +48,6 @@ export async function makePricingReport(file1: any, file2: any ): Promise<Compar
   
 }
 
-function forceRefresh() {
+function forceRefreshApi() {
   window.location.reload();
 }

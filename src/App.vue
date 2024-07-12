@@ -2,8 +2,6 @@
 	<div id="app">
 		<!-- Header Component -->
 		<Header />
-
-		<!-- Main Content Area where routed components will be displayed -->
 		<router-view />
 	</div>
 </template>
@@ -29,15 +27,14 @@
 				destName: destName.trim(),
 				dialCode: Number(dialCode.trim()),
 				rate: Number(rate.trim()),
-				id: index + 1,
 			};
 		});
 	}
 
 	async function loadDb() {
 		try {
+	
 			// Open or create the 'az' IndexedDB database
-			console.log('running');
 			const db = await openDB('az', 1, {
 				upgrade(db) {
 					// Create object stores for file1.csv and file2.csv
@@ -51,11 +48,11 @@
 					});
 				},
 			});
-			console.log('loading and here');
 
 			// Fetch file1.csv
 			const DBstore = useDBstate();
 			const responseFile1 = await fetch('/src/data/vinculum.csv');
+			
 			const csvTextFile1 = await responseFile1.text();
 			DBstore.addFileUploaded('az1', 'az', 'vinculum.csv');
 
@@ -93,7 +90,7 @@
 	// onBeforeUnmount(() => {
 	// 	window.removeEventListener('beforeunload', handleBeforeUnload);
 	// });
-	// });
+	
 </script>
 
 <style>

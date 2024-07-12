@@ -1,33 +1,49 @@
-import { type ComparisonReport, type StandardizedData, type RateComparison, type ConsolidatedData, type NonMatchingCode } from './../../types/app-types';
-type DialCodeMap = Map<number, { destName: string; rate: number }>;
+import {
+  type ComparisonReport,
+  type RateComparison,
+  type ConsolidatedData,
+  type PricingReportInput
+} from './../../types/app-types';
+// type DialCodeMap = Map<number, { destName: string; rate: number }>;
 
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {
-  const { file1, file2 } = event.data;
+  const { fileName1, fileName2, file1Data, file2Data } = event.data;
+  console.log('got', fileName1, fileName2)
 
 
   // Process comparison and generate report
-  const report: ComparisonReport = generateComparisonReport(file1, file2);
+  const report: ComparisonReport = generateComparisonReport(event.data);
 
   // Send the generated report back to the main thread
   self.postMessage(report);
 });
 
-function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport {
+function generateComparisonReport(input: PricingReportInput): ComparisonReport {
+  const { fileName1, fileName2, file1Data, file2Data } = input
+
+  if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
+    throw Error('Missing a file name or fileData in worker !!')
+  }
+
   const comparisonReport: ComparisonReport = {
     higherRatesForFile1: [],
     higherRatesForFile2: [],
     sameRates: [],
-    nonMatchingCodes: []
+    nonMatchingCodes: [],
+    fileName1: fileName1,
+    fileName2: fileName2
+
+    
   };
 
   const dialCodeMapFile1 = new Map<number, { destName: string; rate: number }>();
   const dialCodeMapFile2 = new Map<number, { destName: string; rate: number }>();
 
-  file1.forEach(entry => {
+  file1Data.forEach(entry => {
     dialCodeMapFile1.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
   });
-  file2.forEach(entry => {
+  file2Data.forEach(entry => {
     dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
   });
 
@@ -37,54 +53,78 @@ function generateComparisonReport(file1: any[], file2: any[]): ComparisonReport 
     if (dialCodeMapFile2.has(key1)) {
       const value2 = dialCodeMapFile2.get(key1)!;
       const percentageDifference = calculatePercentageDifference(value1.rate, value2.rate);
-      tempComparisons.push({
-        dialCode: key1,
-        destName: value1.destName,
-        rateFile1: value1.rate,
-        rateFile2: value2.rate,
-        percentageDifference: percentageDifference,
-      });
-      dialCodeMapFile2.delete(key1);
-    } else {
+  
+      if (value1.rate > value2.rate) {
+        comparisonReport.higherRatesForFile1.push({
+          dialCode: `${key1}`,
+          destName: value1.destName,
+          rateFile1: value1.rate,
+          rateFile2: value2.rate,
+          percentageDifference: percentageDifference
+        });
+      } else if (value1.rate < value2.rate) {
+        comparisonReport.higherRatesForFile2.push({
+          dialCode: `${key1}`,
+          destName: value1.destName,
+          rateFile1: value1.rate,
+          rateFile2: value2.rate,
+          percentageDifference: percentageDifference
+        });
+      } else if (value1.rate === value2.rate) {
+        comparisonReport.sameRates.push({
+          dialCode: `${key1}`,
+          destName: value1.destName,
+          rateFile1: value1.rate,
+          rateFile2: value2.rate,
+          percentageDifference: 0
+        });
+      } else {
       comparisonReport.nonMatchingCodes.push({
-        dialCode: key1,
+        dialCode: `${key1}`,
         destName: value1.destName,
         rate: value1.rate,
-        file: 'file1'
+        file: fileName1
       });
+      dialCodeMapFile2.delete(key1);
+     }
     }
   });
-
+  
   dialCodeMapFile2.forEach((value, key) => {
+    console.log(
+      'value', value,
+      'key', key
+    )
     comparisonReport.nonMatchingCodes.push({
-      dialCode: key,
+      dialCode: `${key}`,
       destName: value.destName,
       rate: value.rate,
-      file: 'file2'
+      file: fileName2
     });
   });
 
-  const consolidateEntries = (entries: RateComparison[]): ConsolidatedData[] => {
-    const groups = new Map<string, RateComparison[]>();
-    entries.forEach(entry => {
-      const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(entry);
-    });
+  // const consolidateEntries = (entries: RateComparison[]): ConsolidatedData[] => {
+  //   const groups = new Map<string, RateComparison[]>();
+  //   entries.forEach(entry => {
+  //     const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
+  //     if (!groups.has(key)) {
+  //       groups.set(key, []);
+  //     }
+  //     groups.get(key)!.push(entry);
+  //   });
 
-    const consolidatedEntries: ConsolidatedData[] = [];
-    groups.forEach(group => {
-      consolidatedEntries.push(consolidateDialCodes(group));
-    });
+  //   const consolidatedEntries: ConsolidatedData[] = [];
+  //   groups.forEach(group => {
+  //     consolidatedEntries.push(consolidateDialCodes(group));
+  //   });
 
-    return consolidatedEntries;
-  };
+  //   return consolidatedEntries;
+  // };
 
-  comparisonReport.higherRatesForFile1 = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference > 0));
-  comparisonReport.higherRatesForFile2 = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference < 0));
-  comparisonReport.sameRates = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference === 0));
+  // comparisonReport.higherRatesForFile1 = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference > 0));
+  // comparisonReport.higherRatesForFile2 = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference < 0));
+  // comparisonReport.sameRates = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference === 0));
+  // comparisonReport.nonMatchingCodes = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference === 0));
 
   return comparisonReport;
 }
@@ -103,6 +143,10 @@ function consolidateDialCodes(group: RateComparison[]): ConsolidatedData {
 }
 
 function calculatePercentageDifference(rate1: number, rate2: number): number {
-  return ((rate1 - rate2) / rate2) * 100;
+  if (rate1 > rate2) {
+    return ((rate1 - rate2) / rate2) * 100;
+} else {
+    return ((rate2 - rate1) / rate1) * 100;
+}
 }
 

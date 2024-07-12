@@ -27,15 +27,12 @@ export default function useIndexedDB() {
 
       const transaction = db.transaction(fileName, 'readwrite');
       const store = transaction.objectStore(fileName);
-      // console.log('got data for row ', data)
       data.forEach((row) => {
-        // console.log('adding', row)
         store.add(row);
       });
 
       transaction.oncomplete = () => {
         DBstore.addFileUploaded(componentName, dbName, fileName);
-        // console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
         DBstore.setGlobalFileIsUploading(false);
         DBstore.setComponentFileIsUploading(undefined)
         db.close();

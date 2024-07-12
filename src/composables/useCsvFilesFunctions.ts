@@ -28,9 +28,7 @@ export default function useCSVProcessing() {
 			console.error('No file selected');
 			return;
 		}
-		console.log('These file names exist :', DBstore.filesUploaded);
 		const fileNameExists = DBstore.checkFileNameAvailable(file.value.name);
-		console.log('File name exists:', fileNameExists);
 
 		if (!fileNameExists) {
 			DBstore.setComponentFileIsUploading(componentName.value);
@@ -46,7 +44,7 @@ export default function useCSVProcessing() {
 						const standardizedData: StandardizedData[] = [];
 
 						fullData.forEach((row: string[]) => {
-							
+							console.log('adding row')
 							const standardizedRow: StandardizedData = {
 								destName: '',
 								dialCode: 0,
@@ -83,9 +81,11 @@ export default function useCSVProcessing() {
 							if (isValidDestName && isValidDialCode && isValidRate) {
 								console.log('pushing')
 								standardizedData.push(standardizedRow);
-							} 
+							} else {
+								console.error('Issue parsing file')
+							}
 						});
-
+						//stay in local file 
 						storeDataInIndexedDB(standardizedData);
 					},
 					error: function(error) {
@@ -116,11 +116,12 @@ export default function useCSVProcessing() {
 				},
 			});
 		} catch {
-			console.log('error uploading file');
+			console.error('error uploading file');
 		}
 	}
 
-	async function storeDataInIndexedDB(data: StandardizedData[]) {
+	//function reaches out to IndesBB composable to store data
+	async function storeDataInIndexedDB(data: StandardizedData[]) {	
 		console.log('storing with ', DBname.value, componentName.value)
 		try {
 			if (file.value) {

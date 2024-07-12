@@ -53,7 +53,6 @@
 			<GenerateReport
 				v-if="report"
 				:report="report"
-				:details="{ fileName1: file1, fileName2: file2 }"
 			/>
 		</div>
 	</div>
@@ -65,7 +64,7 @@
 	import UploadComponent from '../components/UploadComponent.vue';
 	import GenerateReport from '../components/GenerateReport.vue';
 	import useIndexedDB from '../composables/useIndexDB';
-	import { makePricingReport, resetReport } from '@/API/api';
+	import { makePricingReportApi, resetReportApi } from '@/API/api';
 	const { loadFromIndexedDB } = useIndexedDB();
 	import { useDBstate } from '@/stores/dbStore';
 	
@@ -74,30 +73,44 @@
 	const theDb = ref<string>('az');
 	const component1 = ref<string>('az1');
 	const component2 = ref<string>('az2');
-	const file1 = ref<string>(dbStore.getStoreNameByComponent(component1.value).split('.')[0])
-	const file2 = ref<string>(dbStore.getStoreNameByComponent(component2.value).split('.')[0])
+	// const file1 = ref<string>(dbStore.getStoreNameByComponent(component1.value).split('.')[0])
+	// const file2 = ref<string>(dbStore.getStoreNameByComponent(component2.value).split('.')[0])
+	const fileName1 = ref<string>('')
+	const fileName2 = ref<string>('')
 	const isGeneratingReport = ref<boolean>(false);
-
-	// const isReporting = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
 
 	async function resetThisReport() {
-		await resetReport('az');
+		//use API to delet DB by name
+		await resetReportApi('az');
+		//reset Pinia state
 		dbStore.resetFilesUploadedByDBname('az')
 		report.value = null;
 	}
 
 	async function makeReport() {
-		console.log('going in');
 		isGeneratingReport.value = true;
-
-		let file1 = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component1.value), dbStore.globalDBVersion)
-		let file2 = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component2.value), dbStore.globalDBVersion)
-
-		const returnedReport = await makePricingReport(file1, file2)
-		console.log('got report ',  returnedReport)
-		report.value = returnedReport
-		isGeneratingReport.value = false;
+		let fileName1 = dbStore.getStoreNameByComponent(component1.value).split('.')[0]
+		let fileName2 = dbStore.getStoreNameByComponent(component2.value).split('.')[0]
+		
+		let file1Data = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component1.value), dbStore.globalDBVersion)
+		let file2Data = await getFilesFromIndexDB(theDb.value, dbStore.getStoreNameByComponent(component2.value), dbStore.globalDBVersion)
+		
+		if (fileName1 && fileName2 && file1Data && file2Data) {
+			console.log('starting the report...');
+			const returnedReport = await makePricingReportApi({
+				fileName1,
+				fileName2,
+				file1Data,
+				file2Data
+			})
+			console.log('got report ',  returnedReport)
+			report.value = returnedReport
+			isGeneratingReport.value = false;
+		} else {
+			isGeneratingReport.value = false;
+			console.error('Error getting files from DB')
+		}
 
 	}
 	
@@ -106,7 +119,8 @@
 			const result = await loadFromIndexedDB(dbName, store, dbVersion)
 			return result
 		} catch(e) {
-			console.log(`got an errror getting ${store}`)
+			isGeneratingReport.value = false;
+			console.error(`got an errror getting ${store} out of DB`)
 		}
 	}
 </script>
