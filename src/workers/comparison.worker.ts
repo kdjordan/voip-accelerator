@@ -1,6 +1,5 @@
 import {
   type ComparisonReport,
-  type RateComparison,
   type ConsolidatedData,
   type PricingReportInput
 } from './../../types/app-types';
@@ -8,10 +7,7 @@ import {
 
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {
-  const { fileName1, fileName2, file1Data, file2Data } = event.data;
-  console.log('got', fileName1, fileName2)
-
-
+  
   // Process comparison and generate report
   const report: ComparisonReport = generateComparisonReport(event.data);
 
@@ -46,8 +42,6 @@ function generateComparisonReport(input: PricingReportInput): ComparisonReport {
   file2Data.forEach(entry => {
     dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
   });
-
-  const tempComparisons: RateComparison[] = [];
 
   dialCodeMapFile1.forEach((value1, key1) => {
     if (dialCodeMapFile2.has(key1)) {
@@ -91,10 +85,6 @@ function generateComparisonReport(input: PricingReportInput): ComparisonReport {
   });
   
   dialCodeMapFile2.forEach((value, key) => {
-    console.log(
-      'value', value,
-      'key', key
-    )
     comparisonReport.nonMatchingCodes.push({
       dialCode: `${key}`,
       destName: value.destName,
@@ -103,41 +93,41 @@ function generateComparisonReport(input: PricingReportInput): ComparisonReport {
     });
   });
 
-  // const consolidateEntries = (entries: RateComparison[]): ConsolidatedData[] => {
-  //   const groups = new Map<string, RateComparison[]>();
-  //   entries.forEach(entry => {
-  //     const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
-  //     if (!groups.has(key)) {
-  //       groups.set(key, []);
-  //     }
-  //     groups.get(key)!.push(entry);
-  //   });
+  const consolidateEntries = (entries: ConsolidatedData[]): ConsolidatedData[] => {
+    const groups = new Map<string, ConsolidatedData[]>();
+    entries.forEach(entry => {
+      const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(entry);
+    });
 
-  //   const consolidatedEntries: ConsolidatedData[] = [];
-  //   groups.forEach(group => {
-  //     consolidatedEntries.push(consolidateDialCodes(group));
-  //   });
+    const consolidatedEntries: ConsolidatedData[] = [];
+    groups.forEach(group => {
+      consolidatedEntries.push(consolidateDialCodes(group));
+    });
 
-  //   return consolidatedEntries;
-  // };
+    return consolidatedEntries;
+  };
 
-  // comparisonReport.higherRatesForFile1 = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference > 0));
-  // comparisonReport.higherRatesForFile2 = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference < 0));
-  // comparisonReport.sameRates = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference === 0));
+  comparisonReport.higherRatesForFile1 = consolidateEntries(comparisonReport.higherRatesForFile1);
+  comparisonReport.higherRatesForFile2 = consolidateEntries(comparisonReport.higherRatesForFile2);
+  comparisonReport.sameRates = consolidateEntries(comparisonReport.sameRates);
   // comparisonReport.nonMatchingCodes = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference === 0));
 
   return comparisonReport;
 }
 
 
-function consolidateDialCodes(group: RateComparison[]): ConsolidatedData {
+function consolidateDialCodes(group: ConsolidatedData[]): ConsolidatedData {
   const { destName, rateFile1, rateFile2, percentageDifference } = group[0];
   const dialCodes = new Set(group.map(row => row.dialCode));
   return {
     destName,
     rateFile1,
     rateFile2,
-    dialCode: Array.from(dialCodes).join(','),
+    dialCode: Array.from(dialCodes).join(', '),
     percentageDifference,
   };
 }

@@ -13,7 +13,7 @@
 			<table>
 				<thead>
 					<tr>
-						<th>Dial Code</th>
+						<th>Dial Code(s)</th>
 						<th>Destination</th>
 						<th>{{ report.fileName1 }} Rate</th>
 						<th>{{ report.fileName2 }} Rate</th>
@@ -44,7 +44,7 @@
 			<table>
 				<thead>
 					<tr>
-						<th>Dial Code</th>
+						<th>Dial Code(s)</th>
 						<th>Destination</th>
 						<th>{{ report.fileName1 }} - rate</th>
 						<th>{{ report.fileName2 }} - rate</th>
@@ -56,7 +56,7 @@
 						v-for="(item, dialCode) in report.higherRatesForFile2"
 						:key="dialCode"
 					>
-						<td class="dial-code-cell">{{ item.dialCode }}</td>
+						<td class="dialcodecell">{{ item.dialCode }}</td>
 						<td>{{ item.destName }}</td>
 						<td>{{ item.rateFile1 }}</td>
 						<td>{{ item.rateFile2 }}</td>
@@ -71,7 +71,7 @@
 			<table>
 				<thead>
 					<tr>
-						<th>Dial Code</th>
+						<th>Dial Code(s)</th>
 						<th>Destination</th>
 						<th>{{ report.fileName1 }} Rate</th>
 						<th>{{ report.fileName2 }} Rate</th>
@@ -82,7 +82,7 @@
 						v-for="(item, dialCode) in report.sameRates"
 						:key="dialCode"
 					>
-						<td>{{ item.dialCode }}</td>
+						<td class="dialcodecell">{{ item.dialCode }}</td>
 						<td>{{ item.destName }}</td>
 						<td>{{ item.rateFile1 }}</td>
 						<td>{{ item.rateFile2 }}</td>
@@ -117,7 +117,7 @@
 						v-for="(item, index) in report.nonMatchingCodes"
 						:key="index"
 					>
-						<td>{{ item.dialCode }}</td>
+						<td class="dialcodecell">{{ item.dialCode }}</td>
 						<td>{{ item.destName }}</td>
 						<td>{{ item.rate }}</td>
 						<td>{{ item.file }}</td>
@@ -136,7 +136,6 @@
 
 	defineProps<{
 		report: ComparisonReport;
-	
 	}>();
 
 	function toggleUnmatchedCodes() {
@@ -151,8 +150,8 @@
 </script>
 
 <style scoped>
-	.dial-code-cell {
-		max-width: 200px; /* Adjust the max-width as needed */
+	.dialcodecell {
+		max-width: 150px; /* Adjust the max-width as needed */
 		word-wrap: break-word;
 		white-space: normal;
 	}
@@ -160,12 +159,13 @@
 		width: 100%;
 		border-collapse: collapse;
 		margin-bottom: 20px;
+    line-height: 1.2;
 	}
 
 	th,
 	td {
 		border: 1px solid #ddd;
-		padding: 8px;
+		padding: 8px; 
 		text-align: left;
 	}
 

@@ -28,18 +28,11 @@ export interface ParsedResults {
   data: string[][];
 }
 
-export interface RateComparison {
-  dialCode: number;
-  destName: string;
-  rateFile1: number;
-  rateFile2: number;
-  percentageDifference: number;
-}
 export interface ConsolidatedData {
+  dialCode: string;
   destName: string;
   rateFile1: number;
   rateFile2: number;
-  dialCode: string;
   percentageDifference: number;
 }
 
