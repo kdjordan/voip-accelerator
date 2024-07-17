@@ -63,11 +63,13 @@
 		<div>
 			<GenerateReport v-if="report" :report="report" />
 		</div>
+		<Button>Click</Button>
 	</div>
 </div>
 </template>
 
 <script setup lang="ts">
+
 	import { ref } from 'vue';
 	import { type ComparisonReport, AZColumnRole } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
