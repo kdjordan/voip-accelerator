@@ -55,10 +55,13 @@
 				:report="report"
 			/>
 		</div>
+		<Button>Click</Button>
 	</div>
 </template>
 
 <script setup lang="ts">
+import { Button } from '@/components/ui/button'
+
 	import { ref } from 'vue';
 	import { type ComparisonReport } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';

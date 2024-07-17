@@ -1,108 +1,37 @@
-function consolidateDialCodes(group: StandardizedData[]): StandardizedData {
-    const { destName, rate } = group[0];
-    const dialCodes = new Set(group.map(row => row.dialCode));
-    return {
-      destName,
-      rate,
-      dialCode: Array.from(dialCodes).join(','),
-      // include other properties if needed
-    };
-  }
-
-  async function openDB(name: string, version: number, options: any): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(name, version);
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (options.upgrade) {
-          options.upgrade(db);
-        }
-      };
-      request.onsuccess = (event) => {
-        resolve((event.target as IDBOpenDBRequest).result);
-      };
-      request.onerror = (event) => {
-        reject((event.target as IDBOpenDBRequest).error);
-      };
-    });
-  }
-
-  function batchProcessAndStoreData(data: StandardizedData[], store: IDBObjectStore) {
-    let currentGroup: StandardizedData[] = [];
-    let currentDestName = data[0].destName;
-    let currentRate = data[0].rate;
-
-    data.forEach((row) => {
-      if (row.destName === currentDestName && row.rate === currentRate) {
-        currentGroup.push(row);
-      } else {
-        // Consolidate and add the current group to the store
-        const consolidatedRow = consolidateDialCodes(currentGroup);
-        store.add(consolidatedRow);
-
-        // Reset the group
-        currentGroup = [row];
-        currentDestName = row.destName;
-        currentRate = row.rate;
-      }
-    });
-
-    // Consolidate and add the last group to the store
-    const consolidatedRow = consolidateDialCodes(currentGroup);
-    console.log('***', consolidatedRow);
-    store.add(consolidatedRow);
-  }
-
-  async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string): Promise<void> {
-    try {
-      const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
-        upgrade(db) {
-          console.log('Upgrade needed for IndexedDB');
-          DBstore.setGlobalFileIsUploading(true);
-
-          if (!db.objectStoreNames.contains(fileName)) {
-            db.createObjectStore(fileName, {
-              keyPath: 'id',
-              autoIncrement: true,
-            });
-          }
-        },
-      });
-
-      const transaction = db.transaction(fileName, 'readwrite');
-      const store = transaction.objectStore(fileName);
-
-      // Sort the data by destName and rate
-      data.sort((a, b) => {
-        if (a.destName < b.destName) return -1;
-        if (a.destName > b.destName) return 1;
-        if (a.rate < b.rate) return -1;
-        if (a.rate > b.rate) return 1;
-        return 0;
-      });
-      console.log('got sorted data', data)
-
-      // Batch process and store the data
-      batchProcessAndStoreData(data, store);
-
-      transaction.oncomplete = () => {
-        DBstore.addFileUploaded(componentName, dbName, fileName);
-        console.log('Data stored successfully in IndexedDB', fileName, dbName, componentName);
-        DBstore.setGlobalFileIsUploading(false);
-        DBstore.setComponentFileIsUploading(undefined);
-        db.close();
-      };
-
-      transaction.onerror = () => {
-        DBstore.setGlobalFileIsUploading(false);
-        DBstore.setComponentFileIsUploading(undefined);
-        console.error('Transaction error:', transaction.error);
-      };
-    } catch (error) {
-      console.error('Error opening IndexedDB:', error);
-    }
-  }
-
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{vue,js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      fontSize: {
+				sizeSm: 'clamp(0.8rem, 0.17vi + 0.76rem, 0.89rem)',
+				sizeBase: 'clamp(1rem, 0.34vi + 0.91rem, 1.19rem)',
+				sizeLg: 'clamp(1.25rem, 0.61vi + 1.1rem, 1.58rem)',
+				sizeXl: 'clamp(1.56rem, 1vi + 1.31rem, 2.11rem)',
+				size2xl: 'clamp(1.95rem, 1.56vi + 1.56rem, 2.81rem)',
+				size3xl: 'clamp(2.44rem, 2.38vi + 1.85rem, 3.75rem)',
+				size4xl: 'clamp(3.05rem, 3.54vi + 2.17rem, 5rem)',
+				size5xl: 'clamp(3.81rem, 5.18vi + 2.52rem, 6.66rem)',
+				size6xl: 'clamp(4.77rem, 7.48vi + 2.9rem, 8.88rem)',
+			},
+      colors: {
+        primary: '#2ecc71',       // Deep Green
+        secondary: '#e67e22',     // Sand Beige
+        accent: '#34495e',        // Dark Slate
+        text: '#2c3e50',          // Charcoal Gray
+        background: '#ecf0f1',    // Soft Sky
+      },
+      fontFamily: {
+        primary: ['Raleway', 'sans-serif'],
+        secondary: ['Nunito', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
 
 
 // Compute available roles for each column

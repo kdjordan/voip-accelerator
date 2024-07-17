@@ -1,5 +1,5 @@
 <template>
-	<nav class="w-full bg-background">
+	<nav class="w-full bg-background z-40">
 		<div
 			class="w-full flex justify-between items-center h-[5rem] px-4 font-primary text-accent"
 		>

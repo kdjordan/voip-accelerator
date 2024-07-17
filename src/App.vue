@@ -1,13 +1,18 @@
 <template>
-	<div id="app">
-		<!-- Header Component -->
-		<Header />
-		<router-view />
-	</div>
+	<div class="flex flex-col h-screen">
+    <Header />
+    <div class="flex flex-grow">
+      <SideNav />
+      <div class="flex-grow p-4">
+        <router-view />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 	import Header from './components/TheHeader.vue';
+	import SideNav from './components/SideNav.vue';
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
 	import { useDBstate } from '@/stores/dbStore';
@@ -33,7 +38,6 @@
 
 	async function loadDb() {
 		try {
-	
 			// Open or create the 'az' IndexedDB database
 			const db = await openDB('az', 1, {
 				upgrade(db) {
@@ -52,7 +56,7 @@
 			// Fetch file1.csv
 			const DBstore = useDBstate();
 			const responseFile1 = await fetch('/src/data/vinculum.csv');
-			
+
 			const csvTextFile1 = await responseFile1.text();
 			DBstore.addFileUploaded('az1', 'az', 'vinculum.csv');
 
@@ -90,7 +94,6 @@
 	// onBeforeUnmount(() => {
 	// 	window.removeEventListener('beforeunload', handleBeforeUnload);
 	// });
-	
 </script>
 
 <style>
