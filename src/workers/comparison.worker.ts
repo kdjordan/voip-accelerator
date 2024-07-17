@@ -1,7 +1,8 @@
 import {
   type ComparisonReport,
   type ConsolidatedData,
-  type PricingReportInput
+  type PricingReportInput,
+  type NonMatchingCode
 } from './../../types/app-types';
 // type DialCodeMap = Map<number, { destName: string; rate: number }>;
 
@@ -114,10 +115,34 @@ function generateComparisonReport(input: PricingReportInput): ComparisonReport {
   comparisonReport.higherRatesForFile1 = consolidateEntries(comparisonReport.higherRatesForFile1);
   comparisonReport.higherRatesForFile2 = consolidateEntries(comparisonReport.higherRatesForFile2);
   comparisonReport.sameRates = consolidateEntries(comparisonReport.sameRates);
-  // comparisonReport.nonMatchingCodes = consolidateEntries(tempComparisons.filter(entry => entry.percentageDifference === 0));
+  comparisonReport.nonMatchingCodes = consolidateNonMatchingEntries(comparisonReport.nonMatchingCodes);
 
   return comparisonReport;
 }
+
+function consolidateDialCodesForNonMatching(group: NonMatchingCode[]): NonMatchingCode {
+  const consolidatedDialCode = group.map(entry => entry.dialCode).join(", ");
+  const { destName, rate, file } = group[0]; // Assuming all entries in the group have the same destName, rate, and file.
+  return { dialCode: consolidatedDialCode, destName, rate, file };
+};
+
+function consolidateNonMatchingEntries(entries: NonMatchingCode[]): NonMatchingCode[] {
+  const groups = new Map<string, NonMatchingCode[]>();
+  entries.forEach(entry => {
+    const key = `${entry.destName}:${entry.rate}:${entry.file}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(entry);
+  });
+
+  const consolidatedEntries: NonMatchingCode[] = [];
+  groups.forEach(group => {
+    consolidatedEntries.push(consolidateDialCodesForNonMatching(group));
+  });
+
+  return consolidatedEntries;
+};
 
 
 function consolidateDialCodes(group: ConsolidatedData[]): ConsolidatedData {

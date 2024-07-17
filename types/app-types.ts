@@ -6,8 +6,8 @@ export interface State {
 }
 
 export interface PricingReportInput {
-  fileName1?: string;
-  fileName2?: string;
+  fileName1: string;
+  fileName2: string;
   file1Data: StandardizedData[]; 
   file2Data: StandardizedData[]; 
 }
