@@ -1,5 +1,5 @@
 <template>
-   <div :class="['sidebar', { 'collapsed': !isOpen }, 'bg-background text-foreground rounded-tr-xl rounded-br-xl border border-muted']">
+   <nav :class="['sidebar', { 'collapsed': !isOpen }, 'bg-background text-foreground rounded-tr-xl rounded-br-xl border border-muted']">
     <!-- <div class="p-4 flex items-center justify-between pt-10 relative">
       <button @click="toggleSidebar" class="focus:outline-none absolute right-4 top-4">
         <ChevronRightIcon
@@ -10,13 +10,13 @@
     </div> -->
     <ul>
       <li v-for="item in items" :key="item.name" class="p-4 hover:bg-muted hover:text-foreground">
-        <router-link :to="item.to" class="flex items-center space-x-2"  exactActiveClass="border-indigo-500">
+        <RouterLink :to="item.to" class="flex items-center space-x-2" active-class="active-link">
           <component :is="item.icon" class="w-6 h-6 text-foreground" />
           <span v-if="isOpen">{{ item.name }}</span>
-        </router-link>
+        </RouterLink>
       </li>
     </ul>
-  </div>
+  </nav>
 </template>
 
 <script setup lang="ts">
@@ -27,6 +27,7 @@ import {
   ArrowsPointingOutIcon,
   DocumentTextIcon,
 } from '@heroicons/vue/24/outline';
+import { RouterLink } from 'vue-router';
 
 const isOpen = ref(true);
 
@@ -118,8 +119,9 @@ button .focus\:outline-none:focus {
   outline: none;
 }
 
-.active {
+.active-link {
   background-color: var(--primary); /* Customize the active background color */
   color: var(--primary-foreground); /* Customize the active text color */
 }
+
 </style>
