@@ -1,104 +1,48 @@
 <template>
-	<nav class="w-full bg-background z-40">
-		<div
-			class="w-full flex justify-between items-center h-[5rem] px-4 font-primary text-accent"
+	<div class="flex justify-center">
+		<header
+			class="w-3/4 bg-background text-foreground flex justify-between items-center py-2 px-4 rounded-xl my-2 border border-muted"
 		>
-			<div>
-				<h1 class="uppercase lg:text-sizeXl">Telecom Toolkit</h1>
-			</div>
-			<button
-				@click="resetAlldbs"
-				class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition ml-4"
-			>
-				RESET
-			</button>
-
-			<div class="ml-auto relative">
-				<ul
-					class="flex gap-8 whitespace-nowrap text-sizeSm uppercase"
+			<h1 class="tracking-wider text-foreground">
+				The Telecom Toolkit
+			</h1>
+			<div class="flex items-center space-x-4">
+					<Button
+						class="bg-foreground text-background"
+					>
+						My account
+					</Button>
+				<Button
+					class="bg-destructive text-foreground"
 				>
-					<li class="relative">
-						<span class="cursor-pointer" @click="toggleDropdown"
-							>Pricing Tools</span
-						>
-						<ul
-							v-if="isDropdownOpen"
-							class="absolute left-0 mt-2 w-40 bg-white border border-gray-200 shadow-lg rounded-md z-10"
-						>
-							<li>
-								<router-link
-									to="/azpricing"
-									class="block px-4 py-2 hover:bg-gray-100"
-									@click="closeDropdown"
-								>
-									AZ
-								</router-link>
-							</li>
-							<li>
-								<router-link
-									to="/usdomestic"
-									class="block px-4 py-2 hover:bg-gray-100"
-									@click="closeDropdown"
-								>
-									US Domestic
-								</router-link>
-							</li>
-						</ul>
-					</li>
-					<li>
-						<router-link to="/lcr" @click="closeDropdown"
-							>LCR Generator</router-link
-						>
-					</li>
-					<li>
-						<router-link to="/dispute" @click="closeDropdown"
-							>Dispute Resolution</router-link
-						>
-					</li>
-				</ul>
+					Log out
+				</Button>
 			</div>
-		</div>
-	</nav>
+		</header>
+	</div>
 </template>
 
 <script setup lang="ts">
-	import { ref, onMounted, onBeforeUnmount } from 'vue';
-	import { deleteAllDbs } from '../API/api';
-	// const { deleteDataBase } = useIndexedDB();
+	import { ref } from 'vue';
+	import { Button } from '@/components/ui/button'
 
-	const isDropdownOpen = ref(false);
+	const dropdownOpen = ref(false);
+	const isDarkTheme = ref(false);
 
-  async function resetAlldbs() {
-    await deleteAllDbs(['az', 'us'])
-  }
+	function toggleDropdown() {
+		dropdownOpen.value = !dropdownOpen.value;
+	}
 
-	const toggleDropdown = () => {
-		isDropdownOpen.value = !isDropdownOpen.value;
-	};
-
-	const closeDropdown = () => {
-		isDropdownOpen.value = false;
-	};
-
-	const handleClickOutside = (event: MouseEvent) => {
-		const dropdownElement = document.querySelector('.relative');
-		if (
-			dropdownElement &&
-			!dropdownElement.contains(event.target as Node)
-		) {
-			closeDropdown();
+	function toggleTheme() {
+		isDarkTheme.value = !isDarkTheme.value;
+		if (isDarkTheme.value) {
+			document.body.classList.add('dark');
+		} else {
+			document.body.classList.remove('dark');
 		}
-	};
-
-	onMounted(() => {
-		document.addEventListener('click', handleClickOutside);
-	});
-
-	onBeforeUnmount(() => {
-		document.removeEventListener('click', handleClickOutside);
-	});
+	}
 </script>
 
 <style scoped>
-	/* Your modal-specific styles here */
+	/* You can add any additional styling here */
 </style>

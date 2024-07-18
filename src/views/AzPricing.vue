@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col items-center pt-32 gap-8">
+	<div class="flex flex-col items-center pt-8 gap-8 bg--background">
 		<h1 class="text-size2xl uppercase">AZ Pricing</h1>
 		<button
 			@click="resetThisReport"
@@ -55,7 +55,6 @@
 				:report="report"
 			/>
 		</div>
-		<Button>Click</Button>
 	</div>
 </template>
 
