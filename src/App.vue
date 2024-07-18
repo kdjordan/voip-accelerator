@@ -1,10 +1,13 @@
 <template>
-	<div class="flex flex-col h-screen">
-    <Header />
-    <div class="flex flex-grow">
-      <SideNav />
-      <div class="flex-grow p-4">
-        <router-view />
+  <div class="relative flex flex-col h-screen w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground">
+    <!-- Main content -->
+    <div class="relative flex flex-col h-screen w-full">
+      <!-- <Header /> -->
+      <div class="flex flex-grow">
+        <SideNav />
+        <div class="flex-grow p-4">
+          <router-view />
+        </div>
       </div>
     </div>
   </div>
