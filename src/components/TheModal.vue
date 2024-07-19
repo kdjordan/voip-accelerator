@@ -17,16 +17,18 @@
 					>&#8203;</span
 				>
 				<div
-					class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6"
+					class="inline-block align-bottom bg-secondary-foreground rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6"
 				>
-					<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+					<div
+						class="bg-secondary-foreground px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+					>
 						<div class="sm:flex sm:items-start">
 							<div
 								class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full"
 							>
 								<div class="flex items-center justify-between">
 									<h3
-										class="text-lg leading-6 font-medium text-gray-900"
+										class="text-lg leading-6 font-medium text-foreground"
 										id="modal-title"
 									>
 										Select Column Roles
@@ -34,13 +36,13 @@
 									<div>
 										<label
 											for="start-line"
-											class="block text-sm font-medium text-gray-700"
+											class="block text-sm font-medium text-foreground"
 											>Data starts on line:</label
 										>
 										<select
 											id="start-line"
 											v-model="startLine"
-											class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+											class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-background"
 										>
 											<option v-for="i in 10" :key="i" :value="i">
 												{{ i }}
@@ -68,7 +70,7 @@
 															'bg-green-100':
 																columnRoles[index] !== '',
 														}"
-														class="block w-full border border-gray-300 rounded p-2"
+														class="block w-full border border-gray-300 rounded p-2 min-w-[200px]"
 													>
 														<option value="">Select Role</option>
 														<option
@@ -82,7 +84,9 @@
 												</th>
 											</tr>
 										</thead>
-										<tbody class="bg-white divide-y divide-gray-200">
+										<tbody
+											class="bg-background divide-y divide-gray-200"
+										>
 											<tr
 												v-for="(row, rowIndex) in displayedData"
 												:key="rowIndex"
@@ -164,10 +168,10 @@
 		// 		role === columnRoles.value[currentIndex]
 		// );
 		return props.columnRoleOptions.filter(
-    (role) =>
-      !usedRoles.has(role.value) ||
-      role.value === columnRoles.value[currentIndex]
-  );
+			(role) =>
+				!usedRoles.has(role.value) ||
+				role.value === columnRoles.value[currentIndex]
+		);
 	};
 
 	const displayedData = computed(() => {
@@ -176,11 +180,13 @@
 
 	// Check if all column roles are selected
 	const allRequiredRolesSelected = computed(() => {
-  const requiredRoles = props.columnRoleOptions.map(option => option.value);
-  return requiredRoles.every((role) =>
-    columnRoles.value.includes(role)
-  );
-});
+		const requiredRoles = props.columnRoleOptions.map(
+			(option) => option.value
+		);
+		return requiredRoles.every((role) =>
+			columnRoles.value.includes(role)
+		);
+	});
 
 	function confirmColumnRoles() {
 		console.log(
@@ -200,7 +206,5 @@
 </script>
 
 <style scoped>
-	.aborder {
-		border: 1px solid red;
-	}
+
 </style>

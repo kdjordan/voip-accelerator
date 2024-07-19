@@ -12,11 +12,11 @@
 					>
 						My account
 					</Button>
-				<Button
+				<button
 					class="bg-destructive text-foreground"
 				>
 					Log out
-				</Button>
+				</button>
 			</div>
 		</header>
 	</div>
@@ -24,7 +24,6 @@
 
 <script setup lang="ts">
 	import { ref } from 'vue';
-	import { Button } from '@/components/ui/button'
 
 	const dropdownOpen = ref(false);
 	const isDarkTheme = ref(false);

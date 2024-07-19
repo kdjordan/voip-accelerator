@@ -2,36 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 220 30% 10%; /* Dark background */
-    --foreground: 151 36% 100%; /* Light text */
-    --muted: 220 20% 20%; /* Dark muted */
-    --muted-foreground: 151 25% 70%; /* Light muted foreground */
-    --popover: 220 30% 12%; /* Dark popover */
-    --popover-foreground: 0 0% 100%; /* White text */
-    --card: 220 30% 12%; /* Dark card */
-    --card-foreground: 0 0% 100%; /* White text */
-    --border: 151 12% 15%; /* Dark border */
-    --input: 151 12% 15%; /* Dark input */
-    --primary: 120 100% 50%; /* Neon green primary */
-    --primary-foreground: 0 0% 0%; /* Black text for primary */
-    --secondary: 220 8% 8%; /* Very dark secondary */
-    --secondary-foreground: 151 8% 68%; /* Light text for secondary */
-    --accent: 120 80% 50%; /* Neon green accent */
-    --accent-foreground: 0 0% 0%; /* Black text for accent */
-    --destructive: 0 100% 50%; /* Red for destructive actions */
-    --destructive-foreground: 0 0% 100%; /* White text for destructive actions */
-    --ring: 120 100% 50%; /* Neon green ring */
-    --radius: 0.5rem; /* Border radius */
-  }
+
+.table {
+  @apply min-w-full divide-y divide-gray-200 rounded-xl;
 }
 
-body {
-  /* background-color: hsl(var(--background)); */
+.table-head {
+  @apply bg-gray-600;
+}
+
+body, html {
+  
   background-color: var(--background);
   color: var(--foreground);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
-
-
-/* <div class="relative h-full w-full bg-slate-950"><div class="absolute bottom-0 left-0 right-0 top-0 bg-[radial-gradient(circle_500px_at_50%_200px,#3e3e3e,transparent)]"></div></div> */

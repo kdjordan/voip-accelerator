@@ -1,7 +1,7 @@
 <template>
-  <div class="relative flex flex-col h-screen w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground">
+  <div class="relative flex flex-col h-full w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground">
     <!-- Main content -->
-    <div class="relative flex flex-col h-screen w-full">
+    <div class="relative flex flex-col h-full w-full">
       <!-- <Header /> -->
       <div class="flex flex-grow">
         <SideNav />
@@ -14,7 +14,6 @@
 </template>
 
 <script setup>
-	import Header from './components/TheHeader.vue';
 	import SideNav from './components/SideNav.vue';
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';

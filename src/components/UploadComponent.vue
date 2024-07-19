@@ -1,13 +1,12 @@
 <template>
-	<div class="min-w-[300px] max-w-md rounded">
+	<div class="min-w-[300px] max-w-md rounded overflow-x-auto">
 		<div
-			class="px-6 rounded-lg shadow-md flex flex-col items-center justify-center space-y-4 h-96"
+			class="px-6 rounded-lg shadow-lg flex flex-col items-center justify-center space-y-4 py-8 bg-background"
 		>
-			<UploadIcon v-if="!props.disabled" class="w-8 h-8 text-primary" />
-			<p class="text-muted-foreground">{{ displayMessage }}</p>
+			<p class="text-muted-foreground mb-4">{{ displayMessage }}</p>
 			<div
 				:class="[
-					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-primary/80 transition-colors',
+					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-slate-400/80 transition-colors cursor-pointer',
 					{
 						pulse: DBstore.isComponentFileUploading(
 							props.componentName
@@ -21,15 +20,22 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<p
-					:class="{
-						'text-white': DBstore.isComponentFileUploading(
-							props.componentName
-						),
-					}"
-				>
-					{{ statusMessage }}
-				</p>
+				<div class="flex flex-col items-center gap-2">
+					<p
+						:class="{
+							'text-white': DBstore.isComponentFileUploading(
+								props.componentName
+							),
+						}"
+					>
+						{{ statusMessage }}
+					</p>
+
+					<UploadIcon
+						v-if="!props.disabled"
+						class="w-8 h-8 text-primary"
+					/>
+				</div>
 
 				<input
 					type="file"
@@ -40,10 +46,13 @@
 					ref="fileInput"
 				/>
 			</div>
-			<DeleteButton
+			<button
 				v-if="DBstore.isComponentDisabled(props.componentName)"
 				@click="removeFromDB"
-			/>
+				class="btn btn-destructive"
+			>
+				Remove
+			</button>
 		</div>
 		<!-- Column Roles Modal -->
 		<TheModal
@@ -72,7 +81,6 @@
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
 	import UploadIcon from './UploadIcon.vue';
-	import DeleteButton from './DeleteButton.vue';
 	import { ref, watch, onMounted } from 'vue';
 	import useCSVProcessing from '../composables/useCsvFilesFunctions';
 	import { useDBstate } from '@/stores/dbStore';
@@ -118,11 +126,13 @@
 			displayMessage.value = 'Upload YOUR rates as CSV';
 		} else if (type === 'client') {
 			displayMessage.value = 'Upload CARRIER rates as CSV';
-		} else if (type === 'complete'){
-			displayMessage.value = DBstore.getStoreNameByComponent(props.componentName)
+		} else if (type === 'complete') {
+			displayMessage.value = DBstore.getStoreNameByComponent(
+				props.componentName
+			);
 		}
 	};
-	
+
 	// Watch for changes in typeOfComponent prop
 	watch(
 		() => props.typeOfComponent,
@@ -131,7 +141,7 @@
 		},
 		{ immediate: true }
 	);
-	
+
 	// Watch for changes in fileUploading and disabled prop
 	watch(
 		[
@@ -142,19 +152,16 @@
 			if (localDBloadingVal) {
 				statusMessage.value = 'Working on it...';
 			} else if (disabledVal) {
-				statusMessage.value = 'Success!';
-				updateDisplayMessage('complete')
+				statusMessage.value = 'Success';
+				updateDisplayMessage('complete');
 			}
 		}
 	);
 
 	//if this component has a file that's uploaded make sure stausMessage and displayMessage
 	//are corrrect
-	if(DBstore.getStoreNameByComponent(props.componentName)) {
-		updateDisplayMessage('complete')
-	}
-	if(props.disabled) {
-		statusMessage.value = 'Success'
+	if (DBstore.getStoreNameByComponent(props.componentName)) {
+		updateDisplayMessage('complete');
 	}
 
 	function handleFileUpload(event: Event) {
@@ -234,7 +241,7 @@
 
 <style scoped>
 	.fileLoaded {
-		background-color: #81c784;
+		background-color: hsl(120, 100%, 30%);
 		color: white;
 	}
 	.drop-zone .absolute {
