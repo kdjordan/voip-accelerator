@@ -1,11 +1,15 @@
 <template>
 	<div class="min-w-[300px] max-w-md rounded overflow-x-auto">
+	<div class="min-w-[300px] max-w-md rounded overflow-x-auto">
 		<div
+			class="px-6 rounded-lg shadow-lg flex flex-col items-center justify-center space-y-4 py-8 bg-background"
 			class="px-6 rounded-lg shadow-lg flex flex-col items-center justify-center space-y-4 py-8 bg-background"
 		>
 			<p class="text-muted-foreground mb-4">{{ displayMessage }}</p>
+			<p class="text-muted-foreground mb-4">{{ displayMessage }}</p>
 			<div
 				:class="[
+					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-slate-400/80 transition-colors cursor-pointer',
 					'w-[95%] h-32 border-2 border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-slate-400/80 transition-colors cursor-pointer',
 					{
 						pulse: DBstore.isComponentFileUploading(
@@ -35,7 +39,6 @@
 						v-if="!props.disabled"
 						class="w-8 h-8 text-primary"
 					/>
-					
 				</div>
 
 				<input
@@ -48,8 +51,13 @@
 				/>
 			</div>
 			<button
+			<button
 				v-if="DBstore.isComponentDisabled(props.componentName)"
 				@click="removeFromDB"
+				class="btn btn-destructive"
+			>
+				Remove
+			</button>
 				class="btn btn-destructive"
 			>
 				Remove
@@ -125,8 +133,13 @@
 			displayMessage.value = DBstore.getStoreNameByComponent(
 				props.componentName
 			);
+		} else if (type === 'complete') {
+			displayMessage.value = DBstore.getStoreNameByComponent(
+				props.componentName
+			);
 		}
 	};
+
 
 	// Watch for changes in typeOfComponent prop
 	watch(
@@ -136,6 +149,7 @@
 		},
 		{ immediate: true }
 	);
+
 
 	// Watch for changes in fileUploading and disabled prop
 	watch(
@@ -149,12 +163,16 @@
 			} else if (disabledVal) {
 				statusMessage.value = 'Success';
 				updateDisplayMessage('complete');
+				statusMessage.value = 'Success';
+				updateDisplayMessage('complete');
 			}
 		}
 	);
 
 	//if this component has a file that's uploaded make sure stausMessage and displayMessage
 	//are corrrect
+	if (DBstore.getStoreNameByComponent(props.componentName)) {
+		updateDisplayMessage('complete');
 	if (DBstore.getStoreNameByComponent(props.componentName)) {
 		updateDisplayMessage('complete');
 	}
@@ -238,6 +256,7 @@
 
 <style scoped>
 	.fileLoaded {
+		background-color: hsl(120, 100%, 30%);
 		background-color: hsl(120, 100%, 30%);
 		color: white;
 	}

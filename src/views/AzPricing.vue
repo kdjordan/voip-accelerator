@@ -3,10 +3,10 @@
 		class="flex flex-col items-center pt-8 h-full"
 	>
 		<div class="flex flex-col items-center w-1/2 mb-16">
-			<h1 class="text-size3xl uppercase mb-2">AZ Pricing</h1>
-			<p class="text-center text-muted-foreground">
+			<h1 class="text-sizeXl uppercase mb-2">AZ Pricing</h1>
+			<p class="text-center">
 				Simply upload your current rates and the rates of your
-				perspective carrier. We will genrate you a report showing the
+				perspective carrier. We will geenrate you a report showing the
 				best opportunities for you to buy and sell.
 			</p>
 		</div>
@@ -14,12 +14,16 @@
 			@click="resetThisReport"
 			v-if="report"
 			class="btn btn-destructive mb-8"
+			class="btn btn-destructive mb-8"
 		>
+			Reset
 			Reset
 		</button>
 		<div class="h-full flex flex-col items-center">
+		<div class="h-full flex flex-col items-center">
 		<div
 			v-if="!report"
+			class="flex items-center justify-center gap-8 flex-wrap mb-8"
 			class="flex items-center justify-center gap-8 flex-wrap mb-8"
 		>
 			<UploadComponent
@@ -56,6 +60,7 @@
 						!dbStore.getIsAZfull,
 				}"
 				class="btn"
+				class="btn"
 			>
 				Get Report
 			</button>
@@ -63,13 +68,11 @@
 		<div>
 			<GenerateReport v-if="report" :report="report" />
 		</div>
-		<Button>Click</Button>
 	</div>
 </div>
 </template>
 
 <script setup lang="ts">
-
 	import { ref } from 'vue';
 	import { type ComparisonReport, AZColumnRole } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
@@ -79,6 +82,7 @@
 	const { loadFromIndexedDB } = useIndexedDB();
 	import { useDBstate } from '@/stores/dbStore';
 
+
 	const dbStore = useDBstate();
 
 	const theDb = ref<string>('az');
@@ -86,8 +90,8 @@
 	const component2 = ref<string>('az2');
 	// const file1 = ref<string>(dbStore.getStoreNameByComponent(component1.value).split('.')[0])
 	// const file2 = ref<string>(dbStore.getStoreNameByComponent(component2.value).split('.')[0])
-	// const fileName1 = ref<string>('');
-	// const fileName2 = ref<string>('');
+	const fileName1 = ref<string>('');
+	const fileName2 = ref<string>('');
 	const isGeneratingReport = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
 
@@ -102,11 +106,30 @@
 		await resetReportApi('az');
 		//reset Pinia state
 		dbStore.resetFilesUploadedByDBname('az');
+		dbStore.resetFilesUploadedByDBname('az');
 		report.value = null;
 	}
 
 	async function makeReport() {
 		isGeneratingReport.value = true;
+		let fileName1 = dbStore
+			.getStoreNameByComponent(component1.value)
+			.split('.')[0];
+		let fileName2 = dbStore
+			.getStoreNameByComponent(component2.value)
+			.split('.')[0];
+
+		let file1Data = await getFilesFromIndexDB(
+			theDb.value,
+			dbStore.getStoreNameByComponent(component1.value),
+			dbStore.globalDBVersion
+		);
+		let file2Data = await getFilesFromIndexDB(
+			theDb.value,
+			dbStore.getStoreNameByComponent(component2.value),
+			dbStore.globalDBVersion
+		);
+
 		let fileName1 = dbStore
 			.getStoreNameByComponent(component1.value)
 			.split('.')[0];
@@ -135,12 +158,23 @@
 			});
 			console.log('got report ', returnedReport);
 			report.value = returnedReport;
+				file2Data,
+			});
+			console.log('got report ', returnedReport);
+			report.value = returnedReport;
 			isGeneratingReport.value = false;
 		} else {
 			isGeneratingReport.value = false;
 			console.error('Error getting files from DB');
+			console.error('Error getting files from DB');
 		}
 	}
+
+	async function getFilesFromIndexDB(
+		dbName: string,
+		store: string,
+		dbVersion: number
+	) {
 
 	async function getFilesFromIndexDB(
 		dbName: string,
@@ -155,7 +189,15 @@
 			);
 			return result;
 		} catch (e) {
+			const result = await loadFromIndexedDB(
+				dbName,
+				store,
+				dbVersion
+			);
+			return result;
+		} catch (e) {
 			isGeneratingReport.value = false;
+			console.error(`got an errror getting ${store} out of DB`);
 			console.error(`got an errror getting ${store} out of DB`);
 		}
 	}

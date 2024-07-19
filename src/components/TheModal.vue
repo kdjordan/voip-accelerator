@@ -16,10 +16,10 @@
 					>&#8203;</span
 				>
 				<div
-					class="inline-block align-bottom rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6 bg-background border border-muted"
+					class="inline-block align-bottom bg-secondary-foreground rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6"
 				>
 					<div
-						class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-xl border border-gray-500"
+						class="bg-secondary-foreground px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
 					>
 						<div class="sm:flex sm:items-start">
 							<div
@@ -27,7 +27,7 @@
 							>
 								<div class="flex items-center justify-between">
 									<h3
-										class="text-lg leading-6 font-medium text-muted-foreground"
+										class="text-lg leading-6 font-medium text-foreground"
 										id="modal-title"
 									>
 										Select Column Roles
@@ -35,13 +35,13 @@
 									<div>
 										<label
 											for="start-line"
-											class="block text-sm font-medium text-muted-foreground"
+											class="block text-sm font-medium text-foreground"
 											>Data starts on line:</label
 										>
 										<select
 											id="start-line"
 											v-model="startLine"
-											class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+											class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-background"
 										>
 											<option v-for="i in 10" :key="i" :value="i">
 												{{ i }}
@@ -69,7 +69,7 @@
 															'bg-muted':
 																columnRoles[index] !== '',
 														}"
-														class="block w-full border border-gray-300 rounded min-w-[200px]"
+														class="block w-full border border-gray-300 rounded p-2 min-w-[200px]"
 													>
 														<option value="">Select Column Role</option>
 														<option
@@ -84,7 +84,7 @@
 											</tr>
 										</thead>
 										<tbody
-											class="divide-y divide-gray-200"
+											class="bg-background divide-y divide-gray-200"
 										>
 											<tr
 												v-for="(row, rowIndex) in displayedData"
@@ -183,6 +183,10 @@
 				!usedRoles.has(role.value) ||
 				role.value === columnRoles.value[currentIndex]
 		);
+			(role) =>
+				!usedRoles.has(role.value) ||
+				role.value === columnRoles.value[currentIndex]
+		);
 	};
 
 	const displayedData = computed(() => {
@@ -191,6 +195,13 @@
 
 	// Check if all required roles are selected
 	const allRequiredRolesSelected = computed(() => {
+		const requiredRoles = props.columnRoleOptions.map(
+			(option) => option.value
+		);
+		return requiredRoles.every((role) =>
+			columnRoles.value.includes(role)
+		);
+	});
 		const requiredRoles = props.columnRoleOptions.map(
 			(option) => option.value
 		);
@@ -211,17 +222,6 @@
 	}
 </script>
 
-<style>
-select {
-	background: hsl(220, 30%, 10%);
-	color: hsl(151, 25%, 70%);
-	-webkit-appearance: none;
-	-moz-appearance: none;
-	appearance: none;
-	padding: .5rem 1rem;
-	background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%23B5CCBD' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
-	background-repeat: no-repeat;
-	background-position: right 0.5rem center;
-	background-size: 0.65em auto;
-}
+<style scoped>
+
 </style>
