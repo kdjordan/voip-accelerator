@@ -14,7 +14,7 @@ module.exports = {
     extend: {
       colors: {
         'background': 'hsl(220, 30%, 10%)', /* Dark background */
-        'foreground': 'hsl(151, 36%, 100%)', /* Light text */
+        'foreground': 'hsl(151, 36%, 90%)', /* Light text */
         'muted': 'hsl(220, 20%, 20%)', /* Dark muted */
         'muted-foreground': 'hsl(151, 25%, 70%)', /* Light muted foreground */
         // popover: 220 30% 12%; /* Dark popover */

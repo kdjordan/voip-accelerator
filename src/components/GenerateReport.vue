@@ -8,11 +8,11 @@
 
 		<div>
 			<h3 class="pb-4 text-sizeBase tracking-wider">
-				<span class="text-accent  uppercase">{{
+				<span class="text-foreground  uppercase">{{
 					report.fileName1
 				}}</span>
 				:: should buy these destinations from ::
-				<span class="text-accent uppercase">{{
+				<span class="text-foreground uppercase">{{
 					report.fileName2
 				}}</span>
 			</h3>
@@ -43,9 +43,9 @@
 
 		<div>
 			<h3 class="pb-4 text-sizeBase tracking-wider">
-				<span class="text-accent uppercase">{{ report.fileName1 }}</span> ::
+				<span class="text-foreground uppercase">{{ report.fileName1 }}</span> ::
 				should sell these destinations to ::
-				<span class="text-accent uppercase">{{ report.fileName2 }}</span>
+				<span class="text-foreground uppercase">{{ report.fileName2 }}</span>
 			</h3>
 			<table>
 				<thead>
@@ -73,7 +73,7 @@
 		</div>
 
 		<div>
-			<h3 class="pb-4 uppercase tracking-wider text-accent text-sizeBase">Same Rates</h3>
+			<h3 class="pb-4 uppercase tracking-wider text-foreground text-sizeBase">Same Rates</h3>
 			<table>
 				<thead>
 					<tr>
@@ -99,7 +99,7 @@
 
 		<div>
 			<div class="flex flex-col align-center gap-4">
-				<h3 class="pb-4 uppercase tracking-wider text-accent text-sizeBase">UnMatched Codes</h3>
+				<h3 class="pb-4 uppercase tracking-wider text-foreground text-sizeBase">UnMatched Codes</h3>
 				<div>
 					<button
 						@click="toggleUnmatchedCodes"
@@ -177,8 +177,10 @@
 		text-align: left;
 	}
 
-	/*
+	
 	th {
-		background-color: #f2f2f2;
-	} */
+		/* background-color: #f2f2f2; */
+		background-color: hsl(220, 30%, 10%);
+		color: white;
+	}
 </style>

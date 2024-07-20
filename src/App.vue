@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex flex-col h-full w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-muted-foreground foreground tracking-wider">
+  <div class="relative flex flex-col h-full w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground foreground tracking-wider">
     <!-- Main content -->
     <div class="relative flex flex-col h-full w-full">
       <!-- <Header /> -->

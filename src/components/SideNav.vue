@@ -7,7 +7,7 @@
 		]"
 	>
 		<div class="p-4 flex flex-col pt-10 relative">
-			<h1 class="tracking-widest text-center text-sizeBase text-foreground">
+			<h1 class="tracking-widest text-center text-sizeBas">
 				Telecom Toolkit
 			</h1>
 		</div>
@@ -16,7 +16,7 @@
 			<li
 				v-for="item in items"
 				:key="item.name"
-				class="pl-4 hover:bg-muted hover:text-foreground"
+				class="pl-4 hover:bg-muted hover:text-muted-foreground"
 			>
 				<RouterLink
 					:to="item.to"
