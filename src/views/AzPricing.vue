@@ -3,7 +3,7 @@
 		class="flex flex-col items-center pt-8 h-full"
 	>
 		<div class="flex flex-col items-center w-1/2 mb-16">
-			<h1 class="text-sizeXl uppercase mb-2">AZ Pricing</h1>
+			<h1 class="text-sizeXl uppercase mb-2 text-foreground">AZ Pricing</h1>
 			<p class="text-center">
 				Simply upload your current rates and the rates of your
 				perspective carrier. We will geenrate you a report showing the

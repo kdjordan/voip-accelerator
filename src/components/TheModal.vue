@@ -17,10 +17,10 @@
 					>&#8203;</span
 				>
 				<div
-					class="inline-block align-bottom bg-secondary-foreground rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6"
+					class="inline-block align-bottom rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6 bg-background border border-muted"
 				>
 					<div
-						class="bg-secondary-foreground px-4 pt-5 pb-4 sm:p-6 sm:pb-4"
+						class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-xl border border-gray-500"
 					>
 						<div class="sm:flex sm:items-start">
 							<div
@@ -28,7 +28,7 @@
 							>
 								<div class="flex items-center justify-between">
 									<h3
-										class="text-lg leading-6 font-medium text-foreground"
+										class="text-lg leading-6 font-medium text-muted-foreground"
 										id="modal-title"
 									>
 										Select Column Roles
@@ -36,13 +36,13 @@
 									<div>
 										<label
 											for="start-line"
-											class="block text-sm font-medium text-foreground"
+											class="block text-sm font-medium text-muted-foreground"
 											>Data starts on line:</label
 										>
 										<select
 											id="start-line"
 											v-model="startLine"
-											class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-background"
+											class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
 										>
 											<option v-for="i in 10" :key="i" :value="i">
 												{{ i }}
@@ -51,26 +51,26 @@
 									</div>
 								</div>
 								<div class="mt-2 overflow-auto max-h-80">
-									<table class="min-w-full bg-white">
+									<table class="min-w-full">
 										<thead>
 											<tr>
 												<th
-													class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+													class="px-6 py-3 border-b border-gray-200  text-left text-xs font-medium uppercase tracking-wider"
 												>
 													Row
 												</th>
 												<th
 													v-for="(col, index) in columns"
 													:key="index"
-													class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+													class="px-6 py-3 border-b border-gray-200  text-left text-xs font-medium uppercase tracking-wider"
 												>
 													<select
 														v-model="columnRoles[index]"
 														:class="{
-															'bg-green-100':
+															'bg-muted':
 																columnRoles[index] !== '',
 														}"
-														class="block w-full border border-gray-300 rounded p-2 min-w-[200px]"
+														class="block w-full border border-gray-300 rounded min-w-[200px]"
 													>
 														<option value="">Select Role</option>
 														<option
@@ -85,7 +85,7 @@
 											</tr>
 										</thead>
 										<tbody
-											class="bg-background divide-y divide-gray-200"
+											class="divide-y divide-gray-200"
 										>
 											<tr
 												v-for="(row, rowIndex) in displayedData"
@@ -109,7 +109,7 @@
 						</div>
 					</div>
 					<div
-						class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse"
+						class=" px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse"
 					>
 						<button
 							@click="confirmColumnRoles"
@@ -119,14 +119,14 @@
 									!allRequiredRolesSelected,
 							}"
 							type="button"
-							class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+							class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 btn btn-primary font-medium  hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
 						>
 							Confirm
 						</button>
 						<button
 							@click="cancelModal"
 							type="button"
-							class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+							class="mt-3 w-full inline-flex justify-center btn btn-destructive focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
 						>
 							Cancel
 						</button>
@@ -204,7 +204,18 @@
 		emit('cancel');
 	}
 </script>
-
-<style scoped>
-
+<style>
+select {
+	background: hsl(220, 30%, 10%);
+	color: hsl(151, 25%, 70%);
+	-webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+	padding: .5rem 1rem;
+	background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%23B5CCBD' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 0.65em auto;
+	
+}
 </style>

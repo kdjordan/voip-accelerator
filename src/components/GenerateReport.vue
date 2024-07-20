@@ -155,7 +155,7 @@
 	});
 </script>
 
-<style scoped>
+<style>
 	.dialcodecell {
 		max-width: 150px; /* Adjust the max-width as needed */
 		word-wrap: break-word;
