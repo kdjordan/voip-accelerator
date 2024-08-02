@@ -13,24 +13,21 @@
 		</div>
 		<hr class="my-8 border border-gray-600 rounded w-[90%] m-auto" />
 		<ul class="flex-grow">
-			<li
-				v-for="item in items"
-				:key="item.name"
-				class="pl-4 hover:bg-muted hover:text-muted-foreground"
+		<li
+			v-for="item in items"
+			:key="item.name"
+			class="pl-4 hover:bg-muted hover:text-muted-foreground"
+		>
+			<RouterLink
+				:to="item.to"
+				class="flex items-center space-x-2 py-2"
+				active-class="active-link"
 			>
-				<RouterLink
-					:to="item.to"
-					class="flex items-center space-x-2 py-2"
-					active-class="active-link"
-				>
-					<component
-						:is="item.icon"
-						class="w-6 h-6"
-					/>
-					<span v-if="isOpen">{{ item.name }}</span>
-				</RouterLink>
-			</li>
-		</ul>
+				<component :is="item.icon" class="w-6 h-6" />
+				<span v-if="isOpen">{{ item.name }}</span>
+			</RouterLink>
+		</li>
+	</ul>
 		<hr class="my-8 border border-gray-600 rounded w-[90%] m-auto" />
 		<!-- User Profile Section -->
 		<div class="profile-section p-4">
@@ -68,14 +65,13 @@
 </template>
 
 <script setup lang="ts">
-	import { ref } from 'vue';
-	import { RouterLink } from 'vue-router';
-	import {
-		DocumentCurrencyDollarIcon,
-		BarsArrowDownIcon,
-		PercentBadgeIcon,
-	} from '@heroicons/vue/24/outline';
-
+import { RouterLink } from 'vue-router';
+import { ref } from 'vue';
+import {
+	DocumentCurrencyDollarIcon,
+	BarsArrowDownIcon,
+	PercentBadgeIcon,
+} from '@heroicons/vue/24/outline';
 	const isOpen = ref(true);
 
 	function toggleSidebar() {
@@ -83,32 +79,32 @@
 	}
 
 	const items = ref([
-		{
-			name: 'AZ Pricing',
-			to: '/azpricing',
-			icon: DocumentCurrencyDollarIcon,
-		},
-		{
-			name: 'US Pricing',
-			to: '/uspricing',
-			icon: DocumentCurrencyDollarIcon,
-		},
-		{
-			name: 'AZ LCR',
-			to: '/lcr',
-			icon: BarsArrowDownIcon,
-		},
-		{
-			name: 'US LCR',
-			to: '/lcr',
-			icon: BarsArrowDownIcon,
-		},
-		{
-			name: 'Dispute Engine',
-			to: '/disputes',
-			icon: PercentBadgeIcon,
-		},
-	]);
+	{
+		name: 'AZ Pricing',
+		to: '/azpricing',
+		icon: DocumentCurrencyDollarIcon,
+	},
+	{
+		name: 'US Pricing',
+		to: '/uspricing',
+		icon: DocumentCurrencyDollarIcon,
+	},
+	{
+		name: 'AZ LCR',
+		to: '/lcr',
+		icon: BarsArrowDownIcon,
+	},
+	{
+		name: 'US LCR',
+		to: '/lcr',
+		icon: BarsArrowDownIcon,
+	},
+	{
+		name: 'Dispute Engine',
+		to: '/disputes',
+		icon: PercentBadgeIcon,
+	},
+]);
 </script>
 
 <style scoped>
@@ -123,12 +119,8 @@
 		z-index: 10; /* Ensures the sidebar is above other content */
 	}
 
-	.active-linke {
-		background-color: var(
-			--primary
-		); /* Customize the active background color */
-		color: var(
-			--primary-foreground
-		); /* Customize the active text color */
+	.active-link {
+		background-color: hsl(220, 20%, 20%); 
+		color: hsl(120, 100%, 40%);
 	}
 </style>
