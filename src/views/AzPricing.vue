@@ -3,10 +3,10 @@
 		class="flex flex-col items-center pt-8 h-full"
 	>
 		<div class="flex flex-col items-center w-1/2 mb-16">
-			<h1 class="text-sizeXl uppercase mb-2">AZ Pricing</h1>
+			<h1 class="text-size3xl uppercase mb-2">AZ Pricing</h1>
 			<p class="text-center text-muted-foreground">
 				Simply upload your current rates and the rates of your
-				perspective carrier. We will geenrate you a report showing the
+				perspective carrier. We will genrate you a report showing the
 				best opportunities for you to buy and sell.
 			</p>
 		</div>
@@ -90,8 +90,8 @@
 	const component2 = ref<string>('az2');
 	// const file1 = ref<string>(dbStore.getStoreNameByComponent(component1.value).split('.')[0])
 	// const file2 = ref<string>(dbStore.getStoreNameByComponent(component2.value).split('.')[0])
-	const fileName1 = ref<string>('');
-	const fileName2 = ref<string>('');
+	// const fileName1 = ref<string>('');
+	// const fileName2 = ref<string>('');
 	const isGeneratingReport = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
 

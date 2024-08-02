@@ -28,6 +28,21 @@
 			</RouterLink>
 		</li>
 	</ul>
+		<li
+			v-for="item in items"
+			:key="item.name"
+			class="pl-4 hover:bg-muted hover:text-muted-foreground"
+		>
+			<RouterLink
+				:to="item.to"
+				class="flex items-center space-x-2 py-2"
+				active-class="active-link"
+			>
+				<component :is="item.icon" class="w-6 h-6" />
+				<span v-if="isOpen">{{ item.name }}</span>
+			</RouterLink>
+		</li>
+	</ul>
 		<hr class="my-8 border border-gray-600 rounded w-[90%] m-auto" />
 		<!-- User Profile Section -->
 		<div class="profile-section p-4">
@@ -67,7 +82,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
 import { ref } from 'vue';
-import { Button } from '@/components/ui/button';
 import {
 	DocumentCurrencyDollarIcon,
 	BarsArrowDownIcon,
@@ -80,6 +94,32 @@ import {
 	}
 
 	const items = ref([
+	{
+		name: 'AZ Pricing',
+		to: '/azpricing',
+		icon: DocumentCurrencyDollarIcon,
+	},
+	{
+		name: 'US Pricing',
+		to: '/uspricing',
+		icon: DocumentCurrencyDollarIcon,
+	},
+	{
+		name: 'AZ LCR',
+		to: '/lcr',
+		icon: BarsArrowDownIcon,
+	},
+	{
+		name: 'US LCR',
+		to: '/lcr',
+		icon: BarsArrowDownIcon,
+	},
+	{
+		name: 'Dispute Engine',
+		to: '/disputes',
+		icon: PercentBadgeIcon,
+	},
+]);
 	{
 		name: 'AZ Pricing',
 		to: '/azpricing',
@@ -120,6 +160,9 @@ import {
 		z-index: 10; /* Ensures the sidebar is above other content */
 	}
 
+	.active-link {
+		background-color: hsl(220, 20%, 20%); 
+		color: hsl(120, 100%, 40%);
 	.active-link {
 		background-color: hsl(220, 20%, 20%); 
 		color: hsl(120, 100%, 40%);

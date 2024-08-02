@@ -113,7 +113,7 @@
 				<thead>
 					<tr>
 						<th>Dial Code</th>
-						<th>Destination</th>e
+						<th>Destination</th>
 						<th>Rate</th>
 						<th>Missing</th>
 					</tr>
