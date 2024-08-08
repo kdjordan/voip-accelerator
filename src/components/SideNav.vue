@@ -7,7 +7,7 @@
 		]"
 	>
 		<div class="p-4 flex flex-col pt-10 relative">
-			<h1 class="tracking-widest text-center text-sizeBas">
+			<h1 class="tracking-widest text-center text-sizeBase">
 				Telecom Toolkit
 			</h1>
 		</div>
