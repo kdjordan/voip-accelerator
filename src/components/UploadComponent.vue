@@ -35,6 +35,7 @@
 						v-if="!props.disabled"
 						class="w-8 h-8 text-primary"
 					/>
+					
 				</div>
 
 				<input
@@ -56,7 +57,7 @@
 		</div>
 		<!-- Column Roles Modal -->
 		<TheModal
-			v-if="showModal"
+			v-show="showModal"
 			:showModal="showModal"
 			:columns="columns"
 			:previewData="previewData"
@@ -215,10 +216,12 @@
 		}
 	}
 
-	async function confirmColumnRoles(event: {
+	interface ColumnRolesEvent {
 		columnRoles: string[];
 		startLine: number;
-	}) {
+	}
+
+	async function confirmColumnRoles(event: ColumnRolesEvent) {
 		showModal.value = false;
 		console.log('column roles ', columnRoles);
 		columnRoles.value = event.columnRoles;

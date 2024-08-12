@@ -59,12 +59,14 @@
 												>
 													Row
 												</th>
+												<pre>{{ JSON.stringify(columnRoles, null, 2) }}</pre>
 												<th
 													v-for="(col, index) in columns"
 													:key="index"
 													class="px-6 py-3 border-b border-gray-200  text-left text-xs font-medium uppercase tracking-wider"
 												>
 													<select
+														autofocus
 														v-model="columnRoles[index]"
 														:class="{
 															'bg-muted':
@@ -72,14 +74,14 @@
 														}"
 														class="block w-full border border-gray-300 rounded min-w-[200px]"
 													>
-														<option value="">Select Role</option>
-														<option
-															v-for="role in availableRoles(index)"
+														<option value="" disabled>Select Column Role</option>
+														<!-- <option
+															v-for="(role, roleIndex) in availableRoles(index)"
 															:key="role.value"
 															:value="role.value"
 														>
-															{{ role.label }}
-														</option>
+															 {{ role.label }}
+														</option> -->
 													</select>
 												</th>
 											</tr>
@@ -148,30 +150,28 @@
 		startLine: number;
 		columnRoleOptions: { value: string; label: string }[];
 	}>();
+	console.log('got ', props.columnRoleOptions)
 
 	const emit = defineEmits(['confirm', 'cancel']);
 
 	const startLine = ref(props.startLine);
-	const columnRoles = ref([...props.columnRoles]);
-
+	const columnRoles = ref(props.columns.map(() => ''));
 	// Compute available roles for each column
-	const availableRoles = (currentIndex: number) => {
+	const availableRoles = (currentIndex: number): { value: string; label: string }[] => {
 		const usedRoles = new Set(
 			columnRoles.value.filter(
 				(role) => role !== '' && role !== undefined
 			)
 		);
-		// const allRoles = ['Destination', 'Code', 'Rate']; // Example roles; replace with your actual roles
-		// return allRoles.filter(
-		// 	(role) =>
-		// 		!usedRoles.has(role) ||
-		// 		role === columnRoles.value[currentIndex]
-		// );
-		return props.columnRoleOptions.filter(
-			(role) =>
-				!usedRoles.has(role.value) ||
-				role.value === columnRoles.value[currentIndex]
-		);
+		
+		return [
+			{ value: '', label: 'Select Column Role' },
+			...props.columnRoleOptions.filter(
+				(role) =>
+					!usedRoles.has(role.value) ||
+					role.value === columnRoles.value[currentIndex]
+			)
+		];
 	};
 
 	const displayedData = computed(() => {
@@ -218,4 +218,6 @@ select {
   background-size: 0.65em auto;
 	
 }
+
+
 </style>
