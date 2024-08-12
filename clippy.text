@@ -104,3 +104,24 @@ function consolidateDialCodes(group: StandardizedData[]): StandardizedData {
   }
 
 
+
+// Compute available roles for each column
+	const availableRoles = (currentIndex: number) => {
+		const usedRoles = new Set(
+			columnRoles.value.filter(
+				(role) => role !== '' && role !== undefined
+			)
+		);
+		// const allRoles = ['Destination', 'Code', 'Rate']; // Example roles; replace with your actual roles
+		// return allRoles.filter(
+		// 	(role) =>
+		// 		!usedRoles.has(role) ||
+		// 		role === columnRoles.value[currentIndex]
+		// );
+		return props.columnRoleOptions.filter(
+    (role) =>
+      !usedRoles.has(role.value) ||
+      role.value === columnRoles.value[currentIndex]
+  );
+	};
+
