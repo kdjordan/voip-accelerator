@@ -58,12 +58,14 @@
 												>
 													Row
 												</th>
+												<pre>{{ JSON.stringify(columnRoles, null, 2) }}</pre>
 												<th
 													v-for="(col, index) in columns"
 													:key="index"
 													class="px-6 py-3 border-b border-gray-200  text-left text-xs font-medium uppercase tracking-wider"
 												>
 													<select
+														autofocus
 														v-model="columnRoles[index]"
 														:class="{
 															'bg-muted':
@@ -77,8 +79,8 @@
 															:key="role.value"
 															:value="role.value"
 														>
-															{{ role.label }}
-														</option>
+															 {{ role.label }}
+														</option> -->
 													</select>
 												</th>
 											</tr>
@@ -147,6 +149,7 @@
 		startLine: number;
 		columnRoleOptions: { value: string; label: string }[];
 	}>();
+	console.log('got ', props.columnRoleOptions)
 
 	const emit = defineEmits(['confirm', 'cancel']);
 
@@ -171,7 +174,7 @@
 	);
 
 	// Compute available roles for each column
-	const availableRoles = (currentIndex: number) => {
+	const availableRoles = (currentIndex: number): { value: string; label: string }[] => {
 		const usedRoles = new Set(
 			columnRoles.value.filter(
 				(role) => role !== '' && role !== undefined
@@ -235,4 +238,6 @@ select {
   background-size: 0.65em auto;
 	
 }
+
+
 </style>
