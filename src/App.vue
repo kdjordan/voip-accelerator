@@ -22,7 +22,7 @@
 	const dbNames = ['az', 'us', 'can']; // List your database names here
 
 	onMounted(async () => {
-		// await loadDb();
+		await loadDb();
 	});
 
 	// Function to process CSV text into an array of objects
