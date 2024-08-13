@@ -3,7 +3,7 @@
 		:class="[
 			'sidebar',
 			{ collapsed: !isOpen },
-			'bg-background rounded-tr-xl rounded-br-xl border border-muted',
+			'bg-background rounded-tr-xl rounded-br-xl border border-muted min-w-[200px]',
 		]"
 	>
 		<div class="p-4 flex flex-col pt-10 relative">

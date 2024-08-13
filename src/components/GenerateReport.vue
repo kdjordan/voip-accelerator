@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="bg-background rounded-lg min-w-[950px] m-auto w-full p-6"
+		class="bg-background rounded-lg m-auto  p-6 border"
 	>
 		<h2 class="text-center text-sizeXl uppercase pb-4 font-primary">
 			Report

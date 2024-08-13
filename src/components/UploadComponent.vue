@@ -65,22 +65,14 @@
 			:startLine="startLine"
 			@confirm="confirmColumnRoles"
 			@cancel="cancelModal"
-			:columnRoleOptions="[
-				{ value: 'destName', label: 'Destination' },
-				{ value: 'dialCode', label: 'Dial Code' },
-				{ value: 'rate', label: 'Rate' },
-			]"
+			:columnRoleOptions="columnRoleOptions"
 		/>
 	</div>
-	<!-- ::{{ DBstore.getStoreNameByComponent(props.componentName) }} -->
-	<!-- {{ DBstore.AZfilesUploaded.file1 }} -->
-	<!-- {{ componentName }} -->
-	<!-- {{ DBstore.isComponentFileUploading(props.componentName) }} -->
-	<!-- {{ showModal }} -->
 </template>
 
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
+	import { AZColumnRole } from '../../types/app-types';
 	import UploadIcon from './UploadIcon.vue';
 	import { ref, watch, onMounted } from 'vue';
 	import useCSVProcessing from '../composables/useCsvFilesFunctions';
@@ -92,7 +84,9 @@
 		DBname: string;
 		componentName: string;
 		disabled: boolean;
+		columnRoleOptions: { value: AZColumnRole; label: string }[];
 	}>();
+
 
 	// Extract functions and reactive properties from useCSVProcessing composable
 	const {

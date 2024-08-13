@@ -33,8 +33,7 @@ export default {
   plugins: [],
 }
 
-
-// Compute available roles for each column
+/ Compute available roles for each column
 	const availableRoles = (currentIndex: number) => {
 		const usedRoles = new Set(
 			columnRoles.value.filter(

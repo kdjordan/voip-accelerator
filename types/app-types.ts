@@ -1,3 +1,11 @@
+export enum AZColumnRole {
+  Destination = 'destName',
+  DialCode = 'dialCode',
+  Rate = 'rate',
+  SelectRole = '' // This will represent our "Select Column Role" option
+}
+
+
 export interface State {
   globalDBVersion: number;
   filesUploaded: UploadedFileTracker;

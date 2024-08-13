@@ -1,4 +1,3 @@
-<!-- ColumnRolesModal.vue -->
 <template>
 	<transition name="modal">
 		<div v-if="showModal" class="fixed z-10 inset-0 overflow-y-auto">
@@ -59,14 +58,12 @@
 												>
 													Row
 												</th>
-												<pre>{{ JSON.stringify(columnRoles, null, 2) }}</pre>
 												<th
 													v-for="(col, index) in columns"
 													:key="index"
 													class="px-6 py-3 border-b border-gray-200  text-left text-xs font-medium uppercase tracking-wider"
 												>
 													<select
-														autofocus
 														v-model="columnRoles[index]"
 														:class="{
 															'bg-muted':
@@ -74,14 +71,14 @@
 														}"
 														class="block w-full border border-gray-300 rounded min-w-[200px]"
 													>
-														<option value="" disabled>Select Column Role</option>
-														<!-- <option
-															v-for="(role, roleIndex) in availableRoles(index)"
+														<option value="">Select Column Role</option>
+														<option
+															v-for="role in availableRoles(index)"
 															:key="role.value"
 															:value="role.value"
 														>
-															 {{ role.label }}
-														</option> -->
+															{{ role.label }}
+														</option>
 													</select>
 												</th>
 											</tr>
@@ -140,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, computed } from 'vue';
+	import { ref, computed, watch } from 'vue';
 
 	const props = defineProps<{
 		showModal: boolean;
@@ -150,35 +147,49 @@
 		startLine: number;
 		columnRoleOptions: { value: string; label: string }[];
 	}>();
-	console.log('got ', props.columnRoleOptions)
 
 	const emit = defineEmits(['confirm', 'cancel']);
 
 	const startLine = ref(props.startLine);
-	const columnRoles = ref(props.columns.map(() => ''));
+
+	// Initialize columnRoles based on the number of columns, if not already initialized
+	const columnRoles = ref(
+		props.columnRoles.length > 0
+			? [...props.columnRoles]
+			: props.columns.map(() => '')
+	);
+
+	// Watch for changes in props.columnRoles to update local state if necessary
+	watch(
+		() => props.columnRoles,
+		(newRoles) => {
+			columnRoles.value = newRoles.length > 0
+				? [...newRoles]
+				: props.columns.map(() => '');
+		},
+		{ immediate: true }
+	);
+
 	// Compute available roles for each column
-	const availableRoles = (currentIndex: number): { value: string; label: string }[] => {
+	const availableRoles = (currentIndex: number) => {
 		const usedRoles = new Set(
 			columnRoles.value.filter(
 				(role) => role !== '' && role !== undefined
 			)
 		);
 		
-		return [
-			{ value: '', label: 'Select Column Role' },
-			...props.columnRoleOptions.filter(
-				(role) =>
-					!usedRoles.has(role.value) ||
-					role.value === columnRoles.value[currentIndex]
-			)
-		];
+		return props.columnRoleOptions.filter(
+			(role) =>
+				!usedRoles.has(role.value) ||
+				role.value === columnRoles.value[currentIndex]
+		);
 	};
 
 	const displayedData = computed(() => {
 		return props.previewData.slice(startLine.value - 1);
 	});
 
-	// Check if all column roles are selected
+	// Check if all required roles are selected
 	const allRequiredRolesSelected = computed(() => {
 		const requiredRoles = props.columnRoleOptions.map(
 			(option) => option.value
@@ -189,11 +200,6 @@
 	});
 
 	function confirmColumnRoles() {
-		console.log(
-			'sending in emit',
-			columnRoles.value,
-			startLine.value
-		);
 		emit('confirm', {
 			columnRoles: columnRoles.value,
 			startLine: startLine.value,
@@ -204,20 +210,18 @@
 		emit('cancel');
 	}
 </script>
+
 <style>
 select {
 	background: hsl(220, 30%, 10%);
 	color: hsl(151, 25%, 70%);
 	-webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
+	-moz-appearance: none;
+	appearance: none;
 	padding: .5rem 1rem;
 	background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%23B5CCBD' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  background-size: 0.65em auto;
-	
+	background-repeat: no-repeat;
+	background-position: right 0.5rem center;
+	background-size: 0.65em auto;
 }
-
-
 </style>

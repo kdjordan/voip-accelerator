@@ -116,6 +116,9 @@ function generateComparisonReport(input: PricingReportInput): ComparisonReport {
   comparisonReport.higherRatesForFile2 = consolidateEntries(comparisonReport.higherRatesForFile2);
   comparisonReport.sameRates = consolidateEntries(comparisonReport.sameRates);
   comparisonReport.nonMatchingCodes = consolidateNonMatchingEntries(comparisonReport.nonMatchingCodes);
+  //sort report descending
+  comparisonReport.higherRatesForFile1.sort((a, b) => b.percentageDifference - a.percentageDifference);
+  comparisonReport.higherRatesForFile2.sort((a, b) => b.percentageDifference - a.percentageDifference);
 
   return comparisonReport;
 }

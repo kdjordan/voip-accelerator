@@ -27,6 +27,7 @@
 				DBname="az"
 				:componentName="component1"
 				:disabled="dbStore.isComponentDisabled('az1')"
+				:columnRoleOptions="columnRoleOptions"
 			/>
 
 			<UploadComponent
@@ -34,6 +35,7 @@
 				DBname="az"
 				:componentName="component2"
 				:disabled="dbStore.isComponentDisabled('az2')"
+				:columnRoleOptions="columnRoleOptions"
 			/>
 		</div>
 		<div>
@@ -67,7 +69,7 @@
 
 <script setup lang="ts">
 	import { ref } from 'vue';
-	import { type ComparisonReport } from '../../types/app-types';
+	import { type ComparisonReport, AZColumnRole } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
 	import GenerateReport from '../components/GenerateReport.vue';
 	import useIndexedDB from '../composables/useIndexDB';
@@ -86,6 +88,12 @@
 	// const fileName2 = ref<string>('');
 	const isGeneratingReport = ref<boolean>(false);
 	const report = ref<ComparisonReport | null>(null);
+
+	const columnRoleOptions = [
+  { value: AZColumnRole.Destination, label: 'Destination Name' },
+  { value: AZColumnRole.DialCode, label: 'Dial Code' },
+  { value: AZColumnRole.Rate, label: 'Rate' },
+];
 
 	async function resetThisReport() {
 		//use API to delet DB by name
