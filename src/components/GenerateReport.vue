@@ -161,26 +161,4 @@
 		word-wrap: break-word;
 		white-space: normal;
 	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-bottom: 20px;
-		line-height: 1.2;
-		background-color: hsl(216, 14%, 34%);
-	}
-
-	th,
-	td {
-		border: 1px solid #ddd;
-		padding: 8px;
-		text-align: left;
-	}
-
-	
-	th {
-		/* background-color: #f2f2f2; */
-		background-color: hsl(220, 30%, 10%);
-		color: white;
-	}
 </style>
