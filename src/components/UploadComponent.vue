@@ -1,6 +1,6 @@
 <template>
   <div class="min-w-[300px] max-w-md rounded overflow-x-auto">
-    <div class="px-6 rounded-lg shadow-lg flex flex-col items-center justify-center space-y-4 py-8 bg-background">
+    <div class="px-6 rounded-lg shadow-xl flex flex-col items-center justify-center space-y-4 py-8 bg-background">
       <p class="text-muted-foreground mb-4">{{ displayMessage }}</p>
       <div
         :class="[

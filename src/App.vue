@@ -1,13 +1,13 @@
 <template>
-  <div class="relative flex flex-col h-full w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground foreground tracking-wider">
-    <!-- Main content -->
-    <div class="relative flex flex-col h-full w-full">
-      <!-- <Header /> -->
-      <div class="flex flex-grow">
-        <SideNav />
-        <div class="flex-grow p-4">
+  <div class="flex flex-col min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground tracking-wider">
+    <TheHeader class="w-full z-10" />
+    <div class="flex flex-grow overflow-hidden">
+      <SideNav class="z-20" />
+      <div class="flex flex-col flex-grow">
+        <main class="flex-grow p-4 overflow-auto ml-[200px]">
           <router-view />
-        </div>
+        </main>
+        <TheFooter class="ml-[200px]"/>
       </div>
     </div>
   </div>
@@ -15,6 +15,8 @@
 
 <script setup>
 	import SideNav from './components/SideNav.vue';
+	import TheHeader from './components/TheHeader.vue';
+	import TheFooter from './components/TheFooter.vue';
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
 	import { useDBstate } from '@/stores/dbStore';

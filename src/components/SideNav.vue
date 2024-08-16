@@ -3,16 +3,16 @@
     :class="[
       'sidebar',
       { collapsed: !isOpen },
-      'bg-background rounded-tr-xl rounded-br-xl border border-muted min-w-[200px]',
+      'bg-background border-r border-t border-muted min-w-[200px] fixed top-0 left-0 bottom-0 pt-4',
     ]"
   >
-    <div class="p-4 flex flex-col pt-10 relative">
+    <div class="px-4 flex flex-col relative">
       <h1 class="tracking-widest text-center text-sizeBase">
         Telecom Toolkit
       </h1>
     </div>
-    <hr class="my-8 border border-gray-600 rounded w-[90%] m-auto" />
-    <ul class="flex-grow">
+    <hr class="my-4 border border-gray-600 rounded w-[100%] m-auto" />
+    <ul class="flex-grow pt-8">
       <li
         v-for="item in items"
         :key="item.name"
@@ -20,7 +20,7 @@
       >
         <RouterLink
           :to="item.to"
-          class="flex items-center space-x-2 py-2"
+          class="flex items-center space-x-2 py-4"
           active-class="active-link"
         >
           <component :is="item.icon" class="w-6 h-6" />
@@ -28,39 +28,6 @@
         </RouterLink>
       </li>
     </ul>
-    <hr class="my-8 border border-gray-600 rounded w-[90%] m-auto" />
-    <!-- User Profile Section -->
-    <div class="profile-section p-4">
-      <div class="flex flex-col items-center mb-4">
-        <div
-          class="w-12 h-12 rounded-full bg-primary text-foreground flex items-center justify-center mb-2"
-        >
-          <span
-            class="flex items-center justify-center h-12 w-12 bg-gray-400 rounded-full text-xl font-bold text-white"
-            >MG</span
-          >
-        </div>
-        <h4 class="text-base text-foreground">Michael Gough</h4>
-        <p class="text-sm text-gray-400">name@company.com</p>
-      </div>
-
-      <!-- Space Indicator -->
-      <div class="flex justify-between items-center mb-2 text-sizeSm text-foreground">
-        <span>70 of 150 GB remains</span>
-      </div>
-      <div class="w-full bg-gray-400 rounded-full h-2.5 mb-4">
-        <div
-          class="bg-accent h-2.5 rounded-full"
-          style="width: 47%"
-        ></div>
-      </div>
-      <button
-        class="btn btn-primary w-full my-4"
-      >
-        Upgrade to Pro
-      </button>
-      <button class="btn btn-destructive w-full">Logout</button>
-    </div>
   </nav>
 </template>
 
@@ -114,10 +81,9 @@ const items = ref([
   flex-direction: column;
   width: 200px;
   transition: width 0.3s;
-  overflow: hidden;
-  border-radius: 0 1rem 1rem 0; /* Upper right and lower right corners rounded */
-  min-height: 100vh; /* Ensures the sidebar height adjusts to the content */
-  z-index: 10; /* Ensures the sidebar is above other content */
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 20;
 }
 
 .active-link {
