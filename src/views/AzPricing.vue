@@ -1,9 +1,9 @@
 <template>
   <div class="flex flex-col items-center pt-8 h-full">
-    <div class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8">
+    <div class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center">
       <h1 class="text-size3xl uppercase mb-2">AZ Pricing</h1>
       <p class="text-center text-muted-foreground w-4/5">
-        Simply upload your current rates and the rates of your prospective carrier. We will generate you a report showing the best opportunities for you to buy and sell.
+        Upload <span class="font-bold uppercase text-accent">your</span> current rates and the rates of your  <span class="font-bold uppercase text-accent">prospective carrier.</span> We will generate you a report showing the best opportunities for you to buy and sell.
       </p>
     </div>
     <button
@@ -13,10 +13,10 @@
     >
       Reset
     </button>
-    <div class="h-full flex flex-col items-center">
+    <div class="flex flex-col justify-between w-2/3">
       <div
         v-if="!report"
-        class="flex items-center justify-center gap-8 flex-wrap mb-8"
+        class="flex flex-grow space-x-4 mb-8"
       >
         <UploadComponent
           typeOfComponent="owner"
@@ -24,6 +24,7 @@
           :componentName="component1"
           :disabled="dbStore.isComponentDisabled('az1')"
           :columnRoleOptions="columnRoleOptions"
+          class="flex-1"
         />
 
         <UploadComponent
@@ -32,9 +33,10 @@
           :componentName="component2"
           :disabled="dbStore.isComponentDisabled('az2')"
           :columnRoleOptions="columnRoleOptions"
+          class="flex-1"
         />
       </div>
-      <div>
+      <div class="ml-4 text-center">
         <div
           v-if="isGeneratingReport"
           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"
@@ -54,12 +56,13 @@
           Get Report
         </button>
       </div>
-      <div>
-        <GenerateReport v-if="report" :report="report" />
-      </div>
+    </div>
+    <div>
+      <GenerateReport v-if="report" :report="report" />
     </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref } from 'vue';

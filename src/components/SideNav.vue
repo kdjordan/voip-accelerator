@@ -17,7 +17,7 @@
         <RouterLink
           :to="item.to"
           class="flex items-center space-x-2 py-4 pl-4"
-          active-class="active-link"
+          active-class="bg-muted text-accent"
         >
           <component :is="item.icon" class="w-6 h-6" />
           <span v-if="isOpen">{{ item.name }}</span>
@@ -82,9 +82,4 @@ const items = ref([
   z-index: 10;
 }
 
-.active-link {
-  background-color: hsl(220, 20%, 20%);
-  color: hsl(120, 100%, 40%);
-  width: 100;
-}
 </style>
