@@ -1,14 +1,14 @@
 <template>
 	<div
-		class="rounded-lg h-full py-12"
+		class="rounded-lg"
 	>
+			<p class="mb-8 text-center uppercase text-accent">{{ displayMessage }}</p>
 		<div
-			class="px-6 rounded-lg shadow-xl flex flex-col items-center justify-between bg-background h-full w-full py-8 gap-8"
+			class="px-6 rounded-lg shadow-xl flex flex-col items-center justify-between bg-background w-full py-8"
 		>
-			<p class="text-muted-foreground mb-12 text-center">{{ displayMessage }}</p>
 			<div
 				:class="[
-					'border border-primary rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-muted transition-colors cursor-pointer p-12',
+					'border border-mutedForeground rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-muted transition-colors cursor-pointer w-full',
 					{
 						pulse: DBstore.isComponentFileUploading(
 							props.componentName
@@ -22,7 +22,7 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<div class="flex flex-col items-center gap-2">
+				<div class="flex flex-col items-center gap-10 py-10 text-foreground">
 					<p
 						:class="{
 							'text-white': DBstore.isComponentFileUploading(

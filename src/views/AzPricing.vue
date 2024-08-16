@@ -13,7 +13,7 @@
     >
       Reset
     </button>
-    <div class="flex flex-col justify-between w-2/3">
+    <div class="flex flex-col justify-between w-2/3  bg-muted p-4 rounded-xl h-[calc(100vh-70%)]">
       <div
         v-if="!report"
         class="flex flex-grow space-x-4 mb-8"
@@ -36,12 +36,12 @@
           class="flex-1"
         />
       </div>
-      <div class="ml-4 text-center">
+      <div class="text-center">
         <div
           v-if="isGeneratingReport"
           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"
         >
-          <p class="text-center">GENERATING REPORT</p>
+          <p>GENERATING REPORT</p>
         </div>
         <button
           v-if="!isGeneratingReport && !report"
