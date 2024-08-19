@@ -18,3 +18,21 @@ body, html {
   margin: 0;
   padding: 0;
 }
+
+.pulse {
+  /* background-color: #4caf50; Initial background color */
+  background-color: hsl(120, 80%, 50%);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    background-color: #4caf50; /* Initial color */
+  }
+  50% {
+    background-color: #81c784; /* Midpoint color */
+  }
+  100% {
+    background-color: #4caf50; /* Initial color */
+  }
+}

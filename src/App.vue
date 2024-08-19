@@ -24,7 +24,7 @@
 	const dbNames = ['az', 'us', 'can']; // List your database names here
 
 	onMounted(async () => {
-		await loadDb();
+		// await loadDb();
 	});
 
 	// Function to process CSV text into an array of objects
@@ -106,20 +106,5 @@
 	.aborder {
 		border: 1px solid red;
 	}
-	.pulse {
-		background-color: #4caf50; /* Initial background color */
-		animation: pulse 1s infinite;
-	}
 
-	@keyframes pulse {
-		0% {
-			background-color: #4caf50; /* Initial color */
-		}
-		50% {
-			background-color: #81c784; /* Midpoint color */
-		}
-		100% {
-			background-color: #4caf50; /* Initial color */
-		}
-	}
 </style>

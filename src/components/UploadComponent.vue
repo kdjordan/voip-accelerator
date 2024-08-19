@@ -232,8 +232,8 @@
 
 <style scoped>
 	.fileLoaded {
-		background-color: hsl(120, 100%, 30%);
-		color: white;
+		background-color: hsl(120, 80%, 50%);
+    color: black;
 	}
 	.drop-zone .absolute {
 		transition: width 0.3s ease-in-out;
