@@ -4,16 +4,16 @@
 	>
 			<p class="mb-8 text-center uppercase text-accent">{{ displayMessage }}</p>
 		<div
-			class="px-6 rounded-lg shadow-xl flex flex-col items-center justify-between bg-background w-full py-8"
+			class="px-6 rounded-lg shadow-xl flex flex-col items-center justify-between bg-background w-full py-8 gap-8"
 		>
-			<div
+			<div 
 				:class="[
-					'border border-mutedForeground rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-muted transition-colors cursor-pointer w-full',
+					'border border-foreground rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-muted transition-colors cursor-pointer w-full',
 					{
-						pulse: DBstore.isComponentFileUploading(
+						'animate-pulse bg-success': DBstore.isComponentFileUploading(
 							props.componentName
 						),
-						fileLoaded: props.disabled,
+						'bg-success text-background': props.disabled,
 					},
 				]"
 				@dragover.prevent="onDragOver"
@@ -22,12 +22,13 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<div class="flex flex-col items-center gap-10 py-10 text-foreground">
+				<div class="flex flex-col items-center gap-10 py-10 text-foreground ">
 					<p
 						:class="{
 							'text-white': DBstore.isComponentFileUploading(
 								props.componentName
 							),
+							'text-black uppercase': props.disabled
 						}"
 					>
 						{{ statusMessage }}
@@ -50,7 +51,7 @@
 			</div>
 			<button
 				v-if="DBstore.isComponentDisabled(props.componentName)"
-				@click="removeFromDB"
+				@click="dumpFile"
 				class="btn btn-destructive"
 			>
 				Remove
@@ -169,6 +170,11 @@
 		}
 	}
 
+	function dumpFile() {
+		removeFromDB()
+		resetLocalState()
+	}
+
 	function resetLocalState() {
 		file.value = null;
 		fileInput.value = null;
@@ -176,6 +182,7 @@
 		previewData.value = [];
 		columnRoles.value = [];
 		statusMessage.value = 'Drag file here or click to load.';
+		updateDisplayMessage(props.typeOfComponent)
 	}
 
 	function onDrop(event: DragEvent) {
@@ -231,10 +238,6 @@
 </script>
 
 <style scoped>
-	.fileLoaded {
-		background-color: hsl(120, 80%, 50%);
-    color: black;
-	}
 	.drop-zone .absolute {
 		transition: width 0.3s ease-in-out;
 	}

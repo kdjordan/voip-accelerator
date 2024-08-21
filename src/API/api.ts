@@ -4,11 +4,10 @@ import { type PricingReportInput, type ComparisonReport } from '../../types/app-
 
 
 export async function resetReportApi(reportType: string) {
-  await delteDb(reportType)
-
+  await deleteDbApi(reportType)
 }
 
-async function delteDb(dbName: string) {
+async function deleteDbApi(dbName: string) {
   try {
     await deleteIndexedDBDatabase(dbName)
   } catch (e) {
@@ -16,7 +15,7 @@ async function delteDb(dbName: string) {
   }
 }
 
-export async function deleteAllDbs(theDbs: string[]) {
+export async function deleteAllDbsApi(theDbs: string[]) {
   try {
     theDbs.forEach(db => {
       deleteIndexedDBDatabase(db)
@@ -27,12 +26,12 @@ export async function deleteAllDbs(theDbs: string[]) {
   forceRefreshApi()
 }
 
-export async function makePricingReportApi(input: PricingReportInput): Promise<ComparisonReport>{
-  
+export async function makePricingReportApi(input: PricingReportInput): Promise<ComparisonReport> {
+
   const worker = new ComparisonWorker();
 
-  	worker.postMessage(input);
-  
+  worker.postMessage(input);
+
   return new Promise((resolve, reject) => {
     worker.onmessage = (event) => {
       const comparisonReport: ComparisonReport = event.data;
@@ -45,7 +44,6 @@ export async function makePricingReportApi(input: PricingReportInput): Promise<C
     };
 
   });
-  
 }
 
 function forceRefreshApi() {

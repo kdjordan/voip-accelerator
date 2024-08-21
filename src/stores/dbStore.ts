@@ -1,7 +1,5 @@
-import { type UploadedFileTracker, type FileUpload, type State } from '../../types/app-types';
+import { type UploadedFileTracker, type FileUpload, type State, DBName } from '../../types/app-types';
 import { defineStore } from 'pinia'
-
-
 
 export const useDBstate = defineStore('useDBstate', {
   state: (): State => {
@@ -45,54 +43,51 @@ export const useDBstate = defineStore('useDBstate', {
 
     },
     getIsAZfull(state) {
-      let azFileCount = 0;
-      state.filesUploaded.forEach(file => {
-        if (file.dbName === 'az') {
-          azFileCount++;
-        }
-      });
-      return azFileCount === 2;
+      return Array.from(state.filesUploaded.values()).filter(file => file.dbName === DBName.AZ).length === 2;
     },
-    getAZFileNames(state) {
-      const azFileNames: string[] = [];
-      state.filesUploaded.forEach((file, fileName) => {
-        if (file.dbName === 'az') {
-          azFileNames.push(file.fileName);
-        }
-      });
-      return azFileNames;
+    getAZFileNames(): string[] {
+      return this.getFileNamesForDB(DBName.AZ);
     },
-    getIsUSfull(state) {
-      let azFileCount = 0;
-      state.filesUploaded.forEach(file => {
-        if (file.dbName === 'us') {
-          azFileCount++;
-        }
-      });
-      return azFileCount === 2;
+    getIsUSfull(): boolean {
+      return this.getFileCountForDB(DBName.US) === 2;
     },
-    getUSFileNames(state) {
-      const azFileNames: string[] = [];
-      state.filesUploaded.forEach((file, fileName) => {
-        if (file.dbName === 'us') {
-          azFileNames.push(fileName);
-        }
-      });
-      return azFileNames;
+    getUSFileNames(): string[] {
+      return this.getFileNamesForDB(DBName.US);
+    },
+    getFileCountForDB: (state) => (dbName: DBName) => {
+      return Array.from(state.filesUploaded.values()).filter(file => file.dbName === dbName).length;
+    },
+    getFileNamesForDB: (state) => (dbName: DBName) => {
+      return Array.from(state.filesUploaded.values())
+        .filter(file => file.dbName === dbName)
+        .map(file => file.fileName);
+    },
+    getAllUploadedFiles: (state) => {
+      return Array.from(state.filesUploaded.entries()).map(([componentName, file]) => ({
+        componentName,
+        dbName: file.dbName,
+        fileName: file.fileName
+      }));
     },
   },
   actions: {
     removeFileNameFilesUploaded(fileName: string) {
+      let fileRemoved = false;
       for (const [key, value] of this.filesUploaded) {
         if (value.fileName === fileName) {
           this.filesUploaded.delete(key);
-          this.incrementGlobalDBVersion()
+          fileRemoved = true;
+          break;
         }
+      }
+      if (fileRemoved) {
+        this.incrementGlobalDBVersion();
+      } else {
+        console.warn(`File not found for removal: ${fileName}`);
       }
     },
     setComponentFileIsUploading(componentName: string | undefined) {
-      console.log(componentName)
-      this.componentFileIsUploading = componentName
+      this.componentFileIsUploading = componentName;
     },
     setGlobalFileIsUploading(isUploading: boolean) {
       this.globalFileIsUploading = isUploading;
@@ -101,19 +96,20 @@ export const useDBstate = defineStore('useDBstate', {
       this.globalDBVersion++
       console.log('updatd globalDBVersion ', this.globalDBVersion)
     },
-    addFileUploaded(componentName: string, dbName: string, fileName: string) {
-      this.incrementGlobalDBVersion()
-      // const dbPrefix = dbName.split('filesUploaded')[0]; // Assuming the dbName includes a prefix like 'AZfilesUploaded'
-      this.filesUploaded.set(componentName, { dbName: dbName, fileName: fileName });
-      // console.log('File added from initial state:', fileName, { db: dbPrefix, fileName });
+    addFileUploaded(componentName: string, dbName: DBName, fileName: string) {
+      if (this.filesUploaded.has(componentName)) {
+        console.warn(`Overwriting existing file for component: ${componentName}`);
+      }
+      this.incrementGlobalDBVersion();
+      this.filesUploaded.set(componentName, { dbName, fileName });
     },
-    resetFilesUploadedByDBname(dbName: string) {
+    resetFilesUploadedByDBname(dbName: DBName) {
       this.filesUploaded.forEach((value, key) => {
-        // Check if any key's dbName matches the parameter
-        if (value && value.dbName === dbName) {
-          this.filesUploaded.delete(key); // Delete the entry from the map
+        if (value.dbName === dbName) {
+          this.filesUploaded.delete(key);
         }
       });
+      this.incrementGlobalDBVersion();
     }
   },
 

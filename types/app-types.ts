@@ -5,6 +5,12 @@ export enum AZColumnRole {
   SelectRole = '' // This will represent our "Select Column Role" option
 }
 
+export enum DBName {
+  AZ = 'AZ',
+  US = 'US',
+  CAN = 'CAN'
+}
+
 
 export interface State {
   globalDBVersion: number;

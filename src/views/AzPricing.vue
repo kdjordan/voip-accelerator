@@ -90,7 +90,7 @@ const columnRoleOptions = [
 
 async function resetThisReport() {
   await resetReportApi('az');
-  dbStore.resetFilesUploadedByDBname('az');
+  // dbStore.resetFilesUploadedByDBname('az');
   report.value = null;
 }
 

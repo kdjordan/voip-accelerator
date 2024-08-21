@@ -11,14 +11,14 @@ export const theme = {
   },
   extend: {
     colors: {
-      background: 'hsl(220, 30%, 10%)',
-      foreground: 'hsl(151, 36%, 90%)',
-      muted: 'hsl(220, 20%, 20%)',
-      mutedForeground: 'hsl(151, 25%, 70%)',
-      accent: 'hsl(120, 80%, 50%)',
-      destructive: 'hsl(0, 100%, 50%)',
+      background: 'hsl(230, 20%, 10%)',
+      foreground: 'hsl(180, 10%, 95%)',
+      muted: 'hsl(230, 15%, 20%)',
+      mutedForeground: 'hsl(180, 5%, 70%)',
+      accent: 'hsl(160, 100%, 40%)',
+      destructive: 'hsl(350, 100%, 50%)',
       destructiveForeground: 'hsl(0, 0%, 100%)',
-      success: 'hsl(120, 100%, 40%)',
+      success: 'hsl(140, 100%, 40%)',
     },
     fontSize: {
       sizeSm: 'clamp(0.8rem, 0.17vi + 0.76rem, 0.89rem)',
@@ -30,6 +30,15 @@ export const theme = {
       size4xl: 'clamp(3.05rem, 3.54vi + 2.17rem, 5rem)',
       size5xl: 'clamp(3.81rem, 5.18vi + 2.52rem, 6.66rem)',
       size6xl: 'clamp(4.77rem, 7.48vi + 2.9rem, 8.88rem)',
+    },
+    keyframes: {
+      pulse: {
+        '0%, 100%': { backgroundColor: 'var(--tw-success)' },
+        '50%': { backgroundColor: 'color-mix(in hsl, var(--tw-success) 70%, white)' },
+      },
+    },
+    animation: {
+      pulse: 'pulse 1s infinite',
     },
   }
 };
