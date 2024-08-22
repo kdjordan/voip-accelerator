@@ -25,15 +25,12 @@ export default function useCSVProcessing() {
 
 	async function parseCSVForFullProcessing(): Promise<void> {
 		if (!file.value) {
-			console.error('No file selected');
 			return;
 		}
 		const fileNameExists = DBstore.checkFileNameAvailable(file.value.name);
 
 		if (!fileNameExists) {
 			DBstore.setComponentFileIsUploading(componentName.value);
-			console.log('Uploading ', file.value);
-
 			try {
 				Papa.parse(file.value, {
 					header: false,
@@ -44,7 +41,6 @@ export default function useCSVProcessing() {
 						const standardizedData: StandardizedData[] = [];
 
 						fullData.forEach((row: string[]) => {
-							console.log('adding row')
 							const standardizedRow: StandardizedData = {
 								destName: '',
 								dialCode: 0,
@@ -79,7 +75,6 @@ export default function useCSVProcessing() {
 							const isValidRate = !isNaN(parseFloat(standardizedRow.rate.toString()));
 
 							if (isValidDestName && isValidDialCode && isValidRate) {
-								console.log('pushing')
 								standardizedData.push(standardizedRow);
 							} else {
 								console.error('Issue parsing file')

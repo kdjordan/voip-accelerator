@@ -8,6 +8,7 @@
           <router-view />
         </main>
         <TheFooter class="ml-[200px]"/>
+				{{ dbStore }}
       </div>
     </div>
   </div>
@@ -20,11 +21,22 @@
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
 	import { useDBstate } from '@/stores/dbStore';
+	import { deleteAllDbsApi } from '@/API/api';
+
+	const dbStore = useDBstate();
 
 	const dbNames = ['az', 'us', 'can']; // List your database names here
 
-	onMounted(async () => {
-		// await loadDb();
+	const handleBeforeUnload = () => {
+		deleteAllDbsApi(dbNames);
+	};
+
+	onMounted(() => {
+		window.addEventListener('beforeunload', handleBeforeUnload);
+	});
+
+	onBeforeUnmount(() => {
+		window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	// Function to process CSV text into an array of objects
@@ -89,17 +101,6 @@
 		data.forEach((item) => store.put(item));
 		await tx.done; // Complete the transaction
 	}
-
-	// const handleBeforeUnload = () => {
-	// 	deleteIndexedDBDatabases(dbNames);
-	// };
-
-	// window.addEventListener('beforeunload', handleBeforeUnload);
-
-	// // Cleanup event listener when component is unmounted
-	// onBeforeUnmount(() => {
-	// 	window.removeEventListener('beforeunload', handleBeforeUnload);
-	// });
 </script>
 
 <style>

@@ -68,9 +68,12 @@
 													<select
 														v-model="columnRoles[index]"
 														:class="{
-															'bg-muted': columnRoles[index] !== '',
+															'bg-accent text-background':
+																columnRoles[index] !== '',
+															'bg-foreground text-stone-700':
+																columnRoles[index] === '',
 														}"
-														class="block w-full rounded min-w-[200px] bg-foreground text-stone-700"
+														class="block w-full rounded min-w-[200px] transition-colors duration-200 px-3 py-2"
 													>
 														<option value="">
 															Select Column Role
@@ -212,20 +215,7 @@
 </script>
 
 <style>
-	select {
-		background: hsl(220, 30%, 10%);
-		color: hsl(151, 25%, 70%);
-		-webkit-appearance: none;
-		-moz-appearance: none;
-		appearance: none;
-		padding: 0.5rem 1rem;
-		background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%23B5CCBD' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
-		background-repeat: no-repeat;
-		background-position: right 0.5rem center;
-		background-size: 0.65em auto;
-	}
-
 	tbody tr:nth-child(even) {
-    background-color: hsl(220, 20%, 20%); /* Darker color for odd rows */
-}
+		background-color: hsl(220, 20%, 20%); /* Darker color for even rows */
+	}
 </style>

@@ -8,12 +8,14 @@
 		>
 			<div 
 				:class="[
-					'border border-foreground rounded-md flex items-center justify-center tracking-wide text-primary hover:bg-muted transition-colors cursor-pointer w-full',
+					'border border-foreground rounded-md flex items-center justify-center tracking-wide text-primary transition-colors w-full',
 					{
 						'animate-pulse bg-success': DBstore.isComponentFileUploading(
 							props.componentName
 						),
 						'bg-success text-background': props.disabled,
+						'hover:bg-muted cursor-pointer': !props.disabled,
+            'cursor-not-allowed': props.disabled || DBstore.globalFileIsUploading
 					},
 				]"
 				@dragover.prevent="onDragOver"
@@ -50,7 +52,7 @@
 				/>
 			</div>
 			<button
-				v-if="DBstore.isComponentDisabled(props.componentName)"
+				v-if="props.disabled"
 				@click="dumpFile"
 				class="btn btn-destructive"
 			>
@@ -195,21 +197,19 @@
 	}
 
 	function onDragOver(event: DragEvent) {
-		if (!DBstore.globalFileIsUploading) {
-			isDragOver.value = false;
+		if (!props.disabled) {
+			isDragOver.value = true;
 		}
 	}
 
 	function onDragEnter(event: DragEvent) {
-		if (!DBstore.globalFileIsUploading) {
+		if (!props.disabled) {
 			isDragOver.value = true;
 		}
 	}
 
 	function onDragLeave(event: DragEvent) {
-		if (!DBstore.globalFileIsUploading) {
-			isDragOver.value = false;
-		}
+		isDragOver.value = false;
 	}
 
 	interface ColumnRolesEvent {
@@ -229,10 +229,12 @@
 	}
 
 	function selectFile(): void {
-		const input = fileInput.value;
-		if (input) {
-			input.value = '';
-			input.click();
+		if (!props.disabled) {
+			const input = fileInput.value;
+			if (input) {
+				input.value = '';
+				input.click();
+			}
 		}
 	}
 </script>
