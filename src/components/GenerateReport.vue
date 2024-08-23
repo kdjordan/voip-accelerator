@@ -1,8 +1,8 @@
 <template>
   <div class="bg-background rounded-lg m-auto p-6">
-    <!-- <h1 class="text-center text-5xl font-bold mb-8 text-foreground uppercase">
-      Report
-    </h1> -->
+    <h1 class="text-center text-5xl font-bold mb-8 text-foreground uppercase">
+      AZ PRICING REPORT
+    </h1>
 
     <div class="mb-6 flex justify-center w-full">
       <h2 class="w-2/3 px-6 py-3 text-xl font-semibold mb-4 text-foreground bg-gradient-to-r from-blue-700 via-blue-600 to-purple-600 border border-blue-500 rounded-md shadow-xl text-center">
