@@ -74,7 +74,8 @@
 																columnRoles[index] === '',
 														}"
 														class="block w-full rounded min-w-[200px] transition-colors duration-200 px-3 py-2"
-													>
+														>
+													
 														<option value="">
 															Select Column Role
 														</option>

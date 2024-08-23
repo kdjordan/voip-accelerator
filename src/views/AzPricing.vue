@@ -13,11 +13,8 @@
     >
       Reset
     </button>
-    <div class="flex flex-col justify-between w-2/3  bg-muted p-4 rounded-xl h-[calc(100vh-70%)]">
-      <div
-        v-if="!report"
-        class="flex flex-grow space-x-4 mb-8"
-      >
+    <div v-if="!report" class="flex flex-col justify-between w-2/3 bg-muted p-4 rounded-xl h-[calc(100vh-70%)]">
+      <div class="flex flex-grow space-x-4 mb-8">
         <UploadComponent
           typeOfComponent="owner"
           DBname="az"
@@ -44,7 +41,7 @@
           <p>GENERATING REPORT</p>
         </div>
         <button
-          v-if="!isGeneratingReport && !report"
+          v-if="!isGeneratingReport"
           @click="makeReport"
           :disabled="!dbStore.getIsAZfull"
           :class="{
@@ -57,8 +54,8 @@
         </button>
       </div>
     </div>
-    <div>
-      <GenerateReport v-if="report" :report="report" />
+    <div v-if="report" class="w-full mt-8">
+      <GenerateReport :report="report" />
     </div>
   </div>
 </template>
@@ -66,7 +63,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type ComparisonReport, AZColumnRole } from '../../types/app-types';
+import { type ComparisonReport, AZColumnRole, DBName } from '../../types/app-types';
 import UploadComponent from '../components/UploadComponent.vue';
 import GenerateReport from '../components/GenerateReport.vue';
 import useIndexedDB from '../composables/useIndexDB';
@@ -90,7 +87,7 @@ const columnRoleOptions = [
 
 async function resetThisReport() {
   await resetReportApi('az');
-  // dbStore.resetFilesUploadedByDBname('az');
+  dbStore.resetFilesUploadedByDBname(DBName.AZ);
   report.value = null;
 }
 

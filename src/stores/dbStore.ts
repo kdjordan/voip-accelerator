@@ -42,8 +42,15 @@ export const useDBstate = defineStore('useDBstate', {
       return '';
 
     },
-    getIsAZfull(state) {
-      return Array.from(state.filesUploaded.values()).filter(file => file.dbName === DBName.AZ).length === 2;
+    getIsAZfull: (state) => {
+      let count = 0;
+      for (const file of state.filesUploaded.values()) {
+        if (file.dbName === 'az') {
+          count++;
+          if (count === 2) return true;
+        }
+      }
+      return false;
     },
     getAZFileNames(): string[] {
       return this.getFileNamesForDB(DBName.AZ);
@@ -104,12 +111,18 @@ export const useDBstate = defineStore('useDBstate', {
       this.filesUploaded.set(componentName, { dbName, fileName });
     },
     resetFilesUploadedByDBname(dbName: DBName) {
+      const keysToDelete: string[] = [];
       this.filesUploaded.forEach((value, key) => {
         if (value.dbName === dbName) {
-          this.filesUploaded.delete(key);
+          keysToDelete.push(key);
         }
       });
-      this.incrementGlobalDBVersion();
+      keysToDelete.forEach(key => {
+        this.filesUploaded.delete(key);
+      });
+      if (keysToDelete.length > 0) {
+        this.incrementGlobalDBVersion();
+      }
     }
   },
 
