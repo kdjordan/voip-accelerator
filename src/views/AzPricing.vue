@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col items-center pt-8 h-full">
     <div class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center">
-      <h1 class="text-size3xl uppercase mb-2">AZ Pricing</h1>
+      <h1 class="text-size3xl uppercase mb-2 font-bold tracking-widest">AZ Pricing</h1>
       <p class="text-center text-muted-foreground w-4/5">
         Upload <span class="font-bold uppercase text-accent">your</span> current rates and the rates of your  <span class="font-bold uppercase text-accent">prospective carrier.</span> We will generate you a report showing the best opportunities for you to buy and sell.
       </p>

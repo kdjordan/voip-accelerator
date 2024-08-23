@@ -7,7 +7,10 @@ export const content = [
 ];
 export const theme = {
   fontFamily: {
-    sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+    // sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+    sans: ['Roboto', 'Open Sans', 'sans-serif'],
+    heading: ['Roboto', 'sans-serif'],
+    body: ['Open Sans', 'sans-serif'],
   },
   extend: {
     colors: {
