@@ -1,8 +1,17 @@
 <template>
   <div class="bg-background rounded-lg m-auto p-6">
-    <h1 class="text-center text-5xl font-bold mb-8 text-foreground uppercase">
+    <h1 class="text-center text-5xl font-bold mb-4 text-foreground uppercase">
       AZ PRICING REPORT
     </h1>
+
+    <div class="flex justify-center mb-8">
+      <button
+        @click="resetReport"
+        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+      >
+        Reset
+      </button>
+    </div>
 
     <div class="mb-6 flex justify-center w-full">
       <h2 class="w-2/3 px-6 py-3 text-xl font-semibold mb-4 text-foreground bg-gradient-to-r from-blue-700 via-blue-600 to-purple-600 border border-blue-500 rounded-md shadow-xl text-center">
@@ -207,6 +216,8 @@ const props = defineProps<{
   report: ComparisonReport;
 }>();
 
+const emit = defineEmits(['resetReport']);
+
 const showUnmatchedCodes = ref<boolean>(false);
 const expandedDialCodes = ref({
   file1: {} as Record<number, boolean>,
@@ -235,6 +246,10 @@ function getDifferenceClass(difference: number): string {
   if (difference > 5) return 'text-green-600';
   if (difference < -5) return 'text-red-600';
   return 'text-gray-600';
+}
+
+function resetReport() {
+  emit('resetReport');
 }
 </script>
 
