@@ -6,9 +6,9 @@ export enum AZColumnRole {
 }
 
 export enum DBName {
-  AZ = 'AZ',
-  US = 'US',
-  CAN = 'CAN'
+  AZ = 'az',
+  US = 'us',
+  CAN = 'can'
 }
 
 
