@@ -6,15 +6,15 @@
         Upload <span class="font-bold uppercase text-accent">your</span> current rates and the rates of your  <span class="font-bold uppercase text-accent">prospective carrier.</span> We will generate you a report showing the best opportunities for you to buy and sell.
       </p>
     </div>
-    <div v-if="!report" class="flex flex-col justify-between w-2/3 bg-muted p-4 rounded-xl h-[calc(100vh-70%)]">
-      <div class="flex flex-grow space-x-4 mb-8">
+    <div v-if="!report" class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]">
+      <div class="flex justify-center space-x-6 flex-grow h-full">
         <UploadComponent
           typeOfComponent="owner"
           DBname="az"
           :componentName="component1"
           :disabled="dbStore.isComponentDisabled('az1')"
           :columnRoleOptions="columnRoleOptions"
-          class="flex-1"
+          class="flex-1 flex flex-col"
         />
 
         <UploadComponent
@@ -23,10 +23,10 @@
           :componentName="component2"
           :disabled="dbStore.isComponentDisabled('az2')"
           :columnRoleOptions="columnRoleOptions"
-          class="flex-1"
+          class="flex-1 flex flex-col"
         />
       </div>
-      <div class="text-center">
+      <div class="text-center mt-6">
         <div
           v-if="isGeneratingReport"
           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"

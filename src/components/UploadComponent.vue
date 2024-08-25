@@ -1,14 +1,14 @@
 <template>
-	<div
-		class="rounded-lg"
-	>
-			<p class="mb-8 text-center uppercase text-accent">{{ displayMessage }}</p>
-		<div
-			class="px-6 rounded-lg shadow-xl flex flex-col items-center justify-between bg-background w-full py-8 gap-8"
-		>
+	<div class="flex flex-col h-full">
+		<p class="mb-4 text-center uppercase text-accent">
+			<span>UPLOAD </span>
+			<span class="text-white">{{ highlightedWord }}</span>
+			<span> RATES AS CSV</span>
+		</p>
+		<div class="flex-grow flex flex-col bg-background w-full rounded-lg shadow-xl p-6">
 			<div 
 				:class="[
-					'border border-foreground rounded-md flex items-center justify-center tracking-wide text-primary transition-colors w-full',
+					'flex-grow flex flex-col items-center justify-center w-full border border-foreground rounded-md tracking-wide text-primary transition-colors p-8',
 					{
 						'animate-pulse bg-success': DBstore.isComponentFileUploading(
 							props.componentName
@@ -24,16 +24,16 @@
 				@dragleave="onDragLeave"
 				@click="selectFile"
 			>
-				<div class="flex flex-col items-center gap-10 py-10 text-foreground ">
+				<div class="flex flex-col items-center gap-10 py-10 text-foreground">
 					<p
 						:class="{
 							'text-white': DBstore.isComponentFileUploading(
 								props.componentName
 							),
-							'text-black uppercase': props.disabled
+								'text-black uppercase': props.disabled
 						}"
 					>
-						{{ statusMessage }}
+						{{ props.disabled ? 'SUCCESS' : statusMessage }}
 					</p>
 
 					<UploadIcon
@@ -51,18 +51,20 @@
 					ref="fileInput"
 				/>
 			</div>
-			<button
-				v-if="props.disabled"
-				@click="dumpFile"
-				class="btn btn-destructive"
-			>
-				Remove
-			</button>
+			<div class="h-12 mt-4 flex items-center justify-center">
+				<button
+					v-if="props.disabled"
+					@click="dumpFile"
+					class="btn btn-destructive"
+				>
+					Remove
+				</button>
+			</div>
 		</div>
 		<!-- Column Roles Modal -->
 		<TheModal
 			v-show="showModal"
-			:showModal="showModal"
+			 :showModal="showModal"
 			:columns="columns"
 			:previewData="previewData"
 			:columnRoles="columnRoles"
@@ -78,7 +80,7 @@
 	import TheModal from './TheModal.vue';
 	import { AZColumnRole } from '../../types/app-types';
 	import UploadIcon from './UploadIcon.vue';
-	import { ref, watch } from 'vue';
+	import { ref, watch, computed } from 'vue';
 	import useCSVProcessing from '../composables/useCsvFilesFunctions';
 	import { useDBstate } from '@/stores/dbStore';
 
@@ -150,8 +152,9 @@
 			if (localDBloadingVal) {
 				statusMessage.value = 'Working on it...';
 			} else if (disabledVal) {
-				statusMessage.value = 'Success';
 				updateDisplayMessage('complete');
+			} else {
+				statusMessage.value = 'Drag file or click to upload';
 			}
 		}
 	);
@@ -237,6 +240,10 @@
 			}
 		}
 	}
+
+	const highlightedWord = computed(() => {
+		return props.typeOfComponent === 'owner' ? 'YOUR' : 'CARRIER';
+	});
 </script>
 
 <style scoped>
