@@ -74,3 +74,31 @@ export type FileUpload = {
 };
 
 export type UploadedFileTracker = Map<string, FileUpload>;
+
+export enum PlanTier {
+  FREE = 'free',
+  PRO = 'pro'
+}
+
+export interface PlanFeatures {
+  unlimitedUploads: boolean;
+  advancedAnalytics: boolean;
+  prioritySupport: boolean;
+  // Add more features as needed
+}
+
+
+export interface UserInfo {
+  email: string;
+  username: string;
+  planTier: PlanTier;
+  lastLoggedIn: Date | null;
+  // Add any other user-related fields you need
+}
+
+export interface UserState {
+  info: UserInfo | null;
+  currentPlan: PlanTier;
+  features: PlanFeatures;
+}
+
