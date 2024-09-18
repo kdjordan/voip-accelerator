@@ -9,6 +9,8 @@
         </main>
         <TheFooter class="ml-[200px]"/>
 				{{ dbStore }}
+				<br>
+				{{ userStore }}
       </div>
     </div>
   </div>
@@ -21,9 +23,12 @@
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
 	import { useDBstate } from '@/stores/dbStore';
+	import { useUserStore } from '@/stores/userStore';
 	import { deleteAllDbsApi } from '@/API/api';
+	import { PlanTier } from '../types/app-types';
 
 	const dbStore = useDBstate();
+	const userStore = useUserStore();
 
 	const dbNames = ['az', 'us', 'can']; // List your database names here
 
@@ -33,6 +38,7 @@
 
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
+		setUser('free', true);
 	});
 
 	onBeforeUnmount(() => {
@@ -50,6 +56,18 @@
 				rate: Number(rate.trim()),
 			};
 		});
+	}
+
+	function setUser(plan, populateDb) {
+		const userInfo = {
+			email: plan === 'free' ? 'free@example.com' : 'pro@example.com',
+			username: plan === 'free' ? 'FreeUser' : 'ProUser',
+			planTier: plan === 'free' ? PlanTier.FREE : PlanTier.PRO,
+		};
+		userStore.setUser(userInfo);
+		if (populateDb) {
+			loadDb();
+		}
 	}
 
 	async function loadDb() {
