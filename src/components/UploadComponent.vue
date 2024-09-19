@@ -64,7 +64,7 @@
 		<!-- Column Roles Modal -->
 		<TheModal
 			v-show="showModal"
-			 :showModal="showModal"
+			:showModal="showModal"
 			:columns="columns"
 			:previewData="previewData"
 			:columnRoles="columnRoles"
@@ -78,10 +78,10 @@
 
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
-	import { AZColumnRole } from '../../types/app-types';
+	import { ColumnRolesEvent } from '../../types/app-types';
 	import UploadIcon from './UploadIcon.vue';
 	import { ref, watch, computed } from 'vue';
-	import useCSVProcessing from '../composables/useCsvFilesFunctions';
+	import useCSVProcessing from '../composables/useCsvFiles';
 	import { useDBstate } from '@/stores/dbStore';
 
 	// Component props
@@ -90,7 +90,7 @@
 		DBname: string;
 		componentName: string;
 		disabled: boolean;
-		columnRoleOptions: { value: AZColumnRole; label: string }[];
+		columnRoleOptions: { value: string; label: string }[];
 	}>();
 
 	// Extract functions and reactive properties from useCSVProcessing composable
@@ -106,6 +106,7 @@
 		parseCSVForFullProcessing,
 		parseCSVForPreview,
 		removeFromDB,
+		deckType
 	} = useCSVProcessing();
 
 	// Define reactive properties
@@ -113,13 +114,13 @@
 	const isDragOver = ref<boolean>(false);
 	const statusMessage = ref<string>('Drag file or click to upload');
 	const displayMessage = ref<string>('');
-
 	// Set DB name and component name from props
 	const DBstore = useDBstate();
 
 	DBname.value = props.DBname;
 	componentName.value = props.componentName;
-
+	deckType.value = props.DBname
+	
 	// Setup displayMessage based on componentType prop
 	const updateDisplayMessage = (type: string) => {
 		if (type === 'owner') {
@@ -215,15 +216,13 @@
 		isDragOver.value = false;
 	}
 
-	interface ColumnRolesEvent {
-		columnRoles: string[];
-		startLine: number;
-	}
+
 
 	async function confirmColumnRoles(event: ColumnRolesEvent) {
 		showModal.value = false;
 		columnRoles.value = event.columnRoles;
 		startLine.value = event.startLine;
+		deckType.value = event.deckType;
 		await parseCSVForFullProcessing();
 	}
 

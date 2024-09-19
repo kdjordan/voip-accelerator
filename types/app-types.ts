@@ -12,6 +12,12 @@ export enum DBName {
 }
 
 
+export interface ColumnRolesEvent {
+  columnRoles: string[];
+  startLine: number;
+  deckType: DBName.AZ | DBName.US;
+}
+
 export interface State {
   globalDBVersion: number;
   filesUploaded: UploadedFileTracker;

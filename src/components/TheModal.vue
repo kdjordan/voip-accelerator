@@ -174,19 +174,25 @@
 		{ immediate: true }
 	);
 
-	// Compute available roles for each column
+	const isNPANXXDeck = computed(() => {
+		return props.columnRoleOptions.some(role => 
+			['NPA', 'NXX', 'NPANXX', 'inter', 'intra', 'indeterm'].includes(role.value)
+		);
+	});
+
 	const availableRoles = (currentIndex: number) => {
 		const usedRoles = new Set(
-			columnRoles.value.filter(
-				(role) => role !== '' && role !== undefined
-			)
+			columnRoles.value.filter(role => role !== '' && role !== undefined)
 		);
 
-		return props.columnRoleOptions.filter(
-			(role) =>
-				!usedRoles.has(role.value) ||
-				role.value === columnRoles.value[currentIndex]
-		);
+		return props.columnRoleOptions.filter(role => {
+			if (isNPANXXDeck.value) {
+				const hasNPANXX = usedRoles.has('NPANXX');
+				if (hasNPANXX && (role.value === 'NPA' || role.value === 'NXX')) return false;
+				if ((usedRoles.has('NPA') || usedRoles.has('NXX')) && role.value === 'NPANXX') return false;
+			}
+			return !usedRoles.has(role.value) || role.value === columnRoles.value[currentIndex];
+		});
 	};
 
 	const displayedData = computed(() => {
@@ -195,18 +201,25 @@
 
 	// Check if all required roles are selected
 	const allRequiredRolesSelected = computed(() => {
-		const requiredRoles = props.columnRoleOptions.map(
-			(option) => option.value
-		);
-		return requiredRoles.every((role) =>
-			columnRoles.value.includes(role)
-		);
+		const selectedRoles = new Set(columnRoles.value.filter(role => role !== ''));
+		
+		if (isNPANXXDeck.value) {
+			const hasNPANXX = selectedRoles.has('NPANXX');
+			const hasNPAandNXX = selectedRoles.has('NPA') && selectedRoles.has('NXX');
+			const hasRates = selectedRoles.has('inter') && selectedRoles.has('intra') && selectedRoles.has('indeterm');
+			
+			return (hasNPANXX || hasNPAandNXX) && hasRates;
+		} else {
+			// For AZ deck
+			return props.columnRoleOptions.every(option => selectedRoles.has(option.value));
+		}
 	});
 
 	function confirmColumnRoles() {
 		emit('confirm', {
 			columnRoles: columnRoles.value,
 			startLine: startLine.value,
+			deckType: isNPANXXDeck.value ? 'us' : 'az',
 		});
 	}
 
