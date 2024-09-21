@@ -5,6 +5,7 @@ import {
 	type AZStandardizedData,
 	type USStandardizedData,
 	type ParsedResults,
+	DBName,
 } from '../../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
 import useIndexedDB from './useIndexDB';
@@ -36,15 +37,16 @@ export default function useCSVProcessing() {
 
 		if (!fileNameExists) {
 			DBstore.setComponentFileIsUploading(componentName.value);
-			if (deckType.value === 'AZ') {
+			if (deckType.value === DBName.AZ) {
 				try {
 					await processAZData(file.value);
 				} catch (e) {
 					console.error('Error during CSV parsing', e);
 				}
 			} // Add this closing bracket
-			if (deckType.value === 'US') {
+			if (deckType.value === DBName.US) {
 				try {
+					console.log('going in on processing US data')
 					await processUSData(file.value);
 				} catch (e) {
 					console.error('Error during CSV parsing', e);
@@ -65,7 +67,10 @@ export default function useCSVProcessing() {
 				const fullData = results.data.slice(dataStartIndex);
 				const standardizedData: USStandardizedData[] = [];
 
-				fullData.forEach((row: string[]) => {
+				
+				console.log('Sample Row:', fullData[0]);
+
+				fullData.forEach((row: string[], rowIndex: number) => {
 					const standardizedRow: USStandardizedData = {
 						npa: 0,
 						nxx: 0,
@@ -75,22 +80,28 @@ export default function useCSVProcessing() {
 					};
 
 					columnRoles.value.forEach((role, index) => {
-						if (role) {
+						if (role && index < row.length) {
+							const value = row[index].trim();
+							
 							switch (role) {
-								case 'npa':
-									standardizedRow.npa = parseInt(row[index], 10);
+								case 'NPA':
+									let processedNpa = value;
+									if (processedNpa.startsWith('1') && processedNpa.length === 4) {
+										processedNpa = processedNpa.slice(1);
+									}
+									standardizedRow.npa = parseInt(processedNpa, 10);
 									break;
-								case 'nxx':
-									standardizedRow.nxx = parseInt(row[index], 10);
+								case 'NXX':
+									standardizedRow.nxx = parseInt(value, 10);
 									break;
-								case 'interRate':
-									standardizedRow.interRate = parseFloat(row[index]);
+								case 'inter':
+									standardizedRow.interRate = parseFloat(value);
 									break;
-								case 'intraRate':
-									standardizedRow.intraRate = parseFloat(row[index]);
+								case 'intra':
+									standardizedRow.intraRate = parseFloat(value);
 									break;
-								case 'ijRate':
-									standardizedRow.ijRate = parseFloat(row[index]);
+								case 'indeterm':
+									standardizedRow.ijRate = parseFloat(value);
 									break;
 							}
 						}
@@ -105,7 +116,7 @@ export default function useCSVProcessing() {
 					if (isValidNPA && isValidNXX && isValidRates) {
 						standardizedData.push(standardizedRow);
 					} else {
-						console.error('Issue parsing US file row', standardizedRow);
+						console.error('Issue parsing US file row', rowIndex, standardizedRow);
 					}
 				});
 				

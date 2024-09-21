@@ -1,10 +1,10 @@
 <template>
   <div class="flex flex-col min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground tracking-wider">
-    <TheHeader class="w-full z-10" />
+    <TheHeader class="w-full z-10 fixed top-0" />
     <div class="flex flex-grow overflow-hidden">
       <SideNav class="z-20" />
       <div class="flex flex-col flex-grow">
-        <main class="flex-grow p-4 overflow-auto ml-[200px]">
+        <main class="flex-grow p-4 overflow-auto ml-[200px] mt-[60px]">
           <router-view />
         </main>
         <TheFooter class="ml-[200px]"/>
