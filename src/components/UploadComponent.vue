@@ -14,15 +14,16 @@
 							props.componentName
 						),
 						'bg-success text-background': props.disabled,
-						'hover:bg-muted cursor-pointer': !props.disabled,
-            'cursor-not-allowed': props.disabled || DBstore.globalFileIsUploading
+						'hover:bg-muted cursor-pointer': !props.disabled && !isDragOver,
+						'bg-muted': isDragOver,
+						'cursor-not-allowed': props.disabled || DBstore.globalFileIsUploading
 					},
 				]"
 				@dragover.prevent="onDragOver"
-				@drop.prevent="onDrop"
-				@dragenter="onDragEnter"
-				@dragleave="onDragLeave"
-				@click="selectFile"
+					@drop.prevent="onDrop"
+					@dragenter.prevent="onDragEnter"
+					@dragleave.prevent="onDragLeave"
+					@click="selectFile"
 			>
 				<div class="flex flex-col items-center gap-10 py-10 text-foreground">
 					<p
@@ -201,19 +202,33 @@
 	}
 
 	function onDragOver(event: DragEvent) {
-		if (!props.disabled) {
+		event.preventDefault();
+		if (!props.disabled && !DBstore.globalFileIsUploading) {
 			isDragOver.value = true;
 		}
 	}
 
 	function onDragEnter(event: DragEvent) {
-		if (!props.disabled) {
+		event.preventDefault();
+		if (!props.disabled && !DBstore.globalFileIsUploading) {
 			isDragOver.value = true;
 		}
 	}
 
 	function onDragLeave(event: DragEvent) {
-		isDragOver.value = false;
+		event.preventDefault();
+		const rect = (event.target as HTMLElement).getBoundingClientRect();
+		const x = event.clientX;
+		const y = event.clientY;
+
+		if (
+			x <= rect.left ||
+			x >= rect.right ||
+			y <= rect.top ||
+			y >= rect.bottom
+		) {
+			isDragOver.value = false;
+		}
 	}
 
 

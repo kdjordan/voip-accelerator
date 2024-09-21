@@ -32,12 +32,21 @@ export interface PricingReportInput {
   file2Data: StandardizedData[]; 
 }
 
-export interface StandardizedData {
+export interface AZStandardizedData {
   destName: string;
   dialCode: number;
   rate: number;
-  [key: string]: string | number; // Allow additional properties
 }
+
+export interface USStandardizedData {
+  npa: number;
+  nxx: number;
+  interRate: number;
+  intraRate: number;
+  ijRate: number;
+}
+
+export type StandardizedData = AZStandardizedData | USStandardizedData;
 
 export interface FileEmit {
   file: File;

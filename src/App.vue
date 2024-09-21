@@ -38,7 +38,7 @@
 
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
-		// setUser('free', true);
+		// setUser('free', true, ['us']);
 	});
 
 	onBeforeUnmount(() => {
@@ -46,70 +46,86 @@
 	});
 
 	// Function to process CSV text into an array of objects
-	function processData(csvText) {
+	function processData(csvText, dataType) {
 		const rows = csvText.trim().split('\n');
 		return rows.map((row, index) => {
-			const [destName, dialCode, rate] = row.split(',');
-			return {
-				destName: destName.trim(),
-				dialCode: Number(dialCode.trim()),
-				rate: Number(rate.trim()),
-			};
+			const columns = row.split(',');
+			if (dataType === 'az') {
+				const [destName, dialCode, rate] = columns;
+				return {
+					destName: destName.trim(),
+					dialCode: Number(dialCode.trim()),
+					rate: Number(rate.trim()),
+				};
+			} else if (dataType === 'us') {
+				const [, npa, nxx, interRate, intraRate, ijRate] = columns;
+				let processedNpa = npa.trim();
+				if (processedNpa.startsWith('1') && processedNpa.length === 4) {
+					processedNpa = processedNpa.slice(1);
+				}
+				return {
+					npa: Number(processedNpa),
+					nxx: Number(nxx.trim()),
+					interRate: Number(interRate.trim()),
+					intraRate: Number(intraRate.trim()),
+					ijRate: Number(ijRate.trim()),
+				};
+			}
 		});
 	}
 
-	function setUser(plan, populateDb) {
+	function setUser(plan, populateDb, dataTypes = []) {
 		const userInfo = {
 			email: plan === 'free' ? 'free@example.com' : 'pro@example.com',
 			username: plan === 'free' ? 'FreeUser' : 'ProUser',
-			planTier: plan === 'free' ? PlanTier.FREE : PlanTier.PRO,
+				planTier: plan === 'free' ? PlanTier.FREE : PlanTier.PRO,
 		};
 		userStore.setUser(userInfo);
 		if (populateDb) {
-			loadDb();
+			dataTypes.forEach(dataType => loadDb(dataType));
 		}
 	}
 
-	async function loadDb() {
+	async function loadDb(dataType) {
 		try {
-			// Open or create the 'az' IndexedDB database
-			const db = await openDB('az', 1, {
+			const dbName = dataType === 'az' ? 'az' : 'us';
+			const db = await openDB(dbName, 1, {
 				upgrade(db) {
-					// Create object stores for file1.csv and file2.csv
-					db.createObjectStore('AZtest1.csv', {
-						keyPath: 'id',
-						autoIncrement: true,
-					});
-					db.createObjectStore('AZtest2.csv', {
-						keyPath: 'id',
-						autoIncrement: true,
-					});
+					if (dataType === 'az') {
+						db.createObjectStore('AZtest1.csv', { keyPath: 'id', autoIncrement: true });
+						db.createObjectStore('AZtest2.csv', { keyPath: 'id', autoIncrement: true });
+					} else if (dataType === 'us') {
+						db.createObjectStore('npa_nxx.csv', { keyPath: 'id', autoIncrement: true });
+					}
 				},
 			});
 
-			// Fetch file1.csv
 			const DBstore = useDBstate();
-			const responseFile1 = await fetch('/src/data/AZtest1.csv');
-			
-			const csvTextFile1 = await responseFile1.text();
-			// console.log('got file 1', csvTextFile1)
-			DBstore.addFileUploaded('az1', 'az', 'AZtest1.csv');
 
-			// Fetch file2.csv
-			const responseFile2 = await fetch('/src/data/AZtest2.csv');
-			const csvTextFile2 = await responseFile2.text();
-			DBstore.addFileUploaded('az2', 'az', 'AZtest2.csv');
+			if (dataType === 'az') {
+				const responseFile1 = await fetch('/src/data/AZtest1.csv');
+				const csvTextFile1 = await responseFile1.text();
+				DBstore.addFileUploaded('az1', 'az', 'AZtest1.csv');
 
-			// Process and store file1.csv in IndexedDB 'file1' object store
-			const dataFile1 = processData(csvTextFile1);
-			console.log('sending data1 ', dataFile1)
-			await storeData(db, 'AZtest1.csv', dataFile1);
+				const responseFile2 = await fetch('/src/data/AZtest2.csv');
+				const csvTextFile2 = await responseFile2.text();
+				DBstore.addFileUploaded('az2', 'az', 'AZtest2.csv');
 
-			// Process and store file2.csv in IndexedDB 'file2' object store
-			const dataFile2 = processData(csvTextFile2);
-			await storeData(db, 'AZtest2.csv', dataFile2);
+				const dataFile1 = processData(csvTextFile1, 'az');
+				await storeData(db, 'AZtest1.csv', dataFile1);
+
+				const dataFile2 = processData(csvTextFile2, 'az');
+				await storeData(db, 'AZtest2.csv', dataFile2);
+			} else if (dataType === 'us') {
+				const responseFile = await fetch('/src/data/npa_nxx.csv');
+				const csvTextFile = await responseFile.text();
+				DBstore.addFileUploaded('us1', 'us', 'npa_nxx.csv');
+
+				const dataFile = processData(csvTextFile, 'us');
+				await storeData(db, 'npa_nxx.csv', dataFile);
+			}
 		} catch (error) {
-			console.error('Error loading CSV into IndexedDB:', error);
+			console.error(`Error loading ${dataType} CSV into IndexedDB:`, error);
 		}
 	}
 	// Function to store data in the specified object store

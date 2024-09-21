@@ -2,6 +2,8 @@ import { ref } from 'vue';
 import Papa from 'papaparse';
 import {
 	type StandardizedData,
+	type AZStandardizedData,
+	type USStandardizedData,
 	type ParsedResults,
 } from '../../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
@@ -34,14 +36,14 @@ export default function useCSVProcessing() {
 
 		if (!fileNameExists) {
 			DBstore.setComponentFileIsUploading(componentName.value);
-			if (deckType.value === 'az') {
+			if (deckType.value === 'AZ') {
 				try {
 					await processAZData(file.value);
 				} catch (e) {
 					console.error('Error during CSV parsing', e);
 				}
 			} // Add this closing bracket
-			if (deckType.value === 'us') {
+			if (deckType.value === 'US') {
 				try {
 					await processUSData(file.value);
 				} catch (e) {
@@ -61,41 +63,49 @@ export default function useCSVProcessing() {
 			complete(results: Papa.ParseResult<string[]>) {
 				const dataStartIndex = startLine.value - 1;
 				const fullData = results.data.slice(dataStartIndex);
-				const standardizedData: StandardizedData[] = [];
+				const standardizedData: USStandardizedData[] = [];
 
 				fullData.forEach((row: string[]) => {
-					const standardizedRow: StandardizedData = {
-						destName: '',
-						dialCode: 0,
-						rate: 0,
+					const standardizedRow: USStandardizedData = {
+						npa: 0,
+						nxx: 0,
+						interRate: 0,
+						intraRate: 0,
+						ijRate: 0,
 					};
 
 					columnRoles.value.forEach((role, index) => {
 						if (role) {
 							switch (role) {
-								case 'destName':
-									standardizedRow.destName = row[index];
+								case 'npa':
+									standardizedRow.npa = parseInt(row[index], 10);
 									break;
-								case 'dialCode':
-									standardizedRow.dialCode = parseFloat(row[index]);
+								case 'nxx':
+									standardizedRow.nxx = parseInt(row[index], 10);
 									break;
-								case 'rate':
-									standardizedRow.rate = parseFloat(row[index]);
+								case 'interRate':
+									standardizedRow.interRate = parseFloat(row[index]);
 									break;
-								default:
-									standardizedRow[role] = row[index];
+								case 'intraRate':
+									standardizedRow.intraRate = parseFloat(row[index]);
+									break;
+								case 'ijRate':
+									standardizedRow.ijRate = parseFloat(row[index]);
+									break;
 							}
 						}
 					});
 					
-					const isValidDestName = typeof standardizedRow.destName === 'string' && standardizedRow.destName.length > 0;
-					const isValidDialCode = !isNaN(Number(standardizedRow.dialCode));
-					const isValidRate = !isNaN(parseFloat(standardizedRow.rate.toString()));
+					const isValidNPA = !isNaN(standardizedRow.npa);
+					const isValidNXX = !isNaN(standardizedRow.nxx);
+					const isValidRates = !isNaN(standardizedRow.interRate) && 
+										 !isNaN(standardizedRow.intraRate) && 
+										 !isNaN(standardizedRow.ijRate);
 
-					if (isValidDestName && isValidDialCode && isValidRate) {
+					if (isValidNPA && isValidNXX && isValidRates) {
 						standardizedData.push(standardizedRow);
 					} else {
-						console.error('Issue parsing file')
+						console.error('Issue parsing US file row', standardizedRow);
 					}
 				});
 				
@@ -115,10 +125,10 @@ export default function useCSVProcessing() {
 			complete(results: Papa.ParseResult<string[]>) {
 				const dataStartIndex = startLine.value - 1;
 				const fullData = results.data.slice(dataStartIndex);
-				const standardizedData: StandardizedData[] = [];
+				const standardizedData: AZStandardizedData[] = [];
 
 				fullData.forEach((row: string[]) => {
-					const standardizedRow: StandardizedData = {
+					const standardizedRow: AZStandardizedData = {
 						destName: '',
 						dialCode: 0,
 						rate: 0,
@@ -136,20 +146,18 @@ export default function useCSVProcessing() {
 								case 'rate':
 									standardizedRow.rate = parseFloat(row[index]);
 									break;
-								default:
-									standardizedRow[role] = row[index];
 							}
 						}
 					});
 					
 					const isValidDestName = typeof standardizedRow.destName === 'string' && standardizedRow.destName.length > 0;
-					const isValidDialCode = !isNaN(Number(standardizedRow.dialCode));
-					const isValidRate = !isNaN(parseFloat(standardizedRow.rate.toString()));
+					const isValidDialCode = !isNaN(standardizedRow.dialCode);
+					const isValidRate = !isNaN(standardizedRow.rate);
 
 					if (isValidDestName && isValidDialCode && isValidRate) {
 						standardizedData.push(standardizedRow);
 					} else {
-						console.error('Issue parsing file')
+						console.error('Issue parsing AZ file row', standardizedRow);
 					}
 				});
 				
