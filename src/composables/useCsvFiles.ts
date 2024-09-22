@@ -67,7 +67,6 @@ export default function useCSVProcessing() {
 				const fullData = results.data.slice(dataStartIndex);
 				const standardizedData: USStandardizedData[] = [];
 
-				
 				console.log('Sample Row:', fullData[0]);
 
 				fullData.forEach((row: string[], rowIndex: number) => {
@@ -85,14 +84,15 @@ export default function useCSVProcessing() {
 							
 							switch (role) {
 								case 'NPA':
-									let processedNpa = value;
-									if (processedNpa.startsWith('1') && processedNpa.length === 4) {
-										processedNpa = processedNpa.slice(1);
-									}
-									standardizedRow.npa = parseInt(processedNpa, 10);
+									standardizedRow.npa = processNPA(value);
 									break;
 								case 'NXX':
 									standardizedRow.nxx = parseInt(value, 10);
+									break;
+								case 'NPANXX':
+									const [npa, nxx] = processNPANXX(value);
+									standardizedRow.npa = npa;
+									standardizedRow.nxx = nxx;
 									break;
 								case 'inter':
 									standardizedRow.interRate = parseFloat(value);
@@ -127,6 +127,24 @@ export default function useCSVProcessing() {
 				throw error;
 			}
 		});
+	}
+
+	function processNPA(value: string): number {
+		let processedNpa = value;
+		if (processedNpa.startsWith('1') && processedNpa.length === 4) {
+			processedNpa = processedNpa.slice(1);
+		}
+		return parseInt(processedNpa, 10);
+	}
+
+	function processNPANXX(value: string): [number, number] {
+		let processedValue = value;
+		if (processedValue.startsWith('1') && processedValue.length === 7) {
+			processedValue = processedValue.slice(1);
+		}
+		const npa = parseInt(processedValue.slice(0, 3), 10);
+		const nxx = parseInt(processedValue.slice(3), 10);
+		return [npa, nxx];
 	}
 
 	async function processAZData(fileToProcess: File) {
