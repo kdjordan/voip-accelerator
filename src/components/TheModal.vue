@@ -49,6 +49,28 @@
 										</select>
 									</div>
 								</div>
+								<div v-if="isNPANXXDeck" class="my-4 w-1/3">
+									<label
+										for="indetermRateSelect"
+										class="block text-sm font-medium text-muted-foreground"
+										>Define Indeterminate Rate:</label
+									>
+									<select
+										id="indetermRateSelect"
+										v-model="indetermRateSelection"
+										class="mt-1 block w-full bg-foreground text-stone-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+									>
+										<option value="default">
+											By selecting column
+										</option>
+										<option value="inter">
+											Using Interstate Rate
+										</option>
+										<option value="intra">
+											Using Intrastate Rate
+										</option>
+									</select>
+								</div>
 								<div class="mt-2 overflow-auto max-h-80">
 									<table
 										class="min-w-full rounded-lg overflow-hidden"
@@ -74,8 +96,7 @@
 																columnRoles[index] === '',
 														}"
 														class="block w-full rounded min-w-[200px] transition-colors duration-200 px-3 py-2"
-														>
-													
+													>
 														<option value="">
 															Select Column Role
 														</option>
@@ -175,23 +196,43 @@
 	);
 
 	const isNPANXXDeck = computed(() => {
-		return props.columnRoleOptions.some(role => 
-			['NPA', 'NXX', 'NPANXX', 'inter', 'intra', 'indeterm'].includes(role.value)
+		return props.columnRoleOptions.some((role) =>
+			['NPA', 'NXX', 'NPANXX', 'inter', 'intra', 'indeterm'].includes(
+				role.value
+			)
 		);
 	});
 
 	const availableRoles = (currentIndex: number) => {
 		const usedRoles = new Set(
-			columnRoles.value.filter(role => role !== '' && role !== undefined)
+			columnRoles.value.filter(
+				(role) => role !== '' && role !== undefined
+			)
 		);
 
-		return props.columnRoleOptions.filter(role => {
+		return props.columnRoleOptions.filter((role) => {
 			if (isNPANXXDeck.value) {
 				const hasNPANXX = usedRoles.has('NPANXX');
-				if (hasNPANXX && (role.value === 'NPA' || role.value === 'NXX')) return false;
-				if ((usedRoles.has('NPA') || usedRoles.has('NXX')) && role.value === 'NPANXX') return false;
+				if (
+					hasNPANXX &&
+					(role.value === 'NPA' || role.value === 'NXX')
+				)
+					return false;
+				if (
+					(usedRoles.has('NPA') || usedRoles.has('NXX')) &&
+					role.value === 'NPANXX'
+				)
+					return false;
+				if (indetermRateSelection.value !== 'default') {
+					if (role.value === 'indeterm') {
+						return false;
+					}
+				}
 			}
-			return !usedRoles.has(role.value) || role.value === columnRoles.value[currentIndex];
+			return (
+				!usedRoles.has(role.value) ||
+				role.value === columnRoles.value[currentIndex]
+			);
 		});
 	};
 
@@ -201,35 +242,58 @@
 
 	// Check if all required roles are selected
 	const allRequiredRolesSelected = computed(() => {
-		const selectedRoles = new Set(columnRoles.value.filter(role => role !== ''));
-		
+		const selectedRoles = new Set(
+			columnRoles.value.filter((role) => role !== '')
+		);
+
 		if (isNPANXXDeck.value) {
 			const hasNPANXX = selectedRoles.has('NPANXX');
-			const hasNPAandNXX = selectedRoles.has('NPA') && selectedRoles.has('NXX');
-			const hasRates = selectedRoles.has('inter') && selectedRoles.has('intra') && selectedRoles.has('indeterm');
-			
-			return (hasNPANXX || hasNPAandNXX) && hasRates;
+			const hasNPAandNXX =
+				selectedRoles.has('NPA') && selectedRoles.has('NXX');
+			const hasRates =
+				selectedRoles.has('inter') && selectedRoles.has('intra');
+			const hasIndetermOrSelection =
+				selectedRoles.has('indeterm') || indetermRateSelection.value !== 'default';
+
+			return (hasNPANXX || hasNPAandNXX) && hasRates && hasIndetermOrSelection;
 		} else {
 			// For AZ deck
-			return props.columnRoleOptions.every(option => selectedRoles.has(option.value));
+			return props.columnRoleOptions.every((option) =>
+				selectedRoles.has(option.value)
+			);
 		}
 	});
+
+	const indetermRateSelection = ref('default');
 
 	function confirmColumnRoles() {
 		emit('confirm', {
 			columnRoles: columnRoles.value,
 			startLine: startLine.value,
 			deckType: isNPANXXDeck.value ? 'us' : 'az',
+			indetermRateType: indetermRateSelection.value,
 		});
 	}
 
 	function cancelModal() {
 		emit('cancel');
 	}
+
+	watch(indetermRateSelection, () => {
+		// Reset the 'indeterm' column role if it was previously selected
+		const indetermIndex = columnRoles.value.findIndex(role => role === 'indeterm');
+		if (indetermIndex !== -1 && indetermRateSelection.value !== 'default') {
+			columnRoles.value[indetermIndex] = '';
+		}
+	});
 </script>
 
 <style>
 	tbody tr:nth-child(even) {
-		background-color: hsl(220, 20%, 20%); /* Darker color for even rows */
+		background-color: hsl(
+			220,
+			20%,
+			20%
+		); /* Darker color for even rows */
 	}
 </style>

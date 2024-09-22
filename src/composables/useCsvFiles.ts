@@ -26,7 +26,7 @@ export default function useCSVProcessing() {
 	const columns = ref<string[]>([]);
 	const showModal = ref<boolean>(false);
 	const deckType = ref<string>('')
-
+	const indetermRateType = ref<string>('default');
 
 	async function parseCSVForFullProcessing(): Promise<void> {
 		console.log('deckType', deckType.value)
@@ -59,6 +59,7 @@ export default function useCSVProcessing() {
 	}
 
 	async function processUSData(fileToProcess: File) {
+		console.log('processing US data', indetermRateType.value)
 		Papa.parse(fileToProcess, {
 			header: false,
 			skipEmptyLines: true,
@@ -78,6 +79,9 @@ export default function useCSVProcessing() {
 						ijRate: 0,
 					};
 
+					let interRate = 0;
+					let intraRate = 0;
+
 					columnRoles.value.forEach((role, index) => {
 						if (role && index < row.length) {
 							const value = row[index].trim();
@@ -95,10 +99,12 @@ export default function useCSVProcessing() {
 									standardizedRow.nxx = nxx;
 									break;
 								case 'inter':
-									standardizedRow.interRate = parseFloat(value);
+									interRate = parseFloat(value);
+									standardizedRow.interRate = interRate;
 									break;
 								case 'intra':
-									standardizedRow.intraRate = parseFloat(value);
+									intraRate = parseFloat(value);
+									standardizedRow.intraRate = intraRate;
 									break;
 								case 'indeterm':
 									standardizedRow.ijRate = parseFloat(value);
@@ -106,6 +112,16 @@ export default function useCSVProcessing() {
 							}
 						}
 					});
+
+					// Handle indeterminate rate based on user selection
+					if (indetermRateType.value === 'inter') {
+						standardizedRow.ijRate = interRate;
+					} else if (indetermRateType.value === 'intra') {
+						standardizedRow.ijRate = intraRate;
+					} else if (indetermRateType.value === 'default' && standardizedRow.ijRate === 0) {
+						// If 'default' is selected and no explicit ijRate was set, use intraRate as fallback
+						standardizedRow.ijRate = intraRate;
+					}
 					
 					const isValidNPA = !isNaN(standardizedRow.npa);
 					const isValidNXX = !isNaN(standardizedRow.nxx);
@@ -255,6 +271,7 @@ export default function useCSVProcessing() {
 		parseCSVForPreview,
 		parseCSVForFullProcessing,
 		removeFromDB,
-		deckType
+		deckType,
+		indetermRateType
 	};
 }
