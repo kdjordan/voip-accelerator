@@ -12,10 +12,17 @@ export enum DBName {
 }
 
 
+export enum IndetermRateType {
+  DEFAULT = 'default',
+  INTER = 'inter',
+  INTRA = 'intra'
+}
+
 export interface ColumnRolesEvent {
   columnRoles: string[];
   startLine: number;
   deckType: DBName.AZ | DBName.US;
+  indetermRateType?: IndetermRateType;
 }
 
 export interface State {

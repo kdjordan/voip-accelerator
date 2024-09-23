@@ -107,7 +107,8 @@
 		parseCSVForFullProcessing,
 		parseCSVForPreview,
 		removeFromDB,
-		deckType
+		deckType,
+		indetermRateType
 	} = useCSVProcessing();
 
 	// Define reactive properties
@@ -238,6 +239,9 @@
 		columnRoles.value = event.columnRoles;
 		startLine.value = event.startLine;
 		deckType.value = event.deckType;
+		if (event.indetermRateType !== undefined) {
+			indetermRateType.value = event.indetermRateType;
+		}
 		await parseCSVForFullProcessing();
 	}
 

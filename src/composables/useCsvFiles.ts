@@ -4,8 +4,8 @@ import {
 	type StandardizedData,
 	type AZStandardizedData,
 	type USStandardizedData,
-	type ParsedResults,
 	DBName,
+	IndetermRateType
 } from '../../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
 import useIndexedDB from './useIndexDB';
@@ -26,7 +26,7 @@ export default function useCSVProcessing() {
 	const columns = ref<string[]>([]);
 	const showModal = ref<boolean>(false);
 	const deckType = ref<string>('')
-	const indetermRateType = ref<string>('default');
+	const indetermRateType = ref<IndetermRateType>(IndetermRateType.DEFAULT);
 
 	async function parseCSVForFullProcessing(): Promise<void> {
 		console.log('deckType', deckType.value)
