@@ -1,29 +1,29 @@
 import {
-  type ComparisonReport,
+  type AzComparisonReport,
   type ConsolidatedData,
-  type PricingReportInput,
+  type AZPricingReportInput,
   type NonMatchingCode
-} from './../../types/app-types';
+} from '../../../types/app-types';
 // type DialCodeMap = Map<number, { destName: string; rate: number }>;
 
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {
   
   // Process comparison and generate report
-  const report: ComparisonReport = generateComparisonReport(event.data);
+  const report: AzComparisonReport = generateComparisonReport(event.data);
 
   // Send the generated report back to the main thread
   self.postMessage(report);
 });
 
-function generateComparisonReport(input: PricingReportInput): ComparisonReport {
+function generateComparisonReport(input: AZPricingReportInput): AzComparisonReport {
   const { fileName1, fileName2, file1Data, file2Data } = input
 
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
     throw Error('Missing a file name or fileData in worker !!')
   }
 
-  const comparisonReport: ComparisonReport = {
+  const comparisonReport: AzComparisonReport = {
     higherRatesForFile1: [],
     higherRatesForFile2: [],
     sameRates: [],

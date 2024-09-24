@@ -1,6 +1,6 @@
 import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
-import ComparisonWorker from '@/workers/comparison.worker?worker';
-import { type PricingReportInput, type ComparisonReport } from '../../types/app-types';
+import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
+import { type AZPricingReportInput, type AzComparisonReport } from '../../types/app-types';
 
 
 export async function resetReportApi(reportType: string) {
@@ -26,15 +26,15 @@ export async function deleteAllDbsApi(theDbs: string[]) {
   forceRefreshApi()
 }
 
-export async function makePricingReportApi(input: PricingReportInput): Promise<ComparisonReport> {
+export async function makeAzPricingReportApi(input: AZPricingReportInput): Promise<AzComparisonReport> {
 
-  const worker = new ComparisonWorker();
+  const worker = new AzComparisonWorker();
 
   worker.postMessage(input);
 
   return new Promise((resolve, reject) => {
     worker.onmessage = (event) => {
-      const comparisonReport: ComparisonReport = event.data;
+      const comparisonReport: AzComparisonReport = event.data;
       resolve(comparisonReport); // Resolve the promise with the comparison report
     };
 

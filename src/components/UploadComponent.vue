@@ -79,7 +79,7 @@
 
 <script setup lang="ts">
 	import TheModal from './TheModal.vue';
-	import { ColumnRolesEvent } from '../../types/app-types';
+	import { ColumnRolesEvent, DBName } from '../../types/app-types';
 	import UploadIcon from './UploadIcon.vue';
 	import { ref, watch, computed } from 'vue';
 	import useCSVProcessing from '../composables/useCsvFiles';
@@ -88,7 +88,7 @@
 	// Component props
 	const props = defineProps<{
 		typeOfComponent: string;
-		DBname: string;
+		DBname: DBName;
 		componentName: string;
 		disabled: boolean;
 		columnRoleOptions: { value: string; label: string }[];

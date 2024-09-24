@@ -10,7 +10,7 @@
       <div class="flex justify-center space-x-6 flex-grow h-full">
         <UploadComponent
           typeOfComponent="owner"
-          DBname="az"
+          :DBname="DBName.AZ"
           :componentName="component1"
           :disabled="dbStore.isComponentDisabled('az1')"
           :columnRoleOptions="columnRoleOptions"
@@ -19,7 +19,7 @@
 
         <UploadComponent
           typeOfComponent="client"
-          DBname="az"
+          :DBname="DBName.AZ"
           :componentName="component2"
           :disabled="dbStore.isComponentDisabled('az2')"
           :columnRoleOptions="columnRoleOptions"
@@ -56,21 +56,21 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type ComparisonReport, AZColumnRole, DBName } from '../../types/app-types';
+import { type AzComparisonReport, AZColumnRole, DBName, type AZStandardizedData } from '../../types/app-types';
 import UploadComponent from '../components/UploadComponent.vue';
 import GenerateReport from '../components/GenerateReport.vue';
 import useIndexedDB from '../composables/useIndexDB';
-import { makePricingReportApi, resetReportApi } from '@/API/api';
+import { makeAzPricingReportApi, resetReportApi } from '@/API/api';
 import { useDBstate } from '@/stores/dbStore';
 
 const dbStore = useDBstate();
 const { loadFromIndexedDB } = useIndexedDB();
 
-const theDb = ref<string>('az');
+const theDb = ref<DBName>(DBName.AZ);
 const component1 = ref<string>('az1');
 const component2 = ref<string>('az2');
 const isGeneratingReport = ref<boolean>(false);
-const report = ref<ComparisonReport | null>(null);
+const report = ref<AzComparisonReport | null>(null);
 
 const columnRoleOptions = [
   { value: AZColumnRole.Destination, label: 'Destination Name' },
@@ -95,11 +95,11 @@ async function makeReport() {
 
   if (fileName1 && fileName2 && file1Data && file2Data) {
     console.log('starting the report...');
-    const returnedReport = await makePricingReportApi({
+    const returnedReport = await makeAzPricingReportApi({
       fileName1,
       fileName2,
-      file1Data,
-      file2Data,
+      file1Data: file1Data as AZStandardizedData[],
+      file2Data: file2Data as AZStandardizedData[],
     });
     console.log('got report ', returnedReport);
     report.value = returnedReport;
@@ -110,7 +110,7 @@ async function makeReport() {
   }
 }
 
-async function getFilesFromIndexDB(dbName: string, store: string, dbVersion: number) {
+async function getFilesFromIndexDB(dbName: DBName, store: string, dbVersion: number) {
   try {
     const result = await loadFromIndexedDB(dbName, store, dbVersion);
     return result;

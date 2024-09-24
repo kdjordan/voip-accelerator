@@ -1,4 +1,4 @@
-import { type StandardizedData } from './../../types/app-types';
+import { type StandardizedData, DBName } from './../../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
 import { openDB } from 'idb';
 
@@ -7,7 +7,7 @@ const DBstore = useDBstate()
 
 export default function useIndexedDB() {
 
-  async function storeInIndexedDB(data: StandardizedData[], dbName: string, fileName: string, componentName: string): Promise<void> {
+  async function storeInIndexedDB(data: StandardizedData[], dbName: DBName, fileName: string, componentName: string): Promise<void> {
     console.log('storing')
     try {
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {

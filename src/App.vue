@@ -38,7 +38,7 @@
 
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
-		// setUser('free', true, ['us']);
+		setUser('free', true, ['az']);
 	});
 
 	onBeforeUnmount(() => {

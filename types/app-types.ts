@@ -11,7 +11,6 @@ export enum DBName {
   CAN = 'can'
 }
 
-
 export enum IndetermRateType {
   DEFAULT = 'default',
   INTER = 'inter',
@@ -32,11 +31,11 @@ export interface State {
   componentFileIsUploading: string | undefined; // Allow string or undefined
 }
 
-export interface PricingReportInput {
+export interface AZPricingReportInput {
   fileName1: string;
   fileName2: string;
-  file1Data: StandardizedData[]; 
-  file2Data: StandardizedData[]; 
+  file1Data: AZStandardizedData[]; 
+  file2Data: AZStandardizedData[]; 
 }
 
 export interface AZStandardizedData {
@@ -73,7 +72,7 @@ export interface ConsolidatedData {
 }
 
 
-export interface ComparisonReport {
+export interface AzComparisonReport {
   higherRatesForFile1: ConsolidatedData[];
   higherRatesForFile2: ConsolidatedData[];
   sameRates: ConsolidatedData[];

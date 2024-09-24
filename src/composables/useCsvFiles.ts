@@ -20,12 +20,13 @@ export default function useCSVProcessing() {
 	const file = ref<File | null>(null);
 	const startLine = ref<number>(1); // Adjust default start line if needed
 	const columnRoles = ref<string[]>([]); // Ensure columnRoles is properly defined
-	const DBname = ref<string>('')
-	const componentName = ref<string>('')
+	const DBname = ref<DBName | null>(null);
+	
+	const componentName = ref<string>('');
 	const previewData = ref<string[][]>([]);
 	const columns = ref<string[]>([]);
 	const showModal = ref<boolean>(false);
-	const deckType = ref<string>('')
+	const deckType = ref<DBName | null>(null);
 	const indetermRateType = ref<IndetermRateType>(IndetermRateType.DEFAULT);
 
 	async function parseCSVForFullProcessing(): Promise<void> {
@@ -240,7 +241,7 @@ export default function useCSVProcessing() {
 			if (file.value) {
 				await storeInIndexedDB(
 					data,
-					DBname.value,
+					DBname.value as DBName,
 					file.value.name,
 					componentName.value
 				);
@@ -256,7 +257,7 @@ export default function useCSVProcessing() {
 			componentName.value
 		);
 		// resetLocalState();
-		await deleteObjectStore(DBname.value, storeName);
+		await deleteObjectStore(DBname.value as DBName, storeName);
 	}
 
 	return {
