@@ -210,10 +210,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { type ComparisonReport } from '../../types/app-types';
+import { type AzComparisonReport } from '../../types/app-types';
 
-const props = defineProps<{
-  report: ComparisonReport;
+defineProps<{
+  report: AzComparisonReport;
 }>();
 
 const emit = defineEmits(['resetReport']);

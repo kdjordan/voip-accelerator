@@ -123,3 +123,15 @@ export interface UserState {
   features: PlanFeatures;
 }
 
+export interface AZCodeReport {
+  fileName1: string;
+  fileName2: string;
+  totalCodesFile1: number;
+  totalCodesFile2: number;
+  totalUniqueCodes: number;
+  matchedCodes: number;
+  percentageMatched: number;
+  nonMatchedCodes: number;
+  percentageNonMatched: number;
+}
+

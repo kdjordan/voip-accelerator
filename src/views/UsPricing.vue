@@ -50,7 +50,7 @@
 			</div>
 		</div>
 		<div v-if="report" class="w-full mt-8">
-			<GenerateReport :report="report" @resetReport="resetThisReport" />
+			<!-- <GenerateReport :report="report" @resetReport="resetThisReport" /> -->
 		</div>
 	</div>
 </template>
