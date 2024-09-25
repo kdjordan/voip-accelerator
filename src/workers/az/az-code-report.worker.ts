@@ -1,11 +1,11 @@
-import { AZPricingReportInput, AZCodeReport } from '../../../types/app-types';
+import { AZReportsInput, AZCodeReport } from '../../../types/app-types';
 
 self.addEventListener('message', (event) => {
   const report: AZCodeReport = generateCodeReport(event.data);
   self.postMessage(report);
 });
 
-function generateCodeReport(input: AZPricingReportInput): AZCodeReport {
+function generateCodeReport(input: AZReportsInput): AZCodeReport {
   const { fileName1, fileName2, file1Data, file2Data } = input;
 
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {

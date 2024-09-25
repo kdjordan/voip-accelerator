@@ -1,12 +1,28 @@
 <template>
 	<div class="flex flex-col items-center pt-8 h-full">
-		<div class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center">
-			<h1 class="text-size3xl uppercase mb-2 font-bold tracking-widest">US Pricing</h1>
+		<div
+			class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center"
+		>
+			<h1
+				class="text-size3xl uppercase mb-2 font-bold tracking-widest"
+			>
+				US Pricing
+			</h1>
 			<p class="text-center text-muted-foreground w-4/5">
-				Upload <span class="font-bold uppercase text-accent">your</span> current rates and the rates of your <span class="font-bold uppercase text-accent">prospective carrier.</span> We will generate you a report showing the best opportunities for you to buy and sell.
+				Upload
+				<span class="font-bold uppercase text-accent">your</span>
+				current rates and the rates of your
+				<span class="font-bold uppercase text-accent"
+					>prospective carrier.</span
+				>
+				We will generate you a report showing the best opportunities
+				for you to buy and sell.
 			</p>
 		</div>
-		<div v-if="!report" class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]">
+		<div
+			v-if="!report"
+			class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]"
+		>
 			<div class="flex justify-center space-x-6 flex-grow h-full">
 				<UploadComponent
 					typeOfComponent="owner"
@@ -34,7 +50,6 @@
 				</div>
 				<button
 					v-if="!isGeneratingReport"
-					
 					@click="console.log('make US report')"
 					:disabled="!dbStore.getIsUSfull"
 					:class="{
@@ -59,7 +74,7 @@
 	import { ref } from 'vue';
 	import { DBName } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
-	import GenerateReport from '../components/GenerateReport.vue';
+	import GenerateReport from '../components/PricingReportAZ.vue';
 	import useIndexedDB from '../composables/useIndexDB';
 	import { resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
@@ -72,9 +87,9 @@
 	const component2 = ref<string>('us2');
 	const isGeneratingReport = ref<boolean>(false);
 	// const report = ref<ComparisonReport | null>(null);
-	const report = ref<String>('')
+	const report = ref<String>('');
 
-	const columnRoleOptions =  [
+	const columnRoleOptions = [
 		{ value: 'NPANXX', label: 'NPANXX' },
 		{ value: 'NPA', label: 'NPA' },
 		{ value: 'NXX', label: 'NXX' },
@@ -115,9 +130,17 @@
 	// 	}
 	// }
 
-	async function getFilesFromIndexDB(dbName: string, store: string, dbVersion: number) {
+	async function getFilesFromIndexDB(
+		dbName: string,
+		store: string,
+		dbVersion: number
+	) {
 		try {
-			const result = await loadFromIndexedDB(dbName, store, dbVersion);
+			const result = await loadFromIndexedDB(
+				dbName,
+				store,
+				dbVersion
+			);
 			return result;
 		} catch (e) {
 			isGeneratingReport.value = false;

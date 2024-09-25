@@ -31,7 +31,7 @@ export interface State {
   componentFileIsUploading: string | undefined; // Allow string or undefined
 }
 
-export interface AZPricingReportInput {
+export interface AZReportsInput {
   fileName1: string;
   fileName2: string;
   file1Data: AZStandardizedData[]; 
@@ -72,7 +72,7 @@ export interface ConsolidatedData {
 }
 
 
-export interface AzComparisonReport {
+export interface AzPricingReport {
   higherRatesForFile1: ConsolidatedData[];
   higherRatesForFile2: ConsolidatedData[];
   sameRates: ConsolidatedData[];
@@ -81,6 +81,33 @@ export interface AzComparisonReport {
   fileName2: string;
 }
 
+export type AzCodeReport = {
+  higherRatesForFile1: Array<{
+    dialCode: string;
+    destName: string;
+    rateFile1: number;
+    rateFile2: number;
+    percentageDifference: number;
+  }>;
+  higherRatesForFile2: Array<{
+    dialCode: string;
+    destName: string;
+    rateFile1: number;
+    rateFile2: number;
+    percentageDifference: number;
+  }>;
+  sameRates: Array<{
+    dialCode: string;
+    destName: string;
+    rate: number;
+  }>;
+  nonMatchingCodes: Array<{
+    dialCode: string;
+    destName: string;
+    rate: number;
+    file: string;
+  }>;
+};
 
 export interface NonMatchingCode {
   dialCode: string;

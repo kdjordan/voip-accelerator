@@ -210,10 +210,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { type AzComparisonReport } from '../../types/app-types';
+import { type AzPricingReport } from '../../types/app-types';
 
 defineProps<{
-  report: AzComparisonReport;
+  report: AzPricingReport;
 }>();
 
 const emit = defineEmits(['resetReport']);
@@ -249,6 +249,7 @@ function getDifferenceClass(difference: number): string {
 }
 
 function resetReport() {
+  console.log('resetting the report');
   emit('resetReport');
 }
 </script>
