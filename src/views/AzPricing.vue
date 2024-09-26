@@ -28,6 +28,7 @@
 					:disabled="dbStore.isComponentDisabled('az1')"
 					:columnRoleOptions="columnRoleOptions"
 					class="flex-1 flex flex-col"
+					@fileUploaded="handleFileUploaded"
 				/>
 
 				<UploadComponent
@@ -37,6 +38,7 @@
 					:disabled="dbStore.isComponentDisabled('az2')"
 					:columnRoleOptions="columnRoleOptions"
 					class="flex-1 flex flex-col"
+					@fileUploaded="handleFileUploaded"
 				/>
 			</div>
 			<div class="mt-6 flex justify-center items-center">
@@ -108,6 +110,13 @@
 		{ value: AZColumnRole.DialCode, label: 'Dial Code' },
 		{ value: AZColumnRole.Rate, label: 'Rate' },
 	];
+
+	const uploadedFiles = ref<Record<string, string>>({});
+
+	function handleFileUploaded(componentName: string, fileName: string) {
+		uploadedFiles.value[componentName] = fileName;
+		console.log(`File uploaded for ${componentName}: ${fileName}`);
+	}
 
 	async function resetThisReport() {
     console.log('resetting the report');

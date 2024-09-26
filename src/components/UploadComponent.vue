@@ -1,40 +1,46 @@
 <template>
 	<div class="flex flex-col h-full">
-		<p class="mb-4 text-center uppercase text-accent">
-			<span>UPLOAD </span>
-			<span class="text-white">{{ highlightedWord }}</span>
-			<span> RATES AS CSV</span>
+		<p class="mb-4 text-center uppercase text-accent flex items-center justify-center gap-2">
+			
+			<span v-if="!props.disabled">
+				UPLOAD <span class="text-white">{{ highlightedWord }}</span> RATES AS CSV
+			</span>
 		</p>
-		<div class="flex-grow flex flex-col bg-background w-full rounded-lg shadow-xl p-6">
-			<div 
+		<div
+			class="flex-grow flex flex-col bg-background w-full rounded-lg shadow-xl p-6"
+		>
+			<div
 				:class="[
 					'flex-grow flex flex-col items-center justify-center w-full border border-foreground rounded-md tracking-wide text-primary transition-colors p-8',
 					{
-						'animate-pulse bg-success': DBstore.isComponentFileUploading(
-							props.componentName
-						),
+						'animate-pulse bg-success':
+							DBstore.isComponentFileUploading(props.componentName),
 						'bg-success text-background': props.disabled,
-						'hover:bg-muted cursor-pointer': !props.disabled && !isDragOver,
+						'hover:bg-muted cursor-pointer':
+							!props.disabled && !isDragOver,
 						'bg-muted': isDragOver,
-						'cursor-not-allowed': props.disabled || DBstore.globalFileIsUploading
+						'cursor-not-allowed':
+							props.disabled || DBstore.globalFileIsUploading,
 					},
 				]"
 				@dragover.prevent="onDragOver"
-					@drop.prevent="onDrop"
-					@dragenter.prevent="onDragEnter"
-					@dragleave.prevent="onDragLeave"
-					@click="selectFile"
+				@drop.prevent="onDrop"
+				@dragenter.prevent="onDragEnter"
+				@dragleave.prevent="onDragLeave"
+				@click="selectFile"
 			>
-				<div class="flex flex-col items-center gap-10 py-10 text-foreground">
+				<div
+					class="flex flex-col items-center gap-10 py-10 text-foreground"
+				>
 					<p
 						:class="{
 							'text-white': DBstore.isComponentFileUploading(
 								props.componentName
 							),
-								'text-black uppercase': props.disabled
+							'text-black': props.disabled,
 						}"
 					>
-						{{ props.disabled ? 'SUCCESS' : statusMessage }}
+						{{ props.disabled ? `${fileName} UPLOADED` : statusMessage }}
 					</p>
 
 					<UploadIcon
@@ -108,7 +114,7 @@
 		parseCSVForPreview,
 		removeFromDB,
 		deckType,
-		indetermRateType
+		indetermRateType,
 	} = useCSVProcessing();
 
 	// Define reactive properties
@@ -121,8 +127,13 @@
 
 	DBname.value = props.DBname;
 	componentName.value = props.componentName;
-	deckType.value = props.DBname
-	
+	deckType.value = props.DBname;
+
+	// Computed property to get the file name if the component is disabled
+	const fileName = computed(() => {
+		return props.disabled ? DBstore.getStoreNameByComponent(props.componentName) : '';
+	});
+
 	// Setup displayMessage based on componentType prop
 	const updateDisplayMessage = (type: string) => {
 		if (type === 'owner') {
@@ -179,8 +190,8 @@
 	}
 
 	function dumpFile() {
-		removeFromDB()
-		resetLocalState()
+		removeFromDB();
+		resetLocalState();
 	}
 
 	function resetLocalState() {
@@ -190,7 +201,7 @@
 		previewData.value = [];
 		columnRoles.value = [];
 		statusMessage.value = 'Drag file here or click to load.';
-		updateDisplayMessage(props.typeOfComponent)
+		updateDisplayMessage(props.typeOfComponent);
 	}
 
 	function onDrop(event: DragEvent) {
@@ -218,7 +229,9 @@
 
 	function onDragLeave(event: DragEvent) {
 		event.preventDefault();
-		const rect = (event.target as HTMLElement).getBoundingClientRect();
+		const rect = (
+			event.target as HTMLElement
+		).getBoundingClientRect();
 		const x = event.clientX;
 		const y = event.clientY;
 
@@ -231,8 +244,6 @@
 			isDragOver.value = false;
 		}
 	}
-
-
 
 	async function confirmColumnRoles(event: ColumnRolesEvent) {
 		showModal.value = false;
