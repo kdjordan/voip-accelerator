@@ -40,7 +40,15 @@
 							'text-black': props.disabled,
 						}"
 					>
-						{{ props.disabled ? `${fileName} UPLOADED` : statusMessage }}
+						<template v-if="props.disabled">
+						<div class="flex flex-col items-center">
+							<div class=" mb-2 border p-2 border-black rounded">{{ fileName }}</div>
+							<div class="text-sm">UPLOADED</div>
+						</div>
+						</template>
+						<template v-else>
+							{{ statusMessage }}
+						</template>
 					</p>
 
 					<UploadIcon

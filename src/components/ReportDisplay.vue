@@ -1,5 +1,5 @@
 <template>
-  <div class="report-display">
+  <div>
     <div class="flex justify-center mb-4">
       <button 
         @click="activeReport = 'code'"

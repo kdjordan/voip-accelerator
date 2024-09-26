@@ -88,9 +88,9 @@
 	import ReportDisplay from '../components/ReportDisplay.vue';
 	import useIndexedDB from '../composables/useIndexDB';
 	import {
-		makeAzPricingReportApi,
+		makeAzReportsApi,
 		resetReportApi,
-		makeAzCodeReportApi,
+
 	} from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
 
@@ -133,80 +133,39 @@
 		codeReport.value = null;
 	}
 
-	async function makePricingReport() {
-		const fileName1 = dbStore
-			.getStoreNameByComponent(component1.value)
-			.split('.')[0];
-		const fileName2 = dbStore
-			.getStoreNameByComponent(component2.value)
-			.split('.')[0];
-
-		const file1Data = await getFilesFromIndexDB(
-			theDb.value,
-			dbStore.getStoreNameByComponent(component1.value),
-			dbStore.globalDBVersion
-		);
-		const file2Data = await getFilesFromIndexDB(
-			theDb.value,
-			dbStore.getStoreNameByComponent(component2.value),
-			dbStore.globalDBVersion
-		);
-
-		if (fileName1 && fileName2 && file1Data && file2Data) {
-			console.log('starting the pricing report...');
-			const returnedReport = await makeAzPricingReportApi({
-				fileName1,
-				fileName2,
-				file1Data: file1Data as AZStandardizedData[],
-				file2Data: file2Data as AZStandardizedData[],
-			});
-			console.log('got pricing report ', returnedReport);
-			pricingReport.value = returnedReport;
-		} else {
-			console.error('Error getting files from DB for pricing report');
-		}
-	}
-
-	async function makeCodeReport() {
-		const fileName1 = dbStore
-			.getStoreNameByComponent(component1.value)
-			.split('.')[0];
-		const fileName2 = dbStore
-			.getStoreNameByComponent(component2.value)
-			.split('.')[0];
-
-		const file1Data = await getFilesFromIndexDB(
-			theDb.value,
-			dbStore.getStoreNameByComponent(component1.value),
-			dbStore.globalDBVersion
-		);
-		const file2Data = await getFilesFromIndexDB(
-			theDb.value,
-			dbStore.getStoreNameByComponent(component2.value),
-			dbStore.globalDBVersion
-		);
-
-		if (fileName1 && fileName2 && file1Data && file2Data) {
-			console.log('starting the code report...');
-			const returnedCodeReport = await makeAzCodeReportApi({
-				fileName1,
-				fileName2,
-				file1Data: file1Data as AZStandardizedData[],
-				file2Data: file2Data as AZStandardizedData[],
-			});
-			console.log('got code report ', returnedCodeReport);
-			codeReport.value = returnedCodeReport;
-		} else {
-			console.error('Error getting files from DB for code report');
-		}
-	}
-
 	async function generateReports() {
 		isGeneratingReports.value = true;
 		try {
-			await makeCodeReport();
-			await makePricingReport();
-			showUploadComponents.value = false;
+			const fileName1 = dbStore.getStoreNameByComponent(component1.value).split('.')[0];
+			const fileName2 = dbStore.getStoreNameByComponent(component2.value).split('.')[0];
+
+			const file1Data = await getFilesFromIndexDB(
+				theDb.value,
+				dbStore.getStoreNameByComponent(component1.value),
+				dbStore.globalDBVersion
+			);
+			const file2Data = await getFilesFromIndexDB(
+				theDb.value,
+				dbStore.getStoreNameByComponent(component2.value),
+				dbStore.globalDBVersion
+			);
+
+			if (fileName1 && fileName2 && file1Data && file2Data) {
+				console.log('Generating reports...');
+				const { pricingReport: pricingReportData, codeReport: codeReportData } = await makeAzReportsApi({
+					fileName1,
+					fileName2,
+					file1Data: file1Data as AZStandardizedData[],
+					file2Data: file2Data as AZStandardizedData[],
+				});
+				
+				pricingReport.value = pricingReportData;
+				codeReport.value = codeReportData;
+				showUploadComponents.value = false;
+				console.log('reports generated', pricingReport.value, codeReport.value);
+			} else {
+				console.error('Error getting files from DB for reports');
+			}
 		} catch (error) {
 			console.error('Error generating reports:', error);
 			// Handle error (e.g., show error message to user)

@@ -1,6 +1,5 @@
 import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
 import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
-import AzPricingWorker from '@/workers/az/az-comparison.worker?worker';
 import { type AZReportsInput, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
 
 
@@ -27,36 +26,15 @@ export async function deleteAllDbsApi(theDbs: string[]) {
   forceRefreshApi()
 }
 
-export async function makeAzPricingReportApi(input: AZReportsInput): Promise<AzPricingReport> {
-
+export async function makeAzReportsApi(input: AZReportsInput): Promise<{ pricingReport: AzPricingReport, codeReport: AzCodeReport }> {
   const worker = new AzComparisonWorker();
 
   worker.postMessage(input);
 
   return new Promise((resolve, reject) => {
     worker.onmessage = (event) => {
-      const comparisonReport: AzPricingReport = event.data;
-      resolve(comparisonReport); // Resolve the promise with the comparison report
-    };
-
-    worker.onerror = (error) => {
-      console.error('Error from worker:', error);
-      reject(error); // Reject the promise if an error occurs
-    };
-
-  });
-}
-
-export async function makeAzCodeReportApi(input: AZReportsInput): Promise<AzCodeReport> {
-  console.log('makeAzCodeReportApi', input)
-  const worker = new AzComparisonWorker();
-
-  worker.postMessage(input);
-
-  return new Promise((resolve, reject) => {
-    worker.onmessage = (event) => {
-      const codeReport: AzCodeReport = event.data;
-      resolve(codeReport);
+      const { pricingReport, codeReport } = event.data;
+      resolve({ pricingReport, codeReport });
     };
 
     worker.onerror = (error) => {

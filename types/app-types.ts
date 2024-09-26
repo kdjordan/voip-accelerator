@@ -81,33 +81,24 @@ export interface AzPricingReport {
   fileName2: string;
 }
 
-export type AzCodeReport = {
-  higherRatesForFile1: Array<{
-    dialCode: string;
-    destName: string;
-    rateFile1: number;
-    rateFile2: number;
-    percentageDifference: number;
-  }>;
-  higherRatesForFile2: Array<{
-    dialCode: string;
-    destName: string;
-    rateFile1: number;
-    rateFile2: number;
-    percentageDifference: number;
-  }>;
-  sameRates: Array<{
-    dialCode: string;
-    destName: string;
-    rate: number;
-  }>;
-  nonMatchingCodes: Array<{
-    dialCode: string;
-    destName: string;
-    rate: number;
-    file: string;
-  }>;
-};
+export interface AzCodeReport {
+  file1: {
+    fileName: string;
+    totalCodes: number;
+    uniqueCodes: Set<number>;
+    uniqueCodesPercentage: number;
+  };
+  file2: {
+    fileName: string;
+    totalCodes: number;
+    uniqueCodes: Set<number>;
+    uniqueCodesPercentage: number;
+  };
+  matchedCodes: number;
+  nonMatchedCodes: number;
+  matchedCodesPercentage: number;
+  nonMatchedCodesPercentage: number;
+}
 
 export interface NonMatchingCode {
   dialCode: string;
