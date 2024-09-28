@@ -35,15 +35,15 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
   const codeReport: AzCodeReport = {
     file1: {
       fileName: fileName1,
-      totalCodes: 0,
-      uniqueCodes: new Set<number>(),
-      uniqueCodesPercentage: 0,
+      totalCodes: file1Data.length,
+      totalDestinations: new Set(file1Data.map(entry => entry.destName)).size,
+      uniqueDestinationsPercentage: 0,
     },
     file2: {
       fileName: fileName2,
-      totalCodes: 0,
-      uniqueCodes: new Set<number>(),
-      uniqueCodesPercentage: 0,
+      totalCodes: file2Data.length,
+      totalDestinations: new Set(file2Data.map(entry => entry.destName)).size,
+      uniqueDestinationsPercentage: 0,
     },
     matchedCodes: 0,
     nonMatchedCodes: 0,
@@ -56,15 +56,30 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
 
   file1Data.forEach(entry => {
     dialCodeMapFile1.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
-    codeReport.file1.totalCodes++;
-    codeReport.file1.uniqueCodes.add(entry.dialCode);
   });
 
   file2Data.forEach(entry => {
     dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: entry.rate });
-    codeReport.file2.totalCodes++;
-    codeReport.file2.uniqueCodes.add(entry.dialCode);
   });
+
+  // Calculate matched and non-matched codes
+  const file1Codes = new Set(file1Data.map(entry => entry.dialCode));
+  const file2Codes = new Set(file2Data.map(entry => entry.dialCode));
+
+  for (const code of file1Codes) {
+    if (file2Codes.has(code)) {
+      codeReport.matchedCodes++;
+    } else {
+      codeReport.nonMatchedCodes++;
+    }
+  }
+
+  // Check for codes in file2 that are not in file1
+  for (const code of file2Codes) {
+    if (!file1Codes.has(code)) {
+      codeReport.nonMatchedCodes++;
+    }
+  }
 
   dialCodeMapFile1.forEach((value1, key1) => {
     if (dialCodeMapFile2.has(key1)) {
@@ -95,44 +110,35 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
           rateFile2: value2.rate,
           percentageDifference: 0
         });
-      } else {
+      }
+    } else {
       pricingReport.nonMatchingCodes.push({
         dialCode: `${key1}`,
         destName: value1.destName,
         rate: value1.rate,
         file: fileName1
       });
-      dialCodeMapFile2.delete(key1);
-     }
     }
   });
   
   dialCodeMapFile2.forEach((value, key) => {
-    pricingReport.nonMatchingCodes.push({
-      dialCode: `${key}`,
-      destName: value.destName,
-      rate: value.rate,
-      file: fileName2
-    });
+    if (!dialCodeMapFile1.has(key)) {
+      pricingReport.nonMatchingCodes.push({
+        dialCode: `${key}`,
+        destName: value.destName,
+        rate: value.rate,
+        file: fileName2
+      });
+    }
   });
 
-  const consolidateEntries = (entries: ConsolidatedData[]): ConsolidatedData[] => {
-    const groups = new Map<string, ConsolidatedData[]>();
-    entries.forEach(entry => {
-      const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(entry);
-    });
+  // Calculate percentages
+  codeReport.file1.uniqueDestinationsPercentage = (codeReport.file1.totalDestinations / codeReport.file1.totalCodes) * 100;
+  codeReport.file2.uniqueDestinationsPercentage = (codeReport.file2.totalDestinations / codeReport.file2.totalCodes) * 100;
 
-    const consolidatedEntries: ConsolidatedData[] = [];
-    groups.forEach(group => {
-      consolidatedEntries.push(consolidateDialCodes(group));
-    });
-
-    return consolidatedEntries;
-  };
+  const totalUniqueCodes = Math.max(file1Codes.size, file2Codes.size);
+  codeReport.matchedCodesPercentage = (codeReport.matchedCodes / totalUniqueCodes) * 100;
+  codeReport.nonMatchedCodesPercentage = (codeReport.nonMatchedCodes / totalUniqueCodes) * 100;
 
   pricingReport.higherRatesForFile1 = consolidateEntries(pricingReport.higherRatesForFile1);
   pricingReport.higherRatesForFile2 = consolidateEntries(pricingReport.higherRatesForFile2);
@@ -141,14 +147,6 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
   //sort report descending
   pricingReport.higherRatesForFile1.sort((a, b) => b.percentageDifference - a.percentageDifference);
   pricingReport.higherRatesForFile2.sort((a, b) => b.percentageDifference - a.percentageDifference);
-
-  // Calculate percentages for code report
-  const totalUniqueCodesFile1 = codeReport.file1.uniqueCodes.size;
-  const totalUniqueCodesFile2 = codeReport.file2.uniqueCodes.size;
-  codeReport.file1.uniqueCodesPercentage = (totalUniqueCodesFile1 / codeReport.file1.totalCodes) * 100;
-  codeReport.file2.uniqueCodesPercentage = (totalUniqueCodesFile2 / codeReport.file2.totalCodes) * 100;
-  codeReport.matchedCodesPercentage = (codeReport.matchedCodes / Math.max(totalUniqueCodesFile1, totalUniqueCodesFile2)) * 100;
-  codeReport.nonMatchedCodesPercentage = (codeReport.nonMatchedCodes / Math.max(totalUniqueCodesFile1, totalUniqueCodesFile2)) * 100;
 
   return { pricingReport, codeReport };
 }
@@ -198,3 +196,20 @@ function calculatePercentageDifference(rate1: number, rate2: number): number {
 }
 }
 
+function consolidateEntries(entries: ConsolidatedData[]): ConsolidatedData[] {
+  const groups = new Map<string, ConsolidatedData[]>();
+  entries.forEach(entry => {
+    const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(entry);
+  });
+
+  const consolidatedEntries: ConsolidatedData[] = [];
+  groups.forEach(group => {
+    consolidatedEntries.push(consolidateDialCodes(group));
+  });
+
+  return consolidatedEntries;
+}

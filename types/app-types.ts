@@ -85,14 +85,14 @@ export interface AzCodeReport {
   file1: {
     fileName: string;
     totalCodes: number;
-    uniqueCodes: Set<number>;
-    uniqueCodesPercentage: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
   };
   file2: {
     fileName: string;
     totalCodes: number;
-    uniqueCodes: Set<number>;
-    uniqueCodesPercentage: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
   };
   matchedCodes: number;
   nonMatchedCodes: number;

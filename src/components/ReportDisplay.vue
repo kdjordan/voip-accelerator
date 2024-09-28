@@ -52,5 +52,5 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['gotoFiles']);
 
-const activeReport = ref<'code' | 'pricing'>('code'); // Default to showing the code report
+const activeReport = ref<'code' | 'pricing'>('code'); // This ensures the Code Report is shown by default
 </script>

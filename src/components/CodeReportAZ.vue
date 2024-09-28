@@ -1,52 +1,68 @@
 <template>
-  <div class="code-report bg-background rounded-lg m-auto p-6 min-w-full max-w-4xl">
-    <h1 class="text-center text-5xl font-bold mb-8 text-foreground uppercase">
-      AZ CODE REPORT
-    </h1>
+  <div class="bg-background rounded-lg m-auto p-6 w-full max-w-7xl font-sans relative">
+    <div class="mb-8 text-center">
+      <h1 class="text-5xl font-bold text-foreground uppercase inline-block">
+        AZ CODE REPORT
+      </h1>
+    </div>
+    
+    <button class="absolute top-6 right-6 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+      Reset
+    </button>
     
     <div v-if="report" class="space-y-8">
-      <div v-for="file in fileKeys" :key="file" class="bg-muted p-6 rounded-lg shadow-md">
-        <h2 class="text-3xl font-semibold mb-4 text-primary">{{ getFileName(file) }}</h2>
-        <table class="w-full text-left">
-          <tbody>
-            <tr class="border-b border-gray-200">
-              <td class="py-2 font-semibold text-muted-foreground">Total Codes:</td>
-              <td class="py-2 text-foreground">{{ getTotalCodes(file) }}</td>
-            </tr>
-            <tr class="border-b border-gray-200">
-              <td class="py-2 font-semibold text-muted-foreground">Unique Codes:</td>
-              <td class="py-2 text-foreground">{{ getUniqueCodes(file) }}</td>
-            </tr>
-            <tr>
-              <td class="py-2 font-semibold text-muted-foreground">Unique Codes Percentage:</td>
-              <td class="py-2 text-foreground">{{ getUniqueCodesPercentage(file) }}%</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div v-for="file in fileKeys" :key="file" class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+          <h2 class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6">
+            <span class="text-gray-300 font-bold">{{ getFileName(file) }}</span>
+          </h2>
+          <div class="p-6">
+            <table class="w-full">
+              <tbody>
+                <tr class="border-b border-gray-700">
+                  <td class="py-2 font-medium text-gray-400">Total Codes:</td>
+                  <td class="py-2 text-right text-foreground">{{ getTotalCodes(file) }}</td>
+                </tr>
+                <tr class="border-b border-gray-700">
+                  <td class="py-2 font-medium text-gray-400">Total Destinations:</td>
+                  <td class="py-2 text-right text-foreground">{{ getTotalDestinations(file) }}</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-medium text-gray-400">Unique Destinations Percentage:</td>
+                  <td class="py-2 text-right text-foreground">{{ getUniqueDestinationsPercentage(file) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       
-      <div class="bg-muted p-6 rounded-lg shadow-md">
-        <h2 class="text-3xl font-semibold mb-4 text-primary">Comparison</h2>
-        <table class="w-full text-left">
-          <tbody>
-            <tr class="border-b border-gray-200">
-              <td class="py-2 font-semibold text-muted-foreground">Matched Codes:</td>
-              <td class="py-2 text-foreground">{{ report.matchedCodes }}</td>
-            </tr>
-            <tr class="border-b border-gray-200">
-              <td class="py-2 font-semibold text-muted-foreground">Non-Matched Codes:</td>
-              <td class="py-2 text-foreground">{{ report.nonMatchedCodes }}</td>
-            </tr>
-            <tr class="border-b border-gray-200">
-              <td class="py-2 font-semibold text-muted-foreground">Matched Codes Percentage:</td>
-              <td class="py-2 text-foreground">{{ report.matchedCodesPercentage.toFixed(2) }}%</td>
-            </tr>
-            <tr>
-              <td class="py-2 font-semibold text-muted-foreground">Non-Matched Codes Percentage:</td>
-              <td class="py-2 text-foreground">{{ report.nonMatchedCodesPercentage.toFixed(2) }}%</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+        <h2 class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6">
+          <span class="text-gray-300 font-bold">Comparison</span>
+        </h2>
+        <div class="p-6">
+          <table class="w-full">
+            <tbody>
+              <tr class="border-b border-gray-700">
+                <td class="py-2 font-medium text-gray-400">Matched Codes:</td>
+                <td class="py-2 text-right text-foreground">{{ report.matchedCodes }}</td>
+              </tr>
+              <tr class="border-b border-gray-700">
+                <td class="py-2 font-medium text-gray-400">Non-Matched Codes:</td>
+                <td class="py-2 text-right text-foreground">{{ report.nonMatchedCodes }}</td>
+              </tr>
+              <tr class="border-b border-gray-700">
+                <td class="py-2 font-medium text-gray-400">Matched Codes Percentage:</td>
+                <td class="py-2 text-right text-foreground">{{ report.matchedCodesPercentage.toFixed(2) }}%</td>
+              </tr>
+              <tr>
+                <td class="py-2 font-medium text-gray-400">Non-Matched Codes Percentage:</td>
+                <td class="py-2 text-right text-foreground">{{ report.nonMatchedCodesPercentage.toFixed(2) }}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     
@@ -74,30 +90,18 @@ function getTotalCodes(file: FileKey): number {
   return props.report?.[file].totalCodes ?? 0;
 }
 
-function getUniqueCodes(file: FileKey): number {
-  return props.report?.[file].uniqueCodes.size ?? 0;
+function getTotalDestinations(file: FileKey): number {
+  return props.report?.[file].totalDestinations ?? 0;
 }
 
-function getUniqueCodesPercentage(file: FileKey): string {
-  return props.report?.[file].uniqueCodesPercentage.toFixed(2) ?? '0.00';
+function getUniqueDestinationsPercentage(file: FileKey): string {
+  return props.report?.[file].uniqueDestinationsPercentage.toFixed(2) ?? '0.00';
 }
 </script>
 
 <style scoped>
-.code-report {
+/* Remove or comment out this style block if it's not needed */
+/*.code-report {
   font-family: Arial, sans-serif;
-}
-
-table {
-  border-collapse: separate;
-  border-spacing: 0 0.5rem;
-}
-
-td {
-  padding: 0.75rem 1rem;
-}
-
-tr:not(:last-child) {
-  border-bottom: 1px solid #e2e8f0;
-}
+}*/
 </style>

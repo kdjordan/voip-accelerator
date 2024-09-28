@@ -41,8 +41,8 @@
 						}"
 					>
 						<template v-if="props.disabled">
-						<div class="flex flex-col items-center">
-							<div class=" mb-2 border p-2 border-black rounded">{{ fileName }}</div>
+						<div class="flex flex-col items-center bg-blue-500 text-white p-4 rounded-lg shadow-md">
+							<div class="mb-2">{{ fileName }}</div>
 							<div class="text-sm">UPLOADED</div>
 						</div>
 						</template>

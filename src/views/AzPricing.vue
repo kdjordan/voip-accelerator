@@ -1,6 +1,7 @@
 <template>
 	<div class="flex flex-col items-center pt-8 h-full">
 		<div
+			v-if="showUploadComponents"
 			class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center"
 		>
 			<h1
@@ -42,7 +43,6 @@
 				/>
 			</div>
 			<div class="mt-6 flex justify-center items-center">
-				<!-- Changed from justify-end to justify-center -->
 				<div
 					v-if="isGeneratingReports"
 					class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"
@@ -51,7 +51,7 @@
 				</div>
 				<button
 					v-else
-					@click="generateReports"
+					@click="handleReportsAction"
 					:disabled="!dbStore.getIsAZfull"
 					:class="{
 						'bg-blue-500 hover:bg-blue-600 text-white':
@@ -61,22 +61,26 @@
 					}"
 					class="btn"
 				>
-					Get Reports
+					{{ reportsGenerated ? 'Goto Reports' : 'Get Reports' }}
 				</button>
+			</div>
+			<!-- Debug info -->
+			<div class="mt-4 text-sm text-gray-500">
+				Reports generated: {{ reportsGenerated }}
 			</div>
 		</div>
 		<ReportDisplay 
 			v-else
 			:codeReport="codeReport"
 			:pricingReport="pricingReport"
-      @resetReport="resetThisReport"
-      @gotoFiles="handleGotoFiles"
+			@resetReport="resetThisReport"
+			@gotoFiles="handleGotoFiles"
 		/>
 	</div>
 </template>
 
 <script setup lang="ts">
-	import { ref } from 'vue';
+	import { ref, computed, watch } from 'vue';
 	import {
 		type AzPricingReport,
 		AZColumnRole,
@@ -104,6 +108,7 @@
 	const pricingReport = ref<AzPricingReport | null>(null);
 	const codeReport = ref<AzCodeReport | null>(null);
 	const showUploadComponents = ref<boolean>(true);
+	const reportsGenerated = ref<boolean>(false);
 
 	const columnRoleOptions = [
 		{ value: AZColumnRole.Destination, label: 'Destination Name' },
@@ -113,17 +118,23 @@
 
 	const uploadedFiles = ref<Record<string, string>>({});
 
-	function handleFileUploaded(componentName: string, fileName: string) {
+	watch([pricingReport, codeReport], ([newPricing, newCode]) => {
+		reportsGenerated.value = !!newPricing && !!newCode;
+		console.log('Reports updated:', { pricing: !!newPricing, code: !!newCode, generated: reportsGenerated.value });
+	}, { immediate: true });
+
+	async function handleFileUploaded(componentName: string, fileName: string) {
 		uploadedFiles.value[componentName] = fileName;
 		console.log(`File uploaded for ${componentName}: ${fileName}`);
 	}
 
 	async function resetThisReport() {
-    console.log('resetting the report');
+		console.log('resetting the report');
 		await resetReportApi('az');
 		dbStore.resetFilesUploadedByDBname(DBName.AZ);
 		pricingReport.value = null;
 		codeReport.value = null;
+		reportsGenerated.value = false;
 		showUploadComponents.value = true;
 	}
 
@@ -131,6 +142,15 @@
 		showUploadComponents.value = true;
 		pricingReport.value = null;
 		codeReport.value = null;
+	}
+
+	async function handleReportsAction() {
+		console.log('handleReportsAction called, reportsGenerated:', reportsGenerated.value);
+		if (reportsGenerated.value) {
+			showUploadComponents.value = false;
+		} else {
+			await generateReports();
+		}
 	}
 
 	async function generateReports() {
@@ -159,16 +179,20 @@
 					file2Data: file2Data as AZStandardizedData[],
 				});
 				
-				pricingReport.value = pricingReportData;
-				codeReport.value = codeReportData;
-				showUploadComponents.value = false;
-				console.log('reports generated', pricingReport.value, codeReport.value);
+				if (pricingReportData && codeReportData) {
+					pricingReport.value = pricingReportData;
+					codeReport.value = codeReportData;
+					reportsGenerated.value = true;
+					showUploadComponents.value = false;
+					console.log('Reports generated:', { pricing: !!pricingReport.value, code: !!codeReport.value, generated: reportsGenerated.value });
+				} else {
+					console.error('Error: Reports data is null or undefined');
+				}
 			} else {
 				console.error('Error getting files from DB for reports');
 			}
 		} catch (error) {
 			console.error('Error generating reports:', error);
-			// Handle error (e.g., show error message to user)
 		} finally {
 			isGeneratingReports.value = false;
 		}
