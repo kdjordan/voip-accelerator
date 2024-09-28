@@ -24,7 +24,7 @@
         Pricing Report
       </button>
       <button 
-        @click="$emit('gotoFiles')"
+        @click="handleGotoFiles"
         class="px-4 py-2 mx-2 rounded-lg transition-colors duration-200 bg-gray-500 text-gray-300 hover:bg-gray-600"
       >
         Goto Files
@@ -43,6 +43,9 @@ import { ref } from 'vue';
 import CodeReportAZ from './CodeReportAZ.vue';
 import PricingReportAZ from './PricingReportAZ.vue';
 import { type AzCodeReport, type AzPricingReport } from '../../types/app-types';
+import { useDBstate } from '@/stores/dbStore';
+
+const dbStore = useDBstate();
 
 interface Props {
   codeReport: AzCodeReport | null;
@@ -52,5 +55,10 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['gotoFiles']);
 
-const activeReport = ref<'code' | 'pricing'>('code'); // This ensures the Code Report is shown by default
+const activeReport = ref<'code' | 'pricing'>('code');
+
+function handleGotoFiles() {
+  dbStore.setShowAzUploadComponents(true);
+  emit('gotoFiles');
+}
 </script>

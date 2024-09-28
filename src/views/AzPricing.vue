@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col items-center pt-8 h-full">
 		<div
-			v-if="showUploadComponents"
+			v-if="dbStore.showAzUploadComponents"
 			class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center"
 		>
 			<h1
@@ -20,7 +20,7 @@
 				for you to buy and sell.
 			</p>
 		</div>
-		<div v-if="showUploadComponents" class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]">
+		<div v-if="dbStore.showAzUploadComponents" class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]">
 			<div class="flex justify-center space-x-6 flex-grow h-full">
 				<UploadComponent
 					typeOfComponent="owner"
@@ -61,18 +61,18 @@
 					}"
 					class="btn"
 				>
-					{{ reportsGenerated ? 'Goto Reports' : 'Get Reports' }}
+					{{ dbStore.getAzReportsGenerated ? 'Goto Reports' : 'Get Reports' }}
 				</button>
 			</div>
 			<!-- Debug info -->
 			<div class="mt-4 text-sm text-gray-500">
-				Reports generated: {{ reportsGenerated }}
+				Reports generated: {{ dbStore.getAzReportsGenerated }}
 			</div>
 		</div>
 		<ReportDisplay 
 			v-else
-			:codeReport="codeReport"
-			:pricingReport="pricingReport"
+			:codeReport="dbStore.getAzCodeReport"
+			:pricingReport="dbStore.getAzPricingReport"
 			@resetReport="resetThisReport"
 			@gotoFiles="handleGotoFiles"
 		/>
@@ -80,13 +80,11 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, computed, watch } from 'vue';
+	import { ref, watch } from 'vue';
 	import {
-		type AzPricingReport,
 		AZColumnRole,
 		DBName,
 		type AZStandardizedData,
-		type AzCodeReport,
 	} from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
 	import ReportDisplay from '../components/ReportDisplay.vue';
@@ -105,10 +103,7 @@
 	const component1 = ref<string>('az1');
 	const component2 = ref<string>('az2');
 	const isGeneratingReports = ref<boolean>(false);
-	const pricingReport = ref<AzPricingReport | null>(null);
-	const codeReport = ref<AzCodeReport | null>(null);
-	const showUploadComponents = ref<boolean>(true);
-	const reportsGenerated = ref<boolean>(false);
+	// const showUploadComponents = ref<boolean>(true);
 
 	const columnRoleOptions = [
 		{ value: AZColumnRole.Destination, label: 'Destination Name' },
@@ -118,9 +113,9 @@
 
 	const uploadedFiles = ref<Record<string, string>>({});
 
-	watch([pricingReport, codeReport], ([newPricing, newCode]) => {
-		reportsGenerated.value = !!newPricing && !!newCode;
-		console.log('Reports updated:', { pricing: !!newPricing, code: !!newCode, generated: reportsGenerated.value });
+	watch(() => [dbStore.getAzPricingReport, dbStore.getAzCodeReport], ([newPricing, newCode]) => {
+		dbStore.setAzReportsGenerated(!!newPricing && !!newCode);
+		console.log('Reports updated:', { pricing: !!newPricing, code: !!newCode, generated: dbStore.getAzReportsGenerated });
 	}, { immediate: true });
 
 	async function handleFileUploaded(componentName: string, fileName: string) {
@@ -131,23 +126,17 @@
 	async function resetThisReport() {
 		console.log('resetting the report');
 		await resetReportApi('az');
-		dbStore.resetFilesUploadedByDBname(DBName.AZ);
-		pricingReport.value = null;
-		codeReport.value = null;
-		reportsGenerated.value = false;
-		showUploadComponents.value = true;
+		dbStore.setShowAzUploadComponents(true);
 	}
 
 	function handleGotoFiles() {
-		showUploadComponents.value = true;
-		pricingReport.value = null;
-		codeReport.value = null;
+		dbStore.setShowAzUploadComponents(true);
 	}
 
 	async function handleReportsAction() {
-		console.log('handleReportsAction called, reportsGenerated:', reportsGenerated.value);
-		if (reportsGenerated.value) {
-			showUploadComponents.value = false;
+		console.log('handleReportsAction called, reportsGenerated:', dbStore.getAzReportsGenerated);
+		if (dbStore.getAzReportsGenerated) {
+			dbStore.setShowAzUploadComponents(false);
 		} else {
 			await generateReports();
 		}
@@ -180,11 +169,11 @@
 				});
 				
 				if (pricingReportData && codeReportData) {
-					pricingReport.value = pricingReportData;
-					codeReport.value = codeReportData;
-					reportsGenerated.value = true;
-					showUploadComponents.value = false;
-					console.log('Reports generated:', { pricing: !!pricingReport.value, code: !!codeReport.value, generated: reportsGenerated.value });
+					dbStore.setAzPricingReport(pricingReportData);
+					dbStore.setAzCodeReport(codeReportData);
+					dbStore.setAzReportsGenerated(true);
+					dbStore.setShowAzUploadComponents(false);
+					console.log('Reports generated:', { pricing: !!pricingReportData, code: !!codeReportData, generated: dbStore.getAzReportsGenerated });
 				} else {
 					console.error('Error: Reports data is null or undefined');
 				}

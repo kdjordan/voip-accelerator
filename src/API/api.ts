@@ -1,17 +1,19 @@
 import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
 import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
 import { type AZReportsInput, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
-
+import { useDBstate } from '@/stores/dbStore';
 
 export async function resetReportApi(reportType: string) {
-  await deleteDbApi(reportType)
+  await deleteDbApi(reportType);
+  const dbStore = useDBstate();
+  dbStore.resetAzReportInStore();
 }
 
 async function deleteDbApi(dbName: string) {
   try {
-    await deleteIndexedDBDatabase(dbName)
+    await deleteIndexedDBDatabase(dbName);
   } catch (e) {
-    console.log(`Error resetting ${dbName} pricing report `, e)
+    console.log(`Error resetting ${dbName} pricing report `, e);
   }
 }
 

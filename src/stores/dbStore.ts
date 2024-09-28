@@ -1,15 +1,18 @@
-import { type UploadedFileTracker, type FileUpload, type State, DBName } from '../../types/app-types';
+import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
 import { defineStore } from 'pinia'
-
+import { resetReportApi } from '@/API/api';
 export const useDBstate = defineStore('dbStore', {
-  state: (): State => {
-    return {
-      globalDBVersion: 1,
-      filesUploaded: new Map<string, FileUpload>() as UploadedFileTracker,
-      globalFileIsUploading: false,
-      componentFileIsUploading: undefined
-    }
-  },
+  state: () => ({
+    globalDBVersion: 1,
+    filesUploaded: new Map<string, FileUpload>() as UploadedFileTracker,
+    globalFileIsUploading: false,
+    componentFileIsUploading: undefined as string | undefined,
+    showAzUploadComponents: true,
+    azReportsGenerated: false,
+    azPricingReport: null as AzPricingReport | null,
+    azCodeReport: null as AzCodeReport | null,
+  }),
+  
   getters: {
     checkFileNameAvailable: (state) => {
       return (fileName: string) => {
@@ -76,8 +79,24 @@ export const useDBstate = defineStore('dbStore', {
         fileName: file.fileName
       }));
     },
+    getAzReportsGenerated: (state) => state.azReportsGenerated,
+    getAzPricingReport: (state) => state.azPricingReport,
+    getAzCodeReport: (state) => state.azCodeReport,
   },
   actions: {
+    async resetAzReportInStore() {
+      try {
+        console.log('Resetting the AZ report');
+        this.resetFilesUploadedByDBname(DBName.AZ);
+        this.azReportsGenerated = false;
+        this.azPricingReport = null;
+        this.azCodeReport = null;
+        this.showAzUploadComponents = true;
+        console.log('AZ reports and uploaded files reset successfully');
+      } catch (error) {
+        console.error('Error resetting AZ reports:', error);
+      }
+    },
     removeFileNameFilesUploaded(fileName: string) {
       let fileRemoved = false;
       for (const [key, value] of this.filesUploaded) {
@@ -123,7 +142,24 @@ export const useDBstate = defineStore('dbStore', {
       if (keysToDelete.length > 0) {
         this.incrementGlobalDBVersion();
       }
-    }
+    },
+    setShowAzUploadComponents(show: boolean) {
+      this.showAzUploadComponents = show;
+    },
+    setAzReportsGenerated(generated: boolean) {
+      this.azReportsGenerated = generated;
+    },
+    setAzPricingReport(report: AzPricingReport | null) {
+      this.azPricingReport = report;
+    },
+    setAzCodeReport(report: AzCodeReport | null) {
+      this.azCodeReport = report;
+    },
+    resetAzReports() {
+      this.azReportsGenerated = false;
+      this.azPricingReport = null;
+      this.azCodeReport = null;
+    },
   },
 
 })

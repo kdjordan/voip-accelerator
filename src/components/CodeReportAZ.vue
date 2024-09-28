@@ -1,12 +1,12 @@
 <template>
-  <div class="bg-background rounded-lg m-auto p-6 w-full max-w-7xl font-sans relative">
+  <div class="bg-background rounded-lg m-auto p-6 w-full relative">
     <div class="mb-8 text-center">
       <h1 class="text-5xl font-bold text-foreground uppercase inline-block">
         AZ CODE REPORT
       </h1>
     </div>
     
-    <button class="absolute top-6 right-6 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+    <button @click="handleReset" class="absolute top-8 right-6 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
       Reset
     </button>
     
@@ -74,6 +74,10 @@
 
 <script setup lang="ts">
 import { type AzCodeReport } from '../../types/app-types';
+import { resetReportApi } from '@/API/api';
+import { useDBstate } from '@/stores/dbStore';
+
+const dbStore = useDBstate();
 
 const props = defineProps<{
   report: AzCodeReport | null;
@@ -97,11 +101,11 @@ function getTotalDestinations(file: FileKey): number {
 function getUniqueDestinationsPercentage(file: FileKey): string {
   return props.report?.[file].uniqueDestinationsPercentage.toFixed(2) ?? '0.00';
 }
+
+async function handleReset() {
+  console.log('Resetting the AZ report');
+  await resetReportApi('az');
+
+}
 </script>
 
-<style scoped>
-/* Remove or comment out this style block if it's not needed */
-/*.code-report {
-  font-family: Arial, sans-serif;
-}*/
-</style>

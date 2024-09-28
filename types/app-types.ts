@@ -24,13 +24,6 @@ export interface ColumnRolesEvent {
   indetermRateType?: IndetermRateType;
 }
 
-export interface State {
-  globalDBVersion: number;
-  filesUploaded: UploadedFileTracker;
-  globalFileIsUploading: boolean;
-  componentFileIsUploading: string | undefined; // Allow string or undefined
-}
-
 export interface AZReportsInput {
   fileName1: string;
   fileName2: string;

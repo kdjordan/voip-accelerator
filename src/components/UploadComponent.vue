@@ -200,6 +200,7 @@
 	function dumpFile() {
 		removeFromDB();
 		resetLocalState();
+		DBstore.setAzReportsGenerated(false);
 	}
 
 	function resetLocalState() {
