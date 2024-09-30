@@ -22,5 +22,21 @@ export default defineConfig({
       // '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@': path.resolve(__dirname, './src'),
     }
+  },
+  // Add this section
+  optimizeDeps: {
+    include: ['vue']
+  },
+  build: {
+    target: 'esnext',
+    minify: 'terser',
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue': ['vue', 'vue-router', 'pinia'],
+        }
+      }
+    }
   }
 })

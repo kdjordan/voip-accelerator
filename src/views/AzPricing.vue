@@ -115,7 +115,6 @@
 
 	watch(() => [dbStore.getAzPricingReport, dbStore.getAzCodeReport], ([newPricing, newCode]) => {
 		dbStore.setAzReportsGenerated(!!newPricing && !!newCode);
-		console.log('Reports updated:', { pricing: !!newPricing, code: !!newCode, generated: dbStore.getAzReportsGenerated });
 	}, { immediate: true });
 
 	async function handleFileUploaded(componentName: string, fileName: string) {
@@ -160,7 +159,7 @@
 			);
 
 			if (fileName1 && fileName2 && file1Data && file2Data) {
-				console.log('Generating reports...');
+				
 				const { pricingReport: pricingReportData, codeReport: codeReportData } = await makeAzReportsApi({
 					fileName1,
 					fileName2,
@@ -173,7 +172,7 @@
 					dbStore.setAzCodeReport(codeReportData);
 					dbStore.setAzReportsGenerated(true);
 					dbStore.setShowAzUploadComponents(false);
-					console.log('Reports generated:', { pricing: !!pricingReportData, code: !!codeReportData, generated: dbStore.getAzReportsGenerated });
+					
 				} else {
 					console.error('Error: Reports data is null or undefined');
 				}

@@ -40,7 +40,7 @@
                     <button 
                       @click="toggleExpandRow(item.dialCode)" 
                       class="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-800 transition-colors duration-300"
-                    >
+w                    >
                       {{ isRowExpanded(item.dialCode) ? 'Show Less' : 'Show More' }}
                     </button>
                   </div>

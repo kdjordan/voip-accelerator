@@ -8,13 +8,14 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["vite/client"],
+    "allowSyntheticDefaultImports": true,
+    "types": ["vite/client", "vue"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       
-    }
-    // ...
+    },
+    "isolatedModules": true
   },
   "include": [
     "src/**/*.ts",
