@@ -8,9 +8,9 @@
           <router-view />
         </main>
         <TheFooter class="ml-[200px]"/>
-				{{ dbStore }}
+				<!-- {{ dbStore }} -->
 				<br>
-				{{ userStore }}
+				<!-- {{ userStore }} -->
       </div>
     </div>
   </div>
@@ -38,7 +38,7 @@
 
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
-		setUser('free', true, ['az']);
+		// setUser('free', true, ['az']);
 	});
 
 	onBeforeUnmount(() => {

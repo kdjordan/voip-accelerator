@@ -168,11 +168,38 @@ w                    >
         </div>
         <div class="p-6">
           <div v-if="showUnmatchedCodes">
-            <ul class="list-disc list-inside text-foreground space-y-2">
-              <li v-for="code in report.nonMatchingCodes" :key="code.dialCode">
-                {{ code.dialCode }} - {{ code.destName }}
-              </li>
-            </ul>
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-700">
+                  <th class="py-3 text-left text-gray-400 px-4 max-w-[250px] w-[250px]">Dial Code(s)</th>
+                  <th class="py-3 text-left text-gray-400 px-4">Destination</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="code in report.nonMatchingCodes" :key="code.dialCode" class="border-b border-gray-700">
+                  <td class="py-3 text-foreground px-4 max-w-[250px] w-[250px]">
+                    <div v-if="code.dialCode.split(',').length > 3">
+                      <span v-if="!isRowExpanded(code.dialCode)">
+                        {{ code.dialCode.split(',')[0] }}
+                      </span>
+                      <span v-else>
+                        {{ code.dialCode }}
+                      </span>
+                      <button 
+                        @click="toggleExpandRow(code.dialCode)" 
+                        class="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-800 transition-colors duration-300"
+                      >
+                        {{ isRowExpanded(code.dialCode) ? 'Show Less' : 'Show More' }}
+                      </button>
+                    </div>
+                    <div v-else>
+                      {{ code.dialCode }}
+                    </div>
+                  </td>
+                  <td class="py-3 text-foreground px-4">{{ code.destName }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
