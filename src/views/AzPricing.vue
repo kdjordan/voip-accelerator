@@ -20,7 +20,10 @@
 				for you to buy and sell.
 			</p>
 		</div>
-		<div v-if="dbStore.showAzUploadComponents" class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]">
+		<div
+			v-if="dbStore.showAzUploadComponents"
+			class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]"
+		>
 			<div class="flex justify-center space-x-6 flex-grow h-full">
 				<UploadComponent
 					typeOfComponent="owner"
@@ -61,7 +64,11 @@
 					}"
 					class="btn"
 				>
-					{{ dbStore.getAzReportsGenerated ? 'Goto Reports' : 'Get Reports' }}
+					{{
+						dbStore.getAzReportsGenerated
+							? 'Goto Reports'
+							: 'Get Reports'
+					}}
 				</button>
 			</div>
 			<!-- Debug info -->
@@ -69,8 +76,8 @@
 				Reports generated: {{ dbStore.getAzReportsGenerated }}
 			</div>
 		</div>
-		<ReportDisplay 
-			v-else
+		<ReportDisplay
+			v-if="!dbStore.showAzUploadComponents"
 			:codeReport="dbStore.getAzCodeReport"
 			:pricingReport="dbStore.getAzPricingReport"
 			@resetReport="resetThisReport"
@@ -89,14 +96,16 @@
 	import UploadComponent from '../components/UploadComponent.vue';
 	import ReportDisplay from '../components/ReportDisplay.vue';
 	import useIndexedDB from '../composables/useIndexDB';
-	import {
-		makeAzReportsApi,
-		resetReportApi,
-
-	} from '@/API/api';
+	import { makeAzReportsApi, resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
+	import { storeToRefs } from 'pinia';
 
 	const dbStore = useDBstate();
+	const {
+		showAzUploadComponents,
+		getAzCodeReport,
+		getAzPricingReport,
+	} = storeToRefs(dbStore);
 	const { loadFromIndexedDB } = useIndexedDB();
 
 	const theDb = ref<DBName>(DBName.AZ);
@@ -113,11 +122,18 @@
 
 	const uploadedFiles = ref<Record<string, string>>({});
 
-	watch(() => [dbStore.getAzPricingReport, dbStore.getAzCodeReport], ([newPricing, newCode]) => {
-		dbStore.setAzReportsGenerated(!!newPricing && !!newCode);
-	}, { immediate: true });
+	watch(
+		() => [dbStore.getAzPricingReport, dbStore.getAzCodeReport],
+		([newPricing, newCode]) => {
+			dbStore.setAzReportsGenerated(!!newPricing && !!newCode);
+		},
+		{ immediate: true }
+	);
 
-	async function handleFileUploaded(componentName: string, fileName: string) {
+	async function handleFileUploaded(
+		componentName: string,
+		fileName: string
+	) {
 		uploadedFiles.value[componentName] = fileName;
 		console.log(`File uploaded for ${componentName}: ${fileName}`);
 	}
@@ -133,7 +149,7 @@
 	}
 
 	async function handleReportsAction() {
-		console.log('handleReportsAction called, reportsGenerated:', dbStore.getAzReportsGenerated);
+		// console.log('handleReportsAction called, reportsGenerated:', dbStore.getAzReportsGenerated);
 		if (dbStore.getAzReportsGenerated) {
 			dbStore.setShowAzUploadComponents(false);
 		} else {
@@ -143,9 +159,14 @@
 
 	async function generateReports() {
 		isGeneratingReports.value = true;
+		console.log('generateReports called');
 		try {
-			const fileName1 = dbStore.getStoreNameByComponent(component1.value).split('.')[0];
-			const fileName2 = dbStore.getStoreNameByComponent(component2.value).split('.')[0];
+			const fileName1 = dbStore
+				.getStoreNameByComponent(component1.value)
+				.split('.')[0];
+			const fileName2 = dbStore
+				.getStoreNameByComponent(component2.value)
+				.split('.')[0];
 
 			const file1Data = await getFilesFromIndexDB(
 				theDb.value,
@@ -159,20 +180,30 @@
 			);
 
 			if (fileName1 && fileName2 && file1Data && file2Data) {
-				
-				const { pricingReport: pricingReportData, codeReport: codeReportData } = await makeAzReportsApi({
+				console.log('generateReports: got file data');
+				const {
+					pricingReport: pricingReportData,
+					codeReport: codeReportData,
+				} = await makeAzReportsApi({
 					fileName1,
 					fileName2,
 					file1Data: file1Data as AZStandardizedData[],
 					file2Data: file2Data as AZStandardizedData[],
 				});
-				
+
 				if (pricingReportData && codeReportData) {
+					console.log('generateReports: got reports data', {
+						pricingReportData,
+						codeReportData,
+					});
 					dbStore.setAzPricingReport(pricingReportData);
 					dbStore.setAzCodeReport(codeReportData);
 					dbStore.setAzReportsGenerated(true);
 					dbStore.setShowAzUploadComponents(false);
-					
+					console.log(
+						'Reports set in store, showAzUploadComponents:',
+						dbStore.showAzUploadComponents
+					);
 				} else {
 					console.error('Error: Reports data is null or undefined');
 				}

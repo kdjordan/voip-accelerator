@@ -9,6 +9,8 @@ import {
 export function generateReports(input: AZReportsInput): { pricingReport: AzPricingReport, codeReport: AzCodeReport } {
   const { fileName1, fileName2, file1Data, file2Data } = input;
 
+  console.log('generateReports input', input);  
+
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
     throw new Error('Missing a file name or fileData in worker !!');
   }
