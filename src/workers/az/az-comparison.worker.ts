@@ -20,16 +20,16 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
   const { fileName1, fileName2, file1Data, file2Data } = input;
 
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
-    throw Error('Missing a file name or fileData in worker !!');
+    throw new Error('Missing a file name or fileData in worker !!');
   }
 
   const pricingReport: AzPricingReport = {
+    fileName1,
+    fileName2,
     higherRatesForFile1: [],
     higherRatesForFile2: [],
     sameRates: [],
-    nonMatchingCodes: [],
-    fileName1: fileName1,
-    fileName2: fileName2
+    nonMatchingCodes: []
   };
 
   const codeReport: AzCodeReport = {
@@ -37,18 +37,18 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
       fileName: fileName1,
       totalCodes: file1Data.length,
       totalDestinations: new Set(file1Data.map(entry => entry.destName)).size,
-      uniqueDestinationsPercentage: 0,
+      uniqueDestinationsPercentage: (new Set(file1Data.map(entry => entry.destName)).size / file1Data.length) * 100
     },
     file2: {
       fileName: fileName2,
       totalCodes: file2Data.length,
       totalDestinations: new Set(file2Data.map(entry => entry.destName)).size,
-      uniqueDestinationsPercentage: 0,
+      uniqueDestinationsPercentage: (new Set(file2Data.map(entry => entry.destName)).size / file2Data.length) * 100
     },
     matchedCodes: 0,
     nonMatchedCodes: 0,
     matchedCodesPercentage: 0,
-    nonMatchedCodesPercentage: 0,
+    nonMatchedCodesPercentage: 0
   };
 
   const dialCodeMapFile1 = new Map<number, { destName: string; rate: number }>();
@@ -132,6 +132,13 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
     }
   });
 
+  // Update the calculation of matched and non-matched codes percentages
+  const totalCodes = codeReport.matchedCodes + codeReport.nonMatchedCodes;
+  if (totalCodes > 0) {
+    codeReport.matchedCodesPercentage = (codeReport.matchedCodes / totalCodes) * 100;
+    codeReport.nonMatchedCodesPercentage = (codeReport.nonMatchedCodes / totalCodes) * 100;
+  }
+
   // Calculate percentages
   codeReport.file1.uniqueDestinationsPercentage = (codeReport.file1.totalDestinations / codeReport.file1.totalCodes) * 100;
   codeReport.file2.uniqueDestinationsPercentage = (codeReport.file2.totalDestinations / codeReport.file2.totalCodes) * 100;
@@ -191,9 +198,9 @@ function consolidateDialCodes(group: ConsolidatedData[]): ConsolidatedData {
 function calculatePercentageDifference(rate1: number, rate2: number): number {
   if (rate1 > rate2) {
     return ((rate1 - rate2) / rate2) * 100;
-} else {
+  } else {
     return ((rate2 - rate1) / rate1) * 100;
-}
+  }
 }
 
 function consolidateEntries(entries: ConsolidatedData[]): ConsolidatedData[] {
