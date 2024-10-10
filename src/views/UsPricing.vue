@@ -74,7 +74,7 @@
 	import { ref } from 'vue';
 	import { DBName } from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
-	import GenerateReport from '../components/PricingReportAZ.vue';
+	import GenerateReport from '../components/AZPricingReport.vue';
 	import useIndexedDB from '../composables/useIndexDB';
 	import { resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';

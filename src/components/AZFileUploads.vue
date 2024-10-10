@@ -1,71 +1,70 @@
 <template>
-	<div class="flex flex-col items-center pt-8 h-full">
-		<div
-			v-if="dbStore.getAzReportsGenerated"
-			class="flex justify-center mb-4"
-		>
-			<button
-				@click="dbStore.setActiveReportAZ('files')"
-				:class="[
-					'px-4 py-2 mx-2 rounded-lg transition-colors duration-200',
-					dbStore.getActiveReportAZ === 'files'
-						? 'bg-blue-500 text-white'
-						: 'bg-gray-500 text-gray-300 hover:bg-gray-600',
-				]"
+  <div class="bg-background rounded-lg m-auto p-6 w-full max-w-4xl flex flex-col items-center">
+	<div class="mb-10 text-center">
+		<h1 class="text-5xl font-bold text-foreground uppercase inline-block mb-8">
+			AZ PRICING
+		</h1>
+		<p class="text-muted-foreground w-4/5 mx-auto">
+			Upload <span class="font-bold uppercase text-accent">your</span> current rates and the rates of your
+			<span class="font-bold uppercase text-accent">prospective carrier.</span>
+			We will generate you a report showing the best opportunities for you to buy and sell.
+		</p>
+	</div>
+	<div class="flex flex-col w-full bg-muted p-6 rounded-xl">
+		<div class="flex justify-center space-x-6 flex-grow h-full">
+			<UploadComponent
+				typeOfComponent="owner"
+				:DBname="DBName.AZ"
+					:componentName="component1"
+					:disabled="dbStore.isComponentDisabled('az1')"
+					:columnRoleOptions="columnRoleOptions"
+					class="flex-1 flex flex-col"
+					@fileUploaded="handleFileUploaded"
+			/>
+
+			<UploadComponent
+				typeOfComponent="client"
+				:DBname="DBName.AZ"
+					:componentName="component2"
+					:disabled="dbStore.isComponentDisabled('az2')"
+					:columnRoleOptions="columnRoleOptions"
+					class="flex-1 flex flex-col"
+					@fileUploaded="handleFileUploaded"
+			/>
+		</div>
+		<div class="mt-6 flex justify-center items-center">
+			<div
+				v-if="isGeneratingReports"
+				class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"
 			>
-				Files
-			</button>
+				<p>GENERATING REPORTS</p>
+			</div>
 			<button
-				@click="dbStore.setActiveReportAZ('code')"
-				:class="[
-					'px-4 py-2 mx-2 rounded-lg transition-colors duration-200',
-					dbStore.getActiveReportAZ === 'code'
-						? 'bg-blue-500 text-white'
-						: 'bg-gray-500 text-gray-300 hover:bg-gray-600',
-				]"
+				v-else
+				@click="handleReportsAction"
+				:disabled="!dbStore.getIsAZfull"
+				:class="{
+					'bg-blue-500 hover:bg-blue-600 text-white':
+						dbStore.getIsAZfull,
+					'bg-gray-500 text-gray-300 cursor-not-allowed':
+						!dbStore.getIsAZfull,
+				}"
+				class="btn"
 			>
-				Code Report
-			</button>
-			<button
-				@click="dbStore.setActiveReportAZ('pricing')"
-				:class="[
-					'px-4 py-2 mx-2 rounded-lg transition-colors duration-200',
-					dbStore.getActiveReportAZ === 'pricing'
-						? 'bg-blue-500 text-white'
-						: 'bg-gray-500 text-gray-300 hover:bg-gray-600',
-				]"
-			>
-				Pricing Report
-			</button>
-			<button
-				@click="handleReset"
-				class="px-4 py-2 mx-2 rounded-lg transition-colors duration-200 bg-red-500 text-white hover:bg-red-600"
-			>
-				Reset
+				{{
+					dbStore.getAzReportsGenerated
+						? 'Goto Reports'
+						: 'Get Reports'
+				}}
 			</button>
 		</div>
-		<div class="report-content">
-			<AZFileUploads v-if="dbStore.getActiveReportAZ === 'files'" />
-			<CodeReportAZ
-				v-if="dbStore.getActiveReportAZ === 'code'"
-				:report="dbStore.getAzCodeReport"
-			/>
-			<PricingReportAZ
-				v-if="dbStore.getActiveReportAZ === 'pricing'"
-				:report="dbStore.getAzPricingReport"
-			/>
-			<div
-				v-if="
-					!dbStore.getAzCodeReport == null &&
-					!dbStore.getAzPricingReport
-				"
-			>
-				No reports available.
-			</div>
+		<!-- Debug info -->
+		<div class="mt-4 text-sm text-gray-500">
+			Reports generated: {{ dbStore.getAzReportsGenerated }}
 		</div>
 	</div>
+</div>
 </template>
-
 <script setup lang="ts">
 	import { ref, watch } from 'vue';
 	import {
@@ -73,16 +72,19 @@
 		DBName,
 		type AZStandardizedData,
 	} from '../../types/app-types';
-	import AZFileUploads from '../components/AZFileUploads.vue';
-	import CodeReportAZ from '../components/AZCodeReport.vue';
-	import PricingReportAZ from '../components/AZPricingReport.vue';
+	import UploadComponent from '../components/UploadComponent.vue';
+	import ReportDisplay from '../components/ReportDisplay.vue';
 	import useIndexedDB from '../composables/useIndexDB';
 	import { makeAzReportsApi, resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
 	import { storeToRefs } from 'pinia';
 
 	const dbStore = useDBstate();
-
+	const {
+		showAzUploadComponents,
+		getAzCodeReport,
+		getAzPricingReport,
+	} = storeToRefs(dbStore);
 	const { loadFromIndexedDB } = useIndexedDB();
 
 	const theDb = ref<DBName>(DBName.AZ);
@@ -210,11 +212,5 @@
 			isGeneratingReports.value = false;
 			console.error(`got an error getting ${store} out of DB`);
 		}
-	}
-
-	async function handleReset() {
-		console.log('Resetting the AZ report');
-		dbStore.setActiveReportAZ('files');
-		await resetReportApi('az');
 	}
 </script>

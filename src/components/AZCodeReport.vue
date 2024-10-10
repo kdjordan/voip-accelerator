@@ -8,13 +8,6 @@
 			</h1>
 		</div>
 
-		<button
-			@click="handleReset"
-			class="absolute top-8 right-6 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-		>
-			Reset
-		</button>
-
 		<div v-if="report" class="space-y-8">
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 				<div
@@ -148,8 +141,4 @@
 		);
 	}
 
-	async function handleReset() {
-		console.log('Resetting the AZ report');
-		await resetReportApi('az');
-	}
 </script>

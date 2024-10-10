@@ -1,6 +1,16 @@
 import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
 import { defineStore } from 'pinia'
 import { resetReportApi } from '@/API/api';
+
+// Define the report state map
+const ReportState = {
+  FILES: 'files',
+  CODE: 'code',
+  PRICING: 'pricing',
+} as const;
+
+type ReportStateType = typeof ReportState[keyof typeof ReportState];
+
 export const useDBstate = defineStore('dbStore', {
   state: () => ({
     globalDBVersion: 1,
@@ -11,6 +21,8 @@ export const useDBstate = defineStore('dbStore', {
     azReportsGenerated: false,
     azPricingReport: null as AzPricingReport | null,
     azCodeReport: null as AzCodeReport | null,
+    activeReportAZ: ReportState.FILES as ReportStateType,
+    activeReportUS: ReportState.FILES as ReportStateType,
   }),
   
   getters: {
@@ -82,6 +94,8 @@ export const useDBstate = defineStore('dbStore', {
     getAzReportsGenerated: (state) => state.azReportsGenerated,
     getAzPricingReport: (state) => state.azPricingReport,
     getAzCodeReport: (state) => state.azCodeReport,
+    getActiveReportAZ: (state) => state.activeReportAZ,
+    getActiveReportUS: (state) => state.activeReportUS,
   },
   actions: {
     async resetAzReportInStore() {
@@ -159,6 +173,12 @@ export const useDBstate = defineStore('dbStore', {
       this.azReportsGenerated = false;
       this.azPricingReport = null;
       this.azCodeReport = null;
+    },
+    setActiveReportAZ(report: ReportStateType) {
+      this.activeReportAZ = report;
+    },
+    setActiveReportUS(report: ReportStateType) {
+      this.activeReportUS = report;
     },
   },
 

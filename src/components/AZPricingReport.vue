@@ -6,10 +6,6 @@
       </h1>
     </div>
     
-    <button @click="handleReset" class="absolute top-8 right-6 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-      Reset
-    </button>
-    
     <div v-if="report" class="space-y-10">
       <!-- Buy Section -->
       <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
@@ -246,10 +242,4 @@ function formatPercentage(value: number): string {
   return value.toFixed(2);
 }
 
-async function handleReset() {
-  console.log('Resetting the AZ report');
-  await resetReportApi('az');
-  dbStore.resetAzReportInStore();
-  dbStore.setShowAzUploadComponents(true);
-}
 </script>
