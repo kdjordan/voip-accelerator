@@ -1,10 +1,7 @@
 <template>
-  <header class="w-full bg-muted text-foreground flex justify-between items-center px-8 h-16 border-b border-gray-600 z-30">
-    <h1 class="tracking-widest text-center text-sizeBase">
-        Telecom Toolkit
-      </h1>
+  <header class="w-full bg-background text-foreground flex justify-end items-center px-8 h-24 border-b border-gray-600">
     <div class="relative">
-      <button @click="toggleDropdown" class="flex items-center justify-center h-12 w-12 bg-gray-400 rounded-full text-xl font-bold text-white ">
+      <button @click="toggleDropdown" class="flex items-center justify-center h-12 w-12 bg-background hover:bg-accent border border-accent rounded-full text-xl font-bold text-accent hover:text-background">
         MG
       </button>
       <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-64 bg-background rounded-md shadow-lg z-50">

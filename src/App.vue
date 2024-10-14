@@ -4,7 +4,7 @@
     <div class="flex flex-grow overflow-hidden">
       <SideNav class="z-20" />
       <div class="flex flex-col flex-grow">
-        <main class="flex-grow p-4 overflow-auto ml-[200px] mt-[60px]">
+        <main class="flex-grow p-4 overflow-auto ml-[200px] mt-[120px]">
           <router-view />
         </main>
         <TheFooter class="ml-[200px]"/>

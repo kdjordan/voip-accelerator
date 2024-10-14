@@ -115,25 +115,6 @@
 		console.log(`File uploaded for ${componentName}: ${fileName}`);
 	}
 
-	async function resetThisReport() {
-		console.log('resetting the report');
-		await resetReportApi('az');
-		dbStore.setShowAzUploadComponents(true);
-	}
-
-	function handleGotoFiles() {
-		dbStore.setShowAzUploadComponents(true);
-	}
-
-	async function handleReportsAction() {
-		// console.log('handleReportsAction called, reportsGenerated:', dbStore.getAzReportsGenerated);
-		if (dbStore.getAzReportsGenerated) {
-			dbStore.setShowAzUploadComponents(false);
-		} else {
-			await generateReports();
-		}
-	}
-
 	async function generateReports() {
 		isGeneratingReports.value = true;
 		console.log('generateReports called');

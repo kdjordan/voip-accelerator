@@ -1,69 +1,69 @@
 <template>
-  <div class="bg-background rounded-lg m-auto p-6 w-full max-w-4xl flex flex-col items-center">
-	<div class="mb-10 text-center">
-		<h1 class="text-5xl font-bold text-foreground uppercase inline-block mb-8">
-			AZ PRICING
-		</h1>
-		<p class="text-muted-foreground w-4/5 mx-auto">
-			Upload <span class="font-bold uppercase text-accent">your</span> current rates and the rates of your
-			<span class="font-bold uppercase text-accent">prospective carrier.</span>
-			We will generate you a report showing the best opportunities for you to buy and sell.
-		</p>
-	</div>
-	<div class="flex flex-col w-full bg-muted p-6 rounded-xl">
-		<div class="flex justify-center space-x-6 flex-grow h-full">
-			<UploadComponent
-				typeOfComponent="owner"
-				:DBname="DBName.AZ"
+	<div
+		class="bg-background rounded-lg m-auto p-6 w-full max-w-4xl flex flex-col items-center"
+	>
+		<div class="mb-10 text-center">
+			<h1
+				class="text-5xl font-bold text-foreground uppercase inline-block mb-8"
+			>
+				AZ PRICING
+			</h1>
+			<p class="text-muted-foreground w-4/5 mx-auto">
+				Upload
+				<span class="font-bold uppercase text-accent">your</span>
+				current rates and the rates of your
+				<span class="font-bold uppercase text-accent"
+					>prospective carrier.</span
+				>
+				We will generate you a report showing the best opportunities
+				for you to buy and sell.
+			</p>
+		</div>
+		<div class="flex flex-col w-full bg-muted p-6 rounded-xl">
+			<div class="flex justify-center space-x-6 flex-grow h-full">
+				<UploadComponent
+					typeOfComponent="owner"
+					:DBname="DBName.AZ"
 					:componentName="component1"
 					:disabled="dbStore.isComponentDisabled('az1')"
 					:columnRoleOptions="columnRoleOptions"
 					class="flex-1 flex flex-col"
 					@fileUploaded="handleFileUploaded"
-			/>
+				/>
 
-			<UploadComponent
-				typeOfComponent="client"
-				:DBname="DBName.AZ"
+				<UploadComponent
+					typeOfComponent="client"
+					:DBname="DBName.AZ"
 					:componentName="component2"
 					:disabled="dbStore.isComponentDisabled('az2')"
 					:columnRoleOptions="columnRoleOptions"
 					class="flex-1 flex flex-col"
 					@fileUploaded="handleFileUploaded"
-			/>
-		</div>
-		<div class="mt-6 flex justify-center items-center">
-			<div
-				v-if="isGeneratingReports"
-				class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"
-			>
-				<p>GENERATING REPORTS</p>
+				/>
 			</div>
-			<button
-				v-else
-				@click="handleReportsAction"
-				:disabled="!dbStore.getIsAZfull"
-				:class="{
-					'bg-blue-500 hover:bg-blue-600 text-white':
-						dbStore.getIsAZfull,
-					'bg-gray-500 text-gray-300 cursor-not-allowed':
-						!dbStore.getIsAZfull,
-				}"
-				class="btn"
-			>
-				{{
-					dbStore.getAzReportsGenerated
-						? 'Goto Reports'
-						: 'Get Reports'
-				}}
-			</button>
-		</div>
-		<!-- Debug info -->
-		<div class="mt-4 text-sm text-gray-500">
-			Reports generated: {{ dbStore.getAzReportsGenerated }}
+			<div class="mt-6 flex justify-center items-center">
+				<button v-if="!dbStore.getAzReportsGenerated"
+					@click="handleReportsAction"
+					:disabled="!dbStore.getIsAZfull || isGeneratingReports"
+					:class="{
+						'bg-blue-500 hover:bg-blue-600 text-white':
+							dbStore.getIsAZfull && !isGeneratingReports,
+						'bg-gray-500 text-gray-300 cursor-not-allowed':
+							!dbStore.getIsAZfull || isGeneratingReports,
+						pulse: isGeneratingReports,
+					}"
+					class="btn font-bold py-2 px-4 rounded-lg shadow-md"
+				>
+					<span v-if="isGeneratingReports">GENERATING REPORTS</span>
+					<span v-else>Get Reports</span>
+				</button>
+			</div>
+			<!-- Debug info -->
+			<div class="mt-4 text-sm text-gray-500">
+				Reports generated: {{ dbStore.getAzReportsGenerated }}
+			</div>
 		</div>
 	</div>
-</div>
 </template>
 <script setup lang="ts">
 	import { ref, watch } from 'vue';
