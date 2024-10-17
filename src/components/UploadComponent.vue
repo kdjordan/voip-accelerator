@@ -1,5 +1,5 @@
 <template>
-	<div id="upload-component" class="flex flex-col h-full w-full gborder">
+	<div id="upload-component" class="flex flex-col h-full w-full min-w-96">
 		<p
 			class="mb-4 text-center uppercase text-accent flex items-center justify-center"
 		>
