@@ -1,5 +1,5 @@
 <template>
-	<div class="bg-background rounded-lg m-auto p-6 w-full relative">
+	<div class="bg-background rounded-lg p-6 min-w-content">
 		<div class="mb-8 text-center">
 			<h1
 				class="text-5xl font-bold text-foreground uppercase inline-block"
@@ -16,7 +16,7 @@
 					class="bg-gray-800 rounded-lg overflow-hidden shadow-lg"
 				>
 					<h2
-						class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6"
+						class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6"
 					>
 						<span class="text-gray-300 font-bold">{{
 							getFileName(file)
@@ -57,7 +57,7 @@
 
 			<div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
 				<h2
-					class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6"
+					class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6"
 				>
 					<span class="text-gray-300 font-bold">Comparison</span>
 				</h2>

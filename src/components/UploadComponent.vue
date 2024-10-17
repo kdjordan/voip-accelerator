@@ -1,21 +1,24 @@
 <template>
-	<div class="flex flex-col h-full">
-		<p class="mb-4 text-center uppercase text-accent flex items-center justify-center gap-2">
-			
+	<div id="upload-component" class="flex flex-col h-full w-full gborder">
+		<p
+			class="mb-4 text-center uppercase text-accent flex items-center justify-center"
+		>
 			<span v-if="!props.disabled">
-				UPLOAD <span class="text-white">{{ highlightedWord }}</span> RATES AS CSV
+				UPLOAD
+				<span class="text-white">{{ highlightedWord }}</span> RATES AS
+				CSV
 			</span>
 		</p>
 		<div
-			class="flex-grow flex flex-col bg-background w-full rounded-lg shadow-xl p-6"
+			class="flex flex-grow flex-col bg-background w-full rounded-lg shadow-xl p-6"
 		>
 			<div
 				:class="[
-					'flex-grow flex flex-col items-center justify-center w-full border border-foreground rounded-md tracking-wide text-primary transition-colors p-8',
+					'flex-grow flex flex-col items-center justify-center border border-foreground rounded-md tracking-wide text-primary transition-colors p-8',
 					{
-						'animate-pulse bg-success':
+						'animate-pulse bg-accent':
 							DBstore.isComponentFileUploading(props.componentName),
-						'bg-success text-background': props.disabled,
+						'bg-accent text-background': props.disabled,
 						'hover:bg-muted cursor-pointer':
 							!props.disabled && !isDragOver,
 						'bg-muted': isDragOver,
@@ -30,7 +33,7 @@
 				@click="selectFile"
 			>
 				<div
-					class="flex flex-col items-center gap-10 py-10 text-foreground"
+					class="flex flex-col items-center py-8 text-foreground"
 				>
 					<p
 						:class="{
@@ -40,15 +43,17 @@
 							'text-black': props.disabled,
 						}"
 					>
-						<template v-if="props.disabled">
-						<div class="flex flex-col items-center bg-blue-500 text-white p-4 rounded-lg shadow-md">
-							<div class="mb-2">{{ fileName }}</div>
-							<div class="text-sm">UPLOADED</div>
-						</div>
-						</template>
-						<template v-else>
+						
+							<div v-if="props.disabled"
+								class="flex flex-col items-center bg-blue-500 text-white p-4 rounded-lg shadow-md"
+							>
+								<div class="mb-2">{{ fileName }}</div>
+								<div class="text-sm">UPLOADED</div>
+							</div>
+						
+						<div v-else>
 							{{ statusMessage }}
-						</template>
+						</div>
 					</p>
 
 					<UploadIcon
@@ -139,7 +144,9 @@
 
 	// Computed property to get the file name if the component is disabled
 	const fileName = computed(() => {
-		return props.disabled ? DBstore.getStoreNameByComponent(props.componentName) : '';
+		return props.disabled
+			? DBstore.getStoreNameByComponent(props.componentName)
+			: '';
 	});
 
 	// Setup displayMessage based on componentType prop

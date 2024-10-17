@@ -1,25 +1,27 @@
 <template>
 	<div
-		class="bg-background rounded-lg m-auto p-6 w-full max-w-4xl flex flex-col items-center"
+		class="bg-background rounded-lg py-6 px-20 flex flex-col items-center justify-center"
+		id="az-file-uploads"
 	>
-		<div class="mb-10 text-center">
+		<div class="mb-4 text-center">
 			<h1
-				class="text-5xl font-bold text-foreground uppercase inline-block mb-8"
+				class="text-5xl font-bold text-foreground uppercase inline-block mb-4"
 			>
-				AZ PRICING
+				{{!dbStore.getIsAZfull ? 'AZ PRICING' : 'FILES UPLOADED'}}
 			</h1>
-			<p class="text-muted-foreground w-4/5 mx-auto">
+			<p v-if="!dbStore.getIsAZfull" class="text-muted-foreground mb-4">
 				Upload
 				<span class="font-bold uppercase text-accent">your</span>
 				current rates and the rates of your
 				<span class="font-bold uppercase text-accent"
 					>prospective carrier.</span
 				>
+				<br />
 				We will generate you a report showing the best opportunities
 				for you to buy and sell.
 			</p>
 		</div>
-		<div class="flex flex-col w-full bg-muted p-6 rounded-xl">
+		<div class="flex flex-col bg-muted rounded-xl p-8 w-full">
 			<div class="flex justify-center space-x-6 flex-grow h-full">
 				<UploadComponent
 					typeOfComponent="owner"
@@ -52,7 +54,7 @@
 							!dbStore.getIsAZfull || isGeneratingReports,
 						pulse: isGeneratingReports,
 					}"
-					class="btn font-bold py-2 px-4 rounded-lg shadow-md"
+					class="btn font-bold py-2 p-4 rounded-lg shadow-md"
 				>
 					<span v-if="isGeneratingReports">GENERATING REPORTS</span>
 					<span v-else>Get Reports</span>
@@ -60,7 +62,7 @@
 			</div>
 			<!-- Debug info -->
 			<div class="mt-4 text-sm text-gray-500">
-				Reports generated: {{ dbStore.getAzReportsGenerated }}
+				<!-- Reports generated: {{ dbStore.getAzReportsGenerated }} -->
 			</div>
 		</div>
 	</div>
@@ -73,25 +75,17 @@
 		type AZStandardizedData,
 	} from '../../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
-	import ReportDisplay from '../components/ReportDisplay.vue';
 	import useIndexedDB from '../composables/useIndexDB';
 	import { makeAzReportsApi, resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
-	import { storeToRefs } from 'pinia';
 
 	const dbStore = useDBstate();
-	const {
-		showAzUploadComponents,
-		getAzCodeReport,
-		getAzPricingReport,
-	} = storeToRefs(dbStore);
 	const { loadFromIndexedDB } = useIndexedDB();
 
 	const theDb = ref<DBName>(DBName.AZ);
 	const component1 = ref<string>('az1');
 	const component2 = ref<string>('az2');
 	const isGeneratingReports = ref<boolean>(false);
-	// const showUploadComponents = ref<boolean>(true);
 
 	const columnRoleOptions = [
 		{ value: AZColumnRole.Destination, label: 'Destination Name' },
@@ -117,15 +111,6 @@
 		console.log(`File uploaded for ${componentName}: ${fileName}`);
 	}
 
-	async function resetThisReport() {
-		console.log('resetting the report');
-		await resetReportApi('az');
-		dbStore.setShowAzUploadComponents(true);
-	}
-
-	function handleGotoFiles() {
-		dbStore.setShowAzUploadComponents(true);
-	}
 
 	async function handleReportsAction() {
 		// console.log('handleReportsAction called, reportsGenerated:', dbStore.getAzReportsGenerated);

@@ -1,13 +1,13 @@
 <template>
-  <div class="flex flex-col min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground tracking-wider">
+  <div id="app" class="flex flex-col w-full min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground tracking-wider">
     <TheHeader class="w-full z-10 fixed top-0" />
-    <div class="flex flex-grow overflow-hidden">
+    <div class="flex flex-grow overflow-hidden w-full">
       <SideNav class="z-20" />
-      <div class="flex flex-col flex-grow">
-        <main class="flex-grow p-4 overflow-auto ml-[200px] mt-[120px]">
+      <div class="flex flex-col flex-grow w-full">
+        <main class="flex flex-grow w-full p-4 mt-20 ml-20">
           <router-view />
         </main>
-        <TheFooter class="ml-[200px]"/>
+        <TheFooter class="ml-20"/>
 				<!-- {{ dbStore }} -->
 				<br>
 				<!-- {{ userStore }} -->
@@ -138,8 +138,17 @@
 </script>
 
 <style>
-	.aborder {
+	.rborder {
 		border: 1px solid red;
+	}
+	.gborder {
+		border: 1px solid green;
+	}
+	.bborder {
+		border: 1px solid blue;
+	}
+	.wborder {
+		border: 10px solid white;
 	}
 
 </style>

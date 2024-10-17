@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background rounded-lg m-auto p-6 w-full relative">
+  <div class="bg-background rounded-lg h-full p-8">
     <div class="mb-10 text-center">
       <h1 class="text-5xl font-bold text-foreground uppercase inline-block">
         AZ PRICING REPORT
@@ -9,8 +9,10 @@
     <div v-if="report" class="space-y-10">
       <!-- Buy Section -->
       <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <h2 class="py-4 text-2xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6">
-          <span class="text-gray-300">{{ report.fileName1 }} SHOULD BUY THESE DESTINATIONS FROM {{ report.fileName2 }}</span>
+        <h2 class="py-4 text-2xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6">
+          <span class="text-background">
+            <span class="text-mutedForeground">{{ report.fileName1 }}</span> SHOULD BUY THESE DESTINATIONS FROM <span class="text-muted">{{ report.fileName2 }}</span>
+          </span>
         </h2>
         <div class="p-6 overflow-x-auto">
           <table class="w-full">
@@ -56,8 +58,10 @@ w                    >
 
       <!-- Sell Section -->
       <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <h2 class="py-4 text-2xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6">
-          <span class="text-gray-300">{{ report.fileName1 }} SHOULD SELL THESE DESTINATIONS TO {{ report.fileName2 }}</span>
+        <h2 class="py-4 text-2xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6">
+          <span class="text-background">
+            <span class="text-mutedForeground">{{ report.fileName1 }}</span> SHOULD SELL THESE DESTINATIONS TO <span class="text-muted">{{ report.fileName2 }}</span>
+          </span>
         </h2>
         <div class="p-6 overflow-x-auto">
           <table class="w-full">
@@ -103,8 +107,8 @@ w                    >
 
       <!-- Same Rates Section -->
       <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <h2 class="py-4 text-2xl font-semibold text-center text-foreground bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 px-6">
-          <span class="text-gray-300">Same Rates</span>
+        <h2 class="py-4 text-2xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6">
+          <span class="text-background">Same Rates</span>
         </h2>
         <div class="p-6 overflow-x-auto">
           <table class="w-full">
@@ -148,9 +152,9 @@ w                    >
 
       <!-- Unmatched Codes Section -->
       <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <div class="py-4 px-6 bg-gradient-to-r from-blue-950 via-cyan-900 to-teal-900 flex justify-between items-center">
+        <div class="py-4 px-6 bg-gradient-to-r from-gray-800 to-accent flex justify-between items-center">
           <div class="w-1/4"></div>
-          <h2 class="text-2xl font-semibold text-center text-gray-300 flex-grow">
+          <h2 class="text-2xl font-semibold text-center text-background flex-grow">
             Unmatched Codes
           </h2>
           <div class="w-1/4 flex justify-end">
@@ -243,3 +247,4 @@ function formatPercentage(value: number): string {
 }
 
 </script>
+
