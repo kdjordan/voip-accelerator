@@ -1,6 +1,14 @@
-@import './base.css';
-
+/* postcss-ignore-next-line */
 @tailwind base;
+/* postcss-ignore-next-line */
+@tailwind components;
+/* postcss-ignore-next-line */
+@tailwind utilities;
+
+@import url('https://fonts.vercel.com/css2?family=Geist+Sans:wght@300;400;500;600;700&display=swap');
+
+/* Keep your existing base styles after the Tailwind directives */
+@import './base.css';
 
 #app {
   min-height: 100vh;

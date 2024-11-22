@@ -1,6 +1,5 @@
 <template>
   <div id="app" class="flex flex-col min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground tracking-wider">
-    <TheHeader class="w-full z-10 fixed top-0" />
     <div class="flex flex-grow overflow-hidden w-full mt-20">
       <SideNav class="z-20" />
       <div class="flex flex-col flex-grow w-full ml-[200px]"> <!-- Adjust 250px to your SideNav width -->
@@ -15,7 +14,6 @@
 
 <script setup>
 	import SideNav from './components/SideNav.vue';
-	import TheHeader from './components/TheHeader.vue';
 	import TheFooter from './components/TheFooter.vue';
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
