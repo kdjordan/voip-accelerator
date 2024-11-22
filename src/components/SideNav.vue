@@ -10,8 +10,8 @@
 			<div
 				class="flex items-center text-accent px-4 mb-0"
 			>
-				<span class="text-sizeXl">V</span>
-				<BoltIcon class="w-8 h-8 -ml-1" />
+				<span class="text-3xl">V</span>
+				<BoltIcon class="w-8 h-8 -ml-1 flex-shrink-0" />
 			</div>
 		</h1>
 		<ul class="flex-grow">
@@ -40,11 +40,11 @@
 		<div class="px-2">
 			<button
 				@click="toggleSidebar"
-				class="flex items-center py-2 px-3 rounded-md transition-all w-full"
-				:class="[isOpen ? 'justify-end' : 'justify-center']"
+				class="flex items-center justify-center h-8 w-8 rounded-md border-2 border-white/20 hover:bg-muted/80 transition-all"
+				:class="[isOpen ? 'ml-auto' : 'mx-auto']"
 			>
 				<ChevronLeftIcon
-					class="w-5 h-5 transition-transform"
+					class="w-5 h-5 text-white transition-transform"
 					:class="{ 'rotate-180': !isOpen }"
 				/>
 			</button>
@@ -54,36 +54,62 @@
 			<!-- Dropdown Menu -->
 			<div
 				v-if="dropdownOpen"
-				class="absolute bottom-full left-0 right-0 mb-2 p-2 bg-background border border-muted rounded-md shadow-lg"
+				class="fixed bottom-[72px] left-4 w-[240px] p-2 bg-background border border-muted rounded-lg shadow-lg z-50"
 			>
-				<div class="space-y-2">
-					<button
-						v-for="(item, index) in dropdownItems"
-						:key="index"
-						class="w-full text-left px-3 py-2 hover:bg-muted rounded-md flex items-center space-x-2"
-					>
-						<component :is="item.icon" class="w-5 h-5" />
-						<span v-if="isOpen">{{ item.label }}</span>
-					</button>
+				<!-- Email -->
+				<div class="px-3 py-2 text-sm text-muted-foreground">
+					k.dean.jordan@gmail.com
 				</div>
+				
+				<!-- User Info -->
+				<div class="px-3 py-2 flex items-center space-x-3">
+					<div class="w-8 h-8 rounded-md bg-gradient-to-br from-purple-500 to-pink-500"></div>
+					<div>
+						<div class="text-sm font-medium">kdjordan</div>
+						<div class="text-xs text-muted-foreground">Free</div>
+					</div>
+				</div>
+
+				<div class="border-t border-muted my-2"></div>
+
+				<!-- Menu Items -->
+				<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md flex items-center space-x-2">
+					<CreditCardIcon class="w-4 h-4 text-white" />
+					<span>Billing</span>
+				</button>
+				<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md flex items-center space-x-2">
+					<ArrowRightOnRectangleIcon class="w-4 h-4 text-white" />
+					<span>Sign Out</span>
+				</button>
+
+				<div class="border-t border-muted my-2"></div>
+
+				<!-- Upgrade Plan -->
+				<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md">
+					Upgrade Plan
+				</button>
 			</div>
 
 			<!-- User Button -->
-			<button
-				@click="toggleDropdown"
-				class="w-full flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 transition-all"
-			>
-				<div class="flex-shrink-0 w-8 h-8 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
-				</div>
-				<div v-if="isOpen" class="flex-grow text-left">
-					<div class="text-sm font-medium">kdjordan</div>
-					<div class="text-xs text-muted-foreground">Free</div>
-				</div>
-				<ChevronUpDownIcon 
-					v-if="isOpen"
-					class="w-4 h-4 text-muted-foreground" 
-				/>
-			</button>
+			<div class="px-2 flex justify-center">
+				<button
+					@click="toggleDropdown"
+					class="flex items-center hover:bg-muted/50 rounded-md transition-all"
+					:class="[
+						isOpen ? 'w-full space-x-3 p-2' : 'w-8'
+					]"
+				>
+					<div class="w-8 h-8 rounded-md bg-gradient-to-br from-purple-500 to-pink-500"></div>
+					<div v-if="isOpen" class="flex-grow text-left">
+						<div class="text-sm font-medium">kdjordan</div>
+						<div class="text-xs text-muted-foreground">Free</div>
+					</div>
+					<ChevronUpDownIcon 
+						v-if="isOpen"
+						class="w-4 h-4 text-muted-foreground" 
+					/>
+				</button>
+			</div>
 		</div>
 	</nav>
 </template>
@@ -98,6 +124,8 @@
 		ChevronLeftIcon,
 		ChevronUpDownIcon,
 		BoltIcon,
+		CreditCardIcon,
+		ArrowRightOnRectangleIcon,
 	} from '@heroicons/vue/24/outline';
 
 	const isOpen = ref(true);
