@@ -27,7 +27,7 @@
 							>
 								<div class="flex items-center justify-between">
 									<h3
-										class="text-lg leading-6 font-medium text-muted-foreground"
+										class="text-lg leading-6 font-medium text-foreground"
 										id="modal-title"
 									>
 										Select Column Roles
@@ -35,13 +35,13 @@
 									<div>
 										<label
 											for="start-line"
-											class="block text-sm font-medium text-muted-foreground"
+											class="block text-sm font-medium text-mutedForeground"
 											>Data starts on line:</label
 										>
 										<select
 											id="start-line"
 											v-model="startLine"
-											class="mt-1 block w-full bg-foreground text-stone-700 rounded-md  py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+											class="select-custom mt-1 block w-32 bg-foreground text-background rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
 										>
 											<option v-for="i in 10" :key="i" :value="i">
 												{{ i }}
@@ -58,7 +58,7 @@
 									<select
 										id="indetermRateSelect"
 										v-model="indetermRateSelection"
-										class="mt-1 block w-full bg-foreground text-stone-700 rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+										class="select-custom mt-1 block w-full bg-foreground text-stone-700 rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
 									>
 										<option value="default">
 											By selecting column
@@ -89,11 +89,13 @@
 												>
 													<select
 														v-model="columnRoles[index]"
+														class="select-custom block w-full rounded-md py-2 pl-3 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-accent"
 														:class="{
+															'bg-white/50 text-background':
+																columnRoles[index] !== '',
 															'bg-foreground text-stone-700':
-																columnRoles[index] === '',
+																columnRoles[index] === ''
 														}"
-														class="rounded-md min-w-[200px] transition-colors duration-200 py-2"
 													>
 														<option value="">
 															Select Column Role
@@ -113,6 +115,10 @@
 											<tr
 												v-for="(row, rowIndex) in displayedData"
 												:key="rowIndex"
+												:class="[
+													'transition-colors',
+													rowIndex % 2 === 0 ? 'bg-transparent' : 'bg-muted/30'
+												]"
 											>
 												<td class="px-4 py-2">
 													{{ rowIndex + 1 }}
@@ -138,7 +144,7 @@
 							:class="[
 								'py-3 px-6 rounded-lg transition-colors',
 								allRequiredRolesSelected 
-									? 'bg-white/10 hover:bg-white/20 text-foreground' 
+									? 'bg-mutedForeground hover:bg-white/20 text-background' 
 									: 'bg-muted/50 text-foreground/50 cursor-not-allowed'
 							]"
 							type="button"
@@ -287,12 +293,4 @@
 	});
 </script>
 
-<style>
-	tbody tr:nth-child(even) {
-		background-color: hsl(
-			220,
-			20%,
-			20%
-		); /* Darker color for even rows */
-	}
-</style>
+
