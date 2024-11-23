@@ -132,6 +132,7 @@ export interface UserState {
   info: UserInfo | null;
   currentPlan: PlanTier;
   features: PlanFeatures;
+  sideNavOpen: boolean;
 }
 
 export interface AZCodeReport {
@@ -145,4 +146,6 @@ export interface AZCodeReport {
   nonMatchedCodes: number;
   percentageNonMatched: number;
 }
+
+export type ReportStateType = 'files' | 'code' | 'pricing';
 

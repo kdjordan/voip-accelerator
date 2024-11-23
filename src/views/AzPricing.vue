@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col items-center w-full max-w-5xl min-h-[700px]">
+	<div class="flex flex-col items-center w-full max-w-5xl min-h-[400px]">
 		<!-- Content Section - No header here since it's in AZFileUploads -->
 		<div class="w-full max-w-2xl">
 			<AZFileUploads v-if="dbStore.getActiveReportAZ === 'files'" />
@@ -20,9 +20,9 @@
 		</div>
 
 		<!-- Report Navigation -->
-		<!-- <div v-if="dbStore.getAzReportsGenerated" class="flex justify-center mt-8">
+		<div v-if="dbStore.getAzReportsGenerated" class="flex justify-center mt-8">
 			<button
-				v-for="type in ['files', 'code', 'pricing']"
+				v-for="type in reportTypes"
 				:key="type"
 				@click="dbStore.setActiveReportAZ(type)"
 				:class="[
@@ -41,7 +41,7 @@
 			>
 				Reset
 			</button>
-		</div> -->
+		</div>
 	</div>
 </template>
 
@@ -51,6 +51,9 @@
 	import PricingReportAZ from '../components/AZPricingReport.vue';
 	import { resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
+	import { type ReportStateType } from '../../types/app-types';
+
+	const reportTypes: ReportStateType[] = ['files', 'code', 'pricing'];
 
 	const dbStore = useDBstate();
 

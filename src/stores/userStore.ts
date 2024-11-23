@@ -9,8 +9,8 @@ export const useUserStore = defineStore('userStore', {
       unlimitedUploads: false,
       advancedAnalytics: false,
       prioritySupport: false,
-      // Add more features as needed
-    }
+    },
+    sideNavOpen: false
   }),
 
   getters: {
@@ -20,6 +20,7 @@ export const useUserStore = defineStore('userStore', {
     lastLoggedIn: (state): Date | null => state.info?.lastLoggedIn ?? null,
     isPro: (state): boolean => state.currentPlan === PlanTier.PRO,
     canUseFeature: (state) => (feature: keyof PlanFeatures): boolean => state.features[feature],
+    isSideNavOpen: (state): boolean => state.sideNavOpen,
   },
 
   actions: {
@@ -39,6 +40,7 @@ export const useUserStore = defineStore('userStore', {
       this.info = null;
       this.currentPlan = PlanTier.FREE;
       this.updateFeatures();
+      this.sideNavOpen = false;
     },
     updatePlanAndFeatures(planTier: PlanTier) {
       this.currentPlan = planTier;
@@ -60,6 +62,12 @@ export const useUserStore = defineStore('userStore', {
           // Disable pro features
         };
       }
-    }
+    },
+    toggleSideNav() {
+      this.sideNavOpen = !this.sideNavOpen;
+    },
+    setSideNavState(isOpen: boolean) {
+      this.sideNavOpen = isOpen;
+    },
   }
 })

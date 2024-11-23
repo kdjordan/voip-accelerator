@@ -1,11 +1,19 @@
 <template>
   <div id="app" class="flex min-h-screen bg-background text-foreground">
     <SideNav class="z-20" />
-    <main class="flex-1 ml-[64px]">
-      <div class="h-screen min-h-[800px] flex items-center justify-center p-8">
-        <router-view />
-      </div>
-    </main>
+    <div 
+      class="flex-1 flex flex-col transition-all duration-300"
+      :class="[
+        userStore.isSideNavOpen ? 'ml-[200px]' : 'ml-[64px]'
+      ]"
+    >
+      <main class="flex-1">
+        <div class="min-h-full flex items-center justify-center">
+          <router-view />
+        </div>
+      </main>
+      <TheFooter />
+    </div>
   </div>
 </template>
 

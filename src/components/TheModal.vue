@@ -90,7 +90,7 @@
 													<select
 														v-model="columnRoles[index]"
 														:class="{
-															'bg-accent text-background':
+															'bg-white/50 text-background':
 																columnRoles[index] !== '',
 															'bg-foreground text-stone-700':
 																columnRoles[index] === '',
@@ -133,25 +133,26 @@
 							</div>
 						</div>
 					</div>
-					<div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+					<div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-4">
 						<button
 							@click="confirmColumnRoles"
 							:disabled="!allRequiredRolesSelected"
-							:class="{
-								'opacity-50 cursor-not-allowed':
-									!allRequiredRolesSelected,
-							}"
+							:class="[
+								'py-3 px-6 rounded-lg transition-colors',
+								allRequiredRolesSelected 
+									? 'bg-white/10 hover:bg-white/20 text-foreground' 
+									: 'bg-muted/50 text-foreground/50 cursor-not-allowed'
+							]"
 							type="button"
-							class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 btn btn-primary font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
 						>
 							Confirm
 						</button>
 						<button
 							@click="cancelModal"
 							type="button"
-							class="mt-3 w-full inline-flex justify-center btn btn-destructive focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+							class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2"
 						>
-							Cancel
+						&times;
 						</button>
 					</div>
 				</div>

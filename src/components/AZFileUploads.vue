@@ -46,11 +46,11 @@
 					@click="handleReportsAction"
 					:disabled="!dbStore.getIsAZfull || isGeneratingReports"
 					:class="{
-						'bg-white/10 hover:bg-white/20 text-foreground': dbStore.getIsAZfull && !isGeneratingReports,
+						'text-background bg-foreground  hover:bg-muted/90 hover:text-foreground transition-all': dbStore.getIsAZfull && !isGeneratingReports,
 						'bg-muted/50 text-foreground/50 cursor-not-allowed': !dbStore.getIsAZfull || isGeneratingReports,
 						'pulse': isGeneratingReports,
 					}"
-					class="py-3 px-6 rounded-lg transition-colors"
+					class="py-3 px-6 rounded-md transition-colors"
 				>
 					<span v-if="isGeneratingReports">GENERATING REPORTS</span>
 					<span v-else>Get Reports</span>

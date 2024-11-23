@@ -1,8 +1,7 @@
 <template>
 	<div id="upload-component" class="flex flex-col w-full">
-		<p
+		<p v-if="!props.disabled"
 			class="mb-4 text-center text-white"
-			v-if="!props.disabled"
 		>
 			UPLOAD {{ props.typeOfComponent === 'owner' ? 'YOUR' : 'CARRIER' }} RATES AS CSV
 		</p>
@@ -11,11 +10,11 @@
 		>
 			<div
 				:class="[
-					'flex flex-col items-center justify-center border border-white/20 rounded-lg transition-colors p-8',
+					'flex flex-col items-center justify-center border-dashed border border-white/30 rounded-lg transition-colors',
 					{
 						'animate-pulse bg-accent':
 							DBstore.isComponentFileUploading(props.componentName),
-						'bg-accent text-background': props.disabled,
+						'bg-muted text-background': props.disabled,
 						'hover:bg-white/5 cursor-pointer':
 							!props.disabled && !isDragOver,
 						'bg-white/5': isDragOver,
@@ -30,7 +29,7 @@
 				@click="selectFile"
 			>
 				<div
-					class="flex flex-col items-center py-8 text-foreground"
+					class="flex items-center gap-4 py-4 text-foreground"
 				>
 					<p
 						:class="{
@@ -42,10 +41,9 @@
 					>
 						
 							<div v-if="props.disabled"
-								class="flex flex-col items-center bg-blue-500 text-white p-4 rounded-lg shadow-md"
+								class="flex flex-col items-center  text-foreground p-4 rounded-lg shadow-md"
 							>
 								<div class="mb-2">{{ fileName }}</div>
-								<div class="text-sm">UPLOADED</div>
 							</div>
 						
 						<div v-else>
@@ -55,7 +53,7 @@
 
 					<UploadIcon
 						v-if="!props.disabled"
-						class="w-8 h-8 text-primary"
+						class="w-4 h-4"
 					/>
 				</div>
 
@@ -68,13 +66,13 @@
 					ref="fileInput"
 				/>
 			</div>
-			<div class="h-12 flex items-center justify-center">
+			<div class="py-4 text-center">
 				<button
 					v-if="props.disabled"
 					@click="dumpFile"
-					class="btn btn-destructive"
+					class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2"
 				>
-					Remove
+				&times;
 				</button>
 			</div>
 		</div>
@@ -130,7 +128,7 @@
 	// Define reactive properties
 	const fileInput = ref<HTMLInputElement | null>(null);
 	const isDragOver = ref<boolean>(false);
-	const statusMessage = ref<string>('Drag file or click to upload');
+	const statusMessage = ref<string>('Drag or Click to upload');
 	const displayMessage = ref<string>('');
 	// Set DB name and component name from props
 	const DBstore = useDBstate();
@@ -283,9 +281,6 @@
 		}
 	}
 
-	const highlightedWord = computed(() => {
-		return props.typeOfComponent === 'owner' ? 'YOUR' : 'CARRIER';
-	});
 </script>
 
 <style scoped>
