@@ -2,7 +2,7 @@
 	<div class="flex flex-col items-center w-full max-w-5xl min-h-[700px]">
 		<div class="flex flex-col items-center w-full mb-8">
 			<h1 class="text-3xl mb-2  text-white">
-				Us Pricing
+				US Pricing
 			</h1>
 			<p class="text-center text-sizeBase max-w-2xl text-foreground">
 				Upload YOUR current rates and the rates of your PROSPECTIVE CARRIER.
@@ -43,7 +43,7 @@
 				}"
 				class="py-3 px-6 rounded-lg transition-colors"
 			>
-				Get Report
+				Get Reports
 			</button>
 		</div>
 		<div v-if="report" class="w-full mt-8">

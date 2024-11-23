@@ -63,7 +63,7 @@
 				
 				<!-- User Info -->
 				<div class="px-3 py-2 flex items-center space-x-3">
-					<div class="w-8 h-8 rounded-md bg-gradient-to-br from-purple-500 to-pink-500"></div>
+					<div class="w-8 h-8 rounded-md bg-gradient-to-br from-accent/90 to-muted/80"></div>
 					<div>
 						<div class="text-sm font-medium">kdjordan</div>
 						<div class="text-xs text-muted-foreground">Free</div>
@@ -99,7 +99,7 @@
 						isOpen ? 'w-full space-x-3 p-2' : 'w-8'
 					]"
 				>
-					<div class="w-8 h-8 rounded-md bg-gradient-to-br from-purple-500 to-pink-500"></div>
+					<div class="w-8 h-8 rounded-md bg-gradient-to-br from-accent/80 to-muted"></div>
 					<div v-if="isOpen" class="flex-grow text-left">
 						<div class="text-sm font-medium">kdjordan</div>
 						<div class="text-xs text-muted-foreground">Free</div>

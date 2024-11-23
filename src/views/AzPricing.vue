@@ -20,7 +20,7 @@
 		</div>
 
 		<!-- Report Navigation -->
-		<div v-if="dbStore.getAzReportsGenerated" class="flex justify-center mt-8">
+		<!-- <div v-if="dbStore.getAzReportsGenerated" class="flex justify-center mt-8">
 			<button
 				v-for="type in ['files', 'code', 'pricing']"
 				:key="type"
@@ -41,7 +41,7 @@
 			>
 				Reset
 			</button>
-		</div>
+		</div> -->
 	</div>
 </template>
 

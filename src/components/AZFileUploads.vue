@@ -1,28 +1,25 @@
 <template>
 	<div
-		class="bg-background rounded-lg py-6 px-20 flex flex-col items-center justify-center"
+		class="flex flex-col items-center w-full"
 		id="az-file-uploads"
 	>
 		<div class="mb-4 text-center">
-			<h1
-				class="text-5xl font-bold text-foreground uppercase inline-block mb-4"
-			>
-				{{!dbStore.getIsAZfull ? 'AZ PRICING' : 'FILES UPLOADED'}}
+			<h1 class="text-3xl mb-2 text-white inline-block">
+				{{!dbStore.getIsAZfull ? 'A-Z Pricing' : 'FILES UPLOADED'}}
 			</h1>
-			<p v-if="!dbStore.getIsAZfull" class="text-muted-foreground mb-4">
+			<p v-if="!dbStore.getIsAZfull" class="text-center text-sizeBase max-w-2xl text-foreground mb-8">
 				Upload
-				<span class="font-bold uppercase text-accent">your</span>
+				<span class="uppercase">your</span>
 				current rates and the rates of your
-				<span class="font-bold uppercase text-accent"
-					>prospective carrier.</span
-				>
+				<span class="uppercase">prospective carrier.</span>
 				<br />
 				We will generate you a report showing the best opportunities
 				for you to buy and sell.
 			</p>
 		</div>
-		<div class="flex flex-col bg-muted rounded-xl p-8 w-full">
-			<div class="flex justify-center space-x-6 flex-grow h-full">
+
+		<div class="w-full max-w-2xl">
+			<div class="grid grid-cols-2 gap-8">
 				<UploadComponent
 					typeOfComponent="owner"
 					:DBname="DBName.AZ"
@@ -43,26 +40,21 @@
 					@fileUploaded="handleFileUploaded"
 				/>
 			</div>
-			<div class="mt-6 flex justify-center items-center">
+
+			<div class="text-center">
 				<button v-if="!dbStore.getAzReportsGenerated"
 					@click="handleReportsAction"
 					:disabled="!dbStore.getIsAZfull || isGeneratingReports"
 					:class="{
-						'bg-blue-500 hover:bg-blue-600 text-white':
-							dbStore.getIsAZfull && !isGeneratingReports,
-						'bg-gray-500 text-gray-300 cursor-not-allowed':
-							!dbStore.getIsAZfull || isGeneratingReports,
-						pulse: isGeneratingReports,
+						'bg-white/10 hover:bg-white/20 text-foreground': dbStore.getIsAZfull && !isGeneratingReports,
+						'bg-muted/50 text-foreground/50 cursor-not-allowed': !dbStore.getIsAZfull || isGeneratingReports,
+						'pulse': isGeneratingReports,
 					}"
-					class="btn font-bold py-2 p-4 rounded-lg shadow-md"
+					class="py-3 px-6 rounded-lg transition-colors"
 				>
 					<span v-if="isGeneratingReports">GENERATING REPORTS</span>
 					<span v-else>Get Reports</span>
 				</button>
-			</div>
-			<!-- Debug info -->
-			<div class="mt-4 text-sm text-gray-500">
-				<!-- Reports generated: {{ dbStore.getAzReportsGenerated }} -->
 			</div>
 		</div>
 	</div>
