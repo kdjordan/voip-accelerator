@@ -1,50 +1,7 @@
 <template>
-	<div id="az-pricing" class="flex flex-col items-center pt-8 h-full w-full">
-		<div
-			v-if="dbStore.getAzReportsGenerated"
-			class="flex justify-center mb-4"
-		>
-			<button
-				@click="dbStore.setActiveReportAZ('files')"
-				:class="[
-					'px-4 py-2 mx-2 rounded-lg transition-colors duration-200',
-					dbStore.getActiveReportAZ === 'files'
-						? 'bg-blue-500 text-white'
-						: 'bg-gray-500 text-gray-300 hover:bg-gray-600',
-				]"
-			>
-				Files
-			</button>
-			<button
-				@click="dbStore.setActiveReportAZ('code')"
-				:class="[
-					'px-4 py-2 mx-2 rounded-lg transition-colors duration-200',
-					dbStore.getActiveReportAZ === 'code'
-						? 'bg-blue-500 text-white'
-						: 'bg-gray-500 text-gray-300 hover:bg-gray-600',
-				]"
-			>
-				Code Report
-			</button>
-			<button
-				@click="dbStore.setActiveReportAZ('pricing')"
-				:class="[
-					'px-4 py-2 mx-2 rounded-lg transition-colors duration-200',
-					dbStore.getActiveReportAZ === 'pricing'
-						? 'bg-blue-500 text-white'
-						: 'bg-gray-500 text-gray-300 hover:bg-gray-600',
-				]"
-			>
-				Pricing Report
-			</button>
-			<button
-				@click="handleReset"
-				class="px-4 py-2 mx-2 rounded-lg transition-colors duration-200 bg-red-500 text-white hover:bg-red-600"
-			>
-				Reset
-			</button>
-		</div>
-		<div>
+	<div class="flex flex-col items-center w-full max-w-5xl min-h-[700px]">
+		<!-- Content Section - No header here since it's in AZFileUploads -->
+		<div class="w-full max-w-2xl">
 			<AZFileUploads v-if="dbStore.getActiveReportAZ === 'files'" />
 			<CodeReportAZ
 				v-if="dbStore.getActiveReportAZ === 'code'"
@@ -55,13 +12,35 @@
 				:report="dbStore.getAzPricingReport"
 			/>
 			<div
-				v-if="
-					!dbStore.getAzCodeReport == null &&
-					!dbStore.getAzPricingReport
-				"
+				v-if="!dbStore.getAzCodeReport == null && !dbStore.getAzPricingReport"
+				class="text-center text-foreground"
 			>
 				No reports available.
 			</div>
+		</div>
+
+		<!-- Report Navigation -->
+		<div v-if="dbStore.getAzReportsGenerated" class="flex justify-center mt-8">
+			<button
+				v-for="type in ['files', 'code', 'pricing']"
+				:key="type"
+				@click="dbStore.setActiveReportAZ(type)"
+				:class="[
+					'py-3 px-6 mx-2 rounded-lg transition-colors',
+					{
+						'bg-white/10 hover:bg-white/20 text-foreground': dbStore.getActiveReportAZ === type,
+						'bg-muted/50 text-foreground/50': dbStore.getActiveReportAZ !== type
+					}
+				]"
+			>
+				{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report
+			</button>
+			<button
+				@click="handleReset"
+				class="py-3 px-6 mx-2 rounded-lg transition-colors bg-white/10 hover:bg-white/20 text-foreground"
+			>
+				Reset
+			</button>
 		</div>
 	</div>
 </template>

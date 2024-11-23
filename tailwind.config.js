@@ -16,7 +16,7 @@ export default {
     extend: {
       colors: {
         background: 'hsl(230, 20%, 10%)',
-        foreground: 'hsl(180, 10%, 95%)',
+        foreground: 'hsl(180, 10%, 80%)',
         muted: 'hsl(230, 15%, 20%)',
         mutedForeground: 'hsl(180, 5%, 70%)',
         accent: 'hsl(160, 100%, 40%)',

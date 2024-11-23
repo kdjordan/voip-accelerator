@@ -1,68 +1,50 @@
 <template>
-	<div class="flex flex-col items-center pt-8 h-full">
-		<div
-			class="flex flex-col items-center w-2/3 mb-16 rounded-xl shadow-xl bg-muted py-8 justify-center"
-		>
-			<h1
-				class="text-size3xl uppercase mb-2 font-bold tracking-widest"
-			>
-				US Pricing
+	<div class="flex flex-col items-center w-full max-w-5xl min-h-[700px]">
+		<div class="flex flex-col items-center w-full mb-8">
+			<h1 class="text-3xl mb-2  text-white">
+				Us Pricing
 			</h1>
-			<p class="text-center text-muted-foreground w-4/5">
-				Upload
-				<span class="font-bold uppercase text-accent">your</span>
-				current rates and the rates of your
-				<span class="font-bold uppercase text-accent"
-					>prospective carrier.</span
-				>
+			<p class="text-center text-sizeBase max-w-2xl text-foreground">
+				Upload YOUR current rates and the rates of your PROSPECTIVE CARRIER.
 				We will generate you a report showing the best opportunities
 				for you to buy and sell.
 			</p>
 		</div>
-		<div
-			v-if="!report"
-			class="flex flex-col w-2/3 bg-muted p-6 rounded-xl h-[calc(100vh-70%)]"
-		>
-			<div class="flex justify-center space-x-6 flex-grow h-full">
-				<UploadComponent
-					typeOfComponent="owner"
-					:DBname="DBName.US"
-					:componentName="component1"
-					:disabled="dbStore.isComponentDisabled('us1')"
-					:columnRoleOptions="columnRoleOptions"
-					class="flex-1 flex flex-col"
-				/>
-				<UploadComponent
-					typeOfComponent="client"
-					:DBname="DBName.US"
-					:componentName="component2"
-					:disabled="dbStore.isComponentDisabled('us2')"
-					:columnRoleOptions="columnRoleOptions"
-					class="flex-1 flex flex-col"
-				/>
+		<div v-if="!report" class="w-full max-w-2xl grid grid-cols-2 gap-8 rounded-xl mt-4">
+			<UploadComponent
+				typeOfComponent="owner"
+				:DBname="DBName.US"
+				:componentName="component1"
+				:disabled="dbStore.isComponentDisabled('us1')"
+				:columnRoleOptions="columnRoleOptions"
+			/>
+			<UploadComponent
+				typeOfComponent="client"
+				:DBname="DBName.US"
+				:componentName="component2"
+				:disabled="dbStore.isComponentDisabled('us2')"
+				:columnRoleOptions="columnRoleOptions"
+			/>
+		</div>
+		<div class="text-center">
+			<div
+				v-if="isGeneratingReport"
+				class="bg-white/10 text-foreground py-3 px-6 rounded-lg cursor-pointer pulse"
+			>
+				<p>GENERATING REPORT</p>
 			</div>
-			<div class="text-center mt-6">
-				<div
-					v-if="isGeneratingReport"
-					class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md cursor-pointer pulse"
-				>
-					<p>GENERATING REPORT</p>
-				</div>
-				<button
-					v-if="!isGeneratingReport"
-					@click="console.log('make US report')"
-					:disabled="!dbStore.getIsUSfull"
-					:class="{
-						'bg-blue-500 hover:bg-blue-600 text-white':
-							dbStore.getIsUSfull,
-						'bg-gray-500 text-gray-300 cursor-not-allowed':
-							!dbStore.getIsUSfull,
-					}"
-					class="btn"
-				>
-					Get Report
-				</button>
-			</div>
+			<button
+				v-if="!isGeneratingReport"
+				@click="console.log('make US report')"
+				:disabled="!dbStore.getIsUSfull"
+				:class="{
+					'bg-white/10 hover:bg-white/20 text-foreground': dbStore.getIsUSfull,
+					'bg-muted/50 text-foreground/50 cursor-not-allowed': !dbStore.getIsUSfull,
+				}"
+				class="py-3 px-6 rounded-lg transition-colors"
+			>
+				Get Report
+			</button>
 		</div>
 		<div v-if="report" class="w-full mt-8">
 			<!-- <GenerateReport :report="report" @resetReport="resetThisReport" /> -->

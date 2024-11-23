@@ -1,14 +1,11 @@
 <template>
-  <div id="app" class="flex flex-col min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-foreground tracking-wider">
-    <div class="flex flex-grow overflow-hidden w-full mt-20">
-      <SideNav class="z-20" />
-      <div class="flex flex-col flex-grow w-full ml-[200px]"> <!-- Adjust 250px to your SideNav width -->
-        <main class="flex-grow flex justify-center items-center">
-          <router-view />
-        </main>
-        <TheFooter class="w-full" />
+  <div id="app" class="flex min-h-screen bg-background text-foreground">
+    <SideNav class="z-20" />
+    <main class="flex-1 ml-[64px]">
+      <div class="h-screen min-h-[800px] flex items-center justify-center p-8">
+        <router-view />
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -33,7 +30,7 @@
 
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
-		setUser('free', true, ['az']);
+		// setUser('free', true, ['az']);
 	});
 
 	onBeforeUnmount(() => {

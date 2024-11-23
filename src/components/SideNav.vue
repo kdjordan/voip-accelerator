@@ -6,7 +6,7 @@
 			isOpen ? 'w-[200px]' : 'w-[64px]'
 		]"
 	>
-		<h1 class="text-center py-2">
+		<h1 class="text-center py-2 mb-4">
 			<div
 				class="flex items-center text-accent px-4 mb-0"
 			>
@@ -18,7 +18,7 @@
 			<li
 				v-for="item in items"
 				:key="item.name"
-				class="px-2 my-1"
+				class="px-2 my-1 text-sizeSm"
 			>
 				<RouterLink
 					:to="item.to"
@@ -28,7 +28,7 @@
 						{ 'bg-muted/90': $route.path === item.to }
 					]"
 				>
-					<component :is="item.icon" class="w-5 h-5 text-white flex-shrink-0" />
+					<component :is="item.icon" class="w-5 h-5 text-foreground flex-shrink-0" />
 					<span 
 						v-if="isOpen" 
 						class="text-foreground whitespace-nowrap"
@@ -44,7 +44,7 @@
 				:class="[isOpen ? 'ml-auto' : 'mx-auto']"
 			>
 				<ChevronLeftIcon
-					class="w-5 h-5 text-white transition-transform"
+					class="w-5 h-5 text-foreground transition-transform"
 					:class="{ 'rotate-180': !isOpen }"
 				/>
 			</button>
@@ -74,11 +74,11 @@
 
 				<!-- Menu Items -->
 				<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md flex items-center space-x-2">
-					<CreditCardIcon class="w-4 h-4 text-white" />
+					<CreditCardIcon class="w-4 h-4 text-foreground" />
 					<span>Billing</span>
 				</button>
 				<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md flex items-center space-x-2">
-					<ArrowRightOnRectangleIcon class="w-4 h-4 text-white" />
+					<ArrowRightOnRectangleIcon class="w-4 h-4 text-foreground" />
 					<span>Sign Out</span>
 				</button>
 
@@ -125,7 +125,6 @@
 		ChevronUpDownIcon,
 		BoltIcon,
 		CreditCardIcon,
-		ArrowRightOnRectangleIcon,
 	} from '@heroicons/vue/24/outline';
 
 	const isOpen = ref(true);

@@ -1,27 +1,24 @@
 <template>
-	<div id="upload-component" class="flex flex-col h-full w-full min-w-96">
+	<div id="upload-component" class="flex flex-col w-full">
 		<p
-			class="mb-4 text-center uppercase text-accent flex items-center justify-center"
+			class="mb-4 text-center text-white"
+			v-if="!props.disabled"
 		>
-			<span v-if="!props.disabled">
-				UPLOAD
-				<span class="text-white">{{ highlightedWord }}</span> RATES AS
-				CSV
-			</span>
+			UPLOAD {{ props.typeOfComponent === 'owner' ? 'YOUR' : 'CARRIER' }} RATES AS CSV
 		</p>
 		<div
-			class="flex flex-grow flex-col bg-background w-full rounded-lg shadow-xl p-6"
+			class="flex flex-col w-full"
 		>
 			<div
 				:class="[
-					'flex-grow flex flex-col items-center justify-center border border-foreground rounded-md tracking-wide text-primary transition-colors p-8',
+					'flex flex-col items-center justify-center border border-white/20 rounded-lg transition-colors p-8',
 					{
 						'animate-pulse bg-accent':
 							DBstore.isComponentFileUploading(props.componentName),
 						'bg-accent text-background': props.disabled,
-						'hover:bg-muted cursor-pointer':
+						'hover:bg-white/5 cursor-pointer':
 							!props.disabled && !isDragOver,
-						'bg-muted': isDragOver,
+						'bg-white/5': isDragOver,
 						'cursor-not-allowed':
 							props.disabled || DBstore.globalFileIsUploading,
 					},
@@ -71,7 +68,7 @@
 					ref="fileInput"
 				/>
 			</div>
-			<div class="h-12 mt-4 flex items-center justify-center">
+			<div class="h-12 flex items-center justify-center">
 				<button
 					v-if="props.disabled"
 					@click="dumpFile"
