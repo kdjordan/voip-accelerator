@@ -3,12 +3,17 @@ import { UserState, UserInfo, PlanTier, PlanFeatures } from '../../types/app-typ
 
 export const useUserStore = defineStore('userStore', {
   state: (): UserState => ({
-    info: null,
-    currentPlan: PlanTier.FREE,
+    info: {
+      username: 'John Doe',
+      email: 'john.doe@example.com',
+      planTier: PlanTier.PRO,
+      lastLoggedIn: new Date(),
+    },
+    currentPlan: PlanTier.PRO,
     features: {
-      unlimitedUploads: false,
-      advancedAnalytics: false,
-      prioritySupport: false,
+      unlimitedUploads: true,
+      advancedAnalytics: true,
+      prioritySupport: true,
     },
     sideNavOpen: false
   }),
@@ -18,7 +23,7 @@ export const useUserStore = defineStore('userStore', {
     userEmail: (state): string | null => state.info?.email ?? null,
     username: (state): string | null => state.info?.username ?? null,
     lastLoggedIn: (state): Date | null => state.info?.lastLoggedIn ?? null,
-    isPro: (state): boolean => state.currentPlan === PlanTier.PRO,
+    isPro: (state): boolean => state.info?.planTier === PlanTier.PRO,
     canUseFeature: (state) => (feature: keyof PlanFeatures): boolean => state.features[feature],
     isSideNavOpen: (state): boolean => state.sideNavOpen,
   },

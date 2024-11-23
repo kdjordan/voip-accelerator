@@ -8,7 +8,7 @@
 					class="fixed inset-0 transition-opacity"
 					aria-hidden="true"
 				>
-					<div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+					<div class="absolute inset-0 bg-muted opacity-75"></div>
 				</div>
 				<span
 					class="hidden sm:inline-block sm:align-middle sm:h-screen"
@@ -16,7 +16,7 @@
 					>&#8203;</span
 				>
 				<div
-					class="inline-block align-bottom rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6 bg-background"
+					class="inline-block align-bottom rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden  transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6 bg-background"
 				>
 					<div
 						class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-xl border border-gray-500"
@@ -41,7 +41,7 @@
 										<select
 											id="start-line"
 											v-model="startLine"
-											class="mt-1 block w-full bg-foreground text-stone-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+											class="mt-1 block w-full bg-foreground text-stone-700 rounded-md  py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
 										>
 											<option v-for="i in 10" :key="i" :value="i">
 												{{ i }}
@@ -49,7 +49,7 @@
 										</select>
 									</div>
 								</div>
-								<div v-if="isNPANXXDeck" class="my-4 w-1/3">
+								 <div v-if="isNPANXXDeck" class="my-4 w-1/3">
 									<label
 										for="indetermRateSelect"
 										class="block text-sm font-medium text-muted-foreground"
@@ -58,7 +58,7 @@
 									<select
 										id="indetermRateSelect"
 										v-model="indetermRateSelection"
-										class="mt-1 block w-full bg-foreground text-stone-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+										class="mt-1 block w-full bg-foreground text-stone-700 rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
 									>
 										<option value="default">
 											By selecting column
@@ -70,7 +70,7 @@
 											Using Intrastate Rate
 										</option>
 									</select>
-								</div>
+								</div> 
 								<div class="mt-2 overflow-auto max-h-80">
 									<table
 										class="min-w-full rounded-lg overflow-hidden"
@@ -90,12 +90,10 @@
 													<select
 														v-model="columnRoles[index]"
 														:class="{
-															'bg-white/50 text-background':
-																columnRoles[index] !== '',
 															'bg-foreground text-stone-700':
 																columnRoles[index] === '',
 														}"
-														class="block w-full rounded min-w-[200px] transition-colors duration-200 px-3 py-2"
+														class="rounded-md min-w-[200px] transition-colors duration-200 py-2"
 													>
 														<option value="">
 															Select Column Role

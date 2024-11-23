@@ -55,19 +55,19 @@
 				<!-- Dropdown Menu -->
 				<div
 					v-if="dropdownOpen"
-					class="fixed bottom-[72px] left-4 w-[240px] p-2 bg-background border border-muted rounded-lg shadow-lg z-50"
+					class="fixed bottom-[72px] left-4 w-[240px] p-2 bg-background border border-muted rounded-lg z-50"
 				>
 					<!-- Email -->
 					<div class="px-3 py-2 text-sm text-muted-foreground">
-						k.dean.jordan@gmail.com
+						{{ userStore.userEmail }}
 					</div>
 					
 					<!-- User Info -->
 					<div class="px-3 py-2 flex items-center space-x-3">
 						<div class="w-8 h-8 rounded-md bg-gradient-to-br from-accent/90 to-muted/80"></div>
 						<div>
-							<div class="text-sm font-medium">kdjordan</div>
-							<div class="text-xs text-muted-foreground">Free</div>
+							<div class="text-sm font-medium">{{ userStore.username }}</div>
+							<div class="text-xs text-muted-foreground">{{ userStore.currentPlan }}</div>
 						</div>
 					</div>
 
@@ -95,19 +95,21 @@
 				<div class="px-2 flex justify-center">
 					<button
 						@click="toggleDropdown"
-						class="flex items-center hover:bg-muted/50 rounded-md transition-all"
+						class="flex items-center hover:bg-muted/50 rounded-md transition-all overflow-hidden min-w-[32px] min-h-[32px] p-0"
 						:class="[
-							isOpen ? 'w-full space-x-3 p-2' : 'w-8'
+							isOpen ? 'w-full p-2 space-x-3' : 'w-8 h-8'
 						]"
 					>
-						<div class="w-8 h-8 rounded-md bg-gradient-to-br from-accent/80 to-muted"></div>
+						<div class="h-8 w-8 rounded-md bg-gradient-to-br from-accent/80 to-muted flex-shrink-0"></div>
 						<div v-if="isOpen" class="flex-grow text-left">
-							<div class="text-sm font-medium">kdjordan</div>
-							<div class="text-xs text-muted-foreground">Free</div>
+							<div class="text-sm text-foreground whitespace-nowrap">{{ userStore.username }}</div>
+							<div class="text-xs text-muted-foreground whitespace-nowrap">
+								{{ userStore.currentPlan === PlanTier.PRO ? 'Pro' : 'Free' }}
+							</div>
 						</div>
 						<ChevronUpDownIcon 
 							v-if="isOpen"
-							class="w-4 h-4 text-muted-foreground" 
+							class="w-4 h-4 text-muted-foreground"
 						/>
 					</button>
 				</div>
@@ -129,6 +131,7 @@
 	import { RouterLink } from 'vue-router';
 	import { ref } from 'vue';
 	import { useUserStore } from '@/stores/userStore';
+	import { PlanTier } from '../../types/app-types';
 	import {
 		DocumentCurrencyDollarIcon,
 		BarsArrowDownIcon,

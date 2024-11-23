@@ -42,18 +42,16 @@
 			</div>
 
 			<div class="text-center">
-				<button v-if="!dbStore.getAzReportsGenerated"
+				<button 
+					v-if="!dbStore.getAzReportsGenerated"
 					@click="handleReportsAction"
 					:disabled="!dbStore.getIsAZfull || isGeneratingReports"
-					:class="{
-						'text-background bg-foreground  hover:bg-muted/90 hover:text-foreground transition-all': dbStore.getIsAZfull && !isGeneratingReports,
-						'bg-muted/50 text-foreground/50 cursor-not-allowed': !dbStore.getIsAZfull || isGeneratingReports,
-						'pulse': isGeneratingReports,
-					}"
-					class="py-3 px-6 rounded-md transition-colors"
+					:class="[
+						'btn-secondary btn-lg',
+						isGeneratingReports && 'animate-pulse'
+					]"
 				>
-					<span v-if="isGeneratingReports">GENERATING REPORTS</span>
-					<span v-else>Get Reports</span>
+					{{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}
 				</button>
 			</div>
 		</div>

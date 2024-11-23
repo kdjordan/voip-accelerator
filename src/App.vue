@@ -9,7 +9,15 @@
     >
       <main class="flex-1">
         <div class="min-h-full flex items-center justify-center">
-          <router-view />
+          <router-view v-slot="{ Component }">
+            <transition
+              name="fade"
+              mode="out-in"
+              appear
+            >
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </div>
       </main>
       <TheFooter />
@@ -149,6 +157,17 @@
 	}
 	.wborder {
 		border: 10px solid white;
+	}
+
+	/* Add these transition classes */
+	.fade-enter-active,
+	.fade-leave-active {
+		transition: opacity 0.2s ease;
+	}
+
+	.fade-enter-from,
+	.fade-leave-to {
+		opacity: 0;
 	}
 
 </style>

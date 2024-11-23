@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col items-center w-full max-w-5xl min-h-[700px]">
+	<div class="flex flex-col items-center w-full max-w-5xl min-h-[400px]">
 		<div class="flex flex-col items-center w-full mb-8">
 			<h1 class="text-3xl mb-2  text-white">
 				US Pricing

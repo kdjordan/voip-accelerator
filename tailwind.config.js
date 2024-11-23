@@ -50,38 +50,42 @@ export default {
     function ({ addComponents }) {
       addComponents({
         '.btn': {
-          padding: '0.5rem 1rem',
-          fontWeight: '400',
-          borderRadius: '0.375rem',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-          transition: 'all 0.4s ease',
-          '&:hover': {
-            opacity: '75%'
-          }
+          '@apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50': {},
         },
         '.btn-primary': {
-          backgroundColor: 'hsl(220, 98%, 61%)',
-          color: '#fff',
-          '&:hover': {
-            backgroundColor: 'hsl(220, 98%, 50%)',
-          },
+          '@apply btn bg-accent text-white hover:bg-accent/90': {},
         },
         '.btn-secondary': {
-          backgroundColor: 'hsl(198, 60%, 50%)',
-          color: '#fff',
-          '&:hover': {
-            backgroundColor: 'hsl(198, 60%, 40%)',
-          },
+          '@apply btn bg-muted text-foreground hover:bg-muted/80': {},
         },
         '.btn-destructive': {
-          backgroundColor: 'hsl(0, 100%, 50%)',
-          color: '#fff',
-          '&:hover': {
-            backgroundColor: 'hsl(198, 60%, 40%)',
-          },
+          '@apply btn bg-destructive text-destructiveForeground hover:bg-destructive/90': {},
+        },
+        '.btn-outline': {
+          '@apply btn border border-foreground/20 bg-transparent hover:bg-muted/50': {},
+        },
+        '.btn-ghost': {
+          '@apply btn hover:bg-muted/50': {},
+        },
+        '.btn-link': {
+          '@apply btn text-accent underline-offset-4 hover:underline': {},
+        },
+        // Size variants
+        '.btn-sm': {
+          '@apply h-8 px-3 text-xs': {},
+        },
+        '.btn-lg': {
+          '@apply h-12 px-8 text-lg': {},
+        },
+        // Icon button variants
+        '.btn-icon': {
+          '@apply btn h-9 w-9 p-2': {},
+        },
+        '.btn-icon-sm': {
+          '@apply btn-icon h-7 w-7': {},
+        },
+        '.btn-icon-lg': {
+          '@apply btn-icon h-11 w-11': {},
         },
       });
     },
