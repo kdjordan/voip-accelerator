@@ -1,15 +1,7 @@
 import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
 import { defineStore } from 'pinia'
-import { resetReportApi } from '@/API/api';
+import { ReportState, type ReportStateType } from '../../types/app-types';
 
-// Define the report state map
-const ReportState = {
-  FILES: 'files',
-  CODE: 'code',
-  PRICING: 'pricing',
-} as const;
-
-type ReportStateType = typeof ReportState[keyof typeof ReportState];
 
 export const useDBstate = defineStore('dbStore', {
   state: () => ({

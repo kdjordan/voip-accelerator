@@ -147,5 +147,10 @@ export interface AZCodeReport {
   percentageNonMatched: number;
 }
 
-export type ReportStateType = 'files' | 'code' | 'pricing';
+export const ReportState = {
+  FILES: 'files',
+  CODE: 'code',
+  PRICING: 'pricing',
+}
+export type ReportStateType = typeof ReportState[keyof typeof ReportState];
 
