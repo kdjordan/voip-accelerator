@@ -16,12 +16,12 @@
 
 <script setup lang="ts">
 	import { ref } from 'vue';
-	import CodeReportAZ from './AZCodeReport.vue';
-	import PricingReportAZ from './AZPricingReport.vue';
+	import CodeReportAZ from './US/AZ/AZCodeReport.vue';
+	import PricingReportAZ from './US/AZ/AZPricingReport.vue';
 	import {
 		type AzCodeReport,
 		type AzPricingReport,
-	} from '../../types/app-types';
+	} from '../types/app-types';
 	import { useDBstate } from '@/stores/dbStore';
 	import { resetReportApi } from '@/API/api';
 	const dbStore = useDBstate();

@@ -1,24 +1,16 @@
 <template>
-	<div class="bg-background rounded-lg p-6 min-w-content">
-		<div class="mb-8 text-center">
-			<h1
-				class="text-5xl font-bold text-foreground uppercase inline-block"
-			>
-				AZ CODE REPORT
-			</h1>
-		</div>
-
+	<div class="rounded-lg p-6 min-w-content">
 		<div v-if="report" class="space-y-8">
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 				<div
 					v-for="file in fileKeys"
 					:key="file"
-					class="bg-gray-800 rounded-lg overflow-hidden shadow-lg"
+					class="rounded-lg overflow-hidden border border-fbBorder"
 				>
 					<h2
-						class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6"
+						class="py-3 text-xl text-center text-fbWhite px-6 border-b border-fbBorder"
 					>
-						<span class="text-gray-300 font-bold">{{
+						<span class="text-fbWhite ">{{
 							getFileName(file)
 						}}</span>
 					</h2>
@@ -26,18 +18,18 @@
 						<table class="w-full">
 							<tbody>
 								<tr class="border-b border-gray-700">
-									<td class="py-2 font-medium text-gray-400">
+									<td class="py-2  text-gray-400">
 										Total Codes:
 									</td>
-									<td class="py-2 text-right text-foreground">
+									<td class="py-2 text-right text-fbWhite">
 										{{ getTotalCodes(file) }}
 									</td>
 								</tr>
 								<tr class="border-b border-gray-700">
-									<td class="py-2 font-medium text-gray-400">
+									<td class="py-2  text-gray-400">
 										Total Destinations:
 									</td>
-									<td class="py-2 text-right text-foreground">
+									<td class="py-2 text-right">
 										{{ getTotalDestinations(file) }}
 									</td>
 								</tr>
@@ -45,7 +37,7 @@
 									<td class="py-2 font-medium text-gray-400">
 										Unique Destinations Percentage:
 									</td>
-									<td class="py-2 text-right text-foreground">
+									<td class="py-2 text-right">
 										{{ getUniqueDestinationsPercentage(file) }}%
 									</td>
 								</tr>
@@ -55,11 +47,11 @@
 				</div>
 			</div>
 
-			<div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+			<div class="rounded-lg overflow-hidden border border-fbBorder">
 				<h2
-					class="py-3 text-xl font-semibold text-center text-foreground bg-gradient-to-r from-gray-800 to-accent px-6"
+					class="py-3 text-xl text-center text-fbWhite px-6 border-b border-fbBorder"
 				>
-					<span class="text-gray-300 font-bold">Comparison</span>
+					<span class="text-fbWhite">Comparison</span>
 				</h2>
 				<div class="p-6">
 					<table class="w-full">
@@ -109,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-	import { type AzCodeReport } from '../../types/app-types';
+	import { type AzCodeReport } from '@/types/app-types';
 	import { resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';
 

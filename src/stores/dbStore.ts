@@ -1,6 +1,6 @@
-import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
+import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport, type AzCodeReport } from '../types/app-types';
 import { defineStore } from 'pinia'
-import { ReportState, type ReportStateType } from '../../types/app-types';
+import { ReportState, type ReportStateType } from '../types/app-types';
 
 
 export const useDBstate = defineStore('dbStore', {

@@ -10,8 +10,8 @@ export default {
     fontFamily: {
       // sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
       sans: ['Geist Sans', 'sans-serif'],
-      heading: ['Roboto', 'sans-serif'],
-      body: ['Open Sans', 'sans-serif'],
+      // heading: ['Roboto', 'sans-serif'],
+      // body: ['Open Sans', 'sans-serif'],
     },
     extend: {
       colors: {
@@ -23,6 +23,13 @@ export default {
         destructive: 'hsl(350, 100%, 50%)',
         destructiveForeground: 'hsl(0, 0%, 100%)',
         success: 'hsl(140, 100%, 40%)',
+        fbBlack: 'hsl(230, 20%, 10%)',
+        fbWhite: 'hsl(180, 10%, 80%)',
+        fbGreen: 'hsl(140, 100%, 40%)',
+        fbGray: 'hsl(220, 10%, 50%)',
+        fbHover: 'hsl(230, 15%, 20%)',
+        fbBorder: 'hsl(230, 15%, 40%)',
+        fbLightMuted: 'hsl(180, 5%, 70%)',
       },
       fontSize: {
         sizeSm: 'clamp(0.8rem, 0.17vi + 0.76rem, 0.89rem)',
@@ -75,17 +82,19 @@ export default {
           '@apply h-8 px-3 text-xs': {},
         },
         '.btn-lg': {
-          '@apply h-12 px-8 text-lg': {},
+          '@apply h-12 px-12 text-lg': {},
         },
-        // Icon button variants
-        '.btn-icon': {
-          '@apply btn h-9 w-9 p-2': {},
+        '.btn-accent': {
+          '@apply border border-accent/50 rounded-lg hover:bg-accent/50 transition-colors': {},
         },
-        '.btn-icon-sm': {
-          '@apply btn-icon h-7 w-7': {},
+        '.btn-destructive': {
+          '@apply border border-destructive/50 rounded-lg hover:bg-destructive/50 hover:text-fbBlack transition-colors': {},
         },
-        '.btn-icon-lg': {
-          '@apply btn-icon h-11 w-11': {},
+        '.btn-active': {
+          '@apply bg-fbWhite text-fbBlack': {},
+        },
+        '.btn-inactive': {
+          '@apply bg-fbHover text-fbWhite hover:bg-fbWhite hover:text-fbBlack transition-colors': {},
         },
         '.select-custom': {
           '@apply appearance-none pr-10': {},

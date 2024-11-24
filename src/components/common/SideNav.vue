@@ -3,13 +3,13 @@
 		<nav
 			:class="[
 				'sidebar',
-				'bg-background border-r border-muted fixed top-0 left-0 bottom-0',
+				'border-r border-muted fixed top-0 left-0 bottom-0',
 				isOpen ? 'w-[200px]' : 'w-[64px]'
 			]"
 		>
 			<h1 class="text-center py-2 mb-4">
 				<div
-					class="flex items-center text-accent px-4 mb-0"
+					class="flex items-center text-fbGreen px-4 mb-0"
 				>
 					<span class="text-3xl">V</span>
 					<BoltIcon class="w-8 h-8 -ml-1 flex-shrink-0" />
@@ -23,16 +23,16 @@
 				>
 					<RouterLink
 						:to="item.to"
-						class="flex items-center py-2 px-3 rounded-md transition-colors hover:bg-muted/50 overflow-hidden"
+						class="flex items-center py-2 px-3 rounded-md transition-colors hover:bg-fbHover overflow-hidden"
 						:class="[
 							isOpen ? 'space-x-2' : 'justify-center',
-							{ 'bg-muted/90': $route.path === item.to }
+							{ 'bg-fbHover': $route.path === item.to }
 						]"
 					>
-						<component :is="item.icon" class="w-5 h-5 text-foreground flex-shrink-0" />
+						<component :is="item.icon" class="w-5 h-5 text-fbWhite flex-shrink-0" />
 						<span 
 							v-if="isOpen" 
-							class="text-foreground whitespace-nowrap"
+							class="text-fbWhite whitespace-nowrap"
 						>{{ item.name }}</span>
 					</RouterLink>
 				</li>
@@ -41,11 +41,11 @@
 			<div class="px-2">
 				<button
 					@click="toggleSidebar"
-					class="flex items-center justify-center h-8 w-8 rounded-md border border-white/20 hover:bg-muted/80 transition-all"
+					class="flex items-center justify-center h-8 w-8 rounded-md border border-fbBorder hover:bg-fbHover transition-all"
 					:class="[isOpen ? 'ml-auto' : 'mx-auto']"
 				>
 					<ChevronLeftIcon
-						class="w-5 h-5 text-foreground transition-transform"
+						class="w-5 h-5 text-fbWhite transition-transform"
 						:class="{ 'rotate-180': !isOpen }"
 					/>
 				</button>
@@ -55,38 +55,38 @@
 				<!-- Dropdown Menu -->
 				<div
 					v-if="dropdownOpen"
-					class="fixed bottom-[72px] left-4 w-[240px] p-2 bg-background border border-muted rounded-lg z-50"
+					class="fixed bottom-[72px] left-4 w-[240px] p-2 bg-fbBlack border border-fbBorder/70 rounded-lg z-50"
 				>
 					<!-- Email -->
-					<div class="px-3 py-2 text-sm text-muted-foreground">
+					<div class="px-3 py-2 text-sm text-fbLightMuted">
 						{{ userStore.userEmail }}
 					</div>
 					
 					<!-- User Info -->
 					<div class="px-3 py-2 flex items-center space-x-3">
-						<div class="w-8 h-8 rounded-md bg-gradient-to-br from-accent/90 to-muted/80"></div>
+						<div class="w-8 h-8 rounded-md bg-gradient-to-br from-fbGreen/90 to-fbGray/80"></div>
 						<div>
-							<div class="text-sm font-medium">{{ userStore.username }}</div>
-							<div class="text-xs text-muted-foreground">{{ userStore.currentPlan }}</div>
+							<div class="text-sizeSm">{{ userStore.username }}</div>
+							<div class="text-xs text-fbLightMuted">{{ userStore.currentPlan }}</div>
 						</div>
 					</div>
 
-					<div class="border-t border-muted my-2"></div>
+					<div class="border-t border-fbBorder my-2"></div>
 
 					<!-- Menu Items -->
-					<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md flex items-center space-x-2">
+					<button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md flex items-center space-x-2">
 						<CreditCardIcon class="w-4 h-4 text-foreground" />
 						<span>Billing</span>
 					</button>
-					<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md flex items-center space-x-2">
-						<ArrowRightOnRectangleIcon class="w-4 h-4 text-foreground" />
+					<button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md flex items-center space-x-2">
+						<ArrowRightOnRectangleIcon class="w-4 h-4 text-fbWhite" />
 						<span>Sign Out</span>
 					</button>
 
-					<div class="border-t border-muted my-2"></div>
+					<div class="border-t border-fbBorder my-2"></div>
 
 					<!-- Upgrade Plan -->
-					<button class="w-full text-left px-3 py-2 hover:bg-muted/50 rounded-md">
+					<button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md">
 						Upgrade Plan
 					</button>
 				</div>
@@ -95,14 +95,14 @@
 				<div class="px-2 flex justify-center">
 					<button
 						@click="toggleDropdown"
-						class="flex items-center hover:bg-muted/50 rounded-md transition-all overflow-hidden min-w-[32px] min-h-[32px] p-0"
+						class="flex items-center hover:bg-fbHover rounded-md transition-all overflow-hidden min-w-[32px] min-h-[32px] p-0"
 						:class="[
 							isOpen ? 'w-full p-2 space-x-3' : 'w-8 h-8'
 						]"
 					>
-						<div class="h-8 w-8 rounded-md bg-gradient-to-br from-accent/80 to-muted flex-shrink-0"></div>
+						<div class="h-8 w-8 rounded-md bg-gradient-to-br from-accent/80 to-fbBlack flex-shrink-0"></div>
 						<div v-if="isOpen" class="flex-grow text-left">
-							<div class="text-sm text-foreground whitespace-nowrap">{{ userStore.username }}</div>
+							<div class="text-sm text-fbWhite whitespace-nowrap">{{ userStore.username }}</div>
 							<div class="text-xs text-muted-foreground whitespace-nowrap">
 								{{ userStore.currentPlan === PlanTier.PRO ? 'Pro' : 'Free' }}
 							</div>
@@ -117,7 +117,7 @@
 		</nav>
 		<!-- Add this new border element -->
 		<div 
-			class="fixed top-0 bottom-0 w-[12px] hover:bg-muted transition-colors cursor-ew-resize"
+			class="ml-2 fixed top-0 bottom-0 w-[8px] hover:bg-fbHover transition-colors cursor-ew-resize"
 			:style="{ 
 				left: isOpen ? '194px' : '58px',  /* Adjusted further left to keep centered on border */
 				transform: 'translateX(0)',

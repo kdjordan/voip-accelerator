@@ -1,4 +1,4 @@
-import { type StandardizedData, DBName } from './../../types/app-types';
+import { type StandardizedData, DBName } from '../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
 import { openDB } from 'idb';
 

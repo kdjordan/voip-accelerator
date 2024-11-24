@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="flex min-h-screen bg-background text-foreground">
+  <div id="app" class="flex min-h-screen bg-fbBlack text-fbWhite font-sans">
     <SideNav class="z-20" />
     <div 
       class="flex-1 flex flex-col transition-all duration-300"
@@ -8,7 +8,7 @@
       ]"
     >
       <main class="flex-1">
-        <div class="min-h-full flex items-center justify-center">
+        <div class="min-h-full flex items-center justify-center w-full max-w-6xl mx-auto">
           <router-view v-slot="{ Component }">
             <transition
               name="fade"
@@ -26,14 +26,14 @@
 </template>
 
 <script setup>
-	import SideNav from './components/SideNav.vue';
-	import TheFooter from './components/TheFooter.vue';
+	import SideNav from './components/common/SideNav.vue';
+	import TheFooter from './components/common/TheFooter.vue';
 	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
 	import { useDBstate } from '@/stores/dbStore';
 	import { useUserStore } from '@/stores/userStore';
 	import { deleteAllDbsApi } from '@/API/api';
-	import { PlanTier } from '../types/app-types';
+	import { PlanTier } from './types/app-types';
 
 	const dbStore = useDBstate();
 	const userStore = useUserStore();
@@ -46,7 +46,7 @@
 
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
-		// setUser('free', true, ['az']);
+		setUser('free', true, ['az']);
 	});
 
 	onBeforeUnmount(() => {

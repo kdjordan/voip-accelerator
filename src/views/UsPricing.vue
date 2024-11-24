@@ -54,9 +54,9 @@
 
 <script setup lang="ts">
 	import { ref } from 'vue';
-	import { DBName } from '../../types/app-types';
+	import { DBName } from '../types/app-types';
 	import UploadComponent from '../components/UploadComponent.vue';
-	import GenerateReport from '../components/AZPricingReport.vue';
+	import GenerateReport from '../components/US/AZ/AZPricingReport.vue';
 	import useIndexedDB from '../composables/useIndexDB';
 	import { resetReportApi } from '@/API/api';
 	import { useDBstate } from '@/stores/dbStore';

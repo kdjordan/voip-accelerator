@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { UserState, UserInfo, PlanTier, PlanFeatures } from '../../types/app-types'
+import { UserState, UserInfo, PlanTier, PlanFeatures } from '../types/app-types'
 
 export const useUserStore = defineStore('userStore', {
   state: (): UserState => ({

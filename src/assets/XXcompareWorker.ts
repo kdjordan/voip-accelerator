@@ -1,4 +1,4 @@
-import { type StandardizedData } from "../../types/app-types";
+import { type StandardizedData } from "../types/app-types";
 
 self.onmessage = function(event) {
   if (event.data.type === 'start') {

@@ -6,7 +6,7 @@ import {
 	type USStandardizedData,
 	DBName,
 	IndetermRateType
-} from '../../types/app-types';
+} from '../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
 import useIndexedDB from './useIndexDB';
 

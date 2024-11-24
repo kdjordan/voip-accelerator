@@ -4,7 +4,7 @@ import {
   type AZReportsInput,
   type NonMatchingCode,
   type AzCodeReport
-} from '../../../types/app-types';
+} from '../../types/app-types';
 // type DialCodeMap = Map<number, { destName: string; rate: number }>;
 
 // Respond to messages from main thread

@@ -1,6 +1,6 @@
 import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
 import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
-import { type AZReportsInput, type AzPricingReport, type AzCodeReport } from '../../types/app-types';
+import { type AZReportsInput, type AzPricingReport, type AzCodeReport } from '../types/app-types';
 import { useDBstate } from '@/stores/dbStore';
 
 export async function resetReportApi(reportType: string) {

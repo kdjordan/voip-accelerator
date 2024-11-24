@@ -70,7 +70,7 @@
 				<button
 					v-if="props.disabled"
 					@click="dumpFile"
-					class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2"
+					class="border border-destructive/70 hover:bg-destructive/70 hover:text-fbBlack transition-colors text-xl rounded-md px-2"
 				>
 				&times;
 				</button>
@@ -92,9 +92,9 @@
 </template>
 
 <script setup lang="ts">
-	import TheModal from './TheModal.vue';
-	import { ColumnRolesEvent, DBName } from '../../types/app-types';
-	import UploadIcon from './UploadIcon.vue';
+	import TheModal from './common/TheModal.vue';
+	import { ColumnRolesEvent, DBName } from '../types/app-types';
+	import UploadIcon from './icons/UploadIcon.vue';
 	import { ref, watch, computed } from 'vue';
 	import useCSVProcessing from '../composables/useCsvFiles';
 	import { useDBstate } from '@/stores/dbStore';
