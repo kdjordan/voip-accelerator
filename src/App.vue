@@ -47,6 +47,9 @@
 	onMounted(() => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
 		setUser('free', true, ['az']);
+
+		// Load LERG data
+		// loadLergData('/path/to/lerg.txt');
 	});
 
 	onBeforeUnmount(() => {

@@ -1,4 +1,4 @@
-import { AZReportsInput, AZCodeReport } from '../../types/app-types';
+import { AZReportsInput, AZCodeReport } from '@/types/app-types';
 
 self.addEventListener('message', (event) => {
   const report: AZCodeReport = generateCodeReport(event.data);

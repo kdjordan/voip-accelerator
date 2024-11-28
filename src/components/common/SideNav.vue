@@ -55,7 +55,8 @@
 				<!-- Dropdown Menu -->
 				<div
 					v-if="dropdownOpen"
-					class="fixed bottom-[72px] left-4 w-[240px] p-2 bg-fbBlack border border-fbBorder/70 rounded-lg z-50"
+					ref="dropdownRef"
+					class="dropdown fixed bottom-[72px] left-4 w-[240px] p-2 bg-fbBlack border border-fbBorder/70 rounded-lg z-50"
 				>
 					<!-- Email -->
 					<div class="px-3 py-2 text-sm text-fbLightMuted">
@@ -95,6 +96,7 @@
 				<div class="px-2 flex justify-center">
 					<button
 						@click="toggleDropdown"
+						@click.stop
 						class="flex items-center hover:bg-fbHover rounded-md transition-all overflow-hidden min-w-[32px] min-h-[32px] p-0"
 						:class="[
 							isOpen ? 'w-full p-2 space-x-3' : 'w-8 h-8'
@@ -129,7 +131,7 @@
 
 <script setup lang="ts">
 	import { RouterLink } from 'vue-router';
-	import { ref } from 'vue';
+	import { ref, onMounted, onBeforeUnmount } from 'vue';
 	import { useUserStore } from '@/stores/userStore';
 	import { PlanTier } from '../../types/app-types';
 	import {
@@ -145,6 +147,7 @@
 
 	const userStore = useUserStore();
 	const isOpen = ref(userStore.isSideNavOpen);
+	const dropdownRef = ref<HTMLElement | null>(null);
 	const dropdownOpen = ref(false);
 
 	function toggleSidebar() {
@@ -152,8 +155,15 @@
 		userStore.setSideNavState(isOpen.value);
 	}
 
-	function toggleDropdown() {
+	function toggleDropdown(event: MouseEvent) {
+		event.stopPropagation();
 		dropdownOpen.value = !dropdownOpen.value;
+	}
+
+	function handleClickOutside(event: MouseEvent) {
+		if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+			dropdownOpen.value = false;
+		}
 	}
 
 	const items = ref([
@@ -198,6 +208,14 @@
 			icon: PercentBadgeIcon,
 		},
 	]);
+
+	onMounted(() => {
+		document.body.addEventListener('click', handleClickOutside);
+	});
+
+	onBeforeUnmount(() => {
+		document.body.removeEventListener('click', handleClickOutside);
+	});
 </script>
 
 <style scoped>

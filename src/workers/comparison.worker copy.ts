@@ -1,5 +1,5 @@
 // comparison.worker.ts
-import { type ComparisonReport } from '../types/app-types';
+import { type ComparisonReport } from '@/types/app-types';
 
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {

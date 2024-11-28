@@ -47,7 +47,7 @@ import {
 } from "@/types/app-types";
 import UploadComponent from "@/components/UploadComponent.vue";
 import useIndexedDB from "@/composables/useIndexDB";
-import { makeAzReportsApi, resetReportApi } from "@/API/api";
+import { makeAzReportsApi } from "@/API/api";
 import { useDBstate } from "@/stores/dbStore";
 
 const dbStore = useDBstate();

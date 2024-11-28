@@ -100,6 +100,34 @@ export interface NonMatchingCode {
   file: string;
 }
 
+export interface ComparisonReport {
+  higherRatesForFile1: {
+    dialCode: number;
+    destName: string;
+    rateFile1: number;
+    rateFile2: number;
+    percentageDifference: number;
+  }[];
+  higherRatesForFile2: {
+    dialCode: number;
+    destName: string;
+    rateFile1: number;
+    rateFile2: number;
+    percentageDifference: number;
+  }[];
+  sameRates: Record<number, {
+    destName: string;
+    rateFile1: number;
+    rateFile2: number;
+  }>;
+  nonMatchingCodes: {
+    dialCode: number;
+    destName: string;
+    rate: number;
+    file: string;
+  }[];
+}
+
 export type FileUpload = {
   dbName: string;
   fileName: string;
@@ -154,3 +182,7 @@ export const ReportState = {
 }
 export type ReportStateType = typeof ReportState[keyof typeof ReportState];
 
+export type LergData = {
+  key: string; // or another appropriate property name
+  state: string;
+};
