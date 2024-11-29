@@ -25,17 +25,17 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 	import SideNav from './components/common/SideNav.vue';
 	import TheFooter from './components/common/TheFooter.vue';
-	import { openDB } from 'idb';
 	import { onMounted, onBeforeUnmount } from 'vue';
-	import { useDBstate } from '@/stores/dbStore';
 	import { useUserStore } from '@/stores/userStore';
 	import { deleteAllDbsApi } from '@/API/api';
-	import { PlanTier } from './types/app-types';
+	
+	import { setUser} from '@/lib/utils'
+import { DBName } from './types/app-types';
 
-	const dbStore = useDBstate();
+	//used for tracking SideNav open or closed
 	const userStore = useUserStore();
 
 	const dbNames = ['az', 'us', 'can']; // List your database names here
@@ -44,108 +44,15 @@
 		deleteAllDbsApi(dbNames);
 	};
 
-	onMounted(() => {
+	onMounted(async () => {
 		window.addEventListener('beforeunload', handleBeforeUnload);
-		setUser('free', true, ['az']);
-
-		// Load LERG data
-		// loadLergData('/path/to/lerg.txt');
+		setUser('free', true, [DBName.AZ]);
 	});
 
 	onBeforeUnmount(() => {
 		window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
-	// Function to process CSV text into an array of objects
-	function processData(csvText, dataType) {
-		const rows = csvText.trim().split('\n');
-		return rows.map((row, index) => {
-			const columns = row.split(',');
-			if (dataType === 'az') {
-				const [destName, dialCode, rate] = columns;
-				return {
-					destName: destName.trim(),
-					dialCode: Number(dialCode.trim()),
-					rate: Number(rate.trim()),
-				};
-			} else if (dataType === 'us') {
-				const [, npa, nxx, interRate, intraRate, ijRate] = columns;
-				let processedNpa = npa.trim();
-				if (processedNpa.startsWith('1') && processedNpa.length === 4) {
-					processedNpa = processedNpa.slice(1);
-				}
-				return {
-					npa: Number(processedNpa),
-					nxx: Number(nxx.trim()),
-					interRate: Number(interRate.trim()),
-					intraRate: Number(intraRate.trim()),
-					ijRate: Number(ijRate.trim()),
-				};
-			}
-		});
-	}
-
-	function setUser(plan, populateDb, dataTypes = []) {
-		const userInfo = {
-			email: plan === 'free' ? 'free@example.com' : 'pro@example.com',
-			username: plan === 'free' ? 'FreeUser' : 'ProUser',
-				planTier: plan === 'free' ? PlanTier.FREE : PlanTier.PRO,
-		};
-		userStore.setUser(userInfo);
-		if (populateDb) {
-			dataTypes.forEach(dataType => loadDb(dataType));
-		}
-	}
-
-	async function loadDb(dataType) {
-		try {
-			const dbName = dataType === 'az' ? 'az' : 'us';
-			const db = await openDB(dbName, 1, {
-				upgrade(db) {
-					if (dataType === 'az') {
-						db.createObjectStore('AZtest1.csv', { keyPath: 'id', autoIncrement: true });
-						db.createObjectStore('AZtest2.csv', { keyPath: 'id', autoIncrement: true });
-					} else if (dataType === 'us') {
-						db.createObjectStore('npa_nxx.csv', { keyPath: 'id', autoIncrement: true });
-					}
-				},
-			});
-
-			const DBstore = useDBstate();
-
-			if (dataType === 'az') {
-				const responseFile1 = await fetch('/src/data/AZtest1.csv');
-				const csvTextFile1 = await responseFile1.text();
-				DBstore.addFileUploaded('az1', 'az', 'AZtest1.csv');
-
-				const responseFile2 = await fetch('/src/data/AZtest2.csv');
-				const csvTextFile2 = await responseFile2.text();
-				DBstore.addFileUploaded('az2', 'az', 'AZtest2.csv');
-
-				const dataFile1 = processData(csvTextFile1, 'az');
-				await storeData(db, 'AZtest1.csv', dataFile1);
-
-				const dataFile2 = processData(csvTextFile2, 'az');
-				await storeData(db, 'AZtest2.csv', dataFile2);
-			} else if (dataType === 'us') {
-				const responseFile = await fetch('/src/data/npa_nxx.csv');
-				const csvTextFile = await responseFile.text();
-				DBstore.addFileUploaded('us1', 'us', 'npa_nxx.csv');
-
-				const dataFile = processData(csvTextFile, 'us');
-				await storeData(db, 'npa_nxx.csv', dataFile);
-			}
-		} catch (error) {
-			console.error(`Error loading ${dataType} CSV into IndexedDB:`, error);
-		}
-	}
-	// Function to store data in the specified object store
-	async function storeData(db, storeName, data) {
-		const tx = db.transaction(storeName, 'readwrite');
-		const store = tx.objectStore(storeName);
-		data.forEach((item) => store.put(item));
-		await tx.done; // Complete the transaction
-	}
 </script>
 
 <style>

@@ -1,7 +1,8 @@
 import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
 import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
-import { type AZReportsInput, type AzPricingReport, type AzCodeReport } from '../types/app-types';
+import { type AZReportsInput, type AzPricingReport, type AzCodeReport, DBName } from '@/types/app-types';
 import { useDBstate } from '@/stores/dbStore';
+
 
 export async function resetReportApi(reportType: string) {
   await deleteDbApi(reportType);
@@ -19,13 +20,13 @@ async function deleteDbApi(dbName: string) {
 
 export async function deleteAllDbsApi(theDbs: string[]) {
   try {
-    theDbs.forEach(db => {
-      deleteIndexedDBDatabase(db)
-    })
+    for (const db of theDbs) {
+      await deleteIndexedDBDatabase(db);
+    }
   } catch (e) {
-    console.log(`error deleting db in API`, e)
+    console.log(`error deleting db in API`, e);
   }
-  forceRefreshApi()
+  forceRefreshApi();
 }
 
 export async function makeAzReportsApi(input: AZReportsInput): Promise<{ pricingReport: AzPricingReport, codeReport: AzCodeReport }> {
@@ -49,3 +50,4 @@ export async function makeAzReportsApi(input: AZReportsInput): Promise<{ pricing
 function forceRefreshApi() {
   window.location.reload();
 }
+

@@ -8,7 +8,8 @@ export enum AZColumnRole {
 export enum DBName {
   AZ = 'az',
   US = 'us',
-  CAN = 'can'
+  CAN = 'can',
+  USCodes = 'USCodes'
 }
 
 export enum IndetermRateType {
@@ -183,6 +184,8 @@ export const ReportState = {
 export type ReportStateType = typeof ReportState[keyof typeof ReportState];
 
 export type LergData = {
-  key: string; // or another appropriate property name
-  state: string;
+  npanxx: number;
+  name: string; // or another appropriate property name
+  npa: number;
+  nxx: number;
 };

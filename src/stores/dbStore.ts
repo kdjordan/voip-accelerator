@@ -2,7 +2,6 @@ import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport
 import { defineStore } from 'pinia'
 import { ReportState, type ReportStateType } from '../types/app-types';
 
-
 export const useDBstate = defineStore('dbStore', {
   state: () => ({
     globalDBVersion: 1,
