@@ -1,5 +1,11 @@
-import { type UploadedFileTracker, type FileUpload, DBName, type AzPricingReport, type AzCodeReport } from '../types/app-types';
-import { defineStore } from 'pinia'
+import {
+  type UploadedFileTracker,
+  type FileUpload,
+  DBName,
+  type AzPricingReport,
+  type AzCodeReport,
+} from '../types/app-types';
+import { defineStore } from 'pinia';
 import { ReportState, type ReportStateType } from '../types/app-types';
 
 export const useDBstate = defineStore('dbStore', {
@@ -15,9 +21,9 @@ export const useDBstate = defineStore('dbStore', {
     activeReportAZ: ReportState.FILES as ReportStateType,
     activeReportUS: ReportState.FILES as ReportStateType,
   }),
-  
+
   getters: {
-    checkFileNameAvailable: (state) => {
+    checkFileNameAvailable: state => {
       return (fileName: string) => {
         for (const fileUpload of state.filesUploaded.values()) {
           if (fileUpload.fileName === fileName) {
@@ -27,28 +33,33 @@ export const useDBstate = defineStore('dbStore', {
         return false;
       };
     },
-    isComponentFileUploading: (state) => (componentName: string): boolean => {
-      return componentName === state.componentFileIsUploading
-    },
+    isComponentFileUploading:
+      state =>
+      (componentName: string): boolean => {
+        return componentName === state.componentFileIsUploading;
+      },
     //will be disabled if componentName had is a key of filesUploaded
-    isComponentDisabled: (state) => (componentName: string): boolean => {
-      for (const [key,] of state.filesUploaded) {
-        if (key === componentName) {
-          return true;
+    isComponentDisabled:
+      state =>
+      (componentName: string): boolean => {
+        for (const [key] of state.filesUploaded) {
+          if (key === componentName) {
+            return true;
+          }
         }
-      }
-      return false;
-    },
-    getStoreNameByComponent: (state) => (componentName: string): string => {
-      for (const [key, value] of state.filesUploaded) {
-        if (key === componentName) {
-          return value.fileName
+        return false;
+      },
+    getStoreNameByComponent:
+      state =>
+      (componentName: string): string => {
+        for (const [key, value] of state.filesUploaded) {
+          if (key === componentName) {
+            return value.fileName;
+          }
         }
-      }
-      return '';
-
-    },
-    getIsAZfull: (state) => {
+        return '';
+      },
+    getIsAZfull: state => {
       let count = 0;
       for (const file of state.filesUploaded.values()) {
         if (file.dbName === 'az') {
@@ -67,26 +78,26 @@ export const useDBstate = defineStore('dbStore', {
     getUSFileNames(): string[] {
       return this.getFileNamesForDB(DBName.US);
     },
-    getFileCountForDB: (state) => (dbName: DBName) => {
+    getFileCountForDB: state => (dbName: DBName) => {
       return Array.from(state.filesUploaded.values()).filter(file => file.dbName === dbName).length;
     },
-    getFileNamesForDB: (state) => (dbName: DBName) => {
+    getFileNamesForDB: state => (dbName: DBName) => {
       return Array.from(state.filesUploaded.values())
         .filter(file => file.dbName === dbName)
         .map(file => file.fileName);
     },
-    getAllUploadedFiles: (state) => {
+    getAllUploadedFiles: state => {
       return Array.from(state.filesUploaded.entries()).map(([componentName, file]) => ({
         componentName,
         dbName: file.dbName,
-        fileName: file.fileName
+        fileName: file.fileName,
       }));
     },
-    getAzReportsGenerated: (state) => state.azReportsGenerated,
-    getAzPricingReport: (state) => state.azPricingReport,
-    getAzCodeReport: (state) => state.azCodeReport,
-    getActiveReportAZ: (state) => state.activeReportAZ,
-    getActiveReportUS: (state) => state.activeReportUS,
+    getAzReportsGenerated: state => state.azReportsGenerated,
+    getAzPricingReport: state => state.azPricingReport,
+    getAzCodeReport: state => state.azCodeReport,
+    getActiveReportAZ: state => state.activeReportAZ,
+    getActiveReportUS: state => state.activeReportUS,
   },
   actions: {
     async resetAzReportInStore() {
@@ -124,8 +135,8 @@ export const useDBstate = defineStore('dbStore', {
       this.globalFileIsUploading = isUploading;
     },
     incrementGlobalDBVersion() {
-      this.globalDBVersion++
-      console.log('updatd globalDBVersion ', this.globalDBVersion)
+      this.globalDBVersion++;
+      console.log('updatd globalDBVersion ', this.globalDBVersion);
     },
     addFileUploaded(componentName: string, dbName: DBName, fileName: string) {
       if (this.filesUploaded.has(componentName)) {
@@ -172,5 +183,4 @@ export const useDBstate = defineStore('dbStore', {
       this.activeReportUS = report;
     },
   },
-
-})
+});

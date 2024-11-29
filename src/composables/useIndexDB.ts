@@ -1,6 +1,6 @@
-import { type StandardizedData, DBName } from "@/types/app-types";
-import { useDBstate } from "@/stores/dbStore";
-import { openDB } from "idb";
+import { type StandardizedData, DBName } from '@/types/app-types';
+import { useDBstate } from '@/stores/dbStore';
+import { openDB } from 'idb';
 
 const DBstore = useDBstate();
 
@@ -11,26 +11,26 @@ export default function useIndexedDB() {
     fileName: string,
     componentName: string
   ): Promise<void> {
-    console.log("storing");
+    console.log('storing');
     try {
       const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
         upgrade(db) {
           // Perform upgrade actions if needed
-          console.log("Upgrade needed for IndexedDB");
+          console.log('Upgrade needed for IndexedDB');
           DBstore.setGlobalFileIsUploading(true);
 
           if (!db.objectStoreNames.contains(fileName)) {
             db.createObjectStore(fileName, {
-              keyPath: "id",
+              keyPath: 'id',
               autoIncrement: true,
             });
           }
         },
       });
 
-      const transaction = db.transaction(fileName, "readwrite");
+      const transaction = db.transaction(fileName, 'readwrite');
       const store = transaction.objectStore(fileName);
-      data.forEach((row) => {
+      data.forEach(row => {
         store.add(row);
       });
 
@@ -44,18 +44,14 @@ export default function useIndexedDB() {
       transaction.onerror = () => {
         DBstore.setGlobalFileIsUploading(false);
         DBstore.setComponentFileIsUploading(undefined);
-        console.error("Transaction error:", transaction.error);
+        console.error('Transaction error:', transaction.error);
       };
     } catch (error) {
-      console.error("Error opening IndexedDB:", error);
+      console.error('Error opening IndexedDB:', error);
     }
   }
 
-  async function loadFromIndexedDB(
-    dbName: string,
-    storeName: string,
-    DBversion: number
-  ): Promise<StandardizedData[]> {
+  async function loadFromIndexedDB(dbName: string, storeName: string, DBversion: number): Promise<StandardizedData[]> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(dbName, DBversion);
 
@@ -64,7 +60,7 @@ export default function useIndexedDB() {
         if (db) {
           if (!db.objectStoreNames.contains(storeName)) {
             db.createObjectStore(storeName, {
-              keyPath: "id",
+              keyPath: 'id',
               autoIncrement: true,
             });
           }
@@ -74,7 +70,7 @@ export default function useIndexedDB() {
       request.onsuccess = function (event) {
         const db = (event.target as IDBOpenDBRequest).result;
         if (db) {
-          const transaction = db.transaction(storeName, "readonly");
+          const transaction = db.transaction(storeName, 'readonly');
           const store = transaction.objectStore(storeName);
           const data: StandardizedData[] = [];
 
@@ -92,23 +88,20 @@ export default function useIndexedDB() {
             db.close();
           };
         } else {
-          reject(new Error("Failed to open IndexedDB"));
+          reject(new Error('Failed to open IndexedDB'));
         }
       };
 
       request.onerror = function (event) {
         const requestError = (event.target as IDBOpenDBRequest).error;
-        console.error("IndexedDB error:", requestError);
+        console.error('IndexedDB error:', requestError);
         reject(requestError);
       };
     });
   }
 
-  async function deleteObjectStore(
-    dbName: string,
-    objectStoreName: string
-  ): Promise<void> {
-    console.log("called delete", dbName, objectStoreName);
+  async function deleteObjectStore(dbName: string, objectStoreName: string): Promise<void> {
+    console.log('called delete', dbName, objectStoreName);
     try {
       // Open the database
       const db = await openDB(dbName, undefined);
@@ -135,12 +128,10 @@ export default function useIndexedDB() {
         // Close the upgraded database connection
         upgradeDb.close();
       } else {
-        console.log(
-          `Object store "${objectStoreName}" does not exist in database "${dbName}".`
-        );
+        console.log(`Object store "${objectStoreName}" does not exist in database "${dbName}".`);
       }
     } catch (error) {
-      console.error("Error deleting object store:", error);
+      console.error('Error deleting object store:', error);
       throw error; // Rethrow the error to handle it at the caller level if needed
     }
   }

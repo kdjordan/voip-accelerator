@@ -2,20 +2,20 @@ export enum AZColumnRole {
   Destination = 'destName',
   DialCode = 'dialCode',
   Rate = 'rate',
-  SelectRole = '' // This will represent our "Select Column Role" option
+  SelectRole = '', // This will represent our "Select Column Role" option
 }
 
 export enum DBName {
   AZ = 'az',
   US = 'us',
   CAN = 'can',
-  USCodes = 'USCodes'
+  USCodes = 'USCodes',
 }
 
 export enum IndetermRateType {
   DEFAULT = 'default',
   INTER = 'inter',
-  INTRA = 'intra'
+  INTRA = 'intra',
 }
 
 export interface ColumnRolesEvent {
@@ -28,8 +28,8 @@ export interface ColumnRolesEvent {
 export interface AZReportsInput {
   fileName1: string;
   fileName2: string;
-  file1Data: AZStandardizedData[]; 
-  file2Data: AZStandardizedData[]; 
+  file1Data: AZStandardizedData[];
+  file2Data: AZStandardizedData[];
 }
 
 export interface AZStandardizedData {
@@ -64,7 +64,6 @@ export interface ConsolidatedData {
   rateFile2: number;
   percentageDifference: number;
 }
-
 
 export interface AzPricingReport {
   higherRatesForFile1: ConsolidatedData[];
@@ -116,11 +115,14 @@ export interface ComparisonReport {
     rateFile2: number;
     percentageDifference: number;
   }[];
-  sameRates: Record<number, {
-    destName: string;
-    rateFile1: number;
-    rateFile2: number;
-  }>;
+  sameRates: Record<
+    number,
+    {
+      destName: string;
+      rateFile1: number;
+      rateFile2: number;
+    }
+  >;
   nonMatchingCodes: {
     dialCode: number;
     destName: string;
@@ -138,7 +140,7 @@ export type UploadedFileTracker = Map<string, FileUpload>;
 
 export enum PlanTier {
   FREE = 'free',
-  PRO = 'pro'
+  PRO = 'pro',
 }
 
 export interface PlanFeatures {
@@ -147,7 +149,6 @@ export interface PlanFeatures {
   prioritySupport: boolean;
   // Add more features as needed
 }
-
 
 export interface UserInfo {
   email: string;
@@ -180,12 +181,12 @@ export const ReportState = {
   FILES: 'files',
   CODE: 'code',
   PRICING: 'pricing',
-}
-export type ReportStateType = typeof ReportState[keyof typeof ReportState];
+};
+export type ReportStateType = (typeof ReportState)[keyof typeof ReportState];
 
 export type LergData = {
   npanxx: number;
-  name: string; // or another appropriate property name
+  name: string;
   npa: number;
   nxx: number;
 };

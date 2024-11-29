@@ -1,11 +1,12 @@
 <template>
-  <div id="app" class="flex min-h-screen bg-fbBlack text-fbWhite font-sans">
+  <div
+    id="app"
+    class="flex min-h-screen bg-fbBlack text-fbWhite font-sans"
+  >
     <SideNav class="z-20" />
-    <div 
+    <div
       class="flex-1 flex flex-col transition-all duration-300"
-      :class="[
-        userStore.isSideNavOpen ? 'ml-[200px]' : 'ml-[64px]'
-      ]"
+      :class="[userStore.isSideNavOpen ? 'ml-[200px]' : 'ml-[64px]']"
     >
       <main class="flex-1">
         <div class="min-h-full flex items-center justify-center w-full max-w-6xl mx-auto">
@@ -26,58 +27,58 @@
 </template>
 
 <script setup lang="ts">
-	import SideNav from './components/common/SideNav.vue';
-	import TheFooter from './components/common/TheFooter.vue';
-	import { onMounted, onBeforeUnmount } from 'vue';
-	import { useUserStore } from '@/stores/userStore';
-	import { deleteAllDbsApi } from '@/API/api';
-	
-	import { setUser} from '@/lib/utils'
+import SideNav from './components/common/SideNav.vue';
+import TheFooter from './components/common/TheFooter.vue';
+import { onMounted, onBeforeUnmount } from 'vue';
+import { useUserStore } from '@/stores/userStore';
+import { deleteAllDbsApi } from '@/API/api';
+import { setUser, initializeLergData } from '@/utils/utils';
 import { DBName } from './types/app-types';
 
-	//used for tracking SideNav open or closed
-	const userStore = useUserStore();
+const userStore = useUserStore();
+const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.USCodes];
 
-	const dbNames = ['az', 'us', 'can']; // List your database names here
+const handleBeforeUnload = () => {
+  deleteAllDbsApi(dbNames);
+};
 
-	const handleBeforeUnload = () => {
-		deleteAllDbsApi(dbNames);
-	};
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  // Test setup
+  setUser('free', true, [DBName.AZ]);
+  
+  // Production LERG data loading
+//   initializeLergData();
+});
 
-	onMounted(async () => {
-		window.addEventListener('beforeunload', handleBeforeUnload);
-		setUser('free', true, [DBName.AZ]);
-	});
-
-	onBeforeUnmount(() => {
-		window.removeEventListener('beforeunload', handleBeforeUnload);
-	});
-
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
 </script>
 
 <style>
-	.rborder {
-		border: 1px solid red;
-	}
-	.gborder {
-		border: 1px solid green;
-	}
-	.bborder {
-		border: 1px solid blue;
-	}
-	.wborder {
-		border: 10px solid white;
-	}
+.rborder {
+  border: 1px solid red;
+}
+.gborder {
+  border: 1px solid green;
+}
+.bborder {
+  border: 1px solid blue;
+}
+.wborder {
+  border: 10px solid white;
+}
 
-	/* Add these transition classes */
-	.fade-enter-active,
-	.fade-leave-active {
-		transition: opacity 0.2s ease;
-	}
+/* Add these transition classes */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
 
-	.fade-enter-from,
-	.fade-leave-to {
-		opacity: 0;
-	}
-
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

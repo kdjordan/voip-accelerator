@@ -1,8 +1,7 @@
-import { deleteIndexedDBDatabase } from '@/utils/resetIndexDb';
+
 import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
 import { type AZReportsInput, type AzPricingReport, type AzCodeReport, DBName } from '@/types/app-types';
 import { useDBstate } from '@/stores/dbStore';
-
 
 export async function resetReportApi(reportType: string) {
   await deleteDbApi(reportType);
@@ -29,18 +28,20 @@ export async function deleteAllDbsApi(theDbs: string[]) {
   forceRefreshApi();
 }
 
-export async function makeAzReportsApi(input: AZReportsInput): Promise<{ pricingReport: AzPricingReport, codeReport: AzCodeReport }> {
+export async function makeAzReportsApi(
+  input: AZReportsInput
+): Promise<{ pricingReport: AzPricingReport; codeReport: AzCodeReport }> {
   const worker = new AzComparisonWorker();
 
   worker.postMessage(input);
 
   return new Promise((resolve, reject) => {
-    worker.onmessage = (event) => {
+    worker.onmessage = event => {
       const { pricingReport, codeReport } = event.data;
       resolve({ pricingReport, codeReport });
     };
 
-    worker.onerror = (error) => {
+    worker.onerror = error => {
       console.error('Error from worker:', error);
       reject(error);
     };
@@ -51,3 +52,12 @@ function forceRefreshApi() {
   window.location.reload();
 }
 
+export async function deleteIndexedDBDatabase(dbName: string) {
+  const request = indexedDB.deleteDatabase(dbName);
+  request.onsuccess = () => {
+    console.log(`Database ${dbName} deleted successfully.`);
+  };
+  request.onerror = event => {
+    console.error(`Error deleting database ${dbName}:`, (event.target as IDBRequest).error);
+  };
+}

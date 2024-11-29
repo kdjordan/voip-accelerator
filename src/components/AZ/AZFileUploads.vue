@@ -31,37 +31,33 @@
         isGeneratingReports && 'animate-pulse',
         'disabled:bg-transparent',
         'disabled:opacity-50',
-        'disabled:cursor-not-allowed'
+        'disabled:cursor-not-allowed',
       ]"
     >
-      {{ isGeneratingReports ? "GENERATING REPORTS" : "Get Reports" }}
+      {{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}
     </button>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import {
-  AZColumnRole,
-  DBName,
-  type AZStandardizedData,
-} from "@/types/app-types";
-import UploadComponent from "@/components/UploadComponent.vue";
-import useIndexedDB from "@/composables/useIndexDB";
-import { makeAzReportsApi } from "@/API/api";
-import { useDBstate } from "@/stores/dbStore";
+import { ref, watch } from 'vue';
+import { AZColumnRole, DBName, type AZStandardizedData } from '@/types/app-types';
+import UploadComponent from '@/components/UploadComponent.vue';
+import useIndexedDB from '@/composables/useIndexDB';
+import { makeAzReportsApi } from '@/API/api';
+import { useDBstate } from '@/stores/dbStore';
 
 const dbStore = useDBstate();
 const { loadFromIndexedDB } = useIndexedDB();
 
 const theDb = ref<DBName>(DBName.AZ);
-const component1 = ref<string>("az1");
-const component2 = ref<string>("az2");
+const component1 = ref<string>('az1');
+const component2 = ref<string>('az2');
 const isGeneratingReports = ref<boolean>(false);
 
 const columnRoleOptions = [
-  { value: AZColumnRole.Destination, label: "Destination Name" },
-  { value: AZColumnRole.DialCode, label: "Dial Code" },
-  { value: AZColumnRole.Rate, label: "Rate" },
+  { value: AZColumnRole.Destination, label: 'Destination Name' },
+  { value: AZColumnRole.DialCode, label: 'Dial Code' },
+  { value: AZColumnRole.Rate, label: 'Rate' },
 ];
 
 const uploadedFiles = ref<Record<string, string>>({});
@@ -90,14 +86,10 @@ async function handleReportsAction() {
 
 async function generateReports() {
   isGeneratingReports.value = true;
-  console.log("generateReports called");
+  console.log('generateReports called');
   try {
-    const fileName1 = dbStore
-      .getStoreNameByComponent(component1.value)
-      .split(".")[0];
-    const fileName2 = dbStore
-      .getStoreNameByComponent(component2.value)
-      .split(".")[0];
+    const fileName1 = dbStore.getStoreNameByComponent(component1.value).split('.')[0];
+    const fileName2 = dbStore.getStoreNameByComponent(component2.value).split('.')[0];
 
     const file1Data = await getFilesFromIndexDB(
       theDb.value,
@@ -111,17 +103,16 @@ async function generateReports() {
     );
 
     if (fileName1 && fileName2 && file1Data && file2Data) {
-      console.log("generateReports: got file data");
-      const { pricingReport: pricingReportData, codeReport: codeReportData } =
-        await makeAzReportsApi({
-          fileName1,
-          fileName2,
-          file1Data: file1Data as AZStandardizedData[],
-          file2Data: file2Data as AZStandardizedData[],
-        });
+      console.log('generateReports: got file data');
+      const { pricingReport: pricingReportData, codeReport: codeReportData } = await makeAzReportsApi({
+        fileName1,
+        fileName2,
+        file1Data: file1Data as AZStandardizedData[],
+        file2Data: file2Data as AZStandardizedData[],
+      });
 
       if (pricingReportData && codeReportData) {
-        console.log("generateReports: got reports data", {
+        console.log('generateReports: got reports data', {
           pricingReportData,
           codeReportData,
         });
@@ -129,28 +120,21 @@ async function generateReports() {
         dbStore.setAzCodeReport(codeReportData);
         dbStore.setAzReportsGenerated(true);
         dbStore.setShowAzUploadComponents(false);
-        console.log(
-          "Reports set in store, showAzUploadComponents:",
-          dbStore.showAzUploadComponents
-        );
+        console.log('Reports set in store, showAzUploadComponents:', dbStore.showAzUploadComponents);
       } else {
-        console.error("Error: Reports data is null or undefined");
+        console.error('Error: Reports data is null or undefined');
       }
     } else {
-      console.error("Error getting files from DB for reports");
+      console.error('Error getting files from DB for reports');
     }
   } catch (error) {
-    console.error("Error generating reports:", error);
+    console.error('Error generating reports:', error);
   } finally {
     isGeneratingReports.value = false;
   }
 }
 
-async function getFilesFromIndexDB(
-  dbName: DBName,
-  store: string,
-  dbVersion: number
-) {
+async function getFilesFromIndexDB(dbName: DBName, store: string, dbVersion: number) {
   try {
     const result = await loadFromIndexedDB(dbName, store, dbVersion);
     return result;
