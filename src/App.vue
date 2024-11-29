@@ -31,29 +31,46 @@ import SideNav from './components/common/SideNav.vue';
 import TheFooter from './components/common/TheFooter.vue';
 import { onMounted, onBeforeUnmount } from 'vue';
 import { useUserStore } from '@/stores/userStore';
-import { deleteAllDbsApi } from '@/API/api';
 import { setUser } from '@/utils/utils';
 import { DBName } from './types/app-types';
 
 const userStore = useUserStore();
 const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.USCodes];
 
-const handleBeforeUnload = () => {
-  deleteAllDbsApi(dbNames);
+// Synchronous cleanup function
+function cleanupIndexedDB() {
+  dbNames.forEach(dbName => {
+    indexedDB.deleteDatabase(dbName);
+  });
+}
+
+// Handle tab/window close
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  cleanupIndexedDB();
+  
+  // Optional: Show confirmation dialog if there's unsaved work
+  // if (hasUnsavedWork) {
+  //   event.preventDefault();
+  //   event.returnValue = '';
+  // }
+};
+
+// Handle page hide (more reliable than beforeunload)
+const handlePageHide = () => {
+  cleanupIndexedDB();
 };
 
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('pagehide', handlePageHide);
   
   // Test setup
   setUser('free', true, [DBName.AZ]);
-  
-  // Production LERG data loading
-
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  window.removeEventListener('pagehide', handlePageHide);
 });
 </script>
 
