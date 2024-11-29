@@ -32,7 +32,7 @@ import TheFooter from './components/common/TheFooter.vue';
 import { onMounted, onBeforeUnmount } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { deleteAllDbsApi } from '@/API/api';
-import { setUser, initializeLergData } from '@/utils/utils';
+import { setUser } from '@/utils/utils';
 import { DBName } from './types/app-types';
 
 const userStore = useUserStore();
@@ -49,7 +49,7 @@ onMounted(() => {
   setUser('free', true, [DBName.AZ]);
   
   // Production LERG data loading
-//   initializeLergData();
+
 });
 
 onBeforeUnmount(() => {
