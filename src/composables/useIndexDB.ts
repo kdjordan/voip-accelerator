@@ -1,24 +1,28 @@
-import { type StandardizedData, DBName } from '@/types/app-types';
-import { useDBstate } from '@/stores/dbStore';
 import { openDB } from 'idb';
-
-const DBstore = useDBstate();
+import { useSharedStore } from '@/domains/shared/store';
+import { useAzStore } from '@/domains/az/store';
+import { useNpanxxStore } from '@/domains/npanxx/store';
+import { DBName, type DBNameType } from '@/domains/shared/types/base-types';
+import type { StandardizedData } from '@/domains/shared/types';
 
 export default function useIndexedDB() {
+  const sharedStore = useSharedStore();
+  const azStore = useAzStore();
+  const npanxxStore = useNpanxxStore();
+
   async function storeInIndexedDB(
     data: StandardizedData[],
-    dbName: DBName,
+    dbName: DBNameType,
     fileName: string,
     componentName: string
   ): Promise<void> {
-    console.log('storing');
+    console.log('Storing in IndexedDB:', { dbName, fileName, componentName });
+    
     try {
-      const db = await openDB(dbName, DBstore.globalDBVersion + 1, {
+      // 1. Open/Create DB with version increment
+      const db = await openDB(dbName, sharedStore.globalDBVersion + 1, {
         upgrade(db) {
-          // Perform upgrade actions if needed
-          console.log('Upgrade needed for IndexedDB');
-          DBstore.setGlobalFileIsUploading(true);
-
+          console.log('Upgrading IndexedDB');
           if (!db.objectStoreNames.contains(fileName)) {
             db.createObjectStore(fileName, {
               keyPath: 'id',
@@ -28,111 +32,88 @@ export default function useIndexedDB() {
         },
       });
 
+      // 2. Store the data
       const transaction = db.transaction(fileName, 'readwrite');
       const store = transaction.objectStore(fileName);
-      data.forEach(row => {
-        store.add(row);
-      });
+      
+      // Add each row
+      for (const row of data) {
+        await store.add(row);
+      }
 
+      // 3. Update the appropriate store based on dbName
       transaction.oncomplete = () => {
-        DBstore.addFileUploaded(componentName, dbName, fileName);
-        DBstore.setGlobalFileIsUploading(false);
-        DBstore.setComponentFileIsUploading(undefined);
+        if (dbName === DBName.AZ) {
+          azStore.addFileUploaded(componentName, fileName);
+        } else if (dbName === DBName.US) {
+          npanxxStore.addFileUploaded(componentName, fileName);
+        }
+        
+        sharedStore.incrementGlobalDBVersion();
         db.close();
       };
 
-      transaction.onerror = () => {
-        DBstore.setGlobalFileIsUploading(false);
-        DBstore.setComponentFileIsUploading(undefined);
-        console.error('Transaction error:', transaction.error);
+      transaction.onerror = (error) => {
+        console.error('Transaction error:', error);
+        throw new Error('Failed to store data in IndexedDB');
       };
+
     } catch (error) {
-      console.error('Error opening IndexedDB:', error);
+      console.error('Error in storeInIndexedDB:', error);
+      throw error;
     }
   }
 
-  async function loadFromIndexedDB(dbName: string, storeName: string, DBversion: number): Promise<StandardizedData[]> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(dbName, DBversion);
-
-      request.onupgradeneeded = function (event) {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (db) {
-          if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, {
-              keyPath: 'id',
-              autoIncrement: true,
-            });
-          }
-        }
-      };
-
-      request.onsuccess = function (event) {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (db) {
-          const transaction = db.transaction(storeName, 'readonly');
-          const store = transaction.objectStore(storeName);
-          const data: StandardizedData[] = [];
-
-          store.openCursor().onsuccess = function (e) {
-            const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
-            if (cursor) {
-              data.push(cursor.value);
-              cursor.continue();
-            } else {
-              resolve(data);
-            }
-          };
-
-          transaction.oncomplete = function () {
-            db.close();
-          };
-        } else {
-          reject(new Error('Failed to open IndexedDB'));
-        }
-      };
-
-      request.onerror = function (event) {
-        const requestError = (event.target as IDBOpenDBRequest).error;
-        console.error('IndexedDB error:', requestError);
-        reject(requestError);
-      };
-    });
+  async function loadFromIndexedDB(
+    dbName: DBNameType,
+    storeName: string,
+    dbVersion: number
+  ): Promise<StandardizedData[]> {
+    try {
+      const db = await openDB(dbName, dbVersion);
+      const transaction = db.transaction(storeName, 'readonly');
+      const store = transaction.objectStore(storeName);
+      const data = await store.getAll();
+      db.close();
+      return data;
+    } catch (error) {
+      console.error('Error loading from IndexedDB:', error);
+      throw error;
+    }
   }
 
-  async function deleteObjectStore(dbName: string, objectStoreName: string): Promise<void> {
-    console.log('called delete', dbName, objectStoreName);
+  async function deleteObjectStore(
+    dbName: DBNameType,
+    objectStoreName: string
+  ): Promise<void> {
     try {
-      // Open the database
       const db = await openDB(dbName, undefined);
-
-      // Check if the object store exists
+      
       if (db.objectStoreNames.contains(objectStoreName)) {
-        // Close the database to prepare for version change
         db.close();
-
-        // Open a new connection with a higher version to delete the object store
+        
         const upgradeDb = await openDB(dbName, db.version + 1, {
-          upgrade(upgradeDb) {
-            if (upgradeDb.objectStoreNames.contains(objectStoreName)) {
-              upgradeDb.deleteObjectStore(objectStoreName);
-              //delete from Pinia
-              DBstore.removeFileNameFilesUploaded(objectStoreName);
-              console.log(`Object store "${objectStoreName}" deleted.`);
-            } else {
-              console.log(`Object store "${objectStoreName}" does not exist.`);
+          upgrade(db) {
+            if (db.objectStoreNames.contains(objectStoreName)) {
+              db.deleteObjectStore(objectStoreName);
+              
+              // Update stores based on dbName
+              if (dbName === DBName.AZ) {
+                azStore.removeFile(objectStoreName);
+              } else if (dbName === DBName.US) {
+                npanxxStore.removeFile(objectStoreName);
+              }
+              
+              console.log(`Object store "${objectStoreName}" deleted`);
             }
           },
         });
-
-        // Close the upgraded database connection
+        
         upgradeDb.close();
-      } else {
-        console.log(`Object store "${objectStoreName}" does not exist in database "${dbName}".`);
       }
     } catch (error) {
       console.error('Error deleting object store:', error);
-      throw error; // Rethrow the error to handle it at the caller level if needed
+      throw error;
     }
   }
 

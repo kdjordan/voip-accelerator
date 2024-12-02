@@ -1,11 +1,13 @@
-import AzComparisonWorker from '@/workers/az/az-comparison.worker?worker';
-import { type AZReportsInput, type AzPricingReport, type AzCodeReport, DBName } from '@/types/app-types';
-import { useDBstate } from '@/stores/dbStore';
+import { AZReportsInput } from '@/domains/az/types/az-types';
+import AzComparisonWorker from '@/domains/az/workers/az-comparison.worker?worker';
+import type { AzPricingReport, AzCodeReport } from '@/domains/az/types/az-types';
+import type { 
+  USReportPayload, 
+  USReportResponse 
+} from '@/domains/npanxx/types/npanxx-types';
 
 export async function resetReportApi(reportType: string) {
   await deleteDbApi(reportType);
-  const dbStore = useDBstate();
-  dbStore.resetAzReportInStore();
 }
 
 async function deleteDbApi(dbName: string) {
@@ -54,4 +56,25 @@ export async function deleteIndexedDBDatabase(dbName: string): Promise<void> {
       resolve();
     };
   });
+}
+
+export async function makeNpanxxReportsApi(payload: USReportPayload): Promise<USReportResponse> {
+  try {
+    const response = await fetch('/api/npanxx/reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate NPANXX reports');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error in makeNpanxxReportsApi:', error);
+    throw error;
+  }
 }

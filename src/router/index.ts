@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -6,7 +6,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../views/AzPricingView.vue')
+      component: () => import('../views/AzPricingView.vue'),
       // component: () => import('../views/HomeView.vue')
     },
     {
@@ -15,7 +15,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AzPricingView.vue')
+      component: () => import('../views/AzPricingView.vue'),
     },
     {
       path: '/uspricing',
@@ -23,7 +23,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/UsPricing.vue')
+      component: () => import('../views/UsPricingView.vue'),
     },
     {
       path: '/lcr',
@@ -31,7 +31,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/LcrGenerator.vue')
+      component: () => import('../views/LcrGeneratorView.vue'),
     },
     {
       path: '/disputes',
@@ -39,9 +39,9 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/DisputeEngine.vue')
+      component: () => import('../views/DisputeEngineView.vue'),
     },
-  ]
-})
+  ],
+});
 
-export default router
+export default router;

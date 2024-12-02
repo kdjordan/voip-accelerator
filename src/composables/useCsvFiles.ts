@@ -1,30 +1,29 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
-import {
-  type StandardizedData,
-  type AZStandardizedData,
-  type USStandardizedData,
-  DBName,
-  IndetermRateType,
-} from '../types/app-types';
-import { useDBstate } from '@/stores/dbStore';
+import type { 
+  AZStandardizedData 
+} from '@/domains/az/types';
+import type { 
+  StandardizedData,
+  FileEmit,
+  ParsedResults 
+} from '@/domains/shared/types';
+import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 
 const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
-
-const DBstore = useDBstate();
 
 export default function useCSVProcessing() {
   const file = ref<File | null>(null);
   const startLine = ref<number>(1); // Adjust default start line if needed
   const columnRoles = ref<string[]>([]); // Ensure columnRoles is properly defined
-  const DBname = ref<DBName | null>(null);
+  const DBname = ref<typeof DBName | null>(null);
 
   const componentName = ref<string>('');
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
   const showModal = ref<boolean>(false);
-  const deckType = ref<DBName | null>(null);
+  const deckType = ref<typeof DBName | null>(null);
   const indetermRateType = ref<IndetermRateType>(IndetermRateType.DEFAULT);
 
   async function parseCSVForFullProcessing(): Promise<void> {
