@@ -1,4 +1,4 @@
-import type { BaseStandardizedData } from '@/domains/shared/types/base-types';
+import type { BaseStandardizedData } from '@/domains/shared/types';
 
 export type ReportType = 'files' | 'code' | 'pricing';
 

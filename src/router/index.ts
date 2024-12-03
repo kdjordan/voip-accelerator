@@ -6,8 +6,8 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../views/AzPricingView.vue'),
-      // component: () => import('../views/HomeView.vue')
+      component: () => import('../pages/AzPricingView.vue'),
+      // component: () => import('../pages/HomeView.vue')
     },
     {
       path: '/azpricing',
@@ -15,7 +15,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AzPricingView.vue'),
+      component: () => import('../pages/AzPricingView.vue'),
     },
     {
       path: '/uspricing',
@@ -23,7 +23,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/UsPricingView.vue'),
+      component: () => import('../pages/UsPricingView.vue'),
     },
     {
       path: '/lcr',
@@ -31,7 +31,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/LcrGeneratorView.vue'),
+      component: () => import('../pages/LcrGeneratorView.vue'),
     },
     {
       path: '/disputes',
@@ -39,7 +39,7 @@ const router = createRouter({
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/DisputeEngineView.vue'),
+      component: () => import('../pages/DisputeEngineView.vue'),
     },
   ],
 });

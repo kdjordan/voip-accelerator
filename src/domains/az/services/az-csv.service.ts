@@ -1,6 +1,6 @@
 import { createCSVService } from '@/domains/shared/services/csv.service';
 import type { CSVProcessor } from '@/domains/shared/services/csv.service';
-import type { CSVProcessingConfig } from '@/domains/shared/types/base-types';
+import type { CSVProcessingConfig } from '@/domains/shared/types';
 import type { AZStandardizedData } from '../types/az-types';
 
 export function createAZCSVService(): CSVProcessor<AZStandardizedData> {

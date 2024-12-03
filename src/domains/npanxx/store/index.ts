@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import type { USPricingReport, USCodeReport } from '../types/npanxx-types';
 import { useSharedStore } from '@/domains/shared/store';
-import type { ReportType } from '@/domains/shared/types/base-types';
+import type { ReportType } from '@/domains/shared/types';
 
 export const useNpanxxStore = defineStore('npanxxStore', {
   state: () => ({
@@ -70,6 +70,9 @@ export const useNpanxxStore = defineStore('npanxxStore', {
         this.showUploadComponents = true;
         this.activeReportType = 'files';
       }
-    }
+    },
+    checkFileNameAvailable(fileName: string): boolean {
+      return this.filesUploaded.has(fileName);
+    },
   },
 });

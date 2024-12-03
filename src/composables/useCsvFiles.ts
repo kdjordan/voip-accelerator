@@ -1,40 +1,48 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
-import type { 
-  AZStandardizedData 
-} from '@/domains/az/types';
-import type { 
-  StandardizedData,
-  FileEmit,
-  ParsedResults 
-} from '@/domains/shared/types';
+import type { AZStandardizedData } from '@/domains/az/types/az-types';
+import type { USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
+import type { StandardizedData, FileEmit, ParsedResults, DBNameType } from '@/domains/shared/types';
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
-
-const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
+import { useAzStore } from '@/domains/az/store';
+import { useNpanxxStore } from '@/domains/npanxx/store';
+import { NPANXXRateType } from '@/domains/npanxx/types/npanxx-types';
 
 export default function useCSVProcessing() {
   const file = ref<File | null>(null);
-  const startLine = ref<number>(1); // Adjust default start line if needed
-  const columnRoles = ref<string[]>([]); // Ensure columnRoles is properly defined
-  const DBname = ref<typeof DBName | null>(null);
-
+  const startLine = ref<number>(1);
+  const columnRoles = ref<string[]>([]);
+  const DBname = ref<DBNameType | null>(null);
   const componentName = ref<string>('');
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
   const showModal = ref<boolean>(false);
-  const deckType = ref<typeof DBName | null>(null);
-  const indetermRateType = ref<IndetermRateType>(IndetermRateType.DEFAULT);
+  const deckType = ref<DBNameType | null>(null);
+  const indetermRateType = ref<NPANXXRateType>(NPANXXRateType.INDETERMINATE);
+
+  const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
+
+  function getDomainStore() {
+    switch (deckType.value) {
+      case DBName.AZ:
+        return useAzStore();
+      case DBName.US:
+        return useNpanxxStore();
+      default:
+        throw new Error(`Invalid deck type: ${deckType.value}`);
+    }
+  }
 
   async function parseCSVForFullProcessing(): Promise<void> {
-    console.log('deckType', deckType.value);
+    const domainStore = getDomainStore();
     if (!file.value) {
       return;
     }
-    const fileNameExists = DBstore.checkFileNameAvailable(file.value.name);
+    const fileNameExists = domainStore.checkFileNameAvailable(file.value.name);
 
     if (!fileNameExists) {
-      DBstore.setComponentFileIsUploading(componentName.value);
+      domainStore.setComponentFileIsUploading(componentName.value);
       if (deckType.value === DBName.AZ) {
         try {
           await processAZData(file.value);
@@ -164,12 +172,15 @@ export default function useCSVProcessing() {
     Papa.parse(fileToProcess, {
       header: false,
       skipEmptyLines: true,
+      dynamicTyping: true,
+      fastMode: true,
       complete(results: Papa.ParseResult<string[]>) {
+        console.log('Processing file:', fileToProcess.name);
         const dataStartIndex = startLine.value - 1;
         const fullData = results.data.slice(dataStartIndex);
         const standardizedData: AZStandardizedData[] = [];
 
-        fullData.forEach((row: string[]) => {
+        fullData.forEach((row: string[], rowIndex: number) => {
           const standardizedRow: AZStandardizedData = {
             destName: '',
             dialCode: 0,
@@ -180,29 +191,34 @@ export default function useCSVProcessing() {
             if (role) {
               switch (role) {
                 case 'destName':
-                  standardizedRow.destName = row[index];
+                  standardizedRow.destName = String(row[index]).trim();
                   break;
                 case 'dialCode':
-                  standardizedRow.dialCode = parseFloat(row[index]);
+                  standardizedRow.dialCode = Number(row[index]);
                   break;
                 case 'rate':
-                  standardizedRow.rate = parseFloat(row[index]);
+                  standardizedRow.rate = Number(row[index]);
                   break;
               }
             }
           });
 
-          const isValidDestName = typeof standardizedRow.destName === 'string' && standardizedRow.destName.length > 0;
-          const isValidDialCode = !isNaN(standardizedRow.dialCode);
-          const isValidRate = !isNaN(standardizedRow.rate);
-
-          if (isValidDestName && isValidDialCode && isValidRate) {
+          if (
+            typeof standardizedRow.destName === 'string' &&
+            typeof standardizedRow.dialCode === 'number' &&
+            typeof standardizedRow.rate === 'number'
+          ) {
             standardizedData.push(standardizedRow);
           } else {
-            console.error('Issue parsing AZ file row', standardizedRow);
+            console.warn('Skipping invalid row:', row, 'Types:', {
+              destName: typeof standardizedRow.destName,
+              dialCode: typeof standardizedRow.dialCode,
+              rate: typeof standardizedRow.rate,
+            });
           }
         });
 
+        console.log(`Standardized ${standardizedData.length} rows for ${fileToProcess.name}`);
         storeDataInIndexedDB(standardizedData);
       },
       error: function (error) {
@@ -241,7 +257,7 @@ export default function useCSVProcessing() {
   }
 
   async function removeFromDB() {
-    let storeName = DBstore.getStoreNameByComponent(componentName.value);
+    let storeName = getDomainStore().getStoreNameByComponent(componentName.value);
     // resetLocalState();
     await deleteObjectStore(DBname.value as DBName, storeName);
   }

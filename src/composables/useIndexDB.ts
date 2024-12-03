@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import { useSharedStore } from '@/domains/shared/store';
 import { useAzStore } from '@/domains/az/store';
 import { useNpanxxStore } from '@/domains/npanxx/store';
-import { DBName, type DBNameType } from '@/domains/shared/types/base-types';
+import { DBName, type DBNameType } from '@/domains/shared/types';
 import type { StandardizedData } from '@/domains/shared/types';
 
 export default function useIndexedDB() {
@@ -16,50 +16,52 @@ export default function useIndexedDB() {
     fileName: string,
     componentName: string
   ): Promise<void> {
-    console.log('Storing in IndexedDB:', { dbName, fileName, componentName });
+    const storeName = `${componentName}-store`;
+    console.log('Attempting to store in IndexedDB:', { 
+      dbName, 
+      fileName, 
+      componentName,
+      storeName,
+      dataLength: data.length,
+      currentVersion: sharedStore.globalDBVersion 
+    });
     
     try {
-      // 1. Open/Create DB with version increment
-      const db = await openDB(dbName, sharedStore.globalDBVersion + 1, {
+      // Always increment version to ensure upgrade
+      sharedStore.incrementGlobalDBVersion();
+      
+      const db = await openDB(dbName, sharedStore.globalDBVersion, {
         upgrade(db) {
-          console.log('Upgrading IndexedDB');
-          if (!db.objectStoreNames.contains(fileName)) {
-            db.createObjectStore(fileName, {
+          if (!db.objectStoreNames.contains(storeName)) {
+            console.log('Creating store:', storeName);
+            db.createObjectStore(storeName, {
               keyPath: 'id',
               autoIncrement: true,
             });
           }
-        },
+        }
       });
 
-      // 2. Store the data
-      const transaction = db.transaction(fileName, 'readwrite');
-      const store = transaction.objectStore(fileName);
-      
-      // Add each row
-      for (const row of data) {
-        await store.add(row);
+      console.log('Database opened, stores:', Array.from(db.objectStoreNames));
+
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+
+      await Promise.all([
+        ...data.map(row => store.add(row)),
+        transaction.done
+      ]);
+
+      if (dbName === DBName.AZ) {
+        azStore.addFileUploaded(componentName, fileName);
+      } else if (dbName === DBName.US) {
+        npanxxStore.addFileUploaded(componentName, fileName);
       }
 
-      // 3. Update the appropriate store based on dbName
-      transaction.oncomplete = () => {
-        if (dbName === DBName.AZ) {
-          azStore.addFileUploaded(componentName, fileName);
-        } else if (dbName === DBName.US) {
-          npanxxStore.addFileUploaded(componentName, fileName);
-        }
-        
-        sharedStore.incrementGlobalDBVersion();
-        db.close();
-      };
-
-      transaction.onerror = (error) => {
-        console.error('Transaction error:', error);
-        throw new Error('Failed to store data in IndexedDB');
-      };
+      db.close();
 
     } catch (error) {
-      console.error('Error in storeInIndexedDB:', error);
+      console.error('Error storing data in IndexedDB:', error);
       throw error;
     }
   }

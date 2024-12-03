@@ -19,6 +19,7 @@
               <component :is="Component" />
             </transition>
           </router-view>
+          
         </div>
       </main>
       <TheFooter />
@@ -32,16 +33,23 @@
   import { onMounted, onBeforeUnmount } from 'vue';
   import { DBName } from '@/domains/shared/types';
   import { useSharedStore } from '@/domains/shared/store';
+  import { loadSampleDecks, deleteIndexedDBDatabase } from '@/utils';
 
   const sharedStore = useSharedStore();
 
   const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.USCodes];
 
-  // Synchronous cleanup function
-  function cleanupIndexedDB() {
-    dbNames.forEach(dbName => {
-      indexedDB.deleteDatabase(dbName);
-    });
+  async function cleanupIndexedDB(): Promise<void> {
+    try {
+      for (const dbName of dbNames) {
+        await deleteIndexedDBDatabase(dbName);
+      }
+      console.log('Successfully cleaned up IndexedDB');
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error cleaning up IndexedDB:', error);
+      return Promise.reject(error);
+    }
   }
 
   // Handle tab/window close
@@ -60,12 +68,18 @@
     cleanupIndexedDB();
   };
 
-  onMounted(() => {
+  onMounted(async () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handlePageHide);
 
-    // Test setup
-    // setUser('free', true, [DBName.AZ]);
+    try {
+      // Clean up first
+      await cleanupIndexedDB();
+      // Then load sample data
+      // await loadSampleDecks([DBName.AZ]);
+    } catch (error) {
+      console.error('Error during initialization:', error);
+    }
   });
 
   onBeforeUnmount(() => {

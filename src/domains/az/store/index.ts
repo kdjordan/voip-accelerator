@@ -1,10 +1,6 @@
 import { defineStore } from 'pinia';
-import type { 
-  AzPricingReport, 
-  AzCodeReport, 
-} from '../types/az-types';
-import type { ReportType } from '@/domains/shared/types/base-types';
-
+import type { AzPricingReport, AzCodeReport } from '../types/az-types';
+import type { ReportType, DomainStore } from '@/domains/shared/types';
 
 
 export const useAzStore = defineStore('azStore', {
@@ -18,9 +14,11 @@ export const useAzStore = defineStore('azStore', {
   }),
 
   getters: {
-    isComponentDisabled: (state) => (componentName: string): boolean => {
-      return state.filesUploaded.has(componentName);
-    },
+    isComponentDisabled:
+      state =>
+      (componentName: string): boolean => {
+        return state.filesUploaded.has(componentName);
+      },
 
     isFull: (state): boolean => state.filesUploaded.size === 2,
 
@@ -33,8 +31,8 @@ export const useAzStore = defineStore('azStore', {
       return state.showUploadComponents ? 'files' : 'pricing';
     },
 
-    getAzPricingReport: (state) => state.pricingReport,
-    getAzCodeReport: (state) => state.codeReport,
+    getAzPricingReport: state => state.pricingReport,
+    getAzCodeReport: state => state.codeReport,
   },
 
   actions: {
@@ -63,7 +61,7 @@ export const useAzStore = defineStore('azStore', {
 
     removeFile(fileName: string) {
       this.filesUploaded.delete(fileName);
-      
+
       // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
         this.reportsGenerated = false;
@@ -72,6 +70,19 @@ export const useAzStore = defineStore('azStore', {
         this.showUploadComponents = true;
         this.activeReportType = 'files';
       }
-    }
-  }
-});
+    },
+
+    checkFileNameAvailable(fileName: string): boolean {
+      return this.filesUploaded.has(fileName);
+    },
+
+    setComponentFileIsUploading(componentName: string): void {
+      // implementation
+    },
+
+    getStoreNameByComponent(componentName: string): string {
+      // implementation
+      return componentName;
+    },
+  },
+}) as unknown as () => DomainStore;

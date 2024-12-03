@@ -133,7 +133,7 @@
 	import { RouterLink } from 'vue-router';
 	import { ref, onMounted, onBeforeUnmount } from 'vue';
 	import { useSharedStore } from '@/domains/shared/store';
-	import { PlanTier } from '@/domains/shared/types/app-types';
+	import { PlanTier } from '@/domains/shared/types';
 	import {
 		DocumentCurrencyDollarIcon,
 		BarsArrowDownIcon,

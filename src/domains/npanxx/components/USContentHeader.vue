@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { useNpanxxStore } from '@/domains/npanxx/store';
-import { ReportTypes, type ReportType } from '@/domains/shared/types/base-types';
+import { ReportTypes, type ReportType } from '@/domains/shared/types';
 import { resetReportApi } from "@/API/api";
 
 const npanxxStore = useNpanxxStore();

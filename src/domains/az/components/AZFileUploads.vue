@@ -42,7 +42,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { AZColumnRole, type AZStandardizedData } from '@/domains/az/types/az-types';
-  import { DBName } from '@/domains/shared/types/base-types';
+  import { DBName } from '@/domains/shared/types/';
   import UploadComponent from '@/domains/shared/components/UploadComponent.vue';
   import useIndexedDB from '@/composables/useIndexDB';
   import { makeAzReportsApi } from '@/API/api';

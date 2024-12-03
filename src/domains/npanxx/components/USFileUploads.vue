@@ -44,12 +44,11 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { useNpanxxStore } from '@/domains/npanxx/store';
-  import { DBName } from '@/domains/shared/types/base-types';
+  import { DBName } from '@/domains/shared/types';
   import UploadComponent from '@/domains/shared/components/UploadComponent.vue';
   import useIndexedDB from '@/composables/useIndexDB';
-  import type { USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
   import { makeNpanxxReportsApi } from '@/API/api';
-  import { USColumnRole, type ColumnRoleOption } from '@/domains/npanxx/types/npanxx-types';
+  import { USColumnRole, type ColumnRoleOption, USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
   import { useSharedStore } from '@/domains/shared/store';
   const npanxxStore = useNpanxxStore();
   const { loadFromIndexedDB } = useIndexedDB();

@@ -4,8 +4,3 @@ export interface CSVProcessingConfig {
     validation?: (row: any) => boolean;
   }
   
-  export interface StandardizedData {
-    dialCode: string;
-    destName: string;
-    rate: number;
-  }

@@ -1,4 +1,4 @@
-import type { BaseStandardizedData } from '@/domains/shared/types/base-types';
+import type { BaseStandardizedData } from '@/domains/shared/types';
 
 export enum USColumnRole {
   NPA = 'npa',
@@ -82,3 +82,11 @@ export interface ColumnRoleOption {
   value: USColumnRole;
   label: string;
 }
+
+export const NPANXXRateType = {
+  INTERSTATE: 'inter',
+  INTRASTATE: 'intra',
+  INDETERMINATE: 'indeterm'
+} as const;
+
+export type NPANXXRateType = typeof NPANXXRateType[keyof typeof NPANXXRateType];
