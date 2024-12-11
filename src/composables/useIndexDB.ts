@@ -30,7 +30,7 @@ export default function useIndexedDB() {
       // Always increment version to ensure upgrade
       sharedStore.incrementGlobalDBVersion();
       
-      const db = await openDB(dbName, sharedStore.globalDBVersion, {
+      const db = await openDB(dbName as DBNameType, sharedStore.globalDBVersion, {
         upgrade(db) {
           if (!db.objectStoreNames.contains(storeName)) {
             console.log('Creating store:', storeName);
@@ -52,9 +52,9 @@ export default function useIndexedDB() {
         transaction.done
       ]);
 
-      if (dbName === DBName.AZ) {
+      if (dbName === DBName.AZ as DBNameType) {
         azStore.addFileUploaded(componentName, fileName);
-      } else if (dbName === DBName.US) {
+      } else if (dbName === DBName.US as DBNameType) {
         npanxxStore.addFileUploaded(componentName, fileName);
       }
 

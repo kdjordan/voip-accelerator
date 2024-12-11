@@ -77,16 +77,11 @@ export interface USPricingReport {
   };
 }
 
-// Add this interface
-export interface ColumnRoleOption {
-  value: USColumnRole;
-  label: string;
-}
 
-export const NPANXXRateType = {
+
+export type NPANXXRateType = {
   INTERSTATE: 'inter',
   INTRASTATE: 'intra',
   INDETERMINATE: 'indeterm'
-} as const;
+} 
 
-export type NPANXXRateType = typeof NPANXXRateType[keyof typeof NPANXXRateType];

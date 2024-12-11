@@ -1,4 +1,4 @@
-import useCSVProcessing from '@/composables/useCsvFiles';
+import useCSVProcessing from '@/composables/useCsvProcessing';
 import useIndexedDB from '@/composables/useIndexDB';
 import { DBName } from '@/types/app-types';
 

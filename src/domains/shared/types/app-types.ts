@@ -1,6 +1,22 @@
 import type { AZStandardizedData } from '@/domains/az/types/az-types';
 import type { USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
 
+export interface DomainStore {
+  isComponentUploading: (componentName: string) => boolean;
+  setComponentUploading: (componentName: string, isUploading: boolean) => void;
+  checkFileNameAvailable: (fileName: string) => boolean;
+  setComponentFileIsUploading: (componentName: string) => void;
+  getStoreNameByComponent: (componentName: string) => string;
+  addFileUploaded: (componentName: string, fileName: string) => void;
+  removeFile: (fileName: string) => void;
+  isComponentDisabled: (componentName: string) => boolean;
+  reportsGenerated: boolean;
+  showUploadComponents: boolean;
+  isFull: boolean;
+  getFileNames: string[];
+  setReports: (pricing: any, code: any) => void;
+}
+
 
 export interface FileEmit {
   file: File;
@@ -28,7 +44,7 @@ export const DBName = {
   AZ: 'az',
   US: 'us',
   CAN: 'can',
-  USCodes: 'USCodes'
+  USCodes: 'uscodes',
 } as const;
 
 export type DBNameType = typeof DBName[keyof typeof DBName];
@@ -37,21 +53,14 @@ export type DBNameType = typeof DBName[keyof typeof DBName];
 export const ReportTypes = {
   FILES: 'files',
   CODE: 'code',
-  PRICING: 'pricing'
-} as const;
+  PRICING: 'pricing',
+};
 
-export type ReportType = typeof ReportTypes[keyof typeof ReportTypes];
+export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
 
-export interface DomainStore {
-  checkFileNameAvailable: (fileName: string) => boolean;
-  setComponentFileIsUploading: (componentName: string) => void;
-  getStoreNameByComponent: (componentName: string) => string;
-  addFileUploaded: (componentName: string, fileName: string) => void;
-  removeFile: (fileName: string) => void;
-  isComponentDisabled: (componentName: string) => boolean;
-  reportsGenerated: boolean;
-  showUploadComponents: boolean;
-  isFull: boolean;
-  getFileNames: string[];
-  setReports: (pricing: any, code: any) => void;
+
+// Add this interface
+export interface ColumnRoleOption {
+  value: string;
+  label: string;
 }

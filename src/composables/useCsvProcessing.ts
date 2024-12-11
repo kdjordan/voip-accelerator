@@ -1,13 +1,12 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
 import type { AZStandardizedData } from '@/domains/az/types/az-types';
-import type { USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
-import type { StandardizedData, FileEmit, ParsedResults, DBNameType } from '@/domains/shared/types';
+import type { USStandardizedData, NPANXXRateType } from '@/domains/npanxx/types/npanxx-types';
+import type { StandardizedData, DBNameType } from '@/domains/shared/types';
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
 import { useNpanxxStore } from '@/domains/npanxx/store';
-import { NPANXXRateType } from '@/domains/npanxx/types/npanxx-types';
 
 export default function useCSVProcessing() {
   const file = ref<File | null>(null);
@@ -17,9 +16,10 @@ export default function useCSVProcessing() {
   const componentName = ref<string>('');
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
-  const showModal = ref<boolean>(false);
+  const showPreviewModal = ref<boolean>(false);
   const deckType = ref<DBNameType | null>(null);
-  const indetermRateType = ref<NPANXXRateType>(NPANXXRateType.INDETERMINATE);
+  const isProcessing = ref<boolean>(false);
+  const indetermRateType = ref<NPANXXRateType | null>(null);
 
   const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
 
@@ -236,7 +236,7 @@ export default function useCSVProcessing() {
           previewData.value = results.data.slice(0, 25) as string[][];
           columns.value = results.data[startLine.value - 1] as string[];
           columnRoles.value = Array(columns.value.length).fill('');
-          showModal.value = true;
+          showPreviewModal.value = true;
         },
       });
     } catch {
@@ -248,8 +248,13 @@ export default function useCSVProcessing() {
   async function storeDataInIndexedDB(data: StandardizedData[]) {
     console.log('storing with ', DBname.value, componentName.value);
     try {
-      if (file.value) {
-        await storeInIndexedDB(data, DBname.value as DBName, file.value.name, componentName.value);
+      if (file.value && DBname.value) {
+        await storeInIndexedDB(
+          data,
+          DBname.value as DBNameType,
+          file.value.name,
+          componentName.value
+        );
       }
     } catch (error) {
       console.error('Error storing data in IndexedDB:', error);
@@ -259,7 +264,7 @@ export default function useCSVProcessing() {
   async function removeFromDB() {
     let storeName = getDomainStore().getStoreNameByComponent(componentName.value);
     // resetLocalState();
-    await deleteObjectStore(DBname.value as DBName, storeName);
+    await deleteObjectStore(DBname.value as DBNameType, storeName);
   }
 
   return {
@@ -268,7 +273,7 @@ export default function useCSVProcessing() {
     previewData,
     columns,
     DBname,
-    showModal,
+    showPreviewModal,
     componentName,
     columnRoles,
     parseCSVForPreview,
@@ -276,5 +281,6 @@ export default function useCSVProcessing() {
     removeFromDB,
     deckType,
     indetermRateType,
+    isProcessing,
   };
 }

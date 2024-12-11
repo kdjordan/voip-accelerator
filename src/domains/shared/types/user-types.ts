@@ -2,10 +2,10 @@
 export const PlanTier = {
   FREE: 'free',
   PRO: 'pro',
-  ENTERPRISE: 'enterprise'
-} as const;
+  ENTERPRISE: 'enterprise',
+};
 
-export type PlanTierType = typeof PlanTier[keyof typeof PlanTier];
+export type PlanTierType = (typeof PlanTier)[keyof typeof PlanTier];
 
 // Feature Limits
 export interface PlanLimits {
@@ -48,4 +48,4 @@ export interface UserState {
     storageUsed: number;
     comparisonsToday: number;
   };
-} 
+}

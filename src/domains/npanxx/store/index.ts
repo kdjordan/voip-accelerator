@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import type { USPricingReport, USCodeReport } from '../types/npanxx-types';
 import { useSharedStore } from '@/domains/shared/store';
 import type { ReportType } from '@/domains/shared/types';
+import type { DomainStore } from '@/domains/shared/types';
 
 export const useNpanxxStore = defineStore('npanxxStore', {
   state: () => ({
@@ -11,6 +12,7 @@ export const useNpanxxStore = defineStore('npanxxStore', {
     activeReportType: 'files' as ReportType,
     pricingReport: null as USPricingReport | null,
     codeReport: null as USCodeReport | null,
+    uploadingComponents: {} as Record<string, boolean>,
   }),
 
   getters: {
@@ -31,6 +33,12 @@ export const useNpanxxStore = defineStore('npanxxStore', {
 
     getUsPricingReport: (state) => state.pricingReport,
     getUsCodeReport: (state) => state.codeReport,
+
+    isComponentUploading:
+      state =>
+      (componentName: string): boolean => {
+        return !!state.uploadingComponents[componentName];
+      },
   },
 
   actions: {
@@ -74,5 +82,9 @@ export const useNpanxxStore = defineStore('npanxxStore', {
     checkFileNameAvailable(fileName: string): boolean {
       return this.filesUploaded.has(fileName);
     },
+
+    setComponentUploading(componentName: string, isUploading: boolean) {
+      this.uploadingComponents[componentName] = isUploading;
+    },
   },
-});
+}) as unknown as () => DomainStore;

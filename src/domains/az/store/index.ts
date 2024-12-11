@@ -6,6 +6,7 @@ import type { ReportType, DomainStore } from '@/domains/shared/types';
 export const useAzStore = defineStore('azStore', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
+    uploadingComponents: {} as Record<string, boolean>,
     showUploadComponents: true,
     reportsGenerated: false,
     activeReportType: 'files' as ReportType,
@@ -18,6 +19,12 @@ export const useAzStore = defineStore('azStore', {
       state =>
       (componentName: string): boolean => {
         return state.filesUploaded.has(componentName);
+      },
+
+    isComponentUploading:
+      state =>
+      (componentName: string): boolean => {
+        return !!state.uploadingComponents[componentName];
       },
 
     isFull: (state): boolean => state.filesUploaded.size === 2,
@@ -83,6 +90,10 @@ export const useAzStore = defineStore('azStore', {
     getStoreNameByComponent(componentName: string): string {
       // implementation
       return componentName;
+    },
+
+    setComponentUploading(componentName: string, isUploading: boolean) {
+      this.uploadingComponents[componentName] = isUploading;
     },
   },
 }) as unknown as () => DomainStore;
