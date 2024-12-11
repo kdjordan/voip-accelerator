@@ -124,7 +124,7 @@ export default function useCSVProcessing() {
             standardizedRow.ijRate = interRate;
           } else if (indetermRateType.value === 'intra') {
             standardizedRow.ijRate = intraRate;
-          } else if (indetermRateType.value === 'default' && standardizedRow.ijRate === 0) {
+          } else if (indetermRateType.value === 'ij' && standardizedRow.ijRate === 0) {
             // If 'default' is selected and no explicit ijRate was set, use intraRate as fallback
             standardizedRow.ijRate = intraRate;
           }

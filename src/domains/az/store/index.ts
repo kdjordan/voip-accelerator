@@ -38,8 +38,8 @@ export const useAzStore = defineStore('azStore', {
       return state.showUploadComponents ? 'files' : 'pricing';
     },
 
-    getAzPricingReport: state => state.pricingReport,
-    getAzCodeReport: state => state.codeReport,
+    getPricingReport: (state): AzPricingReport | null => state.pricingReport,
+    getCodeReport: (state): AzCodeReport | null => state.codeReport,
   },
 
   actions: {
@@ -96,4 +96,4 @@ export const useAzStore = defineStore('azStore', {
       this.uploadingComponents[componentName] = isUploading;
     },
   },
-}) as unknown as () => DomainStore;
+}) as unknown as () => DomainStore<AzPricingReport, AzCodeReport>;

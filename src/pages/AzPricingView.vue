@@ -5,15 +5,15 @@
 
     <div class="w-full max-w-5xl">
       <transition name="fade" mode="out-in" appear>
-        <div :key="azStore.getActiveReportAZ">
-          <AZFileUploads v-if="azStore.getActiveReportAZ === 'files'" />
+        <div :key="azStore.getActiveReportType()">
+          <AZFileUploads v-if="azStore.getActiveReportType() === ReportTypes.FILES" />
           <CodeReportAZ
-            v-if="azStore.getActiveReportAZ === 'code'"
-            :report="azStore.getAzCodeReport"
+            v-if="azStore.getActiveReportType() === ReportTypes.CODE"
+            :report="azStore.getCodeReport()"
           />
           <PricingReportAZ
-            v-if="azStore.getActiveReportAZ === 'pricing'"
-            :report="azStore.getAzPricingReport"
+            v-if="azStore.getActiveReportType() === ReportTypes.PRICING"
+            :report="azStore.getPricingReport()"
           />
         </div>
       </transition>
@@ -27,6 +27,7 @@ import CodeReportAZ from "@/domains/az/components/AZCodeReport.vue";
 import PricingReportAZ from "@/domains/az/components/AZPricingReport.vue";
 import AZContentHeader from "@/domains/az/components/AZContentHeader.vue";
 import { useAzStore } from "@/domains/az/store";
+import { ReportTypes } from '@/domains/shared/types';
 
 const azStore = useAzStore();
 </script>

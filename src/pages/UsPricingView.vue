@@ -5,15 +5,15 @@
 
     <div class="w-full max-w-5xl">
       <transition name="fade" mode="out-in" appear>
-        <div :key="npanxxStore.getActiveReportUS">
-          <USFileUploads v-if="npanxxStore.getActiveReportUS === ReportTypes.FILES" />
+        <div :key="npanxxStore.getActiveReportType()">
+          <USFileUploads v-if="npanxxStore.getActiveReportType() === ReportTypes.FILES" />
           <CodeReportUS
-            v-if="npanxxStore.getActiveReportUS === ReportTypes.CODE"
-            :report="npanxxStore.getUsCodeReport"
+            v-if="npanxxStore.getActiveReportType() === ReportTypes.CODE"
+            :report="npanxxStore.getCodeReport()"
           />
           <PricingReportUS
-            v-if="npanxxStore.getActiveReportUS === ReportTypes.PRICING"
-            :report="npanxxStore.getUsPricingReport"
+            v-if="npanxxStore.getActiveReportType() === ReportTypes.PRICING"
+            :report="npanxxStore.getPricingReport()"
           />
         </div>
       </transition>

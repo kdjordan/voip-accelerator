@@ -3,7 +3,7 @@ export const PlanTier = {
   FREE: 'free',
   PRO: 'pro',
   ENTERPRISE: 'enterprise',
-};
+} as const;
 
 export type PlanTierType = (typeof PlanTier)[keyof typeof PlanTier];
 

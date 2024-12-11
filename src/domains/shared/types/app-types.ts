@@ -1,7 +1,7 @@
-import type { AZStandardizedData } from '@/domains/az/types/az-types';
-import type { USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
+import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/domains/az/types/az-types';
+import type { USStandardizedData, USPricingReport, USCodeReport } from '@/domains/npanxx/types/npanxx-types';
 
-export interface DomainStore {
+export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeReport | USCodeReport> {
   isComponentUploading: (componentName: string) => boolean;
   setComponentUploading: (componentName: string, isUploading: boolean) => void;
   checkFileNameAvailable: (fileName: string) => boolean;
@@ -10,6 +10,9 @@ export interface DomainStore {
   addFileUploaded: (componentName: string, fileName: string) => void;
   removeFile: (fileName: string) => void;
   isComponentDisabled: (componentName: string) => boolean;
+  getActiveReportType: () => ReportType;
+  getPricingReport: () => P | null;
+  getCodeReport: () => C | null;
   reportsGenerated: boolean;
   showUploadComponents: boolean;
   isFull: boolean;
@@ -54,9 +57,9 @@ export const ReportTypes = {
   FILES: 'files',
   CODE: 'code',
   PRICING: 'pricing',
-};
+} as const;
 
-export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
+export type ReportType = typeof ReportTypes[keyof typeof ReportTypes];
 
 
 // Add this interface

@@ -26,13 +26,13 @@ export const useNpanxxStore = defineStore('npanxxStore', {
       return Array.from(state.filesUploaded.values()).map(file => file.fileName);
     },
 
-    getActiveReportUS: (state): ReportType => {
+    getActiveReportType: (state): ReportType => {
       if (!state.reportsGenerated) return 'files';
       return state.activeReportType;
     },
 
-    getUsPricingReport: (state) => state.pricingReport,
-    getUsCodeReport: (state) => state.codeReport,
+    getPricingReport: (state): USPricingReport | null => state.pricingReport,
+    getCodeReport: (state): USCodeReport | null => state.codeReport,
 
     isComponentUploading:
       state =>
@@ -87,4 +87,4 @@ export const useNpanxxStore = defineStore('npanxxStore', {
       this.uploadingComponents[componentName] = isUploading;
     },
   },
-}) as unknown as () => DomainStore;
+}) as unknown as () => DomainStore<USPricingReport, USCodeReport>;

@@ -79,9 +79,10 @@ export interface USPricingReport {
 
 
 
-export type NPANXXRateType = {
+export const NPANXXRateType = {
   INTERSTATE: 'inter',
   INTRASTATE: 'intra',
-  INDETERMINATE: 'indeterm'
-} 
+  INDETERMINATE: 'ij',
+} as const;
 
+export type NPANXXRateType = (typeof NPANXXRateType)[keyof typeof NPANXXRateType];

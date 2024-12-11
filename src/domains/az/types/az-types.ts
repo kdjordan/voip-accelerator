@@ -1,6 +1,5 @@
+import { ReportTypes, type ReportType } from '@/domains/shared/types';
 import type { BaseStandardizedData } from '@/domains/shared/types';
-
-export type ReportType = 'files' | 'code' | 'pricing';
 
 export interface AZStandardizedData extends BaseStandardizedData {
   destName: string;
