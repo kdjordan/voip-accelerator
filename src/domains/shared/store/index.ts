@@ -99,6 +99,10 @@ export const useSharedStore = defineStore('shared', {
         storageUsed: 0,
         comparisonsToday: 0
       };
-    }
+    },
+
+    setGlobalDBVersion(version: number) {
+      this.globalDBVersion = version;
+    },
   }
 });

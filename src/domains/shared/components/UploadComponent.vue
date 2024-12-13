@@ -46,13 +46,15 @@
           </template>
           <template v-if="disabled && !isProcessingState && !isUploading">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
-            <p class="mt-2 text-sm text-foreground">File uploaded successfully</p>
+            <p class="mt-2 text-sm text-foreground">
+              {{ currentFileName }}
+            </p>
             <div class="relative z-10">
               <button
                 @click="handleRemoveFile"
-                class="mt-2 text-xs text-red-500 hover:text-red-400"
+                class="mt-4 w-8 h-8 grid place-items-center border border-red-500 text-red-500 rounded-lg hover:bg-red-500/10 transition-colors text-2xl leading-[0] pb-1"
               >
-                Remove File
+                ×
               </button>
             </div>
           </template>
@@ -116,6 +118,7 @@
     handleDragEnter,
     handleDragLeave,
     setProcessing,
+    resetState
   } = useUploadState();
 
   const isUploading = computed(() => store.value.isComponentUploading(props.componentName));
@@ -158,7 +161,15 @@
       }
     },
     onFileRemoved: () => {
-      emit('fileDeleted', props.componentName, props.DBname)
+      // First update the store
+      store.value.removeFile(props.componentName);
+      // Then emit the event
+      emit('fileDeleted', props.componentName, props.DBname);
+      // Reset all states
+      setProcessing(false);
+      resetState();
+      file.value = null;
+      showPreviewModal.value = false;
     }
   })
 
@@ -189,6 +200,12 @@
       }
     }
   }
+
+  // Add computed property for file name
+  const currentFileName = computed(() => {
+    if (!file.value) return 'File uploaded successfully'
+    return file.value.name
+  })
 </script>
 <style scoped>
   .upload-component {

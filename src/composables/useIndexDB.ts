@@ -12,56 +12,46 @@ export default function useIndexedDB() {
 
   async function storeInIndexedDB(
     data: StandardizedData[],
-    dbName: DBNameType,
+    DBname: DBNameType,
     fileName: string,
-    componentName: string
-  ): Promise<void> {
-    const storeName = `${componentName}-store`;
-    console.log('Attempting to store in IndexedDB:', { 
-      dbName, 
-      fileName, 
-      componentName,
-      storeName,
-      dataLength: data.length,
-      currentVersion: sharedStore.globalDBVersion 
-    });
-    
+    componentName: string,
+    forceCreate = false
+  ) {
     try {
-      // Always increment version to ensure upgrade
-      sharedStore.incrementGlobalDBVersion();
-      
-      const db = await openDB(dbName as DBNameType, sharedStore.globalDBVersion, {
+      // Get the current version first
+      const currentDB = await openDB(DBname, undefined);
+      const newVersion = currentDB.version + 1;
+      currentDB.close();
+
+      // Open with new version
+      const db = await openDB(DBname, newVersion, {
         upgrade(db) {
-          if (!db.objectStoreNames.contains(storeName)) {
-            console.log('Creating store:', storeName);
-            db.createObjectStore(storeName, {
-              keyPath: 'id',
-              autoIncrement: true,
-            });
+          if (db.objectStoreNames.contains(`${componentName}-store`)) {
+            db.deleteObjectStore(`${componentName}-store`);
           }
-        }
+          db.createObjectStore(`${componentName}-store`, { 
+            keyPath: 'id', 
+            autoIncrement: true 
+          });
+        },
       });
 
-      console.log('Database opened, stores:', Array.from(db.objectStoreNames));
-
-      const transaction = db.transaction(storeName, 'readwrite');
-      const store = transaction.objectStore(storeName);
-
-      await Promise.all([
-        ...data.map(row => store.add(row)),
-        transaction.done
-      ]);
-
-      if (dbName === DBName.AZ as DBNameType) {
-        azStore.addFileUploaded(componentName, fileName);
-      } else if (dbName === DBName.US as DBNameType) {
-        npanxxStore.addFileUploaded(componentName, fileName);
+      const tx = db.transaction(`${componentName}-store`, 'readwrite');
+      const store = tx.objectStore(`${componentName}-store`);
+      
+      for (const item of data) {
+        await store.add(item);
       }
-
+      
+      await tx.done;
       db.close();
-
+      
+      // Update the global version in the store
+      sharedStore.globalDBVersion = newVersion;
+      
+      console.log(`Added file to store ${componentName} ${fileName}`);
     } catch (error) {
-      console.error('Error storing data in IndexedDB:', error);
+      console.error('Error storing in IndexedDB:', error);
       throw error;
     }
   }
@@ -89,30 +79,24 @@ export default function useIndexedDB() {
     objectStoreName: string
   ): Promise<void> {
     try {
-      const db = await openDB(dbName, undefined);
+      const currentDB = await openDB(dbName, undefined);
+      const newVersion = currentDB.version + 1;
+      currentDB.close();
+
+      const db = await openDB(dbName, newVersion, {
+        upgrade(db) {
+          if (db.objectStoreNames.contains(objectStoreName)) {
+            db.deleteObjectStore(objectStoreName);
+          }
+        },
+      });
+
+      db.close();
       
-      if (db.objectStoreNames.contains(objectStoreName)) {
-        db.close();
-        
-        const upgradeDb = await openDB(dbName, db.version + 1, {
-          upgrade(db) {
-            if (db.objectStoreNames.contains(objectStoreName)) {
-              db.deleteObjectStore(objectStoreName);
-              
-              // Update stores based on dbName
-              if (dbName === DBName.AZ) {
-                azStore.removeFile(objectStoreName);
-              } else if (dbName === DBName.US) {
-                npanxxStore.removeFile(objectStoreName);
-              }
-              
-              console.log(`Object store "${objectStoreName}" deleted`);
-            }
-          },
-        });
-        
-        upgradeDb.close();
-      }
+      // Update the global version in the store
+      sharedStore.globalDBVersion = newVersion;
+      
+      console.log(`Object store "${objectStoreName}" deleted`);
     } catch (error) {
       console.error('Error deleting object store:', error);
       throw error;

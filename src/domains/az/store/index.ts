@@ -59,9 +59,13 @@ export const useAzStore = defineStore('azStore', {
       this.activeReportType = type;
     },
 
-    removeFile(fileName: string) {
-      this.filesUploaded.delete(fileName);
-
+    removeFile(componentName: string) {
+      // Remove the file from the map
+      this.filesUploaded.delete(componentName);
+      
+      // Reset upload state for this component
+      this.uploadingComponents[componentName] = false;
+      
       // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
         this.reportsGenerated = false;

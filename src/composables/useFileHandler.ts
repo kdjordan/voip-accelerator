@@ -35,24 +35,28 @@ export function useFileHandler(options: FileHandlerOptions) {
   }
 
   async function handlePreviewConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
-    csvProcessing.columnRoles.value = confirmation.columnRoles
-    csvProcessing.startLine.value = confirmation.startLine
-    csvProcessing.showPreviewModal.value = false
-    
-    // Process the CSV and store in IndexDB
-    const processedData = await csvProcessing.parseCSVForFullProcessing()
-    if (processedData) {
-      try {
+    try {
+      csvProcessing.columnRoles.value = confirmation.columnRoles
+      csvProcessing.startLine.value = confirmation.startLine
+      csvProcessing.showPreviewModal.value = false
+      
+      // Process the CSV and store in IndexDB
+      const processedData = await csvProcessing.parseCSVForFullProcessing()
+      if (processedData) {
+        const storeName = `${options.componentName}-store`
+        
+        // Create a new store before trying to store data
         await storeInIndexedDB(
           processedData,
           options.DBname,
           csvProcessing.file.value?.name || '',
-          options.componentName
+          options.componentName,
+          true // Force create new store
         )
-      } catch (error) {
-        console.error('Error storing data:', error)
-        throw error
       }
+    } catch (error) {
+      console.error('Error in preview confirmation:', error)
+      throw error
     }
   }
 
@@ -60,9 +64,15 @@ export function useFileHandler(options: FileHandlerOptions) {
     try {
       const storeName = `${options.componentName}-store`
       await deleteObjectStore(options.DBname, storeName)
+      
+      // Reset all relevant state
       csvProcessing.file.value = null
       csvProcessing.showPreviewModal.value = false
-      options.onFileRemoved()
+      csvProcessing.previewData.value = []
+      csvProcessing.columns.value = []
+      csvProcessing.columnRoles.value = []
+      
+      await options.onFileRemoved()
     } catch (error) {
       console.error('Error removing file:', error)
       throw error

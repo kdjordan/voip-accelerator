@@ -72,12 +72,9 @@
   }
 
   async function handleRemoveFile(componentName: string, DBname: DBNameType) {
-    console.log('Removing file for component:', componentName);
     try {
       const { deleteObjectStore } = useIndexedDB();
       const storeName = `${componentName}-store`;
-
-      // Remove from IndexedDB
       await deleteObjectStore(DBname, storeName);
     } catch (error) {
       console.error('Error removing file:', error);

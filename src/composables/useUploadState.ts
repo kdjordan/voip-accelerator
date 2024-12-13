@@ -24,6 +24,13 @@ export function useUploadState() {
     }
   }
 
+  // Add reset function
+  function resetState() {
+    isProcessing.value = false
+    isDragging.value = false
+    dragCounter.value = 0
+  }
+
   return {
     // State
     isProcessing,
@@ -34,6 +41,7 @@ export function useUploadState() {
     handleDragLeave,
     setProcessing: (value: boolean) => {
       isProcessing.value = value
-    }
+    },
+    resetState // Export the reset function
   }
 } 
