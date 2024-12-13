@@ -12,7 +12,7 @@
     />
 
     <UploadComponent
-      typeOfComponent="client"
+      typeOfComponent="carrier"
       :DBname="DBName.AZ"
       :componentName="component2"
       :disabled="azStore.isComponentDisabled(component2)"

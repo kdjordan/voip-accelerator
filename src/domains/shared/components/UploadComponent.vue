@@ -3,10 +3,10 @@
     <div
       class="relative border border-fbWhite border-dashed rounded-lg p-6 hover:bg-fbWhite/10"
       :class="[
-        isProcessing || disabled || isUploading
+        isProcessingState || disabled || isUploading
           ? 'border-gray-500 bg-gray-800/50'
           : 'border-accent hover:border-accent-hover',
-        isProcessing || disabled || isUploading ? 'cursor-not-allowed' : 'cursor-pointer',
+        isProcessingState || disabled || isUploading ? 'cursor-not-allowed' : 'cursor-pointer',
         isDragging ? 'border-accent bg-fbWhite/10' : '',
       ]"
       @dragenter.prevent="handleDragEnter"
@@ -20,13 +20,13 @@
           type="file"
           accept=".csv"
           class="absolute inset-0 w-full h-full opacity-0"
-          :disabled="isProcessing || disabled || isUploading"
+          :disabled="isProcessingState || disabled || isUploading"
           @change="handleFileInput"
         />
 
         <!-- Upload Icon/Status -->
         <div class="text-center">
-          <template v-if="!disabled && !isProcessing && !isUploading">
+          <template v-if="!disabled && !isProcessingState && !isUploading">
             <i class="fas fa-cloud-upload-alt text-2xl text-accent"></i>
             <p class="mt-2 text-sm text-foreground">
               Drop your {{ typeOfComponent }}'s CSV file here or click to browse
@@ -38,13 +38,13 @@
             </div>
             <p class="mt-2 text-sm text-foreground">Uploading large file...</p>
           </template>
-          <template v-if="isProcessing">
+          <template v-if="isProcessingState">
             <div class="animate-spin text-2xl text-accent">
               <i class="fas fa-circle-notch"></i>
             </div>
             <p class="mt-2 text-sm text-foreground">Processing file...</p>
           </template>
-          <template v-if="disabled && !isProcessing && !isUploading">
+          <template v-if="disabled && !isProcessingState && !isUploading">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
             <p class="mt-2 text-sm text-foreground">File uploaded successfully</p>
             <div class="relative z-10">
@@ -76,16 +76,17 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { computed } from 'vue';
   import TheModal from './PreviewModal.vue';
-  import { DBName, type DBNameType, type DomainStore, type DomainStoreType } from '@/domains/shared/types';
-  import useCSVProcessing from '@/composables/useCsvProcessing';
+  import { DBName, type DBNameType, type DomainStoreType } from '@/domains/shared/types';
   import { useAzStore } from '@/domains/az/store';
   import { useNpanxxStore } from '@/domains/npanxx/store';
   import type { ColumnRoleOption } from '@/domains/shared/types';
+  import { useUploadState } from '@/composables/useUploadState';
+  import { useFileHandler } from '@/composables/useFileHandler';
 
   const props = defineProps<{
-    typeOfComponent: 'owner' | 'carrier' | 'client';
+    typeOfComponent: 'owner' | 'carrier';
     DBname: DBNameType;
     componentName: string;
     disabled: boolean;
@@ -109,59 +110,67 @@
   });
 
   const {
-    file,
-    startLine,
-    previewData,
-    columns,
-    deckType,
-    showPreviewModal,
-    DBname,
-    columnRoles,
-    isProcessing,
-    parseCSVForPreview,
-    parseCSVForFullProcessing,
-  } = useCSVProcessing();
-
-  deckType.value = props.DBname;
-  DBname.value = props.DBname;
-
-  console.log('props', props);
-
-  const isDragging = ref(false);
-  const dragCounter = ref(0);
+    isProcessing: isProcessingState,
+    isDragging,
+    isDropzoneDisabled,
+    handleDragEnter,
+    handleDragLeave,
+    setProcessing,
+  } = useUploadState();
 
   const isUploading = computed(() => store.value.isComponentUploading(props.componentName));
 
-  async function handleFileInput(event: Event) {
-    const target = event.target as HTMLInputElement;
-    if (!target.files?.length) return;
-
-    isProcessing.value = true;
-    file.value = target.files[0];
-
+  // Create a handler for processing files
+  const processFile = async (file: File) => {
+    setProcessing(true)
     try {
-      parseCSVForPreview(file.value);
-      showPreviewModal.value = true;
+      await handleFileInput({ target: { files: [file] } } as unknown as Event)
+      showPreviewModal.value = true
     } catch (error) {
-      console.error('Error handling file:', error);
+      console.error('Error handling file:', error)
     } finally {
-      isProcessing.value = false;
+      setProcessing(false)
     }
   }
 
-  async function handleModalConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
-    showPreviewModal.value = false;
-    isProcessing.value = true;
+  const {
+    file,
+    showPreviewModal,
+    previewData,
+    columns,
+    columnRoles,
+    startLine,
+    handleFileInput,
+    handlePreviewConfirm,
+    handlePreviewCancel,
+    handleRemoveFile
+  } = useFileHandler({
+    DBname: props.DBname,
+    componentName: props.componentName,
+    onFileAccepted: async (file: File) => {
+      setProcessing(true)
+      try {
+        showPreviewModal.value = true
+      } catch (error) {
+        console.error('Error handling file:', error)
+      } finally {
+        setProcessing(false)
+      }
+    },
+    onFileRemoved: () => {
+      emit('fileDeleted', props.componentName, props.DBname)
+    }
+  })
 
+  async function handleModalConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
+    setProcessing(true);
     try {
-      columnRoles.value = confirmation.columnRoles;
-      startLine.value = confirmation.startLine;
-      await parseCSVForFullProcessing();
+      await handlePreviewConfirm(confirmation);
       emit('fileUploaded', props.componentName, file.value?.name || '');
     } catch (error) {
       console.error('Error processing file:', error);
     } finally {
-      isProcessing.value = false;
+      setProcessing(false);
     }
   }
 
@@ -169,39 +178,14 @@
     showPreviewModal.value = false;
     file.value = null;
   }
-  function handleRemoveFile() {
-    // Reset local state
-    file.value = null;
-    isProcessing.value = false;
-    showPreviewModal.value = false;
-    // Emit event to parent to update store
-    emit('fileDeleted', props.componentName, props.DBname);
-  }
 
-  function handleDragEnter(event: DragEvent) {
-    event.preventDefault();
-    if (!isProcessing.value && !props.disabled) {
-      dragCounter.value++;
-      isDragging.value = true;
-    }
-  }
-
-  function handleDragLeave(event: DragEvent) {
-    event.preventDefault();
-    dragCounter.value--;
-    if (dragCounter.value === 0) {
-      isDragging.value = false;
-    }
-  }
-
+  // Update drop handler
   function handleDrop(event: DragEvent) {
     event.preventDefault();
-    dragCounter.value = 0;
-    isDragging.value = false;
-    if (!isProcessing.value && !props.disabled && event.dataTransfer?.files) {
-      const file = event.dataTransfer.files[0];
-      if (file) {
-        handleFileInput({ target: { files: [file] } } as any);
+    if (!isProcessingState.value && !props.disabled && event.dataTransfer?.files) {
+      const droppedFile = event.dataTransfer.files[0];
+      if (droppedFile) {
+        processFile(droppedFile);
       }
     }
   }

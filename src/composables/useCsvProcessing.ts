@@ -1,10 +1,6 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
-import type { 
-  StandardizedData, 
-  DBNameType,
-  DomainStoreType 
-} from '@/domains/shared/types';
+import type { StandardizedData, DBNameType, DomainStoreType } from '@/domains/shared/types';
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
@@ -38,119 +34,106 @@ export default function useCSVProcessing() {
     }
   }
 
-  async function parseCSVForFullProcessing(): Promise<void> {
+  async function parseCSVForFullProcessing(): Promise<StandardizedData[] | undefined> {
     const domainStore = getDomainStore();
     if (!file.value) {
       return;
     }
-    const fileNameExists = domainStore.checkFileNameAvailable(file.value.name);
 
-    if (!fileNameExists) {
-      domainStore.setComponentFileIsUploading(componentName.value);
+    try {
       if (deckType.value === DBName.AZ) {
-        try {
-          await processAZData(file.value);
-        } catch (e) {
-          console.error('Error during CSV parsing', e);
-        }
+        const processedData = await processAZData(file.value);
+        return processedData;
       }
       if (deckType.value === DBName.US) {
-        try {
-          console.log('going in on processing US data');
-          await processUSData(file.value);
-        } catch (e) {
-          console.error('Error during CSV parsing', e);
-        }
+        const processedData = await processUSData(file.value);
+        return processedData;
       }
-    } else {
-      alert('File with this name already exists.');
-      console.log('File with this name already exists.');
+    } catch (e) {
+      console.error('Error during CSV parsing', e);
+      throw e;
     }
   }
 
-  async function processUSData(fileToProcess: File) {
+  async function processUSData(fileToProcess: File): Promise<USStandardizedData[]> {
     console.log('processing US data', indetermRateType.value);
-    Papa.parse(fileToProcess, {
-      header: false,
-      skipEmptyLines: true,
-      complete(results: Papa.ParseResult<string[]>) {
-        const dataStartIndex = startLine.value - 1;
-        const fullData = results.data.slice(dataStartIndex);
-        const standardizedData: USStandardizedData[] = [];
+    return new Promise((resolve, reject) => {
+      Papa.parse(fileToProcess, {
+        header: false,
+        skipEmptyLines: true,
+        complete(results: { data: string[][] }) {
+          const dataStartIndex = startLine.value - 1;
+          const fullData = results.data.slice(dataStartIndex);
+          const standardizedData: USStandardizedData[] = [];
 
-        console.log('Sample Row:', fullData[0]);
+          fullData.forEach((row: string[], rowIndex: number) => {
+            const standardizedRow: USStandardizedData = {
+              npa: 0,
+              nxx: 0,
+              interRate: 0,
+              intraRate: 0,
+              ijRate: 0,
+            };
 
-        fullData.forEach((row: string[], rowIndex: number) => {
-          const standardizedRow: USStandardizedData = {
-            npa: 0,
-            nxx: 0,
-            interRate: 0,
-            intraRate: 0,
-            ijRate: 0,
-          };
+            let interRate = 0;
+            let intraRate = 0;
 
-          let interRate = 0;
-          let intraRate = 0;
+            columnRoles.value.forEach((role, index) => {
+              if (role && index < row.length) {
+                const value = row[index].trim();
 
-          columnRoles.value.forEach((role, index) => {
-            if (role && index < row.length) {
-              const value = row[index].trim();
-
-              switch (role) {
-                case 'NPA':
-                  standardizedRow.npa = processNPA(value);
-                  break;
-                case 'NXX':
-                  standardizedRow.nxx = parseInt(value, 10);
-                  break;
-                case 'NPANXX':
-                  const [npa, nxx] = processNPANXX(value);
-                  standardizedRow.npa = npa;
-                  standardizedRow.nxx = nxx;
-                  break;
-                case 'inter':
-                  interRate = parseFloat(value);
-                  standardizedRow.interRate = interRate;
-                  break;
-                case 'intra':
-                  intraRate = parseFloat(value);
-                  standardizedRow.intraRate = intraRate;
-                  break;
-                case 'indeterm':
-                  standardizedRow.ijRate = parseFloat(value);
-                  break;
+                switch (role) {
+                  case 'NPA':
+                    standardizedRow.npa = processNPA(value);
+                    break;
+                  case 'NXX':
+                    standardizedRow.nxx = parseInt(value, 10);
+                    break;
+                  case 'NPANXX':
+                    const [npa, nxx] = processNPANXX(value);
+                    standardizedRow.npa = npa;
+                    standardizedRow.nxx = nxx;
+                    break;
+                  case 'inter':
+                    interRate = parseFloat(value);
+                    standardizedRow.interRate = interRate;
+                    break;
+                  case 'intra':
+                    intraRate = parseFloat(value);
+                    standardizedRow.intraRate = intraRate;
+                    break;
+                  case 'indeterm':
+                    standardizedRow.ijRate = parseFloat(value);
+                    break;
+                }
               }
+            });
+
+            // Handle indeterminate rate
+            if (indetermRateType.value === 'inter') {
+              standardizedRow.ijRate = interRate;
+            } else if (indetermRateType.value === 'intra') {
+              standardizedRow.ijRate = intraRate;
+            } else if (indetermRateType.value === 'ij' && standardizedRow.ijRate === 0) {
+              standardizedRow.ijRate = intraRate;
+            }
+
+            const isValidNPA = !isNaN(standardizedRow.npa);
+            const isValidNXX = !isNaN(standardizedRow.nxx);
+            const isValidRates =
+              !isNaN(standardizedRow.interRate) && !isNaN(standardizedRow.intraRate) && !isNaN(standardizedRow.ijRate);
+
+            if (isValidNPA && isValidNXX && isValidRates) {
+              standardizedData.push(standardizedRow);
+            } else {
+              console.error('Issue parsing US file row', rowIndex, standardizedRow);
             }
           });
 
-          // Handle indeterminate rate based on user selection
-          if (indetermRateType.value === 'inter') {
-            standardizedRow.ijRate = interRate;
-          } else if (indetermRateType.value === 'intra') {
-            standardizedRow.ijRate = intraRate;
-          } else if (indetermRateType.value === 'ij' && standardizedRow.ijRate === 0) {
-            // If 'default' is selected and no explicit ijRate was set, use intraRate as fallback
-            standardizedRow.ijRate = intraRate;
-          }
-
-          const isValidNPA = !isNaN(standardizedRow.npa);
-          const isValidNXX = !isNaN(standardizedRow.nxx);
-          const isValidRates =
-            !isNaN(standardizedRow.interRate) && !isNaN(standardizedRow.intraRate) && !isNaN(standardizedRow.ijRate);
-
-          if (isValidNPA && isValidNXX && isValidRates) {
-            standardizedData.push(standardizedRow);
-          } else {
-            console.error('Issue parsing US file row', rowIndex, standardizedRow);
-          }
-        });
-
-        storeDataInIndexedDB(standardizedData);
-      },
-      error: function (error) {
-        console.error('Error parsing CSV:', error);
-        throw error;
-      },
+          resolve(standardizedData);
+        },
+        error: reject,
+      });
     });
   }
 
@@ -172,97 +155,84 @@ export default function useCSVProcessing() {
     return [npa, nxx];
   }
 
-  async function processAZData(fileToProcess: File) {
-    Papa.parse(fileToProcess, {
-      header: false,
-      skipEmptyLines: true,
-      dynamicTyping: true,
-      fastMode: true,
-      complete(results: Papa.ParseResult<string[]>) {
-        console.log('Processing file:', fileToProcess.name);
-        const dataStartIndex = startLine.value - 1;
-        const fullData = results.data.slice(dataStartIndex);
-        const standardizedData: AZStandardizedData[] = [];
+  async function processAZData(fileToProcess: File): Promise<AZStandardizedData[]> {
+    return new Promise((resolve, reject) => {
+      Papa.parse(fileToProcess, {
+        header: false,
+        skipEmptyLines: true,
+        complete(results: { data: string[][] }) {
+          const dataStartIndex = startLine.value - 1;
+          const fullData = results.data.slice(dataStartIndex);
+          const standardizedData: AZStandardizedData[] = [];
 
-        fullData.forEach((row: string[], rowIndex: number) => {
-          const standardizedRow: AZStandardizedData = {
-            destName: '',
-            dialCode: 0,
-            rate: 0,
-          };
+          fullData.forEach((row: string[], rowIndex: number) => {
+            const standardizedRow: AZStandardizedData = {
+              destName: '',
+              dialCode: 0,
+              rate: 0,
+            };
 
-          columnRoles.value.forEach((role, index) => {
-            if (role) {
-              switch (role) {
-                case 'destName':
-                  standardizedRow.destName = String(row[index]).trim();
-                  break;
-                case 'dialCode':
-                  standardizedRow.dialCode = Number(row[index]);
-                  break;
-                case 'rate':
-                  standardizedRow.rate = Number(row[index]);
-                  break;
+            columnRoles.value.forEach((role, index) => {
+              if (role && index < row.length) {
+                switch (role) {
+                  case 'destName':
+                    standardizedRow.destName = String(row[index]).trim();
+                    break;
+                  case 'dialCode':
+                    standardizedRow.dialCode = Number(row[index]);
+                    break;
+                  case 'rate':
+                    standardizedRow.rate = Number(row[index]);
+                    break;
+                }
               }
+            });
+
+            if (
+              typeof standardizedRow.destName === 'string' &&
+              typeof standardizedRow.dialCode === 'number' &&
+              typeof standardizedRow.rate === 'number'
+            ) {
+              standardizedData.push(standardizedRow);
             }
           });
 
-          if (
-            typeof standardizedRow.destName === 'string' &&
-            typeof standardizedRow.dialCode === 'number' &&
-            typeof standardizedRow.rate === 'number'
-          ) {
-            standardizedData.push(standardizedRow);
-          } else {
-            console.warn('Skipping invalid row:', row, 'Types:', {
-              destName: typeof standardizedRow.destName,
-              dialCode: typeof standardizedRow.dialCode,
-              rate: typeof standardizedRow.rate,
-            });
-          }
-        });
-
-        console.log(`Standardized ${standardizedData.length} rows for ${fileToProcess.name}`);
-        storeDataInIndexedDB(standardizedData);
-      },
-      error: function (error) {
-        console.error('Error parsing CSV:', error);
-        throw error;
-      },
+          resolve(standardizedData);
+        },
+        error: reject,
+      });
     });
   }
 
   function parseCSVForPreview(uploadedFile: File) {
-    try {
-      Papa.parse(uploadedFile, {
-        header: false,
-        complete(results) {
-          previewData.value = results.data.slice(0, 25) as string[][];
-          columns.value = results.data[startLine.value - 1] as string[];
-          columnRoles.value = Array(columns.value.length).fill('');
-          showPreviewModal.value = true;
-        },
-      });
-    } catch {
-      console.error('error uploading file');
-    }
-  }
-
-  //function reaches out to IndesBB composable to store data
-  async function storeDataInIndexedDB(data: StandardizedData[]) {
-    console.log('storing with ', DBname.value, componentName.value);
-    try {
-      if (file.value && DBname.value) {
-        await storeInIndexedDB(
-          data,
-          DBname.value as DBNameType,
-          file.value.name,
-          componentName.value
-        );
+    return new Promise((resolve, reject) => {
+      try {
+        Papa.parse(uploadedFile, {
+          header: false,
+          preview: 25, // Only get first 25 rows for preview
+          complete(results: { data: string[][] }) {
+            // Get preview data
+            previewData.value = results.data;
+            
+            // Get column headers (first row or specified start line)
+            columns.value = results.data[startLine.value - 1];
+            
+            // Initialize empty column roles
+            columnRoles.value = Array(columns.value.length).fill('');
+            
+            showPreviewModal.value = true;
+            resolve(results.data);
+          },
+          error: (error) => {
+            console.error('Error parsing CSV:', error);
+            reject(error);
+          }
+        });
+      } catch (error) {
+        console.error('error uploading file', error);
+        reject(error);
       }
-    } catch (error) {
-      console.error('Error storing data in IndexedDB:', error);
-    }
+    });
   }
 
   async function removeFromDB() {
