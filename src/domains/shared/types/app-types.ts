@@ -1,23 +1,36 @@
 import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/domains/az/types/az-types';
 import type { USStandardizedData, USPricingReport, USCodeReport } from '@/domains/npanxx/types/npanxx-types';
 
+// Add this type definition
+export type DomainStoreType = 
+  | DomainStore<AzPricingReport, AzCodeReport>
+  | DomainStore<USPricingReport, USCodeReport>;
+
 export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeReport | USCodeReport> {
-  isComponentUploading: (componentName: string) => boolean;
-  setComponentUploading: (componentName: string, isUploading: boolean) => void;
-  checkFileNameAvailable: (fileName: string) => boolean;
-  setComponentFileIsUploading: (componentName: string) => void;
-  getStoreNameByComponent: (componentName: string) => string;
-  addFileUploaded: (componentName: string, fileName: string) => void;
-  removeFile: (fileName: string) => void;
-  isComponentDisabled: (componentName: string) => boolean;
-  getActiveReportType: () => ReportType;
-  getPricingReport: () => P | null;
-  getCodeReport: () => C | null;
+  // State properties
   reportsGenerated: boolean;
   showUploadComponents: boolean;
+  activeReportType: ReportType;
+  
+  // Getters
+  isComponentDisabled: (componentName: string) => boolean;
+  isComponentUploading: (componentName: string) => boolean;
   isFull: boolean;
   getFileNames: string[];
-  setReports: (pricing: any, code: any) => void;
+  getActiveReportType: ReportType;
+  getPricingReport: P | null;
+  getCodeReport: C | null;
+
+  // Actions
+  setComponentUploading: (componentName: string, isUploading: boolean) => void;
+  addFileUploaded: (componentName: string, fileName: string) => void;
+  removeFile: (fileName: string) => void;
+  setReports: (pricing: P, code: C) => void;
+  setActiveReportType: (type: ReportType) => void;
+  checkFileNameAvailable: (fileName: string) => boolean;
+  // Add these methods that were missing
+  setComponentFileIsUploading: (componentName: string) => void;
+  getStoreNameByComponent: (componentName: string) => string;
 }
 
 

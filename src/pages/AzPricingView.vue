@@ -5,15 +5,15 @@
 
     <div class="w-full max-w-5xl">
       <transition name="fade" mode="out-in" appear>
-        <div :key="azStore.getActiveReportType()">
-          <AZFileUploads v-if="azStore.getActiveReportType() === ReportTypes.FILES" />
+        <div :key="azStore.getActiveReportType">
+          <AZFileUploads v-if="azStore.getActiveReportType === ReportTypes.FILES" />
           <CodeReportAZ
-            v-if="azStore.getActiveReportType() === ReportTypes.CODE"
-            :report="azStore.getCodeReport()"
+            v-if="azStore.getActiveReportType === ReportTypes.CODE"
+            :report="azStore.getCodeReport"
           />
           <PricingReportAZ
-            v-if="azStore.getActiveReportType() === ReportTypes.PRICING"
-            :report="azStore.getPricingReport()"
+            v-if="azStore.getActiveReportType === ReportTypes.PRICING"
+            :report="azStore.getPricingReport"
           />
         </div>
       </transition>

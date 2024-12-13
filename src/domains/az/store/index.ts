@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import type { AzPricingReport, AzCodeReport } from '../types/az-types';
-import type { ReportType, DomainStore } from '@/domains/shared/types';
+import type { DomainStore, ReportType } from '@/domains/shared/types';
 
 
 export const useAzStore = defineStore('azStore', {
@@ -15,31 +15,24 @@ export const useAzStore = defineStore('azStore', {
   }),
 
   getters: {
-    isComponentDisabled:
-      state =>
-      (componentName: string): boolean => {
-        return state.filesUploaded.has(componentName);
-      },
-
-    isComponentUploading:
-      state =>
-      (componentName: string): boolean => {
-        return !!state.uploadingComponents[componentName];
-      },
-
-    isFull: (state): boolean => state.filesUploaded.size === 2,
-
-    getFileNames: (state): string[] => {
-      return Array.from(state.filesUploaded.values()).map(file => file.fileName);
+    isComponentDisabled: (state) => (componentName: string) => {
+      return state.filesUploaded.has(componentName);
     },
 
-    getActiveReportAZ: (state): 'files' | 'code' | 'pricing' => {
-      if (!state.reportsGenerated) return 'files';
-      return state.showUploadComponents ? 'files' : 'pricing';
+    isComponentUploading: (state) => (componentName: string) => {
+      return !!state.uploadingComponents[componentName];
     },
 
-    getPricingReport: (state): AzPricingReport | null => state.pricingReport,
-    getCodeReport: (state): AzCodeReport | null => state.codeReport,
+    isFull: (state) => state.filesUploaded.size === 2,
+
+    getFileNames: (state) => 
+      Array.from(state.filesUploaded.values()).map(file => file.fileName),
+
+    getActiveReportType: (state) => state.activeReportType,
+    
+    getPricingReport: (state) => state.pricingReport,
+    
+    getCodeReport: (state) => state.codeReport,
   },
 
   actions: {
@@ -84,12 +77,11 @@ export const useAzStore = defineStore('azStore', {
     },
 
     setComponentFileIsUploading(componentName: string): void {
-      // implementation
+      this.setComponentUploading(componentName, true);
     },
 
     getStoreNameByComponent(componentName: string): string {
-      // implementation
-      return componentName;
+      return `${componentName}-store`;
     },
 
     setComponentUploading(componentName: string, isUploading: boolean) {

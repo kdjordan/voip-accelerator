@@ -1,12 +1,16 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
-import type { AZStandardizedData } from '@/domains/az/types/az-types';
-import type { USStandardizedData, NPANXXRateType } from '@/domains/npanxx/types/npanxx-types';
-import type { StandardizedData, DBNameType } from '@/domains/shared/types';
+import type { 
+  StandardizedData, 
+  DBNameType,
+  DomainStoreType 
+} from '@/domains/shared/types';
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
 import { useNpanxxStore } from '@/domains/npanxx/store';
+import { NPANXXRateType, USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
+import type { AZStandardizedData } from '@/domains/az/types/az-types';
 
 export default function useCSVProcessing() {
   const file = ref<File | null>(null);
@@ -23,7 +27,7 @@ export default function useCSVProcessing() {
 
   const { storeInIndexedDB, deleteObjectStore } = useIndexedDB();
 
-  function getDomainStore() {
+  function getDomainStore(): DomainStoreType {
     switch (deckType.value) {
       case DBName.AZ:
         return useAzStore();
@@ -49,7 +53,7 @@ export default function useCSVProcessing() {
         } catch (e) {
           console.error('Error during CSV parsing', e);
         }
-      } // Add this closing bracket
+      }
       if (deckType.value === DBName.US) {
         try {
           console.log('going in on processing US data');
@@ -262,8 +266,8 @@ export default function useCSVProcessing() {
   }
 
   async function removeFromDB() {
-    let storeName = getDomainStore().getStoreNameByComponent(componentName.value);
-    // resetLocalState();
+    const domainStore = getDomainStore();
+    const storeName = domainStore.getStoreNameByComponent(componentName.value);
     await deleteObjectStore(DBname.value as DBNameType, storeName);
   }
 

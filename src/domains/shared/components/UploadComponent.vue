@@ -78,11 +78,10 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue';
   import TheModal from './PreviewModal.vue';
-  import { DBName, DBNameType } from '@/domains/shared/types';
+  import { DBName, type DBNameType, type DomainStore, type DomainStoreType } from '@/domains/shared/types';
   import useCSVProcessing from '@/composables/useCsvProcessing';
   import { useAzStore } from '@/domains/az/store';
   import { useNpanxxStore } from '@/domains/npanxx/store';
-  import type { DomainStore } from '@/domains/shared/types';
   import type { ColumnRoleOption } from '@/domains/shared/types';
 
   const props = defineProps<{
@@ -98,8 +97,16 @@
     (e: 'fileDeleted', componentName: string, DBname: DBNameType): void;
   }>();
 
-  // const isProcessing = ref(false);
-  // const showPreviewModal = ref(false);
+  const store = computed((): DomainStoreType => {
+    switch (props.DBname) {
+      case DBName.AZ:
+        return useAzStore();
+      case DBName.US:
+        return useNpanxxStore();
+      default:
+        throw new Error(`Invalid DBname: ${props.DBname}`);
+    }
+  });
 
   const {
     file,
@@ -122,17 +129,6 @@
 
   const isDragging = ref(false);
   const dragCounter = ref(0);
-
-  const store = computed((): DomainStore => {
-    switch (props.DBname) {
-      case DBName.AZ:
-        return useAzStore();
-      case DBName.US:
-        return useNpanxxStore();
-      default:
-        throw new Error(`Invalid DBname: ${props.DBname}`);
-    }
-  });
 
   const isUploading = computed(() => store.value.isComponentUploading(props.componentName));
 
