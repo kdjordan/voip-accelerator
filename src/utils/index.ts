@@ -1,6 +1,9 @@
 import useCSVProcessing from '@/composables/useCsvProcessing';
-import { DBName, type DBNameType } from '@/domains/shared/types';
+import { DBName, type DBNameType, type ParsedResults } from '@/domains/shared/types';
 import { useAzStore } from '@/domains/az/store';
+import useIndexedDB from '@/composables/useIndexDB';
+import type { AZStandardizedData } from '@/domains/az/types/az-types';
+import Papa from 'papaparse';
 
 export async function deleteIndexedDBDatabase(dbName: DBNameType): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -20,56 +23,92 @@ export async function deleteIndexedDBDatabase(dbName: DBNameType): Promise<void>
   });
 }
 
-export async function loadSampleDecks(deckTypes: DBNameType[]): Promise<void> {
-  const csvProcessing = useCSVProcessing();
+export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
+  const { storeInIndexedDB } = useIndexedDB();
+  const azStore = useAzStore();
 
-  for (const deckType of deckTypes) {
-    switch (deckType) {
-      case DBName.AZ:
-        await loadAZSampleDecks(csvProcessing);
-        break;
-      case DBName.US:
-        await loadNPANXXSampleDecks(csvProcessing);
-        break;
-      default:
-        console.warn(`Sample deck type ${deckType} not supported`);
-    }
-  }
-}
-
-async function loadAZSampleDecks(csvProcessing: ReturnType<typeof useCSVProcessing>) {
   try {
-    const azStore = useAzStore();
+    if (dbNames.includes('az')) {
+      // Load and parse the CSV files - use AZtest1.csv for both
+      const response = await fetch('/src/data/sample/AZtest1.csv');
+      if (!response.ok) {
+        throw new Error(`Failed to load AZtest1.csv: ${response.statusText}`);
+      }
+      const csvText = await response.text();
+      
+      // Parse CSV data for owner file (az1-store)
+      const parsedOwnerData = await new Promise<AZStandardizedData[]>((resolve, reject) => {
+        Papa.parse<string[]>(csvText, {
+          complete: (results: ParsedResults) => {
+            const standardizedData: AZStandardizedData[] = results.data
+              .filter((row: string[]) => row.length === 3)
+              .map((row: string[]) => ({
+                destName: String(row[0]).trim(),
+                dialCode: Number(row[1]),
+                // Slightly increase rates for owner data
+                rate: Number((Number(row[2]) * 1.1).toFixed(4))
+              }))
+              .filter((item): item is AZStandardizedData => 
+                !isNaN(item.dialCode) && 
+                !isNaN(item.rate) && 
+                Boolean(item.destName)
+              );
+            resolve(standardizedData);
+          },
+          error: reject,
+          skipEmptyLines: true
+        });
+      });
 
-    // Load owner deck first
-    const ownerResponse = await fetch('/src/data/sample/AZtestshort.csv');
-    const ownerContent = await ownerResponse.text();
-    const ownerFile = new File([ownerContent], 'AZtestshort.csv', { type: 'text/csv' });
+      // Store owner file first
+      const storeName1 = `${azStore.getStoreNameByComponent('az1')}`;
+      await storeInIndexedDB(
+        parsedOwnerData,
+        'az',
+        'AZtest.csv',
+        'az1',
+        true
+      );
+      azStore.addFileUploaded('az1', 'AZtest.csv');
 
-    // Process owner file
-    csvProcessing.deckType.value = DBName.AZ;
-    csvProcessing.DBname.value = DBName.AZ;
-    csvProcessing.file.value = ownerFile;
-    csvProcessing.componentName.value = 'az1';
-    csvProcessing.columnRoles.value = ['destName', 'dialCode', 'rate'];
-    csvProcessing.startLine.value = 1;
-    await csvProcessing.parseCSVForFullProcessing();
-    azStore.addFileUploaded('az1', ownerFile.name);
+      // Parse CSV data for carrier file (using same source file)
+      const parsedCarrierData = await new Promise<AZStandardizedData[]>((resolve, reject) => {
+        Papa.parse<string[]>(csvText, {
+          complete: (results: ParsedResults) => {
+            const standardizedData: AZStandardizedData[] = results.data
+              .filter((row: string[]) => row.length === 3)
+              .map((row: string[]) => ({
+                destName: String(row[0]).trim(),
+                dialCode: Number(row[1]),
+                rate: Number(row[2])  // Keep original rates for carrier
+              }))
+              .filter((item): item is AZStandardizedData => 
+                !isNaN(item.dialCode) && 
+                !isNaN(item.rate) && 
+                Boolean(item.destName)
+              );
+            resolve(standardizedData);
+          },
+          error: reject,
+          skipEmptyLines: true
+        });
+      });
 
-    // Then load carrier file
-    const carrierResponse = await fetch('/src/data/sample/AZtest1short.csv');
-    const carrierContent = await carrierResponse.text();
-    const carrierFile = new File([carrierContent], 'AZtest1short.csv', { type: 'text/csv' });
+      // Store carrier file second
+      const storeName2 = `${azStore.getStoreNameByComponent('az2')}`;
+      await storeInIndexedDB(
+        parsedCarrierData,
+        'az',
+        'AZtest1.csv',
+        'az2',
+        true
+      );
+      azStore.addFileUploaded('az2', 'AZtest1.csv');
+    }
 
-    // Process carrier file
-    csvProcessing.file.value = carrierFile;
-    csvProcessing.componentName.value = 'az2';
-    csvProcessing.columnRoles.value = ['destName', 'dialCode', 'rate'];
-    csvProcessing.startLine.value = 1;
-    await csvProcessing.parseCSVForFullProcessing();
-    azStore.addFileUploaded('az2', carrierFile.name);
+    console.log('Sample decks loaded successfully');
   } catch (error) {
-    console.error('Error loading AZ sample decks:', error);
+    console.error('Error loading sample decks:', error);
     throw error;
   }
 }

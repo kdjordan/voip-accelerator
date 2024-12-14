@@ -28,9 +28,9 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   setReports: (pricing: P, code: C) => void;
   setActiveReportType: (type: ReportType) => void;
   checkFileNameAvailable: (fileName: string) => boolean;
-  // Add these methods that were missing
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
+  resetFiles: () => void;
 }
 
 

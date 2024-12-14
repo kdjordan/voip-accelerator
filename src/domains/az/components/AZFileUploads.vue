@@ -94,13 +94,13 @@
     try {
       const fileNames = azStore.getFileNames;
       const file1Data = await loadFromIndexedDB(
-        DBName.AZ as DBNameType,
-        fileNames[0],
+        DBName.AZ,
+        'az1-store',
         sharedStore.globalDBVersion
       );
       const file2Data = await loadFromIndexedDB(
-        DBName.AZ as DBNameType,
-        fileNames[1],
+        DBName.AZ,
+        'az2-store',
         sharedStore.globalDBVersion
       );
 

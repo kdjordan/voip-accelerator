@@ -48,16 +48,36 @@
 </template>
 <script setup lang="ts">
   import { useAzStore } from '@/domains/az/store';
-  import type { ReportType } from '@/domains/shared/types/base-types';
+  import { ReportTypes, type ReportType } from '@/domains/shared/types';
   import { resetReportApi } from '@/API/api';
+  import useIndexedDB from '@/composables/useIndexDB';
+  import { DBName } from '@/domains/shared/types';
 
   const azStore = useAzStore();
+  const { deleteObjectStore } = useIndexedDB();
 
-  const reportTypes: ReportType[] = ['files', 'code', 'pricing'];
+  const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
 
   async function handleReset() {
-    console.log('Resetting the AZ report');
-    azStore.setActiveReportType('files');
-    await resetReportApi('az');
+    try {
+      console.log('Resetting the AZ report');
+      
+      // Reset store state first
+      azStore.resetFiles();
+      azStore.setActiveReportType('files');
+
+      // Clean up IndexedDB stores
+      await Promise.all([
+        deleteObjectStore(DBName.AZ, 'az1-store'),
+        deleteObjectStore(DBName.AZ, 'az2-store')
+      ]);
+
+      // Call API reset
+      await resetReportApi('az');
+
+      console.log('Reset completed successfully');
+    } catch (error) {
+      console.error('Error during reset:', error);
+    }
   }
 </script>
