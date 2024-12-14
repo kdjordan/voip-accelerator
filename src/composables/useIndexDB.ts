@@ -29,26 +29,26 @@ export default function useIndexedDB() {
           if (db.objectStoreNames.contains(`${componentName}-store`)) {
             db.deleteObjectStore(`${componentName}-store`);
           }
-          db.createObjectStore(`${componentName}-store`, { 
-            keyPath: 'id', 
-            autoIncrement: true 
+          db.createObjectStore(`${componentName}-store`, {
+            keyPath: 'id',
+            autoIncrement: true,
           });
         },
       });
 
       const tx = db.transaction(`${componentName}-store`, 'readwrite');
       const store = tx.objectStore(`${componentName}-store`);
-      
+
       for (const item of data) {
         await store.add(item);
       }
-      
+
       await tx.done;
       db.close();
-      
+
       // Update the global version in the store
       sharedStore.globalDBVersion = newVersion;
-      
+
       console.log(`Added file to store ${componentName} ${fileName}`);
     } catch (error) {
       console.error('Error storing in IndexedDB:', error);
@@ -74,10 +74,7 @@ export default function useIndexedDB() {
     }
   }
 
-  async function deleteObjectStore(
-    dbName: DBNameType,
-    objectStoreName: string
-  ): Promise<void> {
+  async function deleteObjectStore(dbName: DBNameType, objectStoreName: string): Promise<void> {
     try {
       const currentDB = await openDB(dbName, undefined);
       const newVersion = currentDB.version + 1;
@@ -92,10 +89,10 @@ export default function useIndexedDB() {
       });
 
       db.close();
-      
+
       // Update the global version in the store
       sharedStore.globalDBVersion = newVersion;
-      
+
       console.log(`Object store "${objectStoreName}" deleted`);
     } catch (error) {
       console.error('Error deleting object store:', error);
