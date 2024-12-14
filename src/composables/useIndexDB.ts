@@ -1,14 +1,10 @@
 import { openDB } from 'idb';
 import { useSharedStore } from '@/domains/shared/store';
-import { useAzStore } from '@/domains/az/store';
-import { useNpanxxStore } from '@/domains/npanxx/store';
-import { DBName, type DBNameType } from '@/domains/shared/types';
+import { type DBNameType } from '@/domains/shared/types';
 import type { StandardizedData } from '@/domains/shared/types';
 
 export default function useIndexedDB() {
   const sharedStore = useSharedStore();
-  const azStore = useAzStore();
-  const npanxxStore = useNpanxxStore();
 
   async function storeInIndexedDB(
     data: StandardizedData[],
