@@ -1,10 +1,7 @@
 import { AZReportsInput } from '@/domains/az/types/az-types';
 import AzComparisonWorker from '@/domains/az/workers/az-comparison.worker?worker';
 import type { AzPricingReport, AzCodeReport } from '@/domains/az/types/az-types';
-import type { 
-  USReportPayload, 
-  USReportResponse 
-} from '@/domains/npanxx/types/npanxx-types';
+import type { USReportPayload, USReportResponse } from '@/domains/npanxx/types/us-types';
 
 export async function resetReportApi(reportType: string) {
   await deleteDbApi(reportType);
@@ -45,12 +42,12 @@ function forceRefreshApi() {
 export async function deleteIndexedDBDatabase(dbName: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(dbName);
-    
+
     request.onerror = () => {
       console.error(`Error deleting database: ${dbName}`);
       reject(new Error(`Failed to delete database: ${dbName}`));
     };
-    
+
     request.onsuccess = () => {
       console.log(`Successfully deleted database: ${dbName}`);
       resolve();

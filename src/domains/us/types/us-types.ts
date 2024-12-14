@@ -9,16 +9,19 @@ export const NPANXXRateType = {
 
 export type NPANXXRateType = (typeof NPANXXRateType)[keyof typeof NPANXXRateType];
 
+
 // Column roles for CSV mapping
-export enum USColumnRole {
-  NPA = 'npa',
-  NXX = 'nxx',
-  NPANXX = 'npanxx',
-  InterRate = 'interRate',
-  IntraRate = 'intraRate',
-  IJRate = 'ijRate',
-  SelectRole = '', // Default empty state
-}
+export const USColumnRole = {
+  NPA: 'npa',
+  NXX: 'nxx',
+  NPANXX: 'npanxx',
+  INTERSTATE: 'interRate',
+  INTRASTATE: 'intraRate',
+  INDETERMINATE: 'ijRate',
+  SELECT: '',
+} as const;
+
+export type USColumnRole = typeof USColumnRole[keyof typeof USColumnRole];
 
 // Core data structure
 export interface USStandardizedData extends BaseStandardizedData {
@@ -107,15 +110,4 @@ export interface USPricingReport {
     totalLower: number;
     totalEqual: number;
   };
-}
-
-// Store types
-export interface NPANXXStoreState {
-  filesUploaded: Map<string, { fileName: string }>;
-  showUploadComponents: boolean;
-  reportsGenerated: boolean;
-  activeReportType: ReportType;
-  pricingReport: USPricingReport | null;
-  codeReport: USCodeReport | null;
-  uploadingComponents: Record<string, boolean>;
 }

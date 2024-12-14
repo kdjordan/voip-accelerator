@@ -43,13 +43,14 @@
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { useNpanxxStore } from '@/domains/npanxx/store';
+  import { useNpanxxStore } from '@/domains/us/store';
   import { DBName } from '@/domains/shared/types';
   import UploadComponent from '@/domains/shared/components/UploadComponent.vue';
   import useIndexedDB from '@/composables/useIndexDB';
   import { makeNpanxxReportsApi } from '@/API/api';
-  import { USColumnRole, type ColumnRoleOption, USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
+  import { USColumnRole, USStandardizedData } from '@/domains/us/types/us-types';
   import { useSharedStore } from '@/domains/shared/store';
+  import { ColumnRoleOption } from '@/domains/shared/types';
   const npanxxStore = useNpanxxStore();
   const { loadFromIndexedDB } = useIndexedDB();
 
@@ -63,9 +64,9 @@
     { value: USColumnRole.NPANXX, label: 'NPANXX' },
     { value: USColumnRole.NPA, label: 'NPA' },
     { value: USColumnRole.NXX, label: 'NXX' },
-    { value: USColumnRole.InterRate, label: 'InterState Rate' },
-    { value: USColumnRole.IntraRate, label: 'IntraState Rate' },
-    { value: USColumnRole.IJRate, label: 'Indeterminate Rate' },
+    { value: USColumnRole.INTERSTATE, label: 'InterState Rate' },
+    { value: USColumnRole.INTRASTATE, label: 'IntraState Rate' },
+    { value: USColumnRole.INDETERMINATE, label: 'Indeterminate Rate' },
   ];
 
   async function handleFileUploaded(componentName: string, fileName: string) {

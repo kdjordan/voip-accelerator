@@ -1,4 +1,3 @@
-import { ReportTypes, type ReportType } from '@/domains/shared/types';
 import type { BaseStandardizedData } from '@/domains/shared/types';
 
 export interface AZStandardizedData extends BaseStandardizedData {
@@ -7,12 +6,14 @@ export interface AZStandardizedData extends BaseStandardizedData {
   rate: number;
 }
 
-export enum AZColumnRole {
-  Destination = 'destName',
-  DialCode = 'dialCode',
-  Rate = 'rate',
-  SelectRole = '', // This will represent our "Select Column Role" option
-}
+export const AZColumnRole = {
+  DESTINATION: 'destName',
+  DIALCODE: 'dialCode',
+  RATE: 'rate',
+  SELECT: '',  // For "Select Column Role" option
+} as const;
+
+export type AZColumnRole = typeof AZColumnRole[keyof typeof AZColumnRole];
 
 export interface AZReportsInput {
   fileName1: string;

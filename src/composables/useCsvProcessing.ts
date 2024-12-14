@@ -4,8 +4,8 @@ import type { StandardizedData, DBNameType, DomainStoreType } from '@/domains/sh
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
-import { useNpanxxStore } from '@/domains/npanxx/store';
-import { NPANXXRateType, type USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
+import { useNpanxxStore } from '@/domains/us/store';
+import { NPANXXRateType, type USStandardizedData } from '@/domains/us/types/us-types';
 import type { AZStandardizedData } from '@/domains/az/types/az-types';
 
 export default function useCSVProcessing() {
@@ -105,15 +105,13 @@ export default function useCSVProcessing() {
             });
 
             if (!standardizedRow.npanxx && standardizedRow.npa && standardizedRow.nxx) {
-              standardizedRow.npanxx = (standardizedRow.npa * 1000) + standardizedRow.nxx;
+              standardizedRow.npanxx = standardizedRow.npa * 1000 + standardizedRow.nxx;
             }
 
             if (
               standardizedRow.npa > 0 &&
               standardizedRow.nxx > 0 &&
-              (standardizedRow.interRate > 0 || 
-               standardizedRow.intraRate > 0 || 
-               standardizedRow.ijRate > 0)
+              (standardizedRow.interRate > 0 || standardizedRow.intraRate > 0 || standardizedRow.ijRate > 0)
             ) {
               standardizedData.push(standardizedRow);
             }
@@ -184,20 +182,20 @@ export default function useCSVProcessing() {
           complete(results: { data: string[][] }) {
             // Get preview data
             previewData.value = results.data;
-            
+
             // Get column headers (first row or specified start line)
             columns.value = results.data[startLine.value - 1];
-            
+
             // Initialize empty column roles
             columnRoles.value = Array(columns.value.length).fill('');
-            
+
             showPreviewModal.value = true;
             resolve(results.data);
           },
-          error: (error) => {
+          error: error => {
             console.error('Error parsing CSV:', error);
             reject(error);
-          }
+          },
         });
       } catch (error) {
         console.error('error uploading file', error);

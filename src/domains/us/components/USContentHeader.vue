@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { useNpanxxStore } from '@/domains/npanxx/store';
+import { useNpanxxStore } from '@/domains/us/store';
 import { ReportTypes, type ReportType } from '@/domains/shared/types';
 import { resetReportApi } from "@/API/api";
 

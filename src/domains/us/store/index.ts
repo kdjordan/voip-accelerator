@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { USPricingReport, USCodeReport, NPANXXStoreState } from '../types/npanxx-types';
+import type { USPricingReport, USCodeReport } from '../types/us-types';
 import { useSharedStore } from '@/domains/shared/store';
 import type { ReportType } from '@/domains/shared/types';
 import type { DomainStore } from '@/domains/shared/types';
@@ -18,29 +18,23 @@ export const useNpanxxStore = defineStore('npanxxStore', {
   getters: {
     isComponentDisabled:
       state =>
-      (componentName: string): boolean => {
-        return state.filesUploaded.has(componentName);
-      },
+      (componentName: string): boolean =>
+        state.filesUploaded.has(componentName),
 
     isFull: (state): boolean => state.filesUploaded.size === 2,
 
-    getFileNames: (state): string[] => {
-      return Array.from(state.filesUploaded.values()).map(file => file.fileName);
-    },
+    getFileNames: (state): string[] => Array.from(state.filesUploaded.values()).map(file => file.fileName),
 
-    getActiveReportType: (state): ReportType => {
-      if (!state.reportsGenerated) return 'files';
-      return state.activeReportType;
-    },
+    getActiveReportType: (state): ReportType => state.activeReportType,
 
     getPricingReport: (state): USPricingReport | null => state.pricingReport,
+
     getCodeReport: (state): USCodeReport | null => state.codeReport,
 
     isComponentUploading:
       state =>
-      (componentName: string): boolean => {
-        return !!state.uploadingComponents[componentName];
-      },
+      (componentName: string): boolean =>
+        !!state.uploadingComponents[componentName],
   },
 
   actions: {
@@ -63,8 +57,8 @@ export const useNpanxxStore = defineStore('npanxxStore', {
     },
 
     setReports(pricing: USPricingReport, code: USCodeReport) {
-      this.pricingReport = pricing;
-      this.codeReport = code;
+      // this.pricingReport = pricing;
+      // this.codeReport = code;
       this.reportsGenerated = true;
       this.showUploadComponents = false;
     },
@@ -86,7 +80,7 @@ export const useNpanxxStore = defineStore('npanxxStore', {
     },
 
     setComponentUploading(componentName: string, isUploading: boolean) {
-      this.uploadingComponents[componentName] = isUploading;
+      // this.uploadingComponents[componentName] = isUploading;
     },
   },
 }) as unknown as () => DomainStore<USPricingReport, USCodeReport>;

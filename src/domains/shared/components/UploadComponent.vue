@@ -39,18 +39,6 @@
             <p class="mt-2 text-sm text-foreground">Uploading large file...</p>
           </template>
           <template v-if="isProcessingState">
-            <!-- Processing Overlay -->
-            <div class="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg overflow-hidden">
-              <!-- Full container pulse effect -->
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div class="w-full h-full bg-accent/5 rounded-lg animate-[pulse_2s_cubic-bezier(0,0,0.2,1)_infinite]">
-                </div>
-              </div>
-              <!-- Processing Text -->
-              <span class="text-background font-medium z-10 bg-accent/20 px-4 py-1 rounded-full">
-                Processing...
-              </span>
-            </div>
             <div class="animate-spin text-2xl text-accent">
               <i class="fas fa-circle-notch"></i>
             </div>
@@ -83,6 +71,7 @@
       :columnRoles="columnRoles"
       :startLine="startLine"
       :columnRoleOptions="columnRoleOptions"
+      :deckType="DBname"
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
@@ -94,7 +83,7 @@
   import TheModal from './PreviewModal.vue';
   import { DBName, type DBNameType, type DomainStoreType } from '@/domains/shared/types';
   import { useAzStore } from '@/domains/az/store';
-  import { useNpanxxStore } from '@/domains/npanxx/store';
+  import { useNpanxxStore } from '@/domains/us/store';
   import type { ColumnRoleOption } from '@/domains/shared/types';
   import { useUploadState } from '@/composables/useUploadState';
   import { useFileHandler } from '@/composables/useFileHandler';
@@ -222,16 +211,5 @@
 <style scoped>
   .upload-component {
     @apply w-full;
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 0.1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.3;
-      transform: scale(1.05);
-    }
   }
 </style>

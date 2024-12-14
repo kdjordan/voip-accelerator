@@ -4,17 +4,21 @@
     <USContentHeader />
 
     <div class="w-full max-w-5xl">
-      <transition name="fade" mode="out-in" appear>
-        <div :key="npanxxStore.activeReportType">
-          <USFileUploads v-if="npanxxStore.activeReportType === ReportTypes.FILES" />
-          <USCodeReport
+      <transition
+        name="fade"
+        mode="out-in"
+        appear
+      >
+        <div :key="usStore.getActiveReportType">
+          <USFileUploads v-if="usStore.activeReportType === ReportTypes.FILES" />
+          <!-- <USCodeReport
             v-if="npanxxStore.activeReportType === ReportTypes.CODE"
             :report="npanxxStore.codeReport"
           />
           <USPricingReport
             v-if="npanxxStore.activeReportType === ReportTypes.PRICING"
-            :report="npanxxStore.pricingReport"
-          />
+            :report="npanxxStore.getPricingReport"
+          /> -->
         </div>
       </transition>
     </div>
@@ -22,12 +26,12 @@
 </template>
 
 <script setup lang="ts">
-import USFileUploads from "@/domains/npanxx/components/USFileUploads.vue";
-import USCodeReport from "@/domains/npanxx/components/USCodeReport.vue";
-import USPricingReport from "@/domains/npanxx/components/USPricingReport.vue";
-import USContentHeader from "@/domains/npanxx/components/USContentHeader.vue";
-import { useNpanxxStore } from "@/domains/npanxx/store";
-import { ReportTypes } from "@/domains/shared/types";
+  import USFileUploads from '@/domains/us/components/USFileUploads.vue';
+  import USCodeReport from '@/domains/us/components/USCodeReport.vue';
+  import USPricingReport from '@/domains/us/components/USPricingReport.vue';
+  import USContentHeader from '@/domains/us/components/USContentHeader.vue';
+  import { useNpanxxStore } from '@/domains/us/store';
+  import { ReportTypes } from '@/domains/shared/types';
 
-const npanxxStore = useNpanxxStore();
+  const usStore = useNpanxxStore();
 </script>

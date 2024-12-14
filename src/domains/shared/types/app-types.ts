@@ -1,17 +1,15 @@
 import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/domains/az/types/az-types';
-import type { USStandardizedData, USPricingReport, USCodeReport } from '@/domains/npanxx/types/npanxx-types';
+import type { USStandardizedData, USPricingReport, USCodeReport } from '@/domains/us/types/us-types';
 
 // Add this type definition
-export type DomainStoreType = 
-  | DomainStore<AzPricingReport, AzCodeReport>
-  | DomainStore<USPricingReport, USCodeReport>;
+export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;
 
 export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeReport | USCodeReport> {
   // State properties
   reportsGenerated: boolean;
   showUploadComponents: boolean;
   activeReportType: ReportType;
-  
+
   // Getters
   isComponentDisabled: (componentName: string) => boolean;
   isComponentUploading: (componentName: string) => boolean;
@@ -32,7 +30,6 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   getStoreNameByComponent: (componentName: string) => string;
   resetFiles: () => void;
 }
-
 
 export interface FileEmit {
   file: File;
@@ -63,7 +60,7 @@ export const DBName = {
   USCodes: 'uscodes',
 } as const;
 
-export type DBNameType = typeof DBName[keyof typeof DBName];
+export type DBNameType = (typeof DBName)[keyof typeof DBName];
 
 // Add shared report types
 export const ReportTypes = {
@@ -72,8 +69,7 @@ export const ReportTypes = {
   PRICING: 'pricing',
 } as const;
 
-export type ReportType = typeof ReportTypes[keyof typeof ReportTypes];
-
+export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
 
 // Add this interface
 export interface ColumnRoleOption {

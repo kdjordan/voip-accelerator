@@ -6,6 +6,7 @@
       :componentName="component1"
       :disabled="azStore.isComponentDisabled(component1)"
       :columnRoleOptions="columnRoleOptions"
+      deckType="az"
       class="flex-1 flex flex-col"
       @fileUploaded="handleFileUploaded"
       @fileDeleted="handleRemoveFile"
@@ -60,9 +61,9 @@
   const isGeneratingReports = ref<boolean>(false);
 
   const columnRoleOptions = [
-    { value: AZColumnRole.Destination, label: 'Destination Name' },
-    { value: AZColumnRole.DialCode, label: 'Dial Code' },
-    { value: AZColumnRole.Rate, label: 'Rate' },
+    { value: AZColumnRole.DESTINATION, label: 'Destination Name' },
+    { value: AZColumnRole.DIALCODE, label: 'Dial Code' },
+    { value: AZColumnRole.RATE, label: 'Rate' },
   ];
 
   async function handleFileUploaded(componentName: string, fileName: string) {
