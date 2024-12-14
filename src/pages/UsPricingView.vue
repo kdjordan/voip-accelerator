@@ -5,15 +5,15 @@
 
     <div class="w-full max-w-5xl">
       <transition name="fade" mode="out-in" appear>
-        <div :key="npanxxStore.getActiveReportType()">
-          <USFileUploads v-if="npanxxStore.getActiveReportType() === ReportTypes.FILES" />
-          <CodeReportUS
-            v-if="npanxxStore.getActiveReportType() === ReportTypes.CODE"
-            :report="npanxxStore.getCodeReport()"
+        <div :key="npanxxStore.activeReportType">
+          <USFileUploads v-if="npanxxStore.activeReportType === ReportTypes.FILES" />
+          <USCodeReport
+            v-if="npanxxStore.activeReportType === ReportTypes.CODE"
+            :report="npanxxStore.codeReport"
           />
-          <PricingReportUS
-            v-if="npanxxStore.getActiveReportType() === ReportTypes.PRICING"
-            :report="npanxxStore.getPricingReport()"
+          <USPricingReport
+            v-if="npanxxStore.activeReportType === ReportTypes.PRICING"
+            :report="npanxxStore.pricingReport"
           />
         </div>
       </transition>
@@ -23,8 +23,8 @@
 
 <script setup lang="ts">
 import USFileUploads from "@/domains/npanxx/components/USFileUploads.vue";
-import CodeReportUS from "@/domains/npanxx/components/USCodeReport.vue";
-import PricingReportUS from "@/domains/npanxx/components/USPricingReport.vue";
+import USCodeReport from "@/domains/npanxx/components/USCodeReport.vue";
+import USPricingReport from "@/domains/npanxx/components/USPricingReport.vue";
 import USContentHeader from "@/domains/npanxx/components/USContentHeader.vue";
 import { useNpanxxStore } from "@/domains/npanxx/store";
 import { ReportTypes } from "@/domains/shared/types";

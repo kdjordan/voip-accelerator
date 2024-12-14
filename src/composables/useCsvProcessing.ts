@@ -5,7 +5,7 @@ import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
 import { useNpanxxStore } from '@/domains/npanxx/store';
-import { NPANXXRateType, USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
+import { NPANXXRateType, type USStandardizedData } from '@/domains/npanxx/types/npanxx-types';
 import type { AZStandardizedData } from '@/domains/az/types/az-types';
 
 export default function useCSVProcessing() {
@@ -56,7 +56,6 @@ export default function useCSVProcessing() {
   }
 
   async function processUSData(fileToProcess: File): Promise<USStandardizedData[]> {
-    console.log('processing US data', indetermRateType.value);
     return new Promise((resolve, reject) => {
       Papa.parse(fileToProcess, {
         header: false,
@@ -75,58 +74,48 @@ export default function useCSVProcessing() {
               ijRate: 0,
             };
 
-            let interRate = 0;
-            let intraRate = 0;
-
             columnRoles.value.forEach((role, index) => {
               if (role && index < row.length) {
-                const value = row[index].trim();
-
                 switch (role) {
-                  case 'NPA':
-                    standardizedRow.npa = processNPA(value);
+                  case 'npa':
+                    standardizedRow.npa = Number(row[index]);
                     break;
-                  case 'NXX':
-                    standardizedRow.nxx = parseInt(value, 10);
+                  case 'nxx':
+                    standardizedRow.nxx = Number(row[index]);
                     break;
-                  case 'NPANXX':
-                    const [npa, nxx] = processNPANXX(value);
-                    standardizedRow.npa = npa;
-                    standardizedRow.nxx = nxx;
+                  case 'npanxx':
+                    const npanxx = Number(row[index]);
+                    if (!isNaN(npanxx)) {
+                      standardizedRow.npanxx = npanxx;
+                      standardizedRow.npa = Math.floor(npanxx / 1000);
+                      standardizedRow.nxx = npanxx % 1000;
+                    }
                     break;
-                  case 'inter':
-                    interRate = parseFloat(value);
-                    standardizedRow.interRate = interRate;
+                  case 'interRate':
+                    standardizedRow.interRate = Number(row[index]);
                     break;
-                  case 'intra':
-                    intraRate = parseFloat(value);
-                    standardizedRow.intraRate = intraRate;
+                  case 'intraRate':
+                    standardizedRow.intraRate = Number(row[index]);
                     break;
-                  case 'indeterm':
-                    standardizedRow.ijRate = parseFloat(value);
+                  case 'ijRate':
+                    standardizedRow.ijRate = Number(row[index]);
                     break;
                 }
               }
             });
 
-            // Handle indeterminate rate
-            if (indetermRateType.value === 'inter') {
-              standardizedRow.ijRate = interRate;
-            } else if (indetermRateType.value === 'intra') {
-              standardizedRow.ijRate = intraRate;
-            } else if (indetermRateType.value === 'ij' && standardizedRow.ijRate === 0) {
-              standardizedRow.ijRate = intraRate;
+            if (!standardizedRow.npanxx && standardizedRow.npa && standardizedRow.nxx) {
+              standardizedRow.npanxx = (standardizedRow.npa * 1000) + standardizedRow.nxx;
             }
 
-            const isValidNPA = !isNaN(standardizedRow.npa);
-            const isValidNXX = !isNaN(standardizedRow.nxx);
-            const isValidRates =
-              !isNaN(standardizedRow.interRate) && !isNaN(standardizedRow.intraRate) && !isNaN(standardizedRow.ijRate);
-
-            if (isValidNPA && isValidNXX && isValidRates) {
+            if (
+              standardizedRow.npa > 0 &&
+              standardizedRow.nxx > 0 &&
+              (standardizedRow.interRate > 0 || 
+               standardizedRow.intraRate > 0 || 
+               standardizedRow.ijRate > 0)
+            ) {
               standardizedData.push(standardizedRow);
-            } else {
-              console.error('Issue parsing US file row', rowIndex, standardizedRow);
             }
           });
 
@@ -135,24 +124,6 @@ export default function useCSVProcessing() {
         error: reject,
       });
     });
-  }
-
-  function processNPA(value: string): number {
-    let processedNpa = value;
-    if (processedNpa.startsWith('1') && processedNpa.length === 4) {
-      processedNpa = processedNpa.slice(1);
-    }
-    return parseInt(processedNpa, 10);
-  }
-
-  function processNPANXX(value: string): [number, number] {
-    let processedValue = value;
-    if (processedValue.startsWith('1') && processedValue.length === 7) {
-      processedValue = processedValue.slice(1);
-    }
-    const npa = parseInt(processedValue.slice(0, 3), 10);
-    const nxx = parseInt(processedValue.slice(3), 10);
-    return [npa, nxx];
   }
 
   async function processAZData(fileToProcess: File): Promise<AZStandardizedData[]> {

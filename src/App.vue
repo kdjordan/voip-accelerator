@@ -76,7 +76,7 @@
       // Clean up first
       await cleanupIndexedDB();
       // Then load sample data
-      await loadSampleDecks([DBName.AZ]);
+      // await loadSampleDecks([DBName.AZ]);
     } catch (error) {
       console.error('Error during initialization:', error);
     }

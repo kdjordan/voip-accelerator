@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { USPricingReport, USCodeReport } from '../types/npanxx-types';
+import type { USPricingReport, USCodeReport, NPANXXStoreState } from '../types/npanxx-types';
 import { useSharedStore } from '@/domains/shared/store';
 import type { ReportType } from '@/domains/shared/types';
 import type { DomainStore } from '@/domains/shared/types';
@@ -10,15 +10,17 @@ export const useNpanxxStore = defineStore('npanxxStore', {
     showUploadComponents: true,
     reportsGenerated: false,
     activeReportType: 'files' as ReportType,
-    pricingReport: null as USPricingReport | null,
-    codeReport: null as USCodeReport | null,
-    uploadingComponents: {} as Record<string, boolean>,
+    pricingReport: null,
+    codeReport: null,
+    uploadingComponents: {},
   }),
 
   getters: {
-    isComponentDisabled: (state) => (componentName: string): boolean => {
-      return state.filesUploaded.has(componentName);
-    },
+    isComponentDisabled:
+      state =>
+      (componentName: string): boolean => {
+        return state.filesUploaded.has(componentName);
+      },
 
     isFull: (state): boolean => state.filesUploaded.size === 2,
 
@@ -69,7 +71,7 @@ export const useNpanxxStore = defineStore('npanxxStore', {
 
     removeFile(fileName: string) {
       this.filesUploaded.delete(fileName);
-      
+
       // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
         this.reportsGenerated = false;
