@@ -1,9 +1,17 @@
 <template>
   <div class="upload-component">
+    <!-- 
+      IMPORTANT UI FEEDBACK - DO NOT REMOVE
+      The animate-pulse class on the container during processing/uploading states
+      provides essential visual feedback to users. This animation indicates that
+      the system is actively handling their file.
+    -->
     <div
       class="relative border border-fbWhite border-dashed rounded-lg p-6 hover:bg-fbWhite/10"
       :class="[
-        isProcessingState || disabled || isUploading
+        isProcessingState || isUploading
+          ? 'animate-pulse border-muted bg-muted/30'
+          : disabled
           ? 'border-gray-500 bg-gray-800/50'
           : 'border-accent hover:border-accent-hover',
         isProcessingState || disabled || isUploading ? 'cursor-not-allowed' : 'cursor-pointer',
@@ -33,16 +41,28 @@
             </p>
           </template>
           <template v-if="isUploading">
-            <div class="animate-pulse text-2xl text-accent">
+            <div class="text-2xl text-accent">
               <i class="fas fa-upload"></i>
             </div>
-            <p class="mt-2 text-sm text-foreground">Uploading large file...</p>
+            <p class="mt-2 text-sm text-mutedForeground">Uploading file...</p>
           </template>
+          <!-- 
+            IMPORTANT PROCESSING STATE UI - DO NOT REMOVE
+            This processing state provides crucial feedback during file handling:
+            - Container pulses (see above)
+            - Shows CSV icon
+            - Uses darker text (text-muted) for better contrast
+          -->
           <template v-if="isProcessingState">
-            <div class="animate-spin text-2xl text-accent">
-              <i class="fas fa-circle-notch"></i>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl text-accent mb-2">
+                <i class="fas fa-file-csv"></i>
+              </div>
+              <div class="animate-spin text-xl text-accent">
+                <i class="fas fa-circle-notch"></i>
+              </div>
+              <p class="mt-2 text-sm text-muted">Processing your file...</p>
             </div>
-            <p class="mt-2 text-sm text-foreground">Processing file...</p>
           </template>
           <template v-if="disabled && !isProcessingState && !isUploading">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
