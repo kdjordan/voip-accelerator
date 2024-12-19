@@ -13,9 +13,14 @@
         - File is processing
         - File is uploading
       This prevents misleading UI feedback when the dropzone is inactive
+
+      CRITICAL LAYOUT REQUIREMENTS - DO NOT MODIFY
+      - min-h-[160px] maintains consistent height across all states
+      - flex/items-center/justify-center ensures content stays centered
+      - These classes prevent layout shift during state changes
     -->
     <div
-      class="relative border border-fbWhite border-dashed rounded-lg p-6"
+      class="relative border border-fbWhite border-dashed rounded-lg p-6 min-h-[160px] flex items-center justify-center"
       :class="[
         isProcessingState || isUploading
           ? 'animate-pulse border-muted bg-muted/30'
@@ -43,7 +48,7 @@
         <!-- Upload Icon/Status -->
         <div class="text-center">
           <template v-if="!disabled && !isProcessingState && !isUploading">
-            <i class="fas fa-cloud-upload-alt text-2xl text-accent"></i>
+            <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
             <p class="mt-2 text-sm text-foreground">
               Drop your {{ typeOfComponent }}'s CSV file here or click to browse
             </p>
@@ -58,19 +63,10 @@
             IMPORTANT PROCESSING STATE UI - DO NOT REMOVE
             This processing state provides crucial feedback during file handling:
             - Container pulses (see above)
-            - Shows CSV icon
             - Uses darker text (text-muted) for better contrast
           -->
           <template v-if="isProcessingState">
-            <div class="flex flex-col items-center">
-              <div class="text-2xl text-accent mb-2">
-                <i class="fas fa-file-csv"></i>
-              </div>
-              <div class="animate-spin text-xl text-accent">
-                <i class="fas fa-circle-notch"></i>
-              </div>
-              <p class="mt-2 text-sm text-muted">Processing your file...</p>
-            </div>
+            <p class="text-sm text-muted">Processing your file...</p>
           </template>
           <template v-if="disabled && !isProcessingState && !isUploading">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
@@ -115,6 +111,7 @@
   import type { ColumnRoleOption } from '@/domains/shared/types';
   import { useUploadState } from '@/composables/useUploadState';
   import { useFileHandler } from '@/composables/useFileHandler';
+  import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
 
   const props = defineProps<{
     typeOfComponent: 'owner' | 'carrier';
