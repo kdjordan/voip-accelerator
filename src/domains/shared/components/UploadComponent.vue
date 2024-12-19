@@ -5,15 +5,23 @@
       The animate-pulse class on the container during processing/uploading states
       provides essential visual feedback to users. This animation indicates that
       the system is actively handling their file.
+
+      Hover states are conditionally applied:
+      - Only active when component is enabled (no file uploaded)
+      - Disabled when:
+        - File is uploaded (disabled state)
+        - File is processing
+        - File is uploading
+      This prevents misleading UI feedback when the dropzone is inactive
     -->
     <div
-      class="relative border border-fbWhite border-dashed rounded-lg p-6 hover:bg-fbWhite/10"
+      class="relative border border-fbWhite border-dashed rounded-lg p-6"
       :class="[
         isProcessingState || isUploading
           ? 'animate-pulse border-muted bg-muted/30'
           : disabled
           ? 'border-gray-500 bg-gray-800/50'
-          : 'border-accent hover:border-accent-hover',
+          : 'border-accent hover:border-accent-hover hover:bg-fbWhite/10',
         isProcessingState || disabled || isUploading ? 'cursor-not-allowed' : 'cursor-pointer',
         isDragging ? 'border-accent bg-fbWhite/10' : '',
       ]"
@@ -72,9 +80,9 @@
             <div class="relative z-10">
               <button
                 @click="handleRemoveFile"
-                class="mt-4 w-8 h-8 grid place-items-center border border-red-500 text-red-500 rounded-lg hover:bg-red-500/10 transition-colors text-2xl leading-[0] pb-1"
+                class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2 mt-4"
               >
-                ×
+                &times;
               </button>
             </div>
           </template>
