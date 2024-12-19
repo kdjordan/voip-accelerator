@@ -61,3 +61,11 @@ Git Commits
 - Use the imperative mood in the commit message
 - Use the present tense in the commit message
 - Keep commits to 50 characters or less
+- Use FEAT: for feature commits
+- Use FIX: for bug fix commits
+- Use DOCS: for documentation commits
+- Use STYLE: for style commits
+- Use REFACTOR: for refactoring commits
+- Use PERF: for performance commits
+- Use TEST: for testing commits
+- Use CHORE: for chore commits
