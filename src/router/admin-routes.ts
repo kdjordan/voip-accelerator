@@ -4,10 +4,10 @@ export const adminRoutes: RouteRecordRaw[] = [
   {
     path: '/admin/lerg',
     name: 'AdminLERG',
-    component: () => import('@/domains/npanxx/views/AdminLergView.vue'),
+    component: () => import('@/pages/AdminLergView.vue'),
     meta: {
       requiresAuth: true,
-      requiresAdmin: true
-    }
-  }
-]; 
+      requiresAdmin: true,
+    },
+  },
+];
