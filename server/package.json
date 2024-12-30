@@ -4,7 +4,7 @@
   "description": "NodeJS backend for pricing tool",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "ts-node-dev src/index.ts",
+    "dev": "ts-node-dev -r tsconfig-paths/register src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
@@ -20,6 +20,7 @@
     "@types/node": "^20.11.24",
     "@types/pg": "^8.11.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "tsconfig-paths": "^4.2.0"
   }
 }
