@@ -12,7 +12,7 @@ export interface LERGProcessingResult {
 
 export interface LERGStats {
   totalRecords: number;
-  lastUpdated: string;
+  lastUpdated: string | null;
 }
 
 // Column roles for LERG file processing

@@ -1,18 +1,39 @@
-import express from 'express';
-import { LERGService } from '../services/lerg.service';
+import { Router } from 'express';
+import multer from 'multer';
+import { LergService } from '../services/lerg.service';
+import * as path from 'path';
+import * as fs from 'fs';
 
-const router = express.Router();
-const lergService = new LERGService();
+const router = Router();
+const lergService = new LergService();
 
-router.get('/test-connection', async (req, res) => {
+// Configure multer for file upload
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.toLowerCase().endsWith('.txt')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .txt files are allowed'));
+    }
+  },
+});
+
+router.post('/upload', upload.single('file'), async (req, res) => {
   try {
-    await lergService.testConnection();
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    if (!req.file) {
+      throw new Error('No file uploaded');
+    }
+
+    const result = await lergService.processLergFile(req.file.path);
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+
+    res.json(result);
+  } catch (error: unknown) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -20,22 +41,20 @@ router.get('/stats', async (req, res) => {
   try {
     const stats = await lergService.getStats();
     res.json(stats);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+  } catch (error: unknown) {
+    console.error('Stats error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
-router.post('/upload', express.raw({ type: 'text/csv', limit: '50mb' }), async (req, res) => {
+router.delete('/clear', async (req, res) => {
   try {
-    const result = await lergService.uploadLERGData(req.body);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    await lergService.clearAllData();
+    res.json({ message: 'All LERG data cleared successfully' });
+  } catch (error: unknown) {
+    console.error('Clear data error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
-export const lergRoutes = router;
+export { router as lergRoutes };

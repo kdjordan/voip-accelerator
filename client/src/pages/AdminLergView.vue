@@ -1,90 +1,86 @@
 <template>
-  <div class="p-6">
-    <div class="max-w-4xl mx-auto">
-      <h1 class="text-2xl font-semibold mb-6">LERG Database Management</h1>
+  <div class="p-4">
+    <h1 class="text-2xl font-bold mb-4 text-fbWhite">LERG Administration</h1>
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <div class="mb-6">
-          <h2 class="text-lg font-medium mb-2">Upload LERG File</h2>
-          <p class="text-gray-600 text-sm mb-4">
-            Upload the LERG.txt file to update the NPA-NXX database. Duplicates will be automatically removed during
-            processing.
+    <!-- Clear Data Button -->
+    <div class="mb-4">
+      <button
+        @click="handleClearData"
+        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+        :disabled="isClearing"
+      >
+        {{ isClearing ? 'Clearing...' : 'Clear All Data' }}
+      </button>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="mb-6 bg-fbBlack rounded-lg shadow p-4 border border-fbBorder">
+      <h2 class="text-lg font-semibold mb-3 text-fbWhite">Database Stats</h2>
+      <div
+        v-if="stats"
+        class="grid grid-cols-2 gap-4"
+      >
+        <div class="p-3 bg-fbHover rounded">
+          <p class="text-sm text-fbWhite">Total Records</p>
+          <p class="text-xl font-bold text-fbWhite">{{ stats.totalRecords.toLocaleString() }}</p>
+        </div>
+        <div class="p-3 bg-fbHover rounded">
+          <p class="text-sm text-fbWhite">Last Updated</p>
+          <p class="text-xl font-bold text-fbWhite">
+            {{ stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleDateString() : 'Never' }}
           </p>
+        </div>
+      </div>
+      <div
+        v-else
+        class="text-fbWhite"
+      >
+        Loading stats...
+      </div>
+    </div>
 
-          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+    <!-- Upload Section -->
+    <div
+      class="border-2 border-dashed border-fbBorder rounded-lg p-8 text-center mb-4"
+      :class="{ 'border-fbGreen bg-fbHover': isDragging }"
+      @dragenter.prevent="isDragging = true"
+      @dragleave.prevent="isDragging = false"
+      @dragover.prevent
+      @drop.prevent="handleDrop"
+    >
+      <div v-if="!isUploading">
+        <p class="text-fbWhite mb-2">
+          Drag and drop your LERG file here, or
+          <label class="text-fbGreen cursor-pointer hover:text-fbGreen/80">
             <input
               type="file"
-              ref="fileInput"
               class="hidden"
               accept=".txt"
               @change="handleFileSelect"
             />
-            <button
-              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              @click="$refs.fileInput.click()"
-              :disabled="isProcessing"
-            >
-              <span v-if="!isProcessing">Select LERG File</span>
-              <span v-else>Processing...</span>
-            </button>
-
-            <p
-              v-if="selectedFile"
-              class="mt-2 text-sm text-gray-600"
-            >
-              Selected: {{ selectedFile.name }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Processing Status -->
-        <div
-          v-if="isProcessing"
-          class="mt-4"
-        >
-          <div class="bg-gray-100 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium">Processing Progress</span>
-              <span class="text-sm text-gray-600">{{ progress }}%</span>
-            </div>
-            <div class="h-2 bg-gray-200 rounded-full">
-              <div
-                class="h-2 bg-blue-600 rounded-full transition-all duration-300"
-                :style="{ width: `${progress}%` }"
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Status Messages -->
-        <div
-          v-if="statusMessage"
-          class="mt-4"
-        >
-          <p
-            :class="[
-              'text-sm p-4 rounded-lg',
-              statusType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700',
-            ]"
-          >
-            {{ statusMessage }}
-          </p>
-        </div>
+            browse
+          </label>
+        </p>
+        <p class="text-sm text-fbWhite/70">Supports TXT files</p>
       </div>
+      <div v-else>
+        <p class="text-fbWhite">Uploading...</p>
+      </div>
+    </div>
 
-      <!-- Database Stats -->
-      <div class="mt-6 bg-white shadow rounded-lg p-6">
-        <h2 class="text-lg font-medium mb-4">Database Statistics</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="p-4 bg-gray-50 rounded-lg">
-            <p class="text-sm text-gray-600">Total Records</p>
-            <p class="text-2xl font-semibold">{{ stats.totalRecords }}</p>
-          </div>
-          <div class="p-4 bg-gray-50 rounded-lg">
-            <p class="text-sm text-gray-600">Last Updated</p>
-            <p class="text-2xl font-semibold">{{ stats.lastUpdated }}</p>
-          </div>
-        </div>
+    <!-- Upload Status -->
+    <div
+      v-if="uploadStatus"
+      class="mt-4"
+    >
+      <div :class="uploadStatus.success ? 'text-fbGreen' : 'text-red-500'">
+        {{ uploadStatus.message }}
+      </div>
+      <div
+        v-if="uploadStatus.details"
+        class="mt-2 text-sm text-fbWhite/70"
+      >
+        {{ uploadStatus.details }}
       </div>
     </div>
   </div>
@@ -92,71 +88,94 @@
 
 <script setup lang="ts">
   import { ref, onMounted } from 'vue';
-  import { useLergStore } from '../domains/lerg/stores/lerg.store';
-  import { LergApiService } from '@/domains/lerg/services/lerg-api.service';
+  import { lergApiService } from '../domains/lerg/services/lerg-api.service';
+  import type { LERGStats } from '../domains/lerg/types/types';
 
-  const fileInput = ref<HTMLInputElement | null>(null);
-  const selectedFile = ref<File | null>(null);
-  const isProcessing = ref(false);
-  const progress = ref(0);
-  const statusMessage = ref('');
-  const statusType = ref<'error' | 'success'>('success');
+  const isDragging = ref(false);
+  const isUploading = ref(false);
+  const stats = ref<LERGStats | null>(null);
+  const uploadStatus = ref<{ success: boolean; message: string; details?: string } | null>(null);
+  const isClearing = ref(false);
 
-  const stats = ref({
-    totalRecords: 0,
-    lastUpdated: '',
+  const loadStats = async () => {
+    try {
+      stats.value = await lergApiService.getStats();
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+      stats.value = { totalRecords: 0, lastUpdated: null }; // Provide default values
+    }
+  };
+
+  onMounted(() => {
+    loadStats();
   });
 
-  const lergStore = useLergStore();
-
-  async function testDatabaseConnection() {
-    try {
-      const apiService = LergApiService.getInstance();
-      await apiService.testConnection();
-      console.log('✅ PostgreSQL connection successful');
-      statusType.value = 'success';
-      statusMessage.value = 'Database connection established';
-    } catch (error) {
-      console.error('❌ PostgreSQL connection failed:', error);
-      statusType.value = 'error';
-      statusMessage.value = 'Failed to connect to database';
+  const handleDrop = async (event: DragEvent) => {
+    isDragging.value = false;
+    const files = event.dataTransfer?.files;
+    if (files?.length) {
+      await uploadFile(files[0]);
     }
-  }
+  };
 
-  async function handleFileSelect(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
+  const handleFileSelect = async (event: Event) => {
+    const files = (event.target as HTMLInputElement).files;
+    if (files?.length) {
+      await uploadFile(files[0]);
+    }
+  };
 
-    selectedFile.value = input.files[0];
-    await processFile(input.files[0]);
-  }
+  const uploadFile = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.txt')) {
+      uploadStatus.value = {
+        success: false,
+        message: 'Please select a TXT file',
+      };
+      return;
+    }
 
-  async function processFile(file: File) {
     try {
-      isProcessing.value = true;
-      progress.value = 0;
-      statusMessage.value = '';
+      isUploading.value = true;
+      uploadStatus.value = null;
 
-      // TODO: Implement file processing logic
-      // This will be handled by the LERG processing service
+      const formData = new FormData();
+      formData.append('file', file);
 
-      statusType.value = 'success';
-      statusMessage.value = 'LERG database updated successfully';
-      await updateStats();
+      const response = await lergApiService.uploadLERGFile(formData);
+
+      uploadStatus.value = {
+        success: true,
+        message: 'File uploaded successfully',
+        details: `Processed ${response.processedRecords} of ${response.totalRecords} records`,
+      };
+
+      // Refresh stats after successful upload
+      await loadStats();
     } catch (error) {
-      statusType.value = 'error';
-      statusMessage.value = error instanceof Error ? error.message : 'An error occurred';
+      uploadStatus.value = {
+        success: false,
+        message: 'Upload failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      };
     } finally {
-      isProcessing.value = false;
+      isUploading.value = false;
+    }
+  };
+
+  async function handleClearData() {
+    if (!confirm('Are you sure you want to delete all LERG data? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      isClearing.value = true;
+      await lergApiService.clearAllData();
+      await loadStats(); // Refresh stats after clearing
+    } catch (error) {
+      console.error('Failed to clear data:', error);
+      alert('Failed to clear data. Please try again.');
+    } finally {
+      isClearing.value = false;
     }
   }
-
-  async function updateStats() {
-    // TODO: Implement stats fetching from the store
-  }
-
-  onMounted(async () => {
-    await testDatabaseConnection();
-    await updateStats();
-  });
 </script>

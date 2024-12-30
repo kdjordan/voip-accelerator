@@ -5,15 +5,7 @@ export class DatabaseService {
   private pool: Pool;
 
   private constructor() {
-    // Log the database configuration being used (temporary, for debugging)
-    console.log('Creating database pool with config:', {
-      user: process.env.DB_USER,
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT,
-      // Don't log the password
-    });
-
+    console.log('Initializing database connection...'); // Debug log
     this.pool = new Pool({
       user: process.env.DB_USER,
       host: process.env.DB_HOST,
@@ -31,7 +23,14 @@ export class DatabaseService {
   }
 
   async query(text: string, params?: any[]) {
-    return this.pool.query(text, params);
+    console.log('Executing query:', text, params); // Debug log
+    try {
+      const result = await this.pool.query(text, params);
+      return result;
+    } catch (error) {
+      console.error('Database query error:', error); // Debug log
+      throw error;
+    }
   }
 
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
