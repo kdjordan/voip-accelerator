@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 import { LERGRecord, LERGUploadResponse } from '../types/lerg.types';
-import { DatabaseService } from '@/domains/shared/services/database.service';
+import { DatabaseService } from '../../../domains/shared/services/database.service';
 
 export class LERGService {
   private dbService: DatabaseService;

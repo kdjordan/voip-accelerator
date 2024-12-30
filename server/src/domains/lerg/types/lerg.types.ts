@@ -1,12 +1,9 @@
 export interface LERGRecord {
   npa: string;
   nxx: string;
-  lata: string;
-  ocn: string;
-  company: string;
+  npanxx: string;
   state: string;
-  rate_center: string;
-  switch_clli: string;
+  last_updated: string;
 }
 
 export interface LERGUploadResponse {
@@ -14,4 +11,4 @@ export interface LERGUploadResponse {
   processedRecords: number;
   failedRecords: number;
   errors?: string[];
-} 
+}

@@ -4,7 +4,7 @@
   "description": "NodeJS backend for pricing tool",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "ts-node-dev -r tsconfig-paths/register src/index.ts",
+    "dev": "ts-node-dev -r dotenv/config -r tsconfig-paths/register src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
