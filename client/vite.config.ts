@@ -38,8 +38,21 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/health': 'http://localhost:3000',
-      '/api': 'http://localhost:3000',
+      '/api/admin/lerg': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/health': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });

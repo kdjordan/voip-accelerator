@@ -1,14 +1,16 @@
+export interface LERGStats {
+  totalRecords: number;
+  lastUpdated: Date | null;
+}
+
 export interface LERGRecord {
   npa: string;
   nxx: string;
-  npanxx: string;
   state: string;
-  last_updated: string;
+  last_updated: Date;
 }
 
 export interface LERGUploadResponse {
-  totalRecords: number;
   processedRecords: number;
-  failedRecords: number;
-  errors?: string[];
+  totalRecords: number;
 }
