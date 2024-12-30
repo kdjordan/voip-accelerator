@@ -1,6 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import cors from 'cors';
+import { lergRoutes } from './domains/lerg/routes/lerg.routes';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,6 +18,9 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   port: parseInt(process.env.DB_PORT || '5432'),
 });
+
+// Routes
+app.use('/api/lerg', lergRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
