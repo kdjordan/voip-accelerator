@@ -1,0 +1,11 @@
+{
+  "name": "pricing-tool-server",
+  "version": "1.0.0",
+  "description": "NodeJS backend for pricing tool",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "ts-node-dev src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  }
+} 
