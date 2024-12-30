@@ -18,6 +18,4 @@ A modern web application for managing and analyzing VoIP (Voice over Internet Pr
 - PostgreSQL (v14 or higher)
 - npm or yarn
 
-## Getting Started
 
-1. Clone the repository:
