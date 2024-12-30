@@ -5,6 +5,15 @@ export class DatabaseService {
   private pool: Pool;
 
   private constructor() {
+    // Log the database configuration being used (temporary, for debugging)
+    console.log('Creating database pool with config:', {
+      user: process.env.DB_USER,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      port: process.env.DB_PORT,
+      // Don't log the password
+    });
+
     this.pool = new Pool({
       user: process.env.DB_USER,
       host: process.env.DB_HOST,
