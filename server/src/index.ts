@@ -17,7 +17,8 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: '500mb' }));
+app.use(express.raw({ type: 'text/plain', limit: '500mb' }));
 
 // Initialize database service
 const dbService = DatabaseService.getInstance();

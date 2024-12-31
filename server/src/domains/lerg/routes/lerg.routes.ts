@@ -3,6 +3,7 @@ import multer from 'multer';
 import { LergService } from '../services/lerg.service';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Request, Response, NextFunction } from 'express';
 
 const router = Router();
 const lergService = new LergService();
@@ -10,6 +11,10 @@ const lergService = new LergService();
 // Configure multer for file upload
 const upload = multer({
   dest: 'uploads/',
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB limit
+    files: 1,
+  },
   fileFilter: (req, file, cb) => {
     if (file.originalname.toLowerCase().endsWith('.txt')) {
       cb(null, true);
@@ -17,6 +22,18 @@ const upload = multer({
       cb(new Error('Only .txt files are allowed'));
     }
   },
+});
+
+// Add error handling middleware
+router.use((error: any, req: Request, res: Response, next: NextFunction) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: 'File is too large. Maximum size is 500MB',
+      });
+    }
+  }
+  next(error);
 });
 
 router.post('/upload', upload.single('file'), async (req, res) => {

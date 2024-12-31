@@ -27,8 +27,9 @@ Syntax and Formatting
 
 UI and Styling
 
-- Use Headless UI, Element Plus, and Tailwind for components and styling.
+- Use Tailwind for components and styling.
 - Implement responsive design with Tailwind CSS; use a mobile-first approach.
+- we are using a custom theme and we want to use theme colors and variables when possible. Also we want to maintain a consistent look and feel across the app.
 
 Performance Optimization
 
