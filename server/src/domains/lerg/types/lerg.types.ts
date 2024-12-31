@@ -6,6 +6,7 @@ export interface LERGStats {
 export interface LERGRecord {
   npa: string;
   nxx: string;
+  npanxx: string;
   state: string;
   last_updated: Date;
 }

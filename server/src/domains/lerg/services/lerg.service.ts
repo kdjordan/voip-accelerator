@@ -5,62 +5,117 @@ import * as readline from 'readline';
 
 export class LergService {
   private db: DatabaseService;
+  private readonly batchSize = 1000;
+  private processedNpanxx = new Set<string>();
 
   constructor() {
     this.db = DatabaseService.getInstance();
   }
 
   async processLergFile(filePath: string): Promise<LERGUploadResponse> {
-    const fileStream = fs.createReadStream(filePath);
-    const rl = readline.createInterface({
-      input: fileStream,
-      crlfDelay: Infinity,
-    });
-
-    let processedRecords = 0;
-    let totalRecords = 0;
-    const batchSize = 1000;
-    let batch: LERGRecord[] = [];
+    let fileStream: fs.ReadStream | null = null;
+    let rl: readline.Interface | null = null;
 
     try {
-      for await (const line of rl) {
-        totalRecords++;
-        const record = this.parseLergLine(line);
-        if (record) {
-          batch.push(record);
-          if (batch.length >= batchSize) {
-            await this.insertBatch(batch);
-            processedRecords += batch.length;
-            batch = [];
-          }
-        }
-      }
+      // Get file stats first
+      const stats = fs.statSync(filePath);
+      console.log('File size:', (stats.size / 1024 / 1024).toFixed(2), 'MB');
 
-      if (batch.length > 0) {
-        await this.insertBatch(batch);
-        processedRecords += batch.length;
-      }
+      // Initialize file reading
+      fileStream = fs.createReadStream(filePath);
+      rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity,
+      });
+
+      const { processedRecords, totalRecords } = await this.processFileContents(rl);
 
       return { processedRecords, totalRecords };
     } catch (error) {
       console.error('Error processing LERG file:', error);
       throw error;
     } finally {
-      fileStream.close();
+      // Clean up resources
+      if (rl) rl.close();
+      if (fileStream) fileStream.destroy();
+      this.processedNpanxx.clear();
+    }
+  }
+
+  private async processFileContents(rl: readline.Interface): Promise<LERGUploadResponse> {
+    let processedRecords = 0;
+    let totalRecords = 0;
+    let rawBatch: LERGRecord[] = [];
+
+    for await (const line of rl) {
+      totalRecords++;
+
+      if (totalRecords % 100 === 0) {
+        console.log(`Processing line ${totalRecords}`);
+      }
+
+      const record = this.parseLergLine(line);
+      if (record) {
+        console.log('Valid record found:', { npanxx: record.npanxx, state: record.state });
+        rawBatch.push(record);
+
+        if (rawBatch.length >= this.batchSize) {
+          console.log('Raw batch collected:', rawBatch.length);
+          const uniqueRecords = this.getUniqueBatch(rawBatch);
+          console.log('Unique NPANXXs in this batch:', uniqueRecords.map(r => r.npanxx).join(', '));
+
+          processedRecords += await this.processBatch(uniqueRecords);
+          rawBatch = [];
+        }
+      } else {
+        console.log('Invalid or skipped line:', line);
+      }
+    }
+
+    if (rawBatch.length > 0) {
+      const uniqueRecords = this.getUniqueBatch(rawBatch);
+      processedRecords += await this.processBatch(uniqueRecords);
+    }
+
+    return { processedRecords, totalRecords };
+  }
+
+  private getUniqueBatch(records: LERGRecord[]): LERGRecord[] {
+    const uniqueMap = new Map<string, LERGRecord>();
+
+    for (const record of records) {
+      const key = `${record.npa}${record.nxx}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, record);
+      }
+    }
+
+    return Array.from(uniqueMap.values());
+  }
+
+  private async processBatch(batch: LERGRecord[]): Promise<number> {
+    try {
+      const inserted = await this.insertBatch(batch);
+      console.log(`Processed batch: ${inserted} inserted out of ${batch.length} records`);
+      return inserted;
+    } catch (error) {
+      console.error('Error processing batch:', error);
+      return 0;
     }
   }
 
   private parseLergLine(line: string): LERGRecord | null {
     try {
-      console.log('Parsing line:', line);
+      if (!line.trim()) {
+        return null;
+      }
 
-      // Split the line by commas, but respect quotes
-      const parts = line.split(',').map(part => part.replace(/"/g, '').trim());
+      const parts = line.split(',').map(part => part.replace(/^"|"$/g, '').trim());
 
-      // Based on the file format:
-      // parts[0] = NPA
-      // parts[1] = NXX
-      // parts[3] = State
+      // Skip header line
+      if (parts[0].toUpperCase() === 'NPA') {
+        return null;
+      }
 
       const npa = parts[0];
       const nxx = parts[1];
@@ -74,19 +129,17 @@ export class LergService {
 
       // Validate state is 2 characters
       if (!state || state.length !== 2) {
-        console.log('Invalid state:', state);
+        console.log('Invalid state:', { state });
         return null;
       }
 
-      const record = {
+      return {
         npa,
         nxx,
+        npanxx: `${npa}${nxx}`,
         state,
         last_updated: new Date(),
       };
-
-      console.log('Parsed record:', record);
-      return record;
     } catch (error) {
       console.error('Error parsing LERG line:', error);
       return null;
@@ -94,32 +147,35 @@ export class LergService {
   }
 
   private async insertBatch(records: LERGRecord[]) {
+    console.log(
+      'Attempting to insert records:',
+      records.map(r => ({
+        npanxx: r.npanxx,
+        state: r.state,
+      }))
+    );
+
+    const values = records.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(',');
+
     const query = `
       INSERT INTO lerg_codes 
       (npa, nxx, state, last_updated)
-      VALUES 
-      ($1, $2, $3, $4)
+      VALUES ${values}
+      ON CONFLICT (npanxx) DO NOTHING
+      RETURNING npanxx;
     `;
 
-    let skippedRecords = 0;
+    const params = records.flatMap(record => [record.npa, record.nxx, record.state, record.last_updated]);
 
     try {
-      await this.db.query('BEGIN');
-      for (const record of records) {
-        try {
-          await this.db.query(query, [record.npa, record.nxx, record.state, record.last_updated]);
-        } catch (error: unknown) {
-          if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') {
-            console.log(`Skipping duplicate NPANXX for NPA: ${record.npa} and NXX: ${record.nxx}`);
-            skippedRecords++;
-            continue; // Skip this record and continue with the next
-          }
-          throw error; // Re-throw other errors
-        }
-      }
-      await this.db.query('COMMIT');
+      const result = await this.db.query(query, params);
+      console.log(
+        'Successfully inserted NPANXXs:',
+        result.rows.map(r => r.npanxx)
+      );
+      return result.rowCount ?? 0;
     } catch (error) {
-      await this.db.query('ROLLBACK');
+      console.error('Batch insert error:', error);
       throw error;
     }
   }
