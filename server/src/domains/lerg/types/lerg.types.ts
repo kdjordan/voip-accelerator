@@ -1,6 +1,7 @@
 export interface LERGStats {
   totalRecords: number;
-  lastUpdated: Date | null;
+  lastUpdated: Date;
+  specialCodes?: SpecialCodesStats;
 }
 
 export interface LERGRecord {
@@ -14,4 +15,12 @@ export interface LERGRecord {
 export interface LERGUploadResponse {
   processedRecords: number;
   totalRecords: number;
+}
+
+export interface SpecialCodesStats {
+  totalCodes: number;
+  countryBreakdown: {
+    countryCode: string;
+    count: number;
+  }[];
 }

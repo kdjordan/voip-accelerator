@@ -1,9 +1,10 @@
 import { DatabaseService } from '../../shared/services/database.service';
-import type { LERGStats, LERGRecord, LERGUploadResponse } from '../types/lerg.types';
+import type { LERGStats, LERGRecord, LERGUploadResponse, SpecialCodesStats } from '../types/lerg.types';
 import * as fs from 'fs';
 import * as readline from 'readline';
+import path from 'path';
 
-export class LergService {
+export class LERGService {
   private db: DatabaseService;
   private readonly batchSize = 1000;
   private processedNpanxx = new Set<string>();
@@ -12,24 +13,29 @@ export class LergService {
     this.db = DatabaseService.getInstance();
   }
 
-  async processLergFile(filePath: string): Promise<LERGUploadResponse> {
+  async processLergFile(fileContent: Buffer | string): Promise<LERGUploadResponse> {
     let fileStream: fs.ReadStream | null = null;
     let rl: readline.Interface | null = null;
 
     try {
-      // Get file stats first
-      const stats = fs.statSync(filePath);
-      console.log('File size:', (stats.size / 1024 / 1024).toFixed(2), 'MB');
-
-      // Initialize file reading
-      fileStream = fs.createReadStream(filePath);
-      rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity,
-      });
+      if (Buffer.isBuffer(fileContent)) {
+        // Handle Buffer input
+        rl = readline.createInterface({
+          input: require('stream').Readable.from(fileContent.toString()),
+          crlfDelay: Infinity,
+        });
+      } else {
+        // Handle file path input (existing logic)
+        const stats = fs.statSync(fileContent);
+        console.log('File size:', (stats.size / 1024 / 1024).toFixed(2), 'MB');
+        fileStream = fs.createReadStream(fileContent);
+        rl = readline.createInterface({
+          input: fileStream,
+          crlfDelay: Infinity,
+        });
+      }
 
       const { processedRecords, totalRecords } = await this.processFileContents(rl);
-
       return { processedRecords, totalRecords };
     } catch (error) {
       console.error('Error processing LERG file:', error);
@@ -181,16 +187,20 @@ export class LergService {
   }
 
   async getStats(): Promise<LERGStats> {
-    const query = `
-      SELECT 
-        COALESCE(COUNT(*), 0) as total,
-        MAX(last_updated) as last_updated 
-      FROM lerg_codes
-    `;
-    const result = await this.db.query(query);
+    const [lergStats, specialStats] = await Promise.all([
+      this.db.query(`
+        SELECT 
+          COALESCE(COUNT(*), 0) as total,
+          MAX(last_updated) as last_updated 
+        FROM lerg_codes
+      `),
+      this.getSpecialCodesStats(),
+    ]);
+
     return {
-      totalRecords: parseInt(result.rows[0].total),
-      lastUpdated: result.rows[0].last_updated,
+      totalRecords: parseInt(lergStats.rows[0].total),
+      lastUpdated: lergStats.rows[0].last_updated,
+      specialCodes: specialStats,
     };
   }
 
@@ -202,5 +212,125 @@ export class LergService {
       console.error('Error clearing LERG data:', error);
       throw error;
     }
+  }
+
+  private async getSpecialCodesStats(): Promise<SpecialCodesStats> {
+    const totalQuery = `
+      SELECT COUNT(*) as total
+      FROM special_area_codes
+    `;
+
+    const countryBreakdownQuery = `
+      SELECT country, COUNT(*) as count
+      FROM special_area_codes
+      GROUP BY country
+      ORDER BY count DESC
+    `;
+
+    try {
+      const [totalResult, breakdownResult] = await Promise.all([
+        this.db.query(totalQuery),
+        this.db.query(countryBreakdownQuery),
+      ]);
+
+      return {
+        totalCodes: parseInt(totalResult.rows[0].total),
+        countryBreakdown: breakdownResult.rows.map(row => ({
+          countryCode: row.country,
+          count: parseInt(row.count),
+        })),
+      };
+    } catch (error) {
+      console.error('Error fetching special codes stats:', error);
+      throw error;
+    }
+  }
+
+  async clearLergData(): Promise<void> {
+    const query = 'TRUNCATE TABLE lerg_codes';
+    try {
+      await this.db.query(query);
+    } catch (error) {
+      console.error('Error clearing LERG codes data:', error);
+      throw error;
+    }
+  }
+
+  async clearSpecialCodesData(): Promise<void> {
+    const query = 'TRUNCATE TABLE special_area_codes';
+    try {
+      await this.db.query(query);
+    } catch (error) {
+      console.error('Error clearing special codes data:', error);
+      throw error;
+    }
+  }
+
+  async reloadSpecialCodes(): Promise<void> {
+    try {
+      // First clear existing data
+      await this.clearSpecialCodesData();
+      
+      // Read and process the special codes CSV
+      const specialCodesPath = path.resolve(__dirname, '../../../../data/special_codes.csv');
+      const fileContent = await fs.promises.readFile(specialCodesPath, 'utf-8');
+      
+      // Process and insert the data
+      const records = fileContent
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => {
+          const [npa, country, province] = line.split(',').map(field => field.trim());
+
+          // Skip header row
+          if (npa === 'NPA' || !npa || isNaN(Number(npa))) {
+            return null;
+          }
+
+          return {
+            npa,
+            country,
+            province_or_territory: province || 'N/A',
+          };
+        })
+        .filter((record): record is { npa: string; country: string; province_or_territory: string } => record !== null);
+
+      // Insert in batches
+      for (let i = 0; i < records.length; i += this.batchSize) {
+        const batch = records.slice(i, i + this.batchSize);
+        await this.insertSpecialCodesBatch(batch);
+      }
+    } catch (error) {
+      console.error('Error reloading special codes:', error);
+      throw error;
+    }
+  }
+
+  private async insertSpecialCodesBatch(records: { npa: string; country: string; province_or_territory: string }[]) {
+    try {
+      const values = records.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(',');
+      const query = `
+        INSERT INTO special_area_codes (npa, country, description)
+        VALUES ${values}
+        ON CONFLICT (npa) DO UPDATE SET
+          country = EXCLUDED.country,
+          description = EXCLUDED.description
+      `;
+      const params = records.flatMap(r => [r.npa, r.country, r.province_or_territory || null]);
+
+      await this.db.query(query, params);
+    } catch (error) {
+      console.error('Error in insertSpecialCodesBatch:', error);
+      throw error;
+    }
+  }
+
+  async reloadLergData(): Promise<void> {
+    // TODO: We need to implement this
+    // We should either:
+    // 1. Store the last successful LERG file somewhere
+    // 2. Keep a backup of the last successful import
+    // 3. Have a default LERG dataset for recovery
+    throw new Error('LERG reload functionality not implemented yet');
   }
 }

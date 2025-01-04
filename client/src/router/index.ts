@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { adminRoutes } from './admin-routes';
-import AdminLergView from '@/pages/AdminLergView.vue';
+import AdminLergView from '../pages/AdminLergView.vue';
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes: [
     {
       path: '/',
