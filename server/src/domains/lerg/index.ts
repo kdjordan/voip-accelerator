@@ -1,2 +1,4 @@
-export * from './services/lerg.service';
-export * from './types/lerg.types';
+import { lergRoutes } from './routes/lerg.routes';
+import { LERGService } from './services/lerg.service';
+
+export { lergRoutes, LERGService };

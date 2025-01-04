@@ -1,16 +1,14 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { LergService } from '../services/lerg.service';
-import * as path from 'path';
-import * as fs from 'fs';
+import { LERGService } from '../services/lerg.service';
 import { Request, Response, NextFunction } from 'express';
 
 const router = Router();
-const lergService = new LergService();
+const lergService = new LERGService();
 
 // Configure multer for file upload
 const upload = multer({
-  dest: 'uploads/',
+  storage: multer.memoryStorage(), // Store in memory instead of disk
   limits: {
     fileSize: 500 * 1024 * 1024, // 500MB limit
     files: 1,
@@ -36,41 +34,83 @@ router.use((error: any, req: Request, res: Response, next: NextFunction) => {
   next(error);
 });
 
-router.post('/upload', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      throw new Error('No file uploaded');
-    }
-
-    const result = await lergService.processLergFile(req.file.path);
-
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
-
-    res.json(result);
-  } catch (error: unknown) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
-
-router.get('/stats', async (req, res) => {
+// All these routes will be protected by admin middleware
+router.get('/stats', async (_req: Request, res: Response) => {
   try {
     const stats = await lergService.getStats();
     res.json(stats);
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Stats error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 });
 
-router.delete('/clear', async (req, res) => {
+router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
-    await lergService.clearAllData();
-    res.json({ message: 'All LERG data cleared successfully' });
-  } catch (error: unknown) {
-    console.error('Clear data error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const result = await lergService.processLergFile(req.file.buffer);
+    res.json(result);
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.delete('/clear/lerg', async (_req: Request, res: Response) => {
+  try {
+    await lergService.clearLergData();
+    res.json({ message: 'LERG codes data cleared successfully' });
+  } catch (error) {
+    console.error('Clear LERG data error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.delete('/clear/special', async (_req: Request, res: Response) => {
+  try {
+    await lergService.clearSpecialCodesData();
+    res.json({ message: 'Special codes data cleared successfully' });
+  } catch (error) {
+    console.error('Clear special codes error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.post('/reload/lerg', async (_req: Request, res: Response) => {
+  try {
+    await lergService.reloadLergData();
+    res.json({ message: 'LERG data reloaded successfully' });
+  } catch (error) {
+    console.error('Reload LERG data error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.post('/reload/special', async (_req: Request, res: Response) => {
+  console.log('Received request to reload special codes');
+  try {
+    console.log('Calling reloadSpecialCodes service method');
+    await lergService.reloadSpecialCodes();
+    console.log('Successfully reloaded special codes');
+    res.json({ message: 'Special codes reloaded successfully' });
+  } catch (error) {
+    console.error('Reload special codes error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 });
 
