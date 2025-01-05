@@ -29,7 +29,7 @@ export const lergApiService = {
   },
 
   async getStats(): Promise<LERGStats> {
-    const response = await fetch(`${ADMIN_URL}/stats`);
+    const response = await fetch(`${LERG_URL}/stats`);
     if (!response.ok) {
       const error = await response.text();
       console.error('Stats fetch error:', error);

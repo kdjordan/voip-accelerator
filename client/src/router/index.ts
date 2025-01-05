@@ -9,30 +9,20 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: () => import('../pages/AzPricingView.vue'),
-      // component: () => import('../pages/HomeView.vue')
     },
     {
       path: '/azpricing',
       name: 'azpricing',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../pages/AzPricingView.vue'),
     },
     {
       path: '/uspricing',
       name: 'uspricing',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../pages/UsPricingView.vue'),
     },
     {
       path: '/healthcheck',
       name: 'healthcheck',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../pages/HealthCheckView.vue'),
     },
     {

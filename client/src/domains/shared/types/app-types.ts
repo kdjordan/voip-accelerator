@@ -54,10 +54,11 @@ export interface BaseStandardizedData {
 
 // Replace enum with const map for better type safety
 export const DBName = {
-  AZ: 'az',
-  US: 'us',
-  CAN: 'can',
-  USCodes: 'uscodes',
+  AZ: 'az_db',
+  US: 'us_db',
+  CAN: 'can_db',
+  SpecialCodes: 'special_codes_db',
+  LERG: 'lerg_db',
 } as const;
 
 export type DBNameType = (typeof DBName)[keyof typeof DBName];

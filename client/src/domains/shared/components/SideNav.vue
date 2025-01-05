@@ -136,6 +136,7 @@
     CreditCardIcon,
     ArrowRightEndOnRectangleIcon,
     HeartIcon,
+    Cog6ToothIcon,
   } from '@heroicons/vue/24/outline';
 
   const userStore = useSharedStore();
@@ -174,6 +175,11 @@
       name: 'Health Check',
       to: '/healthcheck',
       icon: HeartIcon,
+    },
+    {
+      name: 'Lerg Admin',
+      to: '/admin/lerg',
+      icon: Cog6ToothIcon,
     },
   ]);
 

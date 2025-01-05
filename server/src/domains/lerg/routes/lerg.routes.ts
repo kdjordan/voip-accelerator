@@ -51,4 +51,19 @@ router.get('/test-connection', async (_req: Request, res: Response) => {
   }
 });
 
+router.get('/stats', async (_req: Request, res: Response) => {
+  try {
+    console.log('Fetching stats...');
+    const stats = await lergService.getStats();
+    console.log('Stats retrieved:', JSON.stringify(stats, null, 2));
+    res.json(stats);
+  } catch (error) {
+    console.error('Stats error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error instanceof Error ? error.stack : undefined,
+    });
+  }
+});
+
 export { router as lergRoutes };
