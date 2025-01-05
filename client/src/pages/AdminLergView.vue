@@ -3,7 +3,7 @@
     <h1 class="text-3xl font-bold mb-8">LERG Administration</h1>
 
     <!-- Stats Dashboard -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="flex flex-col gap-6 mb-8">
       <!-- LERG Database Stats -->
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">LERG Database Stats</h2>
@@ -29,14 +29,63 @@
           </div>
           <div class="mt-4">
             <h3 class="text-sm font-medium text-gray-400 mb-2">Country Breakdown</h3>
-            <div class="max-h-48 overflow-y-auto space-y-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div
                 v-for="country in stats.specialCodes?.countryBreakdown"
                 :key="country.countryCode"
-                class="flex justify-between items-center bg-gray-700 p-2 rounded"
+                class="bg-gray-700 rounded overflow-hidden"
               >
-                <span class="text-sm">{{ getCountryName(country.countryCode) }}</span>
-                <span class="font-medium">{{ formatNumber(country.count) }}</span>
+                <!-- Clickable Header -->
+                <button
+                  @click="toggleCountryDetails(country.countryCode)"
+                  class="w-full px-4 py-3 flex justify-between items-center hover:bg-gray-600 transition-colors"
+                >
+                  <span class="text-sm">{{ getCountryName(country.countryCode) }}</span>
+                  <div class="flex items-center space-x-3">
+                    <span class="font-medium">{{ formatNumber(country.count) }}</span>
+                    <svg
+                      :class="[
+                        'w-4 h-4 transform transition-transform',
+                        expandedCountries.includes(country.countryCode) ? 'rotate-180' : '',
+                      ]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+
+                <!-- Expandable Content -->
+                <div
+                  v-if="expandedCountries.includes(country.countryCode)"
+                  class="px-4 py-3 bg-gray-800/50 border-t border-gray-600"
+                >
+                  <div class="space-y-4">
+                    <div
+                      v-for="group in countryDetails[country.countryCode]"
+                      :key="group.province"
+                      class="space-y-1"
+                    >
+                      <h4 class="text-sm font-medium text-gray-300 mb-1">{{ group.province }}</h4>
+                      <div class="grid grid-cols-3 gap-2">
+                        <div
+                          v-for="npa in group.npas"
+                          :key="npa"
+                          class="bg-gray-700/50 rounded px-3 py-1"
+                        >
+                          <span class="font-medium">{{ npa }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -44,25 +93,50 @@
       </div>
     </div>
 
-    <!-- File Upload Section -->
-    <div class="bg-gray-800 rounded-lg p-6 mb-8">
-      <h2 class="text-xl font-semibold mb-4">Upload LERG File</h2>
-      <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-        <input
-          type="file"
-          ref="fileInput"
-          class="hidden"
-          accept=".txt"
-          @change="handleFileChange"
-        />
-        <button
-          @click="$refs.fileInput.click()"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-        >
-          Choose File
-        </button>
-        <p class="text-sm text-gray-400 mt-2">or drag and drop your LERG file here</p>
-        <p class="text-xs text-gray-500 mt-1">Supports TXT files</p>
+    <!-- File Upload Sections -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <!-- LERG Upload -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Upload LERG File</h2>
+        <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+          <input
+            type="file"
+            ref="lergFileInput"
+            class="hidden"
+            accept=".txt"
+            @change="handleLergFileChange"
+          />
+          <button
+            @click="$refs.lergFileInput.click()"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Choose File
+          </button>
+          <p class="text-sm text-gray-400 mt-2">or drag and drop your LERG file here</p>
+          <p class="text-xs text-gray-500 mt-1">Supports TXT files</p>
+        </div>
+      </div>
+
+      <!-- Special Codes Upload -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Upload Special Codes</h2>
+        <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+          <input
+            type="file"
+            ref="specialCodesFileInput"
+            class="hidden"
+            accept=".csv"
+            @change="handleSpecialCodesFileChange"
+          />
+          <button
+            @click="$refs.specialCodesFileInput.click()"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Choose File
+          </button>
+          <p class="text-sm text-gray-400 mt-2">or drag and drop your Special Codes file here</p>
+          <p class="text-xs text-gray-500 mt-1">Supports CSV files</p>
+        </div>
       </div>
     </div>
 
@@ -70,13 +144,6 @@
     <div class="bg-green-900/20 border border-green-500/50 rounded-lg p-6 mb-4">
       <h2 class="text-xl font-semibold text-green-400 mb-4">Data Recovery</h2>
       <div class="flex items-center justify-end space-x-4">
-        <button
-          @click="confirmReloadLerg"
-          class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          Reload LERG
-        </button>
-
         <button
           @click="confirmReloadSpecial"
           class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
@@ -121,6 +188,9 @@
     },
   });
 
+  const expandedCountries = ref<string[]>([]);
+  const countryDetails = ref<Record<string, Array<{ province: string; npas: string[] }>>>({});
+
   // Format large numbers with commas
   function formatNumber(num: number): string {
     return new Intl.NumberFormat().format(num);
@@ -140,9 +210,11 @@
   // Get country name from country code
   function getCountryName(code: string): string {
     const countries: Record<string, string> = {
-      '+1': 'United States/Canada',
-      '+44': 'United Kingdom',
-      // Add more country codes as needed
+      Canada: 'Canada',
+      'United States': 'United States',
+      'Dominican Republic': 'Dominican Republic',
+      Jamaica: 'Jamaica',
+      // Add more as needed
     };
     return countries[code] || code;
   }
@@ -156,7 +228,7 @@
     }
   }
 
-  async function handleFileChange(event: Event) {
+  async function handleLergFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
@@ -170,11 +242,29 @@
       });
 
       if (!response.ok) throw new Error('Upload failed');
-
-      console.log('File uploaded successfully');
       await fetchStats();
     } catch (error) {
-      console.error('Failed to upload file:', error);
+      console.error('Failed to upload LERG file:', error);
+    }
+  }
+
+  async function handleSpecialCodesFileChange(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/lerg/upload/special', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+      await fetchStats();
+    } catch (error) {
+      console.error('Failed to upload special codes file:', error);
     }
   }
 
@@ -206,22 +296,6 @@
     }
   }
 
-  async function confirmReloadLerg() {
-    if (!confirm('Are you sure you want to reload the last known good LERG data?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/lerg/reload/lerg', { method: 'POST' });
-      if (!response.ok) throw new Error('Reload failed');
-
-      console.log('LERG data reloaded successfully');
-      await fetchStats();
-    } catch (error) {
-      console.error('Failed to reload LERG data:', error);
-    }
-  }
-
   async function confirmReloadSpecial() {
     if (!confirm('Are you sure you want to reload the special codes data?')) {
       return;
@@ -247,6 +321,30 @@
       if (error instanceof Error) {
         console.error('Error:', error.message);
       }
+    }
+  }
+
+  async function toggleCountryDetails(countryCode: string) {
+    const index = expandedCountries.value.indexOf(countryCode);
+
+    if (index === -1) {
+      // Expand
+      expandedCountries.value.push(countryCode);
+
+      // Fetch details if we don't have them yet
+      if (!countryDetails.value[countryCode]) {
+        try {
+          const response = await fetch(`/api/lerg/special-codes/${countryCode}`);
+          if (!response.ok) throw new Error('Failed to fetch country details');
+          countryDetails.value[countryCode] = await response.json();
+        } catch (error) {
+          console.error(`Failed to fetch details for ${countryCode}:`, error);
+          expandedCountries.value = expandedCountries.value.filter(c => c !== countryCode);
+        }
+      }
+    } else {
+      // Collapse
+      expandedCountries.value.splice(index, 1);
     }
   }
 

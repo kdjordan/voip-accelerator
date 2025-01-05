@@ -5,7 +5,7 @@ import fs from 'fs';
 async function runMigrations() {
   const db = DatabaseService.getInstance();
   const migrationsPath = path.join(__dirname, '../domains/lerg/migrations');
-  
+
   try {
     const files = await fs.promises.readdir(migrationsPath);
     const sqlFiles = files.filter(f => f.endsWith('.sql')).sort();
@@ -22,4 +22,4 @@ async function runMigrations() {
   }
 }
 
-runMigrations(); 
+runMigrations();
