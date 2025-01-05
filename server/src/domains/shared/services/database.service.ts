@@ -47,4 +47,14 @@ export class DatabaseService {
       client.release();
     }
   }
+
+  public async testConnection(): Promise<void> {
+    try {
+      await this.pool.query('SELECT 1');
+      console.log('Database connection successful');
+    } catch (error) {
+      console.error('Database connection failed:', error);
+      throw error;
+    }
+  }
 }

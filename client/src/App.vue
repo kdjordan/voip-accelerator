@@ -1,4 +1,4 @@
-<template>
+@ap<template>
   <div
     id="app"
     class="flex min-h-screen bg-fbBlack text-fbWhite font-sans"

@@ -28,14 +28,14 @@ app.use(express.raw({ type: 'text/plain', limit: '500mb' }));
 // Initialize database service
 const dbService = DatabaseService.getInstance();
 
-// Mount routes - Fix the mounting path to match the client's request
-app.use('/api/lerg', adminAuthMiddleware, lergRoutes);
+// Public LERG routes (no auth required)
+app.use('/api/lerg', lergRoutes);
+
+// Admin-only LERG routes (require auth)
+app.use('/api/admin/lerg', adminAuthMiddleware, adminLergRoutes);
 
 // Separate route for admin login
 app.use('/api/auth', authRoutes);
-
-// Admin routes with auth middleware
-app.use('/api/admin/lerg', adminAuthMiddleware, adminLergRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {

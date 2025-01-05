@@ -18,6 +18,8 @@ export class LergProcessingService implements BaseService {
       console.log('Worker initialized, setting up IndexedDB...');
 
       await this.initIndexedDB();
+      await this.initSpecialCodes();
+      await this.initLergCodes();
       console.log('IndexedDB setup complete');
     } catch (error) {
       console.error('Failed to initialize LERG service:', {
@@ -59,6 +61,54 @@ export class LergProcessingService implements BaseService {
         }
       };
     });
+  }
+
+  private async initSpecialCodes(): Promise<void> {
+    try {
+      // Fetch special codes from initialization endpoint
+      const response = await fetch('/api/lerg/init-special-codes');
+      if (!response.ok) throw new Error('Failed to fetch special codes');
+      const { success, data, count } = await response.json();
+
+      if (!success) throw new Error('Failed to initialize special codes');
+
+      // Store in IndexedDB
+      const store = this.db?.transaction('special_codes', 'readwrite').objectStore('special_codes');
+      if (!store) throw new Error('Special codes store not initialized');
+
+      for (const code of data) {
+        await store.put(code);
+      }
+
+      console.log(`Stored ${count} special codes in IndexedDB`);
+    } catch (error) {
+      console.error('Failed to initialize special codes:', error);
+      throw error;
+    }
+  }
+
+  private async initLergCodes(): Promise<void> {
+    try {
+      // Fetch LERG codes from initialization endpoint
+      const response = await fetch('/api/lerg/init-lerg-codes');
+      if (!response.ok) throw new Error('Failed to fetch LERG codes');
+      const { success, data, count } = await response.json();
+
+      if (!success) throw new Error('Failed to initialize LERG codes');
+
+      // Store in IndexedDB
+      const store = this.db?.transaction('lerg_codes', 'readwrite').objectStore('lerg_codes');
+      if (!store) throw new Error('LERG codes store not initialized');
+
+      for (const code of data) {
+        await store.put(code);
+      }
+
+      console.log(`Stored ${count} LERG codes in IndexedDB`);
+    } catch (error) {
+      console.error('Failed to initialize LERG codes:', error);
+      throw error;
+    }
   }
 
   async syncDataToIndexedDB(): Promise<void> {
