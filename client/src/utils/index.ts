@@ -28,14 +28,14 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const azStore = useAzStore();
 
   try {
-    if (dbNames.includes('az')) {
+    if (dbNames.includes(DBName.AZ)) {
       // Load and parse the CSV files - use AZtest1.csv for both
       const response = await fetch('/src/data/sample/AZtest1.csv');
       if (!response.ok) {
         throw new Error(`Failed to load AZtest1.csv: ${response.statusText}`);
       }
       const csvText = await response.text();
-      
+
       // Parse CSV data for owner file (az1-store)
       const parsedOwnerData = await new Promise<AZStandardizedData[]>((resolve, reject) => {
         Papa.parse<string[]>(csvText, {
@@ -46,29 +46,22 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
                 destName: String(row[0]).trim(),
                 dialCode: Number(row[1]),
                 // Slightly increase rates for owner data
-                rate: Number((Number(row[2]) * 1.1).toFixed(4))
+                rate: Number((Number(row[2]) * 1.1).toFixed(4)),
               }))
-              .filter((item): item is AZStandardizedData => 
-                !isNaN(item.dialCode) && 
-                !isNaN(item.rate) && 
-                Boolean(item.destName)
+              .filter(
+                (item): item is AZStandardizedData =>
+                  !isNaN(item.dialCode) && !isNaN(item.rate) && Boolean(item.destName)
               );
             resolve(standardizedData);
           },
           error: reject,
-          skipEmptyLines: true
+          skipEmptyLines: true,
         });
       });
 
       // Store owner file first
       const storeName1 = `${azStore.getStoreNameByComponent('az1')}`;
-      await storeInIndexedDB(
-        parsedOwnerData,
-        'az',
-        'AZtest.csv',
-        'az1',
-        true
-      );
+      await storeInIndexedDB(parsedOwnerData, DBName.AZ, 'AZtest.csv', 'az1', true);
       azStore.addFileUploaded('az1', 'AZtest.csv');
 
       // Parse CSV data for carrier file (using same source file)
@@ -80,29 +73,22 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
               .map((row: string[]) => ({
                 destName: String(row[0]).trim(),
                 dialCode: Number(row[1]),
-                rate: Number(row[2])  // Keep original rates for carrier
+                rate: Number(row[2]), // Keep original rates for carrier
               }))
-              .filter((item): item is AZStandardizedData => 
-                !isNaN(item.dialCode) && 
-                !isNaN(item.rate) && 
-                Boolean(item.destName)
+              .filter(
+                (item): item is AZStandardizedData =>
+                  !isNaN(item.dialCode) && !isNaN(item.rate) && Boolean(item.destName)
               );
             resolve(standardizedData);
           },
           error: reject,
-          skipEmptyLines: true
+          skipEmptyLines: true,
         });
       });
 
       // Store carrier file second
       const storeName2 = `${azStore.getStoreNameByComponent('az2')}`;
-      await storeInIndexedDB(
-        parsedCarrierData,
-        'az',
-        'AZtest1.csv',
-        'az2',
-        true
-      );
+      await storeInIndexedDB(parsedCarrierData, DBName.AZ, 'AZtest1.csv', 'az2', true);
       azStore.addFileUploaded('az2', 'AZtest1.csv');
     }
 

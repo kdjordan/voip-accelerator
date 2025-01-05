@@ -1,4 +1,5 @@
-@ap<template>
+@ap
+<template>
   <div
     id="app"
     class="flex min-h-screen bg-fbBlack text-fbWhite font-sans"
@@ -9,7 +10,7 @@
       :class="[sharedStore.getSideNavOpen ? 'ml-[200px]' : 'ml-[64px]']"
     >
       <main class="flex-1">
-        <div class="min-h-full flex items-center justify-center w-full max-w-6xl mx-auto">
+        <div class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10">
           <router-view v-slot="{ Component }">
             <transition
               name="fade"
@@ -37,7 +38,7 @@
 
   const sharedStore = useSharedStore();
 
-  const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.USCodes];
+  const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.SpecialCodes, DBName.LERG];
 
   const lergService = new LergProcessingService();
 
@@ -77,6 +78,10 @@
     try {
       // Clean up first
       await cleanupIndexedDB();
+
+      // Load sample decks
+      console.log('Loading sample decks...');
+      await loadSampleDecks([DBName.AZ]);
 
       // Initialize LERG service and sync data
       console.log('Initializing LERG service...');
