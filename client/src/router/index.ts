@@ -28,20 +28,12 @@ const router = createRouter({
       component: () => import('../pages/UsPricingView.vue'),
     },
     {
-      path: '/lcr',
-      name: 'lcr',
+      path: '/healthcheck',
+      name: 'healthcheck',
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../pages/LcrGeneratorView.vue'),
-    },
-    {
-      path: '/disputes',
-      name: 'disputes',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../pages/DisputeEngineView.vue'),
+      component: () => import('../pages/HealthCheckView.vue'),
     },
     {
       path: '/admin/lerg',

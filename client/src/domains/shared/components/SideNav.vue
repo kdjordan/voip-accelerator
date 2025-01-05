@@ -73,7 +73,7 @@
             <span>Billing</span>
           </button>
           <button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md flex items-center space-x-2">
-            <ArrowRightOnRectangleIcon class="w-4 h-4 text-fbWhite" />
+            <ArrowRightEndOnRectangleIcon class="w-4 h-4 text-fbWhite" />
             <span>Sign Out</span>
           </button>
 
@@ -134,7 +134,8 @@
     ChevronUpDownIcon,
     BoltIcon,
     CreditCardIcon,
-    ArrowRightOnRectangleIcon,
+    ArrowRightEndOnRectangleIcon,
+    HeartIcon,
   } from '@heroicons/vue/24/outline';
 
   const userStore = useSharedStore();
@@ -160,29 +161,19 @@
 
   const items = ref([
     {
-      name: 'AZ Pricing',
+      name: 'AZ Reporting',
       to: '/azpricing',
       icon: DocumentCurrencyDollarIcon,
     },
     {
-      name: 'US Pricing',
+      name: 'US Reporting',
       to: '/uspricing',
       icon: DocumentCurrencyDollarIcon,
     },
     {
-      name: 'AZ LCR',
-      to: '/lcr',
-      icon: BarsArrowDownIcon,
-    },
-    {
-      name: 'US LCR',
-      to: '/lcr',
-      icon: BarsArrowDownIcon,
-    },
-    {
-      name: 'Dispute Engine',
-      to: '/disputes',
-      icon: PercentBadgeIcon,
+      name: 'Health Check',
+      to: '/healthcheck',
+      icon: HeartIcon,
     },
   ]);
 
