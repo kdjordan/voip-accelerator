@@ -1,5 +1,3 @@
-DROP TABLE IF EXISTS special_area_codes;
-
 CREATE TABLE IF NOT EXISTS special_area_codes (
   id SERIAL PRIMARY KEY,
   npa CHARACTER(3) NOT NULL,

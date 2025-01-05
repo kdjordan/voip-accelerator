@@ -46,7 +46,7 @@ app.get('/health', async (req, res) => {
 async function runMigrations() {
   const db = DatabaseService.getInstance();
   const migrationsPath = path.join(__dirname, 'domains/lerg/migrations');
-  
+
   try {
     // Read migration files in order
     const files = await fs.promises.readdir(migrationsPath);
