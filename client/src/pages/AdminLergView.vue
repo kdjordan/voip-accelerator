@@ -221,7 +221,7 @@
 
   async function fetchStats() {
     try {
-      const response = await fetch('/api/lerg/stats');
+      const response = await fetch('/api/admin/lerg/stats');
       stats.value = await response.json();
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -236,7 +236,7 @@
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/lerg/upload', {
+      const response = await fetch('/api/admin/lerg/upload', {
         method: 'POST',
         body: formData,
       });
@@ -256,7 +256,7 @@
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/lerg/upload/special', {
+      const response = await fetch('/api/admin/lerg/upload/special', {
         method: 'POST',
         body: formData,
       });
@@ -274,7 +274,7 @@
     }
 
     try {
-      await fetch('/api/lerg/clear/lerg', { method: 'DELETE' });
+      await fetch('/api/admin/lerg/clear/lerg', { method: 'DELETE' });
       console.log('LERG codes cleared successfully');
       await fetchStats();
     } catch (error) {
@@ -288,7 +288,7 @@
     }
 
     try {
-      await fetch('/api/lerg/clear/special', { method: 'DELETE' });
+      await fetch('/api/admin/lerg/clear/special', { method: 'DELETE' });
       console.log('Special codes cleared successfully');
       await fetchStats();
     } catch (error) {
@@ -302,7 +302,7 @@
     }
 
     try {
-      const response = await fetch('/api/lerg/reload/special', {
+      const response = await fetch('/api/admin/lerg/reload/special', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

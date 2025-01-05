@@ -423,9 +423,59 @@ export class LERGService {
   async testConnection(): Promise<boolean> {
     try {
       await this.db.query('SELECT 1');
+      console.log('Database connection test successful');
       return true;
     } catch (error) {
       console.error('Database connection test failed:', error);
+      throw error;
+    }
+  }
+
+  async getBasicStats(): Promise<{ totalRecords: number; lastUpdated: string | null }> {
+    try {
+      const result = await this.db.query(`
+        SELECT 
+          COUNT(*) as total,
+          MAX(last_updated) as last_updated 
+        FROM lerg_codes
+      `);
+
+      return {
+        totalRecords: parseInt(result.rows[0].total || '0'),
+        lastUpdated: result.rows[0].last_updated || null,
+      };
+    } catch (error) {
+      console.error('Error getting basic stats:', error);
+      throw error;
+    }
+  }
+
+  public async getPublicSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
+    try {
+      const query = `
+        SELECT npa, country, description as province
+        FROM special_area_codes
+        ORDER BY country, npa
+      `;
+      const result = await this.db.query(query);
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching special codes:', error);
+      throw error;
+    }
+  }
+
+  public async getPublicLergCodes(): Promise<Array<{ npanxx: string; npa: string; nxx: string; state: string }>> {
+    try {
+      const query = `
+        SELECT npanxx, npa, nxx, state
+        FROM lerg_codes
+        ORDER BY npanxx
+      `;
+      const result = await this.db.query(query);
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching LERG codes:', error);
       throw error;
     }
   }

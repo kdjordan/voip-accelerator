@@ -1,11 +1,13 @@
 import type { LERGStats, LERGRecord } from '../types/types';
 
-const BASE_URL = '/api/lerg';
+const LERG_URL = '/api/lerg';
+const ADMIN_URL = '/api/admin/lerg';
 
 export const lergApiService = {
+  // Public endpoints
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${BASE_URL}/test-connection`);
+      const response = await fetch(`${LERG_URL}/test-connection`);
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Connection test failed:', {
@@ -19,7 +21,7 @@ export const lergApiService = {
     } catch (error) {
       console.error('Database connection test failed:', {
         error,
-        url: `${BASE_URL}/test-connection`,
+        url: `${LERG_URL}/test-connection`,
         stack: error instanceof Error ? error.stack : undefined,
       });
       throw error;
@@ -27,7 +29,18 @@ export const lergApiService = {
   },
 
   async getStats(): Promise<LERGStats> {
-    const response = await fetch(`${BASE_URL}/stats`);
+    const response = await fetch(`${ADMIN_URL}/stats`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Stats fetch error:', error);
+      throw new Error('Failed to fetch LERG stats');
+    }
+    return await response.json();
+  },
+
+  // Admin endpoints
+  async getAdminStats(): Promise<LERGStats> {
+    const response = await fetch(`${ADMIN_URL}/stats`);
     if (!response.ok) {
       const error = await response.text();
       console.error('Stats fetch error:', error);
@@ -37,7 +50,7 @@ export const lergApiService = {
   },
 
   async uploadLERGFile(formData: FormData) {
-    const response = await fetch(`${BASE_URL}/upload`, {
+    const response = await fetch(`${ADMIN_URL}/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -52,7 +65,7 @@ export const lergApiService = {
   },
 
   async clearAllData(): Promise<void> {
-    const response = await fetch(`${BASE_URL}/clear`, {
+    const response = await fetch(`${ADMIN_URL}/clear`, {
       method: 'DELETE',
     });
 
@@ -64,7 +77,7 @@ export const lergApiService = {
   },
 
   async getAllLergCodes(): Promise<LERGRecord[]> {
-    const response = await fetch(`${BASE_URL}/codes/all`);
+    const response = await fetch(`${ADMIN_URL}/codes/all`);
     if (!response.ok) {
       const error = await response.text();
       console.error('Failed to fetch LERG codes:', error);
@@ -74,7 +87,7 @@ export const lergApiService = {
   },
 
   async getAllSpecialCodes(): Promise<Array<{ npa: string; country: string; description: string }>> {
-    const response = await fetch(`${BASE_URL}/special-codes/all`);
+    const response = await fetch(`${ADMIN_URL}/special-codes/all`);
     if (!response.ok) {
       const error = await response.text();
       console.error('Failed to fetch special codes:', error);
