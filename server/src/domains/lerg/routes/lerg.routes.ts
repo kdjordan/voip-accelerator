@@ -90,18 +90,6 @@ router.delete('/clear/special', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/reload/lerg', async (_req: Request, res: Response) => {
-  try {
-    await lergService.reloadLergData();
-    res.json({ message: 'LERG data reloaded successfully' });
-  } catch (error) {
-    console.error('Reload LERG data error:', error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
 router.post('/reload/special', async (_req: Request, res: Response) => {
   console.log('Received request to reload special codes');
   try {
@@ -124,6 +112,18 @@ router.get('/special-codes/:country', async (req: Request, res: Response) => {
     res.json(result);
   } catch (error) {
     console.error('Error fetching special codes by country:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.get('/test-connection', async (_req: Request, res: Response) => {
+  try {
+    await lergService.testConnection();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Test connection failed:', error);
     res.status(500).json({
       error: error instanceof Error ? error.message : 'Unknown error',
     });

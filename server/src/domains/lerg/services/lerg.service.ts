@@ -419,4 +419,14 @@ export class LERGService {
       throw error;
     }
   }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.db.query('SELECT 1');
+      return true;
+    } catch (error) {
+      console.error('Database connection test failed:', error);
+      throw error;
+    }
+  }
 }

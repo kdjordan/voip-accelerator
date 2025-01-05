@@ -7,6 +7,7 @@ import { adminAuthMiddleware } from './domains/auth/middleware/admin-auth.middle
 import { authRoutes } from './domains/auth/routes/auth.routes';
 import path from 'path';
 import fs from 'fs';
+import { adminLergRoutes } from './domains/lerg/routes/admin.routes';
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +33,9 @@ app.use('/api/lerg', adminAuthMiddleware, lergRoutes);
 
 // Separate route for admin login
 app.use('/api/auth', authRoutes);
+
+// Admin routes with auth middleware
+app.use('/api/admin/lerg', adminAuthMiddleware, adminLergRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {

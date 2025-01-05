@@ -1,23 +1,89 @@
 import { BaseService } from '@/domains/shared/types/services';
 import { LERGRecord, LERGProcessingResult } from '../types/types';
-import { DatabaseService } from '@/domains/shared/services/database.service';
+import { lergApiService } from './lerg-api.service';
 
 export class LergProcessingService implements BaseService {
-  private dbService: DatabaseService;
   private worker: Worker | null = null;
-
-  constructor() {
-    this.dbService = DatabaseService.getInstance();
-  }
+  private db: IDBDatabase | null = null;
+  private readonly DB_NAME = 'lerg_db';
+  private readonly DB_VERSION = 1;
 
   async initialize(): Promise<void> {
     try {
-      await this.dbService.query('SELECT 1 FROM lerg_codes LIMIT 1');
+      console.log('Testing connection to LERG service...');
+      await lergApiService.testConnection();
+      console.log('Connection test successful, initializing worker...');
+
       this.worker = new Worker(new URL('../workers/lerg-processing.worker.ts', import.meta.url), { type: 'module' });
+      console.log('Worker initialized, setting up IndexedDB...');
+
+      await this.initIndexedDB();
+      console.log('IndexedDB setup complete');
     } catch (error) {
-      console.error('Failed to initialize LERG service:', error);
-      throw new Error('LERG service initialization failed');
+      console.error('Failed to initialize LERG service:', {
+        error,
+        workerStatus: this.worker ? 'initialized' : 'not initialized',
+        dbStatus: this.db ? 'connected' : 'not connected',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error(
+        `LERG service initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
+  }
+
+  private async initIndexedDB(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+
+      request.onerror = () => {
+        console.error('Failed to open IndexedDB');
+        reject(new Error('IndexedDB access denied'));
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+
+      request.onupgradeneeded = event => {
+        const db = (event.target as IDBOpenDBRequest).result;
+
+        // Create object stores if they don't exist
+        if (!db.objectStoreNames.contains('lerg_codes')) {
+          db.createObjectStore('lerg_codes', { keyPath: 'npanxx' });
+        }
+
+        if (!db.objectStoreNames.contains('special_codes')) {
+          db.createObjectStore('special_codes', { keyPath: 'npa' });
+        }
+      };
+    });
+  }
+
+  async syncDataToIndexedDB(): Promise<void> {
+    if (!this.worker) {
+      throw new Error('Worker not initialized');
+    }
+
+    return new Promise((resolve, reject) => {
+      const worker = this.worker;
+      if (!worker) return reject(new Error('Worker not initialized'));
+
+      const messageHandler = (event: MessageEvent) => {
+        const { type, error } = event.data;
+        if (type === 'sync_complete') {
+          worker.removeEventListener('message', messageHandler);
+          resolve();
+        } else if (type === 'error') {
+          worker.removeEventListener('message', messageHandler);
+          reject(new Error(error));
+        }
+      };
+
+      worker.addEventListener('message', messageHandler);
+      worker.postMessage({ type: 'sync_data' });
+    });
   }
 
   async processLERGFile(file: File): Promise<LERGProcessingResult> {
@@ -59,16 +125,7 @@ export class LergProcessingService implements BaseService {
     });
   }
 
-  async getStats(): Promise<{ totalRecords: number; lastUpdated: string }> {
-    const query = `
-      SELECT COUNT(*) as total, MAX(last_updated) as last_updated 
-      FROM lerg_codes
-    `;
-
-    const result = await this.dbService.query(query);
-    return {
-      totalRecords: parseInt(result.rows[0].total),
-      lastUpdated: result.rows[0].last_updated,
-    };
+  async getStats(): Promise<{ totalRecords: number; lastUpdated: string | null }> {
+    return lergApiService.getStats();
   }
 }

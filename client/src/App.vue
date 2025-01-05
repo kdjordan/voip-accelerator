@@ -33,10 +33,13 @@
   import { DBName } from '@/domains/shared/types';
   import { useSharedStore } from '@/domains/shared/store';
   import { loadSampleDecks, deleteIndexedDBDatabase } from '@/utils';
+  import { LergProcessingService } from '@/domains/lerg/services/lerg-processing.service';
 
   const sharedStore = useSharedStore();
 
   const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.USCodes];
+
+  const lergService = new LergProcessingService();
 
   async function cleanupIndexedDB(): Promise<void> {
     try {
@@ -74,8 +77,13 @@
     try {
       // Clean up first
       await cleanupIndexedDB();
-      // Then load sample data
-      // await loadSampleDecks([DBName.AZ]);
+
+      // Initialize LERG service and sync data
+      console.log('Initializing LERG service...');
+      await lergService.initialize();
+      console.log('Starting data sync to IndexedDB...');
+      await lergService.syncDataToIndexedDB();
+      console.log('Data sync complete');
     } catch (error) {
       console.error('Error during initialization:', error);
     }

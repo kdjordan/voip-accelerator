@@ -23,4 +23,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
   }
 });
 
+router.get('/test-connection', async (_req: Request, res: Response) => {
+  try {
+    // We can use a simple query to test the connection
+    await lergService.testConnection();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Test connection failed:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 export const adminLergRoutes = router;
