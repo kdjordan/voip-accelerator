@@ -2,7 +2,6 @@ import { defineStore } from 'pinia';
 import type { AzPricingReport, AzCodeReport } from '../types/az-types';
 import type { DomainStore, ReportType } from '@/domains/shared/types';
 
-
 export const useAzStore = defineStore('azStore', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
@@ -15,24 +14,23 @@ export const useAzStore = defineStore('azStore', {
   }),
 
   getters: {
-    isComponentDisabled: (state) => (componentName: string) => {
+    isComponentDisabled: state => (componentName: string) => {
       return state.filesUploaded.has(componentName);
     },
 
-    isComponentUploading: (state) => (componentName: string) => {
+    isComponentUploading: state => (componentName: string) => {
       return !!state.uploadingComponents[componentName];
     },
 
-    isFull: (state) => state.filesUploaded.size === 2,
+    isFull: state => state.filesUploaded.size === 2,
 
-    getFileNames: (state) => 
-      Array.from(state.filesUploaded.values()).map(file => file.fileName),
+    getFileNames: state => Array.from(state.filesUploaded.values()).map(file => file.fileName),
 
-    getActiveReportType: (state) => state.activeReportType,
-    
-    getPricingReport: (state) => state.pricingReport,
-    
-    getCodeReport: (state) => state.codeReport,
+    getActiveReportType: state => state.activeReportType,
+
+    getPricingReport: state => state.pricingReport,
+
+    getCodeReport: state => state.codeReport,
   },
 
   actions: {
@@ -62,10 +60,10 @@ export const useAzStore = defineStore('azStore', {
     removeFile(componentName: string) {
       // Remove the file from the map
       this.filesUploaded.delete(componentName);
-      
+
       // Reset upload state for this component
       this.uploadingComponents[componentName] = false;
-      
+
       // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
         this.reportsGenerated = false;
