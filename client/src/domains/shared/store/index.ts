@@ -6,9 +6,8 @@ export const useSharedStore = defineStore('shared', {
   state: () => ({
     ui: {
       isSideNavOpen: false,
-      isGlobalLoading: false
+      isGlobalLoading: false,
     },
-    globalDBVersion: 1,
     user: {
       info: null as UserInfo | null,
       currentPlan: PlanTier.FREE as PlanTierType,
@@ -19,23 +18,23 @@ export const useSharedStore = defineStore('shared', {
         cdrProcessing: false,
         rateDeckBuilder: false,
         batchProcessing: false,
-        exportFormats: ['csv']
+        exportFormats: ['csv'],
       } as PlanFeatures,
       usage: {
         uploadsToday: 0,
         storageUsed: 0,
-        comparisonsToday: 0
-      }
-    }
+        comparisonsToday: 0,
+      },
+    },
   }),
 
   getters: {
-    getSideNavOpen: (state) => state.ui.isSideNavOpen,
-    isLoggedIn: (state) => state.user.info !== null,
-    isPro: (state) => state.user.currentPlan === PlanTier.PRO,
-    userEmail: (state) => state.user.info?.email ?? '',
-    username: (state) => state.user.info?.username ?? '',
-    currentPlan: (state) => state.user.currentPlan
+    getSideNavOpen: state => state.ui.isSideNavOpen,
+    isLoggedIn: state => state.user.info !== null,
+    isPro: state => state.user.currentPlan === PlanTier.PRO,
+    userEmail: state => state.user.info?.email ?? '',
+    username: state => state.user.info?.username ?? '',
+    currentPlan: state => state.user.currentPlan,
   },
 
   actions: {
@@ -47,15 +46,10 @@ export const useSharedStore = defineStore('shared', {
       this.ui.isSideNavOpen = !this.ui.isSideNavOpen;
     },
 
-    incrementGlobalDBVersion() {
-      this.globalDBVersion++;
-      console.log('updated globalDBVersion ', this.globalDBVersion);
-    },
-
     setUser(userInfo: Omit<UserInfo, 'lastLoggedIn'>) {
       this.user.info = {
         ...userInfo,
-        lastLoggedIn: new Date()
+        lastLoggedIn: new Date(),
       };
       this.updatePlanAndFeatures(userInfo.planTier);
     },
@@ -74,7 +68,7 @@ export const useSharedStore = defineStore('shared', {
           cdrProcessing: true,
           rateDeckBuilder: true,
           batchProcessing: true,
-          exportFormats: ['csv', 'xlsx', 'json']
+          exportFormats: ['csv', 'xlsx', 'json'],
         };
       } else {
         this.user.features = {
@@ -84,7 +78,7 @@ export const useSharedStore = defineStore('shared', {
           cdrProcessing: false,
           rateDeckBuilder: false,
           batchProcessing: false,
-          exportFormats: ['csv']
+          exportFormats: ['csv'],
         };
       }
     },
@@ -97,12 +91,8 @@ export const useSharedStore = defineStore('shared', {
       this.user.usage = {
         uploadsToday: 0,
         storageUsed: 0,
-        comparisonsToday: 0
+        comparisonsToday: 0,
       };
     },
-
-    setGlobalDBVersion(version: number) {
-      this.globalDBVersion = version;
-    },
-  }
+  },
 });

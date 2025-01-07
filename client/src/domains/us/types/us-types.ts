@@ -9,7 +9,6 @@ export const NPANXXRateType = {
 
 export type NPANXXRateType = (typeof NPANXXRateType)[keyof typeof NPANXXRateType];
 
-
 // Column roles for CSV mapping
 export const USColumnRole = {
   NPA: 'npa',
@@ -21,13 +20,16 @@ export const USColumnRole = {
   SELECT: '',
 } as const;
 
-export type USColumnRole = typeof USColumnRole[keyof typeof USColumnRole];
+export type USColumnRole = (typeof USColumnRole)[keyof typeof USColumnRole];
 
 // Core data structure
 export interface USStandardizedData extends BaseStandardizedData {
-  npa: number;
-  nxx: number;
-  npanxx?: number; // Optional as it can be derived from npa + nxx
+  // Phone number components as strings (for leading zeros, format preservation)
+  npa: string;
+  nxx: string;
+  npanxx?: string; // Optional as it can be derived from npa + nxx
+
+  // Rates as numbers (for mathematical operations)
   interRate: number;
   intraRate: number;
   ijRate: number;

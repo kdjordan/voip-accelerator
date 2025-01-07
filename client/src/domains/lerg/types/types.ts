@@ -9,7 +9,6 @@ export interface LERGProcessingResult {
   totalProcessed: number;
   errors: string[];
 }
-
 export interface LERGStats {
   totalRecords: number;
   lastUpdated: string | null;

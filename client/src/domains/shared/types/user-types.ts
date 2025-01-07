@@ -28,12 +28,12 @@ export interface PlanFeatures {
 
 // User information
 export interface UserInfo {
-  id: string;
-  username: string;
+  id: number;
   email: string;
+  username: string;
   planTier: PlanTierType;
-  lastLoggedIn: Date;
   createdAt: Date;
+  lastLoggedIn?: Date; // Optional, not needed for setUser
 }
 
 // User state
