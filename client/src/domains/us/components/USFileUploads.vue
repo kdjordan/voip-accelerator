@@ -4,7 +4,7 @@
       typeOfComponent="owner"
       :DBname="DBName.US"
       :componentName="component1"
-      :disabled="npanxxStore.isComponentDisabled(component1)"
+      :disabled="usStore.isComponentDisabled(component1)"
       :columnRoleOptions="columnRoleOptions"
       :deckType="DBName.US"
       class="flex-1 flex flex-col"
@@ -15,7 +15,7 @@
       typeOfComponent="carrier"
       :DBname="DBName.US"
       :componentName="component2"
-      :disabled="npanxxStore.isComponentDisabled(component2)"
+      :disabled="usStore.isComponentDisabled(component2)"
       :columnRoleOptions="columnRoleOptions"
       :deckType="DBName.US"
       class="flex-1 flex flex-col"
@@ -25,9 +25,9 @@
 
   <div class="text-center mt-8">
     <button
-      v-if="!npanxxStore.reportsGenerated"
+      v-if="!usStore.reportsGenerated"
       @click="handleReportsAction"
-      :disabled="!npanxxStore.isFull || isGeneratingReports"
+      :disabled="!usStore.isFull || isGeneratingReports"
       :class="[
         'btn-accent btn-lg',
         isGeneratingReports && 'animate-pulse',
@@ -43,17 +43,15 @@
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { useNpanxxStore } from '@/domains/us/store';
+  import { useUsStore } from '@/domains/us/store';
   import { DBName } from '@/domains/shared/types';
   import UploadComponent from '@/domains/shared/components/UploadComponent.vue';
-  import useIndexedDB from '@/composables/useIndexDB';
+  import { db } from '@/db';
   import { makeNpanxxReportsApi } from '@/API/api';
   import { USColumnRole, USStandardizedData } from '@/domains/us/types/us-types';
   import { useSharedStore } from '@/domains/shared/store';
   import { ColumnRoleOption } from '@/domains/shared/types';
-  const npanxxStore = useNpanxxStore();
-  const { loadFromIndexedDB } = useIndexedDB();
-
+  const usStore = useUsStore();
   const sharedStore = useSharedStore();
 
   const component1 = ref<string>('us1');
@@ -70,13 +68,13 @@
   ];
 
   async function handleFileUploaded(componentName: string, fileName: string) {
-    npanxxStore.addFileUploaded(componentName, fileName);
+    usStore.addFileUploaded(componentName, fileName);
     console.log(`File uploaded for ${componentName}: ${fileName}`);
   }
 
   async function handleReportsAction() {
-    if (npanxxStore.reportsGenerated) {
-      npanxxStore.showUploadComponents = false;
+    if (usStore.reportsGenerated) {
+      usStore.showUploadComponents = false;
     } else {
       await generateReports();
     }
@@ -85,9 +83,9 @@
   async function generateReports() {
     isGeneratingReports.value = true;
     try {
-      const fileNames = npanxxStore.getFileNames;
-      const file1Data = await loadFromIndexedDB(DBName.US, fileNames[0], sharedStore.globalDBVersion);
-      const file2Data = await loadFromIndexedDB(DBName.US, fileNames[1], sharedStore.globalDBVersion);
+      const fileNames = usStore.getFileNames;
+      const file1Data = await db.us.where('fileName').equals(fileNames[0]).toArray();
+      const file2Data = await db.us.where('fileName').equals(fileNames[1]).toArray();
 
       if (file1Data && file2Data) {
         const { pricing, code } = await makeNpanxxReportsApi({
@@ -98,7 +96,7 @@
         });
 
         if (pricing && code) {
-          npanxxStore.setReports(pricing, code);
+          usStore.setReports(pricing, code);
         }
       }
     } catch (error) {

@@ -1,5 +1,6 @@
 import { useSharedStore } from '@/domains/shared/store';
 import { useAzStore } from '@/domains/az/store';
+import { useUsStore } from '@/domains/us/store';
 import { db } from '@/db';
 import Papa, { ParseResult } from 'papaparse';
 import { DBName, PlanTier, type DataType } from '@/domains/shared/types';
@@ -7,6 +8,18 @@ import type { AZStandardizedData } from '@/domains/az/types/az-types';
 import type { USStandardizedData } from '@/domains/us/types/us-types';
 import type { LERGRecord } from '@/domains/lerg/types';
 import type { AZTable, USTable } from '@/db/types';
+
+// Add this type helper at the top with other imports
+type USTableData = Omit<USTable, 'id'> & {
+  npa: string;
+  nxx: string;
+  npanxx: string;
+  interRate: number;
+  intraRate: number;
+  ijRate: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // Process functions
 function processData(csvText: string, dataType: DataType): (AZStandardizedData | USStandardizedData)[] {
@@ -150,8 +163,87 @@ async function loadDb(dataType: DataType): Promise<void> {
       await db.az.bulkPut(parsedCarrierData);
       azStore.addFileUploaded('az2', 'AZtest1.csv');
     } else if (dataType === DBName.US) {
-      // TODO: Implement US data loading with similar pattern
-      console.log('US data loading not yet implemented');
+      const usStore = useUsStore();
+
+      // Load and parse the CSV files
+      const response = await fetch('/src/data/sample/UStest1.csv');
+      if (!response.ok) {
+        throw new Error(`Failed to load UStest1.csv: ${response.statusText}`);
+      }
+      const csvText = await response.text();
+
+      // Process owner data
+      const parsedOwnerData = await new Promise<USTable[]>((resolve, reject) => {
+        Papa.parse<string[]>(csvText, {
+          complete: (results: ParseResult<string[]>) => {
+            const now = new Date();
+            const standardizedData = results.data
+              .filter((row: string[]) => row.length >= 5)
+              .map((row: string[]) => {
+                const [, npa, nxx, interRate, intraRate, ijRate] = row;
+                const npanxx = `${npa.trim()}${nxx.trim()}`;
+                const data: USTableData = {
+                  createdAt: now,
+                  updatedAt: now,
+                  npa: npa.trim(),
+                  nxx: nxx.trim(),
+                  npanxx,
+                  interRate: Number((Number(interRate) * 1.1).toFixed(4)),
+                  intraRate: Number((Number(intraRate) * 1.1).toFixed(4)),
+                  ijRate: Number((Number(ijRate || 0) * 1.1).toFixed(4)),
+                };
+                return data;
+              })
+              .filter(
+                (item): item is USTableData =>
+                  Boolean(item.npa) &&
+                  Boolean(item.nxx) &&
+                  Boolean(item.npanxx) &&
+                  !isNaN(item.interRate) &&
+                  !isNaN(item.intraRate)
+              );
+            resolve(standardizedData);
+          },
+          error: reject,
+          skipEmptyLines: true,
+        });
+      });
+
+      // Store owner data and update store
+      await db.us.bulkPut(parsedOwnerData);
+      usStore.addFileUploaded('us1', 'UStest.csv');
+
+      // Process carrier data with original rates
+      const parsedCarrierData = await new Promise<USTable[]>((resolve, reject) => {
+        Papa.parse<string[]>(csvText, {
+          complete: (results: ParseResult<string[]>) => {
+            const now = new Date();
+            const standardizedData = results.data
+              .filter((row: string[]) => row.length >= 5)
+              .map((row: string[]) => {
+                const [, npa, nxx, interRate, intraRate, ijRate] = row;
+                const npanxx = `${npa.trim()}${nxx.trim()}`;
+                return {
+                  createdAt: now,
+                  updatedAt: now,
+                  npa: npa.trim(),
+                  nxx: nxx.trim(),
+                  npanxx,
+                  interRate: Number(interRate),
+                  intraRate: Number(intraRate),
+                  ijRate: Number(ijRate || 0),
+                } satisfies USTable;
+              });
+            resolve(standardizedData);
+          },
+          error: reject,
+          skipEmptyLines: true,
+        });
+      });
+
+      // Store carrier data and update store
+      await db.us.bulkPut(parsedCarrierData);
+      usStore.addFileUploaded('us2', 'UStest1.csv');
     }
 
     console.log(`Sample ${dataType} decks loaded successfully`);

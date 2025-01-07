@@ -50,27 +50,23 @@
   import { useAzStore } from '@/domains/az/store';
   import { ReportTypes, type ReportType } from '@/domains/shared/types';
   import { resetReportApi } from '@/API/api';
-  import useIndexedDB from '@/composables/useIndexDB';
+  import { db } from '@/db';
   import { DBName } from '@/domains/shared/types';
 
   const azStore = useAzStore();
-  const { deleteObjectStore } = useIndexedDB();
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
 
   async function handleReset() {
     try {
       console.log('Resetting the AZ report');
-      
+
       // Reset store state first
       azStore.resetFiles();
       azStore.setActiveReportType('files');
 
-      // Clean up IndexedDB stores
-      await Promise.all([
-        deleteObjectStore(DBName.AZ, 'az1-store'),
-        deleteObjectStore(DBName.AZ, 'az2-store')
-      ]);
+      // Clean up data using Dexie
+      await db.az.clear();
 
       // Call API reset
       await resetReportApi('az');

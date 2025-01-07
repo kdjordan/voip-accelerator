@@ -81,7 +81,7 @@
 
       // Load sample decks
       console.log('Loading sample decks...');
-      await loadSampleDecks([DBName.AZ]);
+      await loadSampleDecks([DBName.US]);
 
       // Initialize LERG service and sync data
       console.log('Initializing LERG service...');

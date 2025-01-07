@@ -11,14 +11,14 @@
       >
         <div :key="usStore.getActiveReportType">
           <USFileUploads v-if="usStore.activeReportType === ReportTypes.FILES" />
-          <!-- <USCodeReport
-            v-if="npanxxStore.activeReportType === ReportTypes.CODE"
-            :report="npanxxStore.codeReport"
+          <USCodeReport
+            v-if="usStore.activeReportType === ReportTypes.CODE"
+            :report="usStore.codeReport"
           />
           <USPricingReport
-            v-if="npanxxStore.activeReportType === ReportTypes.PRICING"
-            :report="npanxxStore.getPricingReport"
-          /> -->
+            v-if="usStore.activeReportType === ReportTypes.PRICING"
+            :report="usStore.getPricingReport"
+          />
         </div>
       </transition>
     </div>
@@ -30,8 +30,8 @@
   import USCodeReport from '@/domains/us/components/USCodeReport.vue';
   import USPricingReport from '@/domains/us/components/USPricingReport.vue';
   import USContentHeader from '@/domains/us/components/USContentHeader.vue';
-  import { useNpanxxStore } from '@/domains/us/store';
+  import { useUsStore } from '@/domains/us/store';
   import { ReportTypes } from '@/domains/shared/types';
 
-  const usStore = useNpanxxStore();
+  const usStore = useUsStore();
 </script>

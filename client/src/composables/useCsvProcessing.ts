@@ -4,7 +4,7 @@ import type { StandardizedData, DBNameType, DomainStoreType } from '@/domains/sh
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
-import { useNpanxxStore } from '@/domains/us/store';
+import { useUsStore } from '@/domains/us/store';
 import { NPANXXRateType, type USStandardizedData } from '@/domains/us/types/us-types';
 import type { AZStandardizedData } from '@/domains/az/types/az-types';
 
@@ -28,7 +28,7 @@ export default function useCSVProcessing() {
       case DBName.AZ:
         return useAzStore();
       case DBName.US:
-        return useNpanxxStore();
+        return useUsStore();
       default:
         throw new Error(`Invalid deck type: ${deckType.value}`);
     }
@@ -67,8 +67,9 @@ export default function useCSVProcessing() {
 
           fullData.forEach((row: string[], rowIndex: number) => {
             const standardizedRow: USStandardizedData = {
-              npa: 0,
-              nxx: 0,
+              npa: '',
+              nxx: '',
+              npanxx: '',
               interRate: 0,
               intraRate: 0,
               ijRate: 0,
@@ -78,17 +79,17 @@ export default function useCSVProcessing() {
               if (role && index < row.length) {
                 switch (role) {
                   case 'npa':
-                    standardizedRow.npa = Number(row[index]);
+                    standardizedRow.npa = row[index].trim();
                     break;
                   case 'nxx':
-                    standardizedRow.nxx = Number(row[index]);
+                    standardizedRow.nxx = row[index].trim();
                     break;
                   case 'npanxx':
-                    const npanxx = Number(row[index]);
-                    if (!isNaN(npanxx)) {
-                      standardizedRow.npanxx = npanxx;
-                      standardizedRow.npa = Math.floor(npanxx / 1000);
-                      standardizedRow.nxx = npanxx % 1000;
+                    const npanxxStr = row[index].trim();
+                    if (npanxxStr) {
+                      standardizedRow.npanxx = npanxxStr;
+                      standardizedRow.npa = npanxxStr.slice(0, 3);
+                      standardizedRow.nxx = npanxxStr.slice(3);
                     }
                     break;
                   case 'interRate':
@@ -105,12 +106,12 @@ export default function useCSVProcessing() {
             });
 
             if (!standardizedRow.npanxx && standardizedRow.npa && standardizedRow.nxx) {
-              standardizedRow.npanxx = standardizedRow.npa * 1000 + standardizedRow.nxx;
+              standardizedRow.npanxx = `${standardizedRow.npa}${standardizedRow.nxx}`;
             }
 
             if (
-              standardizedRow.npa > 0 &&
-              standardizedRow.nxx > 0 &&
+              standardizedRow.npa &&
+              standardizedRow.nxx &&
               (standardizedRow.interRate > 0 || standardizedRow.intraRate > 0 || standardizedRow.ijRate > 0)
             ) {
               standardizedData.push(standardizedRow);
@@ -137,7 +138,7 @@ export default function useCSVProcessing() {
           fullData.forEach((row: string[], rowIndex: number) => {
             const standardizedRow: AZStandardizedData = {
               destName: '',
-              dialCode: 0,
+              dialCode: '',
               rate: 0,
             };
 
@@ -148,7 +149,7 @@ export default function useCSVProcessing() {
                     standardizedRow.destName = String(row[index]).trim();
                     break;
                   case 'dialCode':
-                    standardizedRow.dialCode = Number(row[index]);
+                    standardizedRow.dialCode = row[index].trim();
                     break;
                   case 'rate':
                     standardizedRow.rate = Number(row[index]);
@@ -159,7 +160,7 @@ export default function useCSVProcessing() {
 
             if (
               typeof standardizedRow.destName === 'string' &&
-              typeof standardizedRow.dialCode === 'number' &&
+              standardizedRow.dialCode &&
               typeof standardizedRow.rate === 'number'
             ) {
               standardizedData.push(standardizedRow);

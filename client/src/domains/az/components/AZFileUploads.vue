@@ -47,13 +47,12 @@
   import { AZColumnRole, type AZStandardizedData } from '@/domains/az/types/az-types';
   import { DBName, type DBNameType } from '@/domains/shared/types';
   import UploadComponent from '@/domains/shared/components/UploadComponent.vue';
-  import useIndexedDB from '@/composables/useIndexDB';
+  import { db } from '@/db';
   import { makeAzReportsApi } from '@/API/api';
   import { useAzStore } from '@/domains/az/store';
   import { useSharedStore } from '@/domains/shared/store';
 
   const azStore = useAzStore();
-  const { loadFromIndexedDB } = useIndexedDB();
   const sharedStore = useSharedStore();
 
   const component1 = ref<string>('az1');
@@ -74,9 +73,7 @@
 
   async function handleRemoveFile(componentName: string, DBname: DBNameType) {
     try {
-      const { deleteObjectStore } = useIndexedDB();
-      const storeName = `${componentName}-store`;
-      await deleteObjectStore(DBname, storeName);
+      await db.az.where('fileName').equals(componentName).delete();
     } catch (error) {
       console.error('Error removing file:', error);
     }
@@ -94,16 +91,8 @@
     isGeneratingReports.value = true;
     try {
       const fileNames = azStore.getFileNames;
-      const file1Data = await loadFromIndexedDB(
-        DBName.AZ,
-        'az1-store',
-        sharedStore.globalDBVersion
-      );
-      const file2Data = await loadFromIndexedDB(
-        DBName.AZ,
-        'az2-store',
-        sharedStore.globalDBVersion
-      );
+      const file1Data = await db.az.where('fileName').equals(fileNames[0]).toArray();
+      const file2Data = await db.az.where('fileName').equals(fileNames[1]).toArray();
 
       if (file1Data && file2Data) {
         const { pricingReport, codeReport } = await makeAzReportsApi({

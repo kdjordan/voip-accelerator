@@ -107,7 +107,7 @@
   import TheModal from './PreviewModal.vue';
   import { DBName, type DBNameType, type DomainStoreType } from '@/domains/shared/types';
   import { useAzStore } from '@/domains/az/store';
-  import { useNpanxxStore } from '@/domains/us/store';
+  import { useUsStore } from '@/domains/us/store';
   import type { ColumnRoleOption } from '@/domains/shared/types';
   import { useUploadState } from '@/composables/useUploadState';
   import { useFileHandler } from '@/composables/useFileHandler';
@@ -131,7 +131,7 @@
       case DBName.AZ:
         return useAzStore();
       case DBName.US:
-        return useNpanxxStore();
+        return useUsStore();
       default:
         throw new Error(`Invalid DBname: ${props.DBname}`);
     }
