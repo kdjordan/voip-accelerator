@@ -14,26 +14,26 @@ export default function useIndexedDB() {
     forceCreate = false
   ) {
     try {
-      // Get the current version first
+      const storeName = fileName.replace('.csv', '');
+
       const currentDB = await openDB(DBname, undefined);
       const newVersion = currentDB.version + 1;
       currentDB.close();
 
-      // Open with new version
       const db = await openDB(DBname, newVersion, {
         upgrade(db) {
-          if (db.objectStoreNames.contains(`${componentName}-store`)) {
-            db.deleteObjectStore(`${componentName}-store`);
+          if (db.objectStoreNames.contains(storeName)) {
+            db.deleteObjectStore(storeName);
           }
-          db.createObjectStore(`${componentName}-store`, {
+          db.createObjectStore(storeName, {
             keyPath: 'id',
             autoIncrement: true,
           });
         },
       });
 
-      const tx = db.transaction(`${componentName}-store`, 'readwrite');
-      const store = tx.objectStore(`${componentName}-store`);
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
 
       for (const item of data) {
         await store.add(item);
@@ -44,8 +44,6 @@ export default function useIndexedDB() {
 
       // Update the global version in the store
       sharedStore.globalDBVersion = newVersion;
-
-      console.log(`Added file to store ${componentName} ${fileName}`);
     } catch (error) {
       console.error('Error storing in IndexedDB:', error);
       throw error;

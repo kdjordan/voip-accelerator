@@ -33,7 +33,7 @@
   import { onMounted, onBeforeUnmount } from 'vue';
   import { DBName } from '@/domains/shared/types';
   import { useSharedStore } from '@/domains/shared/store';
-  import { loadSampleDecks, deleteIndexedDBDatabase } from '@/utils';
+  import { loadSampleDecks, deleteIndexedDBDatabase } from '@/domains/shared/utils';
   import { LergProcessingService } from '@/domains/lerg/services/lerg-processing.service';
 
   const sharedStore = useSharedStore();
@@ -81,14 +81,14 @@
 
       // Load sample decks
       console.log('Loading sample decks...');
-      await loadSampleDecks([DBName.AZ]);
+      await loadSampleDecks([DBName.AZ, DBName.US]);
 
       // Initialize LERG service and sync data
-      console.log('Initializing LERG service...');
-      await lergService.initialize();
-      console.log('Starting data sync to IndexedDB...');
-      await lergService.syncDataToIndexedDB();
-      console.log('Data sync complete');
+      // console.log('Initializing LERG service...');
+      // await lergService.initialize();
+      // console.log('Starting data sync to IndexedDB...');
+      // await lergService.syncDataToIndexedDB();
+      // console.log('Data sync complete');
     } catch (error) {
       console.error('Error during initialization:', error);
     }
