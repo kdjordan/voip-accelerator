@@ -4,7 +4,7 @@ import { useSharedStore } from '@/domains/shared/store';
 import type { ReportType } from '@/domains/shared/types';
 import type { DomainStore } from '@/domains/shared/types';
 
-export const useNpanxxStore = defineStore('npanxxStore', {
+export const useUsStore = defineStore('npanxxStore', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
     showUploadComponents: true,

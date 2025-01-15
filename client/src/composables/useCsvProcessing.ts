@@ -4,7 +4,7 @@ import type { StandardizedData, DBNameType, DomainStoreType } from '@/domains/sh
 import { DBName } from '@/domains/shared/types';
 import useIndexedDB from './useIndexDB';
 import { useAzStore } from '@/domains/az/store';
-import { useNpanxxStore } from '@/domains/us/store';
+import { useUsStore } from '@/domains/us/store';
 import { NPANXXRateType, type USStandardizedData } from '@/domains/us/types/us-types';
 import type { AZStandardizedData } from '@/domains/az/types/az-types';
 
@@ -28,7 +28,7 @@ export default function useCSVProcessing() {
       case DBName.AZ:
         return useAzStore();
       case DBName.US:
-        return useNpanxxStore();
+        return useUsStore();
       default:
         throw new Error(`Invalid deck type: ${deckType.value}`);
     }

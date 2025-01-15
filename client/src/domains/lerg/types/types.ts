@@ -2,6 +2,7 @@ export interface LERGRecord {
   npa: string;
   nxx: string;
   state: string;
+  npanxx: string;
 }
 
 export interface LERGProcessingResult {
