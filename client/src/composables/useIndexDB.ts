@@ -1,35 +1,10 @@
-import Dexie, { Table } from 'dexie';
-import { useSharedStore } from '@/domains/shared/store';
-import { type DBNameType } from '@/domains/shared/types';
-import type { StandardizedData } from '@/domains/shared/types';
-
-// Define database structure
-class RateDeckDB extends Dexie {
-  [key: string]: Table<StandardizedData> | any; // Dynamic stores
-
-  constructor(dbName: DBNameType) {
-    super(dbName);
-  }
-
-  // Method to create/update store schema
-  createStore(storeName: string) {
-    const newVersion = this.verno + 1;
-    this.version(newVersion).stores({
-      [storeName]: '++id, dialCode, rate', // Index on dialCode and rate
-    });
-  }
-}
+import { openDB } from 'idb';
+import { useSharedStore } from '@/stores/shared-store';
+import { type DBNameType } from '@/types';
+import type { StandardizedData } from '@/types';
 
 export default function useIndexedDB() {
   const sharedStore = useSharedStore();
-  const dbInstances = new Map<DBNameType, RateDeckDB>();
-
-  function getDB(dbName: DBNameType): RateDeckDB {
-    if (!dbInstances.has(dbName)) {
-      dbInstances.set(dbName, new RateDeckDB(dbName));
-    }
-    return dbInstances.get(dbName)!;
-  }
 
   async function storeInIndexedDB(
     data: StandardizedData[],
@@ -40,17 +15,35 @@ export default function useIndexedDB() {
   ) {
     try {
       const storeName = fileName.replace('.csv', '');
-      const db = getDB(DBname);
 
-      // Create or update store schema
-      db.createStore(storeName);
-      await db.open();
+      const currentDB = await openDB(DBname, undefined);
+      const newVersion = currentDB.version + 1;
+      currentDB.close();
 
-      // Store data
-      await db.table(storeName).bulkPut(data);
+      const db = await openDB(DBname, newVersion, {
+        upgrade(db) {
+          if (db.objectStoreNames.contains(storeName)) {
+            db.deleteObjectStore(storeName);
+          }
+          db.createObjectStore(storeName, {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+        },
+      });
 
-      // Update global version
-      sharedStore.globalDBVersion = db.verno;
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+
+      for (const item of data) {
+        await store.add(item);
+      }
+
+      await tx.done;
+      db.close();
+
+      // Update the global version in the store
+      sharedStore.globalDBVersion = newVersion;
     } catch (error) {
       console.error('Error storing in IndexedDB:', error);
       throw error;
@@ -63,8 +56,12 @@ export default function useIndexedDB() {
     dbVersion: number
   ): Promise<StandardizedData[]> {
     try {
-      const db = getDB(dbName);
-      return await db.table(storeName).toArray();
+      const db = await openDB(dbName, dbVersion);
+      const transaction = db.transaction(storeName, 'readonly');
+      const store = transaction.objectStore(storeName);
+      const data = await store.getAll();
+      db.close();
+      return data;
     } catch (error) {
       console.error('Error loading from IndexedDB:', error);
       throw error;
@@ -73,15 +70,24 @@ export default function useIndexedDB() {
 
   async function deleteObjectStore(dbName: DBNameType, objectStoreName: string): Promise<void> {
     try {
-      const db = getDB(dbName);
-      const newVersion = db.verno + 1;
+      const currentDB = await openDB(dbName, undefined);
+      const newVersion = currentDB.version + 1;
+      currentDB.close();
 
-      db.version(newVersion).stores({
-        [objectStoreName]: null, // This deletes the store
+      const db = await openDB(dbName, newVersion, {
+        upgrade(db) {
+          if (db.objectStoreNames.contains(objectStoreName)) {
+            db.deleteObjectStore(objectStoreName);
+          }
+        },
       });
 
-      await db.open();
-      sharedStore.globalDBVersion = db.verno;
+      db.close();
+
+      // Update the global version in the store
+      sharedStore.globalDBVersion = newVersion;
+
+      console.log(`Object store "${objectStoreName}" deleted`);
     } catch (error) {
       console.error('Error deleting object store:', error);
       throw error;

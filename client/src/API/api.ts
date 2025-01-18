@@ -1,7 +1,12 @@
-import { AZReportsInput } from '@/domains/az/types/az-types';
-import AzComparisonWorker from '@/domains/az/workers/az-comparison.worker?worker';
-import type { AzPricingReport, AzCodeReport } from '@/domains/az/types/az-types';
-import type { USReportPayload, USReportResponse } from '@/domains/npanxx/types/us-types';
+import { AZReportsInput } from '@/types/az-types';
+import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
+import type { AzPricingReport, AzCodeReport } from '@/types/az-types';
+import type { USReportPayload, USReportResponse } from '@/types/us-types';
+import type { AZStandardizedData } from '@/types/az-types';
+import type { USStandardizedData } from '@/types/us-types';
+import { useSharedStore } from '@/stores/shared-store';
+import type { USPricingReport, USCodeReport } from '@/types/us-types';
+import type { ReportType } from '@/types/app-types';
 
 export async function resetReportApi(reportType: string) {
   await deleteDbApi(reportType);
