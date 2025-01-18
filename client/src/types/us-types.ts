@@ -1,4 +1,14 @@
-import type { BaseStandardizedData } from '@/domains/shared/types';
+import type { BaseStandardizedData } from '@/types';
+
+// Core data structure
+export interface USStandardizedData extends BaseStandardizedData {
+  npa: number;
+  nxx: number;
+  npanxx?: number; // Optional as it can be derived from npa + nxx
+  interRate: number;
+  intraRate: number;
+  ijRate: number;
+}
 
 // Rate type constants
 export const NPANXXRateType = {
@@ -23,15 +33,7 @@ export const USColumnRole = {
 
 export type USColumnRole = typeof USColumnRole[keyof typeof USColumnRole];
 
-// Core data structure
-export interface USStandardizedData extends BaseStandardizedData {
-  npa: number;
-  nxx: number;
-  npanxx?: number; // Optional as it can be derived from npa + nxx
-  interRate: number;
-  intraRate: number;
-  ijRate: number;
-}
+
 
 // Rate comparison result
 export interface RateComparison {

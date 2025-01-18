@@ -46,13 +46,13 @@
   import { useUsStore } from '@/stores/us-store';
   import { DBName } from '@/types/app-types';
   import UploadComponent from '@/components/shared/UploadComponent.vue';
-  import useIndexedDB from '@/composables/useIndexDB';
+  import useDexieDB from '@/composables/useDexieDB';
   import { makeNpanxxReportsApi } from '@/API/api';
   import { USColumnRole, USStandardizedData } from '@/types/us-types';
   import { useSharedStore } from '@/stores/shared-store';
   import { ColumnRoleOption } from '@/types/app-types';
   const usStore = useUsStore();
-  const { loadFromIndexedDB } = useIndexedDB();
+  const { loadFromDexieDB } = useDexieDB();
 
   const sharedStore = useSharedStore();
 
@@ -86,8 +86,8 @@
     isGeneratingReports.value = true;
     try {
       const fileNames = usStore.getFileNames;
-      const file1Data = await loadFromIndexedDB(DBName.US, fileNames[0], sharedStore.globalDBVersion);
-      const file2Data = await loadFromIndexedDB(DBName.US, fileNames[1], sharedStore.globalDBVersion);
+      const file1Data = await loadFromDexieDB(DBName.US, fileNames[0]);
+      const file2Data = await loadFromDexieDB(DBName.US, fileNames[1]);
 
       if (file1Data && file2Data) {
         const { pricing, code } = await makeNpanxxReportsApi({

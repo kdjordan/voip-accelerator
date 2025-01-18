@@ -43,7 +43,7 @@ export default function useIndexedDB() {
       db.close();
 
       // Update the global version in the store
-      sharedStore.globalDBVersion = newVersion;
+      // sharedStore.globalDBVersion = newVersion;
     } catch (error) {
       console.error('Error storing in IndexedDB:', error);
       throw error;
@@ -85,7 +85,7 @@ export default function useIndexedDB() {
       db.close();
 
       // Update the global version in the store
-      sharedStore.globalDBVersion = newVersion;
+      // sharedStore.globalDBVersion = newVersion;
 
       console.log(`Object store "${objectStoreName}" deleted`);
     } catch (error) {
