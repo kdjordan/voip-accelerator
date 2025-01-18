@@ -5,7 +5,7 @@
   >
     <div class="mb-4 text-center">
       <p
-        v-if="!npanxxStore.isFull"
+        v-if="!usStore.isFull"
         class="text-center text-sizeBase text-foreground mb-8"
       >
         Upload
@@ -17,18 +17,18 @@
       </p>
     </div>
     <div
-      v-if="npanxxStore.reportsGenerated"
+      v-if="usStore.reportsGenerated"
       class="flex justify-center my-4"
     >
       <button
         v-for="type in reportTypes"
         :key="type"
-        @click="npanxxStore.setActiveReportType(type)"
+        @click="usStore.setActiveReportType(type)"
         :class="[
           'py-3 px-6 mx-2 rounded-lg transition-colors',
           {
-            'btn-active': npanxxStore.activeReportType === type,
-            'btn-inactive': npanxxStore.activeReportType !== type,
+            'btn-active': usStore.activeReportType === type,
+            'btn-inactive': usStore.activeReportType !== type,
           },
         ]"
       >
@@ -48,17 +48,18 @@
 </template>
 
 <script setup lang="ts">
-  import { useNpanxxStore } from '@/stores/us-store';
-  import { ReportTypes, type ReportType } from '@/domains/shared/types';
+  import { useUsStore } from '@/stores/us-store';
+  import { ReportTypes, type ReportType } from '@/types/app-types';
   import { resetReportApi } from '@/API/api';
 
-  const npanxxStore = useNpanxxStore();
+  const usStore = useUsStore();
 
   const reportTypes: readonly ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING] as const;
 
   async function handleReset() {
     console.log('Resetting the US report');
-    npanxxStore.setActiveReportType(ReportTypes.FILES);
+    usStore.setActiveReportType(ReportTypes.FILES);
     await resetReportApi('us');
   }
 </script>
+

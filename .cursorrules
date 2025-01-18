@@ -7,6 +7,13 @@ Code Style and Structure
 - Favor iteration and modularization to adhere to DRY principles and avoid code duplication.
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
 - Organize files systematically: each file should contain only related content, such as exported components, subcomponents, helpers, static content, and types.
+- in all .vue files, use the composition api and script setup style.
+- put all the logic in the script section and all the html in the template section.
+- use the tailwind css classes for styling.
+- place script setup at the middle of the file.
+- place the template section at the top of the file.
+- place style at the bottom of the file, if one is needed.
+
 
 Naming Conventions
 

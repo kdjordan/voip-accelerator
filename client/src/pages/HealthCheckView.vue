@@ -70,8 +70,8 @@
 
 <script setup lang="ts">
   import { ref, onMounted } from 'vue';
-  import { lergApiService } from '@/domains/lerg/services/lerg-api.service';
-  import type { LERGStats } from '@/domains/lerg/types/api.types';
+  import { lergApiService } from '@/API/api';
+  import type { LERGStats } from '@/types/api-types';
 
   const stats = ref<LERGStats>({
     totalRecords: 0,
