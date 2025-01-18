@@ -1,12 +1,12 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
-import type { StandardizedData, DBNameType, DomainStoreType } from '@/domains/shared/types';
-import { DBName } from '@/domains/shared/types';
+import type { StandardizedData, DBNameType, DomainStoreType } from '@/types';
+import { DBName } from '@/types';
 import useIndexedDB from './useIndexDB';
-import { useAzStore } from '@/domains/az/store';
-import { useUsStore } from '@/domains/us/store';
-import { NPANXXRateType, type USStandardizedData } from '@/domains/us/types/us-types';
-import type { AZStandardizedData } from '@/domains/az/types/az-types';
+import { useAzStore } from '@/stores/az-store';
+import { useUsStore } from '@/stores/us-store';
+import { NPANXXRateType, type USStandardizedData } from '@/types/us-types';
+import type { AZStandardizedData } from '@/types/az-types';
 
 export default function useCSVProcessing() {
   const file = ref<File | null>(null);

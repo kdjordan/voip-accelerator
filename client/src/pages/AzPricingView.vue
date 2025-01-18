@@ -4,7 +4,11 @@
     <AZContentHeader />
 
     <div class="w-full max-w-5xl">
-      <transition name="fade" mode="out-in" appear>
+      <transition
+        name="fade"
+        mode="out-in"
+        appear
+      >
         <div :key="azStore.getActiveReportType">
           <AZFileUploads v-if="azStore.getActiveReportType === ReportTypes.FILES" />
           <CodeReportAZ
@@ -22,12 +26,12 @@
 </template>
 
 <script setup lang="ts">
-import AZFileUploads from "@/domains/az/components/AZFileUploads.vue";
-import CodeReportAZ from "@/domains/az/components/AZCodeReport.vue";
-import PricingReportAZ from "@/domains/az/components/AZPricingReport.vue";
-import AZContentHeader from "@/domains/az/components/AZContentHeader.vue";
-import { useAzStore } from "@/domains/az/store";
-import { ReportTypes } from '@/domains/shared/types';
+  import AZFileUploads from '@/components/az/AZFileUploads.vue';
+  import CodeReportAZ from '@/components/az/AZCodeReport.vue';
+  import PricingReportAZ from '@/components/az/AZPricingReport.vue';
+  import AZContentHeader from '@/components/az/AZContentHeader.vue';
+  import { useAzStore } from '@/stores/az-store';
+  import { ReportTypes } from '@/types/app-types';
 
-const azStore = useAzStore();
+  const azStore = useAzStore();
 </script>

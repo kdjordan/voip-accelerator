@@ -26,11 +26,11 @@
 </template>
 
 <script setup lang="ts">
-  import USFileUploads from '@/domains/us/components/USFileUploads.vue';
-  import USCodeReport from '@/domains/us/components/USCodeReport.vue';
-  import USPricingReport from '@/domains/us/components/USPricingReport.vue';
-  import USContentHeader from '@/domains/us/components/USContentHeader.vue';
-  import { useNpanxxStore } from '@/domains/us/store';
+  import USFileUploads from '@/components/us/USFileUploads.vue';
+  import USCodeReport from '@/components/us/USCodeReport.vue';
+  import USPricingReport from '@/components/us/USPricingReport.vue';
+  import USContentHeader from '@/components/us/USContentHeader.vue';
+  import { useNpanxxStore } from '@/stores/us-store';
   import { ReportTypes } from '@/domains/shared/types';
 
   const usStore = useNpanxxStore();

@@ -1,4 +1,4 @@
-You are an expert in TypeScript, Node.js, Vite, Vue.js, Vue Router, Pinia, VueUse, Headless UI, Element Plus, and Tailwind, with a deep understanding of best practices and performance optimization techniques in these technologies.
+You are an expert in TypeScript, Node.js, Vite, Vue.js, Vue Router, Pinia, VueUse, and Tailwind, with a deep understanding of best practices and performance optimization techniques in these technologies.
 
 Code Style and Structure
 
@@ -42,20 +42,6 @@ Performance Optimization
 Key Conventions
 
 - Optimize Web Vitals (LCP, CLS, FID) using tools like Lighthouse or WebPageTest.
-
-Domain-Driven Architecture
-
-- Organize code by business domains (e.g., /domains/npanxx, /domains/az)
-- Each domain should be self-contained with its own:
-  - types/
-  - components/
-  - services/
-  - store/
-  - utils/
-- Cross-domain functionality should be in shared/ domain
-- Composables should be domain-aware and use appropriate domain stores/services
-- Keep domain-specific types and logic within their respective domains
-- Use shared/types for cross-domain interfaces and types
 
 Git Commits
 

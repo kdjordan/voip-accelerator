@@ -28,13 +28,13 @@
 </template>
 
 <script setup lang="ts">
-  import SideNav from './domains/shared/components/SideNav.vue';
-  import TheFooter from './domains/shared/components/TheFooter.vue';
+  import SideNav from '@/components/shared/SideNav.vue';
+  import TheFooter from '@/components/shared/TheFooter.vue';
   import { onMounted, onBeforeUnmount } from 'vue';
-  import { DBName } from '@/domains/shared/types';
-  import { useSharedStore } from '@/domains/shared/store';
-  import { loadSampleDecks, deleteIndexedDBDatabase } from '@/domains/shared/utils';
-  import { LergProcessingService } from '@/domains/lerg/services/lerg-processing.service';
+  import { DBName } from '@/types/app-types';
+  import { useSharedStore } from '@/stores/shared-store';
+  import { deleteIndexedDBDatabase, loadSampleDecks } from '@/utils/allUtils';
+  import { LergProcessingService } from '@/services/lerg-processing.service';
 
   const sharedStore = useSharedStore();
 
@@ -81,7 +81,7 @@
 
       // Load sample decks
       console.log('Loading sample decks...');
-      await loadSampleDecks([DBName.AZ, DBName.US]);
+      await loadSampleDecks([DBName.AZ]);
 
       // Initialize LERG service and sync data
       // console.log('Initializing LERG service...');
