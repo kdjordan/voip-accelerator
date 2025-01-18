@@ -222,7 +222,7 @@ export function initializeLergData(): void {
   });
 }
 
-export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
+export async function loadSampleDecks(dbNames: 3. yes[]): Promise<void> {
   try {
     console.log('loadSampleDecks called with:', dbNames);
 

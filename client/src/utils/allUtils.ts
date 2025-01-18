@@ -1,8 +1,9 @@
 import Dexie from 'dexie';
-import { type DBNameType, DBName } from '@/types/app-types';
+import { DB_NAMES } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import useDexieDB from '@/composables/useDexieDB';
 import useCSVProcessing from '@/composables/useCsvProcessing';
+import type { DBNameType } from '@/types/app-types';
 
 export async function deleteIndexedDBDatabase(dbName: DBNameType): Promise<void> {
   try {
@@ -21,10 +22,10 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   try {
     console.log('Starting sample deck loading for:', dbNames);
 
-    if (dbNames.includes(DBName.AZ)) {
+    if (dbNames.includes(DB_NAMES.AZ)) {
       // Configure CSV processing for AZ data
-      csvProcessing.deckType.value = DBName.AZ;
-      csvProcessing.DBname.value = DBName.AZ;
+      csvProcessing.deckType.value = DB_NAMES.AZ;
+      csvProcessing.DBname.value = DB_NAMES.AZ;
       csvProcessing.startLine.value = 1;
       csvProcessing.columnRoles.value = ['destName', 'dialCode', 'rate'];
 
@@ -34,7 +35,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       csvProcessing.file.value = new File([azTestBlob], 'AZtest.csv');
       const azTestData = await csvProcessing.parseCSVForFullProcessing();
       if (azTestData) {
-        await storeInDexieDB(azTestData, DBName.AZ, 'az1');
+        await storeInDexieDB(azTestData, DB_NAMES.AZ, 'az1');
         azStore.addFileUploaded('az1', 'AZtest');
       }
 
@@ -44,7 +45,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       csvProcessing.file.value = new File([azTest1Blob], 'AZtest1.csv');
       const azTest1Data = await csvProcessing.parseCSVForFullProcessing();
       if (azTest1Data) {
-        await storeInDexieDB(azTest1Data, DBName.AZ, 'az2');
+        await storeInDexieDB(azTest1Data, DB_NAMES.AZ, 'az2');
         azStore.addFileUploaded('az2', 'AZtest1');
       }
     }

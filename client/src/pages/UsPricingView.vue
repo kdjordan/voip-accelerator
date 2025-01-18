@@ -30,8 +30,8 @@
   import USCodeReport from '@/components/us/USCodeReport.vue';
   import USPricingReport from '@/components/us/USPricingReport.vue';
   import USContentHeader from '@/components/us/USContentHeader.vue';
-  import { useNpanxxStore } from '@/stores/us-store';
-  import { ReportTypes } from '@/domains/shared/types';
+  import { useUsStore } from '@/stores/us-store';
+  import { ReportTypes } from '@/types/app-types';
 
-  const usStore = useNpanxxStore();
+  const usStore = useUsStore();
 </script>
