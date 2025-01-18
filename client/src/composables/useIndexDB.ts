@@ -1,10 +1,35 @@
-import { openDB } from 'idb';
+import Dexie, { Table } from 'dexie';
 import { useSharedStore } from '@/domains/shared/store';
 import { type DBNameType } from '@/domains/shared/types';
 import type { StandardizedData } from '@/domains/shared/types';
 
+// Define database structure
+class RateDeckDB extends Dexie {
+  [key: string]: Table<StandardizedData> | any; // Dynamic stores
+
+  constructor(dbName: DBNameType) {
+    super(dbName);
+  }
+
+  // Method to create/update store schema
+  createStore(storeName: string) {
+    const newVersion = this.verno + 1;
+    this.version(newVersion).stores({
+      [storeName]: '++id, dialCode, rate', // Index on dialCode and rate
+    });
+  }
+}
+
 export default function useIndexedDB() {
   const sharedStore = useSharedStore();
+  const dbInstances = new Map<DBNameType, RateDeckDB>();
+
+  function getDB(dbName: DBNameType): RateDeckDB {
+    if (!dbInstances.has(dbName)) {
+      dbInstances.set(dbName, new RateDeckDB(dbName));
+    }
+    return dbInstances.get(dbName)!;
+  }
 
   async function storeInIndexedDB(
     data: StandardizedData[],
@@ -15,35 +40,17 @@ export default function useIndexedDB() {
   ) {
     try {
       const storeName = fileName.replace('.csv', '');
+      const db = getDB(DBname);
 
-      const currentDB = await openDB(DBname, undefined);
-      const newVersion = currentDB.version + 1;
-      currentDB.close();
+      // Create or update store schema
+      db.createStore(storeName);
+      await db.open();
 
-      const db = await openDB(DBname, newVersion, {
-        upgrade(db) {
-          if (db.objectStoreNames.contains(storeName)) {
-            db.deleteObjectStore(storeName);
-          }
-          db.createObjectStore(storeName, {
-            keyPath: 'id',
-            autoIncrement: true,
-          });
-        },
-      });
+      // Store data
+      await db.table(storeName).bulkPut(data);
 
-      const tx = db.transaction(storeName, 'readwrite');
-      const store = tx.objectStore(storeName);
-
-      for (const item of data) {
-        await store.add(item);
-      }
-
-      await tx.done;
-      db.close();
-
-      // Update the global version in the store
-      sharedStore.globalDBVersion = newVersion;
+      // Update global version
+      sharedStore.globalDBVersion = db.verno;
     } catch (error) {
       console.error('Error storing in IndexedDB:', error);
       throw error;
@@ -56,12 +63,8 @@ export default function useIndexedDB() {
     dbVersion: number
   ): Promise<StandardizedData[]> {
     try {
-      const db = await openDB(dbName, dbVersion);
-      const transaction = db.transaction(storeName, 'readonly');
-      const store = transaction.objectStore(storeName);
-      const data = await store.getAll();
-      db.close();
-      return data;
+      const db = getDB(dbName);
+      return await db.table(storeName).toArray();
     } catch (error) {
       console.error('Error loading from IndexedDB:', error);
       throw error;
@@ -70,24 +73,15 @@ export default function useIndexedDB() {
 
   async function deleteObjectStore(dbName: DBNameType, objectStoreName: string): Promise<void> {
     try {
-      const currentDB = await openDB(dbName, undefined);
-      const newVersion = currentDB.version + 1;
-      currentDB.close();
+      const db = getDB(dbName);
+      const newVersion = db.verno + 1;
 
-      const db = await openDB(dbName, newVersion, {
-        upgrade(db) {
-          if (db.objectStoreNames.contains(objectStoreName)) {
-            db.deleteObjectStore(objectStoreName);
-          }
-        },
+      db.version(newVersion).stores({
+        [objectStoreName]: null, // This deletes the store
       });
 
-      db.close();
-
-      // Update the global version in the store
-      sharedStore.globalDBVersion = newVersion;
-
-      console.log(`Object store "${objectStoreName}" deleted`);
+      await db.open();
+      sharedStore.globalDBVersion = db.verno;
     } catch (error) {
       console.error('Error deleting object store:', error);
       throw error;
