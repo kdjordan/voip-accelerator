@@ -50,11 +50,11 @@
   import { useAzStore } from '@/stores/az-store';
   import { ReportTypes, type ReportType } from '@/types';
   import { resetReportApi } from '@/API/api';
-  import useIndexedDB from '@/composables/useIndexDB';
+  import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
 
   const azStore = useAzStore();
-  const { deleteObjectStore } = useIndexedDB();
+  const { deleteObjectStore } = useDexieDB();
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
 
@@ -66,8 +66,8 @@
       azStore.resetFiles();
       azStore.setActiveReportType('files');
 
-      // Clean up IndexedDB stores
-      await Promise.all([deleteObjectStore(DBName.AZ, 'az1-store'), deleteObjectStore(DBName.AZ, 'az2-store')]);
+      // Clean up Dexie stores - note we don't need '-store' suffix anymore
+      await Promise.all([deleteObjectStore(DBName.AZ, 'az1'), deleteObjectStore(DBName.AZ, 'az2')]);
 
       // Call API reset
       await resetReportApi('az');

@@ -31,44 +31,33 @@
   import SideNav from '@/components/shared/SideNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
   import { onMounted, onBeforeUnmount } from 'vue';
-  import { DBName } from '@/types/app-types';
+  import { DBName, type DBNameType } from '@/types/app-types';
   import { useSharedStore } from '@/stores/shared-store';
-  import { deleteIndexedDBDatabase, loadSampleDecks } from '@/utils/allUtils';
+
+  import { loadSampleDecks, cleanupSampleDatabases } from '@/utils/load-sample-data';
   import { LergProcessingService } from '@/services/lerg-processing.service';
 
   const sharedStore = useSharedStore();
 
-  const dbNames = [DBName.AZ, DBName.US, DBName.CAN, DBName.SpecialCodes, DBName.LERG];
-
   const lergService = new LergProcessingService();
 
-  async function cleanupIndexedDB(): Promise<void> {
+  async function cleanupIndexedDB(dbsToClean: DBNameType[]): Promise<void> {
     try {
-      for (const dbName of dbNames) {
-        await deleteIndexedDBDatabase(dbName);
-      }
-      console.log('Successfully cleaned up IndexedDB');
-      return Promise.resolve();
+      await cleanupSampleDatabases(dbsToClean);
     } catch (error) {
       console.error('Error cleaning up IndexedDB:', error);
-      return Promise.reject(error);
+      throw error;
     }
   }
 
   // Handle tab/window close
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    cleanupIndexedDB();
-
-    // Optional: Show confirmation dialog if there's unsaved work
-    // if (hasUnsavedWork) {
-    //   event.preventDefault();
-    //   event.returnValue = '';
-    // }
+    cleanupIndexedDB([DBName.AZ]);
   };
 
   // Handle page hide (more reliable than beforeunload)
   const handlePageHide = () => {
-    cleanupIndexedDB();
+    cleanupIndexedDB([DBName.AZ]);
   };
 
   onMounted(async () => {
@@ -77,11 +66,11 @@
 
     try {
       // Clean up first
-      await cleanupIndexedDB();
+      await cleanupIndexedDB([DBName.AZ]);
 
       // Load sample decks
       console.log('Loading sample decks...');
-      // await loadSampleDecks([DBName.AZ]);
+      await loadSampleDecks([DBName.AZ]);
 
       // Initialize LERG service and sync data
       // console.log('Initializing LERG service...');

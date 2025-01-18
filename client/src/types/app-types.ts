@@ -77,3 +77,22 @@ export interface ColumnRoleOption {
   value: string;
   label: string;
 }
+
+// Add this interface
+export interface CSVProcessingConfig {
+  startLine: number;
+  columnMapping: Record<string, string>;
+}
+
+// Define supported DB types for schemas
+export type SchemaDBType = typeof DBName.AZ | typeof DBName.US;
+
+export const DBSchemas = {
+  [DBName.AZ]: '++id, destName, dialCode, rate',
+  [DBName.US]: 'npanxx, destName, npa, nxx, interRate, intraRate, indetermRate',
+} as const;
+
+// Type guard to check if a DBNameType is supported for schemas
+export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
+  return dbName === DBName.AZ || dbName === DBName.US;
+}

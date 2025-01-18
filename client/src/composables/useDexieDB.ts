@@ -1,103 +1,147 @@
 import Dexie, { Table } from 'dexie';
-import { useSharedStore } from '@/stores/shared-store';
 import { type DBNameType } from '@/types';
 import type { StandardizedData } from '@/types';
+import { useDBStore } from '@/stores/db-store';
+import { DBSchemas, isSchemaSupported } from '@/types/app-types';
 
 class RateDeckDB extends Dexie {
   [key: string]: Table<StandardizedData> | any;
+  private stores: Set<string> = new Set();
+  private schema: string;
 
   constructor(dbName: DBNameType) {
     super(dbName);
+    if (!isSchemaSupported(dbName)) {
+      throw new Error(`Database ${dbName} does not have a defined schema`);
+    }
+    this.schema = DBSchemas[dbName];
     this.version(1).stores({});
   }
 
   async addStore(storeName: string) {
-    // Close existing connections
-    await this.close();
+    try {
+      if (this.stores.has(storeName)) {
+        return;
+      }
 
-    // Create new version with store schema
-    this.version(this.verno + 1).stores({
-      [storeName]: '++id, destName, dialCode, rate',
-    });
+      this.stores.add(storeName);
+      const schema = Array.from(this.stores).reduce(
+        (acc, store) => ({
+          ...acc,
+          [store]: this.schema,
+        }),
+        {}
+      );
 
-    // Reopen database with new schema
-    await this.open();
+      // Close current connection before schema update
+      await this.close();
+
+      // Update schema with new version
+      const newVersion = this.verno + 1;
+      this.version(newVersion).stores(schema);
+
+      // Reopen with new schema
+      await this.open();
+      console.log(`Store ${storeName} added in version ${newVersion}`);
+    } catch (error) {
+      console.error('Error adding store:', error);
+      throw error;
+    }
+  }
+
+  hasStore(storeName: string): boolean {
+    return this.tables.some(table => table.name === storeName);
   }
 }
 
 export default function useDexieDB() {
-  const sharedStore = useSharedStore();
-  let dbInstance: RateDeckDB | null = null;
+  const dbStore = useDBStore();
 
-  function getDB(dbName: DBNameType): RateDeckDB {
-    if (!dbInstance) {
-      dbInstance = new RateDeckDB(dbName);
-    }
-    return dbInstance;
-  }
+  async function getDB(dbName: DBNameType): Promise<RateDeckDB> {
+    let db = dbStore.activeConnections[dbName] as RateDeckDB;
 
-  async function closeDB() {
-    if (dbInstance) {
-      await dbInstance.close();
-      dbInstance = null;
-    }
-  }
-
-  async function storeInDexieDB(data: StandardizedData[], DBname: DBNameType, fileName: string) {
-    try {
-      const storeName = fileName;
-      const db = getDB(DBname);
-
-      // Wait for store to be added and DB to be ready
-      await db.addStore(storeName);
-
-      // Ensure DB is open before attempting to write
+    if (!db) {
+      db = new RateDeckDB(dbName);
+      dbStore.registerConnection(dbName, db);
       await db.open();
+    }
 
-      // Wait for data to be written
+    return db;
+  }
+
+  async function storeInDexieDB(data: StandardizedData[], dbName: DBNameType, storeName: string) {
+    const db = await getDB(dbName);
+
+    try {
+      await db.addStore(storeName);
       await db.table(storeName).bulkPut(data);
-
-      sharedStore.incrementGlobalDBVersion();
+      console.log(`Data stored successfully in ${dbName}/${storeName}`);
     } catch (error) {
-      console.error('Error storing in DexieDB:', error);
+      console.error(`Error storing data in ${dbName}/${storeName}:`, error);
       throw error;
     }
   }
 
   async function loadFromDexieDB(dbName: DBNameType, storeName: string): Promise<StandardizedData[]> {
+    const db = await getDB(dbName);
+
     try {
-      const db = getDB(dbName);
+      if (!db.hasStore(storeName)) {
+        throw new Error(`Store ${storeName} not found in database ${dbName}`);
+      }
 
-      // Close any existing connections
-      await closeDB();
-
-      // Get fresh instance and open connection
-      const freshDb = getDB(dbName);
-      await freshDb.open();
-
-      // Get data
-      const data = await freshDb.table(storeName).toArray();
-
-      // Close connection after getting data
-      await closeDB();
-
+      const data = await db.table(storeName).toArray();
+      console.log(`Successfully loaded ${data.length} records from ${dbName}/${storeName}`);
       return data;
     } catch (error) {
-      console.error('Error loading from DexieDB:', error);
+      console.error(`Error loading data from ${dbName}/${storeName}:`, error);
       throw error;
     }
   }
 
-  async function deleteObjectStore(dbName: DBNameType, objectStoreName: string): Promise<void> {
+  async function deleteObjectStore(dbName: DBNameType, storeName: string): Promise<void> {
+    const db = await getDB(dbName);
+
     try {
-      const db = getDB(dbName);
-      db.version(db.verno + 1).stores({
-        [objectStoreName]: null,
+      if (!db.hasStore(storeName)) {
+        console.log(`Store ${storeName} already deleted or doesn't exist`);
+        return;
+      }
+
+      await db.close();
+      const freshDb = new RateDeckDB(dbName);
+      freshDb.version(db.verno + 1).stores({
+        [storeName]: null,
       });
-      await db.open();
-      sharedStore.incrementGlobalDBVersion();
+
+      await freshDb.open();
+      dbStore.registerConnection(dbName, freshDb);
+      console.log(`Store ${storeName} deleted from ${dbName}`);
     } catch (error) {
-      console.error('Error deleting object store:', error);
+      console.error(`Error deleting store ${storeName} from ${dbName}:`, error);
+      throw error;
+    }
+  }
+
+  async function deleteDatabase(dbName: DBNameType): Promise<void> {
+    try {
+      await dbStore.closeConnection(dbName);
+      await Dexie.delete(dbName);
+      console.log(`Database ${dbName} deleted`);
+    } catch (error) {
+      console.error(`Error deleting database ${dbName}:`, error);
+      throw error;
+    }
+  }
+
+  async function closeAllConnections(): Promise<void> {
+    try {
+      const connections = Object.keys(dbStore.activeConnections) as DBNameType[];
+      for (const dbName of connections) {
+        await dbStore.closeConnection(dbName);
+      }
+    } catch (error) {
+      console.error('Error closing database connections:', error);
       throw error;
     }
   }
@@ -106,6 +150,7 @@ export default function useDexieDB() {
     storeInDexieDB,
     loadFromDexieDB,
     deleteObjectStore,
-    closeDB,
+    deleteDatabase,
+    closeAllConnections,
   };
 }

@@ -1,4 +1,4 @@
-import type { BaseStandardizedData } from '@/domains/shared/types';
+import type { BaseStandardizedData } from '@/types';
 
 export interface AZStandardizedData extends BaseStandardizedData {
   destName: string;

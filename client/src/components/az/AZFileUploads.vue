@@ -98,14 +98,10 @@
       const fileNames = azStore.getFileNames;
       console.log('File names from store:', fileNames);
 
-      const storeName1 = azStore.getStoreNameByComponent('az1');
-      const storeName2 = azStore.getStoreNameByComponent('az2');
-      console.log('Store names to load:', { storeName1, storeName2 });
-
-      const file1Data = await loadFromDexieDB(DBName.AZ, storeName1);
+      const file1Data = await loadFromDexieDB(DBName.AZ, fileNames[0]);
       console.log('File 1 data loaded:', { length: file1Data?.length, sample: file1Data?.[0] });
 
-      const file2Data = await loadFromDexieDB(DBName.AZ, storeName2);
+      const file2Data = await loadFromDexieDB(DBName.AZ, fileNames[1]);
       console.log('File 2 data loaded:', { length: file2Data?.length, sample: file2Data?.[0] });
 
       if (file1Data && file2Data) {
@@ -115,8 +111,8 @@
         });
 
         const { pricingReport, codeReport } = await makeAzReportsApi({
-          fileName1: fileNames[0].split('.')[0],
-          fileName2: fileNames[1].split('.')[0],
+          fileName1: fileNames[0],
+          fileName2: fileNames[1],
           file1Data: file1Data as AZStandardizedData[],
           file2Data: file2Data as AZStandardizedData[],
         });

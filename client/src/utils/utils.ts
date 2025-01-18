@@ -1,5 +1,6 @@
 import { AZStandardizedData } from '@/types/az-types';
 import { USStandardizedData } from '@/types/us-types';
+import type { DBNameType } from '@/types/app-types';
 import { openDB, IDBPDatabase } from 'idb';
 import { DBName } from '@/types/app-types';
 import { useSharedStore } from '@/stores/shared-store';
@@ -222,24 +223,4 @@ export function initializeLergData(): void {
   });
 }
 
-export async function loadSampleDecks(dbNames: 3. yes[]): Promise<void> {
-  try {
-    console.log('loadSampleDecks called with:', dbNames);
 
-    for (const dbName of dbNames) {
-      console.log(`Processing ${dbName}...`);
-
-      if (dbName === DBName.AZ) {
-        await loadDb(DBName.AZ);
-      } else if (dbName === DBName.US) {
-        console.log('Found US in dbNames, attempting to load...');
-        await loadDb(DBName.US);
-      }
-    }
-
-    console.log('Sample decks load attempt complete');
-  } catch (error) {
-    console.error('Error in loadSampleDecks:', error);
-    throw error;
-  }
-}
