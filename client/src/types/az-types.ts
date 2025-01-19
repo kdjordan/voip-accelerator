@@ -2,7 +2,7 @@ import type { BaseStandardizedData } from '@/types';
 
 export interface AZStandardizedData extends BaseStandardizedData {
   destName: string;
-  dialCode: number;
+  dialCode: string;
   rate: number;
 }
 
@@ -10,10 +10,10 @@ export const AZColumnRole = {
   DESTINATION: 'destName',
   DIALCODE: 'dialCode',
   RATE: 'rate',
-  SELECT: '',  // For "Select Column Role" option
+  SELECT: '', // For "Select Column Role" option
 } as const;
 
-export type AZColumnRole = typeof AZColumnRole[keyof typeof AZColumnRole];
+export type AZColumnRole = (typeof AZColumnRole)[keyof typeof AZColumnRole];
 
 export interface AZReportsInput {
   fileName1: string;

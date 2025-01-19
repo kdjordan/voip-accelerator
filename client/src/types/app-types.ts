@@ -89,7 +89,7 @@ export type SchemaDBType = typeof DBName.AZ | typeof DBName.US;
 
 export const DBSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
-  [DBName.US]: 'npanxx, destName, npa, nxx, interRate, intraRate, indetermRate',
+  [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx',
 } as const;
 
 // Type guard to check if a DBNameType is supported for schemas

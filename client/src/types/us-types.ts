@@ -2,12 +2,12 @@ import type { BaseStandardizedData } from '@/types';
 
 // Core data structure
 export interface USStandardizedData extends BaseStandardizedData {
-  npa: number;
-  nxx: number;
-  npanxx?: number; // Optional as it can be derived from npa + nxx
+  npanxx: string;
+  npa: string;
+  nxx: string;
   interRate: number;
   intraRate: number;
-  ijRate: number;
+  indetermRate: number;
 }
 
 // Rate type constants
@@ -18,7 +18,6 @@ export const NPANXXRateType = {
 } as const;
 
 export type NPANXXRateType = (typeof NPANXXRateType)[keyof typeof NPANXXRateType];
-
 
 // Column roles for CSV mapping
 export const USColumnRole = {
@@ -31,9 +30,7 @@ export const USColumnRole = {
   SELECT: '',
 } as const;
 
-export type USColumnRole = typeof USColumnRole[keyof typeof USColumnRole];
-
-
+export type USColumnRole = (typeof USColumnRole)[keyof typeof USColumnRole];
 
 // Rate comparison result
 export interface RateComparison {

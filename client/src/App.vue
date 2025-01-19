@@ -52,12 +52,12 @@
 
   // Handle tab/window close
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    cleanupIndexedDB([DBName.AZ]);
+    cleanupIndexedDB([DBName.AZ, DBName.US]);
   };
 
   // Handle page hide (more reliable than beforeunload)
   const handlePageHide = () => {
-    cleanupIndexedDB([DBName.AZ]);
+    cleanupIndexedDB([DBName.AZ, DBName.US]);
   };
 
   onMounted(async () => {
@@ -66,11 +66,11 @@
 
     try {
       // Clean up first
-      await cleanupIndexedDB([DBName.AZ]);
+      await cleanupIndexedDB([DBName.AZ, DBName.US]);
 
       // Load sample decks
       console.log('Loading sample decks...');
-      await loadSampleDecks([DBName.AZ]);
+      await loadSampleDecks([DBName.AZ, DBName.US]);
 
       // Initialize LERG service and sync data
       // console.log('Initializing LERG service...');

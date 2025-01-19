@@ -50,16 +50,34 @@
 <script setup lang="ts">
   import { useUsStore } from '@/stores/us-store';
   import { ReportTypes, type ReportType } from '@/types/app-types';
-  import { resetReportApi } from '@/API/api';
+  import useDexieDB from '@/composables/useDexieDB';
+  import { DBName } from '@/types';
 
   const usStore = useUsStore();
+  const { deleteObjectStore } = useDexieDB();
 
   const reportTypes: readonly ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING] as const;
 
   async function handleReset() {
-    console.log('Resetting the US report');
-    usStore.setActiveReportType(ReportTypes.FILES);
-    await resetReportApi('us');
+    try {
+      console.log('Resetting the US report');
+
+      // Get current file names before resetting store
+      const fileNames = usStore.getFileNames;
+      console.log('Cleaning up stores:', fileNames);
+
+      // Reset store state
+      usStore.resetFiles();
+      usStore.setActiveReportType(ReportTypes.FILES);
+
+      // Clean up Dexie stores using actual file names
+      if (fileNames.length > 0) {
+        await Promise.all(fileNames.map(fileName => deleteObjectStore(DBName.US, fileName)));
+      }
+
+      console.log('Reset completed successfully');
+    } catch (error) {
+      console.error('Error during reset:', error);
+    }
   }
 </script>
-

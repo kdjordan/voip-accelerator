@@ -49,12 +49,11 @@
 <script setup lang="ts">
   import { useAzStore } from '@/stores/az-store';
   import { ReportTypes, type ReportType } from '@/types';
-  import { resetReportApi } from '@/API/api';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
 
   const azStore = useAzStore();
-  const { deleteObjectStore } = useDexieDB();
+  const { deleteObjectStore, deleteDatabase } = useDexieDB();
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
 
@@ -62,15 +61,18 @@
     try {
       console.log('Resetting the AZ report');
 
-      // Reset store state first
+      // Get current file names before resetting store
+      const fileNames = azStore.getFileNames;
+      console.log('Cleaning up stores:', fileNames);
+
+      // Reset store state
       azStore.resetFiles();
       azStore.setActiveReportType('files');
 
-      // Clean up Dexie stores - note we don't need '-store' suffix anymore
-      await Promise.all([deleteObjectStore(DBName.AZ, 'az1'), deleteObjectStore(DBName.AZ, 'az2')]);
-
-      // Call API reset
-      await resetReportApi('az');
+      // Clean up Dexie stores using actual file names
+      if (fileNames.length > 0) {
+        await Promise.all(fileNames.map(fileName => deleteObjectStore(DBName.AZ, fileName)));
+      }
 
       console.log('Reset completed successfully');
     } catch (error) {

@@ -49,12 +49,10 @@
   import useDexieDB from '@/composables/useDexieDB';
   import { makeNpanxxReportsApi } from '@/API/api';
   import { USColumnRole, USStandardizedData } from '@/types/us-types';
-  import { useSharedStore } from '@/stores/shared-store';
   import { ColumnRoleOption } from '@/types/app-types';
   const usStore = useUsStore();
   const { loadFromDexieDB } = useDexieDB();
 
-  const sharedStore = useSharedStore();
 
   const component1 = ref<string>('us1');
   const component2 = ref<string>('us2');

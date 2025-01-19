@@ -48,14 +48,12 @@
   import { DBName, type DBNameType } from '@/types/app-types';
   import UploadComponent from '@/components/shared/UploadComponent.vue';
   import useIndexedDB from '@/composables/useIndexDB';
-  import { makeAzReportsApi } from '@/API/api';
+  import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
+  import type { AzPricingReport, AzCodeReport, AZReportsInput } from '@/types/az-types';
   import { useAzStore } from '@/stores/az-store';
-  import { useSharedStore } from '@/stores/shared-store';
   import useDexieDB from '@/composables/useDexieDB';
 
   const azStore = useAzStore();
-  const { loadFromIndexedDB } = useIndexedDB();
-  const sharedStore = useSharedStore();
   const { loadFromDexieDB } = useDexieDB();
 
   const component1 = ref<string>('az1');
@@ -105,26 +103,47 @@
       console.log('File 2 data loaded:', { length: file2Data?.length, sample: file2Data?.[0] });
 
       if (file1Data && file2Data) {
-        console.log('Making API call with data lengths:', {
+        console.log('Making comparison with data lengths:', {
           file1Length: file1Data.length,
           file2Length: file2Data.length,
         });
 
-        const { pricingReport, codeReport } = await makeAzReportsApi({
-          fileName1: fileNames[0],
-          fileName2: fileNames[1],
-          file1Data: file1Data as AZStandardizedData[],
-          file2Data: file2Data as AZStandardizedData[],
-        });
+        // Create worker and process data
+        const worker = new AzComparisonWorker();
+        const reports = await new Promise<{ pricingReport: AzPricingReport; codeReport: AzCodeReport }>(
+          (resolve, reject) => {
+            worker.onmessage = event => {
+              const { pricingReport, codeReport } = event.data;
+              resolve({ pricingReport, codeReport });
+            };
+
+            worker.onerror = error => {
+              console.error('Worker error:', error);
+              reject(error);
+            };
+
+            const input: AZReportsInput = {
+              fileName1: fileNames[0],
+              fileName2: fileNames[1],
+              file1Data: file1Data as AZStandardizedData[],
+              file2Data: file2Data as AZStandardizedData[],
+            };
+
+            worker.postMessage(input);
+          }
+        );
 
         console.log('Reports generated:', {
-          hasPricingReport: !!pricingReport,
-          hasCodeReport: !!codeReport,
+          hasPricingReport: !!reports.pricingReport,
+          hasCodeReport: !!reports.codeReport,
         });
 
-        if (pricingReport && codeReport) {
-          azStore.setReports(pricingReport, codeReport);
+        if (reports.pricingReport && reports.codeReport) {
+          azStore.setReports(reports.pricingReport, reports.codeReport);
         }
+
+        // Clean up worker
+        worker.terminate();
       }
     } catch (error: unknown) {
       console.error('Error generating reports:', error);
