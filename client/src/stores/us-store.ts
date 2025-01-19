@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import type { USPricingReport, USCodeReport } from '../types/us-types';
-import { useSharedStore } from '@/stores/shared-store';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
 
@@ -12,7 +11,7 @@ export const useUsStore = defineStore('npanxxStore', {
     activeReportType: 'files' as ReportType,
     pricingReport: null,
     codeReport: null,
-    uploadingComponents: {},
+    uploadingComponents: {} as Record<string, boolean>,
   }),
 
   getters: {
@@ -43,9 +42,7 @@ export const useUsStore = defineStore('npanxxStore', {
     },
 
     addFileUploaded(componentName: string, fileName: string) {
-      const sharedDBStore = useSharedStore();
       this.filesUploaded.set(componentName, { fileName });
-      sharedDBStore.incrementGlobalDBVersion();
     },
 
     resetFiles() {

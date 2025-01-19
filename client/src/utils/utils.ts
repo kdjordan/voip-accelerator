@@ -41,7 +41,7 @@ function processData(csvText: string, dataType: DataType): (AZStandardizedData |
         }
         return {
           destName: destName.trim(),
-          dialCode: Number(dialCode.trim()),
+          dialCode: dialCode.trim(),
           rate: Number(rate.trim()),
         } as AZStandardizedData;
       } else if (dataType === DBName.US) {
@@ -55,11 +55,12 @@ function processData(csvText: string, dataType: DataType): (AZStandardizedData |
           processedNpa = processedNpa.slice(1);
         }
         return {
-          npa: Number(processedNpa),
-          nxx: Number(nxx.trim()),
+          npa: processedNpa,
+          nxx: nxx.trim(),
+          npanxx: `${processedNpa}${nxx.trim()}`,
           interRate: Number(interRate.trim()),
           intraRate: Number(intraRate.trim()),
-          ijRate: Number(ijRate.trim()),
+          indetermRate: Number(ijRate.trim()),
         } as USStandardizedData;
       }
     } catch (error) {
@@ -223,4 +224,17 @@ export function initializeLergData(): void {
   });
 }
 
-
+function transformUSData(data: string[][]): USStandardizedData[] {
+  return data.map(row => {
+    const npa = row[0].trim();
+    const nxx = row[1].trim();
+    return {
+      npa,
+      nxx,
+      npanxx: `${npa}${nxx}`,
+      interRate: parseFloat(row[2]) || 0,
+      intraRate: parseFloat(row[3]) || 0,
+      indetermRate: parseFloat(row[4]) || 0,
+    };
+  });
+}
