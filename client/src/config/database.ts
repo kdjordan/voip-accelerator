@@ -1,17 +1,28 @@
-import { Pool } from 'pg';
+import Dexie from 'dexie';
 
-const pool = new Pool({
-  user: import.meta.env.VITE_DB_USER,
-  host: import.meta.env.VITE_DB_HOST,
-  database: import.meta.env.VITE_DB_NAME,
-  password: import.meta.env.VITE_DB_PASSWORD,
-  port: parseInt(import.meta.env.VITE_DB_PORT),
-});
+// Define database schema versions and configurations
+export const DBConfig = {
+  LERG: {
+    name: 'lerg_db',
+    version: 1,
+    stores: {
+      lerg: 'npanxx, state, npa, nxx',
+      special_codes: 'npa, country, description',
+    },
+  },
+  RATE_DECKS: {
+    name: 'rate_decks_db',
+    version: 1,
+    stores: {
+      az: '++id, destName, dialCode, rate',
+      us: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, &npanxx',
+    },
+  },
+} as const;
 
-// Test the connection
-pool.on('error', err => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
-
-export default pool;
+// Create database instances
+export function createDatabase(config: typeof DBConfig.LERG | typeof DBConfig.RATE_DECKS): Dexie {
+  const db = new Dexie(config.name);
+  db.version(config.version).stores(config.stores);
+  return db;
+}

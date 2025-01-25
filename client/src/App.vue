@@ -35,11 +35,11 @@
   import { useSharedStore } from '@/stores/shared-store';
 
   import { loadSampleDecks, cleanupSampleDatabases } from '@/utils/load-sample-data';
-  import { LergProcessingService } from '@/services/lerg-processing.service';
+
 
   const sharedStore = useSharedStore();
 
-  const lergService = new LergProcessingService();
+  
 
   async function cleanupIndexedDB(dbsToClean: DBNameType[]): Promise<void> {
     try {
