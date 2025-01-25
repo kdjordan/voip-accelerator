@@ -3,9 +3,10 @@ import { defineStore } from 'pinia';
 interface LergState {
   isProcessing: boolean;
   progress: number;
+  error: string | null;
   stats: {
     totalRecords: number;
-    lastUpdated: string;
+    lastUpdated: string | null;
   };
 }
 
@@ -13,10 +14,11 @@ export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
     isProcessing: false,
     progress: 0,
+    error: null,
     stats: {
       totalRecords: 0,
-      lastUpdated: ''
-    }
+      lastUpdated: null,
+    },
   }),
 
   actions: {
@@ -26,6 +28,6 @@ export const useLergStore = defineStore('lerg', {
 
     async getStats() {
       // TODO: Implement stats fetching
-    }
-  }
-}); 
+    },
+  },
+});
