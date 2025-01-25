@@ -273,61 +273,59 @@ export class LERGService {
     }
   }
 
-  async reloadSpecialCodes(): Promise<void> {
+  public async reloadSpecialCodes(): Promise<void> {
     try {
-      // First clear existing data
-      await this.clearSpecialCodesData();
+      console.log('Starting special codes reload...');
 
-      // Read and process the special codes CSV
-      const specialCodesPath = path.resolve(__dirname, '../../../../data/special_codes.csv');
-      const fileContent = await fs.promises.readFile(specialCodesPath, 'utf-8');
+      // Clear existing data
+      await this.db.query('TRUNCATE TABLE special_area_codes;');
 
-      // Process and insert the data
+      // Read and process the CSV file
+      const csvPath = path.resolve(__dirname, '../../../../data/special_codes.csv');
+      console.log('Loading CSV from:', csvPath);
+
+      const fileContent = await fs.promises.readFile(csvPath, 'utf-8');
       const records = fileContent
         .split('\n')
         .filter(line => line.trim())
+        .slice(1) // Skip header
         .map(line => {
           const [npa, country, province] = line.split(',').map(field => field.trim());
-
-          // Skip header row
-          if (npa === 'NPA' || !npa || isNaN(Number(npa))) {
-            return null;
-          }
-
           return {
             npa,
             country,
-            province_or_territory: province || 'N/A',
+            description: province || null,
           };
-        })
-        .filter((record): record is { npa: string; country: string; province_or_territory: string } => record !== null);
+        });
 
-      // Insert in batches
-      for (let i = 0; i < records.length; i += this.batchSize) {
-        const batch = records.slice(i, i + this.batchSize);
-        await this.insertSpecialCodesBatch(batch);
+      console.log('CSV records:', {
+        total: records.length,
+        sample: records.slice(0, 3),
+      });
+
+      // Insert records in batches
+      for (let i = 0; i < records.length; i += 100) {
+        const batch = records.slice(i, i + 100);
+        const values = batch.map(r => `('${r.npa}', '${r.country}', '${r.description}')`).join(',');
+
+        const insertQuery = `
+          INSERT INTO special_area_codes (npa, country, description)
+          VALUES ${values}
+          ON CONFLICT (npa) DO UPDATE SET
+            country = EXCLUDED.country,
+            description = EXCLUDED.description;
+        `;
+        await this.db.query(insertQuery);
       }
+
+      // Verify data was inserted
+      const verifyQuery = 'SELECT COUNT(*) FROM special_area_codes';
+      const verifyResult = await this.db.query(verifyQuery);
+      console.log('Verified inserted records:', verifyResult.rows[0].count);
+
+      console.log('Special codes reload completed');
     } catch (error) {
       console.error('Error reloading special codes:', error);
-      throw error;
-    }
-  }
-
-  private async insertSpecialCodesBatch(records: { npa: string; country: string; province_or_territory: string }[]) {
-    try {
-      const values = records.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(',');
-      const query = `
-        INSERT INTO special_area_codes (npa, country, description)
-        VALUES ${values}
-        ON CONFLICT (npa) DO UPDATE SET
-          country = EXCLUDED.country,
-          description = EXCLUDED.description
-      `;
-      const params = records.flatMap(r => [r.npa, r.country, r.province_or_territory || null]);
-
-      await this.db.query(query, params);
-    } catch (error) {
-      console.error('Error in insertSpecialCodesBatch:', error);
       throw error;
     }
   }
@@ -365,99 +363,23 @@ export class LERGService {
     }
   }
 
-  public async processSpecialCodesFile(fileContent: Buffer): Promise<void> {
-    try {
-      // First clear existing data
-      await this.clearSpecialCodesData();
-
-      // Convert buffer to string and process
-      const content = fileContent.toString('utf-8');
-      const records = content
-        .split('\n')
-        .filter(line => line.trim())
-        .map(line => {
-          const [npa, country, province] = line.split(',').map(field => field.trim());
-
-          // Skip header row
-          if (npa === 'NPA' || !npa || isNaN(Number(npa))) {
-            return null;
-          }
-
-          return {
-            npa,
-            country,
-            province_or_territory: province || 'N/A',
-          };
-        })
-        .filter((record): record is { npa: string; country: string; province_or_territory: string } => record !== null);
-
-      // Insert in batches
-      for (let i = 0; i < records.length; i += this.batchSize) {
-        const batch = records.slice(i, i + this.batchSize);
-        await this.insertSpecialCodesBatch(batch);
-      }
-    } catch (error) {
-      console.error('Error processing special codes file:', error);
-      throw error;
-    }
-  }
-
-  public async getSpecialCodesByCountry(country: string): Promise<Array<{ province: string; npas: Array<string> }>> {
-    try {
-      const query = `
-        SELECT description as province, array_agg(npa ORDER BY npa) as npas
-        FROM special_area_codes
-        WHERE country = $1
-        GROUP BY description
-        ORDER BY description
-      `;
-
-      const result = await this.db.query(query, [country]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching special codes by country:', error);
-      throw error;
-    }
-  }
-
-  async testConnection(): Promise<boolean> {
-    try {
-      await this.db.query('SELECT 1');
-      console.log('Database connection test successful');
-      return true;
-    } catch (error) {
-      console.error('Database connection test failed:', error);
-      throw error;
-    }
-  }
-
-  async getBasicStats(): Promise<{ totalRecords: number; lastUpdated: string | null }> {
-    try {
-      const result = await this.db.query(`
-        SELECT 
-          COUNT(*) as total,
-          MAX(last_updated) as last_updated 
-        FROM lerg_codes
-      `);
-
-      return {
-        totalRecords: parseInt(result.rows[0].total || '0'),
-        lastUpdated: result.rows[0].last_updated || null,
-      };
-    } catch (error) {
-      console.error('Error getting basic stats:', error);
-      throw error;
-    }
-  }
-
   public async getPublicSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
     try {
+      // First check if table has data
+      const countQuery = 'SELECT COUNT(*) FROM special_area_codes';
+      const countResult = await this.db.query(countQuery);
+      console.log('Database special codes count:', countResult.rows[0].count);
+
       const query = `
         SELECT npa, country, description as province
         FROM special_area_codes
-        ORDER BY country, npa
+        ORDER BY country, npa;
       `;
       const result = await this.db.query(query);
+      console.log('Database query result:', {
+        rowCount: result.rowCount,
+        sampleData: result.rows.slice(0, 3),
+      });
       return result.rows;
     } catch (error) {
       console.error('Error fetching special codes:', error);
@@ -476,6 +398,51 @@ export class LERGService {
       return result.rows;
     } catch (error) {
       console.error('Error fetching LERG codes:', error);
+      throw error;
+    }
+  }
+
+  public async testConnection(): Promise<boolean> {
+    try {
+      // First check if we can connect to the database
+      await this.db.query('SELECT 1');
+
+      // Then check if we have data in either table
+      const result = await this.db.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM lerg_codes LIMIT 1
+        ) as has_lerg,
+        EXISTS (
+          SELECT 1 FROM special_area_codes LIMIT 1
+        ) as has_special
+      `);
+
+      console.log('Database connection test results:', result.rows[0]);
+      return result.rows[0].has_lerg || result.rows[0].has_special;
+    } catch (error) {
+      console.error('Database connection test failed:', error);
+      throw error;
+    }
+  }
+
+  public async getSpecialCodesByCountry(country: string): Promise<Array<{ province: string; npas: string[] }>> {
+    try {
+      const query = `
+        SELECT 
+          description as province,
+          array_agg(npa ORDER BY npa) as npas
+        FROM special_area_codes
+        WHERE country = $1
+        GROUP BY description
+        ORDER BY description
+      `;
+
+      console.log('Fetching special codes for country:', country);
+      const result = await this.db.query(query, [country]);
+      console.log('Special codes by country result:', result.rows);
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching special codes by country:', error);
       throw error;
     }
   }

@@ -6,8 +6,11 @@ export const DBConfig = {
     name: 'lerg_db',
     version: 1,
     stores: {
-      lerg: 'npanxx, state, npa, nxx',
-      special_codes: 'npa, country, description',
+      lerg: 'npanxx, npa, nxx, state',
+      special_area_codes: 'npa, country, description',
+    },
+    tables: {
+      specialCodes: 'special_area_codes',
     },
   },
   RATE_DECKS: {
@@ -23,6 +26,7 @@ export const DBConfig = {
 // Create database instances
 export function createDatabase(config: typeof DBConfig.LERG | typeof DBConfig.RATE_DECKS): Dexie {
   const db = new Dexie(config.name);
+  console.log('Creating database with stores:', config.stores);
   db.version(config.version).stores(config.stores);
   return db;
 }

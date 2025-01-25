@@ -9,7 +9,8 @@ export interface LERGRecord {
 }
 
 // Service interfaces
-export interface LERGService extends BaseService {
+export interface LERGService {
+  initialize(): Promise<void>;
   initializeLergData(): Promise<void>;
   getStats(): Promise<LERGStats>;
   uploadLergFile(file: File): Promise<void>;
@@ -21,12 +22,14 @@ export interface LERGStats {
   lastUpdated: string | null;
   specialCodes?: {
     totalCodes: number;
-    countryBreakdown: {
+    countryBreakdown: Array<{
       countryCode: string;
       count: number;
-    }[];
+    }>;
   };
 }
+
+
 
 export interface LERGUploadResponse {
   processedRecords: number;
@@ -56,3 +59,12 @@ export const LERGColumnRole = {
 } as const;
 
 export type LERGColumnRoleType = (typeof LERGColumnRole)[keyof typeof LERGColumnRole];
+
+export interface LergState {
+  isProcessing: boolean;
+  progress: number;
+  error: string | null;
+  isLocallyStored: boolean;
+  specialCodesLocallyStored: boolean;
+  stats: LERGStats;
+}
