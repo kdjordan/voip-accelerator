@@ -1,4 +1,4 @@
-import type { LERGStats, LERGRecord } from '../types/types';
+import type { LERGStats, LERGRecord } from '@/types/lerg-types';
 
 const LERG_URL = '/api/lerg';
 const ADMIN_URL = '/api/admin/lerg';
@@ -29,13 +29,11 @@ export const lergApiService = {
   },
 
   async getStats(): Promise<LERGStats> {
-    const response = await fetch(`${LERG_URL}/stats`);
+    const response = await fetch(`${ADMIN_URL}/stats`);
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Stats fetch error:', error);
-      throw new Error('Failed to fetch LERG stats');
+      throw new Error('Failed to fetch stats');
     }
-    return await response.json();
+    return response.json();
   },
 
   // Admin endpoints
@@ -86,13 +84,60 @@ export const lergApiService = {
     return await response.json();
   },
 
-  async getAllSpecialCodes(): Promise<Array<{ npa: string; country: string; description: string }>> {
+  async reloadSpecialCodes(): Promise<void> {
+    console.log('Requesting special codes reload...');
+    const response = await fetch(`${ADMIN_URL}/reload/special`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Failed to reload special codes:', error);
+      throw new Error('Failed to reload special codes');
+    }
+
+    const result = await response.json();
+    console.log('Special codes reload result:', result);
+  },
+
+  async getAllSpecialCodes(retryCount = 0): Promise<Array<{ npa: string; country: string; province: string }>> {
+    console.log('Fetching all special codes...');
     const response = await fetch(`${ADMIN_URL}/special-codes/all`);
     if (!response.ok) {
       const error = await response.text();
       console.error('Failed to fetch special codes:', error);
       throw new Error('Failed to fetch special codes');
     }
-    return await response.json();
+    const data = await response.json();
+    if (data.length === 0 && retryCount < 3) {
+      console.log(`No data received, retrying (${retryCount + 1}/3)...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return this.getAllSpecialCodes(retryCount + 1);
+    }
+    console.log('API response data:', {
+      length: data.length,
+      sampleData: data.slice(0, 3),
+    });
+    return data;
+  },
+
+  async uploadLergFile(formData: FormData): Promise<void> {
+    const response = await fetch(`${ADMIN_URL}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error('Failed to upload LERG file');
+    }
+  },
+
+  async uploadSpecialCodesFile(formData: FormData): Promise<void> {
+    const response = await fetch(`${ADMIN_URL}/upload/special`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error('Failed to upload special codes file');
+    }
   },
 };

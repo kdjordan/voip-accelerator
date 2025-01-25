@@ -6,23 +6,11 @@ import { createAZCSVService } from '@/services/az-csv.service';
 import { createUSCSVService } from '@/services/us-csv.service';
 import type { CSVProcessingConfig } from '@/types/app-types';
 
+
 function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
 }
 
-export async function cleanupSampleDatabases(dbNames: DBNameType[]): Promise<void> {
-  const { deleteDatabase } = useDexieDB();
-
-  try {
-    for (const dbName of dbNames) {
-      await deleteDatabase(dbName);
-    }
-    console.log('Successfully cleaned up sample databases');
-  } catch (error) {
-    console.error('Error cleaning up sample databases:', error);
-    throw error;
-  }
-}
 
 export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const { storeInDexieDB } = useDexieDB();

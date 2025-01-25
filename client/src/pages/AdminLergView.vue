@@ -16,6 +16,19 @@
             <span class="text-gray-400">Last Updated</span>
             <span class="text-lg">{{ formatDate(stats.lastUpdated) }}</span>
           </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-400">Stored locally</span>
+            <div class="flex items-center">
+              <div
+                class="w-3 h-3 rounded-full transition-colors duration-200"
+                :class="[
+                  isLocallyStored
+                    ? 'bg-green-500 animate-status-pulse-success'
+                    : 'bg-red-500 animate-status-pulse-error',
+                ]"
+              ></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -23,6 +36,19 @@
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Special Area Codes</h2>
         <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-400">Stored locally</span>
+            <div class="flex items-center">
+              <div
+                class="w-3 h-3 rounded-full transition-colors duration-200"
+                :class="[
+                  specialCodesLocallyStored
+                    ? 'bg-green-500 animate-status-pulse-success'
+                    : 'bg-red-500 animate-status-pulse-error',
+                ]"
+              ></div>
+            </div>
+          </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Total Special Codes</span>
             <span class="text-2xl font-bold">{{ formatNumber(stats.specialCodes?.totalCodes ?? 0) }}</span>
@@ -176,20 +202,21 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue';
-  import type { LERGStats } from '../domains/lerg/types/api.types';
+  import { ref, onMounted, computed } from 'vue';
+  import type { LERGStats } from '@/types/lerg-types';
+  import { useLergStore } from '@/stores/lerg-store';
+  import { lergApiService } from '@/services/lerg-api.service';
+  import { LergService } from '@/services/lerg.service';
 
-  const stats = ref<LERGStats>({
-    totalRecords: 0,
-    lastUpdated: new Date(),
-    specialCodes: {
-      totalCodes: 0,
-      countryBreakdown: [],
-    },
-  });
+  const stats = ref<LERGStats>(useLergStore().stats);
 
   const expandedCountries = ref<string[]>([]);
   const countryDetails = ref<Record<string, Array<{ province: string; npas: string[] }>>>({});
+
+  const store = useLergStore();
+  const isLocallyStored = computed(() => store.isLocallyStored);
+  const specialCodesLocallyStored = computed(() => store.specialCodesLocallyStored);
+  const lergService = new LergService();
 
   // Format large numbers with commas
   function formatNumber(num: number): string {
@@ -197,7 +224,8 @@
   }
 
   // Format dates in a readable way
-  function formatDate(date: Date): string {
+  function formatDate(date: string | null): string {
+    if (!date) return 'Never';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -221,8 +249,8 @@
 
   async function fetchStats() {
     try {
-      const response = await fetch('/api/admin/lerg/stats');
-      stats.value = await response.json();
+      console.log('Fetching stats from AdminLergView.vue');
+      stats.value = await lergService.getStats();
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     }
@@ -236,12 +264,7 @@
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/admin/lerg/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
+      await lergApiService.uploadLergFile(formData);
       await fetchStats();
     } catch (error) {
       console.error('Failed to upload LERG file:', error);
@@ -256,12 +279,7 @@
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/admin/lerg/upload/special', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
+      await lergApiService.uploadSpecialCodesFile(formData);
       await fetchStats();
     } catch (error) {
       console.error('Failed to upload special codes file:', error);
@@ -348,5 +366,39 @@
     }
   }
 
-  onMounted(fetchStats);
+  // onMounted(fetchStats);
 </script>
+
+<style>
+  @keyframes status-pulse-success {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    }
+    50% {
+      opacity: 0.6;
+      box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    }
+  }
+
+  @keyframes status-pulse-error {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    50% {
+      opacity: 0.6;
+      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+  }
+
+  .animate-status-pulse-success {
+    animation: status-pulse-success 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-status-pulse-error {
+    animation: status-pulse-error 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>

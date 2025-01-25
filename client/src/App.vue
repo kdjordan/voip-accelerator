@@ -33,59 +33,66 @@
   import { onMounted, onBeforeUnmount } from 'vue';
   import { DBName, type DBNameType } from '@/types/app-types';
   import { useSharedStore } from '@/stores/shared-store';
+  import { LergService } from '@/services/lerg.service';
+  import { cleanupDatabases } from '@/utils/cleanup';
 
-  import { loadSampleDecks, cleanupSampleDatabases } from '@/utils/load-sample-data';
-
+  import { loadSampleDecks } from '@/utils/load-sample-data';
 
   const sharedStore = useSharedStore();
+  const lergService = new LergService();
 
-  
+  let isCleaningUp = false;
 
-  async function cleanupIndexedDB(dbsToClean: DBNameType[]): Promise<void> {
+  const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+    if (isCleaningUp) return;
+    isCleaningUp = true;
+
+    // Show "Changes you made may not be saved" dialog
+    event.preventDefault();
+    event.returnValue = '';
+
     try {
-      await cleanupSampleDatabases(dbsToClean);
-    } catch (error) {
-      console.error('Error cleaning up IndexedDB:', error);
-      throw error;
+      await cleanupDatabases();
+    } finally {
+      isCleaningUp = false;
     }
-  }
-
-  // Handle tab/window close
-  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    cleanupIndexedDB([DBName.AZ, DBName.US]);
   };
 
-  // Handle page hide (more reliable than beforeunload)
-  const handlePageHide = () => {
-    cleanupIndexedDB([DBName.AZ, DBName.US]);
+  const handlePageHide = async () => {
+    if (isCleaningUp) return;
+    isCleaningUp = true;
+
+    try {
+      await cleanupDatabases();
+    } finally {
+      isCleaningUp = false;
+    }
   };
 
   onMounted(async () => {
-    window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handlePageHide);
+    // Keep beforeunload for page refreshes
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     try {
-      // Clean up first
-      await cleanupIndexedDB([DBName.AZ, DBName.US]);
+      console.time('initialization');
+      console.log('Starting application initialization...');
 
-      // Load sample decks
-      console.log('Loading sample decks...');
-      await loadSampleDecks([DBName.AZ, DBName.US]);
+      // console.log('Loading sample decks...');
+      // await loadSampleDecks([DBName.AZ, DBName.US]);
 
-      // Initialize LERG service and sync data
-      // console.log('Initializing LERG service...');
-      // await lergService.initialize();
-      // console.log('Starting data sync to IndexedDB...');
-      // await lergService.syncDataToIndexedDB();
-      // console.log('Data sync complete');
+      console.log('Initializing LERG service...');
+      await lergService.initializeData();
+
+      console.timeEnd('initialization');
     } catch (error) {
       console.error('Error during initialization:', error);
     }
   });
 
   onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
     window.removeEventListener('pagehide', handlePageHide);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
   });
 </script>
 <style>
