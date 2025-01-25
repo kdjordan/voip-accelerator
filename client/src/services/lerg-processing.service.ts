@@ -1,5 +1,5 @@
-import { BaseService } from '@/domains/shared/types/services';
-import { LERGRecord, LERGProcessingResult } from '../types/types';
+import { BaseService } from '@/types/services-types';
+import { LERGRecord, LERGProcessingResult } from '@/types/lerg-types';
 import { lergApiService } from './lerg-api.service';
 
 export class LergProcessingService implements BaseService {

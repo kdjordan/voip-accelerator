@@ -1,8 +1,8 @@
 export interface LERGRecord {
+  npanxx: string;
+  state: string;
   npa: string;
   nxx: string;
-  state: string;
-  npanxx: string;
 }
 
 export interface LERGProcessingResult {
