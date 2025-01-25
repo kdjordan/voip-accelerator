@@ -1,5 +1,12 @@
 # Current Implementation Task
 
+## Description 
+The LERG data is a large file that managed in the /admin/lerg route. It should be stored in a postgresDB in it's own table and be able to be updated from the admin route. 
+The LERG is supplied as a .txt file and is processed by a worker, since it can be very large.
+It contains many duplicate NPA NXX codes that need to be filtered so only unique ones are kept.
+We also need to be able to upload a CSV file of Special Area Codes and have them be added to the postgresDB. 
+This is the foundation of how we will be doing our us-code reports.
+
 ## Task: LERG Data Management
 
 ### Completed ✅
