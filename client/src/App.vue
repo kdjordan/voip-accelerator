@@ -33,13 +33,14 @@
   import { onMounted, onBeforeUnmount } from 'vue';
   import { DBName, type DBNameType } from '@/types/app-types';
   import { useSharedStore } from '@/stores/shared-store';
-  import { LergService } from '@/services/lerg.service';
+  import { lergApiService } from '@/services/lerg-api.service';
+  import { useLergStore } from '@/stores/lerg-store';
   import { cleanupDatabases } from '@/utils/cleanup';
 
   import { loadSampleDecks } from '@/utils/load-sample-data';
 
   const sharedStore = useSharedStore();
-  const lergService = new LergService();
+  const lergStore = useLergStore();
 
   let isCleaningUp = false;
 
@@ -82,7 +83,7 @@
       // await loadSampleDecks([DBName.AZ, DBName.US]);
 
       console.log('Initializing LERG service...');
-      await lergService.initializeData();
+      await lergApiService.initialize();
 
       console.timeEnd('initialization');
     } catch (error) {

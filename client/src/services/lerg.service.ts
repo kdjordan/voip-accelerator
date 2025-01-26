@@ -216,4 +216,35 @@ export class LergService implements LERGService {
       };
     });
   }
+
+  async initializeWithData(
+    lergData: LERGRecord[],
+    specialCodes: Array<{ npa: string; country: string; province: string }>
+  ): Promise<void> {
+    try {
+      console.log('Starting data initialization...');
+
+      // Store LERG data
+      if (lergData.length > 0) {
+        await this.storeLergData(lergData);
+        this.store.setLocallyStored(true);
+      }
+
+      // Store special codes
+      if (specialCodes.length > 0) {
+        const formattedCodes = specialCodes.map(code => ({
+          npa: code.npa,
+          country: code.country,
+          description: code.province || '',
+        }));
+        await this.storeSpecialCodes(formattedCodes);
+        this.store.setSpecialCodesLocallyStored(true);
+      }
+
+      console.log('Data initialization complete');
+    } catch (error) {
+      console.error('Failed to initialize data:', error);
+      throw error;
+    }
+  }
 }
