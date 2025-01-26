@@ -1,9 +1,47 @@
 import type { LERGStats, LERGRecord } from '@/types/lerg-types';
+import { LergService } from '@/services/lerg.service';
+import { useLergStore } from '@/stores/lerg-store';
 
 const LERG_URL = '/api/lerg';
 const ADMIN_URL = '/api/admin/lerg';
 
 export const lergApiService = {
+  async initialize(): Promise<void> {
+    const store = useLergStore();
+    const service = new LergService();
+
+    try {
+      store.isProcessing = true;
+
+      // 1. Test database connection
+      const hasServerData = await this.testConnection();
+      console.log('Server data status:', hasServerData);
+
+      if (!hasServerData) {
+        console.log('No server data found, attempting to reload special codes...');
+        await this.reloadSpecialCodes();
+        return;
+      }
+
+      // 2. Fetch both LERG and special codes data
+      console.log('Fetching LERG and special codes data...');
+      const [lergData, specialCodes] = await Promise.all([this.getAllLergCodes(), this.getAllSpecialCodes()]);
+
+      // 3. Initialize local service with fetched data
+      await service.initializeWithData(lergData, specialCodes);
+
+      // 4. Get and update stats
+      const stats = await this.getStats();
+      store.$patch({ stats });
+    } catch (error) {
+      console.error('Initialization failed:', error);
+      store.error = error instanceof Error ? error.message : 'Unknown error';
+      throw error;
+    } finally {
+      store.isProcessing = false;
+    }
+  },
+
   // Public endpoints
   async testConnection(): Promise<boolean> {
     try {

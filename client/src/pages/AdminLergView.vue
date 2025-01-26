@@ -66,8 +66,8 @@
                   @click="toggleCountryDetails(country.countryCode)"
                   class="w-full px-4 py-3 flex justify-between items-center hover:bg-gray-600 transition-colors"
                 >
-                  <span class="text-sm">{{ getCountryName(country.countryCode) }}</span>
                   <div class="flex items-center space-x-3">
+                    <span class="text-sm">{{ getCountryName(country.countryCode) }}</span>
                     <span class="font-medium">{{ formatNumber(country.count) }}</span>
                     <svg
                       :class="[
@@ -206,24 +206,19 @@
   import type { LERGStats } from '@/types/lerg-types';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
-  import { LergService } from '@/services/lerg.service';
 
-  const stats = ref<LERGStats>(useLergStore().stats);
-
+  const store = useLergStore();
+  const stats = computed(() => store.stats);
   const expandedCountries = ref<string[]>([]);
   const countryDetails = ref<Record<string, Array<{ province: string; npas: string[] }>>>({});
 
-  const store = useLergStore();
   const isLocallyStored = computed(() => store.isLocallyStored);
   const specialCodesLocallyStored = computed(() => store.specialCodesLocallyStored);
-  const lergService = new LergService();
 
-  // Format large numbers with commas
   function formatNumber(num: number): string {
     return new Intl.NumberFormat().format(num);
   }
 
-  // Format dates in a readable way
   function formatDate(date: string | null): string {
     if (!date) return 'Never';
     return new Date(date).toLocaleDateString('en-US', {
@@ -235,7 +230,6 @@
     });
   }
 
-  // Get country name from country code
   function getCountryName(code: string): string {
     const countries: Record<string, string> = {
       Canada: 'Canada',
@@ -247,14 +241,14 @@
     return countries[code] || code;
   }
 
-  async function fetchStats() {
-    try {
-      console.log('Fetching stats from AdminLergView.vue');
-      stats.value = await lergService.getStats();
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  }
+  // async function fetchStats() {
+  //   try {
+  //     console.log('Fetching stats from AdminLergView.vue');
+  //     stats.value = await lergService.getStats();
+  //   } catch (error) {
+  //     console.error('Failed to fetch stats:', error);
+  //   }
+  // }
 
   async function handleLergFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
@@ -265,7 +259,7 @@
 
     try {
       await lergApiService.uploadLergFile(formData);
-      await fetchStats();
+      // await fetchStats();
     } catch (error) {
       console.error('Failed to upload LERG file:', error);
     }
@@ -280,7 +274,7 @@
 
     try {
       await lergApiService.uploadSpecialCodesFile(formData);
-      await fetchStats();
+      // await fetchStats();
     } catch (error) {
       console.error('Failed to upload special codes file:', error);
     }
@@ -294,7 +288,7 @@
     try {
       await fetch('/api/admin/lerg/clear/lerg', { method: 'DELETE' });
       console.log('LERG codes cleared successfully');
-      await fetchStats();
+      // await fetchStats();
     } catch (error) {
       console.error('Failed to clear LERG data:', error);
     }
@@ -308,7 +302,7 @@
     try {
       await fetch('/api/admin/lerg/clear/special', { method: 'DELETE' });
       console.log('Special codes cleared successfully');
-      await fetchStats();
+      // await fetchStats();
     } catch (error) {
       console.error('Failed to clear special codes:', error);
     }
@@ -333,7 +327,7 @@
       }
 
       await response.json();
-      await fetchStats();
+      // await fetchStats();
     } catch (error) {
       console.error('Failed to reload special codes:', error);
       if (error instanceof Error) {
