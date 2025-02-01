@@ -8,10 +8,11 @@ export async function runMigrations() {
   const migrationsPath = path.join(__dirname);
 
   try {
-    // Read migration files in order
+    // Reads SQL files in order (001_, 002_, etc.)
     const files = await fs.promises.readdir(migrationsPath);
     const sqlFiles = files.filter(f => f.endsWith('.sql')).sort();
 
+    // Executes each migration in sequence
     for (const file of sqlFiles) {
       logger.info(`Running migration: ${file}`);
       const sql = await fs.promises.readFile(path.join(migrationsPath, file), 'utf-8');
