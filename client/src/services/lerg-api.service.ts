@@ -24,7 +24,7 @@ export const lergApiService = {
       console.log('Server data status:', hasServerData);
 
       if (!hasServerData) {
-        console.log('No server data found, attempting to reload special codes...');
+        console.log('No server data found : DB empty');
         await this.reloadSpecialCodes();
         return;
       }
@@ -154,6 +154,7 @@ export const lergApiService = {
   },
 
   async getAllLergCodes(): Promise<LERGRecord[]> {
+    console.log('Fetching all LERG codes...');
     const response = await fetch(`${ADMIN_URL}/codes/all`);
     if (!response.ok) {
       const error = await response.text();
@@ -190,11 +191,15 @@ export const lergApiService = {
     return await response.json();
   },
 
-  async uploadLergFile(formData: FormData): Promise<void> {
+  async uploadLergFile(file: File): Promise<void> {
+    const formData = new FormData();
+    formData.append('file', file);
+
     const response = await fetch(`${ADMIN_URL}/upload`, {
       method: 'POST',
       body: formData,
     });
+
     if (!response.ok) {
       throw new Error('Failed to upload LERG file');
     }

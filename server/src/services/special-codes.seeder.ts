@@ -1,13 +1,9 @@
-import { DatabaseService } from './database.service';
+import { DatabaseService } from '@/services/database.service';
+import { logger } from '@/config/logger';
 import * as fs from 'fs';
 import * as path from 'path';
-import { parse } from 'csv-parse';
-
-interface SpecialCode {
-  npa: string;
-  country: string;
-  province_or_territory: string;
-}
+import Papa, { ParseResult } from 'papaparse';
+import type { SpecialCode, CSVRow } from '@/types/lerg.types';
 
 export class SpecialCodesSeeder {
   private db: DatabaseService;
@@ -17,37 +13,33 @@ export class SpecialCodesSeeder {
   }
 
   async seedFromCsv(filePath: string): Promise<number> {
-    const records: SpecialCode[] = await this.parseCsvFile(filePath);
+    const records = await this.parseCsvFile(filePath);
     return this.insertRecords(records);
   }
 
   private async parseCsvFile(filePath: string): Promise<SpecialCode[]> {
-    const records: SpecialCode[] = [];
+    const fileContent = await fs.promises.readFile(filePath, 'utf-8');
 
-    return new Promise((resolve, reject) => {
-      fs.createReadStream(filePath)
-        .pipe(
-          parse({
-            columns: true,
-            skip_empty_lines: true,
-            trim: true,
-          })
-        )
-        .on('data', row => {
-          if (row.NPA && row.Country) {
-            records.push({
+    return new Promise<SpecialCode[]>((resolve, reject) => {
+      Papa.parse<CSVRow>(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results: ParseResult<CSVRow>) => {
+          const records = results.data
+            .filter((row: CSVRow) => row.NPA && row.Country)
+            .map((row: CSVRow) => ({
               npa: row.NPA,
               country: row.Country,
               province_or_territory: row['Province or Territory'] || '',
-            });
-          }
-        })
-        .on('end', () => resolve(records))
-        .on('error', reject);
+            }));
+          resolve(records);
+        },
+      });
     });
   }
 
   private async insertRecords(records: SpecialCode[]): Promise<number> {
+    logger.info('Starting record insertion');
     const query = `
       INSERT INTO special_area_codes (npa, country, province_or_territory)
       VALUES ($1, $2, $3)
@@ -63,7 +55,7 @@ export class SpecialCodesSeeder {
         const result = await this.db.query(query, [record.npa, record.country, record.province_or_territory]);
         if (result.rowCount) inserted++;
       } catch (error) {
-        console.error(`Error inserting NPA ${record.npa}:`, error);
+        logger.error(`Error inserting NPA ${record.npa}`, error);
       }
     }
 

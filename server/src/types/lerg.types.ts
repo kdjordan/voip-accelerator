@@ -24,3 +24,16 @@ export interface SpecialCodesStats {
     count: number;
   }[];
 }
+
+export interface SpecialCode {
+  npa: string;
+  country: string;
+  province_or_territory: string;
+}
+
+export interface CSVRow {
+  NPA: string;
+  Country: string;
+  'Province or Territory': string;
+}
+

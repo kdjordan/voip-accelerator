@@ -9,8 +9,6 @@ This is the foundation of how we will be doing our us-code reports.
 
 ## Task: LERG Data Management
 
-### Completed ✅
-
 1. File Processing:
 
    - Fixed file size limits (500MB)
@@ -23,8 +21,6 @@ This is the foundation of how we will be doing our us-code reports.
    - Implemented CSV seeder
    - Added data migration
    - Successfully seeded reference data
-
-### Next Steps 🔄
 
 1. LERG Processing Enhancements:
 
