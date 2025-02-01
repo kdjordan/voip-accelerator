@@ -1,10 +1,12 @@
 import express, { Request, Response } from 'express';
 import { LERGService } from '../services/lerg.service';
+import { logger } from '../config/logger';
 
 const router = express.Router();
 const lergService = new LERGService();
 
 router.get('/init-special-codes', async (_req: Request, res: Response) => {
+  logger.info('Initializing special codes');
   try {
     const specialCodes = await lergService.getPublicSpecialCodes();
     res.json({
@@ -13,7 +15,7 @@ router.get('/init-special-codes', async (_req: Request, res: Response) => {
       count: specialCodes.length,
     });
   } catch (error) {
-    console.error('Error initializing special codes:', error);
+    logger.error('Error initializing special codes', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -30,7 +32,7 @@ router.get('/init-lerg-codes', async (_req: Request, res: Response) => {
       count: lergCodes.length,
     });
   } catch (error) {
-    console.error('Error initializing LERG codes:', error);
+    logger.error('Error initializing LERG codes', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

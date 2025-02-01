@@ -26,39 +26,41 @@ self.onmessage = async (event: MessageEvent<WorkerMessageType>) => {
   }
 };
 
-async function processFile(file: File, batchSize: number = 1000): Promise<void> {
-  // Process data in chunks
-  const { data } = await Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-  });
-
+async function processFile(file: File, batchSize: number) {
+  const text = await file.text();
+  const { data } = Papa.parse(text, { header: true });
+  const records: LERGRecord[] = [];
   const total = data.length;
   let processed = 0;
 
-  const records: LERGRecord[] = [];
-
   for (let i = 0; i < total; i += batchSize) {
     const batch = data.slice(i, i + batchSize);
-    records.push(...batch);
+    const transformedBatch = batch.map((row: any) => ({
+      npanxx: `${row.npa}${row.nxx}`,
+      state: row.state,
+      npa: row.npa,
+      nxx: row.nxx,
+    }));
+    records.push(...transformedBatch);
     processed += batch.length;
 
     // Report progress
     self.postMessage({
       type: 'progress',
       progress: Math.round((processed / total) * 100),
-    });
+      processed,
+      total,
+    } as LergWorkerResponse);
   }
 
   // Send completed data
   self.postMessage({
     type: 'complete',
     data: records,
-  });
-}
-
-function validateAndTransformRow(row: string[]): LERGRecord | null {
-  // ... existing validation logic from lerg-processing.worker.ts ...
+    progress: 100,
+    processed: total,
+    total,
+  } as LergWorkerResponse);
 }
 
 export {}; // Make this a module

@@ -1,6 +1,4 @@
-import type { BaseService } from './service-types';
-
-// Core LERG data types
+// Core LERG data type
 export interface LERGRecord {
   npanxx: string;
   state: string;
@@ -29,8 +27,6 @@ export interface LERGStats {
   };
 }
 
-
-
 export interface LERGUploadResponse {
   processedRecords: number;
   totalRecords: number;
@@ -39,9 +35,11 @@ export interface LERGUploadResponse {
 // Worker types
 export interface LergWorkerResponse {
   type: 'progress' | 'complete' | 'error';
+  error?: string;
   progress?: number;
+  processed?: number;
+  total?: number;
   data?: LERGRecord[];
-  error?: Error;
 }
 
 export interface LergLoadingStatus {
@@ -61,10 +59,35 @@ export const LERGColumnRole = {
 export type LERGColumnRoleType = (typeof LERGColumnRole)[keyof typeof LERGColumnRole];
 
 export interface LergState {
-  isProcessing: boolean;
-  progress: number;
   error: string | null;
-  isLocallyStored: boolean;
-  specialCodesLocallyStored: boolean;
-  stats: LERGStats;
+  lerg: {
+    isProcessing: boolean;
+    progress: number;
+    isLocallyStored: boolean;
+    stats: {
+      totalRecords: number;
+      lastUpdated: string | null;
+    };
+  };
+  specialCodes: {
+    isProcessing: boolean;
+    progress: number;
+    isLocallyStored: boolean;
+    data: SpecialAreaCode[];
+    stats: {
+      totalCodes: number;
+      lastUpdated: string | null;
+      countryBreakdown: Array<{
+        countryCode: string;
+        count: number;
+      }>;
+    };
+  };
+}
+
+export interface SpecialAreaCode {
+  npa: string;
+  country: string;
+  description: string; // server sends 'province'
+  last_updated: string; // server doesn't send this
 }

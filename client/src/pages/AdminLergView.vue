@@ -10,11 +10,67 @@
         <div class="space-y-4">
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Total Records</span>
-            <span class="text-2xl font-bold">{{ formatNumber(stats.totalRecords) }}</span>
+            <div
+              v-if="isLergProcessing"
+              class="animate-spin h-5 w-5"
+            >
+              <svg
+                class="text-accent"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            </div>
+            <span
+              v-else
+              class="text-2xl font-bold"
+              >{{ formatNumber(lergStats.totalRecords) }}</span
+            >
           </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Last Updated</span>
-            <span class="text-lg">{{ formatDate(stats.lastUpdated) }}</span>
+            <div
+              v-if="isLergProcessing"
+              class="animate-spin h-5 w-5"
+            >
+              <svg
+                class="text-accent"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            </div>
+            <span
+              v-else
+              class="text-lg"
+              >{{ formatDate(lergStats.lastUpdated) }}</span
+            >
           </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Stored locally</span>
@@ -22,7 +78,7 @@
               <div
                 class="w-3 h-3 rounded-full transition-colors duration-200"
                 :class="[
-                  isLocallyStored
+                  isLergLocallyStored
                     ? 'bg-green-500 animate-status-pulse-success'
                     : 'bg-red-500 animate-status-pulse-error',
                 ]"
@@ -35,6 +91,7 @@
       <!-- Special Codes Stats -->
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Special Area Codes</h2>
+
         <div class="space-y-4">
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Stored locally</span>
@@ -42,7 +99,7 @@
               <div
                 class="w-3 h-3 rounded-full transition-colors duration-200"
                 :class="[
-                  specialCodesLocallyStored
+                  isSpecialCodesLocallyStored
                     ? 'bg-green-500 animate-status-pulse-success'
                     : 'bg-red-500 animate-status-pulse-error',
                 ]"
@@ -51,13 +108,13 @@
           </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Total Special Codes</span>
-            <span class="text-2xl font-bold">{{ formatNumber(stats.specialCodes?.totalCodes ?? 0) }}</span>
+            <span class="text-2xl font-bold">{{ formatNumber(specialCodeStats.totalCodes ?? 0) }}</span>
           </div>
           <div class="mt-4">
             <h3 class="text-sm font-medium text-gray-400 mb-2">Country Breakdown</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div
-                v-for="country in stats.specialCodes?.countryBreakdown"
+                v-for="country in countryBreakdown"
                 :key="country.countryCode"
                 class="bg-gray-700 rounded overflow-hidden"
               >
@@ -208,12 +265,19 @@
   import { lergApiService } from '@/services/lerg-api.service';
 
   const store = useLergStore();
-  const stats = computed(() => store.stats);
+  const lergStats = computed(() => store.lerg.stats);
+  const specialCodeStats = computed(() => store.specialCodes.stats);
+  const isLergProcessing = computed(() => store.lerg.isProcessing);
+  const isSpecialCodesProcessing = computed(() => store.specialCodes.isProcessing);
   const expandedCountries = ref<string[]>([]);
   const countryDetails = ref<Record<string, Array<{ province: string; npas: string[] }>>>({});
 
-  const isLocallyStored = computed(() => store.isLocallyStored);
-  const specialCodesLocallyStored = computed(() => store.specialCodesLocallyStored);
+  const isLergLocallyStored = computed(() => {
+    return store.lerg.isLocallyStored;
+  });
+  const isSpecialCodesLocallyStored = computed(() => store.specialCodes.isLocallyStored);
+
+  const countryBreakdown = computed(() => store.getCountryBreakdown);
 
   function formatNumber(num: number): string {
     return new Intl.NumberFormat().format(num);
@@ -240,15 +304,6 @@
     };
     return countries[code] || code;
   }
-
-  // async function fetchStats() {
-  //   try {
-  //     console.log('Fetching stats from AdminLergView.vue');
-  //     stats.value = await lergService.getStats();
-  //   } catch (error) {
-  //     console.error('Failed to fetch stats:', error);
-  //   }
-  // }
 
   async function handleLergFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];

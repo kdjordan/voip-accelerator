@@ -1,4 +1,4 @@
-import { DatabaseService } from '../../shared/services/database.service';
+import { DatabaseService } from './database.service';
 import type { LERGStats, LERGRecord, LERGUploadResponse, SpecialCodesStats } from '../types/lerg.types';
 import * as fs from 'fs';
 import * as readline from 'readline';
@@ -365,24 +365,18 @@ export class LERGService {
 
   public async getPublicSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
     try {
-      // First check if table has data
-      const countQuery = 'SELECT COUNT(*) FROM special_area_codes';
-      const countResult = await this.db.query(countQuery);
-      console.log('Database special codes count:', countResult.rows[0].count);
-
       const query = `
         SELECT npa, country, description as province
         FROM special_area_codes
-        ORDER BY country, npa;
+        ORDER BY country, npa
       `;
       const result = await this.db.query(query);
-      console.log('Database query result:', {
-        rowCount: result.rowCount,
-        sampleData: result.rows.slice(0, 3),
-      });
+      if (!result.rows.length) {
+        console.warn('No special area codes found in database');
+      }
       return result.rows;
     } catch (error) {
-      console.error('Error fetching special codes:', error);
+      console.error('Failed to fetch special area codes:', error);
       throw error;
     }
   }
