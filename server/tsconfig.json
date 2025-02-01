@@ -10,17 +10,9 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["src/*"]
     }
   },
-  "include": [
-    "config/**/*",
-    "routes/**/*",
-    "services/**/*",
-    "types/**/*",
-    "middleware/**/*",
-    "migrations/**/*",
-    "index.ts"
-  ],
+  "include": ["src/**/*", "migrations/**/*"],
   "exclude": ["node_modules", "dist"]
 }

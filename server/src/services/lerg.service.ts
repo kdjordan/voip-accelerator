@@ -1,8 +1,9 @@
-import { DatabaseService } from './database.service';
-import type { LERGStats, LERGRecord, LERGUploadResponse, SpecialCodesStats } from '../types/lerg.types';
+import { DatabaseService } from '@/services/database.service';
+import type { LERGStats, LERGRecord, LERGUploadResponse, SpecialCodesStats } from '@/types/lerg.types';
 import * as fs from 'fs';
 import * as readline from 'readline';
 import path from 'path';
+import { logger } from '@/config/logger';
 
 export class LERGService {
   private db: DatabaseService;
@@ -34,7 +35,7 @@ export class LERGService {
       const { processedRecords, totalRecords } = await this.processFileContents(rl);
       return { processedRecords, totalRecords };
     } catch (error) {
-      console.error('Error processing LERG file:', error);
+      logger.error('Error processing LERG file:', error);
       throw error;
     } finally {
       if (rl) rl.close();
@@ -52,24 +53,24 @@ export class LERGService {
       totalRecords++;
 
       if (totalRecords % 100 === 0) {
-        console.log(`Processing line ${totalRecords}`);
+        logger.debug(`Processing line ${totalRecords}`);
       }
 
       const record = this.parseLergLine(line);
       if (record) {
-        console.log('Valid record found:', { npanxx: record.npanxx, state: record.state });
+        logger.debug('Valid record found:', { npanxx: record.npanxx, state: record.state });
         rawBatch.push(record);
 
         if (rawBatch.length >= this.batchSize) {
-          console.log('Raw batch collected:', rawBatch.length);
+          logger.debug('Raw batch collected:', { count: rawBatch.length });
           const uniqueRecords = this.getUniqueBatch(rawBatch);
-          console.log('Unique NPANXXs in this batch:', uniqueRecords.map(r => r.npanxx).join(', '));
+          logger.debug('Unique NPANXXs in this batch:', { npanxxs: uniqueRecords.map(r => r.npanxx) });
 
           processedRecords += await this.processBatch(uniqueRecords);
           rawBatch = [];
         }
       } else {
-        console.log('Invalid or skipped line:', line);
+        logger.debug('Invalid or skipped line:', { line });
       }
     }
 
@@ -97,10 +98,10 @@ export class LERGService {
   private async processBatch(batch: LERGRecord[]): Promise<number> {
     try {
       const inserted = await this.insertBatch(batch);
-      console.log(`Processed batch: ${inserted} inserted out of ${batch.length} records`);
+      logger.info(`Processed batch: ${inserted} inserted out of ${batch.length} records`);
       return inserted;
     } catch (error) {
-      console.error('Error processing batch:', error);
+      logger.error('Error processing batch:', error);
       return 0;
     }
   }
@@ -124,13 +125,13 @@ export class LERGService {
 
       // Validate NPA and NXX
       if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
-        console.log('Invalid NPA/NXX:', { npa, nxx });
+        logger.warn('Invalid NPA/NXX:', { npa, nxx });
         return null;
       }
 
       // Validate state is 2 characters
       if (!state || state.length !== 2) {
-        console.log('Invalid state:', { state });
+        logger.warn('Invalid state:', { state });
         return null;
       }
 
@@ -142,13 +143,13 @@ export class LERGService {
         last_updated: new Date(),
       };
     } catch (error) {
-      console.error('Error parsing LERG line:', error);
+      logger.error('Error parsing LERG line:', error);
       return null;
     }
   }
 
   private async insertBatch(records: LERGRecord[]) {
-    console.log(
+    logger.debug(
       'Attempting to insert records:',
       records.map(r => ({
         npanxx: r.npanxx,
@@ -170,20 +171,20 @@ export class LERGService {
 
     try {
       const result = await this.db.query(query, params);
-      console.log(
+      logger.info(
         'Successfully inserted NPANXXs:',
         result.rows.map(r => r.npanxx)
       );
       return result.rowCount ?? 0;
     } catch (error) {
-      console.error('Batch insert error:', error);
+      logger.error('Batch insert error:', error);
       throw error;
     }
   }
 
   async getStats(): Promise<LERGStats> {
     try {
-      console.log('Getting LERG stats...');
+      logger.info('Getting LERG stats...');
       const [lergStats, specialStats] = await Promise.all([
         this.db.query(`
           SELECT 
@@ -194,8 +195,8 @@ export class LERGService {
         this.getSpecialCodesStats(),
       ]);
 
-      console.log('LERG stats query result:', lergStats.rows[0]);
-      console.log('Special stats result:', specialStats);
+      logger.info('LERG stats query result:', lergStats.rows[0]);
+      logger.info('Special stats result:', specialStats);
 
       const stats = {
         totalRecords: parseInt(lergStats.rows[0].total || '0'),
@@ -203,10 +204,10 @@ export class LERGService {
         specialCodes: specialStats,
       };
 
-      console.log('Final stats object:', stats);
+      logger.info('Final stats object:', stats);
       return stats;
     } catch (error) {
-      console.error('Error getting stats:', error);
+      logger.error('Error getting stats:', error);
       throw error;
     }
   }
@@ -216,14 +217,14 @@ export class LERGService {
     try {
       await this.db.query(query);
     } catch (error) {
-      console.error('Error clearing LERG data:', error);
+      logger.error('Error clearing LERG data:', error);
       throw error;
     }
   }
 
   private async getSpecialCodesStats(): Promise<SpecialCodesStats> {
     try {
-      console.log('Getting special codes stats...');
+      logger.info('Getting special codes stats...');
       const [totalResult, breakdownResult] = await Promise.all([
         this.db.query('SELECT COUNT(*) as total FROM special_area_codes'),
         this.db.query(`
@@ -234,8 +235,8 @@ export class LERGService {
         `),
       ]);
 
-      console.log('Special codes total:', totalResult.rows[0]);
-      console.log('Special codes breakdown:', breakdownResult.rows);
+      logger.info('Special codes total:', totalResult.rows[0]);
+      logger.info('Special codes breakdown:', breakdownResult.rows);
 
       return {
         totalCodes: parseInt(totalResult.rows[0].total || '0'),
@@ -245,7 +246,7 @@ export class LERGService {
         })),
       };
     } catch (error) {
-      console.error('Error getting special codes stats:', error);
+      logger.error('Error getting special codes stats:', error);
       return {
         totalCodes: 0,
         countryBreakdown: [],
@@ -258,7 +259,7 @@ export class LERGService {
     try {
       await this.db.query(query);
     } catch (error) {
-      console.error('Error clearing LERG codes data:', error);
+      logger.error('Error clearing LERG codes data:', error);
       throw error;
     }
   }
@@ -268,21 +269,21 @@ export class LERGService {
     try {
       await this.db.query(query);
     } catch (error) {
-      console.error('Error clearing special codes data:', error);
+      logger.error('Error clearing special codes data:', error);
       throw error;
     }
   }
 
   public async reloadSpecialCodes(): Promise<void> {
     try {
-      console.log('Starting special codes reload...');
+      logger.info('Starting special codes reload...');
 
       // Clear existing data
       await this.db.query('TRUNCATE TABLE special_area_codes;');
 
       // Read and process the CSV file
       const csvPath = path.resolve(__dirname, '../../../../data/special_codes.csv');
-      console.log('Loading CSV from:', csvPath);
+      logger.info('Loading CSV from:', csvPath);
 
       const fileContent = await fs.promises.readFile(csvPath, 'utf-8');
       const records = fileContent
@@ -298,7 +299,7 @@ export class LERGService {
           };
         });
 
-      console.log('CSV records:', {
+      logger.info('CSV records:', {
         total: records.length,
         sample: records.slice(0, 3),
       });
@@ -321,11 +322,11 @@ export class LERGService {
       // Verify data was inserted
       const verifyQuery = 'SELECT COUNT(*) FROM special_area_codes';
       const verifyResult = await this.db.query(verifyQuery);
-      console.log('Verified inserted records:', verifyResult.rows[0].count);
+      logger.info('Verified inserted records:', verifyResult.rows[0].count);
 
-      console.log('Special codes reload completed');
+      logger.info('Special codes reload completed');
     } catch (error) {
-      console.error('Error reloading special codes:', error);
+      logger.error('Error reloading special codes:', error);
       throw error;
     }
   }
@@ -358,7 +359,7 @@ export class LERGService {
       // Process the file
       await this.processLergFile(mostRecentFile.path);
     } catch (error) {
-      console.error('Error reloading LERG data:', error);
+      logger.error('Error reloading LERG data:', error);
       throw error;
     }
   }
@@ -372,11 +373,11 @@ export class LERGService {
       `;
       const result = await this.db.query(query);
       if (!result.rows.length) {
-        console.warn('No special area codes found in database');
+        logger.warn('No special area codes found in database');
       }
       return result.rows;
     } catch (error) {
-      console.error('Failed to fetch special area codes:', error);
+      logger.error('Failed to fetch special area codes:', error);
       throw error;
     }
   }
@@ -391,7 +392,7 @@ export class LERGService {
       const result = await this.db.query(query);
       return result.rows;
     } catch (error) {
-      console.error('Error fetching LERG codes:', error);
+      logger.error('Error fetching LERG codes:', error);
       throw error;
     }
   }
@@ -411,10 +412,10 @@ export class LERGService {
         ) as has_special
       `);
 
-      console.log('Database connection test results:', result.rows[0]);
+      logger.info('Database connection test results:', result.rows[0]);
       return result.rows[0].has_lerg || result.rows[0].has_special;
     } catch (error) {
-      console.error('Database connection test failed:', error);
+      logger.error('Database connection test failed:', error);
       throw error;
     }
   }
@@ -431,12 +432,12 @@ export class LERGService {
         ORDER BY description
       `;
 
-      console.log('Fetching special codes for country:', country);
+      logger.info('Fetching special codes for country:', country);
       const result = await this.db.query(query, [country]);
-      console.log('Special codes by country result:', result.rows);
+      logger.info('Special codes by country result:', result.rows);
       return result.rows;
     } catch (error) {
-      console.error('Error fetching special codes by country:', error);
+      logger.error('Error fetching special codes by country:', error);
       throw error;
     }
   }

@@ -1,13 +1,13 @@
+import 'module-alias/register';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { DatabaseService } from './services/database.service';
-import { lergRoutes } from './routes/lerg.routes';
-import { adminLergRoutes } from './routes/admin.routes';
-import { authRoutes } from './routes/auth.routes';
-import { adminAuthMiddleware } from './middleware/admin-auth.middleware';
-import { logger } from './config/logger';
-import { runMigrations } from './migrations';
+import { DatabaseService } from '@/services/database.service';
+import { lergRoutes } from '@/routes/lerg.routes';
+import { adminLergRoutes } from '@/routes/admin.routes';
+import { authRoutes } from '@/routes/auth.routes';
+import { adminAuthMiddleware } from '@/middleware/admin-auth.middleware';
+import { logger } from '@/config/logger';
 
 // Load environment variables
 dotenv.config();
@@ -45,7 +45,6 @@ app.get('/health', async (_req, res) => {
 
 async function startServer() {
   try {
-    await runMigrations();
     app.listen(port, () => {
       logger.info(`Server running on port ${port}`);
     });

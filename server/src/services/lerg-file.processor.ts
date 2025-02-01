@@ -1,3 +1,6 @@
+import { logger } from '@/config/logger';
+import type { LERGRecord } from '@/types/lerg.types';
+
 private parseLergLine(line: string): LERGRecord | null {
   try {
     if (!line.trim()) {
@@ -17,13 +20,13 @@ private parseLergLine(line: string): LERGRecord | null {
 
     // Validate NPA and NXX
     if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
-      console.log('Invalid NPA/NXX:', { npa, nxx });
+      logger.warn('Invalid NPA/NXX:', { npa, nxx });
       return null;
     }
 
     // Validate state is 2 characters
     if (!state || state.length !== 2) {
-      console.log('Invalid state:', { state });
+      logger.warn('Invalid state:', { state });
       return null;
     }
 
@@ -35,7 +38,7 @@ private parseLergLine(line: string): LERGRecord | null {
       last_updated: new Date()
     };
   } catch (error) {
-    console.error('Error parsing LERG line:', error);
+    logger.error('Error parsing LERG line:', error);
     return null;
   }
 } 

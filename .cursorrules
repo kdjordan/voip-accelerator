@@ -25,6 +25,7 @@ TypeScript Usage
 - Use TypeScript for all code; prefer interfaces over types for their extendability and ability to merge.
 - Avoid enums; use maps instead for better type safety and flexibility.
 - Use functional components with TypeScript interfaces.
+- Always place types in type files - never in the component or any other file.
 
 Syntax and Formatting
 
@@ -41,7 +42,6 @@ UI and Styling
 Performance Optimization
 
 - Leverage VueUse functions where applicable to enhance reactivity and performance.
-- Wrap asynchronous components in Suspense with a fallback UI.
 - Use dynamic loading for non-critical components.
 - Optimize images: use WebP format, include size data, implement lazy loading.
 - Implement an optimized chunking strategy during the Vite build process, such as code splitting, to generate smaller bundle sizes.
