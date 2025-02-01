@@ -4,12 +4,12 @@
   "description": "NodeJS backend for pricing tool",
   "main": "index.ts",
   "scripts": {
-    "dev": "ts-node-dev -r dotenv/config -r tsconfig-paths/register src/index.ts",
+    "dev": "ts-node-dev -r tsconfig-paths/register -r dotenv/config src/index.ts",
     "build": "tsc",
     "start": "node dist/src/index.js",
-    "migrate": "ts-node migrations/index.ts",
-    "migrate:prod": "NODE_ENV=production ts-node migrations/index.ts",
-    "seed:special-codes": "ts-node src/scripts/seed-special-codes.ts"
+    "migrate": "ts-node -r tsconfig-paths/register migrations/index.ts",
+    "migrate:prod": "NODE_ENV=production ts-node -r tsconfig-paths/register migrations/index.ts",
+    "seed:special-codes": "ts-node -r tsconfig-paths/register src/scripts/seed-special-codes.ts"
   },
   "dependencies": {
     "@types/papaparse": "^5.3.15",
