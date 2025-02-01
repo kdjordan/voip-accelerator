@@ -248,31 +248,54 @@ export class LergService implements LERGService {
     });
   }
 
+  private async initializeLergTable(data: LERGRecord[]): Promise<void> {
+    try {
+      console.log('Initializing LERG table with records:', data.length);
+      await this.db.table('lerg').clear(); // Clear existing data
+      await this.db.table('lerg').bulkPut(data);
+
+      // Verify data is stored
+      const count = await this.db.table('lerg').count();
+      console.log('LERG table initialized with records:', count);
+      this.store.setLergLocallyStored(count > 0);
+    } catch (error) {
+      console.error('Failed to initialize LERG table:', error);
+      throw error;
+    }
+  }
+
+  private async initializeSpecialCodesTable(
+    data: Array<{ npa: string; country: string; province: string }>
+  ): Promise<void> {
+    try {
+      console.log('Initializing special codes table with records:', data.length);
+      await this.db.table('special_area_codes').clear();
+      await this.db.table('special_area_codes').bulkPut(
+        data.map(code => ({
+          id: undefined, // Let Dexie auto-increment
+          npa: code.npa,
+          country: code.country,
+          description: code.province,
+          last_updated: new Date().toISOString(),
+        }))
+      );
+
+      const count = await this.db.table('special_area_codes').count();
+      console.log('Special codes table initialized with records:', count);
+    } catch (error) {
+      console.error('Failed to initialize special codes table:', error);
+      throw error;
+    }
+  }
+
   async initializeWithData(
     lergData: LERGRecord[],
     specialCodes: Array<{ npa: string; country: string; province: string }>
   ): Promise<void> {
     try {
-      console.log('Initializing data in IndexDB:', {
-        lergCount: lergData.length,
-        specialCodesCount: specialCodes.length,
-      });
-
-      // Store both datasets
-      await Promise.all([
-        this.db.table('lerg').bulkPut(lergData),
-        this.db.table('special_area_codes').bulkPut(
-          specialCodes.map(code => ({
-            id: undefined, // Let Dexie auto-increment
-            npa: code.npa,
-            country: code.country,
-            description: code.province,
-            last_updated: new Date().toISOString(),
-          }))
-        ),
-      ]);
-
-      console.log('Data stored in IndexDB successfully');
+      console.log('Starting data initialization...');
+      await Promise.all([this.initializeLergTable(lergData), this.initializeSpecialCodesTable(specialCodes)]);
+      console.log('Data initialization completed successfully');
     } catch (error) {
       console.error('Failed to initialize data:', error);
       throw error;

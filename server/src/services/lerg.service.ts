@@ -366,11 +366,11 @@ export class LERGService {
       `;
       const result = await this.db.query(query);
       if (!result.rows.length) {
-        logger.warn('No special area codes found in database');
+        logger.warn('[lerg.service.ts] No special area codes found in database');
       }
       return result.rows;
     } catch (error) {
-      logger.error('Failed to fetch special area codes:', error);
+      logger.error('[lerg.service.ts] Failed to fetch special area codes:', error);
       throw error;
     }
   }
@@ -392,10 +392,7 @@ export class LERGService {
 
   public async testConnection(): Promise<boolean> {
     try {
-      // First check if we can connect to the database
       await this.db.query('SELECT 1');
-
-      // Then check if we have data in either table
       const result = await this.db.query(`
         SELECT EXISTS (
           SELECT 1 FROM lerg_codes LIMIT 1
@@ -405,16 +402,17 @@ export class LERGService {
         ) as has_special
       `);
 
-      logger.info('Database connection test results:', result.rows[0]);
+      logger.info('[lerg.service.ts] Connection test results:', result.rows[0]);
       return result.rows[0].has_lerg || result.rows[0].has_special;
     } catch (error) {
-      logger.error('Database connection test failed:', error);
+      logger.error('[lerg.service.ts] Database connection test failed:', error);
       throw error;
     }
   }
 
   public async getSpecialCodesByCountry(country: string): Promise<Array<{ province: string; npas: string[] }>> {
     try {
+      logger.info('[lerg.service.ts] Fetching special codes for country:', country);
       const query = `
         SELECT 
           description as province,
@@ -424,13 +422,11 @@ export class LERGService {
         GROUP BY description
         ORDER BY description
       `;
-
-      logger.info('Fetching special codes for country:', country);
       const result = await this.db.query(query, [country]);
-      logger.info('Special codes by country result:', result.rows);
+      logger.info('[lerg.service.ts] Special codes by country result:', result.rows);
       return result.rows;
     } catch (error) {
-      logger.error('Error fetching special codes by country:', error);
+      logger.error('[lerg.service.ts] Error fetching special codes by country:', error);
       throw error;
     }
   }

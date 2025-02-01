@@ -30,9 +30,12 @@ export const lergApiService = {
       }
 
       // 2. Fetch both LERG and special codes data
-      const [lergData, specialCodes] = await Promise.all([this.getAllLergCodes(), this.getAllSpecialCodes()]);
+      const [lergResponse, specialCodes] = await Promise.all([this.getAllLergCodes(), this.getAllSpecialCodes()]);
 
-      // 3. Store in IndexDB and update state
+      // Extract the data from the response
+      const lergData = lergResponse.data;
+
+      // Pass the actual data arrays to initializeWithData
       await service.initializeWithData(lergData, specialCodes);
 
       // 4. Transform special codes for UI
@@ -182,7 +185,7 @@ export const lergApiService = {
 
   async getAllSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
     console.log('Fetching all special codes...');
-    const response = await fetch(`${ADMIN_URL}/special-codes/all`);
+    const response = await fetch(`${LERG_URL}/init-special-codes`);
     if (!response.ok) {
       const error = await response.text();
       console.error('Failed to fetch special codes:', error);
