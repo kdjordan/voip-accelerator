@@ -1,5 +1,5 @@
-import { DatabaseService } from '../src/services/database.service';
-import { logger } from '../src/config/logger';
+import { DatabaseService } from '@/services/database.service';
+import { logger } from '@/config/logger';
 import fs from 'fs';
 import path from 'path';
 

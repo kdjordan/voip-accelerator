@@ -4,43 +4,36 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import path from 'path';
 import { logger } from '@/config/logger';
+import { LERGFileProcessor } from './lerg-file.processor';
 
 export class LERGService {
   private db: DatabaseService;
   private readonly batchSize = 1000;
   private processedNpanxx = new Set<string>();
+  private fileProcessor: LERGFileProcessor;
 
   constructor() {
     this.db = DatabaseService.getInstance();
+    this.fileProcessor = new LERGFileProcessor();
   }
 
   async processLergFile(fileContent: Buffer | string): Promise<LERGUploadResponse> {
-    let fileStream: fs.ReadStream | null = null;
-    let rl: readline.Interface | null = null;
-
     try {
-      if (Buffer.isBuffer(fileContent)) {
-        rl = readline.createInterface({
-          input: require('stream').Readable.from(fileContent.toString()),
-          crlfDelay: Infinity,
-        });
-      } else {
-        fileStream = fs.createReadStream(fileContent);
-        rl = readline.createInterface({
-          input: fileStream,
-          crlfDelay: Infinity,
-        });
+      const records = await this.fileProcessor.processFile(fileContent);
+      let processedRecords = 0;
+      let totalRecords = records.length;
+
+      // Process records in batches
+      for (let i = 0; i < records.length; i += this.batchSize) {
+        const batch = records.slice(i, i + this.batchSize);
+        const uniqueRecords = this.getUniqueBatch(batch);
+        processedRecords += await this.processBatch(uniqueRecords);
       }
 
-      const { processedRecords, totalRecords } = await this.processFileContents(rl);
       return { processedRecords, totalRecords };
     } catch (error) {
       logger.error('Error processing LERG file:', error);
       throw error;
-    } finally {
-      if (rl) rl.close();
-      if (fileStream) fileStream.destroy();
-      this.processedNpanxx.clear();
     }
   }
 

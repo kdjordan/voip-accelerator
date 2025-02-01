@@ -24,7 +24,6 @@ export class DatabaseService {
   }
 
   async query(text: string, params?: any[]) {
-    logger.debug('Executing query:', { text, params });
     try {
       const result = await this.pool.query(text, params);
       return result;

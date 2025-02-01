@@ -6,7 +6,7 @@ const router = express.Router();
 const lergService = new LERGService();
 
 router.get('/init-special-codes', async (_req: Request, res: Response) => {
-  logger.info('Initializing special codes on server');
+  logger.info('SERVER: Got a call to init special codes');
   try {
     const specialCodes = await lergService.getPublicSpecialCodes();
     res.json(specialCodes);
@@ -20,6 +20,7 @@ router.get('/init-special-codes', async (_req: Request, res: Response) => {
 });
 
 router.get('/init-lerg-codes', async (_req: Request, res: Response) => {
+  logger.info('SERVER: Got a call to init lerg codes');
   try {
     const lergCodes = await lergService.getPublicLergCodes();
     res.json(lergCodes);
