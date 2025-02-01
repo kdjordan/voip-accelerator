@@ -6,7 +6,7 @@ export class DatabaseService {
   private pool: Pool;
 
   private constructor() {
-    logger.info('Initializing database connection...');
+    logger.info('[database.service.ts] Initializing database connection...');
     this.pool = new Pool({
       user: process.env.DB_USER,
       host: process.env.DB_HOST,
@@ -28,7 +28,7 @@ export class DatabaseService {
       const result = await this.pool.query(text, params);
       return result;
     } catch (error) {
-      logger.error('Database query error:', error);
+      logger.error('[database.service.ts] Database query error:', error);
       throw error;
     }
   }
@@ -51,9 +51,9 @@ export class DatabaseService {
   public async testConnection(): Promise<void> {
     try {
       await this.pool.query('SELECT 1');
-      logger.info('Database connection successful');
+      logger.info('[database.service.ts] Database connection successful');
     } catch (error) {
-      logger.error('Database connection failed:', error);
+      logger.error('[database.service.ts] Database connection failed:', error);
       throw error;
     }
   }
