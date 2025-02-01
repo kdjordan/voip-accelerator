@@ -5,12 +5,17 @@ export const DBConfig = {
   LERG: {
     name: 'lerg_db',
     version: 1,
+    tables: {
+      lerg: 'lerg',
+      specialCodes: 'special_codes',
+    },
+    schema: {
+      lerg: '++id, npanxx, state, npa, nxx',
+      specialCodes: '++id, npa, country, province',
+    },
     stores: {
       lerg: 'npanxx, npa, nxx, state',
-      special_area_codes: 'npa, country, description',
-    },
-    tables: {
-      specialCodes: 'special_area_codes',
+      special_area_codes: '++id, npa, country, description, last_updated',
     },
   },
   RATE_DECKS: {

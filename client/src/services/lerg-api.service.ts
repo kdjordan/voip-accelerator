@@ -1,9 +1,15 @@
-import type { LERGStats, LERGRecord } from '@/types/lerg-types';
+import type { LERGStats, LERGRecord, SpecialAreaCode } from '@/types/lerg-types';
 import { LergService } from '@/services/lerg.service';
 import { useLergStore } from '@/stores/lerg-store';
 
 const LERG_URL = '/api/lerg';
 const ADMIN_URL = '/api/admin/lerg';
+
+interface CountryBreakdown {
+  countryCode: string;
+  count: number;
+  npaCodes: string[];
+}
 
 export const lergApiService = {
   async initialize(): Promise<void> {
@@ -11,7 +17,7 @@ export const lergApiService = {
     const service = new LergService();
 
     try {
-      store.isProcessing = true;
+      store.lerg.isProcessing = true;
 
       // 1. Test database connection
       const hasServerData = await this.testConnection();
@@ -24,22 +30,57 @@ export const lergApiService = {
       }
 
       // 2. Fetch both LERG and special codes data
-      console.log('Fetching LERG and special codes data...');
       const [lergData, specialCodes] = await Promise.all([this.getAllLergCodes(), this.getAllSpecialCodes()]);
 
-      // 3. Initialize local service with fetched data
+      // 3. Store in IndexDB and update state
       await service.initializeWithData(lergData, specialCodes);
 
-      // 4. Get and update stats
+      // 4. Transform special codes for UI
+      const countryBreakdown = this.transformForState(specialCodes);
+
+      // 5. Get stats and update store
       const stats = await this.getStats();
-      store.$patch({ stats });
+
+      store.$patch({
+        lerg: {
+          stats: {
+            totalRecords: stats.totalRecords,
+            lastUpdated: stats.lastUpdated,
+          },
+          isLocallyStored: true,
+        },
+        specialCodes: {
+          stats: {
+            totalCodes: specialCodes.length,
+            countryBreakdown,
+            lastUpdated: new Date().toISOString(),
+          },
+          isLocallyStored: true,
+        },
+      });
     } catch (error) {
       console.error('Initialization failed:', error);
       store.error = error instanceof Error ? error.message : 'Unknown error';
-      throw error;
     } finally {
-      store.isProcessing = false;
+      store.lerg.isProcessing = false;
     }
+  },
+
+  transformForState(codes: Array<{ npa: string; country: string; province: string }>): CountryBreakdown[] {
+    return codes.reduce((acc, code) => {
+      const existing = acc.find((item: CountryBreakdown) => item.countryCode === code.country);
+      if (existing) {
+        existing.count++;
+        existing.npaCodes.push(code.npa);
+      } else {
+        acc.push({
+          countryCode: code.country,
+          count: 1,
+          npaCodes: [code.npa],
+        });
+      }
+      return acc;
+    }, [] as CountryBreakdown[]);
   },
 
   // Public endpoints
@@ -138,7 +179,7 @@ export const lergApiService = {
     console.log('Special codes reload result:', result);
   },
 
-  async getAllSpecialCodes(retryCount = 0): Promise<Array<{ npa: string; country: string; province: string }>> {
+  async getAllSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
     console.log('Fetching all special codes...');
     const response = await fetch(`${ADMIN_URL}/special-codes/all`);
     if (!response.ok) {
@@ -146,17 +187,7 @@ export const lergApiService = {
       console.error('Failed to fetch special codes:', error);
       throw new Error('Failed to fetch special codes');
     }
-    const data = await response.json();
-    if (data.length === 0 && retryCount < 3) {
-      console.log(`No data received, retrying (${retryCount + 1}/3)...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return this.getAllSpecialCodes(retryCount + 1);
-    }
-    console.log('API response data:', {
-      length: data.length,
-      sampleData: data.slice(0, 3),
-    });
-    return data;
+    return await response.json();
   },
 
   async uploadLergFile(formData: FormData): Promise<void> {

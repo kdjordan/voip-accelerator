@@ -106,12 +106,7 @@ router.get('/codes/all', async (_req: Request, res: Response) => {
 // Add this route to get all special codes
 router.get('/special-codes/all', async (_req: Request, res: Response) => {
   try {
-    console.log('Received request for all special codes');
     const specialCodes = await lergService.getPublicSpecialCodes();
-    console.log('Special codes from database:', specialCodes);
-    if (!specialCodes.length) {
-      console.log('Warning: No special codes found in database');
-    }
     res.json(specialCodes);
   } catch (error) {
     console.error('Failed to fetch special codes:', error);

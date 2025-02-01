@@ -3,17 +3,24 @@
     "target": "es2020",
     "module": "commonjs",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@domains/*": ["src/domains/*"]
+      "@/*": ["./*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "config/**/*",
+    "routes/**/*",
+    "services/**/*",
+    "types/**/*",
+    "middleware/**/*",
+    "migrations/**/*",
+    "index.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

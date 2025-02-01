@@ -31,16 +31,16 @@
   import SideNav from '@/components/shared/SideNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
   import { onMounted, onBeforeUnmount } from 'vue';
-  import { DBName, type DBNameType } from '@/types/app-types';
+  // import { DBName, type DBNameType } from '@/types/app-types';
   import { useSharedStore } from '@/stores/shared-store';
   import { lergApiService } from '@/services/lerg-api.service';
   import { useLergStore } from '@/stores/lerg-store';
   import { cleanupDatabases } from '@/utils/cleanup';
 
-  import { loadSampleDecks } from '@/utils/load-sample-data';
+  // import { loadSampleDecks } from '@/utils/load-sample-data';
 
   const sharedStore = useSharedStore();
-  const lergStore = useLergStore();
+
 
   let isCleaningUp = false;
 

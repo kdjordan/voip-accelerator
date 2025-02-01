@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { LERGRecord, LERGStats, LergWorkerResponse, LERGService } from '@/types/lerg-types';
+import { LERGRecord, LERGStats, LergWorkerResponse, LERGService, SpecialAreaCode } from '@/types/lerg-types';
 import { useLergStore } from '@/stores/lerg-store';
 import { lergApiService } from './lerg-api.service';
 import { DBConfig, createDatabase } from '@/config/database';
@@ -101,7 +101,6 @@ export class LergService implements LERGService {
       // Process and store data
       if (lergData.length > 0) {
         await this.storeLergData(lergData);
-        this.store.setLocallyStored(true);
       }
 
       if (specialCodes.length > 0) {
@@ -111,7 +110,6 @@ export class LergService implements LERGService {
           description: code.province || '',
         }));
         await this.storeSpecialCodes(formattedSpecialCodes);
-        this.store.setSpecialCodesLocallyStored(true);
       }
     } catch (error) {
       console.error('Error initializing LERG data:', error);
@@ -126,6 +124,9 @@ export class LergService implements LERGService {
 
   private async storeLergData(data: LERGRecord[]): Promise<void> {
     await this.db.table('lerg').bulkPut(data);
+    // Verify data is stored before setting flag
+    const count = await this.db.table('lerg').count();
+    this.store.setLergLocallyStored(count > 0);
   }
 
   private async storeSpecialCodes(data: any[]): Promise<void> {
@@ -146,7 +147,21 @@ export class LergService implements LERGService {
   async getStats(): Promise<LERGStats> {
     try {
       const stats = await lergApiService.getStats();
-      this.store.$patch({ stats });
+      this.store.$patch({
+        lerg: {
+          stats: {
+            totalRecords: stats.totalRecords,
+            lastUpdated: stats.lastUpdated,
+          },
+        },
+        specialCodes: {
+          stats: {
+            totalCodes: stats.specialCodes?.totalCodes || 0,
+            lastUpdated: stats.lastUpdated,
+            countryBreakdown: stats.specialCodes?.countryBreakdown || [],
+          },
+        },
+      });
       return stats;
     } catch (error) {
       console.error('Failed to fetch LERG stats:', error);
@@ -174,11 +189,17 @@ export class LergService implements LERGService {
     this.worker.onmessage = (event: MessageEvent<LergWorkerResponse>) => {
       switch (event.data.type) {
         case 'progress':
-          this.store.$patch({ progress: event.data.progress });
+          if (event.data.progress !== undefined) {
+            this.store.$patch({
+              lerg: {
+                progress: event.data.progress,
+              },
+            });
+          }
           break;
         case 'complete':
           if (event.data.data) {
-            this.handleProcessingComplete(event.data.data);
+            this.handleProcessingSuccess(event.data.data);
           }
           break;
         case 'error':
@@ -195,22 +216,32 @@ export class LergService implements LERGService {
     };
   }
 
-  private async handleProcessingComplete(data: LERGRecord[]) {
+  private async handleProcessingSuccess(data: LERGRecord[]) {
+    console.log('Processing completed successfully');
     await this.db.table('lerg').bulkPut(data);
-    this.store.$patch({
-      isProcessing: false,
-      stats: {
-        totalRecords: data.length,
-        lastUpdated: new Date().toISOString(),
-      },
-    });
-  }
-  private handleProcessingError(error: Error) {
     this.store.$patch(state => {
-      state.isProcessing = false;
-      state.progress = 0;
-      state.error = error.message;
-      state.stats = {
+      state.lerg = {
+        isProcessing: false,
+        progress: 0,
+        isLocallyStored: true,
+        stats: {
+          totalRecords: data.length,
+          lastUpdated: new Date().toISOString(),
+        },
+      };
+    });
+    const count = await this.db.table('lerg').count();
+    console.log('Count of LERG records:', count);
+    this.store.setLergLocallyStored(true);
+  }
+
+  private handleProcessingError(error: string | Error) {
+    const errorMessage = error instanceof Error ? error.message : error;
+    this.store.$patch(state => {
+      state.lerg.isProcessing = false;
+      state.lerg.progress = 0;
+      state.error = errorMessage;
+      state.lerg.stats = {
         totalRecords: 0,
         lastUpdated: new Date().toISOString(),
       };
@@ -222,26 +253,26 @@ export class LergService implements LERGService {
     specialCodes: Array<{ npa: string; country: string; province: string }>
   ): Promise<void> {
     try {
-      console.log('Starting data initialization...');
+      console.log('Initializing data in IndexDB:', {
+        lergCount: lergData.length,
+        specialCodesCount: specialCodes.length,
+      });
 
-      // Store LERG data
-      if (lergData.length > 0) {
-        await this.storeLergData(lergData);
-        this.store.setLocallyStored(true);
-      }
+      // Store both datasets
+      await Promise.all([
+        this.db.table('lerg').bulkPut(lergData),
+        this.db.table('special_area_codes').bulkPut(
+          specialCodes.map(code => ({
+            id: undefined, // Let Dexie auto-increment
+            npa: code.npa,
+            country: code.country,
+            description: code.province,
+            last_updated: new Date().toISOString(),
+          }))
+        ),
+      ]);
 
-      // Store special codes
-      if (specialCodes.length > 0) {
-        const formattedCodes = specialCodes.map(code => ({
-          npa: code.npa,
-          country: code.country,
-          description: code.province || '',
-        }));
-        await this.storeSpecialCodes(formattedCodes);
-        this.store.setSpecialCodesLocallyStored(true);
-      }
-
-      console.log('Data initialization complete');
+      console.log('Data stored in IndexDB successfully');
     } catch (error) {
       console.error('Failed to initialize data:', error);
       throw error;
