@@ -78,16 +78,24 @@ router.delete('/clear/special', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/reload/special', async (_req: Request, res: Response) => {
+// Keep and update this route for file upload
+router.post('/upload/special', upload.single('file'), async (req, res) => {
   try {
-    logger.info('Reloading special codes');
-    await lergService.reloadSpecialCodes();
+    if (!req.file?.buffer) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    await lergService.processSpecialCodesFile(req.file.buffer);
     res.json({
       success: true,
-      message: 'Special codes reloaded successfully',
+      message: 'Special codes file processed successfully',
     });
   } catch (error) {
-    res.status(500).json(handleError('Reload special codes error', error));
+    logger.error('Failed to process special codes file:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to process file',
+    });
   }
 });
 
