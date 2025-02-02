@@ -1,4 +1,4 @@
-// Core LERG data type
+// Core LERG data types
 export interface LERGRecord {
   npanxx: string;
   state: string;
@@ -6,11 +6,16 @@ export interface LERGRecord {
   nxx: string;
 }
 
+export interface CountryBreakdown {
+  countryCode: string;
+  count: number;
+  npaCodes: string[];
+}
+
 // Service interfaces
 export interface LERGService {
   initialize(): Promise<void>;
   initializeLergData(): Promise<void>;
-  getStats(): Promise<LERGStats>;
   uploadLergFile(file: File): Promise<void>;
 }
 
@@ -20,10 +25,7 @@ export interface LERGStats {
   lastUpdated: string | null;
   specialCodes?: {
     totalCodes: number;
-    countryBreakdown: Array<{
-      countryCode: string;
-      count: number;
-    }>;
+    countryBreakdown: CountryBreakdown[];
   };
 }
 
@@ -34,17 +36,13 @@ export interface LERGUploadResponse {
 
 // Worker types
 export interface LergWorkerResponse {
-  type: 'progress' | 'complete' | 'error';
+  type: 'complete' | 'error';
   error?: string;
-  progress?: number;
-  processed?: number;
-  total?: number;
   data?: LERGRecord[];
 }
 
 export interface LergLoadingStatus {
   isLoading: boolean;
-  progress: number;
   error: Error | null;
   lastUpdated: Date | null;
 }
@@ -58,11 +56,11 @@ export const LERGColumnRole = {
 
 export type LERGColumnRoleType = (typeof LERGColumnRole)[keyof typeof LERGColumnRole];
 
+// Store state types
 export interface LergState {
   error: string | null;
   lerg: {
     isProcessing: boolean;
-    progress: number;
     isLocallyStored: boolean;
     stats: {
       totalRecords: number;
@@ -71,16 +69,12 @@ export interface LergState {
   };
   specialCodes: {
     isProcessing: boolean;
-    progress: number;
     isLocallyStored: boolean;
     data: SpecialAreaCode[];
     stats: {
       totalCodes: number;
       lastUpdated: string | null;
-      countryBreakdown: Array<{
-        countryCode: string;
-        count: number;
-      }>;
+      countryBreakdown: CountryBreakdown[];
     };
   };
 }
@@ -88,6 +82,6 @@ export interface LergState {
 export interface SpecialAreaCode {
   npa: string;
   country: string;
-  description: string; // server sends 'province'
-  last_updated: string; // server doesn't send this
+  province: string; 
+  last_updated: string; // optional since server doesn't always send this
 }

@@ -23,42 +23,45 @@ export const lergApiService = {
       const hasServerData = await this.testConnection();
       console.log('Server data status:', hasServerData);
 
-      if (!hasServerData) {
-        console.log('No server data found : DB empty');
-        await this.reloadSpecialCodes();
-        return;
-      }
+      // 2. Fetch both LERG and special codes data with their stats
+      const [lergData, specialCodesData] = await Promise.all([
+        this.getLergData().catch(error => {
+          console.error('Failed to fetch LERG codes:', error);
+          return { data: [], stats: { totalRecords: 0, lastUpdated: null } };
+        }),
+        this.getSpecialCodesData().catch(error => {
+          console.error('Failed to fetch special codes:', error);
+          return {
+            data: [],
+            stats: {
+              totalCodes: 0,
+              lastUpdated: null,
+              countryBreakdown: [],
+            },
+          };
+        }),
+      ]);
 
-      // 2. Fetch both LERG and special codes data
-      const [lergResponse, specialCodes] = await Promise.all([this.getAllLergCodes(), this.getAllSpecialCodes()]);
+      // 3. Initialize IndexDB with whatever data we have
+      await service.initializeWithData(lergData.data || [], specialCodesData.data || []);
 
-      // Extract the data from the response
-      const lergData = lergResponse.data;
-
-      // Pass the actual data arrays to initializeWithData
-      await service.initializeWithData(lergData, specialCodes);
-
-      // 4. Transform special codes for UI
-      const countryBreakdown = this.transformForState(specialCodes);
-
-      // 5. Get stats and update store
-      const stats = await this.getStats();
-
+      // 4. Update store with data and stats
       store.$patch({
         lerg: {
           stats: {
-            totalRecords: stats.totalRecords,
-            lastUpdated: stats.lastUpdated,
+            totalRecords: lergData.stats?.totalRecords || 0,
+            lastUpdated: lergData.stats?.lastUpdated || null,
           },
-          isLocallyStored: true,
+          isLocallyStored: lergData.data?.length > 0,
         },
         specialCodes: {
           stats: {
-            totalCodes: specialCodes.length,
-            countryBreakdown,
-            lastUpdated: new Date().toISOString(),
+            totalCodes: specialCodesData.stats?.totalCodes || 0,
+            countryBreakdown: specialCodesData.stats?.countryBreakdown || [],
+            lastUpdated: specialCodesData.stats?.lastUpdated || null,
           },
-          isLocallyStored: true,
+          isLocallyStored: specialCodesData.data?.length > 0,
+          data: specialCodesData.data || [],
         },
       });
     } catch (error) {
@@ -110,25 +113,29 @@ export const lergApiService = {
     }
   },
 
-  async getStats(): Promise<LERGStats> {
-    const response = await fetch(`${ADMIN_URL}/stats`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch stats');
-    }
-    return response.json();
-  },
-
-  // Admin endpoints
-  async getAdminStats(): Promise<LERGStats> {
-    const response = await fetch(`${ADMIN_URL}/stats`);
+  async getLergData() {
+    console.log('Fetching LERG data and stats...');
+    const response = await fetch(`${LERG_URL}/lerg-data`);
     if (!response.ok) {
       const error = await response.text();
-      console.error('Stats fetch error:', error);
-      throw new Error('Failed to fetch LERG stats');
+      console.error('Failed to fetch LERG data:', error);
+      throw new Error('Failed to fetch LERG data');
     }
     return await response.json();
   },
 
+  async getSpecialCodesData() {
+    console.log('Fetching special codes data and stats...');
+    const response = await fetch(`${LERG_URL}/special-codes-data`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Failed to fetch special codes data:', error);
+      throw new Error('Failed to fetch special codes data');
+    }
+    return await response.json();
+  },
+
+  // Admin endpoints
   async uploadLERGFile(formData: FormData) {
     const response = await fetch(`${ADMIN_URL}/upload`, {
       method: 'POST',
@@ -156,17 +163,6 @@ export const lergApiService = {
     }
   },
 
-  async getAllLergCodes(): Promise<LERGRecord[]> {
-    console.log('Fetching all LERG codes...');
-    const response = await fetch(`${ADMIN_URL}/codes/all`);
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Failed to fetch LERG codes:', error);
-      throw new Error('Failed to fetch LERG codes');
-    }
-    return await response.json();
-  },
-
   async reloadSpecialCodes(): Promise<void> {
     console.log('Requesting special codes reload...');
     const response = await fetch(`${ADMIN_URL}/reload/special`, {
@@ -183,21 +179,7 @@ export const lergApiService = {
     console.log('Special codes reload result:', result);
   },
 
-  async getAllSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
-    console.log('Fetching all special codes...');
-    const response = await fetch(`${LERG_URL}/init-special-codes`);
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Failed to fetch special codes:', error);
-      throw new Error('Failed to fetch special codes');
-    }
-    return await response.json();
-  },
-
-  async uploadLergFile(file: File): Promise<void> {
-    const formData = new FormData();
-    formData.append('file', file);
-
+  async uploadLergFile(formData: FormData): Promise<void> {
     const response = await fetch(`${ADMIN_URL}/upload`, {
       method: 'POST',
       body: formData,
@@ -216,5 +198,32 @@ export const lergApiService = {
     if (!response.ok) {
       throw new Error('Failed to upload special codes file');
     }
+  },
+
+  async clearSpecialCodesData(): Promise<void> {
+    console.log('Clearing special codes data...');
+    const response = await fetch(`${ADMIN_URL}/lerg/clear/special`, { method: 'DELETE' });
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Failed to clear special codes:', error);
+      throw new Error('Failed to clear special codes');
+    }
+
+    // Clear IndexDB and update store
+    const lergService = new LergService();
+    await lergService.clearSpecialCodesData();
+
+    const store = useLergStore();
+    store.$patch({
+      specialCodes: {
+        isLocallyStored: false,
+        data: [],
+        stats: {
+          totalCodes: 0,
+          lastUpdated: null,
+          countryBreakdown: [],
+        },
+      },
+    });
   },
 };

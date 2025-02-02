@@ -5,14 +5,12 @@ import { logger } from '@/config/logger';
 const router = express.Router();
 const lergService = new LERGService();
 
-router.get('/init-special-codes', async (_req: Request, res: Response) => {
-  logger.info('[lerg.routes.ts] SERVER: Got a call to init special codes');
+router.get('/lerg-data', async (_req: Request, res: Response) => {
   try {
-    const specialCodes = await lergService.getPublicSpecialCodes();
-    logger.info('[lerg.routes.ts] Special codes response:', specialCodes);
-    res.json(specialCodes);
+    const data = await lergService.getLergData();
+    res.json(data);
   } catch (error) {
-    logger.error('[lerg.routes.ts] Error initializing special codes', error);
+    logger.error('Error fetching LERG data:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -20,13 +18,12 @@ router.get('/init-special-codes', async (_req: Request, res: Response) => {
   }
 });
 
-router.get('/init-lerg-codes', async (_req: Request, res: Response) => {
-  logger.info('[lerg.routes.ts] SERVER: Got a call to init lerg codes');
+router.get('/special-codes-data', async (_req: Request, res: Response) => {
   try {
-    const lergCodes = await lergService.getPublicLergCodes();
-    res.json(lergCodes);
+    const data = await lergService.getSpecialCodesData();
+    res.json(data);
   } catch (error) {
-    logger.error('Error initializing LERG codes', error);
+    logger.error('Error fetching special codes data:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -37,28 +34,12 @@ router.get('/init-lerg-codes', async (_req: Request, res: Response) => {
 router.get('/test-connection', async (_req: Request, res: Response) => {
   try {
     await lergService.testConnection();
-    logger.info('[lerg.routes.ts] Connection test successful');
     res.json(true);
   } catch (error) {
-    logger.error('[lerg.routes.ts] Connection test failed:', error);
+    logger.error('Connection test failed:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
-router.get('/stats', async (_req: Request, res: Response) => {
-  try {
-    logger.info('[lerg.routes.ts] Fetching stats');
-    const stats = await lergService.getStats();
-    logger.debug('[lerg.routes.ts] Stats retrieved', stats);
-    res.json(stats);
-  } catch (error) {
-    logger.error('[lerg.routes.ts] Stats error', error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: error instanceof Error ? error.stack : undefined,
     });
   }
 });
