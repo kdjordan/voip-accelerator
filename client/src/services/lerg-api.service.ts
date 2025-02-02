@@ -1,4 +1,3 @@
-import type { LERGStats, LERGRecord, SpecialAreaCode } from '@/types/lerg-types';
 import { LergService } from '@/services/lerg.service';
 import { useLergStore } from '@/stores/lerg-store';
 
@@ -202,7 +201,7 @@ export const lergApiService = {
 
   async clearSpecialCodesData(): Promise<void> {
     console.log('Clearing special codes data...');
-    const response = await fetch(`${ADMIN_URL}/lerg/clear/special`, { method: 'DELETE' });
+    const response = await fetch(`${ADMIN_URL}/clear/special`, { method: 'DELETE' });
     if (!response.ok) {
       const error = await response.text();
       console.error('Failed to clear special codes:', error);

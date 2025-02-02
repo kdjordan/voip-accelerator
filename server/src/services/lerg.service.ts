@@ -5,16 +5,20 @@ import * as readline from 'readline';
 import path from 'path';
 import { logger } from '@/config/logger';
 import { LERGFileProcessor } from './lerg-file.processor';
+import { SpecialCodesFileProcessor } from './special-codes-file.processor';
+import type { SpecialCodeRecord } from '@/types/lerg.types';
 
 export class LERGService {
   private db: DatabaseService;
   private readonly batchSize = 1000;
   private processedNpanxx = new Set<string>();
   private fileProcessor: LERGFileProcessor;
+  private specialCodesProcessor: SpecialCodesFileProcessor;
 
   constructor() {
     this.db = DatabaseService.getInstance();
     this.fileProcessor = new LERGFileProcessor();
+    this.specialCodesProcessor = new SpecialCodesFileProcessor();
   }
 
   async processLergFile(fileContent: Buffer | string): Promise<LERGUploadResponse> {
@@ -259,55 +263,37 @@ export class LERGService {
     }
   }
 
-  public async reloadSpecialCodes(): Promise<void> {
+  async processSpecialCodesFile(fileBuffer: Buffer): Promise<void> {
     try {
-      logger.info('Starting special codes reload...');
+      logger.info('Processing special codes file...');
+
+      // Parse the file
+      const records = await this.specialCodesProcessor.processFile(fileBuffer);
 
       // Clear existing data
       await this.db.query('TRUNCATE TABLE special_area_codes;');
 
-      // Read and process the CSV file
-      const csvPath = path.resolve(__dirname, '../../../../data/special_codes.csv');
-      logger.info('Loading CSV from:', csvPath);
-
-      const fileContent = await fs.promises.readFile(csvPath, 'utf-8');
-      const records = fileContent
-        .split('\n')
-        .filter(line => line.trim())
-        .slice(1) // Skip header
-        .map(line => {
-          const [npa, country, province] = line.split(',').map(field => field.trim());
-          return {
-            npa,
-            country,
-            description: province || null,
-          };
-        });
-
-      // Insert records in batches
+      // Process records in batches
       for (let i = 0; i < records.length; i += 100) {
         const batch = records.slice(i, i + 100);
-        const values = batch.map(r => `('${r.npa}', '${r.country}', '${r.description}', '${new Date()}')`).join(',');
+        const values = batch
+          .map(
+            record =>
+              `('${record.npa}', '${record.country}', ${record.province ? `'${record.province}'` : 'NULL'}, NOW())`
+          )
+          .join(',');
 
         const insertQuery = `
           INSERT INTO special_area_codes (npa, country, province, last_updated)
-          VALUES ${values}
-          ON CONFLICT (npa) DO UPDATE SET
-            country = EXCLUDED.country,
-            province = EXCLUDED.province,
-            last_updated = EXCLUDED.last_updated;
+          VALUES ${values};
         `;
+
         await this.db.query(insertQuery);
       }
 
-      // Verify data was inserted
-      const verifyQuery = 'SELECT COUNT(*) FROM special_area_codes';
-      const verifyResult = await this.db.query(verifyQuery);
-      logger.info('Verified inserted records:', verifyResult.rows[0].count);
-
-      logger.info('Special codes reload completed');
+      logger.info('Special codes file processed successfully');
     } catch (error) {
-      logger.error('Error reloading special codes:', error);
+      logger.error('Failed to process special codes file:', error);
       throw error;
     }
   }

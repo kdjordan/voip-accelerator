@@ -37,3 +37,8 @@ export interface CSVRow {
   'Province or Territory': string;
 }
 
+export interface SpecialCodeRecord {
+  npa: string;
+  country: string;
+  province: string | null;
+}

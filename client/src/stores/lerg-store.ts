@@ -2,6 +2,11 @@ import { defineStore } from 'pinia';
 import type { LergState, SpecialAreaCode } from '@/types/lerg-types';
 import type { CountryBreakdown } from '@/types/lerg-types';
 
+interface CountryWithNPAs {
+  name: string;
+  npas: string[];
+}
+
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
     error: null,
@@ -100,6 +105,24 @@ export const useLergStore = defineStore('lerg', {
           return acc;
         }, [] as CountryBreakdown[])
         .sort((a, b) => a.countryCode.localeCompare(b.countryCode));
+    },
+
+    sortedCountriesWithNPAs(): CountryWithNPAs[] {
+      const countryMap = new Map<string, string[]>();
+
+      this.specialCodes.data.forEach(code => {
+        if (!countryMap.has(code.country)) {
+          countryMap.set(code.country, []);
+        }
+        countryMap.get(code.country)?.push(code.npa);
+      });
+
+      return Array.from(countryMap.entries())
+        .map(([name, npas]) => ({
+          name,
+          npas: npas.sort(),
+        }))
+        .sort((a, b) => b.npas.length - a.npas.length);
     },
   },
 });
