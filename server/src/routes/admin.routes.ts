@@ -18,14 +18,13 @@ function handleError(message: string, error: unknown) {
 }
 
 // All these routes will be protected by admin middleware
-router.get('/stats', async (_req: Request, res: Response) => {
+router.get('/special-codes/:country', async (req: Request, res: Response) => {
   try {
-    logger.info('Fetching stats');
-    const stats = await lergService.getStats();
-    logger.debug('Stats retrieved', stats);
-    res.json({ success: true, data: stats });
+    const { country } = req.params;
+    const result = await lergService.getSpecialCodesByCountry(country);
+    res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json(handleError('Stats error', error));
+    res.status(500).json(handleError('Error fetching special codes', error));
   }
 });
 
@@ -66,17 +65,6 @@ router.delete('/clear/lerg', async (_req: Request, res: Response) => {
   }
 });
 
-router.get('/special-codes/:country', async (req: Request, res: Response) => {
-  try {
-    const { country } = req.params;
-    logger.info('Fetching special codes', { country });
-    const result = await lergService.getSpecialCodesByCountry(country);
-    res.json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json(handleError('Error fetching special codes', error));
-  }
-});
-
 router.delete('/clear/special', async (_req: Request, res: Response) => {
   try {
     logger.info('Clearing special codes data');
@@ -100,28 +88,6 @@ router.post('/reload/special', async (_req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json(handleError('Reload special codes error', error));
-  }
-});
-
-// Add this route to get all LERG codes
-router.get('/codes/all', async (_req: Request, res: Response) => {
-  try {
-    logger.info('Fetching all LERG codes');
-    const lergCodes = await lergService.getPublicLergCodes();
-    res.json({ success: true, data: lergCodes });
-  } catch (error) {
-    res.status(500).json(handleError('Failed to fetch LERG codes', error));
-  }
-});
-
-// Add this route to get all special codes
-router.get('/special-codes/all', async (_req: Request, res: Response) => {
-  try {
-    logger.info('Fetching all special codes');
-    const specialCodes = await lergService.getPublicSpecialCodes();
-    res.json({ success: true, data: specialCodes });
-  } catch (error) {
-    res.status(500).json(handleError('Failed to fetch special codes', error));
   }
 });
 

@@ -93,6 +93,19 @@
         <h2 class="text-xl font-semibold mb-4">Special Area Codes</h2>
 
         <div class="space-y-4">
+          <!-- Total Special Codes -->
+          <div class="flex justify-between items-center">
+            <span class="text-gray-400">Total Special Codes</span>
+            <span class="text-2xl font-bold">{{ formatNumber(specialCodeStats.totalCodes ?? 0) }}</span>
+          </div>
+
+          <!-- Last Updated -->
+          <div class="flex justify-between items-center">
+            <span class="text-gray-400">Last Updated</span>
+            <span class="text-gray-300">{{ formatDate(specialCodeStats.lastUpdated) }}</span>
+          </div>
+
+          <!-- Stored locally status -->
           <div class="flex justify-between items-center">
             <span class="text-gray-400">Stored locally</span>
             <div class="flex items-center">
@@ -106,10 +119,7 @@
               ></div>
             </div>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-gray-400">Total Special Codes</span>
-            <span class="text-2xl font-bold">{{ formatNumber(specialCodeStats.totalCodes ?? 0) }}</span>
-          </div>
+
           <div class="mt-4">
             <h3 class="text-sm font-medium text-gray-400 mb-2">Country Breakdown</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -124,8 +134,13 @@
                   class="w-full px-4 py-3 flex justify-between items-center hover:bg-gray-600 transition-colors"
                 >
                   <div class="flex items-center space-x-3">
-                    <span class="text-sm">{{ getCountryName(country.countryCode) }}</span>
-                    <span class="font-medium">{{ formatNumber(country.count) }}</span>
+                    <span class="text-sm font-medium">{{ country.countryCode }}</span>
+                    <span class="px-2 py-1 bg-gray-800 rounded-full text-xs font-medium">
+                      {{ formatNumber(country.count) }}
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs text-gray-400">{{ country.npaCodes?.length || 0 }} NPAs</span>
                     <svg
                       :class="[
                         'w-4 h-4 transform transition-transform',
@@ -150,22 +165,13 @@
                   v-if="expandedCountries.includes(country.countryCode)"
                   class="px-4 py-3 bg-gray-800/50 border-t border-gray-600"
                 >
-                  <div class="space-y-4">
+                  <div class="grid grid-cols-3 gap-2">
                     <div
-                      v-for="group in countryDetails[country.countryCode]"
-                      :key="group.province"
-                      class="space-y-1"
+                      v-for="npa in country.npaCodes"
+                      :key="npa"
+                      class="bg-gray-700/50 rounded px-3 py-1 text-center"
                     >
-                      <h4 class="text-sm font-medium text-gray-300 mb-1">{{ group.province }}</h4>
-                      <div class="grid grid-cols-3 gap-2">
-                        <div
-                          v-for="npa in group.npas"
-                          :key="npa"
-                          class="bg-gray-700/50 rounded px-3 py-1"
-                        >
-                          <span class="font-medium">{{ npa }}</span>
-                        </div>
-                      </div>
+                      <span class="font-medium">{{ npa }}</span>
                     </div>
                   </div>
                 </div>
@@ -355,9 +361,8 @@
     }
 
     try {
-      await fetch('/api/admin/lerg/clear/special', { method: 'DELETE' });
+      await lergApiService.clearSpecialCodesData();
       console.log('Special codes cleared successfully');
-      // await fetchStats();
     } catch (error) {
       console.error('Failed to clear special codes:', error);
     }
@@ -397,18 +402,6 @@
     if (index === -1) {
       // Expand
       expandedCountries.value.push(countryCode);
-
-      // Fetch details if we don't have them yet
-      if (!countryDetails.value[countryCode]) {
-        try {
-          const response = await fetch(`/api/lerg/special-codes/${countryCode}`);
-          if (!response.ok) throw new Error('Failed to fetch country details');
-          countryDetails.value[countryCode] = await response.json();
-        } catch (error) {
-          console.error(`Failed to fetch details for ${countryCode}:`, error);
-          expandedCountries.value = expandedCountries.value.filter(c => c !== countryCode);
-        }
-      }
     } else {
       // Collapse
       expandedCountries.value.splice(index, 1);

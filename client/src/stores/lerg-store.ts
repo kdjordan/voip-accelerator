@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
 import type { LergState, SpecialAreaCode } from '@/types/lerg-types';
+import type { CountryBreakdown } from '@/types/lerg-types';
 
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
     error: null,
     lerg: {
       isProcessing: false,
-      progress: 0,
       isLocallyStored: false,
       stats: {
         totalRecords: 0,
@@ -15,7 +15,6 @@ export const useLergStore = defineStore('lerg', {
     },
     specialCodes: {
       isProcessing: false,
-      progress: 0,
       isLocallyStored: false,
       data: [] as SpecialAreaCode[],
       stats: {
@@ -39,10 +38,11 @@ export const useLergStore = defineStore('lerg', {
 
     setSpecialCodes(codes: SpecialAreaCode[]) {
       this.specialCodes.data = codes;
+      this.specialCodes.stats.totalCodes = codes.length;
+      this.specialCodes.isLocallyStored = true;
     },
 
     $patch(partialState: Partial<LergState>) {
-      console.log('Patching store with:', partialState);
       // Deep merge to preserve nested structure
       if (partialState.lerg) {
         this.lerg = { ...this.lerg, ...partialState.lerg };
@@ -83,19 +83,23 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getCountryBreakdown: state => {
-      // Calculate breakdown from data
-      const breakdown = state.specialCodes.data.reduce((acc, code) => {
-        const existing = acc.find(item => item.countryCode === code.country);
-        if (existing) {
-          existing.count++;
-        } else {
-          acc.push({ countryCode: code.country, count: 1 });
-        }
-        return acc;
-      }, [] as Array<{ countryCode: string; count: number }>);
-
-      // Sort by country code
-      return breakdown.sort((a, b) => a.countryCode.localeCompare(b.countryCode));
+      // Transform the data to match CountryBreakdown interface
+      return state.specialCodes.data
+        .reduce((acc, code) => {
+          const existing = acc.find(item => item.countryCode === code.country);
+          if (existing) {
+            existing.count++;
+            existing.npaCodes.push(code.npa);
+          } else {
+            acc.push({
+              countryCode: code.country,
+              count: 1,
+              npaCodes: [code.npa],
+            });
+          }
+          return acc;
+        }, [] as CountryBreakdown[])
+        .sort((a, b) => a.countryCode.localeCompare(b.countryCode));
     },
   },
 });

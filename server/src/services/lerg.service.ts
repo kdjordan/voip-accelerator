@@ -175,34 +175,58 @@ export class LERGService {
     }
   }
 
-  async getStats(): Promise<LERGStats> {
-    try {
-      logger.info('Getting LERG stats...');
-      const [lergStats, specialStats] = await Promise.all([
-        this.db.query(`
-          SELECT 
-            COUNT(*) as total,
-            MAX(last_updated) as last_updated 
-          FROM lerg_codes
-        `),
-        this.getSpecialCodesStats(),
-      ]);
+  async getLergData() {
+    const query = `
+      SELECT json_build_object(
+        'data', (
+          SELECT json_agg(row_to_json(l)) 
+          FROM (
+            SELECT npanxx, npa, nxx, state 
+            FROM lerg_codes 
+            ORDER BY npanxx
+            LIMIT 1000
+          ) l
+        ),
+        'stats', json_build_object(
+          'totalRecords', (SELECT COUNT(*) FROM lerg_codes),
+          'lastUpdated', (SELECT MAX(last_updated) FROM lerg_codes)
+        )
+      ) as result
+    `;
+    const result = await this.db.query(query);
+    return result.rows[0].result;
+  }
 
-      logger.info('LERG stats query result:', lergStats.rows[0]);
-      logger.info('Special stats result:', specialStats);
+  async getSpecialCodesData() {
+    const query = `
+      WITH country_breakdown AS (
+        SELECT 
+          country as countryCode,
+          COUNT(*) as count,
+          array_agg(npa) as npaCodes
+        FROM special_area_codes
+        GROUP BY country
+      )
+      SELECT json_build_object(
+        'data', (
+          SELECT json_agg(row_to_json(s)) 
+          FROM (
+            SELECT npa, country, province, last_updated
+            FROM special_area_codes
+          ) s
+        ),
+        'stats', json_build_object(
+          'totalCodes', (SELECT COUNT(*) FROM special_area_codes),
+          'lastUpdated', (SELECT MAX(last_updated) FROM special_area_codes),
+          'countryBreakdown', (
+            SELECT json_agg(row_to_json(cb))
+            FROM country_breakdown cb
+          )
+        )
+      ) as result`;
 
-      const stats = {
-        totalRecords: parseInt(lergStats.rows[0].total || '0'),
-        lastUpdated: lergStats.rows[0].last_updated || new Date(),
-        specialCodes: specialStats,
-      };
-
-      logger.info('Final stats object:', stats);
-      return stats;
-    } catch (error) {
-      logger.error('Error getting stats:', error);
-      throw error;
-    }
+    const result = await this.db.query(query);
+    return result.rows[0].result;
   }
 
   async clearAllData(): Promise<void> {
@@ -212,38 +236,6 @@ export class LERGService {
     } catch (error) {
       logger.error('Error clearing LERG data:', error);
       throw error;
-    }
-  }
-
-  private async getSpecialCodesStats(): Promise<SpecialCodesStats> {
-    try {
-      logger.info('Getting special codes stats...');
-      const [totalResult, breakdownResult] = await Promise.all([
-        this.db.query('SELECT COUNT(*) as total FROM special_area_codes'),
-        this.db.query(`
-          SELECT country, COUNT(*) as count
-          FROM special_area_codes
-          GROUP BY country
-          ORDER BY count DESC
-        `),
-      ]);
-
-      logger.info('Special codes total:', totalResult.rows[0]);
-      logger.info('Special codes breakdown:', breakdownResult.rows);
-
-      return {
-        totalCodes: parseInt(totalResult.rows[0].total || '0'),
-        countryBreakdown: breakdownResult.rows.map(row => ({
-          countryCode: row.country,
-          count: parseInt(row.count),
-        })),
-      };
-    } catch (error) {
-      logger.error('Error getting special codes stats:', error);
-      return {
-        totalCodes: 0,
-        countryBreakdown: [],
-      };
     }
   }
 
@@ -292,22 +284,18 @@ export class LERGService {
           };
         });
 
-      logger.info('CSV records:', {
-        total: records.length,
-        sample: records.slice(0, 3),
-      });
-
       // Insert records in batches
       for (let i = 0; i < records.length; i += 100) {
         const batch = records.slice(i, i + 100);
-        const values = batch.map(r => `('${r.npa}', '${r.country}', '${r.description}')`).join(',');
+        const values = batch.map(r => `('${r.npa}', '${r.country}', '${r.description}', '${new Date()}')`).join(',');
 
         const insertQuery = `
-          INSERT INTO special_area_codes (npa, country, description)
+          INSERT INTO special_area_codes (npa, country, province, last_updated)
           VALUES ${values}
           ON CONFLICT (npa) DO UPDATE SET
             country = EXCLUDED.country,
-            description = EXCLUDED.description;
+            province = EXCLUDED.province,
+            last_updated = EXCLUDED.last_updated;
         `;
         await this.db.query(insertQuery);
       }
@@ -357,39 +345,6 @@ export class LERGService {
     }
   }
 
-  public async getPublicSpecialCodes(): Promise<Array<{ npa: string; country: string; province: string }>> {
-    try {
-      const query = `
-        SELECT npa, country, description as province
-        FROM special_area_codes
-        ORDER BY country, npa
-      `;
-      const result = await this.db.query(query);
-      if (!result.rows.length) {
-        logger.warn('[lerg.service.ts] No special area codes found in database');
-      }
-      return result.rows;
-    } catch (error) {
-      logger.error('[lerg.service.ts] Failed to fetch special area codes:', error);
-      throw error;
-    }
-  }
-
-  public async getPublicLergCodes(): Promise<Array<{ npanxx: string; npa: string; nxx: string; state: string }>> {
-    try {
-      const query = `
-        SELECT npanxx, npa, nxx, state
-        FROM lerg_codes
-        ORDER BY npanxx
-      `;
-      const result = await this.db.query(query);
-      return result.rows;
-    } catch (error) {
-      logger.error('Error fetching LERG codes:', error);
-      throw error;
-    }
-  }
-
   public async testConnection(): Promise<boolean> {
     try {
       await this.db.query('SELECT 1');
@@ -412,18 +367,16 @@ export class LERGService {
 
   public async getSpecialCodesByCountry(country: string): Promise<Array<{ province: string; npas: string[] }>> {
     try {
-      logger.info('[lerg.service.ts] Fetching special codes for country:', country);
       const query = `
         SELECT 
-          description as province,
+          province,
           array_agg(npa ORDER BY npa) as npas
         FROM special_area_codes
         WHERE country = $1
-        GROUP BY description
-        ORDER BY description
+        GROUP BY province
+        ORDER BY province
       `;
       const result = await this.db.query(query, [country]);
-      logger.info('[lerg.service.ts] Special codes by country result:', result.rows);
       return result.rows;
     } catch (error) {
       logger.error('[lerg.service.ts] Error fetching special codes by country:', error);

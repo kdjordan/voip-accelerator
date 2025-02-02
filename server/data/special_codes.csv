@@ -1,71 +1,79 @@
- NPA,Country,Province or Territory
-204,Canada,Manitoba
-226,Canada,Ontario
-236,Canada,British Columbia
-242,Bahamas,Bahamas
-246,Barbados,Barbados
-249,Canada,Ontario
-250,Canada,British Columbia
-264,Anguilla,Anguilla
-268,Antigua and Barbuda,Antigua and Barbuda
-284,British Virgin Islands,British Virgin Islands
-289,Canada,Ontario
-306,Canada,Saskatchewan
-340,United States,U.S. Virgin Islands
-343,Canada,Ontario
-345,Cayman Islands,Cayman Islands
-365,Canada,Ontario
-367,Canada,Quebec
-368,Canada,Alberta
+npa,country,province
+264,Anguilla,NULL
+268,Antigua and Barbuda,NULL
+242,Bahamas,NULL
+246,Barbados,NULL
+441,Bermuda,NULL
+284,British Virgin Islands,NULL
+345,Cayman Islands,NULL
+767,Dominica,NULL
+809,Dominican Republic,NULL
+829,Dominican Republic,NULL
+849,Dominican Republic,NULL
+473,Grenada,NULL
+658,Jamaica,NULL
+876,Jamaica,NULL
+664,Montserrat,NULL
+869,Saint Kitts and Nevis,NULL
+758,Saint Lucia,NULL
+784,Saint Vincent and the Grenadines,NULL
+721,Sint Maarten,NULL
+868,Trinidad and Tobago,NULL
+649,Turks and Caicos,NULL
+340,US Virgin Islands,NULL
+670,Northern Mariana Islands,NULL
+671,Guam,NULL
+684,American Samoa,NULL
+787,Puerto Rico,NULL
+939,Puerto Rico,NULL
 403,Canada,Alberta
-416,Canada,Ontario
-418,Canada,Quebec
+587,Canada,Alberta
+780,Canada,Alberta
+825,Canada,Alberta
+368,Canada,Alberta
+236,Canada,British Columbia
+250,Canada,British Columbia
+604,Canada,British Columbia
+672,Canada,British Columbia
+778,Canada,British Columbia
+204,Canada,Manitoba
 431,Canada,Manitoba
-437,Canada,Ontario
-438,Canada,Quebec
-441,Bermuda,Bermuda
-450,Canada,Quebec
-473,Grenada,Grenada
-474,Canada,Saskatchewan
+584,Canada,Manitoba
 506,Canada,New Brunswick
-514,Canada,Quebec
+709,Canada,Newfoundland and Labrador
+902,Canada,Nova Scotia
+782,Canada,Nova Scotia
+902,Canada,Prince Edward Island
+782,Canada,Prince Edward Island
+226,Canada,Ontario
+249,Canada,Ontario
+289,Canada,Ontario
+343,Canada,Ontario
+365,Canada,Ontario
+416,Canada,Ontario
+437,Canada,Ontario
 519,Canada,Ontario
 548,Canada,Ontario
+613,Canada,Ontario
+647,Canada,Ontario
+705,Canada,Ontario
+753,Canada,Ontario
+807,Canada,Ontario
+905,Canada,Ontario
+263,Canada,Quebec
+354,Canada,Quebec
+367,Canada,Quebec
+418,Canada,Quebec
+438,Canada,Quebec
+450,Canada,Quebec
+514,Canada,Quebec
 579,Canada,Quebec
 581,Canada,Quebec
-587,Canada,Alberta
-604,Canada,British Columbia
-613,Canada,Ontario
-639,Canada,Saskatchewan
-647,Canada,Ontario
-649,Turks and Caicos Islands,Turks and Caicos Islands
-658,Jamaica,Jamaica
-664,Montserrat,Montserrat
-670,United States,Northern Mariana Islands
-671,United States,Guam
-672,Canada,British Columbia
-684,United States,American Samoa
-705,Canada,Ontario
-709,Canada,Newfoundland and Labrador
-758,Saint Lucia,Saint Lucia
-767,Dominica,Dominica
-778,Canada,British Columbia
-780,Canada,Alberta
-782,Canada,Nova Scotia and Prince Edward Island
-784,Saint Vincent and the Grenadines,Saint Vincent and the Grenadines
-787,United States,Puerto Rico
-807,Canada,Ontario
-809,Dominican Republic,Dominican Republic
 819,Canada,Quebec
-825,Canada,Alberta
-829,Dominican Republic,Dominican Republic
-849,Dominican Republic,Dominican Republic
-867,Canada,Northwest Territories, Nunavut, Yukon
-868,Trinidad and Tobago,Trinidad and Tobago
-869,Saint Kitts and Nevis,Saint Kitts and Nevis
 873,Canada,Quebec
-876,Jamaica,Jamaica
-902,Canada,Nova Scotia and Prince Edward Island
-905,Canada,Ontario
-939,United States,Puerto Rico
-},
+306,Canada,Saskatchewan
+639,Canada,Saskatchewan
+474,Canada,Saskatchewan
+867,Canada,Northwest Territories
+867,Canada,None
+867,Canada,Yukon

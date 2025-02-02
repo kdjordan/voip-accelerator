@@ -56,8 +56,6 @@ export class LergService implements LERGService {
   async initializeData(retryCount = 0): Promise<void> {
     try {
       console.log('Starting LERG service initialization...');
-      // Get initial stats
-      await this.getStats();
 
       // Check if data exists in PostgreSQL
       const hasData = await lergApiService.testConnection().catch(error => {
@@ -78,11 +76,11 @@ export class LergService implements LERGService {
       console.log('Fetching LERG and special codes data...');
       // Fetch both LERG and special codes data
       const [lergData, specialCodes] = await Promise.all([
-        lergApiService.getAllLergCodes().catch(error => {
+        lergApiService.getLergData().catch(error => {
           console.error('Failed to fetch LERG codes:', error);
           return [];
         }),
-        lergApiService.getAllSpecialCodes().catch(error => {
+        lergApiService.getSpecialCodesData().catch(error => {
           console.error('Failed to fetch special codes:', error);
           return [];
         }),
@@ -92,7 +90,7 @@ export class LergService implements LERGService {
         console.log('No data received, attempting reload...');
         await lergApiService.reloadSpecialCodes();
         // Retry fetch after reload
-        const reloadedSpecialCodes = await lergApiService.getAllSpecialCodes();
+        const reloadedSpecialCodes = await lergApiService.getSpecialCodesData();
         if (reloadedSpecialCodes.length === 0) {
           throw new Error('Failed to fetch any data from server');
         }
@@ -104,7 +102,7 @@ export class LergService implements LERGService {
       }
 
       if (specialCodes.length > 0) {
-        const formattedSpecialCodes = specialCodes.map(code => ({
+        const formattedSpecialCodes = specialCodes.map((code: SpecialAreaCode) => ({
           npa: code.npa,
           country: code.country,
           description: code.province || '',
@@ -134,37 +132,20 @@ export class LergService implements LERGService {
     try {
       // Clear existing data first
       await this.db.table('special_area_codes').clear();
-      await this.db.table('special_area_codes').bulkPut(data);
+      await this.db.table('special_area_codes').bulkPut(
+        data.map((code: SpecialAreaCode) => ({
+          id: undefined,
+          npa: code.npa,
+          country: code.country,
+          description: code.province,
+          last_updated: new Date().toISOString(),
+        }))
+      );
       console.log('Successfully stored special codes');
       const count = await this.db.table('special_area_codes').count();
       console.log('Number of special codes stored:', count);
     } catch (error) {
       console.error('Failed to store special codes:', error);
-      throw error;
-    }
-  }
-
-  async getStats(): Promise<LERGStats> {
-    try {
-      const stats = await lergApiService.getStats();
-      this.store.$patch({
-        lerg: {
-          stats: {
-            totalRecords: stats.totalRecords,
-            lastUpdated: stats.lastUpdated,
-          },
-        },
-        specialCodes: {
-          stats: {
-            totalCodes: stats.specialCodes?.totalCodes || 0,
-            lastUpdated: stats.lastUpdated,
-            countryBreakdown: stats.specialCodes?.countryBreakdown || [],
-          },
-        },
-      });
-      return stats;
-    } catch (error) {
-      console.error('Failed to fetch LERG stats:', error);
       throw error;
     }
   }
@@ -188,15 +169,6 @@ export class LergService implements LERGService {
 
     this.worker.onmessage = (event: MessageEvent<LergWorkerResponse>) => {
       switch (event.data.type) {
-        case 'progress':
-          if (event.data.progress !== undefined) {
-            this.store.$patch({
-              lerg: {
-                progress: event.data.progress,
-              },
-            });
-          }
-          break;
         case 'complete':
           if (event.data.data) {
             this.handleProcessingSuccess(event.data.data);
@@ -222,7 +194,6 @@ export class LergService implements LERGService {
     this.store.$patch(state => {
       state.lerg = {
         isProcessing: false,
-        progress: 0,
         isLocallyStored: true,
         stats: {
           totalRecords: data.length,
@@ -239,7 +210,6 @@ export class LergService implements LERGService {
     const errorMessage = error instanceof Error ? error.message : error;
     this.store.$patch(state => {
       state.lerg.isProcessing = false;
-      state.lerg.progress = 0;
       state.error = errorMessage;
       state.lerg.stats = {
         totalRecords: 0,
@@ -271,8 +241,8 @@ export class LergService implements LERGService {
       console.log('Initializing special codes table with records:', data.length);
       await this.db.table('special_area_codes').clear();
       await this.db.table('special_area_codes').bulkPut(
-        data.map(code => ({
-          id: undefined, // Let Dexie auto-increment
+        data.map((code: { npa: string; country: string; province: string }) => ({
+          id: undefined,
           npa: code.npa,
           country: code.country,
           description: code.province,
@@ -288,16 +258,38 @@ export class LergService implements LERGService {
     }
   }
 
-  async initializeWithData(
-    lergData: LERGRecord[],
-    specialCodes: Array<{ npa: string; country: string; province: string }>
-  ): Promise<void> {
+  async initializeWithData(lergData: LERGRecord[], specialCodes: SpecialAreaCode[]): Promise<void> {
     try {
-      console.log('Starting data initialization...');
-      await Promise.all([this.initializeLergTable(lergData), this.initializeSpecialCodesTable(specialCodes)]);
+      console.log('Initializing LERG table with records:', lergData?.length);
+      await this.db.table('lerg').clear();
+      await this.db.table('lerg').bulkPut(lergData);
+
+      console.log('Initializing special codes table with records:', specialCodes?.length);
+      await this.db.table('special_area_codes').clear();
+      await this.db.table('special_area_codes').bulkPut(specialCodes);
+
       console.log('Data initialization completed successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to initialize data:', error);
+      throw error;
+    }
+  }
+
+  async getLergData(): Promise<LERGRecord[]> {
+    return await this.db.table('lerg').toArray();
+  }
+
+  async getSpecialCodesData(): Promise<SpecialAreaCode[]> {
+    return await this.db.table('special_area_codes').toArray();
+  }
+
+  async clearSpecialCodesData(): Promise<void> {
+    try {
+      console.log('Clearing special codes from IndexDB...');
+      await this.db.table('special_area_codes').clear();
+      console.log('Special codes cleared from IndexDB');
+    } catch (error) {
+      console.error('Failed to clear special codes from IndexDB:', error);
       throw error;
     }
   }
