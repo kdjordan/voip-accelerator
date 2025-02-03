@@ -244,23 +244,6 @@ export class LergService implements LERGService {
     }
   }
 
-  // async initializeWithData(lergData: LERGRecord[], specialCodes: SpecialAreaCode[]): Promise<void> {
-  //   try {
-  //     console.log('Initializing LERG table with records:', lergData?.length);
-  //     await this.db.table('lerg').clear();
-  //     await this.db.table('lerg').bulkPut(lergData);
-
-  //     console.log('Initializing special codes table with records:', specialCodes?.length);
-  //     await this.db.table('special_area_codes').clear();
-  //     await this.db.table('special_area_codes').bulkPut(specialCodes);
-
-  //     console.log('Data initialization completed successfully');
-  //   } catch (error: unknown) {
-  //     console.error('Failed to initialize data:', error);
-  //     throw error;
-  //   }
-  // }
-
   async getLergData(): Promise<LERGRecord[]> {
     return await this.db.table('lerg').toArray();
   }

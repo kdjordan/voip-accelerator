@@ -286,7 +286,7 @@ export class LERGService {
         const insertQuery = `
           INSERT INTO special_area_codes (npa, country, province, last_updated)
           VALUES ${values}
-          ON CONFLICT (npa) DO UPDATE SET
+          ON CONFLICT ON CONSTRAINT special_area_codes_pkey DO UPDATE SET
             country = EXCLUDED.country,
             province = EXCLUDED.province,
             last_updated = EXCLUDED.last_updated;

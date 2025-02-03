@@ -212,42 +212,28 @@
 
       <!-- Special Codes Upload -->
       <div class="bg-gray-800 rounded-lg p-6">
-        <h3 class="text-lg font-medium mb-4">Upload Special Codes</h3>
-
+        <h2 class="text-xl font-semibold mb-4">Upload Special Codes</h2>
         <div
           @dragover.prevent
           @drop.prevent="handleSpecialCodesDrop"
-          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-gray-500 transition-colors"
+          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center"
           :class="{ 'border-green-500': isDragging }"
         >
-          <div class="space-y-2">
-            <svg
-              class="mx-auto h-12 w-12 text-gray-400"
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 48 48"
-            >
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <div class="text-sm text-gray-400">
-              <label class="relative cursor-pointer rounded-md font-medium text-indigo-400 hover:text-indigo-300">
-                <span>Upload a file</span>
-                <input
-                  type="file"
-                  class="sr-only"
-                  accept=".csv"
-                  @change="handleSpecialCodesFileSelect"
-                />
-              </label>
-              <p class="pl-1">or drag and drop</p>
-            </div>
-            <p class="text-xs text-gray-400">CSV files only</p>
-          </div>
+          <input
+            type="file"
+            ref="specialCodesFileInput"
+            class="hidden"
+            accept=".csv"
+            @change="handleSpecialCodesFileSelect"
+          />
+          <button
+            @click="$refs.specialCodesFileInput.click()"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Choose File
+          </button>
+          <p class="text-sm text-gray-400 mt-2">or drag and drop your special codes file here</p>
+          <p class="text-xs text-gray-500 mt-1">Supports CSV files</p>
         </div>
 
         <!-- Upload Status -->
@@ -298,26 +284,21 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted, computed } from 'vue';
-  import type { LERGStats } from '@/types/lerg-types';
+  import { ref, computed } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
 
   const store = useLergStore();
   const lergStats = computed(() => store.lerg.stats);
-  const specialCodeStats = computed(() => store.specialCodes.stats);
   const isLergProcessing = computed(() => store.lerg.isProcessing);
-  const isSpecialCodesProcessing = computed(() => store.specialCodes.isProcessing);
   const expandedCountries = ref<string[]>([]);
-  const countryDetails = ref<Record<string, Array<{ province: string; npas: string[] }>>>({});
 
   const isLergLocallyStored = computed(() => {
     return store.lerg.isLocallyStored;
   });
   const isSpecialCodesLocallyStored = computed(() => store.specialCodes.isLocallyStored);
 
-  const countryBreakdown = computed(() => store.getCountryBreakdown);
 
   const isDragging = ref(false);
   const uploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -338,18 +319,7 @@
       minute: '2-digit',
     });
   }
-
-  function getCountryName(code: string): string {
-    const countries: Record<string, string> = {
-      Canada: 'Canada',
-      'United States': 'United States',
-      'Dominican Republic': 'Dominican Republic',
-      Jamaica: 'Jamaica',
-      // Add more as needed
-    };
-    return countries[code] || code;
-  }
-
+  
   async function handleLergFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -393,9 +363,6 @@
 
       await lergApiService.uploadSpecialCodesFile(formData);
       uploadStatus.value = { type: 'success', message: 'Upload successful' };
-
-      // Refresh data
-      await lergApiService.initialize();
     } catch (error) {
       console.error('Upload failed:', error);
       uploadStatus.value = {
@@ -413,7 +380,6 @@
     try {
       await fetch('/api/admin/lerg/clear/lerg', { method: 'DELETE' });
       console.log('LERG codes cleared successfully');
-      // await fetchStats();
     } catch (error) {
       console.error('Failed to clear LERG data:', error);
     }
@@ -460,18 +426,6 @@
     }
   }
 
-  async function toggleCountryDetails(countryCode: string) {
-    const index = expandedCountries.value.indexOf(countryCode);
-
-    if (index === -1) {
-      // Expand
-      expandedCountries.value.push(countryCode);
-    } else {
-      // Collapse
-      expandedCountries.value.splice(index, 1);
-    }
-  }
-
   function toggleExpand(countryName: string) {
     const index = expandedCountries.value.indexOf(countryName);
     if (index === -1) {
@@ -480,8 +434,6 @@
       expandedCountries.value.splice(index, 1);
     }
   }
-
-  // onMounted(fetchStats);
 </script>
 
 <style>
