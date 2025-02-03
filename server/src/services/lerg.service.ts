@@ -188,7 +188,7 @@ export class LERGService {
             SELECT npanxx, npa, nxx, state 
             FROM lerg_codes 
             ORDER BY npanxx
-            LIMIT 1000
+            LIMIT 100000
           ) l
         ),
         'stats', json_build_object(
@@ -285,7 +285,11 @@ export class LERGService {
 
         const insertQuery = `
           INSERT INTO special_area_codes (npa, country, province, last_updated)
-          VALUES ${values};
+          VALUES ${values}
+          ON CONFLICT (npa) DO UPDATE SET
+            country = EXCLUDED.country,
+            province = EXCLUDED.province,
+            last_updated = EXCLUDED.last_updated;
         `;
 
         await this.db.query(insertQuery);
