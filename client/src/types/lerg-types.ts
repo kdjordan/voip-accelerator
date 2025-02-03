@@ -82,6 +82,23 @@ export interface LergState {
 export interface SpecialAreaCode {
   npa: string;
   country: string;
-  province: string; 
+  province: string;
   last_updated: string; // optional since server doesn't always send this
+}
+
+export interface LergDataResponse {
+  data: LERGRecord[];
+  stats: {
+    totalRecords: number;
+    lastUpdated: string | null;
+  };
+}
+
+export interface SpecialCodesDataResponse {
+  data: SpecialAreaCode[];
+  stats: {
+    totalCodes: number;
+    lastUpdated: string | null;
+    countryBreakdown: CountryBreakdown[];
+  };
 }

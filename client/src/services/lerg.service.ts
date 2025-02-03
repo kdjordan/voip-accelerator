@@ -218,52 +218,21 @@ export class LergService implements LERGService {
     });
   }
 
-  private async initializeLergTable(data: LERGRecord[]): Promise<void> {
-    try {
-      console.log('Initializing LERG table with records:', data.length);
-      await this.db.table('lerg').clear(); // Clear existing data
-      await this.db.table('lerg').bulkPut(data);
-
-      // Verify data is stored
-      const count = await this.db.table('lerg').count();
-      console.log('LERG table initialized with records:', count);
-      this.store.setLergLocallyStored(count > 0);
-    } catch (error) {
-      console.error('Failed to initialize LERG table:', error);
-      throw error;
-    }
-  }
-
-  private async initializeSpecialCodesTable(
-    data: Array<{ npa: string; country: string; province: string }>
-  ): Promise<void> {
-    try {
-      console.log('Initializing special codes table with records:', data.length);
-      await this.db.table('special_area_codes').clear();
-      await this.db.table('special_area_codes').bulkPut(
-        data.map((code: { npa: string; country: string; province: string }) => ({
-          id: undefined,
-          npa: code.npa,
-          country: code.country,
-          description: code.province,
-          last_updated: new Date().toISOString(),
-        }))
-      );
-
-      const count = await this.db.table('special_area_codes').count();
-      console.log('Special codes table initialized with records:', count);
-    } catch (error) {
-      console.error('Failed to initialize special codes table:', error);
-      throw error;
-    }
-  }
-
-  async initializeWithData(lergData: LERGRecord[], specialCodes: SpecialAreaCode[]): Promise<void> {
+  async initializeLergTable(lergData: LERGRecord[]): Promise<void> {
     try {
       console.log('Initializing LERG table with records:', lergData?.length);
       await this.db.table('lerg').clear();
       await this.db.table('lerg').bulkPut(lergData);
 
+      console.log('Data initialization completed successfully');
+    } catch (error: unknown) {
+      console.error('Failed to initialize data:', error);
+      throw error;
+    }
+  }
+
+  async initializeSpecialCodesTable(specialCodes: LERGRecord[]): Promise<void> {
+    try {
       console.log('Initializing special codes table with records:', specialCodes?.length);
       await this.db.table('special_area_codes').clear();
       await this.db.table('special_area_codes').bulkPut(specialCodes);
@@ -274,6 +243,23 @@ export class LergService implements LERGService {
       throw error;
     }
   }
+
+  // async initializeWithData(lergData: LERGRecord[], specialCodes: SpecialAreaCode[]): Promise<void> {
+  //   try {
+  //     console.log('Initializing LERG table with records:', lergData?.length);
+  //     await this.db.table('lerg').clear();
+  //     await this.db.table('lerg').bulkPut(lergData);
+
+  //     console.log('Initializing special codes table with records:', specialCodes?.length);
+  //     await this.db.table('special_area_codes').clear();
+  //     await this.db.table('special_area_codes').bulkPut(specialCodes);
+
+  //     console.log('Data initialization completed successfully');
+  //   } catch (error: unknown) {
+  //     console.error('Failed to initialize data:', error);
+  //     throw error;
+  //   }
+  // }
 
   async getLergData(): Promise<LERGRecord[]> {
     return await this.db.table('lerg').toArray();

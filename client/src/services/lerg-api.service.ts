@@ -17,42 +17,18 @@ export const lergApiService = {
 
     try {
       store.lerg.isProcessing = true;
+      store.specialCodes.isProcessing = true;
 
       // 1. Test database connection
       const hasServerData = await this.testConnection();
       console.log('Server data status:', hasServerData);
 
-      // 2. Fetch both LERG and special codes data with their stats
-      const [lergData, specialCodesData] = await Promise.all([
-        this.getLergData().catch(error => {
-          console.error('Failed to fetch LERG codes:', error);
-          return { data: [], stats: { totalRecords: 0, lastUpdated: null } };
-        }),
-        this.getSpecialCodesData().catch(error => {
-          console.error('Failed to fetch special codes:', error);
-          return {
-            data: [],
-            stats: {
-              totalCodes: 0,
-              lastUpdated: null,
-              countryBreakdown: [],
-            },
-          };
-        }),
-      ]);
+      // 2. Fetch special codes data (smaller dataset)
+      const specialCodesData = await this.getSpecialCodesData();
+      await service.initializeSpecialCodesTable(specialCodesData.data || []);
 
-      // 3. Initialize IndexDB with whatever data we have
-      await service.initializeWithData(lergData.data || [], specialCodesData.data || []);
-
-      // 4. Update store with data and stats
+      // Update store with special codes immediately
       store.$patch({
-        lerg: {
-          stats: {
-            totalRecords: lergData.stats?.totalRecords || 0,
-            lastUpdated: lergData.stats?.lastUpdated || null,
-          },
-          isLocallyStored: lergData.data?.length > 0,
-        },
         specialCodes: {
           stats: {
             totalCodes: specialCodesData.stats?.totalCodes || 0,
@@ -61,6 +37,21 @@ export const lergApiService = {
           },
           isLocallyStored: specialCodesData.data?.length > 0,
           data: specialCodesData.data || [],
+        },
+      });
+
+      // 3. Initialize IndexDB with whatever data we have
+      const lergData = await this.getLergData();
+      await service.initializeLergTable(lergData.data || []);
+
+      // 4. Update store with LERG data
+      store.$patch({
+        lerg: {
+          stats: {
+            totalRecords: lergData.stats?.totalRecords || 0,
+            lastUpdated: lergData.stats?.lastUpdated || null,
+          },
+          isLocallyStored: lergData.data?.length > 0,
         },
       });
     } catch (error) {
