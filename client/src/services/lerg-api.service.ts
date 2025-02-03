@@ -188,6 +188,25 @@ export const lergApiService = {
     if (!response.ok) {
       throw new Error('Failed to upload special codes file');
     }
+
+    // Only refresh special codes data
+    const specialCodesData = await this.getSpecialCodesData();
+    const service = new LergService();
+    await service.initializeSpecialCodesTable(specialCodesData.data || []);
+
+    // Update store with just special codes
+    const store = useLergStore();
+    store.$patch({
+      specialCodes: {
+        stats: {
+          totalCodes: specialCodesData.stats?.totalCodes || 0,
+          countryBreakdown: specialCodesData.stats?.countryBreakdown || [],
+          lastUpdated: specialCodesData.stats?.lastUpdated || null,
+        },
+        isLocallyStored: specialCodesData.data?.length > 0,
+        data: specialCodesData.data || [],
+      },
+    });
   },
 
   async clearSpecialCodesData(): Promise<void> {
