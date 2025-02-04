@@ -262,4 +262,28 @@ export class LergService implements LERGService {
       throw error;
     }
   }
+
+  async clearLergData(): Promise<void> {
+    try {
+      // Clear IndexDB
+      await this.db.table('lerg').clear();
+      console.log('IndexDB LERG data cleared');
+
+      // Clear store
+      const store = useLergStore();
+      store.$patch({
+        lerg: {
+          isProcessing: false,
+          isLocallyStored: false,
+          stats: {
+            totalRecords: 0,
+            lastUpdated: null,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Failed to clear LERG data:', error);
+      throw error;
+    }
+  }
 }

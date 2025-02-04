@@ -137,6 +137,27 @@ export const lergApiService = {
       throw new Error(error.message || 'Failed to upload LERG file');
     }
 
+    // After successful upload, refresh data
+    const lergData = await this.getLergData();
+    const service = new LergService();
+
+    // Clear and reload IndexDB
+    await service.clearLergData();
+    await service.initializeLergTable(lergData.data || []);
+
+    // Update store with new stats
+    const store = useLergStore();
+    store.$patch({
+      lerg: {
+        isProcessing: false,
+        isLocallyStored: true,
+        stats: {
+          totalRecords: lergData.stats?.totalRecords || 0,
+          lastUpdated: lergData.stats?.lastUpdated || null,
+        },
+      },
+    });
+
     return response.json();
   },
 
