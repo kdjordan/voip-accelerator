@@ -128,7 +128,8 @@
                 <div
                   v-for="country in sortedCountries.filter(c => c.npas.length > 1)"
                   :key="country.name"
-                  class="bg-gray-900/50 p-4 rounded-lg w-full"
+                  @click="toggleExpand(country.name)"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
                 >
                   <div class="flex justify-between items-center">
                     <!-- Country Name -->
@@ -136,16 +137,13 @@
 
                     <!-- NPAs -->
                     <div class="flex items-center space-x-4">
-                      <button
-                        @click="toggleExpand(country.name)"
-                        class="flex items-center space-x-2 px-2 py-1 rounded"
-                      >
+                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
                         <span class="text-sm text-gray-400">{{ country.npas.length }} NPAs</span>
                         <ChevronDownIcon
                           :class="{ 'transform rotate-180': expandedCountries.includes(country.name) }"
                           class="w-4 h-4 transition-transform"
                         />
-                      </button>
+                      </div>
                     </div>
                   </div>
 
@@ -172,7 +170,7 @@
                 <div
                   v-for="country in sortedCountries.filter(c => c.npas.length === 1)"
                   :key="country.name"
-                  class="bg-gray-900/50 p-4 rounded-lg hover:bg-gray-800/50 transition-colors"
+                  class="bg-gray-900/50 p-4 rounded-lg"
                 >
                   <div class="flex justify-between items-center">
                     <span class="font-medium">{{ country.name }}</span>
