@@ -26,41 +26,107 @@ self.onmessage = async (event: MessageEvent<WorkerMessageType>) => {
   }
 };
 
+interface ParsedRow {
+  [key: number]: string;
+}
+
+const REQUIRED_LENGTH = 14; // Number of columns in LERG file
+const BATCH_SIZE = 1000;
+
 async function processFile(file: File, batchSize: number) {
   const text = await file.text();
-  const { data } = Papa.parse(text, { header: true });
-  const records: LERGRecord[] = [];
-  const total = data.length;
-  let processed = 0;
+  let totalRows = 0;
+  let validRows = 0;
+  let duplicates = 0;
+  const validRecords: LERGRecord[] = [];
+  const seen = new Set<string>();
 
-  for (let i = 0; i < total; i += batchSize) {
-    const batch = data.slice(i, i + batchSize);
-    const transformedBatch = batch.map((row: any) => ({
-      npanxx: `${row.npa}${row.nxx}`,
-      state: row.state,
-      npa: row.npa,
-      nxx: row.nxx,
-    }));
-    records.push(...transformedBatch);
-    processed += batch.length;
+  // Configure Papa Parse
+  const parseConfig = {
+    delimiter: ',',
+    skipEmptyLines: true,
+    header: false,
+    step: (results: Papa.ParseStepResult<ParsedRow>, parser: Papa.Parser) => {
+      totalRows++;
+      const row = results.data;
 
-    // Report progress
-    self.postMessage({
-      type: 'progress',
-      progress: Math.round((processed / total) * 100),
-      processed,
-      total,
-    } as LergWorkerResponse);
-  }
+      if (totalRows === 1) {
+        console.log('🔄 Worker processing first row:', row);
+      }
 
-  // Send completed data
-  self.postMessage({
-    type: 'complete',
-    data: records,
-    progress: 100,
-    processed: total,
-    total,
-  } as LergWorkerResponse);
+      // Validate row structure
+      if (Object.keys(row).length !== REQUIRED_LENGTH) {
+        console.warn('❌ Invalid row length:', { expected: REQUIRED_LENGTH, got: Object.keys(row).length });
+        return;
+      }
+
+      // Extract and validate fields
+      const npa = row[0]?.trim();
+      const nxx = row[1]?.trim();
+      const state = row[3]?.trim();
+
+      if (!isValidNPA(npa) || !isValidNXX(nxx) || !isValidState(state)) {
+        console.warn('Invalid field data:', { npa, nxx, state });
+        return;
+      }
+
+      const npanxx = `${npa}${nxx}`;
+      if (seen.has(npanxx)) {
+        duplicates++;
+        return;
+      }
+
+      seen.add(npanxx);
+      validRows++;
+      validRecords.push({
+        npa,
+        nxx,
+        npanxx,
+        state,
+      });
+
+      // Report progress every BATCH_SIZE rows
+      if (validRows % BATCH_SIZE === 0) {
+        self.postMessage({
+          type: 'progress',
+          progress: Math.round((totalRows / file.size) * 100),
+          processed: validRows,
+          total: totalRows,
+          duplicates,
+        } as LergWorkerResponse);
+      }
+    },
+    complete: () => {
+      self.postMessage({
+        type: 'complete',
+        progress: 100,
+        processed: validRows,
+        total: totalRows,
+        duplicates,
+        data: validRecords,
+      } as LergWorkerResponse);
+    },
+    error: (error: Error) => {
+      self.postMessage({
+        type: 'error',
+        error: error.message,
+      } as LergWorkerResponse);
+    },
+  };
+
+  Papa.parse(text, parseConfig);
+}
+
+function isValidNPA(npa: string): boolean {
+  return /^\d{3}$/.test(npa);
+}
+
+function isValidNXX(nxx: string): boolean {
+  return /^\d{3}$/.test(nxx);
+}
+
+function isValidState(state: string): boolean {
+  return /^[A-Z]{2}$/.test(state);
 }
 
 export {}; // Make this a module

@@ -36,9 +36,12 @@ export interface LERGUploadResponse {
 
 // Worker types
 export interface LergWorkerResponse {
-  type: 'complete' | 'error';
+  type: 'complete' | 'error' | 'progress';
   error?: string;
   data?: LERGRecord[];
+  progress?: number;
+  processed?: number;
+  total?: number;
 }
 
 export interface LergLoadingStatus {

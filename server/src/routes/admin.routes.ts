@@ -30,6 +30,7 @@ router.get('/special-codes/:country', async (req: Request, res: Response) => {
 
 // POST /admin/lerg/upload
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+  console.log('got hit /upload', req.file);
   try {
     if (!req.file) {
       logger.error('No file uploaded', new Error('No file provided'));
