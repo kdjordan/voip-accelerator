@@ -159,7 +159,7 @@ export class LERGService {
       INSERT INTO lerg_codes
       (npa, nxx, state, last_updated)
       VALUES ${values}
-      ON CONFLICT ON CONSTRAINT lerg_codes_pkey DO NOTHING
+      ON CONFLICT (npanxx) DO NOTHING
       RETURNING npanxx;
     `;
 
@@ -241,11 +241,11 @@ export class LERGService {
   }
 
   async clearLergData(): Promise<void> {
+    const query = 'TRUNCATE TABLE lerg_codes';
     try {
-      await this.db.query('TRUNCATE TABLE lerg_codes;');
-      logger.info('LERG data cleared successfully');
+      await this.db.query(query);
     } catch (error) {
-      logger.error('Error clearing LERG data:', error);
+      logger.error('Error clearing LERG codes data:', error);
       throw error;
     }
   }
