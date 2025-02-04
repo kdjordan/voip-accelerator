@@ -1,18 +1,66 @@
 import { logger } from '@/config/logger';
 import type { LERGRecord } from '@/types/lerg.types';
+import { Readable } from 'stream';
+import { createInterface } from 'readline';
+import { EventEmitter } from 'events';
 
-export class LERGFileProcessor {
-  // Process the entire file
+export class LERGFileProcessor extends EventEmitter {
+  private processedLines = 0;
+  private totalLines = 0;
+  private batchSize = 1000;
+
+  constructor() {
+    super();
+  }
+
   public async processFile(fileContent: Buffer | string): Promise<LERGRecord[]> {
     try {
-      const lines = fileContent.toString().split('\n');
       const records: LERGRecord[] = [];
+      const content = fileContent.toString();
+      const stream = Readable.from(content);
+      const rl = createInterface({
+        input: stream,
+        crlfDelay: Infinity,
+      });
 
-      for (const line of lines) {
+      // First pass to count lines
+      for await (const _ of rl) {
+        this.totalLines++;
+      }
+
+      // Reset for processing
+      const rl2 = createInterface({
+        input: Readable.from(content),
+        crlfDelay: Infinity,
+      });
+
+      let batch: LERGRecord[] = [];
+      for await (const line of rl2) {
+        this.processedLines++;
         const record = this.parseLergLine(line);
         if (record) {
-          records.push(record);
+          batch.push(record);
+
+          if (batch.length >= this.batchSize) {
+            records.push(...batch);
+            this.emit('progress', {
+              processed: this.processedLines,
+              total: this.totalLines,
+              records: batch.length,
+            });
+            batch = [];
+          }
         }
+      }
+
+      // Push final batch
+      if (batch.length > 0) {
+        records.push(...batch);
+        this.emit('progress', {
+          processed: this.processedLines,
+          total: this.totalLines,
+          records: batch.length,
+        });
       }
 
       return records;

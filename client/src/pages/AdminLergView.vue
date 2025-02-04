@@ -191,7 +191,16 @@
       <!-- LERG Upload -->
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Upload LERG File</h2>
-        <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+        <div
+          @dragover.prevent
+          @drop.prevent="handleLergFileDrop"
+          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center relative"
+          :class="[
+            isDragging ? 'border-green-500' : '',
+            lergUploadStatus?.type === 'error' ? 'border-red-500' : '',
+            isLergUploading ? 'border-blue-500' : '',
+          ]"
+        >
           <input
             type="file"
             ref="lergFileInput"
@@ -201,12 +210,23 @@
           />
           <button
             @click="$refs.lergFileInput.click()"
+            :disabled="isLergUploading"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            :class="{ 'opacity-50 cursor-not-allowed': isLergUploading }"
           >
             Choose File
           </button>
           <p class="text-sm text-gray-400 mt-2">or drag and drop your LERG file here</p>
-          <p class="text-xs text-gray-500 mt-1">Supports TXT files</p>
+          <p class="text-xs text-gray-500 mt-1">Supports TXT files (max 500MB)</p>
+        </div>
+        <!-- Upload Status -->
+        <div
+          v-if="lergUploadStatus"
+          class="mt-4 text-center"
+        >
+          <p :class="['text-sm', lergUploadStatus.type === 'error' ? 'text-red-400' : 'text-green-400']">
+            {{ lergUploadStatus.message }}
+          </p>
         </div>
       </div>
 
@@ -238,11 +258,11 @@
 
         <!-- Upload Status -->
         <div
-          v-if="uploadStatus"
+          v-if="specialCodesUploadStatus"
           class="mt-4"
         >
-          <p :class="['text-sm', uploadStatus.type === 'error' ? 'text-red-400' : 'text-green-400']">
-            {{ uploadStatus.message }}
+          <p :class="['text-sm', specialCodesUploadStatus.type === 'error' ? 'text-red-400' : 'text-green-400']">
+            {{ specialCodesUploadStatus.message }}
           </p>
         </div>
       </div>
@@ -284,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, onUnmounted } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
@@ -299,11 +319,13 @@
   });
   const isSpecialCodesLocallyStored = computed(() => store.specialCodes.isLocallyStored);
 
-
   const isDragging = ref(false);
-  const uploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+  const specialCodesUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+  const lergUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const sortedCountries = computed(() => store.sortedCountriesWithNPAs);
+
+  const isLergUploading = ref(false);
 
   function formatNumber(num: number): string {
     return new Intl.NumberFormat().format(num);
@@ -319,19 +341,60 @@
       minute: '2-digit',
     });
   }
-  
+
   async function handleLergFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+
+    if (
+      !confirm(
+        'Uploading a new LERG file will delete all existing LERG data. This action cannot be undone. Are you sure you want to continue?'
+      )
+    ) {
+      // Clear the file input
+      if (event.target) {
+        (event.target as HTMLInputElement).value = '';
+      }
+      return;
+    }
+
+    console.log('📁 File received in AdminLergView:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
+
+    // Validate file type
+    if (!file.name.endsWith('.txt') || file.type !== 'text/plain') {
+      lergUploadStatus.value = {
+        type: 'error',
+        message: 'Error uploading - please reload page and try again',
+      };
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
+      isLergUploading.value = true;
+      lergUploadStatus.value = { type: 'success', message: 'Uploading LERG file...' };
+
       await lergApiService.uploadLergFile(formData);
-      // await fetchStats();
+      lergUploadStatus.value = { type: 'success', message: 'LERG file uploaded successfully' };
+      setTimeout(() => {
+        if (lergUploadStatus.value?.type === 'success') {
+          lergUploadStatus.value = null;
+        }
+      }, 5000);
     } catch (error) {
       console.error('Failed to upload LERG file:', error);
+      lergUploadStatus.value = {
+        type: 'error',
+        message: 'Error uploading - please reload page and try again',
+      };
+    } finally {
+      isLergUploading.value = false;
     }
   }
 
@@ -352,20 +415,20 @@
 
   async function uploadSpecialCodesFile(file: File) {
     if (!file.name.endsWith('.csv')) {
-      uploadStatus.value = { type: 'error', message: 'Please upload a CSV file' };
+      specialCodesUploadStatus.value = { type: 'error', message: 'Please upload a CSV file' };
       return;
     }
 
     try {
-      uploadStatus.value = { type: 'success', message: 'Uploading...' };
+      specialCodesUploadStatus.value = { type: 'success', message: 'Uploading...' };
       const formData = new FormData();
       formData.append('file', file);
 
       await lergApiService.uploadSpecialCodesFile(formData);
-      uploadStatus.value = { type: 'success', message: 'Upload successful' };
+      specialCodesUploadStatus.value = { type: 'success', message: 'Upload successful' };
     } catch (error) {
       console.error('Upload failed:', error);
-      uploadStatus.value = {
+      specialCodesUploadStatus.value = {
         type: 'error',
         message: error instanceof Error ? error.message : 'Upload failed',
       };
@@ -432,6 +495,15 @@
       expandedCountries.value.push(countryName);
     } else {
       expandedCountries.value.splice(index, 1);
+    }
+  }
+
+  async function handleLergFileDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging.value = false;
+    const file = event.dataTransfer?.files[0];
+    if (file) {
+      await handleLergFileChange({ target: { files: [file] } } as unknown as Event);
     }
   }
 </script>

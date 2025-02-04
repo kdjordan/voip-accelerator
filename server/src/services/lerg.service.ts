@@ -1,12 +1,11 @@
 import { DatabaseService } from '@/services/database.service';
-import type { LERGStats, LERGRecord, LERGUploadResponse, SpecialCodesStats } from '@/types/lerg.types';
+import type { LERGRecord, LERGUploadResponse } from '@/types/lerg.types';
 import * as fs from 'fs';
 import * as readline from 'readline';
 import path from 'path';
 import { logger } from '@/config/logger';
 import { LERGFileProcessor } from './lerg-file.processor';
 import { SpecialCodesFileProcessor } from './special-codes-file.processor';
-import type { SpecialCodeRecord } from '@/types/lerg.types';
 
 export class LERGService {
   private db: DatabaseService;
@@ -23,6 +22,10 @@ export class LERGService {
 
   async processLergFile(fileContent: Buffer | string): Promise<LERGUploadResponse> {
     try {
+      // First clear all existing LERG data
+      await this.clearLergData();
+      logger.info('Cleared existing LERG data');
+
       const records = await this.fileProcessor.processFile(fileContent);
       let processedRecords = 0;
       let totalRecords = records.length;
@@ -146,25 +149,19 @@ export class LERGService {
   }
 
   private async insertBatch(records: LERGRecord[]) {
-    logger.debug(
-      'Attempting to insert records:',
-      records.map(r => ({
-        npanxx: r.npanxx,
-        state: r.state,
-      }))
-    );
+    logger.debug('Attempting to insert records:', records);
 
     const values = records.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(',');
 
+    const params = records.flatMap(record => [record.npa, record.nxx, record.state, record.last_updated]);
+
     const query = `
-      INSERT INTO lerg_codes 
+      INSERT INTO lerg_codes
       (npa, nxx, state, last_updated)
       VALUES ${values}
-      ON CONFLICT (npanxx) DO NOTHING
+      ON CONFLICT ON CONSTRAINT lerg_codes_pkey DO NOTHING
       RETURNING npanxx;
     `;
-
-    const params = records.flatMap(record => [record.npa, record.nxx, record.state, record.last_updated]);
 
     try {
       const result = await this.db.query(query, params);
@@ -244,11 +241,11 @@ export class LERGService {
   }
 
   async clearLergData(): Promise<void> {
-    const query = 'TRUNCATE TABLE lerg_codes';
     try {
-      await this.db.query(query);
+      await this.db.query('TRUNCATE TABLE lerg_codes;');
+      logger.info('LERG data cleared successfully');
     } catch (error) {
-      logger.error('Error clearing LERG codes data:', error);
+      logger.error('Error clearing LERG data:', error);
       throw error;
     }
   }

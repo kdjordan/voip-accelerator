@@ -1,6 +1,6 @@
 import { LergService } from '@/services/lerg.service';
 import { useLergStore } from '@/stores/lerg-store';
-
+import { LERGRecord } from '@/types/lerg-types';
 const LERG_URL = '/api/lerg';
 const ADMIN_URL = '/api/admin/lerg';
 
@@ -126,16 +126,15 @@ export const lergApiService = {
   },
 
   // Admin endpoints
-  async uploadLERGFile(formData: FormData) {
+  async uploadLergFile(formData: FormData, onProgress?: (progress: number) => void): Promise<void> {
     const response = await fetch(`${ADMIN_URL}/upload`, {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Upload error:', error);
-      throw new Error('Upload failed');
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload LERG file');
     }
 
     return response.json();
@@ -167,17 +166,6 @@ export const lergApiService = {
 
     const result = await response.json();
     console.log('Special codes reload result:', result);
-  },
-
-  async uploadLergFile(formData: FormData): Promise<void> {
-    const response = await fetch(`${ADMIN_URL}/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to upload LERG file');
-    }
   },
 
   async uploadSpecialCodesFile(formData: FormData): Promise<void> {
@@ -234,5 +222,20 @@ export const lergApiService = {
         },
       },
     });
+  },
+
+  async uploadLergRecords(records: LERGRecord[]): Promise<void> {
+    const response = await fetch('/api/admin/lerg/records', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ records }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload LERG records');
+    }
   },
 };

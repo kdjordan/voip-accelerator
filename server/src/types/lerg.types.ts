@@ -9,7 +9,7 @@ export interface LERGRecord {
   nxx: string;
   npanxx: string;
   state: string;
-  last_updated: Date;
+  last_updated?: Date;
 }
 
 export interface LERGUploadResponse {
