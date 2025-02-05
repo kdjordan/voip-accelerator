@@ -14,8 +14,6 @@ export interface CountryBreakdown {
 
 // Service interfaces
 export interface LERGService {
-  initialize(): Promise<void>;
-  initializeLergData(): Promise<void>;
   uploadLergFile(file: File): Promise<void>;
 }
 
@@ -35,6 +33,21 @@ export interface LERGUploadResponse {
 }
 
 // Worker types
+export interface StateWorkerMessage {
+  type: 'process';
+  data: LERGRecord[];
+  batchSize?: number;
+}
+
+export interface StateWorkerResponse {
+  type: 'complete' | 'error' | 'progress';
+  error?: string;
+  data?: StateNPAMapping;
+  progress?: number;
+  processed?: number;
+  total?: number;
+}
+
 export interface LergWorkerResponse {
   type: 'complete' | 'error' | 'progress';
   error?: string;
@@ -60,6 +73,10 @@ export const LERGColumnRole = {
 export type LERGColumnRoleType = (typeof LERGColumnRole)[keyof typeof LERGColumnRole];
 
 // Store state types
+export interface StateNPAMapping {
+  [stateCode: string]: string[]; // Maps state codes to array of NPAs
+}
+
 export interface LergState {
   error: string | null;
   lerg: {
@@ -68,6 +85,7 @@ export interface LergState {
     stats: {
       totalRecords: number;
       lastUpdated: string | null;
+      stateNPAs: StateNPAMapping;
     };
   };
   specialCodes: {
@@ -86,7 +104,7 @@ export interface SpecialAreaCode {
   npa: string;
   country: string;
   province: string;
-  last_updated: string; // optional since server doesn't always send this
+  last_updated: string;
 }
 
 export interface LergDataResponse {
@@ -105,3 +123,14 @@ export interface SpecialCodesDataResponse {
     countryBreakdown: CountryBreakdown[];
   };
 }
+
+export interface CountryWithNPAs {
+  name: string;
+  npas: string[];
+}
+
+// Reuse same structure but with 'code' instead of 'name' for states
+export type StateWithNPAs = {
+  code: string;
+  npas: string[];
+};

@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
-import type { LergState, SpecialAreaCode } from '@/types/lerg-types';
-import type { CountryBreakdown } from '@/types/lerg-types';
+import type { LergState, SpecialAreaCode, CountryBreakdown, StateWithNPAs, StateNPAMapping } from '@/types/lerg-types';
 
 interface CountryWithNPAs {
   name: string;
@@ -16,6 +15,7 @@ export const useLergStore = defineStore('lerg', {
       stats: {
         totalRecords: 0,
         lastUpdated: null,
+        stateNPAs: {},
       },
     },
     specialCodes: {
@@ -64,6 +64,22 @@ export const useLergStore = defineStore('lerg', {
       // Update the store's data for a specific country
       const otherCodes = this.specialCodes.data.filter(code => code.country !== country);
       this.specialCodes.data = [...otherCodes, ...codes];
+    },
+
+    setStateNPAs(stateNPAs: StateNPAMapping) {
+      console.log('🔵 Setting state NPAs, incoming data:', stateNPAs);
+      // Force a full state update
+      this.$state = {
+        ...this.$state,
+        lerg: {
+          ...this.lerg,
+          stats: {
+            ...this.lerg.stats,
+            stateNPAs,
+          },
+        },
+      };
+      console.log('🔵 Store state after update:', this.lerg.stats.stateNPAs);
     },
   },
 
@@ -123,6 +139,27 @@ export const useLergStore = defineStore('lerg', {
           npas: npas.sort(),
         }))
         .sort((a, b) => b.npas.length - a.npas.length);
+    },
+
+    sortedStatesWithNPAs(): StateWithNPAs[] {
+      if (!this.lerg.stats.stateNPAs) return [];
+      const stateMap = this.lerg.stats.stateNPAs;
+      return Object.entries(stateMap)
+        .map(([code, npas]) => ({
+          code,
+          npas: npas.sort(),
+        }))
+        .sort((a, b) => b.npas.length - a.npas.length);
+    },
+
+    getStateNPACount: state => (stateCode: string) => {
+      if (!state.lerg.stats.stateNPAs) return 0;
+      return state.lerg.stats.stateNPAs[stateCode]?.length || 0;
+    },
+
+    getTotalStates: state => {
+      if (!state.lerg.stats.stateNPAs) return 0;
+      return Object.keys(state.lerg.stats.stateNPAs).length;
     },
   },
 });
