@@ -8,14 +8,17 @@ export const DBConfig = {
     tables: {
       lerg: 'lerg',
       specialCodes: 'special_codes',
+      stateMappings: 'state_mappings',
     },
     schema: {
       lerg: '++id, npanxx, state, npa, nxx',
       specialCodes: '++id, npa, country, province',
+      stateMappings: 'state, npas',
     },
     stores: {
       lerg: 'npanxx, npa, nxx, state',
       special_area_codes: '++id, npa, country, description, last_updated',
+      state_mappings: 'state, npas',
     },
   },
   RATE_DECKS: {

@@ -120,7 +120,27 @@
             </div>
           </div>
 
-          <div class="border-t border-gray-700/50 pt-6">
+          <!-- Special Area Codes Details Header -->
+          <div
+            @click="toggleSpecialCodesDetails"
+            class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
+          >
+            <div class="flex justify-between items-center">
+              <span class="font-medium">Special Area Codes Details</span>
+              <div class="flex items-center space-x-2">
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': showSpecialCodesDetails }"
+                  class="w-4 h-4 transition-transform"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Special Area Codes Details Content -->
+          <div
+            v-if="showSpecialCodesDetails"
+            class="border-t border-gray-700/50 pt-6"
+          >
             <!-- Table -->
             <div class="space-y-4">
               <!-- Full width rows for multi-NPA countries -->
@@ -311,6 +331,7 @@
   const lergStats = computed(() => store.lerg.stats);
   const isLergProcessing = computed(() => store.lerg.isProcessing);
   const expandedCountries = ref<string[]>([]);
+  const showSpecialCodesDetails = ref(false);
 
   const isLergLocallyStored = computed(() => {
     return store.lerg.isLocallyStored;
@@ -324,6 +345,9 @@
   const sortedCountries = computed(() => store.sortedCountriesWithNPAs);
 
   const isLergUploading = ref(false);
+
+  const stateNPAs = computed(() => store.lerg.stats.stateNPAs);
+  console.log('Current state mappings:', stateNPAs.value);
 
   function formatNumber(num: number): string {
     return new Intl.NumberFormat().format(num);
@@ -494,6 +518,10 @@
     } else {
       expandedCountries.value.splice(index, 1);
     }
+  }
+
+  function toggleSpecialCodesDetails() {
+    showSpecialCodesDetails.value = !showSpecialCodesDetails.value;
   }
 
   async function handleLergFileDrop(event: DragEvent) {
