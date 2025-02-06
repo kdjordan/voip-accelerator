@@ -88,6 +88,131 @@
         </div>
       </div>
 
+      <!-- State/NPA Breakdown Section -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <div class="space-y-6">
+          <div>
+            <h2 class="text-xl font-semibold mb-6">State/NPA Breakdown</h2>
+            <div class="space-y-4">
+              <!-- Total States -->
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Total States</span>
+                <div
+                  v-if="store.lerg.isProcessing"
+                  class="animate-spin h-5 w-5"
+                >
+                  <svg
+                    class="text-accent"
+                    viewBox="0 0 24 24"
+                  >
+                    <!-- spinner svg -->
+                  </svg>
+                </div>
+                <span
+                  v-else
+                  class="text-2xl font-bold"
+                  >{{ store.getTotalStates }}</span
+                >
+              </div>
+              <!-- Last Updated -->
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Last Updated</span>
+                <span class="text-gray-200">{{ formatDate(store.lerg.stats.lastUpdated) }}</span>
+              </div>
+              <!-- Stored locally -->
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Stored locally</span>
+                <div
+                  class="w-3 h-3 rounded-full"
+                  :class="[
+                    store.lerg.isLocallyStored
+                      ? 'bg-green-500 animate-status-pulse-success'
+                      : 'bg-red-500 animate-status-pulse-error',
+                  ]"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- State/NPA Details Header -->
+          <div
+            @click="toggleStateDetails"
+            class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
+          >
+            <div class="flex justify-between items-center">
+              <span class="font-medium">State/NPA Details</span>
+              <div class="flex items-center space-x-2">
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': showStateDetails }"
+                  class="w-4 h-4 transition-transform"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- State/NPA Details Content -->
+          <div
+            v-if="showStateDetails"
+            class="border-t border-gray-700/50 pt-6"
+          >
+            <div class="space-y-4">
+              <!-- Full width rows for multi-NPA states -->
+              <div class="space-y-2">
+                <div
+                  v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length > 1)"
+                  :key="state.code"
+                  @click="toggleExpandState(state.code)"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
+                >
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium">{{ state.code }}</span>
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
+                        <span class="text-sm text-gray-400">{{ state.npas.length }} NPAs</span>
+                        <ChevronDownIcon
+                          :class="{ 'transform rotate-180': expandedStates.includes(state.code) }"
+                          class="w-4 h-4 transition-transform"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Expanded NPAs list -->
+                  <div
+                    v-if="expandedStates.includes(state.code)"
+                    class="mt-3 pl-4"
+                  >
+                    <div class="flex flex-wrap gap-2">
+                      <div
+                        v-for="npa in state.npas"
+                        :key="npa"
+                        class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
+                      >
+                        {{ npa }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grid for single NPA states -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div
+                  v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length === 1)"
+                  :key="state.code"
+                  class="bg-gray-900/50 p-4 rounded-lg"
+                >
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium">{{ state.code }}</span>
+                    <span class="text-gray-300">{{ state.npas[0] }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Special Codes Section -->
       <div class="bg-gray-800 rounded-lg p-6">
         <div class="space-y-6">
@@ -322,7 +447,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onUnmounted } from 'vue';
+  import { ref, computed } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
@@ -332,6 +457,8 @@
   const isLergProcessing = computed(() => store.lerg.isProcessing);
   const expandedCountries = ref<string[]>([]);
   const showSpecialCodesDetails = ref(false);
+  const showStateDetails = ref(false);
+  const expandedStates = ref<string[]>([]);
 
   const isLergLocallyStored = computed(() => {
     return store.lerg.isLocallyStored;
@@ -346,7 +473,7 @@
 
   const isLergUploading = ref(false);
 
-  const stateNPAs = computed(() => store.lerg.stats.stateNPAs);
+  const stateNPAs = computed(() => store.lerg.stateNPAs);
   console.log('Current state mappings:', stateNPAs.value);
 
   function formatNumber(num: number): string {
@@ -531,6 +658,19 @@
     if (file) {
       await handleLergFileChange({ target: { files: [file] } } as unknown as Event);
     }
+  }
+
+  function toggleExpandState(stateCode: string) {
+    const index = expandedStates.value.indexOf(stateCode);
+    if (index === -1) {
+      expandedStates.value.push(stateCode);
+    } else {
+      expandedStates.value.splice(index, 1);
+    }
+  }
+
+  function toggleStateDetails() {
+    showStateDetails.value = !showStateDetails.value;
   }
 </script>
 

@@ -27,33 +27,17 @@ export const lergApiService = {
       const specialCodesData = await this.getSpecialCodesData();
       await service.initializeSpecialCodesTable(specialCodesData.data || []);
 
-      // Update store with special codes immediately
-      store.$patch({
-        specialCodes: {
-          stats: {
-            totalCodes: specialCodesData.stats?.totalCodes || 0,
-            countryBreakdown: specialCodesData.stats?.countryBreakdown || [],
-            lastUpdated: specialCodesData.stats?.lastUpdated || null,
-          },
-          isLocallyStored: specialCodesData.data?.length > 0,
-          data: specialCodesData.data || [],
-        },
-      });
+      // Use direct setters
+      store.setSpecialCodesLocallyStored(specialCodesData.data?.length > 0);
+      store.setSpecialCodes(specialCodesData.data || []);
 
       // 3. Initialize IndexDB with whatever data we have
       const lergData = await this.getLergData();
       await service.initializeLergTable(lergData.data || []);
 
-      // 4. Update store with LERG data
-      store.$patch({
-        lerg: {
-          stats: {
-            totalRecords: lergData.stats?.totalRecords || 0,
-            lastUpdated: lergData.stats?.lastUpdated || null,
-          },
-          isLocallyStored: lergData.data?.length > 0,
-        },
-      });
+      // Use direct setters
+      store.setLergStats(lergData.stats?.totalRecords || 0);
+      store.setLergLocallyStored(lergData.data?.length > 0);
     } catch (error) {
       console.error('Initialization failed:', error);
       store.error = error instanceof Error ? error.message : 'Unknown error';

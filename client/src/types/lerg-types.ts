@@ -82,10 +82,10 @@ export interface LergState {
   lerg: {
     isProcessing: boolean;
     isLocallyStored: boolean;
+    stateNPAs: StateNPAMapping;
     stats: {
       totalRecords: number;
       lastUpdated: string | null;
-      stateNPAs: StateNPAMapping;
     };
   };
   specialCodes: {

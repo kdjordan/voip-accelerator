@@ -67,7 +67,7 @@ export class LergService implements LERGService {
           if (event.data.data) {
             console.log('🟢 State worker data before store update:', event.data.data);
             this.store.setStateNPAs(event.data.data);
-            console.log('🟢 Store state after update:', this.store.lerg.stats.stateNPAs);
+            console.log('🟢 Store state after update:', this.store.lerg.stateNPAs);
           }
           break;
         case 'error':
@@ -125,7 +125,6 @@ export class LergService implements LERGService {
     console.log('Processing completed successfully');
     await this.db.table('lerg').bulkPut(data);
 
-    // After LERG data is processed, start state processing
     if (this.stateWorker) {
       this.stateWorker.postMessage({
         type: 'process',
@@ -134,33 +133,19 @@ export class LergService implements LERGService {
       } as StateWorkerMessage);
     }
 
-    this.store.$patch(state => {
-      state.lerg = {
-        isProcessing: false,
-        isLocallyStored: true,
-        stats: {
-          totalRecords: data.length,
-          lastUpdated: new Date().toISOString(),
-          stateNPAs: state.lerg.stats.stateNPAs,
-        },
-      };
-    });
+    this.store.setLergLocallyStored(true);
+    this.store.setLergStats(data.length);
+
     const count = await this.db.table('lerg').count();
     console.log('Count of LERG records:', count);
-    this.store.setLergLocallyStored(true);
   }
 
   private handleProcessingError(error: string | Error) {
     const errorMessage = error instanceof Error ? error.message : error;
-    this.store.$patch(state => {
-      state.lerg.isProcessing = false;
-      state.error = errorMessage;
-      state.lerg.stats = {
-        totalRecords: 0,
-        lastUpdated: new Date().toISOString(),
-        stateNPAs: {}, // Initialize empty mapping on error
-      };
-    });
+    this.store.lerg.isProcessing = false;
+    this.store.setError(errorMessage);
+    this.store.setLergStats(0);
+    this.store.setStateNPAs({}); // Reset state mappings on error
   }
 
   async initializeLergTable(lergData: LERGRecord[]): Promise<void> {

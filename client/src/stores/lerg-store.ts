@@ -12,10 +12,10 @@ export const useLergStore = defineStore('lerg', {
     lerg: {
       isProcessing: false,
       isLocallyStored: false,
+      stateNPAs: {},
       stats: {
         totalRecords: 0,
         lastUpdated: null,
-        stateNPAs: {},
       },
     },
     specialCodes: {
@@ -32,9 +32,7 @@ export const useLergStore = defineStore('lerg', {
 
   actions: {
     setLergLocallyStored(value: boolean) {
-      this.$patch(state => {
-        state.lerg.isLocallyStored = value;
-      });
+      this.lerg.isLocallyStored = value;
     },
 
     setSpecialCodesLocallyStored(value: boolean) {
@@ -47,39 +45,24 @@ export const useLergStore = defineStore('lerg', {
       this.specialCodes.isLocallyStored = true;
     },
 
-    $patch(partialState: Partial<LergState>) {
-      // Deep merge to preserve nested structure
-      if (partialState.lerg) {
-        this.lerg = { ...this.lerg, ...partialState.lerg };
-      }
-      if (partialState.specialCodes) {
-        this.specialCodes = { ...this.specialCodes, ...partialState.specialCodes };
-      }
-      if (partialState.error !== undefined) {
-        this.error = partialState.error;
-      }
+    setStateNPAs(stateNPAs: StateNPAMapping) {
+      console.log('🔵 Setting state NPAs, incoming data:', stateNPAs);
+      this.lerg.stateNPAs = stateNPAs;
+    },
+
+    setLergStats(totalRecords: number) {
+      this.lerg.stats.totalRecords = totalRecords;
+      this.lerg.stats.lastUpdated = new Date().toISOString();
+    },
+
+    setError(error: string | null) {
+      this.error = error;
     },
 
     updateSpecialCodesForCountry(country: string, codes: SpecialAreaCode[]) {
       // Update the store's data for a specific country
       const otherCodes = this.specialCodes.data.filter(code => code.country !== country);
       this.specialCodes.data = [...otherCodes, ...codes];
-    },
-
-    setStateNPAs(stateNPAs: StateNPAMapping) {
-      console.log('🔵 Setting state NPAs, incoming data:', stateNPAs);
-      // Force a full state update
-      this.$state = {
-        ...this.$state,
-        lerg: {
-          ...this.lerg,
-          stats: {
-            ...this.lerg.stats,
-            stateNPAs,
-          },
-        },
-      };
-      console.log('🔵 Store state after update:', this.lerg.stats.stateNPAs);
     },
   },
 
@@ -142,8 +125,8 @@ export const useLergStore = defineStore('lerg', {
     },
 
     sortedStatesWithNPAs(): StateWithNPAs[] {
-      if (!this.lerg.stats.stateNPAs) return [];
-      const stateMap = this.lerg.stats.stateNPAs;
+      if (!this.lerg.stateNPAs) return [];
+      const stateMap = this.lerg.stateNPAs;
       return Object.entries(stateMap)
         .map(([code, npas]) => ({
           code,
@@ -153,13 +136,13 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getStateNPACount: state => (stateCode: string) => {
-      if (!state.lerg.stats.stateNPAs) return 0;
-      return state.lerg.stats.stateNPAs[stateCode]?.length || 0;
+      if (!state.lerg.stateNPAs) return 0;
+      return state.lerg.stateNPAs[stateCode]?.length || 0;
     },
 
     getTotalStates: state => {
-      if (!state.lerg.stats.stateNPAs) return 0;
-      return Object.keys(state.lerg.stats.stateNPAs).length;
+      if (!state.lerg.stateNPAs) return 0;
+      return Object.keys(state.lerg.stateNPAs).length;
     },
   },
 });
