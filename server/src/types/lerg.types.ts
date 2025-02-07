@@ -9,6 +9,7 @@ export interface LERGRecord {
   nxx: string;
   npanxx: string;
   state: string;
+  country: string;
   last_updated?: Date;
 }
 

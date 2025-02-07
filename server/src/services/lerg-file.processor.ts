@@ -73,20 +73,19 @@ export class LERGFileProcessor extends EventEmitter {
   // Parse individual lines
   private parseLergLine(line: string): LERGRecord | null {
     try {
-      if (!line.trim()) {
-        return null;
-      }
+      if (!line.trim()) return null;
 
       const parts = line.split(',').map(part => part.replace(/^"|"$/g, '').trim());
+      console.log('🔍 Processing LERG line:', { parts });
 
       // Skip header line
-      if (parts[0].toUpperCase() === 'NPA') {
-        return null;
-      }
+      if (parts[0].toUpperCase() === 'NPA') return null;
 
       const npa = parts[0];
       const nxx = parts[1];
       const state = parts[3];
+      const country = parts[13]; // Country is last column
+      console.log('📝 Extracted data:', { npa, nxx, state, country });
 
       // Validate NPA and NXX
       if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
@@ -100,11 +99,18 @@ export class LERGFileProcessor extends EventEmitter {
         return null;
       }
 
+      // Validate country is 2 characters
+      if (!country || country.length !== 2) {
+        logger.warn('Invalid country:', { country });
+        return null;
+      }
+
       return {
         npa,
         nxx,
         npanxx: `${npa}${nxx}`,
         state,
+        country,
         last_updated: new Date(),
       };
     } catch (error) {
