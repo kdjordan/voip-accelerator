@@ -122,6 +122,7 @@ export class LERGService {
       const npa = parts[0];
       const nxx = parts[1];
       const state = parts[3];
+      const country = parts[4];
 
       // Validate NPA and NXX
       if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
@@ -140,6 +141,7 @@ export class LERGService {
         nxx,
         npanxx: `${npa}${nxx}`,
         state,
+        country,
         last_updated: new Date(),
       };
     } catch (error) {
@@ -151,13 +153,21 @@ export class LERGService {
   private async insertBatch(records: LERGRecord[]) {
     logger.debug('Attempting to insert records:', records);
 
-    const values = records.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(',');
+    const values = records
+      .map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`)
+      .join(',');
 
-    const params = records.flatMap(record => [record.npa, record.nxx, record.state, record.last_updated]);
+    const params = records.flatMap(record => [
+      record.npa,
+      record.nxx,
+      record.state,
+      record.country,
+      record.last_updated,
+    ]);
 
     const query = `
       INSERT INTO lerg_codes
-      (npa, nxx, state, last_updated)
+      (npa, nxx, state, country, last_updated)
       VALUES ${values}
       ON CONFLICT (npanxx) DO NOTHING
       RETURNING npanxx;

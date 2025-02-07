@@ -11,12 +11,12 @@ export const DBConfig = {
       stateMappings: 'state_mappings',
     },
     schema: {
-      lerg: '++id, npanxx, state, npa, nxx',
+      lerg: '++id, npanxx, state, npa, nxx, country',
       specialCodes: '++id, npa, country, province',
       stateMappings: 'state, npas',
     },
     stores: {
-      lerg: 'npanxx, npa, nxx, state',
+      lerg: 'npanxx, npa, nxx, state, country',
       special_area_codes: '++id, npa, country, description, last_updated',
       state_mappings: 'state, npas',
     },
