@@ -5,10 +5,10 @@ import { logger } from '@/config/logger';
 const router = express.Router();
 const lergService = new LERGService();
 
-router.get('/lerg-data', async (_req: Request, res: Response) => {
+router.get('/lerg-data', async (_req: Request, res: Response): Promise<void> => {
   try {
     const data = await lergService.getLergData();
-    res.json(data);
+    res.json(data).status(200);
   } catch (error) {
     logger.error('Error fetching LERG data:', error);
     res.status(500).json({
@@ -18,23 +18,10 @@ router.get('/lerg-data', async (_req: Request, res: Response) => {
   }
 });
 
-router.get('/special-codes-data', async (_req: Request, res: Response) => {
-  try {
-    const data = await lergService.getSpecialCodesData();
-    res.json(data);
-  } catch (error) {
-    logger.error('Error fetching special codes data:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
-router.get('/test-connection', async (_req: Request, res: Response) => {
+router.get('/test-connection', async (_req: Request, res: Response): Promise<void> => {
   try {
     await lergService.testConnection();
-    res.json(true);
+    res.status(200).json(true);
   } catch (error) {
     logger.error('Connection test failed:', error);
     res.status(500).json({

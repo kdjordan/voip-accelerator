@@ -5,19 +5,15 @@ import * as readline from 'readline';
 import path from 'path';
 import { logger } from '@/config/logger';
 import { LERGFileProcessor } from './lerg-file.processor';
-import { SpecialCodesFileProcessor } from './special-codes-file.processor';
 
 export class LERGService {
   private db: DatabaseService;
   private readonly batchSize = 1000;
-  private processedNpanxx = new Set<string>();
   private fileProcessor: LERGFileProcessor;
-  private specialCodesProcessor: SpecialCodesFileProcessor;
 
   constructor() {
     this.db = DatabaseService.getInstance();
     this.fileProcessor = new LERGFileProcessor();
-    this.specialCodesProcessor = new SpecialCodesFileProcessor();
   }
 
   async processLergFile(fileContent: Buffer | string): Promise<LERGUploadResponse> {
@@ -208,38 +204,6 @@ export class LERGService {
     return result.rows[0].result;
   }
 
-  async getSpecialCodesData() {
-    const query = `
-      WITH country_breakdown AS (
-        SELECT 
-          country as countryCode,
-          COUNT(*) as count,
-          array_agg(npa) as npaCodes
-        FROM special_area_codes
-        GROUP BY country
-      )
-      SELECT json_build_object(
-        'data', (
-          SELECT json_agg(row_to_json(s)) 
-          FROM (
-            SELECT npa, country, province, last_updated
-            FROM special_area_codes
-          ) s
-        ),
-        'stats', json_build_object(
-          'totalCodes', (SELECT COUNT(*) FROM special_area_codes),
-          'lastUpdated', (SELECT MAX(last_updated) FROM special_area_codes),
-          'countryBreakdown', (
-            SELECT json_agg(row_to_json(cb))
-            FROM country_breakdown cb
-          )
-        )
-      ) as result`;
-
-    const result = await this.db.query(query);
-    return result.rows[0].result;
-  }
-
   async clearAllData(): Promise<void> {
     const query = 'TRUNCATE TABLE lerg_codes';
     try {
@@ -251,60 +215,11 @@ export class LERGService {
   }
 
   async clearLergData(): Promise<void> {
-    const query = 'TRUNCATE TABLE lerg_codes';
     try {
-      await this.db.query(query);
+      await this.db.query('TRUNCATE TABLE lerg_codes');
+      logger.info('[lerg.service.ts] LERG data cleared successfully');
     } catch (error) {
-      logger.error('Error clearing LERG codes data:', error);
-      throw error;
-    }
-  }
-
-  async clearSpecialCodesData(): Promise<void> {
-    const query = 'TRUNCATE TABLE special_area_codes';
-    try {
-      await this.db.query(query);
-    } catch (error) {
-      logger.error('Error clearing special codes data:', error);
-      throw error;
-    }
-  }
-
-  async processSpecialCodesFile(fileBuffer: Buffer): Promise<void> {
-    try {
-      logger.info('Processing special codes file...');
-
-      // Parse the file
-      const records = await this.specialCodesProcessor.processFile(fileBuffer);
-
-      // Clear existing data
-      await this.db.query('TRUNCATE TABLE special_area_codes;');
-
-      // Process records in batches
-      for (let i = 0; i < records.length; i += 100) {
-        const batch = records.slice(i, i + 100);
-        const values = batch
-          .map(
-            record =>
-              `('${record.npa}', '${record.country}', ${record.province ? `'${record.province}'` : 'NULL'}, NOW())`
-          )
-          .join(',');
-
-        const insertQuery = `
-          INSERT INTO special_area_codes (npa, country, province, last_updated)
-          VALUES ${values}
-          ON CONFLICT ON CONSTRAINT special_area_codes_pkey DO UPDATE SET
-            country = EXCLUDED.country,
-            province = EXCLUDED.province,
-            last_updated = EXCLUDED.last_updated;
-        `;
-
-        await this.db.query(insertQuery);
-      }
-
-      logger.info('Special codes file processed successfully');
-    } catch (error) {
-      logger.error('Failed to process special codes file:', error);
+      logger.error('[lerg.service.ts] Error clearing LERG data:', error);
       throw error;
     }
   }
@@ -344,39 +259,15 @@ export class LERGService {
 
   public async testConnection(): Promise<boolean> {
     try {
-      await this.db.query('SELECT 1');
       const result = await this.db.query(`
-        SELECT EXISTS (
-          SELECT 1 FROM lerg_codes LIMIT 1
-        ) as has_lerg,
-        EXISTS (
-          SELECT 1 FROM special_area_codes LIMIT 1
-        ) as has_special
+        SELECT 
+          EXISTS (SELECT 1 FROM lerg_codes LIMIT 1) as has_lerg
       `);
 
       logger.info('[lerg.service.ts] Connection test results:', result.rows[0]);
-      return result.rows[0].has_lerg || result.rows[0].has_special;
+      return result.rows[0].has_lerg;
     } catch (error) {
       logger.error('[lerg.service.ts] Database connection test failed:', error);
-      throw error;
-    }
-  }
-
-  public async getSpecialCodesByCountry(country: string): Promise<Array<{ province: string; npas: string[] }>> {
-    try {
-      const query = `
-        SELECT 
-          province,
-          array_agg(npa ORDER BY npa) as npas
-        FROM special_area_codes
-        WHERE country = $1
-        GROUP BY province
-        ORDER BY province
-      `;
-      const result = await this.db.query(query, [country]);
-      return result.rows;
-    } catch (error) {
-      logger.error('[lerg.service.ts] Error fetching special codes by country:', error);
       throw error;
     }
   }

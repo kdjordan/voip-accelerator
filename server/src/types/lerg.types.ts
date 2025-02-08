@@ -1,7 +1,6 @@
 export interface LERGStats {
   totalRecords: number;
   lastUpdated: Date;
-  specialCodes?: SpecialCodesStats;
 }
 
 export interface LERGRecord {
@@ -18,28 +17,9 @@ export interface LERGUploadResponse {
   totalRecords: number;
 }
 
-export interface SpecialCodesStats {
-  totalCodes: number;
-  countryBreakdown: {
-    countryCode: string;
-    count: number;
-  }[];
-}
-
-export interface SpecialCode {
-  npa: string;
-  country: string;
-  province_or_territory: string;
-}
-
 export interface CSVRow {
   NPA: string;
   Country: string;
   'Province or Territory': string;
 }
 
-export interface SpecialCodeRecord {
-  npa: string;
-  country: string;
-  province: string | null;
-}

@@ -17,25 +17,14 @@ export const lergApiService = {
 
     try {
       store.lerg.isProcessing = true;
-      store.specialCodes.isProcessing = true;
 
-      // 1. Test database connection
+      // Test database connection
       const hasServerData = await this.testConnection();
       console.log('Server data status:', hasServerData);
 
-      // 2. Fetch special codes data (smaller dataset)
-      const specialCodesData = await this.getSpecialCodesData();
-      await service.initializeSpecialCodesTable(specialCodesData.data || []);
-
-      // Use direct setters
-      store.setSpecialCodesLocallyStored(specialCodesData.data?.length > 0);
-      store.setSpecialCodes(specialCodesData.data || []);
-
-      // 3. Initialize IndexDB with whatever data we have
+      // Initialize IndexDB with LERG data
       const lergData = await this.getLergData();
       await service.initializeLergTable(lergData.data || []);
-
-      // Use direct setters
       store.setLergStats(lergData.stats?.totalRecords || 0);
       store.setLergLocallyStored(lergData.data?.length > 0);
     } catch (error) {
@@ -98,17 +87,6 @@ export const lergApiService = {
     return await response.json();
   },
 
-  async getSpecialCodesData() {
-    console.log('Fetching special codes data and stats...');
-    const response = await fetch(`${LERG_URL}/special-codes-data`);
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Failed to fetch special codes data:', error);
-      throw new Error('Failed to fetch special codes data');
-    }
-    return await response.json();
-  },
-
   // Admin endpoints
   async uploadLergFile(formData: FormData, onProgress?: (progress: number) => void): Promise<void> {
     const response = await fetch(`${ADMIN_URL}/upload`, {
@@ -155,78 +133,6 @@ export const lergApiService = {
       console.error('Clear data error:', error);
       throw new Error('Failed to clear LERG data');
     }
-  },
-
-  async reloadSpecialCodes(): Promise<void> {
-    console.log('Requesting special codes reload...');
-    const response = await fetch(`${ADMIN_URL}/reload/special`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Failed to reload special codes:', error);
-      throw new Error('Failed to reload special codes');
-    }
-
-    const result = await response.json();
-    console.log('Special codes reload result:', result);
-  },
-
-  async uploadSpecialCodesFile(formData: FormData): Promise<void> {
-    const response = await fetch(`${ADMIN_URL}/upload/special`, {
-      method: 'POST',
-      body: formData,
-    });
-    if (!response.ok) {
-      throw new Error('Failed to upload special codes file');
-    }
-
-    // Only refresh special codes data
-    const specialCodesData = await this.getSpecialCodesData();
-    const service = new LergService();
-    await service.initializeSpecialCodesTable(specialCodesData.data || []);
-
-    // Update store with just special codes
-    const store = useLergStore();
-    store.$patch({
-      specialCodes: {
-        stats: {
-          totalCodes: specialCodesData.stats?.totalCodes || 0,
-          countryBreakdown: specialCodesData.stats?.countryBreakdown || [],
-          lastUpdated: specialCodesData.stats?.lastUpdated || null,
-        },
-        isLocallyStored: specialCodesData.data?.length > 0,
-        data: specialCodesData.data || [],
-      },
-    });
-  },
-
-  async clearSpecialCodesData(): Promise<void> {
-    console.log('Clearing special codes data...');
-    const response = await fetch(`${ADMIN_URL}/clear/special`, { method: 'DELETE' });
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Failed to clear special codes:', error);
-      throw new Error('Failed to clear special codes');
-    }
-
-    // Clear IndexDB and update store
-    const lergService = new LergService();
-    await lergService.clearSpecialCodesData();
-
-    const store = useLergStore();
-    store.$patch({
-      specialCodes: {
-        isLocallyStored: false,
-        data: [],
-        stats: {
-          totalCodes: 0,
-          lastUpdated: null,
-          countryBreakdown: [],
-        },
-      },
-    });
   },
 
   async uploadLergRecords(records: LERGRecord[]): Promise<void> {

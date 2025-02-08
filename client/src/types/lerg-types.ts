@@ -74,7 +74,7 @@ export type LERGColumnRoleType = (typeof LERGColumnRole)[keyof typeof LERGColumn
 
 // Store state types
 export interface StateNPAMapping {
-  [stateCode: string]: string[]; // Maps state codes to array of NPAs
+  [state: string]: string[];
 }
 
 export interface LergState {
@@ -86,16 +86,6 @@ export interface LergState {
     stats: {
       totalRecords: number;
       lastUpdated: string | null;
-    };
-  };
-  specialCodes: {
-    isProcessing: boolean;
-    isLocallyStored: boolean;
-    data: SpecialAreaCode[];
-    stats: {
-      totalCodes: number;
-      lastUpdated: string | null;
-      countryBreakdown: CountryBreakdown[];
     };
   };
 }
