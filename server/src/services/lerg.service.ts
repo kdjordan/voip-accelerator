@@ -2,7 +2,6 @@ import { DatabaseService } from '@/services/database.service';
 import type { LERGRecord, LERGUploadResponse } from '@/types/lerg.types';
 import * as fs from 'fs';
 import path from 'path';
-import { logger } from '@/config/logger';
 import { LERGFileProcessor } from './lerg-file.processor';
 
 export class LERGService {
@@ -19,7 +18,7 @@ export class LERGService {
     try {
       // First clear all existing LERG data
       await this.clearLergData();
-      logger.info('Cleared existing LERG data');
+      console.log('[lerg.service.ts] Cleared existing LERG data');
 
       const records = await this.fileProcessor.processFile(fileContent);
       let processedRecords = 0;
@@ -29,13 +28,13 @@ export class LERGService {
       for (let i = 0; i < records.length; i += this.batchSize) {
         const batch = records.slice(i, i + this.batchSize);
         const uniqueRecords = this.getUniqueBatch(batch);
-        logger.debug('Unique NPAs in this batch:', { npas: uniqueRecords.map(r => r.npa) });
+        console.debug('Unique NPAs in this batch:', { npas: uniqueRecords.map(r => r.npa) });
         processedRecords += await this.processBatch(uniqueRecords);
       }
 
       return { processedRecords, totalRecords };
     } catch (error) {
-      logger.error('Error processing LERG file:', error);
+      console.error('[lerg.service.ts] Error processing LERG file:', error);
       throw error;
     }
   }
@@ -56,16 +55,18 @@ export class LERGService {
   private async processBatch(batch: LERGRecord[]): Promise<number> {
     try {
       const inserted = await this.insertBatch(batch);
-      logger.info(`[lerg.service.ts] Processed batch: ${inserted} unique NPAs inserted out of ${batch.length} records`);
+      console.info(
+        `[lerg.service.ts] Processed batch: ${inserted} unique NPAs inserted out of ${batch.length} records`
+      );
       return inserted;
     } catch (error) {
-      logger.error('Error processing batch:', error);
+      console.error('Error processing batch:', error);
       return 0;
     }
   }
 
   private async insertBatch(records: LERGRecord[]) {
-    logger.debug('Attempting to insert records:', records);
+    console.debug('Attempting to insert records:', records);
 
     const values = records.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(',');
 
@@ -81,13 +82,13 @@ export class LERGService {
 
     try {
       const result = await this.db.query(query, params);
-      logger.info(
+      console.info(
         'Successfully inserted NPANXXs:',
         result.rows.map(r => r.npa)
       );
       return result.rowCount ?? 0;
     } catch (error) {
-      logger.error('Batch insert error:', error);
+      console.error('Batch insert error:', error);
       throw error;
     }
   }
@@ -119,7 +120,7 @@ export class LERGService {
     try {
       await this.db.query(query);
     } catch (error) {
-      logger.error('Error clearing LERG data:', error);
+      console.error('Error clearing LERG data:', error);
       throw error;
     }
   }
@@ -127,9 +128,9 @@ export class LERGService {
   async clearLergData(): Promise<void> {
     try {
       await this.db.query('TRUNCATE TABLE lerg_codes');
-      logger.info('[lerg.service.ts] LERG data cleared successfully');
+      console.info('[lerg.service.ts] LERG data cleared successfully');
     } catch (error) {
-      logger.error('[lerg.service.ts] Error clearing LERG data:', error);
+      console.error('[lerg.service.ts] Error clearing LERG data:', error);
       throw error;
     }
   }
@@ -162,7 +163,7 @@ export class LERGService {
       // Process the file
       await this.processLergFile(mostRecentFile.path);
     } catch (error) {
-      logger.error('Error reloading LERG data:', error);
+      console.error('Error reloading LERG data:', error);
       throw error;
     }
   }
@@ -178,10 +179,10 @@ export class LERGService {
         ) as has_lerg
       `);
 
-      logger.info('[lerg.service.ts] Connection test results:', result.rows[0]);
+      console.info('[lerg.service.ts] Connection test results:', result.rows[0]);
       return result.rows[0].has_lerg;
     } catch (error) {
-      logger.error('[lerg.service.ts] Database connection test failed:', error);
+      console.error('[lerg.service.ts] Database connection test failed:', error);
       throw error;
     }
   }

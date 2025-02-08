@@ -7,7 +7,7 @@ import { lergRoutes } from '@/routes/lerg.routes';
 import { adminLergRoutes } from '@/routes/admin.routes';
 import { authRoutes } from '@/routes/auth.routes';
 import { adminAuthMiddleware } from '@/middleware/admin-auth.middleware';
-import { logger } from '@/config/logger';
+
 
 // Load environment variables
 dotenv.config();
@@ -38,7 +38,7 @@ app.get('/health', async (_req, res) => {
     await dbService.query('SELECT 1');
     res.json({ status: 'ok' });
   } catch (error) {
-    logger.error('Health check failed', error);
+    console.log('Health check failed', error);
     res.status(500).json({ status: 'error' });
   }
 });
@@ -46,10 +46,10 @@ app.get('/health', async (_req, res) => {
 async function startServer() {
   try {
     app.listen(port, () => {
-      logger.info(`Server running on port ${port}`);
+      console.log(`Server running on port ${port}`);
     });
   } catch (error) {
-    logger.error('Server startup failed', error);
+    console.log('Server startup failed', error);
     process.exit(1);
   }
 }

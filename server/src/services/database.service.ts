@@ -1,12 +1,11 @@
 import { Pool, PoolClient } from 'pg';
-import { logger } from '@/config/logger';
 
 export class DatabaseService {
   private static instance: DatabaseService;
   private pool: Pool;
 
   private constructor() {
-    logger.info('[database.service.ts] Initializing database connection...');
+    console.info('[database.service.ts] Initializing database connection...');
     this.pool = new Pool({
       user: process.env.DB_USER,
       host: process.env.DB_HOST,
@@ -28,7 +27,7 @@ export class DatabaseService {
       const result = await this.pool.query(text, params);
       return result;
     } catch (error) {
-      logger.error('[database.service.ts] Database query error:', error);
+      console.error('[database.service.ts] Database query error:', error);
       throw error;
     }
   }
@@ -51,9 +50,9 @@ export class DatabaseService {
   public async testConnection(): Promise<void> {
     try {
       await this.pool.query('SELECT 1');
-      logger.info('[database.service.ts] Database connection successful');
+      console.info('[database.service.ts] Database connection successful');
     } catch (error) {
-      logger.error('[database.service.ts] Database connection failed:', error);
+      console.error('[database.service.ts] Database connection failed:', error);
       throw error;
     }
   }

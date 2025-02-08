@@ -11,7 +11,7 @@ export const lergApiService = {
     const service = new LergService();
 
     try {
-      store.lerg.isProcessing = true;
+      store.isProcessing = true;
 
       // Test database connection
       const hasServerData = await this.testConnection();
@@ -20,13 +20,18 @@ export const lergApiService = {
       // Initialize IndexDB with LERG data
       const lergData = await this.getLergData();
       await service.initializeLergTable(lergData.data || []);
+
+      // Process the data for UI display
+      const { stateMapping, countryData } = await service.processLergData();
+      store.setStateNPAs(stateMapping);
+      store.setCountryData(countryData);
       store.setLergStats(lergData.stats?.totalRecords || 0);
-      store.setLergLocallyStored(lergData.data?.length > 0);
+      store.isLocallyStored = lergData.data?.length > 0;
     } catch (error) {
       console.error('Initialization failed:', error);
       store.error = error instanceof Error ? error.message : 'Unknown error';
     } finally {
-      store.lerg.isProcessing = false;
+      store.isProcessing = false;
     }
   },
 
