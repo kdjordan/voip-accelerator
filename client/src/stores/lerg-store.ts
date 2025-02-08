@@ -47,6 +47,7 @@ export const useLergStore = defineStore('lerg', {
       return Object.entries(state.stateNPAs)
         .map(([code, npas]) => ({
           code,
+          country: 'US',
           npas: [...npas].sort(),
         }))
         .sort((a, b) => b.npas.length - a.npas.length);

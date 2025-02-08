@@ -42,7 +42,6 @@
                       : 'bg-red-500 animate-status-pulse-error'
                   "
                 ></div>
-                <span>{{ dbStatus.connected ? 'Connected' : 'Disconnected' }}</span>
                 <span
                   v-if="!dbStatus.connected"
                   class="text-red-400 text-sm"
@@ -64,7 +63,6 @@
                       : 'bg-red-500 animate-status-pulse-error',
                   ]"
                 ></div>
-                <span>{{ isLergLocallyStored ? 'Stored Locally' : 'Not Stored' }}</span>
               </div>
             </div>
           </div>
@@ -76,7 +74,7 @@
           <div class="bg-gray-900/30 rounded-lg overflow-hidden">
             <div
               @click="toggleStateDetails"
-              class="p-4 w-full hover:bg-gray-400/80 transition-colors cursor-pointer"
+              class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
             >
               <div class="flex justify-between items-center">
                 <span class="font-medium">US States</span>
@@ -97,10 +95,10 @@
                   v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length > 1)"
                   :key="state.code"
                   @click="toggleExpandState(state.code)"
-                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/80 transition-colors cursor-pointer"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
                 >
                   <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ state.code }}</span>
+                    <span class="font-medium">{{ getStateName(state.code, 'US') }}</span>
                     <div class="flex items-center space-x-4">
                       <div class="flex items-center space-x-2 px-2 py-1 rounded">
                         <span class="text-sm text-gray-400">{{ state.npas.length }} NPAs</span>
@@ -138,7 +136,7 @@
                   class="bg-gray-900/50 p-4 rounded-lg"
                 >
                   <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ state.code }}</span>
+                    <span class="font-medium">{{ getStateName(state.code, 'US') }}</span>
                     <span class="text-gray-300">{{ state.npas[0] }}</span>
                   </div>
                 </div>
@@ -150,7 +148,7 @@
           <div class="bg-gray-900/30 rounded-lg overflow-hidden">
             <div
               @click="toggleCountryDetails"
-              class="p-4 w-full hover:bg-gray-400/80 transition-colors cursor-pointer"
+              class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
             >
               <div class="flex justify-between items-center">
                 <span class="font-medium">Non-US States</span>
@@ -171,7 +169,7 @@
                   v-for="country in store.getCountryData.filter(c => c.country !== 'US' && c.npaCount > 1)"
                   :key="country.country"
                   @click="toggleExpandCountry(country.country)"
-                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-400/80 transition-colors cursor-pointer"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
                 >
                   <div class="flex justify-between items-center">
                     <span class="font-medium">{{ getCountryName(country.country) }}</span>
@@ -191,7 +189,64 @@
                     v-if="expandedCountries.includes(country.country)"
                     class="mt-3 pl-4"
                   >
-                    <div class="flex flex-wrap gap-2">
+                    <!-- Show provinces for Canada -->
+                    <div
+                      v-if="country.country === 'CA'"
+                      class="space-y-3"
+                    >
+                      <!-- Multi-NPA provinces -->
+                      <div
+                        v-for="province in country.provinces?.filter(p => p.npas.length > 1)"
+                        :key="province.code"
+                        class="bg-gray-800/50 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors"
+                        @click.stop="toggleExpandProvince(province.code)"
+                      >
+                        <div class="flex justify-between items-center">
+                          <span class="font-medium">{{ getStateName(province.code, 'CA') }}</span>
+                          <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-400">{{ province.npas.length }} NPAs</span>
+                            <ChevronDownIcon
+                              :class="{ 'transform rotate-180': expandedProvinces.includes(province.code) }"
+                              class="w-4 h-4 transition-transform"
+                            />
+                          </div>
+                        </div>
+                        <!-- Expanded NPAs list for provinces -->
+                        <div
+                          v-if="expandedProvinces.includes(province.code)"
+                          class="mt-3"
+                        >
+                          <div class="flex flex-wrap gap-2">
+                            <div
+                              v-for="npa in province.npas"
+                              :key="npa"
+                              class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
+                            >
+                              {{ npa }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Single-NPA provinces grid -->
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div
+                          v-for="province in country.provinces?.filter(p => p.npas.length === 1)"
+                          :key="province.code"
+                          class="bg-gray-800/50 p-4 rounded-lg"
+                        >
+                          <div class="flex justify-between items-center">
+                            <span class="font-medium">{{ getStateName(province.code, 'CA') }}</span>
+                            <span class="text-gray-300">{{ province.npas[0] }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Show regular NPA list for other countries -->
+                    <div
+                      v-else
+                      class="flex flex-wrap gap-2"
+                    >
                       <div
                         v-for="npa in country.npas"
                         :key="npa"
@@ -295,6 +350,7 @@
   import { lergApiService } from '@/services/lerg-api.service';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
   import { getCountryName } from '@/constants/country-codes';
+  import { getStateName } from '@/constants/state-codes';
 
   const store = useLergStore();
   const lergStats = computed(() => store.stats);
@@ -302,6 +358,7 @@
   const expandedCountries = ref<string[]>([]);
   const showStateDetails = ref(false);
   const expandedStates = ref<string[]>([]);
+  const expandedProvinces = ref<string[]>([]);
   const showCountryDetails = ref(false);
 
   const isLergLocallyStored = computed(() => {
@@ -465,6 +522,15 @@
       expandedCountries.value.push(countryCode);
     } else {
       expandedCountries.value.splice(index, 1);
+    }
+  }
+
+  function toggleExpandProvince(code: string) {
+    const index = expandedProvinces.value.indexOf(code);
+    if (index === -1) {
+      expandedProvinces.value.push(code);
+    } else {
+      expandedProvinces.value.splice(index, 1);
     }
   }
 </script>

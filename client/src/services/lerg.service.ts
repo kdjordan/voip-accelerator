@@ -85,6 +85,7 @@ export class LergService {
 
     // Process state mappings
     const stateMapping: StateNPAMapping = {};
+    const canadaProvinces: Record<string, Set<string>> = {};
     const countryMap = new Map<string, Set<string>>();
 
     for (const record of records) {
@@ -96,6 +97,14 @@ export class LergService {
         if (!stateMapping[record.state].includes(record.npa)) {
           stateMapping[record.state].push(record.npa);
         }
+      }
+
+      // Handle Canadian provinces
+      if (record.country === 'CA') {
+        if (!canadaProvinces[record.state]) {
+          canadaProvinces[record.state] = new Set();
+        }
+        canadaProvinces[record.state].add(record.npa);
       }
 
       // Handle country mappings
@@ -110,6 +119,14 @@ export class LergService {
       country,
       npaCount: npas.size,
       npas: Array.from(npas).sort(),
+      // Add provinces for Canada
+      provinces:
+        country === 'CA'
+          ? Object.entries(canadaProvinces).map(([code, npas]) => ({
+              code,
+              npas: Array.from(npas).sort(),
+            }))
+          : undefined,
     }));
 
     return {

@@ -43,6 +43,10 @@ export interface CountryLergData {
   country: string;
   npaCount: number;
   npas: string[];
+  provinces?: Array<{
+    code: string;
+    npas: string[];
+  }>;
 }
 
 export interface LergState {
@@ -66,7 +70,8 @@ export interface LergDataResponse {
 }
 
 // Reuse same structure but with 'code' instead of 'name' for states
-export type StateWithNPAs = {
+export interface StateWithNPAs {
   code: string;
+  country?: string;
   npas: string[];
-};
+}
