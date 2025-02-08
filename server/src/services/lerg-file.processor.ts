@@ -45,6 +45,7 @@ export class LERGFileProcessor extends EventEmitter {
         const record = this.parseLergLine(line);
         if (record) {
           validRecords++;
+          logger.debug('Valid record found:', { npa: record.npa, state: record.state });
           batch.push(record);
           if (batch.length >= this.batchSize) {
             records.push(...batch);
@@ -86,13 +87,12 @@ export class LERGFileProcessor extends EventEmitter {
       if (parts[0].toUpperCase() === 'NPA') return null;
 
       const npa = parts[0];
-      const nxx = parts[1];
       const state = parts[3];
       const country = parts[parts.length - 1];
 
-      // Validate NPA and NXX
-      if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
-        this.logError('Invalid NPA/NXX', { line, npa, nxx });
+      // Validate NPA
+      if (!/^\d{3}$/.test(npa)) {
+        this.logError('Invalid NPA', { line, npa });
         return null;
       }
 
@@ -110,8 +110,6 @@ export class LERGFileProcessor extends EventEmitter {
 
       return {
         npa,
-        nxx,
-        npanxx: `${npa}${nxx}`,
         state,
         country,
         last_updated: new Date(),

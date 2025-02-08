@@ -30,6 +30,7 @@ export class LERGService {
       for (let i = 0; i < records.length; i += this.batchSize) {
         const batch = records.slice(i, i + this.batchSize);
         const uniqueRecords = this.getUniqueBatch(batch);
+        logger.debug('Unique NPAs in this batch:', { npas: uniqueRecords.map(r => r.npa) });
         processedRecords += await this.processBatch(uniqueRecords);
       }
 
@@ -40,49 +41,49 @@ export class LERGService {
     }
   }
 
-  private async processFileContents(rl: readline.Interface): Promise<LERGUploadResponse> {
-    let processedRecords = 0;
-    let totalRecords = 0;
-    let rawBatch: LERGRecord[] = [];
+  // private async processFileContents(rl: readline.Interface): Promise<LERGUploadResponse> {
+  //   let processedRecords = 0;
+  //   let totalRecords = 0;
+  //   let rawBatch: LERGRecord[] = [];
 
-    for await (const line of rl) {
-      totalRecords++;
+  //   for await (const line of rl) {
+  //     totalRecords++;
 
-      if (totalRecords % 100 === 0) {
-        logger.debug(`Processing line ${totalRecords}`);
-      }
+  //     if (totalRecords % 100 === 0) {
+  //       logger.debug(`Processing line ${totalRecords}`);
+  //     }
 
-      const record = this.parseLergLine(line);
-      if (record) {
-        logger.debug('Valid record found:', { npanxx: record.npanxx, state: record.state });
-        rawBatch.push(record);
+  //     const record = this.parseLergLine(line);
+  //     if (record) {
+  //       logger.debug('Valid record found:', { npanxx: record.npanxx, state: record.state });
+  //       rawBatch.push(record);
 
-        if (rawBatch.length >= this.batchSize) {
-          logger.debug('Raw batch collected:', { count: rawBatch.length });
-          const uniqueRecords = this.getUniqueBatch(rawBatch);
-          logger.debug('Unique NPANXXs in this batch:', { npanxxs: uniqueRecords.map(r => r.npanxx) });
+  //       if (rawBatch.length >= this.batchSize) {
+  //         logger.debug('Raw batch collected:', { count: rawBatch.length });
+  //         const uniqueRecords = this.getUniqueBatch(rawBatch);
+  //         logger.debug('Unique NPANXXs in this batch:', { npanxxs: uniqueRecords.map(r => r.npanxx) });
 
-          processedRecords += await this.processBatch(uniqueRecords);
-          rawBatch = [];
-        }
-      } else {
-        logger.debug('Invalid or skipped line:', { line });
-      }
-    }
+  //         processedRecords += await this.processBatch(uniqueRecords);
+  //         rawBatch = [];
+  //       }
+  //     } else {
+  //       logger.debug('Invalid or skipped line:', { line });
+  //     }
+  //   }
 
-    if (rawBatch.length > 0) {
-      const uniqueRecords = this.getUniqueBatch(rawBatch);
-      processedRecords += await this.processBatch(uniqueRecords);
-    }
+  //   if (rawBatch.length > 0) {
+  //     const uniqueRecords = this.getUniqueBatch(rawBatch);
+  //     processedRecords += await this.processBatch(uniqueRecords);
+  //   }
 
-    return { processedRecords, totalRecords };
-  }
+  //   return { processedRecords, totalRecords };
+  // }
 
   private getUniqueBatch(records: LERGRecord[]): LERGRecord[] {
     const uniqueMap = new Map<string, LERGRecord>();
 
     for (const record of records) {
-      const key = `${record.npa}${record.nxx}`;
+      const key = record.npa;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, record);
       }
@@ -94,7 +95,7 @@ export class LERGService {
   private async processBatch(batch: LERGRecord[]): Promise<number> {
     try {
       const inserted = await this.insertBatch(batch);
-      logger.info(`Processed batch: ${inserted} inserted out of ${batch.length} records`);
+      logger.info(`[lerg.service.ts] Processed batch: ${inserted} unique NPAs inserted out of ${batch.length} records`);
       return inserted;
     } catch (error) {
       logger.error('Error processing batch:', error);
@@ -134,8 +135,6 @@ export class LERGService {
 
       return {
         npa,
-        nxx,
-        npanxx: `${npa}${nxx}`,
         state,
         country,
         last_updated: new Date(),
@@ -149,31 +148,23 @@ export class LERGService {
   private async insertBatch(records: LERGRecord[]) {
     logger.debug('Attempting to insert records:', records);
 
-    const values = records
-      .map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`)
-      .join(',');
+    const values = records.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(',');
 
-    const params = records.flatMap(record => [
-      record.npa,
-      record.nxx,
-      record.state,
-      record.country,
-      record.last_updated,
-    ]);
+    const params = records.flatMap(record => [record.npa, record.state, record.country, record.last_updated]);
 
     const query = `
       INSERT INTO lerg_codes
-      (npa, nxx, state, country, last_updated)
+      (npa, state, country, last_updated)
       VALUES ${values}
-      ON CONFLICT (npanxx) DO NOTHING
-      RETURNING npanxx;
+      ON CONFLICT ON CONSTRAINT lerg_codes_npa_unique DO NOTHING
+      RETURNING npa;
     `;
 
     try {
       const result = await this.db.query(query, params);
       logger.info(
         'Successfully inserted NPANXXs:',
-        result.rows.map(r => r.npanxx)
+        result.rows.map(r => r.npa)
       );
       return result.rowCount ?? 0;
     } catch (error) {
@@ -188,9 +179,9 @@ export class LERGService {
         'data', (
           SELECT json_agg(row_to_json(l)) 
           FROM (
-            SELECT npanxx, npa, nxx, state 
+            SELECT npa, state, country
             FROM lerg_codes 
-            ORDER BY npanxx
+            ORDER BY npa
             LIMIT 100000
           ) l
         ),
@@ -259,9 +250,13 @@ export class LERGService {
 
   public async testConnection(): Promise<boolean> {
     try {
+      // First check if table exists
       const result = await this.db.query(`
-        SELECT 
-          EXISTS (SELECT 1 FROM lerg_codes LIMIT 1) as has_lerg
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'lerg_codes'
+        ) as has_lerg
       `);
 
       logger.info('[lerg.service.ts] Connection test results:', result.rows[0]);

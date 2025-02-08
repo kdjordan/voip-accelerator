@@ -5,8 +5,6 @@ export interface LERGStats {
 
 export interface LERGRecord {
   npa: string;
-  nxx: string;
-  npanxx: string;
   state: string;
   country: string;
   last_updated?: Date;
@@ -16,10 +14,3 @@ export interface LERGUploadResponse {
   processedRecords: number;
   totalRecords: number;
 }
-
-export interface CSVRow {
-  NPA: string;
-  Country: string;
-  'Province or Territory': string;
-}
-
