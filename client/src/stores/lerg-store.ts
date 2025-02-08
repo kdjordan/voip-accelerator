@@ -18,16 +18,6 @@ export const useLergStore = defineStore('lerg', {
         lastUpdated: null,
       },
     },
-    specialCodes: {
-      isProcessing: false,
-      isLocallyStored: false,
-      data: [] as SpecialAreaCode[],
-      stats: {
-        totalCodes: 0,
-        lastUpdated: null,
-        countryBreakdown: [],
-      },
-    },
   }),
 
   actions: {
@@ -35,18 +25,7 @@ export const useLergStore = defineStore('lerg', {
       this.lerg.isLocallyStored = value;
     },
 
-    setSpecialCodesLocallyStored(value: boolean) {
-      this.specialCodes.isLocallyStored = value;
-    },
-
-    setSpecialCodes(codes: SpecialAreaCode[]) {
-      this.specialCodes.data = codes;
-      this.specialCodes.stats.totalCodes = codes.length;
-      this.specialCodes.isLocallyStored = true;
-    },
-
     setStateNPAs(stateNPAs: StateNPAMapping) {
-      console.log('🔵 Setting state NPAs, incoming data:', stateNPAs);
       this.lerg.stateNPAs = stateNPAs;
     },
 
@@ -67,23 +46,15 @@ export const useLergStore = defineStore('lerg', {
   },
 
   getters: {
-    filterSpecialCodesByCountry: state => (country: string) => {
-      return state.specialCodes.data.filter(code => code.country === country);
+    getLergStats: (state): LERGStats => {
+      return {
+        totalRecords: state.lerg.stats.totalRecords,
+        lastUpdated: state.lerg.stats.lastUpdated,
+      };
     },
 
     getCountryList: state => {
       return [...new Set(state.specialCodes.data.map(code => code.country))];
-    },
-
-    getLergStats: state => {
-      return {
-        totalRecords: state.lerg.stats.totalRecords,
-        lastUpdated: state.lerg.stats.lastUpdated,
-        specialCodes: {
-          totalCodes: state.specialCodes.stats.totalCodes,
-          countryBreakdown: state.specialCodes.stats.countryBreakdown,
-        },
-      };
     },
 
     getCountryBreakdown: state => {
@@ -106,31 +77,11 @@ export const useLergStore = defineStore('lerg', {
         .sort((a, b) => a.countryCode.localeCompare(b.countryCode));
     },
 
-    sortedCountriesWithNPAs(): CountryWithNPAs[] {
-      const countryMap = new Map<string, string[]>();
-
-      this.specialCodes.data.forEach(code => {
-        if (!countryMap.has(code.country)) {
-          countryMap.set(code.country, []);
-        }
-        countryMap.get(code.country)?.push(code.npa);
-      });
-
-      return Array.from(countryMap.entries())
-        .map(([name, npas]) => ({
-          name,
-          npas: npas.sort(),
-        }))
-        .sort((a, b) => b.npas.length - a.npas.length);
-    },
-
-    sortedStatesWithNPAs(): StateWithNPAs[] {
-      if (!this.lerg.stateNPAs) return [];
-      const stateMap = this.lerg.stateNPAs;
-      return Object.entries(stateMap)
+    sortedStatesWithNPAs: (state): StateWithNPAs[] => {
+      return Object.entries(state.lerg.stateNPAs)
         .map(([code, npas]) => ({
           code,
-          npas: npas.sort(),
+          npas: [...npas].sort(),
         }))
         .sort((a, b) => b.npas.length - a.npas.length);
     },
@@ -140,8 +91,7 @@ export const useLergStore = defineStore('lerg', {
       return state.lerg.stateNPAs[stateCode]?.length || 0;
     },
 
-    getTotalStates: state => {
-      if (!state.lerg.stateNPAs) return 0;
+    getTotalStates: (state): number => {
       return Object.keys(state.lerg.stateNPAs).length;
     },
   },

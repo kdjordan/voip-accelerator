@@ -3,64 +3,69 @@ import type { LERGRecord } from '@/types/lerg.types';
 import { Readable } from 'stream';
 import { createInterface } from 'readline';
 import { EventEmitter } from 'events';
+import fs from 'fs';
+import path from 'path';
 
 export class LERGFileProcessor extends EventEmitter {
   private processedLines = 0;
   private totalLines = 0;
   private batchSize = 1000;
+  private errorLogPath: string;
 
   constructor() {
     super();
+    this.errorLogPath = path.join(process.cwd(), 'logs', 'lerg-processing-errors.log');
+    // Ensure logs directory exists
+    fs.mkdirSync(path.dirname(this.errorLogPath), { recursive: true });
+  }
+
+  private logError(error: string, data?: any) {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${error}\n${data ? JSON.stringify(data, null, 2) : ''}\n\n`;
+    fs.appendFileSync(this.errorLogPath, logEntry);
   }
 
   public async processFile(fileContent: Buffer | string): Promise<LERGRecord[]> {
     try {
       const records: LERGRecord[] = [];
       const content = fileContent.toString();
+      console.log('🔍 Starting LERG file processing');
       const stream = Readable.from(content);
       const rl = createInterface({
         input: stream,
         crlfDelay: Infinity,
       });
 
-      // First pass to count lines
-      for await (const _ of rl) {
-        this.totalLines++;
-      }
-
-      // Reset for processing
-      const rl2 = createInterface({
-        input: Readable.from(content),
-        crlfDelay: Infinity,
-      });
-
       let batch: LERGRecord[] = [];
-      for await (const line of rl2) {
+      let validRecords = 0;
+      let skippedRecords = 0;
+
+      for await (const line of rl) {
         this.processedLines++;
         const record = this.parseLergLine(line);
         if (record) {
+          validRecords++;
           batch.push(record);
-
           if (batch.length >= this.batchSize) {
             records.push(...batch);
-            this.emit('progress', {
-              processed: this.processedLines,
-              total: this.totalLines,
-              records: batch.length,
-            });
             batch = [];
           }
+        } else {
+          skippedRecords++;
         }
       }
+
+      console.log('📈 LERG Processing Stats:', {
+        totalLines: this.totalLines,
+        processedLines: this.processedLines,
+        validRecords,
+        skippedRecords,
+        finalRecordCount: records.length + batch.length,
+      });
 
       // Push final batch
       if (batch.length > 0) {
         records.push(...batch);
-        this.emit('progress', {
-          processed: this.processedLines,
-          total: this.totalLines,
-          records: batch.length,
-        });
       }
 
       return records;
@@ -76,7 +81,6 @@ export class LERGFileProcessor extends EventEmitter {
       if (!line.trim()) return null;
 
       const parts = line.split(',').map(part => part.replace(/^"|"$/g, '').trim());
-      console.log('🔍 Processing LERG line:', { parts });
 
       // Skip header line
       if (parts[0].toUpperCase() === 'NPA') return null;
@@ -84,24 +88,23 @@ export class LERGFileProcessor extends EventEmitter {
       const npa = parts[0];
       const nxx = parts[1];
       const state = parts[3];
-      const country = parts[13]; // Country is last column
-      console.log('📝 Extracted data:', { npa, nxx, state, country });
+      const country = parts[parts.length - 1];
 
       // Validate NPA and NXX
       if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
-        logger.warn('Invalid NPA/NXX:', { npa, nxx });
+        this.logError('Invalid NPA/NXX', { line, npa, nxx });
         return null;
       }
 
       // Validate state is 2 characters
       if (!state || state.length !== 2) {
-        logger.warn('Invalid state:', { state });
+        this.logError('Invalid state', { line, state });
         return null;
       }
 
       // Validate country is 2 characters
       if (!country || country.length !== 2) {
-        logger.warn('Invalid country:', { country });
+        this.logError('Invalid country', { line, country });
         return null;
       }
 
@@ -114,7 +117,10 @@ export class LERGFileProcessor extends EventEmitter {
         last_updated: new Date(),
       };
     } catch (error) {
-      logger.error('Error parsing LERG line:', error);
+      this.logError('Error parsing LERG line', {
+        line,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
   }

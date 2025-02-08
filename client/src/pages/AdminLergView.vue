@@ -212,125 +212,10 @@
           </div>
         </div>
       </div>
-
-      <!-- Special Codes Section -->
-      <div class="bg-gray-800 rounded-lg p-6">
-        <div class="space-y-6">
-          <!-- Special Codes Stats -->
-          <div>
-            <h2 class="text-xl font-semibold mb-6">Special Area Codes</h2>
-            <div class="space-y-4">
-              <!-- Total Special Codes -->
-              <div class="flex justify-between items-center">
-                <span class="text-gray-400">Total Special Codes</span>
-                <span class="text-2xl font-bold">{{ formatNumber(store.specialCodes.stats.totalCodes) }}</span>
-              </div>
-              <!-- Last Updated -->
-              <div class="flex justify-between items-center">
-                <span class="text-gray-400">Last Updated</span>
-                <span class="text-gray-200">{{ formatDate(store.specialCodes.stats.lastUpdated) }}</span>
-              </div>
-              <!-- Stored locally -->
-              <div class="flex justify-between items-center">
-                <span class="text-gray-400">Stored locally</span>
-                <div
-                  class="w-3 h-3 rounded-full"
-                  :class="[
-                    isSpecialCodesLocallyStored
-                      ? 'bg-green-500 animate-status-pulse-success'
-                      : 'bg-red-500 animate-status-pulse-error',
-                  ]"
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Special Area Codes Details Header -->
-          <div
-            @click="toggleSpecialCodesDetails"
-            class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
-          >
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Special Area Codes Details</span>
-              <div class="flex items-center space-x-2">
-                <ChevronDownIcon
-                  :class="{ 'transform rotate-180': showSpecialCodesDetails }"
-                  class="w-4 h-4 transition-transform"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Special Area Codes Details Content -->
-          <div
-            v-if="showSpecialCodesDetails"
-            class="border-t border-gray-700/50 pt-6"
-          >
-            <!-- Table -->
-            <div class="space-y-4">
-              <!-- Full width rows for multi-NPA countries -->
-              <div class="space-y-2">
-                <div
-                  v-for="country in sortedCountries.filter(c => c.npas.length > 1)"
-                  :key="country.name"
-                  @click="toggleExpand(country.name)"
-                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
-                >
-                  <div class="flex justify-between items-center">
-                    <!-- Country Name -->
-                    <span class="font-medium">{{ country.name }}</span>
-
-                    <!-- NPAs -->
-                    <div class="flex items-center space-x-4">
-                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
-                        <span class="text-sm text-gray-400">{{ country.npas.length }} NPAs</span>
-                        <ChevronDownIcon
-                          :class="{ 'transform rotate-180': expandedCountries.includes(country.name) }"
-                          class="w-4 h-4 transition-transform"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Expanded NPAs list -->
-                  <div
-                    v-if="expandedCountries.includes(country.name)"
-                    class="mt-3 pl-4"
-                  >
-                    <div class="flex flex-wrap gap-2">
-                      <div
-                        v-for="npa in country.npas"
-                        :key="npa"
-                        class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
-                      >
-                        {{ npa }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Grid for single NPA countries -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div
-                  v-for="country in sortedCountries.filter(c => c.npas.length === 1)"
-                  :key="country.name"
-                  class="bg-gray-900/50 p-4 rounded-lg"
-                >
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ country.name }}</span>
-                    <span class="text-gray-300">{{ country.npas[0] }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- File Upload Sections -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 gap-6 mb-8">
       <!-- LERG Upload -->
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Upload LERG File</h2>
@@ -372,56 +257,12 @@
           </p>
         </div>
       </div>
-
-      <!-- Special Codes Upload -->
-      <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Upload Special Codes</h2>
-        <div
-          @dragover.prevent
-          @drop.prevent="handleSpecialCodesDrop"
-          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center"
-          :class="{ 'border-green-500': isDragging }"
-        >
-          <input
-            type="file"
-            ref="specialCodesFileInput"
-            class="hidden"
-            accept=".csv"
-            @change="handleSpecialCodesFileSelect"
-          />
-          <button
-            @click="$refs.specialCodesFileInput.click()"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            Choose File
-          </button>
-          <p class="text-sm text-gray-400 mt-2">or drag and drop your special codes file here</p>
-          <p class="text-xs text-gray-500 mt-1">Supports CSV files</p>
-        </div>
-
-        <!-- Upload Status -->
-        <div
-          v-if="specialCodesUploadStatus"
-          class="mt-4"
-        >
-          <p :class="['text-sm', specialCodesUploadStatus.type === 'error' ? 'text-red-400' : 'text-green-400']">
-            {{ specialCodesUploadStatus.message }}
-          </p>
-        </div>
-      </div>
     </div>
 
     <!-- Data Recovery -->
     <div class="bg-green-900/20 border border-green-500/50 rounded-lg p-6 mb-4">
       <h2 class="text-xl font-semibold text-green-400 mb-4">Data Recovery</h2>
-      <div class="flex items-center justify-end space-x-4">
-        <button
-          @click="confirmReloadSpecial"
-          class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          Reload Special Codes
-        </button>
-      </div>
+      <div class="flex items-center justify-end space-x-4"></div>
     </div>
 
     <!-- Danger Zone -->
@@ -433,13 +274,6 @@
           class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
         >
           Clear LERG Data
-        </button>
-
-        <button
-          @click="confirmClearSpecialData"
-          class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-        >
-          Clear Special Codes
         </button>
       </div>
     </div>
@@ -456,20 +290,16 @@
   const lergStats = computed(() => store.lerg.stats);
   const isLergProcessing = computed(() => store.lerg.isProcessing);
   const expandedCountries = ref<string[]>([]);
-  const showSpecialCodesDetails = ref(false);
   const showStateDetails = ref(false);
   const expandedStates = ref<string[]>([]);
 
   const isLergLocallyStored = computed(() => {
     return store.lerg.isLocallyStored;
   });
-  const isSpecialCodesLocallyStored = computed(() => store.specialCodes.isLocallyStored);
 
   const isDragging = ref(false);
-  const specialCodesUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
   const lergUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const sortedCountries = computed(() => store.sortedCountriesWithNPAs);
 
   const isLergUploading = ref(false);
 
@@ -547,43 +377,6 @@
     }
   }
 
-  async function handleSpecialCodesDrop(e: DragEvent) {
-    isDragging.value = false;
-    const file = e.dataTransfer?.files[0];
-    if (file) {
-      await uploadSpecialCodesFile(file);
-    }
-  }
-
-  async function handleSpecialCodesFileSelect(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-      await uploadSpecialCodesFile(file);
-    }
-  }
-
-  async function uploadSpecialCodesFile(file: File) {
-    if (!file.name.endsWith('.csv')) {
-      specialCodesUploadStatus.value = { type: 'error', message: 'Please upload a CSV file' };
-      return;
-    }
-
-    try {
-      specialCodesUploadStatus.value = { type: 'success', message: 'Uploading...' };
-      const formData = new FormData();
-      formData.append('file', file);
-
-      await lergApiService.uploadSpecialCodesFile(formData);
-      specialCodesUploadStatus.value = { type: 'success', message: 'Upload successful' };
-    } catch (error) {
-      console.error('Upload failed:', error);
-      specialCodesUploadStatus.value = {
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Upload failed',
-      };
-    }
-  }
-
   async function confirmClearLergData() {
     if (!confirm('Are you sure you want to clear all LERG codes? This action cannot be undone.')) {
       return;
@@ -597,47 +390,6 @@
     }
   }
 
-  async function confirmClearSpecialData() {
-    if (!confirm('Are you sure you want to clear all special area codes? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await lergApiService.clearSpecialCodesData();
-      console.log('Special codes cleared successfully');
-    } catch (error) {
-      console.error('Failed to clear special codes:', error);
-    }
-  }
-
-  async function confirmReloadSpecial() {
-    if (!confirm('Are you sure you want to reload the special codes data?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/admin/lerg/reload/special', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Reload failed');
-      }
-
-      await response.json();
-      // await fetchStats();
-    } catch (error) {
-      console.error('Failed to reload special codes:', error);
-      if (error instanceof Error) {
-        console.error('Error:', error.message);
-      }
-    }
-  }
-
   function toggleExpand(countryName: string) {
     const index = expandedCountries.value.indexOf(countryName);
     if (index === -1) {
@@ -645,10 +397,6 @@
     } else {
       expandedCountries.value.splice(index, 1);
     }
-  }
-
-  function toggleSpecialCodesDetails() {
-    showSpecialCodesDetails.value = !showSpecialCodesDetails.value;
   }
 
   async function handleLergFileDrop(event: DragEvent) {

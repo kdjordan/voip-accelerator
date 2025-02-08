@@ -7,17 +7,14 @@ export const DBConfig = {
     version: 1,
     tables: {
       lerg: 'lerg',
-      specialCodes: 'special_codes',
       stateMappings: 'state_mappings',
     },
     schema: {
       lerg: '++id, npanxx, state, npa, nxx, country',
-      specialCodes: '++id, npa, country, province',
       stateMappings: 'state, npas',
     },
     stores: {
       lerg: 'npanxx, npa, nxx, state, country',
-      special_area_codes: '++id, npa, country, description, last_updated',
       state_mappings: 'state, npas',
     },
   },
