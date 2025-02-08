@@ -41,7 +41,6 @@
 
   const sharedStore = useSharedStore();
 
-
   let isCleaningUp = false;
 
   const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
@@ -76,16 +75,14 @@
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     try {
-      console.time('initialization');
       console.log('Starting application initialization...');
 
       // console.log('Loading sample decks...');
-      // await loadSampleDecks([DBName.AZ, DBName.US]);
+      // await loadSampleDecks([DBName.AZ]);
 
       console.log('Initializing LERG service...');
       await lergApiService.initialize();
 
-      console.timeEnd('initialization');
     } catch (error) {
       console.error('Error during initialization:', error);
     }

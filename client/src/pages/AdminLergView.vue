@@ -4,165 +4,100 @@
 
     <!-- Stats Dashboard -->
     <div class="flex flex-col gap-6 mb-8">
-      <!-- LERG Database Stats -->
+      <!-- Combined Stats Box -->
       <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">LERG Database Stats</h2>
-        <div class="space-y-4">
-          <div class="flex justify-between items-center">
-            <span class="text-gray-400">Total Records</span>
-            <div
-              v-if="isLergProcessing"
-              class="animate-spin h-5 w-5"
-            >
-              <svg
-                class="text-accent"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                  fill="none"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            </div>
-            <span
-              v-else
-              class="text-2xl font-bold"
-              >{{ formatNumber(lergStats.totalRecords) }}</span
-            >
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-gray-400">Last Updated</span>
-            <div
-              v-if="isLergProcessing"
-              class="animate-spin h-5 w-5"
-            >
-              <svg
-                class="text-accent"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                  fill="none"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            </div>
-            <span
-              v-else
-              class="text-lg"
-              >{{ formatDate(lergStats.lastUpdated) }}</span
-            >
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-gray-400">Stored locally</span>
-            <div class="flex items-center">
-              <div
-                class="w-3 h-3 rounded-full transition-colors duration-200"
-                :class="[
-                  isLergLocallyStored
-                    ? 'bg-green-500 animate-status-pulse-success'
-                    : 'bg-red-500 animate-status-pulse-error',
-                ]"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- State/NPA Breakdown Section -->
-      <div class="bg-gray-800 rounded-lg p-6">
-        <div class="space-y-6">
+        <!-- LERG Stats Grid -->
+        <div class="grid grid-cols-1 gap-3 border-b border-gray-700/50 pb-4 mb-6">
+          <!-- Last Updated -->
           <div>
-            <h2 class="text-xl font-semibold mb-6">State/NPA Breakdown</h2>
-            <div class="space-y-4">
-              <!-- Total States -->
-              <div class="flex justify-between items-center">
-                <span class="text-gray-400">Total States</span>
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Last Updated</h3>
+              <div class="text-lg">{{ formatDate(lergStats.lastUpdated) }}</div>
+            </div>
+          </div>
+          <!-- Total Records -->
+          <div>
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Total Records</h3>
+              <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalRecords) }}</div>
+            </div>
+          </div>
+          <!-- Total Countries -->
+          <div>
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Total Countries</h3>
+              <div class="text-2xl font-bold">{{ store.getCountryCount }}</div>
+            </div>
+          </div>
+          <!-- Database Connection Status -->
+          <div>
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Database Status</h3>
+              <div class="flex items-center space-x-2">
                 <div
-                  v-if="store.lerg.isProcessing"
-                  class="animate-spin h-5 w-5"
-                >
-                  <svg
-                    class="text-accent"
-                    viewBox="0 0 24 24"
-                  >
-                    <!-- spinner svg -->
-                  </svg>
-                </div>
+                  class="w-3 h-3 rounded-full"
+                  :class="
+                    dbStatus.connected
+                      ? 'bg-green-500 animate-status-pulse-success'
+                      : 'bg-red-500 animate-status-pulse-error'
+                  "
+                ></div>
+                <span>{{ dbStatus.connected ? 'Connected' : 'Disconnected' }}</span>
                 <span
-                  v-else
-                  class="text-2xl font-bold"
-                  >{{ store.getTotalStates }}</span
+                  v-if="!dbStatus.connected"
+                  class="text-red-400 text-sm"
+                  >{{ dbStatus.error }}</span
                 >
               </div>
-              <!-- Last Updated -->
-              <div class="flex justify-between items-center">
-                <span class="text-gray-400">Last Updated</span>
-                <span class="text-gray-200">{{ formatDate(store.lerg.stats.lastUpdated) }}</span>
-              </div>
-              <!-- Stored locally -->
-              <div class="flex justify-between items-center">
-                <span class="text-gray-400">Stored locally</span>
+            </div>
+          </div>
+          <!-- Storage Status -->
+          <div>
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Storage Status</h3>
+              <div class="flex items-center space-x-2">
                 <div
                   class="w-3 h-3 rounded-full"
                   :class="[
-                    store.lerg.isLocallyStored
+                    isLergLocallyStored
                       ? 'bg-green-500 animate-status-pulse-success'
                       : 'bg-red-500 animate-status-pulse-error',
                   ]"
                 ></div>
+                <span>{{ isLergLocallyStored ? 'Stored Locally' : 'Not Stored' }}</span>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- State/NPA Details Header -->
-          <div
-            @click="toggleStateDetails"
-            class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
-          >
-            <div class="flex justify-between items-center">
-              <span class="font-medium">State/NPA Details</span>
-              <div class="flex items-center space-x-2">
+        <!-- Breakdown Sections -->
+        <div class="space-y-6">
+          <!-- US States Section -->
+          <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+            <div
+              @click="toggleStateDetails"
+              class="p-4 w-full hover:bg-gray-400/80 transition-colors cursor-pointer"
+            >
+              <div class="flex justify-between items-center">
+                <span class="font-medium">US States</span>
                 <ChevronDownIcon
                   :class="{ 'transform rotate-180': showStateDetails }"
                   class="w-4 h-4 transition-transform"
                 />
               </div>
             </div>
-          </div>
-
-          <!-- State/NPA Details Content -->
-          <div
-            v-if="showStateDetails"
-            class="border-t border-gray-700/50 pt-6"
-          >
-            <div class="space-y-4">
+            <!-- US States Content -->
+            <div
+              v-if="showStateDetails"
+              class="p-4 space-y-4"
+            >
               <!-- Full width rows for multi-NPA states -->
               <div class="space-y-2">
                 <div
                   v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length > 1)"
                   :key="state.code"
                   @click="toggleExpandState(state.code)"
-                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/50 transition-colors cursor-pointer"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-500/80 transition-colors cursor-pointer"
                 >
                   <div class="flex justify-between items-center">
                     <span class="font-medium">{{ state.code }}</span>
@@ -205,6 +140,80 @@
                   <div class="flex justify-between items-center">
                     <span class="font-medium">{{ state.code }}</span>
                     <span class="text-gray-300">{{ state.npas[0] }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Non-US States Section -->
+          <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+            <div
+              @click="toggleCountryDetails"
+              class="p-4 w-full hover:bg-gray-400/80 transition-colors cursor-pointer"
+            >
+              <div class="flex justify-between items-center">
+                <span class="font-medium">Non-US States</span>
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': showCountryDetails }"
+                  class="w-4 h-4 transition-transform"
+                />
+              </div>
+            </div>
+            <!-- Non-US States Content -->
+            <div
+              v-if="showCountryDetails"
+              class="p-4 space-y-4"
+            >
+              <!-- Full width rows for multi-NPA countries -->
+              <div class="space-y-2">
+                <div
+                  v-for="country in store.getCountryData.filter(c => c.country !== 'US' && c.npaCount > 1)"
+                  :key="country.country"
+                  @click="toggleExpandCountry(country.country)"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-400/80 transition-colors cursor-pointer"
+                >
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium">{{ getCountryName(country.country) }}</span>
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
+                        <span class="text-sm text-gray-400">{{ country.npaCount }} NPAs</span>
+                        <ChevronDownIcon
+                          :class="{ 'transform rotate-180': expandedCountries.includes(country.country) }"
+                          class="w-4 h-4 transition-transform"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Expanded NPAs list -->
+                  <div
+                    v-if="expandedCountries.includes(country.country)"
+                    class="mt-3 pl-4"
+                  >
+                    <div class="flex flex-wrap gap-2">
+                      <div
+                        v-for="npa in country.npas"
+                        :key="npa"
+                        class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
+                      >
+                        {{ npa }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grid for single NPA countries -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div
+                  v-for="country in store.getCountryData.filter(c => c.country !== 'US' && c.npaCount === 1)"
+                  :key="country.country"
+                  class="bg-gray-900/50 p-4 rounded-lg"
+                >
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium">{{ getCountryName(country.country) }}</span>
+                    <span class="text-gray-300">{{ country.npas[0] }}</span>
                   </div>
                 </div>
               </div>
@@ -260,10 +269,10 @@
     </div>
 
     <!-- Data Recovery -->
-    <div class="bg-green-900/20 border border-green-500/50 rounded-lg p-6 mb-4">
+    <!-- <div class="bg-green-900/20 border border-green-500/50 rounded-lg p-6 mb-4">
       <h2 class="text-xl font-semibold text-green-400 mb-4">Data Recovery</h2>
       <div class="flex items-center justify-end space-x-4"></div>
-    </div>
+    </div> -->
 
     <!-- Danger Zone -->
     <div class="bg-red-900/20 border border-red-500/50 rounded-lg p-6">
@@ -281,30 +290,55 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
+  import { getCountryName } from '@/constants/country-codes';
 
   const store = useLergStore();
-  const lergStats = computed(() => store.lerg.stats);
-  const isLergProcessing = computed(() => store.lerg.isProcessing);
+  const lergStats = computed(() => store.stats);
+  const isLergProcessing = computed(() => store.isProcessing);
   const expandedCountries = ref<string[]>([]);
   const showStateDetails = ref(false);
   const expandedStates = ref<string[]>([]);
+  const showCountryDetails = ref(false);
 
   const isLergLocallyStored = computed(() => {
-    return store.lerg.isLocallyStored;
+    return store.isLocallyStored;
   });
 
   const isDragging = ref(false);
   const lergUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 
-
   const isLergUploading = ref(false);
 
-  const stateNPAs = computed(() => store.lerg.stateNPAs);
+  const stateNPAs = computed(() => store.stateNPAs);
   console.log('Current state mappings:', stateNPAs.value);
+
+  const dbStatus = ref({
+    connected: false,
+    error: '',
+  });
+
+  async function checkConnection() {
+    try {
+      await lergApiService.testConnection();
+      dbStatus.value = {
+        connected: true,
+        error: '',
+      };
+    } catch (error) {
+      dbStatus.value = {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
+  }
+
+  onMounted(async () => {
+    await checkConnection();
+  });
 
   function formatNumber(num: number): string {
     return new Intl.NumberFormat().format(num);
@@ -419,6 +453,19 @@
 
   function toggleStateDetails() {
     showStateDetails.value = !showStateDetails.value;
+  }
+
+  function toggleCountryDetails() {
+    showCountryDetails.value = !showCountryDetails.value;
+  }
+
+  function toggleExpandCountry(countryCode: string) {
+    const index = expandedCountries.value.indexOf(countryCode);
+    if (index === -1) {
+      expandedCountries.value.push(countryCode);
+    } else {
+      expandedCountries.value.splice(index, 1);
+    }
   }
 </script>
 

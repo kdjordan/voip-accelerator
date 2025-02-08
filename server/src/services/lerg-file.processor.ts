@@ -1,4 +1,3 @@
-import { logger } from '@/config/logger';
 import type { LERGRecord } from '@/types/lerg.types';
 import { Readable } from 'stream';
 import { createInterface } from 'readline';
@@ -45,7 +44,7 @@ export class LERGFileProcessor extends EventEmitter {
         const record = this.parseLergLine(line);
         if (record) {
           validRecords++;
-          logger.debug('Valid record found:', { npa: record.npa, state: record.state });
+          console.debug('[lerg-file.processor.ts] Valid record found:', { npa: record.npa, state: record.state });
           batch.push(record);
           if (batch.length >= this.batchSize) {
             records.push(...batch);
@@ -71,7 +70,7 @@ export class LERGFileProcessor extends EventEmitter {
 
       return records;
     } catch (error) {
-      logger.error('Error processing LERG file:', error);
+      console.error('[lerg-file.processor.ts] Error processing LERG file:', error);
       throw error;
     }
   }

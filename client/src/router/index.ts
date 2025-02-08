@@ -21,11 +21,6 @@ const router = createRouter({
       component: () => import('../pages/UsPricingView.vue'),
     },
     {
-      path: '/healthcheck',
-      name: 'healthcheck',
-      component: () => import('../pages/HealthCheckView.vue'),
-    },
-    {
       path: '/admin/lerg',
       name: 'AdminLerg',
       component: AdminLergView,

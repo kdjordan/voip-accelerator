@@ -8,11 +8,8 @@ export const DBConfig = {
     tables: {
       lerg: 'lerg',
     },
-    schema: {
-      lerg: '++id, npa, state, country',
-    },
     stores: {
-      lerg: 'npa, state, country',
+      lerg: 'npa, *state, *country',
     },
   },
   RATE_DECKS: {

@@ -1,84 +1,50 @@
 import { defineStore } from 'pinia';
-import type { LergState, SpecialAreaCode, CountryBreakdown, StateWithNPAs, StateNPAMapping } from '@/types/lerg-types';
-
-interface CountryWithNPAs {
-  name: string;
-  npas: string[];
-}
+import type { LergState, StateWithNPAs, StateNPAMapping, LergStats, CountryLergData } from '@/types/lerg-types';
 
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
     error: null,
-    lerg: {
-      isProcessing: false,
-      isLocallyStored: false,
-      stateNPAs: {},
-      stats: {
-        totalRecords: 0,
-        lastUpdated: null,
-      },
+    isProcessing: false,
+    isLocallyStored: false,
+    stateNPAs: {},
+    countryData: [],
+    stats: {
+      totalRecords: 0,
+      lastUpdated: null,
     },
   }),
 
   actions: {
     setLergLocallyStored(value: boolean) {
-      this.lerg.isLocallyStored = value;
+      this.isLocallyStored = value;
     },
 
     setStateNPAs(stateNPAs: StateNPAMapping) {
-      this.lerg.stateNPAs = stateNPAs;
+      this.stateNPAs = stateNPAs;
+    },
+
+    setCountryData(countryData: CountryLergData[]) {
+      this.countryData = countryData;
     },
 
     setLergStats(totalRecords: number) {
-      this.lerg.stats.totalRecords = totalRecords;
-      this.lerg.stats.lastUpdated = new Date().toISOString();
+      this.stats.totalRecords = totalRecords;
+      this.stats.lastUpdated = new Date().toISOString();
     },
 
     setError(error: string | null) {
       this.error = error;
     },
-
-    updateSpecialCodesForCountry(country: string, codes: SpecialAreaCode[]) {
-      // Update the store's data for a specific country
-      const otherCodes = this.specialCodes.data.filter(code => code.country !== country);
-      this.specialCodes.data = [...otherCodes, ...codes];
-    },
   },
 
   getters: {
-    getLergStats: (state): LERGStats => {
-      return {
-        totalRecords: state.lerg.stats.totalRecords,
-        lastUpdated: state.lerg.stats.lastUpdated,
-      };
-    },
-
-    getCountryList: state => {
-      return [...new Set(state.specialCodes.data.map(code => code.country))];
-    },
-
-    getCountryBreakdown: state => {
-      // Transform the data to match CountryBreakdown interface
-      return state.specialCodes.data
-        .reduce((acc, code) => {
-          const existing = acc.find(item => item.countryCode === code.country);
-          if (existing) {
-            existing.count++;
-            existing.npaCodes.push(code.npa);
-          } else {
-            acc.push({
-              countryCode: code.country,
-              count: 1,
-              npaCodes: [code.npa],
-            });
-          }
-          return acc;
-        }, [] as CountryBreakdown[])
-        .sort((a, b) => a.countryCode.localeCompare(b.countryCode));
-    },
+    getLergStats: (state): LergStats => ({
+      totalRecords: state.stats.totalRecords,
+      lastUpdated: state.stats.lastUpdated,
+    }),
 
     sortedStatesWithNPAs: (state): StateWithNPAs[] => {
-      return Object.entries(state.lerg.stateNPAs)
+      return Object.entries(state.stateNPAs)
         .map(([code, npas]) => ({
           code,
           npas: [...npas].sort(),
@@ -87,12 +53,21 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getStateNPACount: state => (stateCode: string) => {
-      if (!state.lerg.stateNPAs) return 0;
-      return state.lerg.stateNPAs[stateCode]?.length || 0;
+      if (!state.stateNPAs) return 0;
+      return state.stateNPAs[stateCode]?.length || 0;
     },
 
     getTotalStates: (state): number => {
-      return Object.keys(state.lerg.stateNPAs).length;
+      return Object.keys(state.stateNPAs).length;
     },
+
+    getCountryData: (state): CountryLergData[] => state.countryData,
+
+    getCountryByCode: state => (countryCode: string) =>
+      state.countryData.find(country => country.country === countryCode),
+
+    getTotalNPAs: (state): number => state.countryData.reduce((sum, country) => sum + country.npaCount, 0),
+
+    getCountryCount: (state): number => state.countryData.length,
   },
 });

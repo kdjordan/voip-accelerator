@@ -172,11 +172,6 @@
       icon: DocumentCurrencyDollarIcon,
     },
     {
-      name: 'Health Check',
-      to: '/healthcheck',
-      icon: HeartIcon,
-    },
-    {
       name: 'Lerg Admin',
       to: '/admin/lerg',
       icon: Cog6ToothIcon,
