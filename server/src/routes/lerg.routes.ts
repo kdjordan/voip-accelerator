@@ -20,10 +20,10 @@ router.get('/lerg-data', async (_req: Request, res: Response): Promise<void> => 
 
 router.get('/test-connection', async (_req: Request, res: Response): Promise<void> => {
   try {
-    await lergService.testConnection();
-    res.status(200).json(true);
+    const hasData = await lergService.testConnection();
+    res.json(hasData);
   } catch (error) {
-    logger.error('Connection test failed:', error);
+    logger.error('[lerg.routes.ts] Connection test failed:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

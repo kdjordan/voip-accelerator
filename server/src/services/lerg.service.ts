@@ -1,7 +1,6 @@
 import { DatabaseService } from '@/services/database.service';
 import type { LERGRecord, LERGUploadResponse } from '@/types/lerg.types';
 import * as fs from 'fs';
-import * as readline from 'readline';
 import path from 'path';
 import { logger } from '@/config/logger';
 import { LERGFileProcessor } from './lerg-file.processor';
@@ -41,44 +40,6 @@ export class LERGService {
     }
   }
 
-  // private async processFileContents(rl: readline.Interface): Promise<LERGUploadResponse> {
-  //   let processedRecords = 0;
-  //   let totalRecords = 0;
-  //   let rawBatch: LERGRecord[] = [];
-
-  //   for await (const line of rl) {
-  //     totalRecords++;
-
-  //     if (totalRecords % 100 === 0) {
-  //       logger.debug(`Processing line ${totalRecords}`);
-  //     }
-
-  //     const record = this.parseLergLine(line);
-  //     if (record) {
-  //       logger.debug('Valid record found:', { npanxx: record.npanxx, state: record.state });
-  //       rawBatch.push(record);
-
-  //       if (rawBatch.length >= this.batchSize) {
-  //         logger.debug('Raw batch collected:', { count: rawBatch.length });
-  //         const uniqueRecords = this.getUniqueBatch(rawBatch);
-  //         logger.debug('Unique NPANXXs in this batch:', { npanxxs: uniqueRecords.map(r => r.npanxx) });
-
-  //         processedRecords += await this.processBatch(uniqueRecords);
-  //         rawBatch = [];
-  //       }
-  //     } else {
-  //       logger.debug('Invalid or skipped line:', { line });
-  //     }
-  //   }
-
-  //   if (rawBatch.length > 0) {
-  //     const uniqueRecords = this.getUniqueBatch(rawBatch);
-  //     processedRecords += await this.processBatch(uniqueRecords);
-  //   }
-
-  //   return { processedRecords, totalRecords };
-  // }
-
   private getUniqueBatch(records: LERGRecord[]): LERGRecord[] {
     const uniqueMap = new Map<string, LERGRecord>();
 
@@ -100,48 +61,6 @@ export class LERGService {
     } catch (error) {
       logger.error('Error processing batch:', error);
       return 0;
-    }
-  }
-
-  private parseLergLine(line: string): LERGRecord | null {
-    try {
-      if (!line.trim()) {
-        return null;
-      }
-
-      const parts = line.split(',').map(part => part.replace(/^"|"$/g, '').trim());
-
-      // Skip header line
-      if (parts[0].toUpperCase() === 'NPA') {
-        return null;
-      }
-
-      const npa = parts[0];
-      const nxx = parts[1];
-      const state = parts[3];
-      const country = parts[4];
-
-      // Validate NPA and NXX
-      if (!/^\d{3}$/.test(npa) || !/^\d{3}$/.test(nxx)) {
-        logger.warn('Invalid NPA/NXX:', { npa, nxx });
-        return null;
-      }
-
-      // Validate state is 2 characters
-      if (!state || state.length !== 2) {
-        logger.warn('Invalid state:', { state });
-        return null;
-      }
-
-      return {
-        npa,
-        state,
-        country,
-        last_updated: new Date(),
-      };
-    } catch (error) {
-      logger.error('Error parsing LERG line:', error);
-      return null;
     }
   }
 
