@@ -7,15 +7,12 @@ export const DBConfig = {
     version: 1,
     tables: {
       lerg: 'lerg',
-      stateMappings: 'state_mappings',
     },
     schema: {
-      lerg: '++id, npanxx, state, npa, nxx, country',
-      stateMappings: 'state, npas',
+      lerg: '++id, npa, state, country',
     },
     stores: {
-      lerg: 'npanxx, npa, nxx, state, country',
-      state_mappings: 'state, npas',
+      lerg: 'npa, state, country',
     },
   },
   RATE_DECKS: {

@@ -31,7 +31,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     logger.info('Processing uploaded file');
     const result = await lergService.processLergFile(req.file.buffer);
-    logger.info('File processed successfully', result);
+    logger.info('[admin.routes.ts] LERG file processed successfully:', {
+      processedRecords: result.processedRecords,
+      totalRecords: result.totalRecords
+    });
 
     return res.json({
       success: true,
