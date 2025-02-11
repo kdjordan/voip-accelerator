@@ -18,7 +18,7 @@
           <!-- Total Records -->
           <div>
             <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Total Records</h3>
+              <h3 class="text-gray-400">Total NPA Records</h3>
               <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalRecords) }}</div>
             </div>
           </div>
