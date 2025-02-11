@@ -137,6 +137,7 @@
     ArrowRightEndOnRectangleIcon,
     HeartIcon,
     Cog6ToothIcon,
+    CurrencyDollarIcon,
   } from '@heroicons/vue/24/outline';
 
   const userStore = useSharedStore();
@@ -170,6 +171,11 @@
       name: 'US Reporting',
       to: '/uspricing',
       icon: DocumentCurrencyDollarIcon,
+    },
+    {
+      name: 'Rate Sheet',
+      to: '/rate-sheet',
+      icon: CurrencyDollarIcon,
     },
     {
       name: 'Lerg Admin',

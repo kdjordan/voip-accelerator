@@ -12,6 +12,13 @@ export const DBConfig = {
       lerg: 'npa, *state, *country',
     },
   },
+  RATE_SHEET: {
+    name: 'rate_sheet_db',
+    version: 1,
+    stores: {
+      rate_sheet: '++id, name, prefix, rate, effective, minDuration, increments',
+    },
+  },
   RATE_DECKS: {
     name: 'rate_decks_db',
     version: 1,
@@ -23,7 +30,9 @@ export const DBConfig = {
 } as const;
 
 // Create database instances
-export function createDatabase(config: typeof DBConfig.LERG | typeof DBConfig.RATE_DECKS): Dexie {
+export function createDatabase(
+  config: typeof DBConfig.LERG | typeof DBConfig.RATE_DECKS | typeof DBConfig.RATE_SHEET
+): Dexie {
   const db = new Dexie(config.name);
   console.log('Creating database with stores:', config.stores);
   db.version(config.version).stores(config.stores);

@@ -47,7 +47,7 @@
   import { AZColumnRole, type AZStandardizedData } from '@/types/az-types';
   import { DBName, type DBNameType } from '@/types/app-types';
   import UploadComponent from '@/components/shared/UploadComponent.vue';
-  import useIndexedDB from '@/composables/useIndexDB';
+  import useIndexedDB from '@/composables/xxuseIndexDB';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
   import type { AzPricingReport, AzCodeReport, AZReportsInput } from '@/types/az-types';
   import { useAzStore } from '@/stores/az-store';

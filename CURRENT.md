@@ -1,44 +1,98 @@
-# LERG Country/State Integration
+# Rate Sheet Formalizer Implementation
 
 ## Overview
 
-Integrate country information from LERG data to provide a single source of truth for NPA mappings, eliminating the need for separate special codes management.
+Create a new feature to allow users to upload and process rate sheet CSV files, with client-side storage using IndexedDB. The tool will help formalize rates when a destination has multiple codes and potentially different rates.
 
-## Implementation Steps
+## Implmentation notes
 
-### 1. Database Schema Updates
+Use best practices for Vue 3 and act as senior developer. Use Tailwind for all css. Always check to see if we have a fuction available for the task - do not assume we have to write everything from scratch. Leverage existing components and functions whenever possible. Keep all types in type files - never in component code.
+Always ask clarifying questions if you are confused or ave lost context.
 
-- [x] Clean up migration files (consolidate in server/migrations)
-- [x] Add country column to LERG table
-- [x] Update migrations
-- [x] Decision made: Remove special_codes functionality as it's redundant with LERG data
+## Required Column Roles
 
-### 2. Cleanup Tasks
+- [x] Destination Name
+- [x] Code
+- [x] Rate
+- [x] Effective Date
+- [x] Min Duration
+- [x] Increments
 
-- [ ] Remove special_area_codes table
-- [ ] Remove special codes seeder
-- [ ] Remove special codes processor
-- [ ] Remove special codes routes
-- [ ] Update client to use LERG data for country/NPA mappings
+_Note: All columns are required and can only map to one role_
 
-### 3. Data Processing Updates
+## Core Components
 
-- [x] Modify LERG file processor to extract country data
-<!-- 
-### 4. Store/Service Updates
+### 1. Navigation & Routing
 
-- [ ] Update LergState interface for country data
-- [ ] Modify store actions and getters
-- [ ] Update services to handle unified data
+- [x] Add new icon to SideNav for Rate Sheet Formalizer
+- [x] Create new route for the Rate Sheet view
+- [ ] Implement route guards if needed
 
-### 5. UI Updates
+### 2. New View/Page
 
-- [ ] Modify AdminLergView to show unified data
-- [ ] Update special codes section to use LERG data
-- [ ] Add country/state relationship display
+- [x] Create RateSheetView.vue
+- [x] Implement drag-and-drop/file upload
+- [ ] Display processed data results:
+  - [ ] Implement expandable table view:
+    - [ ] Show all destinations in main table
+    - [ ] Visual indicator for destinations with rate discrepancies
+    - [ ] Expandable rows for detailed rate information:
+      - [ ] Show all codes for the destination
+      - [ ] Display rate frequency statistics (count and percentage)
+      - [ ] Rate selection interface for problematic destinations
+    - [ ] Filter toggle for showing:
+      - [ ] All destinations
+      - [ ] Only destinations with rate issues
+      - [ ] Only unified destinations
+- [ ] Implement export functionality for formalized data
 
-### 6. Migration Path
+### 3. Data Management
 
-- [ ] Plan deprecation of special codes
-- [ ] Add data migration utilities
-- [ ] Update documentation -->
+- [x] Define new types for rate sheet data:
+  - [x] RateSheetRecord interface
+  - [x] RateSheetState interface
+  - [x] GroupedRateData interface
+  - [x] RateStatistics interface
+- [x] Set up IndexedDB table using Dexie
+- [x] Create rate sheet store
+- [ ] Implement data processing functions:
+  - [ ] Group by destination
+  - [ ] Calculate rate frequencies with 6 decimal precision
+  - [ ] Handle rate selection
+
+### 4. File Processing
+
+- [x] Restrict to CSV files only
+- [x] Direct column mapping based on known format
+- [x] Implement validation:
+  - [x] Required fields present
+  - [x] Valid rate format
+  - [x] Valid duration format
+  - [x] Valid increment format
+- [x] Process CSV data into standardized format
+
+### 5. UI/UX
+
+- [x] Consistent styling with existing application
+- [x] Clear feedback during upload/processing
+- [ ] Error handling and user notifications
+- [ ] Export functionality:
+  - [ ] Export as CSV
+  - [ ] Maintain exact format of original file
+  - [ ] Apply selected rates to destinations
+  - [ ] Preserve original date formats
+
+## Data Structure
+
+### IndexedDB Schema
+
+```typescript
+interface RateSheetRecord {
+  name: string;
+  prefix: string;
+  rate: number; // Stored with 6 decimal precision
+  effective: string; // Stored in original format
+  minDuration: number;
+  increments: number;
+}
+```

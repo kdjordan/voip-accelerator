@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { LergState, StateWithNPAs, StateNPAMapping, LergStats, CountryLergData } from '@/types/lerg-types';
+import type { LergState, StateWithNPAs, StateNPAMapping, CountryLergData } from '@/types/lerg-types';
 
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
@@ -38,11 +38,6 @@ export const useLergStore = defineStore('lerg', {
   },
 
   getters: {
-    getLergStats: (state): LergStats => ({
-      totalRecords: state.stats.totalRecords,
-      lastUpdated: state.stats.lastUpdated,
-    }),
-
     sortedStatesWithNPAs: (state): StateWithNPAs[] => {
       return Object.entries(state.stateNPAs)
         .map(([code, npas]) => ({
@@ -54,7 +49,6 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getStateNPACount: state => (stateCode: string) => {
-      if (!state.stateNPAs) return 0;
       return state.stateNPAs[stateCode]?.length || 0;
     },
 

@@ -11,6 +11,11 @@ const router = createRouter({
       component: () => import('../pages/UsPricingView.vue'),
     },
     {
+      path: '/rate-sheet',
+      name: 'rateSheet',
+      component: () => import('../pages/RateSheetView.vue'),
+    },
+    {
       path: '/azpricing',
       name: 'azpricing',
       component: () => import('../pages/AzPricingView.vue'),

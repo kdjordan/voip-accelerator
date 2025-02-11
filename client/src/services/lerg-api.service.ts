@@ -12,16 +12,12 @@ export const lergApiService = {
 
     try {
       store.isProcessing = true;
-
-      // Test database connection
       const hasServerData = await this.testConnection();
       console.log('Server data status:', hasServerData);
 
-      // Initialize IndexDB with LERG data
       const lergData = await this.getLergData();
       await service.initializeLergTable(lergData.data || []);
 
-      // Process the data for UI display
       const { stateMapping, countryData } = await service.processLergData();
       store.setStateNPAs(stateMapping);
       store.setCountryData(countryData);
@@ -35,7 +31,6 @@ export const lergApiService = {
     }
   },
 
-  // Public endpoints
   async testConnection(): Promise<boolean> {
     const response = await fetch(`${PUBLIC_URL}/test-connection`);
     if (!response.ok) throw new Error('Failed to test connection');
@@ -48,7 +43,6 @@ export const lergApiService = {
     return response.json();
   },
 
-  // Admin endpoints
   async uploadLergFile(formData: FormData) {
     const response = await fetch(`${ADMIN_URL}/upload`, {
       method: 'POST',
@@ -59,13 +53,8 @@ export const lergApiService = {
   },
 
   async clearAllData(): Promise<void> {
-    const response = await fetch(`${ADMIN_URL}/clear`, {
-      method: 'DELETE',
-    });
-
+    const response = await fetch(`${ADMIN_URL}/clear`, { method: 'DELETE' });
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Clear data error:', error);
       throw new Error('Failed to clear LERG data');
     }
   },

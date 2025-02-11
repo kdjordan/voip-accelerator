@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import Papa from 'papaparse';
 import type { StandardizedData, DBNameType, DomainStoreType } from '@/types';
 import { DBName } from '@/types';
-import useIndexedDB from './useIndexDB';
+import useIndexedDB from './xxuseIndexDB';
 import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import { NPANXXRateType, type USStandardizedData } from '@/types/us-types';
