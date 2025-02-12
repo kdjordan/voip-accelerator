@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import Papa from 'papaparse';
-import type { RateSheetRecord, RateSheetRow } from '@/types/rate-sheet-types';
+import type { RateSheetRow } from '@/types/rate-sheet-types';
 import { useRateSheetStore } from '@/stores/rate-sheet-store';
 
 export function useRateSheetFileHandler() {
