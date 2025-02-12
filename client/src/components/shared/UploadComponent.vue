@@ -112,13 +112,15 @@
   import { useUploadState } from '@/composables/XXuseUploadState';
   import { useFileHandler } from '@/composables/useFileHandler';
   import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
+  import type { CSVHandler } from '@/types';
 
   const props = defineProps<{
-    typeOfComponent: 'owner' | 'carrier'; //used for displaying name in UI when 2 upload 
+    typeOfComponent: 'owner' | 'carrier'; //used for displaying name in UI when 2 upload
     DBname: DBNameType; //used to determine which store to use
     componentName: string; //used to identify the component in the store
     disabled: boolean; //used to disable the component if it has a large file currently uploading
     columnRoleOptions: ColumnRoleOption[]; //used to display the column roles in the modal
+    csvHandler: CSVHandler;
   }>();
 
   const emit = defineEmits<{
