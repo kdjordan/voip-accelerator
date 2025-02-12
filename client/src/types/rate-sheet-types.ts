@@ -23,13 +23,11 @@ export interface RateSheetRow {
   increments: string;
 }
 
-
 export interface GroupedRateData {
   destinationName: string;
   codes: string[];
   rates: RateStatistics[];
   hasDiscrepancy: boolean;
-  selectedRate?: number;
   effectiveDate: string;
   minDuration: number;
   increments: number;
@@ -41,4 +39,4 @@ export interface RateSheetState {
   isLocallyStored: boolean;
   groupedData: GroupedRateData[];
   originalData: RateSheetRecord[];
-} 
+}
