@@ -1,0 +1,444 @@
+
+
+  VITE v5.4.11  ready in 296 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+7:17:59 PM [vite] page reload src/types/rate-s
+7:17:59 PM [vite] page reload src/types/rate-sheet-types.ts
+7:18:04 PM [vite] page reload src/types/rate-s
+7:18:04 PM [vite] page reload src/types/rate-sheet-types.ts (x2)
+7:18:07 PM [vite] page reload src/types/rate-s
+7:18:07 PM [vite] page reload src/types/rate-sheet-types.ts (x3)
+7:18:09 PM [vite] page reload src/types/rate-s
+7:18:09 PM [vite] page reload src/types/rate-sheet-types.ts (x4)
+7:18:17 PM [vite] page reload src/types/rate-s
+7:18:17 PM [vite] page reload src/types/rate-sheet-types.ts (x5)
+7:19:26 PM [vite] page reload src/composables/
+7:19:26 PM [vite] page reload src/composables/useRateSheetFileHandler.ts
+7:19:27 PM [vite] page reload src/composables/
+7:19:27 PM [vite] page reload src/composables/useRateSheetFileHandler.ts (x2)
+7:19:35 PM [vite] page reload src/types/rate-s
+7:19:35 PM [vite] page reload src/types/rate-sheet-types.ts
+7:19:42 PM [vite] page reload src/types/rate-s
+7:19:42 PM [vite] page reload src/types/rate-sheet-types.ts (x2)
+7:19:47 PM [vite] page reload src/types/rate-s
+7:19:47 PM [vite] page reload src/types/rate-sheet-types.ts (x3)
+7:19:48 PM [vite] page reload src/types/rate-s
+7:19:48 PM [vite] page reload src/types/rate-sheet-types.ts (x4)
+7:23:19 PM [vite] page reload src/composables/
+7:23:19 PM [vite] page reload src/composables/useCsvProcessing.ts
+7:23:19 PM [vite] page reload src/composables/
+7:23:19 PM [vite] page reload src/composables/useFileHandler.ts
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue, /src/pages/AdminLergView.v
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue, /src/pages/AdminLergView.vue
+7:23:19 PM [vite] vite.config.ts changed, rest
+7:23:19 PM [vite] vite.config.ts changed, restarting server...
+7:23:19 PM [vite] page reload src/router/index
+7:23:19 PM [vite] page reload src/router/index.ts
+7:23:19 PM [vite] page reload src/components/a
+7:23:19 PM [vite] page reload src/components/az/AZCodeReport.vue
+7:23:19 PM [vite] page reload src/components/a
+7:23:19 PM [vite] page reload src/components/az/AZContentHeader.vue
+7:23:19 PM [vite] page reload src/components/a
+7:23:19 PM [vite] page reload src/components/az/AZFileUploads.vue
+7:23:19 PM [vite] page reload src/components/a
+7:23:19 PM [vite] page reload src/components/az/AZPricingReport.vue
+7:23:19 PM [vite] page reload src/components/r
+7:23:19 PM [vite] page reload src/components/rate-sheet/RateSheetTable.vue
+7:23:19 PM [vite] page reload src/components/s
+7:23:19 PM [vite] page reload src/components/shared/PreviewModal.vue
+7:23:19 PM [vite] page reload src/components/s
+7:23:19 PM [vite] page reload src/components/shared/ReportTable.vue
+7:23:19 PM [vite] hmr update /src/components/s
+7:23:19 PM [vite] hmr update /src/components/shared/SideNav.vue, /src/assets/index.css, /src
+7:23:19 PM [vite] hmr update /src/components/shared/SideNav.vue, /src/assets/index.css, /src/components/shared/SideNav.vue?vue&type=style&
+7:23:19 PM [vite] hmr update /src/components/shared/SideNav.vue, /src/assets/index.css, /src/components/shared/SideNav.vue?vue&type=style&index=0&scoped=7cdc0667&lang.css
+7:23:19 PM [vite] hmr update /src/components/s
+7:23:19 PM [vite] hmr update /src/components/shared/TheFooter.vue, /src/assets/index.css
+7:23:19 PM [vite] page reload src/components/s
+7:23:19 PM [vite] page reload src/components/shared/TheHeader.vue
+7:23:19 PM [vite] page reload src/components/s
+7:23:19 PM [vite] page reload src/components/shared/UploadComponent.vue
+7:23:19 PM [vite] page reload src/components/s
+7:23:19 PM [vite] page reload src/components/shared/icons/UploadIcon.vue
+7:23:19 PM [vite] page reload src/components/u
+7:23:19 PM [vite] page reload src/components/us/USCodeReport.vue
+7:23:19 PM [vite] page reload src/components/u
+7:23:19 PM [vite] page reload src/components/us/USContentHeader.vue
+7:23:19 PM [vite] page reload src/components/u
+7:23:19 PM [vite] page reload src/components/us/USFileUploads.vue
+7:23:19 PM [vite] page reload src/components/u
+7:23:19 PM [vite] page reload src/components/us/USPricingReport.vue
+7:23:19 PM [vite] page reload src/composables/
+7:23:19 PM [vite] page reload src/composables/XXuseUploadState.ts
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:19 PM [vite] page reload src/composables/
+7:23:19 PM [vite] page reload src/composables/xxuseIndexDB.ts
+7:23:19 PM [vite] page reload src/composables/
+7:23:19 PM [vite] page reload src/composables/useRateSheetFileHandler.ts
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/pages/AdminLergView.vue
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/pages/AdminLergView.vue (x2)
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/pages/AdminLergView.vue (x3)
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue (x2)
+7:23:19 PM [vite] page reload src/services/csv
+7:23:19 PM [vite] page reload src/services/csv.service.ts
+7:23:19 PM [vite] page reload src/services/dat
+7:23:19 PM [vite] page reload src/services/database.service.ts
+7:23:19 PM [vite] hmr update /src/App.vue, /sr
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css, /src/pages/AdminLergView.v
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css, /src/pages/AdminLergView.vue
+7:23:19 PM [vite] page reload src/services/ler
+7:23:19 PM [vite] page reload src/services/lerg.service.ts
+7:23:19 PM [vite] page reload src/services/rat
+7:23:19 PM [vite] page reload src/services/rate-sheet.service.ts
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue (x2)
+7:23:19 PM [vite] page reload src/stores/db-st
+7:23:19 PM [vite] page reload src/stores/db-store.ts
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/pages/AdminLergView.vue
+7:23:19 PM [vite] page reload src/stores/rate-
+7:23:19 PM [vite] page reload src/stores/rate-sheet-store.ts
+7:23:19 PM [vite] hmr update /src/App.vue, /sr
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:19 PM [vite] hmr update /src/assets/index
+7:23:19 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:19 PM [vite] hmr update /src/App.vue, /sr
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:19 PM [vite] page reload src/types/az-typ
+7:23:19 PM [vite] page reload src/types/az-types.ts
+7:23:19 PM [vite] page reload src/types/countr
+7:23:19 PM [vite] page reload src/types/country-codes.ts
+7:23:19 PM [vite] page reload src/types/index.
+7:23:19 PM [vite] page reload src/types/index.ts
+7:23:19 PM [vite] page reload src/types/lerg-t
+7:23:19 PM [vite] page reload src/types/lerg-types.ts
+7:23:19 PM [vite] page reload src/types/rate-s
+7:23:19 PM [vite] page reload src/types/rate-sheet-types.ts
+7:23:19 PM [vite] page reload src/types/servic
+7:23:19 PM [vite] page reload src/types/service-types.ts
+7:23:19 PM [vite] page reload src/types/us-typ
+7:23:19 PM [vite] page reload src/types/us-types.ts
+7:23:19 PM [vite] page reload src/types/user-t
+7:23:19 PM [vite] page reload src/types/user-types.ts
+7:23:19 PM [vite] hmr update /src/App.vue, /sr
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:19 PM [vite] page reload src/utils/load-l
+7:23:19 PM [vite] page reload src/utils/load-lerg.ts
+7:23:19 PM [vite] hmr update /src/App.vue, /sr
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:19 PM [vite] page reload src/utils/utils.
+7:23:19 PM [vite] page reload src/utils/utils.ts
+7:23:19 PM [vite] page reload src/workers/az-c
+7:23:19 PM [vite] page reload src/workers/az-code-report.worker.ts
+7:23:19 PM [vite] page reload src/workers/az-c
+7:23:19 PM [vite] page reload src/workers/az-comparison.worker.ts
+7:23:19 PM [vite] page reload src/workers/gene
+7:23:19 PM [vite] page reload src/workers/generate-reports.ts
+7:23:19 PM [vite] page reload src/workers/lerg
+7:23:19 PM [vite] page reload src/workers/lerg-state.worker.ts
+7:23:19 PM [vite] page reload src/workers/lerg
+7:23:19 PM [vite] page reload src/workers/lerg.worker.ts
+7:23:19 PM [vite] hmr update /src/App.vue, /sr
+7:23:19 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:19 PM [vite] hmr update /src/pages/AdminL
+7:23:19 PM [vite] hmr update /src/pages/AdminLergView.vue, /src/assets/index.css
+7:23:19 PM [vite] server restarted.
+7:23:19 PM [vite] http proxy error: /api/admin
+7:23:19 PM [vite] http proxy error: /api/admin/lerg/stats
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+7:23:39 PM [vite] page reload src/API/api.ts
+7:23:39 PM [vite] hmr update /src/assets/index
+7:23:39 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:39 PM [vite] page reload src/composables/
+7:23:39 PM [vite] page reload src/composables/useLergData.ts
+7:23:39 PM [vite] page reload src/composables/
+7:23:39 PM [vite] page reload src/composables/useUploadState.ts
+7:23:39 PM [vite] page reload src/domains/az/c
+7:23:39 PM [vite] page reload src/domains/az/components/AZCodeReport.vue
+7:23:39 PM [vite] page reload src/domains/az/c
+7:23:39 PM [vite] page reload src/domains/az/components/AZContentHeader.vue
+7:23:39 PM [vite] page reload src/domains/az/c
+7:23:39 PM [vite] page reload src/domains/az/components/AZFileUploads.vue
+7:23:39 PM [vite] page reload src/domains/az/c
+7:23:39 PM [vite] page reload src/domains/az/components/AZPricingReport.vue
+7:23:39 PM [vite] page reload src/domains/az/s
+7:23:39 PM [vite] page reload src/domains/az/services/az-csv.service.ts
+7:23:39 PM [vite] hmr update /src/assets/index
+7:23:39 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:39 PM [vite] page reload src/domains/az/t
+7:23:39 PM [vite] page reload src/domains/az/types/az-types.ts
+7:23:39 PM [vite] page reload src/domains/az/w
+7:23:39 PM [vite] page reload src/domains/az/workers/az-code-report.worker.ts
+7:23:39 PM [vite] page reload src/domains/az/w
+7:23:39 PM [vite] page reload src/domains/az/workers/az-comparison.worker.ts
+7:23:39 PM [vite] page reload src/domains/az/w
+7:23:39 PM [vite] page reload src/domains/az/workers/generate-reports.ts
+7:23:39 PM [vite] hmr update /src/assets/index
+7:23:39 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:39 PM [vite] hmr update /src/App.vue, /sr
+7:23:39 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:39 PM [vite] page reload src/domains/lerg
+7:23:39 PM [vite] page reload src/domains/lerg/stores/lerg.store.ts
+7:23:39 PM [vite] page reload src/domains/lerg
+7:23:39 PM [vite] page reload src/domains/lerg/types/api.types.ts
+7:23:39 PM [vite] page reload src/domains/lerg
+7:23:39 PM [vite] page reload src/domains/lerg/types/types.ts
+7:23:39 PM [vite] page reload src/domains/lerg
+7:23:39 PM [vite] page reload src/domains/lerg/workers/lerg-processing.worker.ts
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/components/PreviewModal.vue
+7:23:39 PM [vite] page reload src/composables/
+7:23:39 PM [vite] page reload src/composables/useCsvProcessing.ts
+7:23:39 PM [vite] page reload src/composables/
+7:23:39 PM [vite] page reload src/composables/useFileHandler.ts
+7:23:39 PM [vite] page reload src/config/datab
+7:23:39 PM [vite] page reload src/config/database.ts
+7:23:39 PM [vite] page reload src/router/index
+7:23:39 PM [vite] page reload src/router/index.ts
+7:23:39 PM [vite] vite.config.ts changed, rest
+7:23:39 PM [vite] vite.config.ts changed, restarting server...
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/components/ReportTable.vue
+7:23:39 PM [vite] hmr update /src/domains/shar
+7:23:39 PM [vite] hmr update /src/domains/shared/components/TheFooter.vue, /src/assets/index
+7:23:39 PM [vite] hmr update /src/domains/shared/components/TheFooter.vue, /src/assets/index.css
+7:23:39 PM [vite] hmr update /src/domains/shar
+7:23:39 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.c
+7:23:39 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.css, /src/domains/shared/components/SideNav.vue
+7:23:39 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.css, /src/domains/shared/components/SideNav.vue?vue&type=style&index=0&scoped=ab4ae8b3&lang.c
+7:23:39 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.css, /src/domains/shared/components/SideNav.vue?vue&type=style&index=0&scoped=ab4ae8b3&lang.css
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/components/TheHeader.vue
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/components/UploadComponent.vue
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/components/icons/UploadIcon.vue
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/services/base-csv.service.ts
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/services/csv-processing.service.ts
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/services/csv.service.ts
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/services/database.service.ts
+7:23:39 PM [vite] hmr update /src/App.vue, /sr
+7:23:39 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:39 PM [vite] hmr update /src/assets/index
+7:23:39 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:23:39 PM [vite] hmr update /src/assets/index
+7:23:39 PM [vite] hmr update /src/assets/index.css, /src/App.vue (x2)
+7:23:39 PM [vite] hmr update /src/App.vue, /sr
+7:23:39 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/types/services.ts
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/types/user-types.ts
+7:23:39 PM [vite] hmr update /src/App.vue, /sr
+7:23:39 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:39 PM [vite] page reload src/domains/shar
+7:23:39 PM [vite] page reload src/domains/shared/utils/utils.ts
+7:23:39 PM [vite] page reload src/domains/us/c
+7:23:39 PM [vite] page reload src/domains/us/components/USCodeReport.vue
+7:23:39 PM [vite] page reload src/domains/us/c
+7:23:39 PM [vite] page reload src/domains/us/components/USContentHeader.vue
+7:23:39 PM [vite] page reload src/domains/us/c
+7:23:39 PM [vite] page reload src/domains/us/components/USFileUploads.vue
+7:23:39 PM [vite] page reload src/domains/us/c
+7:23:39 PM [vite] page reload src/domains/us/components/USPricingReport.vue
+7:23:39 PM [vite] page reload src/domains/us/s
+7:23:39 PM [vite] page reload src/domains/us/store/index.ts
+7:23:39 PM [vite] page reload src/domains/us/t
+7:23:39 PM [vite] page reload src/domains/us/types/us-types.ts
+7:23:39 PM [vite] hmr update /src/App.vue, /sr
+7:23:39 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:23:39 PM [vite] hmr update /src/pages/AdminL
+7:23:39 PM [vite] hmr update /src/pages/AdminLergView.vue, /src/assets/index.css
+7:23:39 PM [vite] server restarted.
+7:23:57 PM [vite] vite.config.ts changed, rest
+7:23:57 PM [vite] vite.config.ts changed, restarting server...
+7:23:57 PM [vite] server restarted.
+7:24:03 PM [vite] page reload src/API/api.ts
+7:24:03 PM [vite] page reload src/composables/
+7:24:03 PM [vite] page reload src/composables/useFileUploadHandler.ts
+7:24:03 PM [vite] hmr update /src/assets/index
+7:24:03 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:24:03 PM [vite] page reload src/composables/
+7:24:03 PM [vite] page reload src/composables/useLergData.ts
+7:24:03 PM [vite] page reload src/composables/
+7:24:03 PM [vite] page reload src/composables/useSessionStorage.ts
+7:24:03 PM [vite] page reload src/composables/
+7:24:03 PM [vite] page reload src/composables/useUploadState.ts
+7:24:03 PM [vite] page reload src/domains/az/c
+7:24:03 PM [vite] page reload src/domains/az/components/AZCodeReport.vue
+7:24:03 PM [vite] page reload src/domains/az/c
+7:24:03 PM [vite] page reload src/domains/az/components/AZContentHeader.vue
+7:24:03 PM [vite] page reload src/domains/az/c
+7:24:03 PM [vite] page reload src/domains/az/components/AZPricingReport.vue
+7:24:03 PM [vite] page reload src/domains/az/c
+7:24:03 PM [vite] page reload src/domains/az/components/AZFileUploads.vue
+7:24:03 PM [vite] page reload src/domains/az/s
+7:24:03 PM [vite] page reload src/domains/az/services/az-csv.service.ts
+7:24:03 PM [vite] hmr update /src/assets/index
+7:24:03 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:24:03 PM [vite] page reload src/domains/az/t
+7:24:03 PM [vite] page reload src/domains/az/types/az-types.ts
+7:24:03 PM [vite] page reload src/domains/az/w
+7:24:03 PM [vite] page reload src/domains/az/workers/az-code-report.worker.ts
+7:24:03 PM [vite] page reload src/domains/az/w
+7:24:03 PM [vite] page reload src/domains/az/workers/az-comparison.worker.ts
+7:24:03 PM [vite] page reload src/domains/az/w
+7:24:03 PM [vite] page reload src/domains/az/workers/generate-reports.ts
+7:24:03 PM [vite] hmr update /src/assets/index
+7:24:03 PM [vite] hmr update /src/assets/index.css, /src/pages/AdminLergView.vue
+7:24:03 PM [vite] page reload src/domains/lerg
+7:24:03 PM [vite] page reload src/domains/lerg/services/lerg-processing.service.ts
+7:24:03 PM [vite] hmr update /src/assets/index
+7:24:03 PM [vite] hmr update /src/assets/index.css, /src/pages/AdminLergView.vue
+7:24:03 PM [vite] page reload src/domains/lerg
+7:24:03 PM [vite] page reload src/domains/lerg/types/types.ts
+7:24:03 PM [vite] page reload src/composables/
+7:24:03 PM [vite] page reload src/composables/useCsvProcessing.ts
+7:24:03 PM [vite] page reload src/composables/
+7:24:03 PM [vite] page reload src/composables/useFileHandler.ts
+7:24:03 PM [vite] page reload src/config/datab
+7:24:03 PM [vite] page reload src/config/database.ts
+7:24:03 PM [vite] page reload src/router/index
+7:24:03 PM [vite] page reload src/router/index.ts
+7:24:03 PM [vite] vite.config.ts changed, rest
+7:24:03 PM [vite] vite.config.ts changed, restarting server...
+7:24:03 PM [vite] page reload src/domains/lerg
+7:24:03 PM [vite] page reload src/domains/lerg/workers/lerg-processing.worker.ts
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/components/PreviewModal.vue
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/components/ReportTable.vue
+7:24:03 PM [vite] hmr update /src/domains/shar
+7:24:03 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.c
+7:24:03 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.css, /src/domains/shared/components/SideNav.vue
+7:24:03 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.css, /src/domains/shared/components/SideNav.vue?vue&type=style&index=0&scoped=ab4ae8b3&lang.c
+7:24:03 PM [vite] hmr update /src/domains/shared/components/SideNav.vue, /src/assets/index.css, /src/domains/shared/components/SideNav.vue?vue&type=style&index=0&scoped=ab4ae8b3&lang.css
+7:24:03 PM [vite] hmr update /src/domains/shar
+7:24:03 PM [vite] hmr update /src/domains/shared/components/TheFooter.vue, /src/assets/index
+7:24:03 PM [vite] hmr update /src/domains/shared/components/TheFooter.vue, /src/assets/index.css
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/components/TheHeader.vue
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/components/UploadComponent.vue
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/components/icons/UploadIcon.vue
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/services/base-csv.service.ts
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/services/csv-processing.service.ts
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/services/csv.service.ts
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/services/database.service.ts
+7:24:03 PM [vite] hmr update /src/App.vue, /sr
+7:24:03 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:24:03 PM [vite] hmr update /src/assets/index
+7:24:03 PM [vite] hmr update /src/assets/index.css, /src/App.vue
+7:24:03 PM [vite] hmr update /src/assets/index
+7:24:03 PM [vite] hmr update /src/assets/index.css, /src/App.vue (x2)
+7:24:03 PM [vite] hmr update /src/App.vue, /sr
+7:24:03 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/types/services.ts
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/types/user-types.ts
+7:24:03 PM [vite] page reload src/domains/shar
+7:24:03 PM [vite] page reload src/domains/shared/utils/utils.ts
+7:24:03 PM [vite] page reload src/domains/us/c
+7:24:03 PM [vite] page reload src/domains/us/components/USCodeReport.vue
+7:24:03 PM [vite] page reload src/domains/us/c
+7:24:03 PM [vite] page reload src/domains/us/components/USContentHeader.vue
+7:24:03 PM [vite] page reload src/domains/us/c
+7:24:03 PM [vite] page reload src/domains/us/components/USFileUploads.vue
+7:24:03 PM [vite] page reload src/domains/us/c
+7:24:03 PM [vite] page reload src/domains/us/components/USPricingReport.vue
+7:24:03 PM [vite] page reload src/domains/us/s
+7:24:03 PM [vite] page reload src/domains/us/store/index.ts
+7:24:03 PM [vite] page reload src/domains/us/t
+7:24:03 PM [vite] page reload src/domains/us/types/us-types.ts
+7:24:03 PM [vite] hmr update /src/App.vue, /sr
+7:24:03 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:24:03 PM [vite] page reload src/utils/loadUs
+7:24:03 PM [vite] page reload src/utils/loadUsCodes.ts
+7:24:03 PM [vite] hmr update /src/App.vue, /sr
+7:24:03 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:24:03 PM [vite] hmr update /src/pages/AdminL
+7:24:03 PM [vite] hmr update /src/pages/AdminLergView.vue, /src/assets/index.css
+7:24:03 PM [vite] server restarted.
+7:24:04 PM [vite] http proxy error: /api/lerg/
+7:24:04 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+7:24:26 PM [vite] http proxy error: /api/lerg/
+7:24:26 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7) 
+    at afterConnectMultiple (node:net:1685:7) (x2)
+7:30:24 PM [vite] hmr update /src/App.vue, /sr
+7:30:24 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:30:24 PM [vite] http proxy error: /api/lerg/
+7:30:24 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+7:30:29 PM [vite] http proxy error: /api/lerg/
+7:30:29 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7) 
+    at afterConnectMultiple (node:net:1685:7) (x2)
+7:30:57 PM [vite] hmr update /src/App.vue, /sr
+7:30:57 PM [vite] hmr update /src/App.vue, /src/assets/index.css
+7:30:57 PM [vite] http proxy error: /api/lerg/
+7:30:57 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+7:30:57 PM [vite] http proxy error: /api/lerg/
+7:30:57 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7) 
+    at afterConnectMultiple (node:net:1685:7) (x2)
+7:34:14 PM [vite] http proxy error: /api/lerg/
+7:34:14 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7) 
+    at afterConnectMultiple (node:net:1685:7) (x3)
+7:34:14 PM [vite] http proxy error: /api/lerg/
+7:34:14 PM [vite] http proxy error: /api/lerg/test-connection
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7) 
+    at afterConnectMultiple (node:net:1685:7) (x4)

@@ -8,7 +8,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../pages/UsPricingView.vue'),
+      component: () => import('../pages/AzView.vue'),
     },
     {
       path: '/rate-sheet',
@@ -18,12 +18,12 @@ const router = createRouter({
     {
       path: '/azpricing',
       name: 'azpricing',
-      component: () => import('../pages/AzPricingView.vue'),
+      component: () => import('../pages/UsView.vue'),
     },
     {
       path: '/uspricing',
       name: 'uspricing',
-      component: () => import('../pages/UsPricingView.vue'),
+      component: () => import('../pages/UsView.vue'),
     },
     {
       path: '/admin/lerg',

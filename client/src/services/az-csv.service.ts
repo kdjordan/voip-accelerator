@@ -1,37 +1,63 @@
-import { createBaseCSVService } from './base-csv.service';
+import Dexie from 'dexie';
+import Papa from 'papaparse';
+import { createDatabase, DBConfig } from '@/config/database';
 import type { AZStandardizedData } from '@/types/az-types';
+import { useAzStore } from '@/stores/az-store';
 
-export function createAZCSVService() {
-  const baseService = createBaseCSVService<AZStandardizedData>();
+export class AZCSVService {
+  private db: Dexie;
+  private store = useAzStore();
 
-  return {
-    ...baseService,
-    processChunk(chunk: string[], columnMapping: Record<string, string>): AZStandardizedData {
-      const mappedData: Record<string, string> = {};
+  constructor() {
+    this.db = createDatabase(DBConfig.RATE_DECKS);
+  }
 
-      // Safely map column indices to values
-      Object.entries(columnMapping).forEach(([index, field]) => {
-        const columnIndex = parseInt(index);
-        if (!isNaN(columnIndex) && columnIndex < chunk.length) {
-          mappedData[field] = chunk[columnIndex];
-        }
+  async generatePreview(file: File) {
+    return new Promise<{ headers: string[]; data: string[][] }>((resolve, reject) => {
+      Papa.parse(file, {
+        preview: 5, // Preview first 5 rows
+        complete: (results) => {
+          resolve({
+            headers: results.data[0] as string[],
+            data: results.data.slice(1) as string[][],
+          });
+        },
+        error: (error) => {
+          reject(new Error(`Failed to parse CSV: ${error.message}`));
+        },
       });
+    });
+  }
 
-      return {
-        destName: mappedData['destName'] || '',
-        dialCode: mappedData['dialCode'] || '',
-        rate: parseFloat(mappedData['rate'] || '0'),
-      };
-    },
+  async processFile(file: File, config: { columnRoles: string[]; startLine: number }) {
+    return new Promise<void>((resolve, reject) => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.toLowerCase().trim(),
+        complete: async (results) => {
+          try {
+            const records: AZStandardizedData[] = results.data.map((row: any) => ({
+              destName: row[config.columnRoles[0]],
+              dialCode: row[config.columnRoles[1]],
+              rate: parseFloat(row[config.columnRoles[2]]),
+            }));
 
-    validate(data: AZStandardizedData[]): boolean {
-      return data.every(
-        item =>
-          typeof item.destName === 'string' &&
-          typeof item.dialCode === 'string' &&
-          typeof item.rate === 'number' &&
-          !isNaN(item.rate)
-      );
-    },
-  };
+            // Store in IndexedDB
+            await this.db.table('az').bulkPut(records);
+            
+            // Update store
+            this.store.addFileUploaded(file.name, file.name);
+            
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        },
+        error: (error) => {
+          reject(new Error(`Failed to process CSV: ${error.message}`));
+        },
+      });
+    });
+  }
 }
