@@ -205,11 +205,6 @@
       }
     });
 
-    console.log('Current Column Roles:', columnRoles.value);
-    console.log('Current Index:', currentIndex);
-    console.log('Available Column Role Options:', props.columnRoleOptions);
-    console.log('Used Roles (including implicit):', Array.from(usedRoles));
-
     return props.columnRoleOptions.filter(role => {
       if (isNPANXXDeck.value) {
         // Handle indeterminate rate selection
@@ -220,7 +215,6 @@
 
       // Don't show already used roles (unless it's the current column's role)
       const isAvailable = !usedRoles.has(role.value) || role.value === columnRoles.value[currentIndex];
-      console.log(`Role ${role.value} availability:`, isAvailable);
       return isAvailable;
     });
   };

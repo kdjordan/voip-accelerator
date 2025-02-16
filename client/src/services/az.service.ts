@@ -84,4 +84,22 @@ export class AZService {
       throw error;
     }
   }
+
+  async removeTable(tableName: string): Promise<void> {
+    try {
+      // Close the database to modify schema
+      await this.db.close();
+
+      // Remove the table by setting it to null in the next version
+      this.db.version(this.db.verno! + 1).stores({
+        [tableName]: null, // This deletes the table
+      });
+
+      await this.db.open();
+      console.log(`Table ${tableName} removed successfully`);
+    } catch (error) {
+      console.error(`Failed to remove table ${tableName}:`, error);
+      throw error;
+    }
+  }
 }
