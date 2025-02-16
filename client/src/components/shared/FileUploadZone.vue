@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div
     class="relative border border-fbWhite border-dashed rounded-lg p-6 min-h-[160px] flex items-center justify-center"
     :class="[
@@ -10,8 +10,7 @@
       isProcessing || disabled || isUploading ? 'cursor-not-allowed' : 'cursor-pointer',
       isDragging ? 'border-accent bg-fbWhite/10' : '',
     ]"
-    @dragenter.prevent="handleDragEnter"
-    @dragleave.prevent="handleDragLeave"
+    
     @dragover.prevent
     @drop.prevent="handleDrop"
   >
@@ -46,4 +45,4 @@ const emit = defineEmits<{
 }>();
 
 // ... drag and drop logic here
-</script> 
+</script>  -->

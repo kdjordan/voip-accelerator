@@ -16,13 +16,13 @@ const router = createRouter({
       component: () => import('../pages/RateSheetView.vue'),
     },
     {
-      path: '/azpricing',
-      name: 'azpricing',
-      component: () => import('../pages/UsView.vue'),
+      path: '/azview',
+      name: 'azview',
+      component: () => import('../pages/AzView.vue'),
     },
     {
-      path: '/uspricing',
-      name: 'uspricing',
+      path: '/usview',
+      name: 'usview',
       component: () => import('../pages/UsView.vue'),
     },
     {

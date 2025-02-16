@@ -4,7 +4,7 @@ import {
   type AZReportsInput,
   type NonMatchingCode,
   type AzCodeReport
-} from '../../types/app-types';
+  } from '@/types/az-types';
 
 export function generateReports(input: AZReportsInput): { pricingReport: AzPricingReport, codeReport: AzCodeReport } {
   const { fileName1, fileName2, file1Data, file2Data } = input;
