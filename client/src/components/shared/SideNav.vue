@@ -164,12 +164,12 @@
   const items = ref([
     {
       name: 'AZ Reporting',
-      to: '/azpricing',
+      to: '/azview',
       icon: DocumentCurrencyDollarIcon,
     },
     {
       name: 'US Reporting',
-      to: '/uspricing',
+      to: '/usview',
       icon: DocumentCurrencyDollarIcon,
     },
     {

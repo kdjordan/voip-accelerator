@@ -64,3 +64,24 @@ export interface NonMatchingCode {
   rate: number;
   file: string;
 }
+export interface AZCSVRow {
+  [key: string]: string;
+}
+
+export interface AZParseError {
+  message: string;
+  row?: number;
+  type: string;
+}
+
+export interface AZParseResult {
+  data: AZCSVRow[];
+  errors: AZParseError[];
+  meta: {
+    delimiter: string;
+    linebreak: string;
+    aborted: boolean;
+    truncated: boolean;
+    cursor: number;
+  };
+}

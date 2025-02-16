@@ -47,7 +47,7 @@
   import { DBName } from '@/types/app-types';
   import UploadComponent from '@/components/shared/UploadComponent.vue';
   import useDexieDB from '@/composables/useDexieDB';
-  import { makeNpanxxReportsApi } from '@/API/api';
+  // import { makeNpanxxReportsApi } from '@/API/api';
   import { USColumnRole, USStandardizedData } from '@/types/us-types';
   import { ColumnRoleOption } from '@/types/app-types';
   const usStore = useUsStore();
@@ -82,27 +82,27 @@
 
   async function generateReports() {
     isGeneratingReports.value = true;
-    try {
-      const fileNames = usStore.getFileNames;
-      const file1Data = await loadFromDexieDB(DBName.US, fileNames[0]);
-      const file2Data = await loadFromDexieDB(DBName.US, fileNames[1]);
+    // try {
+    //   const fileNames = usStore.getFileNames;
+    //   const file1Data = await loadFromDexieDB(DBName.US, fileNames[0]);
+    //   const file2Data = await loadFromDexieDB(DBName.US, fileNames[1]);
 
-      if (file1Data && file2Data) {
-        const { pricing, code } = await makeNpanxxReportsApi({
-          fileName1: fileNames[0].split('.')[0],
-          fileName2: fileNames[1].split('.')[0],
-          file1Data: file1Data as USStandardizedData[],
-          file2Data: file2Data as USStandardizedData[],
-        });
+    //   if (file1Data && file2Data) {
+    //     const { pricing, code } = await makeNpanxxReportsApi({
+    //       fileName1: fileNames[0].split('.')[0],
+    //       fileName2: fileNames[1].split('.')[0],
+    //       file1Data: file1Data as USStandardizedData[],
+    //       file2Data: file2Data as USStandardizedData[],
+    //     });
 
-        if (pricing && code) {
-          usStore.setReports(pricing, code);
-        }
-      }
-    } catch (error) {
-      console.error('Error generating reports:', error);
-    } finally {
-      isGeneratingReports.value = false;
-    }
+    //     if (pricing && code) {
+    //       usStore.setReports(pricing, code);
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error('Error generating reports:', error);
+    // } finally {
+    //   isGeneratingReports.value = false;
+    // }
   }
 </script>

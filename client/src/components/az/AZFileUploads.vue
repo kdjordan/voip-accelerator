@@ -1,135 +1,204 @@
 <template>
   <div class="grid grid-cols-2 gap-8 max-w-2xl mx-auto">
-    <FileUploadZone
-      v-for="(component, index) in ['az1', 'az2']"
-      :key="component"
-      :disabled="azStore.isComponentDisabled(component)"
-      :is-processing="isProcessing[component]"
-      :is-uploading="isUploading[component]"
-      :file-name="files[component]?.name"
-      @fileSelected="file => handleFileSelected(file, component)"
-      @remove="() => handleRemoveFile(component)"
+    <!-- Carrier A Upload Zone -->
+    <div
+      class="relative border-2 border-dashed rounded-lg p-6 min-h-[160px] flex items-center justify-center"
+      :class="[
+        isDragging['az1'] ? 'border-accent bg-fbWhite/10' : 'hover:border-accent-hover hover:bg-fbWhite/10',
+        isProcessing['az1'] ? 'animate-pulse border-muted bg-muted/30 cursor-not-allowed' : 'cursor-pointer',
+        azStore.isComponentDisabled('az1') ? 'border-gray-500 bg-gray-800/50' : 'border-fbWhite',
+      ]"
+      @dragenter.prevent="e => handleDragEnter(e, 'az1')"
+      @dragleave.prevent="e => handleDragLeave(e, 'az1')"
+      @dragover.prevent
+      @drop.prevent="e => handleDrop(e, 'az1')"
     >
-      <template #default="{ isProcessing, isUploading, isDisabled, fileName }">
-        <div class="flex flex-col items-center justify-center space-y-2">
-          <div class="text-center">
-            <template v-if="!azStore.isComponentDisabled(component) && !isProcessing && !isUploading">
-              <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-              <p class="mt-2 text-sm text-foreground">Drop your AZ rate deck here or click to browse</p>
-            </template>
+      <input
+        type="file"
+        accept=".csv"
+        class="absolute inset-0 opacity-0 cursor-pointer"
+        :disabled="isProcessing['az1'] || azStore.isComponentDisabled('az1')"
+        @change="e => handleFileInput(e, 'az1')"
+      />
+      <div class="text-center">
+        <template v-if="!azStore.isComponentDisabled('az1') && !isProcessing['az1']">
+          <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
+          <p class="mt-2 text-sm text-foreground">Drop Carrier A rate deck here or click to browse</p>
+        </template>
 
-            <template v-if="isUploading">
-              <p class="mt-2 text-sm text-mutedForeground">Uploading file...</p>
-            </template>
+        <template v-if="isProcessing['az1']">
+          <p class="text-sm text-muted">Processing your file...</p>
+        </template>
 
-            <template v-if="isProcessing">
-              <p class="text-sm text-muted">Processing your file...</p>
-            </template>
-
-            <template v-if="azStore.isComponentDisabled(component) && !isProcessing && !isUploading">
-              <p class="mt-2 text-sm text-foreground">
-                {{ fileName || 'File uploaded successfully' }}
-              </p>
-              <div class="relative z-10">
-                <button
-                  @click="() => handleRemoveFile(component)"
-                  class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2 mt-4"
-                >
-                  &times;
-                </button>
-              </div>
-            </template>
-          </div>
-        </div>
-      </template>
-    </FileUploadZone>
-
-    <PreviewModal
-      v-if="showPreviewModal"
-      :showModal="showPreviewModal"
-      :columns="columns"
-      :previewData="previewData"
-      :columnRoles="columnRoles"
-      :startLine="startLine"
-      :columnRoleOptions="columnRoleOptions"
-      :deckType="DBName.AZ"
-      @confirm="handleModalConfirm"
-      @cancel="handleModalCancel"
-    />
-
-    <div class="text-center mt-8">
-      <button
-        v-if="!azStore.reportsGenerated"
-        @click="handleReportsAction"
-        :disabled="!azStore.isFull || isGeneratingReports"
-        :class="[
-          'btn-accent btn-lg',
-          isGeneratingReports && 'animate-pulse',
-          'disabled:bg-transparent',
-          'disabled:opacity-50',
-          'disabled:cursor-not-allowed',
-        ]"
-      >
-        {{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}
-      </button>
+        <template v-if="azStore.isComponentDisabled('az1')">
+          <p class="mt-2 text-sm text-foreground">
+            {{ files['az1']?.name || 'File uploaded successfully' }}
+          </p>
+          <button
+            @click="() => handleRemoveFile('az1')"
+            class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2 mt-4"
+          >
+            &times;
+          </button>
+        </template>
+      </div>
     </div>
+
+    <!-- Carrier B Upload Zone -->
+    <div
+      class="relative border-2 border-dashed rounded-lg p-6 min-h-[160px] flex items-center justify-center"
+      :class="[
+        isDragging['az2'] ? 'border-accent bg-fbWhite/10' : 'hover:border-accent-hover hover:bg-fbWhite/10',
+        isProcessing['az2'] ? 'animate-pulse border-muted bg-muted/30 cursor-not-allowed' : 'cursor-pointer',
+        azStore.isComponentDisabled('az2') ? 'border-gray-500 bg-gray-800/50' : 'border-fbWhite',
+      ]"
+      @dragenter.prevent="e => handleDragEnter(e, 'az2')"
+      @dragleave.prevent="e => handleDragLeave(e, 'az2')"
+      @dragover.prevent
+      @drop.prevent="e => handleDrop(e, 'az2')"
+    >
+      <input
+        type="file"
+        accept=".csv"
+        class="absolute inset-0 opacity-0 cursor-pointer"
+        :disabled="isProcessing['az2'] || azStore.isComponentDisabled('az2')"
+        @change="e => handleFileInput(e, 'az2')"
+      />
+      <div class="text-center">
+        <template v-if="!azStore.isComponentDisabled('az2') && !isProcessing['az2']">
+          <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
+          <p class="mt-2 text-sm text-foreground">Drop Carrier B rate deck here or click to browse</p>
+        </template>
+
+        <template v-if="isProcessing['az2']">
+          <p class="text-sm text-muted">Processing your file...</p>
+        </template>
+
+        <template v-if="azStore.isComponentDisabled('az2')">
+          <p class="mt-2 text-sm text-foreground">
+            {{ files['az2']?.name || 'File uploaded successfully' }}
+          </p>
+          <button
+            @click="() => handleRemoveFile('az2')"
+            class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2 mt-4"
+          >
+            &times;
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <PreviewModal
+    v-if="showPreviewModal"
+    :showModal="showPreviewModal"
+    :columns="columns"
+    :previewData="previewData"
+    :columnRoles="columnRoles"
+    :startLine="startLine"
+    :columnRoleOptions="columnRoleOptions"
+    :deckType="DBName.AZ"
+    @confirm="handleModalConfirm"
+    @cancel="handleModalCancel"
+  />
+
+  <!-- Reports Button -->
+  <div class="text-center mt-8">
+    <button
+      v-if="!azStore.reportsGenerated"
+      @click="handleReportsAction"
+      :disabled="!azStore.isFull || isGeneratingReports"
+      :class="[
+        'btn-accent btn-lg',
+        isGeneratingReports && 'animate-pulse',
+        'disabled:bg-transparent',
+        'disabled:opacity-50',
+        'disabled:cursor-not-allowed',
+      ]"
+    >
+      {{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive } from 'vue';
+  import { ref, reactive, onMounted } from 'vue';
   import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import { useAzStore } from '@/stores/az-store';
-  import { useFileUpload } from '@/composables/useFileUpload';
-  import { useAZFileHandler } from '@/composables/useAZFileHandler';
   import useDexieDB from '@/composables/useDexieDB';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
   import type { AzPricingReport, AzCodeReport, AZReportsInput, AZStandardizedData } from '@/types/az-types';
   import { DBName } from '@/types/app-types';
-  import FileUploadZone from '@/components/shared/FileUploadZone.vue';
+  import { AZColumnRole } from '@/types/az-types';
+  import Papa from 'papaparse';
+  import { AZService } from '@/services/az.service';
+  import { useAZFileHandler } from '@/composables/useAZFileHandler';
 
   const azStore = useAzStore();
   const { loadFromDexieDB } = useDexieDB();
+  const azService = new AZService();
 
   // Component state
-  const component1 = ref<string>('az1');
-  const component2 = ref<string>('az2');
-  const isGeneratingReports = ref<boolean>(false);
+  const files = reactive<Record<string, File | null>>({});
+  const isDragging = reactive<Record<string, boolean>>({});
+  const isProcessing = reactive<Record<string, boolean>>({});
+  const isUploading = reactive<Record<string, boolean>>({});
+  const isGeneratingReports = ref(false);
 
-  const { isDragging, isProcessing, isUploading, handleDragEnter, handleDragLeave, setProcessing, setUploading } =
-    useFileUpload({
-      onFileAccepted: async (file: File, componentId: string) => {
-        try {
-          await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
-        } catch (error) {
-          console.error('Error handling dropped file:', error);
-        }
-      },
-    });
+  // Preview state
+  const showPreviewModal = ref(false);
+  const previewData = ref<string[][]>([]);
+  const columns = ref<string[]>([]);
+  const columnRoles = ref<string[]>([]);
+  const startLine = ref(1);
+  const activeComponent = ref<string>('');
 
-  const {
-    files,
-    showPreviewModal,
-    previewData,
-    columns,
-    columnRoles,
-    columnRoleOptions,
-    startLine,
-    activeComponent,
-    handleFileInput,
-    handleModalConfirm,
-    handleModalCancel,
-  } = useAZFileHandler();
+  // AZ-specific column options
+  const columnRoleOptions = [
+    { value: AZColumnRole.DESTINATION, label: 'Destination Name' },
+    { value: AZColumnRole.DIALCODE, label: 'Dial Code' },
+    { value: AZColumnRole.RATE, label: 'Rate' },
+  ];
+
+  onMounted(() => {
+    // azService.value = new AZService();
+  });
+
+  // Drag and drop handlers
+  function handleDragEnter(event: DragEvent, componentId: string) {
+    event.preventDefault();
+    isDragging[componentId] = true;
+  }
+
+  function handleDragLeave(event: DragEvent, componentId: string) {
+    event.preventDefault();
+    isDragging[componentId] = false;
+  }
+
+  function handleDrop(event: DragEvent, componentId: string) {
+    event.preventDefault();
+    isDragging[componentId] = false;
+
+    if (!isProcessing[componentId] && event.dataTransfer?.files) {
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        handleFileSelected(file, componentId);
+      }
+    }
+  }
 
   async function handleFileSelected(file: File, componentId: string) {
-    setProcessing(componentId, true);
+    if (isProcessing[componentId]) return;
+
+    isProcessing[componentId] = true;
     try {
       await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
     } catch (error) {
-      console.error('Error handling selected file:', error);
+      console.error('Error handling file:', error);
     } finally {
-      setProcessing(componentId, false);
+      isProcessing[componentId] = false;
     }
   }
 
@@ -225,6 +294,63 @@
   }
 
   // File handling implementation...
-  // Modal handling implementation...
-  // Report generation implementation...
+  async function handleFileInput(event: Event, componentId: string) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    files[componentId] = file;
+
+    // Generate preview using Papa Parse
+    Papa.parse(file, {
+      preview: 5,
+      complete: results => {
+        previewData.value = results.data.slice(1) as string[][];
+        columns.value = results.data[0] as string[];
+        activeComponent.value = componentId;
+        showPreviewModal.value = true;
+      },
+      error: error => {
+        console.error('Error parsing CSV:', error);
+      },
+    });
+  }
+
+  // Modal handlers
+  async function handleModalConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
+    const file = files[activeComponent.value];
+    if (!file) return;
+
+    isUploading[activeComponent.value] = true;
+    try {
+      // Add debug logs
+      console.log('Column roles from confirmation:', confirmation.columnRoles);
+      console.log('Available columns:', columns.value);
+
+      // Create column mapping using indices
+      const columnMapping = {
+        destination: confirmation.columnRoles.indexOf(AZColumnRole.DESTINATION),
+        dialcode: confirmation.columnRoles.indexOf(AZColumnRole.DIALCODE),
+        rate: confirmation.columnRoles.indexOf(AZColumnRole.RATE),
+      };
+
+      console.log('Column mapping:', columnMapping);
+
+      // Process file independently
+      const result = await azService.processFile(file, columnMapping, confirmation.startLine);
+
+      // Update store after successful processing
+      await handleFileUploaded(activeComponent.value, result.fileName);
+    } catch (error) {
+      console.error('Error processing file:', error);
+    } finally {
+      isUploading[activeComponent.value] = false;
+      showPreviewModal.value = false;
+    }
+  }
+
+  function handleModalCancel() {
+    showPreviewModal.value = false;
+    files[activeComponent.value] = null;
+    activeComponent.value = '';
+  }
 </script>

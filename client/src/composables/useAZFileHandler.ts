@@ -1,14 +1,20 @@
 import { ref, reactive } from 'vue';
 import { useAzStore } from '@/stores/az-store';
-import { AZCSVService } from '@/services/az-csv.service';
-import { DBName } from '@/types/app-types';
+import Papa from 'papaparse';
 import { AZColumnRole } from '@/types/az-types';
+import { createDatabase, DBConfig } from '@/config/database';
+import { AZService } from '@/services/az.service';
 
-export function useAZFileHandler() {
+export function useAZFileHandler(service: AZService) {
   const store = useAzStore();
-  const service = new AZCSVService();
-  
+
+  // File state
   const files = reactive<Record<string, File | null>>({});
+  const isProcessing = reactive<Record<string, boolean>>({});
+  const isUploading = reactive<Record<string, boolean>>({});
+  const isDragging = reactive<Record<string, boolean>>({});
+
+  // Preview state
   const showPreviewModal = ref(false);
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
@@ -26,29 +32,67 @@ export function useAZFileHandler() {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
-    files[componentId] = file;
-    const preview = await service.generatePreview(file);
-    previewData.value = preview.data;
-    columns.value = preview.headers;
-    activeComponent.value = componentId;
-    showPreviewModal.value = true;
+    try {
+      isProcessing[componentId] = true;
+      files[componentId] = file;
+
+      // Generate preview
+      const preview = await new Promise<{ headers: string[]; data: string[][] }>((resolve, reject) => {
+        Papa.parse(file, {
+          preview: 5,
+          error: error => reject(new Error(`Failed to parse CSV: ${error.message}`)),
+          complete: results => {
+            resolve({
+              headers: results.data[0] as string[],
+              data: results.data.slice(1) as string[][],
+            });
+          },
+        });
+      });
+
+      previewData.value = preview.data;
+      columns.value = preview.headers;
+      activeComponent.value = componentId;
+      showPreviewModal.value = true;
+    } finally {
+      isProcessing[componentId] = false;
+    }
   }
 
   async function handleModalConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
-    try {
-      columnRoles.value = confirmation.columnRoles;
-      startLine.value = confirmation.startLine;
-      showPreviewModal.value = false;
+    if (!activeComponent.value || !files[activeComponent.value]) return;
 
-      if (files[activeComponent.value]) {
-        await service.processFile(files[activeComponent.value]!, {
-          columnRoles: columnRoles.value,
-          startLine: startLine.value,
+    try {
+      isUploading[activeComponent.value] = true;
+      const file = files[activeComponent.value]!;
+
+      await new Promise<void>((resolve, reject) => {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: async results => {
+            try {
+              // Create column mapping using indices
+              const columnMapping = {
+                destination: columns.value.indexOf(confirmation.columnRoles[0]),
+                dialcode: columns.value.indexOf(confirmation.columnRoles[1]),
+                rate: columns.value.indexOf(confirmation.columnRoles[2]),
+              };
+
+              await service.processFile(file, columnMapping, confirmation.startLine);
+              store.addFileUploaded(file.name, file.name);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          },
+          error: error => reject(new Error(`Failed to process CSV: ${error.message}`)),
         });
-      }
-    } catch (error) {
-      console.error('Error processing file:', error);
-      throw error;
+      });
+
+      showPreviewModal.value = false;
+    } finally {
+      isUploading[activeComponent.value] = false;
     }
   }
 
@@ -59,7 +103,11 @@ export function useAZFileHandler() {
   }
 
   return {
+    // State
     files,
+    isProcessing,
+    isUploading,
+    isDragging,
     showPreviewModal,
     previewData,
     columns,
@@ -71,4 +119,4 @@ export function useAZFileHandler() {
     handleModalConfirm,
     handleModalCancel,
   };
-} 
+}
