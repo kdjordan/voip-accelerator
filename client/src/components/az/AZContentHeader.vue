@@ -1,16 +1,21 @@
 <template>
   <div class="w-full">
-    <!-- Header Section -->
-    <div>
-      <p
-        v-if="!azStore.isFull"
-        class="text-base text-foreground px-4 bg-gray-800 rounded-t-lg p-4 border-b border-fbWhite/10"
+    <!-- Journey Message Section -->
+    <div class="bg-gray-800 rounded-t-lg p-4 border-b border-gray-700/50">
+      <Transition
+        name="fade"
+        mode="out-in"
       >
-        Upload <span class="text-white">your</span> current rates and the rates of your
-        <span class="text-white">prospective carrier.</span>
-        <br />
-        We will generate you a report showing the best opportunities for you to buy and sell.
-      </p>
+        <div :key="azStore.getJourneyState">
+          <h3 class="text-lg font-medium text-white mb-2">
+            {{ AZ_JOURNEY_MESSAGES[azStore.getJourneyState].title }}
+          </h3>
+          <p
+            class="text-base text-foreground"
+            v-html="AZ_JOURNEY_MESSAGES[azStore.getJourneyState].message"
+          ></p>
+        </div>
+      </Transition>
     </div>
 
     <!-- Report Type Buttons -->
@@ -45,6 +50,7 @@
 <script setup lang="ts">
   import { useAzStore } from '@/stores/az-store';
   import { ReportTypes, type ReportType } from '@/types';
+  import { AZ_JOURNEY_MESSAGES, type AZJourneyState } from '@/constants/az-messages';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
 
@@ -76,3 +82,15 @@
     }
   }
 </script>
+
+<style>
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+  }
+</style>

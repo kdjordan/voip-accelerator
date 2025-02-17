@@ -1,5 +1,6 @@
 import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/types/az-types';
 import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/us-types';
+import type { AZJourneyState } from '@/constants/az-messages';
 
 // Add this type definition
 export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;
@@ -35,6 +36,9 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   resetFiles: () => void;
+
+  // Add the journey state getter
+  getJourneyState: AZJourneyState;
 }
 
 
