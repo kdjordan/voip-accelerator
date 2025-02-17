@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import type { AzPricingReport, AzCodeReport } from '@/types/az-types';
 import type { DomainStore, ReportType } from '@/types';
+import { AZ_JOURNEY_STATE, type AZJourneyState } from '@/constants/az-messages';
 
 export const useAzStore = defineStore('azStore', {
   state: () => ({
@@ -36,6 +37,16 @@ export const useAzStore = defineStore('azStore', {
     getFileNameByComponent: state => (componentId: string) => {
       const file = state.filesUploaded.get(componentId);
       return file ? file.fileName : '';
+    },
+
+    getJourneyState: (state): AZJourneyState => {
+      if (state.filesUploaded.size === 0) return AZ_JOURNEY_STATE.INITIAL;
+      if (state.filesUploaded.size === 1) return AZ_JOURNEY_STATE.ONE_FILE;
+      if (state.filesUploaded.size === 2 && !state.reportsGenerated) return AZ_JOURNEY_STATE.TWO_FILES;
+      if (Object.values(state.uploadingComponents).some(isUploading => isUploading)) {
+        return AZ_JOURNEY_STATE.PROCESSING;
+      }
+      return AZ_JOURNEY_STATE.REPORTS_READY;
     },
   },
 
