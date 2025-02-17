@@ -11,6 +11,7 @@ export const useAzStore = defineStore('azStore', {
     activeReportType: 'files' as ReportType,
     pricingReport: null as AzPricingReport | null,
     codeReport: null as AzCodeReport | null,
+    tempFiles: new Map<string, File>(),
   }),
 
   getters: {
@@ -31,11 +32,18 @@ export const useAzStore = defineStore('azStore', {
     getPricingReport: state => state.pricingReport,
 
     getCodeReport: state => state.codeReport,
+
+    getFileNameByComponent: state => (componentId: string) => {
+      const file = state.filesUploaded.get(componentId);
+      return file ? file.fileName : '';
+    },
   },
 
   actions: {
     addFileUploaded(componentName: string, fileName: string) {
-      this.filesUploaded.set(componentName, { fileName });
+      if (componentName.startsWith('az')) {
+        this.filesUploaded.set(componentName, { fileName });
+      }
     },
 
     resetFiles() {
@@ -58,13 +66,9 @@ export const useAzStore = defineStore('azStore', {
     },
 
     removeFile(componentName: string) {
-      // Remove the file from the map
       this.filesUploaded.delete(componentName);
-
-      // Reset upload state for this component
       this.uploadingComponents[componentName] = false;
 
-      // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
         this.reportsGenerated = false;
         this.pricingReport = null;
@@ -88,6 +92,18 @@ export const useAzStore = defineStore('azStore', {
 
     setComponentUploading(componentName: string, isUploading: boolean) {
       this.uploadingComponents[componentName] = isUploading;
+    },
+
+    setTempFile(componentId: string, file: File) {
+      this.tempFiles.set(componentId, file);
+    },
+
+    getTempFile(componentId: string) {
+      return this.tempFiles.get(componentId);
+    },
+
+    clearTempFile(componentId: string) {
+      this.tempFiles.delete(componentId);
     },
   },
 }) as unknown as () => DomainStore<AzPricingReport, AzCodeReport>;

@@ -18,6 +18,12 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   getActiveReportType: ReportType;
   getPricingReport: P | null;
   getCodeReport: C | null;
+  getFileNameByComponent: (componentId: string) => string;
+
+  // Add temp file methods
+  setTempFile: (componentId: string, file: File) => void;
+  getTempFile: (componentId: string) => File | undefined;
+  clearTempFile: (componentId: string) => void;
 
   // Actions
   setComponentUploading: (componentName: string, isUploading: boolean) => void;

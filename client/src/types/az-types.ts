@@ -85,3 +85,14 @@ export interface AZParseResult {
     cursor: number;
   };
 }
+
+export interface ColumnRoleOption {
+  value: AZColumnRole;
+  label: string;
+}
+
+export const AZ_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
+  { value: AZColumnRole.DESTINATION, label: 'Destination Name' },
+  { value: AZColumnRole.DIALCODE, label: 'Dial Code' },
+  { value: AZColumnRole.RATE, label: 'Rate' },
+];

@@ -44,20 +44,21 @@ export default {
       },
       keyframes: {
         pulse: {
-          '0%, 100%': { backgroundColor: 'var(--tw-success)' },
-          '50%': { backgroundColor: 'color-mix(in hsl, var(--tw-success) 70%, white)' },
+          '0%, 100%': { '@apply bg-green-900/20 border-green-500/50': {} },
+          '50%': { '@apply bg-green-500/20 border-green-500/50': {} },
         },
       },
       animation: {
         pulse: 'pulse 1s infinite',
       },
-    }
+    },
   },
   plugins: [
     function ({ addComponents }) {
       addComponents({
         '.btn': {
-          '@apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50': {},
+          '@apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50':
+            {},
         },
         '.btn-primary': {
           '@apply btn bg-accent text-white hover:bg-accent/90': {},
@@ -88,7 +89,8 @@ export default {
           '@apply border border-accent/50 rounded-lg hover:bg-accent/50 transition-colors': {},
         },
         '.btn-destructive': {
-          '@apply border border-destructive/50 rounded-lg hover:bg-destructive/50 hover:text-fbBlack transition-colors': {},
+          '@apply border border-destructive/50 rounded-lg hover:bg-destructive/50 hover:text-fbBlack transition-colors':
+            {},
         },
         '.btn-active': {
           '@apply bg-fbWhite text-fbBlack': {},
@@ -98,7 +100,8 @@ export default {
         },
         '.select-custom': {
           '@apply appearance-none pr-10': {},
-          'background-image': 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke-width=\'1.5\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9\'/%3E%3C/svg%3E")',
+          'background-image':
+            "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9'/%3E%3C/svg%3E\")",
           'background-position': 'right 0.5rem center',
           'background-repeat': 'no-repeat',
           'background-size': '1.5em 1.5em',
