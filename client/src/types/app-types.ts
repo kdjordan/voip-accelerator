@@ -37,26 +37,10 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   resetFiles: () => void;
 }
 
-export interface FileEmit {
-  file: File;
-  data: StandardizedData[];
-}
-
-export interface ParsedResults {
-  data: string[][];
-}
 
 // Union type of all possible standardized data types
 export type StandardizedData = AZStandardizedData | USStandardizedData;
 
-export interface DataTransformer<T> {
-  transform(row: Record<string, string>, columnRoles: string[]): T;
-  validate(data: T): boolean;
-}
-
-export interface BaseStandardizedData {
-  id?: number;
-}
 
 // Replace enum with const map for better type safety
 export const DBName = {
@@ -76,18 +60,6 @@ export const ReportTypes = {
 } as const;
 
 export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
-
-// Add this interface
-export interface ColumnRoleOption {
-  value: string;
-  label: string;
-}
-
-// Add this interface
-export interface CSVProcessingConfig {
-  startLine: number;
-  columnMapping: Record<string, string>;
-}
 
 // Define supported DB types for schemas
 export type SchemaDBType = typeof DBName.AZ | typeof DBName.US | typeof DBName.RATE_SHEET;

@@ -1,7 +1,4 @@
-import type { BaseStandardizedData } from '@/types';
-
-// Core data structure
-export interface USStandardizedData extends BaseStandardizedData {
+export interface USStandardizedData  {
   npanxx: string;
   npa: string;
   nxx: string;

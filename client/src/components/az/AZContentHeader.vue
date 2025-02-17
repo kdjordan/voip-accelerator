@@ -1,11 +1,10 @@
 <template>
-  <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="w-full">
     <!-- Header Section -->
-    <div class="mb-8">
-      <h1 class="text-2xl font-semibold text-white mb-2">AZ Rate Deck Analysis</h1>
+    <div>
       <p
         v-if="!azStore.isFull"
-        class="text-base text-foreground"
+        class="text-base text-foreground px-4 bg-gray-800 rounded-t-lg p-4 border-b border-fbWhite/10"
       >
         Upload <span class="text-white">your</span> current rates and the rates of your
         <span class="text-white">prospective carrier.</span>
