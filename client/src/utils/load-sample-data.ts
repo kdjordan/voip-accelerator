@@ -4,8 +4,6 @@ import { useUsStore } from '@/stores/us-store';
 import useDexieDB from '@/composables/useDexieDB';
 import { AZService } from '@/services/az.service';
 import { createUSCSVService } from '@/services/us-csv.service';
-import type { CSVProcessingConfig } from '@/types/app-types';
-import { AZColumnRole } from '@/types/az-types';
 
 function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
@@ -46,45 +44,45 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       await azStore.addFileUploaded('az2', result2.fileName);
     }
 
-    if (dbNames.includes(DBName.US)) {
-      console.log('Loading US sample data');
-      // Load UStest.csv data
-      const usTestFile = 'UStest.csv';
-      const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
-      const usTestBlob = new File([await usTestResponse.blob()], usTestFile);
+    // if (dbNames.includes(DBName.US)) {
+    //   console.log('Loading US sample data');
+    //   // Load UStest.csv data
+    //   const usTestFile = 'UStest.csv';
+    //   const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
+    //   const usTestBlob = new File([await usTestResponse.blob()], usTestFile);
 
-      const usConfig: CSVProcessingConfig = {
-        startLine: 1,
-        columnMapping: {
-          '1': 'npa',
-          '2': 'nxx',
-          '3': 'interRate',
-          '4': 'intraRate',
-          '5': 'indetermRate',
-        },
-      };
+    //   const usConfig: CSVProcessingConfig = {
+    //     startLine: 1,
+    //     columnMapping: {
+    //       '1': 'npa',
+    //       '2': 'nxx',
+    //       '3': 'interRate',
+    //       '4': 'intraRate',
+    //       '5': 'indetermRate',
+    //     },
+    //   };
 
-      console.log('Processing US test data with config:', usConfig);
-      const usTestData = await usCSVService.process(usTestBlob, usConfig);
-      console.log('Processed US test data:', usTestData?.[0]); // Let's see what the data looks like
-      if (usTestData && usCSVService.validate(usTestData)) {
-        const storeName = getStoreNameFromFile(usTestFile);
-        await storeInDexieDB(usTestData, DBName.US, storeName);
-        usStore.addFileUploaded('us1', storeName);
-      }
+    //   console.log('Processing US test data with config:', usConfig);
+    //   const usTestData = await usCSVService.process(usTestBlob, usConfig);
+    //   console.log('Processed US test data:', usTestData?.[0]); // Let's see what the data looks like
+    //   if (usTestData && usCSVService.validate(usTestData)) {
+    //     const storeName = getStoreNameFromFile(usTestFile);
+    //     await storeInDexieDB(usTestData, DBName.US, storeName);
+    //     usStore.addFileUploaded('us1', storeName);
+    //   }
 
-      // Load UStest1.csv data
-      const usTest1File = 'UStest1.csv';
-      const usTest1Response = await fetch(`/src/data/sample/${usTest1File}`);
-      const usTest1Blob = new File([await usTest1Response.blob()], usTest1File);
+    //   // Load UStest1.csv data
+    //   const usTest1File = 'UStest1.csv';
+    //   const usTest1Response = await fetch(`/src/data/sample/${usTest1File}`);
+    //   const usTest1Blob = new File([await usTest1Response.blob()], usTest1File);
 
-      const usTest1Data = await usCSVService.process(usTest1Blob, usConfig);
-      if (usTest1Data && usCSVService.validate(usTest1Data)) {
-        const storeName = getStoreNameFromFile(usTest1File);
-        await storeInDexieDB(usTest1Data, DBName.US, storeName);
-        usStore.addFileUploaded('us2', storeName);
-      }
-    }
+    //   const usTest1Data = await usCSVService.process(usTest1Blob, usConfig);
+    //   if (usTest1Data && usCSVService.validate(usTest1Data)) {
+    //     const storeName = getStoreNameFromFile(usTest1File);
+    //     await storeInDexieDB(usTest1Data, DBName.US, storeName);
+    //     usStore.addFileUploaded('us2', storeName);
+    //   }
+    // }
 
     console.log('Sample decks loaded successfully');
   } catch (error) {

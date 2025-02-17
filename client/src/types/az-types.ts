@@ -1,6 +1,5 @@
-import type { BaseStandardizedData } from '@/types';
-
-export interface AZStandardizedData extends BaseStandardizedData {
+export interface AZStandardizedData {
+  id?: number;
   destName: string;
   dialCode: string;
   rate: number;
