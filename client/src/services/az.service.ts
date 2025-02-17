@@ -11,7 +11,6 @@ export class AZService {
   constructor() {
     console.log('Initializing AZ service with database:', DBConfig.AZ_RATE_DECK.name);
     this.db = createDatabase(DBConfig.AZ_RATE_DECK);
-    console.log('AZ service initialized with database:', this.db);
     this.db.open().then(() => {
       console.log('Database opened successfully');
       console.log(
@@ -45,8 +44,6 @@ export class AZService {
           try {
             // Skip to user-specified start line
             const dataRows = results.data.slice(startLine - 1);
-            console.log('Data rows:', dataRows);
-            console.log('Column mapping:', columnMapping);
             const records: AZStandardizedData[] = dataRows.map(row => {
               // The columnMapping should contain the indices selected by user
               return {
@@ -55,7 +52,6 @@ export class AZService {
                 rate: parseFloat(row[columnMapping.rate]) || 0,
               };
             });
-            console.log('Records:', records);
 
             // Store in the new table
             const chunkSize = 1000;

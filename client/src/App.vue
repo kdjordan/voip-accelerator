@@ -1,4 +1,3 @@
-@ap
 <template>
   <div
     id="app"
@@ -77,11 +76,10 @@
       console.log('Starting application initialization...');
 
       // console.log('Loading sample decks...');
-      // await loadSampleDecks([DBName.AZ]);
+      await loadSampleDecks([DBName.AZ]);
 
       console.log('Initializing LERG service...');
       await lergApiService.initialize();
-
     } catch (error) {
       console.error('Error during initialization:', error);
     }

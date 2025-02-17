@@ -2,21 +2,20 @@ import { DBName, type DBNameType } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import useDexieDB from '@/composables/useDexieDB';
-import { createAZCSVService } from '@/services/az-csv.service';
+import { AZService } from '@/services/az.service';
 import { createUSCSVService } from '@/services/us-csv.service';
 import type { CSVProcessingConfig } from '@/types/app-types';
-
+import { AZColumnRole } from '@/types/az-types';
 
 function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
 }
 
-
 export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const { storeInDexieDB } = useDexieDB();
   const azStore = useAzStore();
   const usStore = useUsStore();
-  const azCSVService = createAZCSVService();
+  const azService = new AZService();
   const usCSVService = createUSCSVService();
 
   try {
@@ -28,33 +27,23 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const azTestResponse = await fetch(`/src/data/sample/${azTestFile}`);
       const azTestBlob = new File([await azTestResponse.blob()], azTestFile);
 
-      const config: CSVProcessingConfig = {
-        startLine: 1,
-        columnMapping: {
-          '0': 'destName',
-          '1': 'dialCode',
-          '2': 'rate',
-        },
+      // New column mapping structure for AZService
+      const columnMapping = {
+        destination: 0, // Index of destination column
+        dialcode: 1, // Index of dialcode column
+        rate: 2, // Index of rate column
       };
 
-      const azTestData = await azCSVService.process(azTestBlob, config);
-      if (azTestData && azCSVService.validate(azTestData)) {
-        const storeName = getStoreNameFromFile(azTestFile);
-        await storeInDexieDB(azTestData, DBName.AZ, storeName);
-        azStore.addFileUploaded('az1', storeName);
-      }
+      const result = await azService.processFile(azTestBlob, columnMapping, 1);
+      await azStore.addFileUploaded('az1', result.fileName);
 
       // Load AZtest1.csv data
       const azTest1File = 'AZtest1.csv';
       const azTest1Response = await fetch(`/src/data/sample/${azTest1File}`);
       const azTest1Blob = new File([await azTest1Response.blob()], azTest1File);
 
-      const azTest1Data = await azCSVService.process(azTest1Blob, config);
-      if (azTest1Data && azCSVService.validate(azTest1Data)) {
-        const storeName = getStoreNameFromFile(azTest1File);
-        await storeInDexieDB(azTest1Data, DBName.AZ, storeName);
-        azStore.addFileUploaded('az2', storeName);
-      }
+      const result2 = await azService.processFile(azTest1Blob, columnMapping, 1);
+      await azStore.addFileUploaded('az2', result2.fileName);
     }
 
     if (dbNames.includes(DBName.US)) {

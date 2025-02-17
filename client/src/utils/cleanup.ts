@@ -16,6 +16,8 @@ export async function cleanupDatabases(): Promise<void> {
       'lerg_db', // Backup check
       'lerg', // Another possible name
       '_db$', // Sample databases ending with _db
+      'az_rate_deck_db',
+      'az'
     ];
 
     // Filter for our application databases only

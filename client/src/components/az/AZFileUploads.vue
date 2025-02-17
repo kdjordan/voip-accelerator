@@ -4,9 +4,17 @@
     <div
       class="relative border-2 border-dashed rounded-lg p-6 min-h-[160px]"
       :class="[
-        isDragging['az1'] ? 'border-accent bg-fbWhite/10' : 'hover:border-accent-hover hover:bg-fbWhite/10',
-        isProcessing['az1'] ? 'animate-pulse border-muted bg-muted/30 cursor-not-allowed' : 'cursor-pointer',
-        azStore.isComponentDisabled('az1') ? 'border-gray-500 bg-gray-800/50' : 'border-fbWhite',
+        isDragging['az1']
+          ? 'border-accent bg-fbWhite/10'
+          : !azStore.isComponentDisabled('az1')
+          ? 'hover:border-accent-hover hover:bg-fbWhite/10'
+          : '',
+        azStore.isComponentUploading('az1')
+          ? 'animate-pulse cursor-not-allowed'
+          : !azStore.isComponentDisabled('az1')
+          ? 'cursor-pointer'
+          : '',
+        azStore.isComponentDisabled('az1') ? 'bg-green-900/20 border border-green-500/50' : 'border-fbWhite',
       ]"
       @dragenter.prevent="e => handleDragEnter(e, 'az1')"
       @dragleave.prevent="e => handleDragLeave(e, 'az1')"
@@ -18,22 +26,26 @@
         accept=".csv"
         class="absolute inset-0 opacity-0"
         :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
-        :disabled="isProcessing['az1'] || azStore.isComponentDisabled('az1')"
+        :disabled="
+          azStore.isComponentUploading('az1') ||
+          azStore.isComponentUploading('az2') ||
+          azStore.isComponentDisabled('az1')
+        "
         @change="e => handleFileInput(e, 'az1')"
       />
 
       <div class="flex flex-col h-full">
         <!-- Empty/Processing States -->
-        <template v-if="!azStore.isComponentDisabled('az1') && !isProcessing['az1']">
+        <template v-if="!azStore.isComponentDisabled('az1') && !azStore.isComponentUploading('az1')">
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-              <p class="mt-2 text-sm text-foreground">Drop Carrier A rate deck here or click to browse</p>
+              <p class="mt-2 text-sm text-foreground">Drop Carrier A rate deck here or click to select</p>
             </div>
           </div>
         </template>
 
-        <template v-if="isProcessing['az1']">
+        <template v-if="azStore.isComponentUploading('az1')">
           <div class="flex-1 flex items-center justify-center">
             <p class="text-sm text-muted animate-pulse">Processing your file...</p>
           </div>
@@ -44,8 +56,10 @@
           <!-- Centered File Info -->
           <div class="flex-1 flex items-center justify-center">
             <div class="flex items-center space-x-2">
-              <DocumentIcon class="w-5 h-5 text-accent" />
-              <p class="text-sm text-foreground">{{ files['az1']?.name }}</p>
+              <DocumentIcon class="w-5 h-5 text-foreground" />
+              <p class="text-sm text-foreground">
+                {{ azStore.getFileNameByComponent('az1') }}
+              </p>
             </div>
           </div>
 
@@ -53,10 +67,12 @@
           <div class="flex justify-center mt-4">
             <button
               @click="handleRemoveFile('az1')"
-              class="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-red-500/20 hover:bg-red-500/10 transition-all duration-200"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
             >
-              <TrashIcon class="w-4 h-4 text-red-500" />
-              <span class="text-sm text-red-500">Remove File</span>
+              <div class="flex items-center space-x-2">
+                <TrashIcon class="w-4 h-4 text-white" />
+                <span class="text-sm text-white">Remove File</span>
+              </div>
             </button>
           </div>
         </template>
@@ -67,9 +83,17 @@
     <div
       class="relative border-2 border-dashed rounded-lg p-6 min-h-[160px]"
       :class="[
-        isDragging['az2'] ? 'border-accent bg-fbWhite/10' : 'hover:border-accent-hover hover:bg-fbWhite/10',
-        isProcessing['az2'] ? 'animate-pulse border-muted bg-muted/30 cursor-not-allowed' : 'cursor-pointer',
-        azStore.isComponentDisabled('az2') ? 'border-gray-500 bg-gray-800/50' : 'border-fbWhite',
+        isDragging['az2']
+          ? 'border-accent bg-fbWhite/10'
+          : !azStore.isComponentDisabled('az2')
+          ? 'hover:border-accent-hover hover:bg-fbWhite/10'
+          : '',
+        azStore.isComponentUploading('az2')
+          ? 'animate-pulse cursor-not-allowed'
+          : !azStore.isComponentDisabled('az2')
+          ? 'cursor-pointer'
+          : '',
+        azStore.isComponentDisabled('az2') ? 'bg-green-900/20 border border-green-500/50' : 'border-fbWhite',
       ]"
       @dragenter.prevent="e => handleDragEnter(e, 'az2')"
       @dragleave.prevent="e => handleDragLeave(e, 'az2')"
@@ -81,13 +105,17 @@
         accept=".csv"
         class="absolute inset-0 opacity-0"
         :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
-        :disabled="isProcessing['az2'] || azStore.isComponentDisabled('az2')"
+        :disabled="
+          azStore.isComponentUploading('az2') ||
+          azStore.isComponentUploading('az1') ||
+          azStore.isComponentDisabled('az2')
+        "
         @change="e => handleFileInput(e, 'az2')"
       />
 
       <div class="flex flex-col h-full">
         <!-- Empty/Processing States -->
-        <template v-if="!azStore.isComponentDisabled('az2') && !isProcessing['az2']">
+        <template v-if="!azStore.isComponentDisabled('az2') && !azStore.isComponentUploading('az2')">
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
@@ -96,7 +124,7 @@
           </div>
         </template>
 
-        <template v-if="isProcessing['az2']">
+        <template v-if="azStore.isComponentUploading('az2')">
           <div class="flex-1 flex items-center justify-center">
             <p class="text-sm text-muted animate-pulse">Processing your file...</p>
           </div>
@@ -107,8 +135,10 @@
           <!-- Centered File Info -->
           <div class="flex-1 flex items-center justify-center">
             <div class="flex items-center space-x-2">
-              <DocumentIcon class="w-5 h-5 text-accent" />
-              <p class="text-sm text-foreground">{{ files['az2']?.name }}</p>
+              <DocumentIcon class="w-5 h-5 text-foreground" />
+              <p class="text-sm text-foreground">
+                {{ azStore.getFileNameByComponent('az2') }}
+              </p>
             </div>
           </div>
 
@@ -116,10 +146,12 @@
           <div class="flex justify-center mt-4">
             <button
               @click="handleRemoveFile('az2')"
-              class="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-red-500/20 hover:bg-red-500/10 transition-all duration-200"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
             >
-              <TrashIcon class="w-4 h-4 text-red-500" />
-              <span class="text-sm text-red-500">Remove File</span>
+              <div class="flex items-center space-x-2">
+                <TrashIcon class="w-4 h-4 text-white" />
+                <span class="text-sm text-white">Remove File</span>
+              </div>
             </button>
           </div>
         </template>
@@ -135,7 +167,7 @@
     :previewData="previewData"
     :columnRoles="columnRoles"
     :startLine="startLine"
-    :columnRoleOptions="columnRoleOptions"
+    :columnRoleOptions="AZ_COLUMN_ROLE_OPTIONS"
     :deckType="DBName.AZ"
     @confirm="handleModalConfirm"
     @cancel="handleModalCancel"
@@ -161,13 +193,14 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted } from 'vue';
+  import { ref, reactive, onMounted, watch } from 'vue';
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import { useAzStore } from '@/stores/az-store';
   import useDexieDB from '@/composables/useDexieDB';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
   import type { AzPricingReport, AzCodeReport, AZReportsInput, AZStandardizedData } from '@/types/az-types';
+  import { AZ_COLUMN_ROLE_OPTIONS } from '@/types/az-types';
   import { DBName } from '@/types/app-types';
   import { AZColumnRole } from '@/types/az-types';
   import Papa from 'papaparse';
@@ -177,11 +210,8 @@
   const { loadFromDexieDB } = useDexieDB();
   const azService = new AZService();
 
-  // Component state
-  const files = reactive<Record<string, File | null>>({});
   const isDragging = reactive<Record<string, boolean>>({});
-  const isProcessing = reactive<Record<string, boolean>>({});
-  const isUploading = reactive<Record<string, boolean>>({});
+
   const isGeneratingReports = ref(false);
 
   // Preview state
@@ -191,17 +221,6 @@
   const columnRoles = ref<string[]>([]);
   const startLine = ref(1);
   const activeComponent = ref<string>('');
-
-  // AZ-specific column options
-  const columnRoleOptions = [
-    { value: AZColumnRole.DESTINATION, label: 'Destination Name' },
-    { value: AZColumnRole.DIALCODE, label: 'Dial Code' },
-    { value: AZColumnRole.RATE, label: 'Rate' },
-  ];
-
-  onMounted(() => {
-    // azService.value = new AZService();
-  });
 
   // Drag and drop handlers
   function handleDragEnter(event: DragEvent, componentId: string) {
@@ -218,7 +237,14 @@
     event.preventDefault();
     isDragging[componentId] = false;
 
-    if (!isProcessing[componentId] && event.dataTransfer?.files) {
+    // Add check for disabled state and other processing
+    if (
+      !azStore.isComponentUploading(componentId) &&
+      !azStore.isComponentDisabled(componentId) &&
+      !azStore.isComponentUploading('az1') &&
+      !azStore.isComponentUploading('az2') &&
+      event.dataTransfer?.files
+    ) {
       const file = event.dataTransfer.files[0];
       if (file) {
         handleFileSelected(file, componentId);
@@ -227,15 +253,15 @@
   }
 
   async function handleFileSelected(file: File, componentId: string) {
-    if (isProcessing[componentId]) return;
+    if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId)) return;
 
-    isProcessing[componentId] = true;
+    azStore.setComponentUploading(componentId, true);
     try {
       await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
     } catch (error) {
       console.error('Error handling file:', error);
     } finally {
-      isProcessing[componentId] = false;
+      azStore.setComponentUploading(componentId, false);
     }
   }
 
@@ -246,22 +272,13 @@
   }
 
   async function handleRemoveFile(componentName: string) {
-    console.log('removing file from store', componentName);
     try {
-      const fileName = files[componentName]?.name;
+      const fileName = azStore.getFileNameByComponent(componentName);
       if (!fileName) return;
 
-      // Get table name that was created for this file
       const tableName = fileName.toLowerCase().replace('.csv', '');
-
-      // Remove from Dexie
       await azService.removeTable(tableName);
-
-      // Remove from store
       azStore.removeFile(componentName);
-
-      // Reset file state
-      files[componentName] = null;
     } catch (error) {
       console.error('Error removing file:', error);
     }
@@ -349,9 +366,8 @@
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
-    files[componentId] = file;
+    azStore.setTempFile(componentId, file);
 
-    // Generate preview using Papa Parse
     Papa.parse(file, {
       preview: 5,
       complete: results => {
@@ -362,21 +378,18 @@
       },
       error: error => {
         console.error('Error parsing CSV:', error);
+        azStore.clearTempFile(componentId);
       },
     });
   }
 
   // Modal handlers
   async function handleModalConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
-    const file = files[activeComponent.value];
+    const file = azStore.getTempFile(activeComponent.value);
     if (!file) return;
 
-    // Close modal immediately
     showPreviewModal.value = false;
-
-    // Show processing state
-    isProcessing[activeComponent.value] = true;
-    isUploading[activeComponent.value] = true;
+    azStore.setComponentUploading(activeComponent.value, true);
 
     try {
       const columnMapping = {
@@ -385,23 +398,19 @@
         rate: confirmation.columnRoles.indexOf(AZColumnRole.RATE),
       };
 
-      // Process file independently
       const result = await azService.processFile(file, columnMapping, confirmation.startLine);
-
-      // Update store after successful processing
       await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
-      // TODO: Show error state in upload zone
     } finally {
-      isUploading[activeComponent.value] = false;
-      isProcessing[activeComponent.value] = false;
+      azStore.setComponentUploading(activeComponent.value, false);
+      azStore.clearTempFile(activeComponent.value);
     }
   }
 
   function handleModalCancel() {
     showPreviewModal.value = false;
-    files[activeComponent.value] = null;
+    azStore.clearTempFile(activeComponent.value);
     activeComponent.value = '';
   }
 </script>

@@ -1,6 +1,5 @@
 <template>
   <div class="flex flex-col items-center w-full min-h-[400px]">
-    <h1 class="text-4xl my-2 text-white inline-block">A-Z Pricing</h1>
     <AZContentHeader />
 
     <div class="w-full max-w-5xl">
