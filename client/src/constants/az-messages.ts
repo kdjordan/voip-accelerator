@@ -16,7 +16,7 @@ export const AZ_JOURNEY_MESSAGES = {
   },
   [AZ_JOURNEY_STATE.ONE_FILE]: {
     title: 'Great start!',
-    message: 'Now upload your second rate deck to compare rates and find opportunities.',
+    message: 'Now upload your second rate deck to compare rates and codes to find opportunities.',
   },
   [AZ_JOURNEY_STATE.TWO_FILES]: {
     title: 'Ready for analysis',

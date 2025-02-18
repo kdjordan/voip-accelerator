@@ -48,6 +48,10 @@ export const useAzStore = defineStore('azStore', {
       }
       return AZ_JOURNEY_STATE.REPORTS_READY;
     },
+
+    hasExistingFile: (state) => (fileName: string) => {
+      return Array.from(state.filesUploaded.values()).some(f => f.fileName === fileName);
+    },
   },
 
   actions: {

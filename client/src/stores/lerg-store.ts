@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 import type { LergState, StateWithNPAs, StateNPAMapping, CountryLergData } from '@/types/lerg-types';
+import { computed } from 'vue';
+import { COUNTRY_CODES } from '@/types/country-codes';
 
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
@@ -40,6 +42,7 @@ export const useLergStore = defineStore('lerg', {
   getters: {
     sortedStatesWithNPAs: (state): StateWithNPAs[] => {
       return Object.entries(state.stateNPAs)
+        .filter(([code]) => !COUNTRY_CODES[code])
         .map(([code, npas]) => ({
           code,
           country: 'US',
@@ -56,7 +59,18 @@ export const useLergStore = defineStore('lerg', {
       return Object.keys(state.stateNPAs).length;
     },
 
-    getCountryData: (state): CountryLergData[] => state.countryData,
+    getCountryData: (state): CountryLergData[] => {
+      const territoryData = Object.entries(state.stateNPAs)
+        .filter(([code]) => COUNTRY_CODES[code])
+        .map(([code, npas]) => ({
+          country: code,
+          npaCount: npas.length,
+          npas: [...npas].sort(),
+        }));
+
+      return [...territoryData, ...state.countryData]
+        .sort((a, b) => b.npaCount - a.npaCount);
+    },
 
     getCountryByCode: state => (countryCode: string) =>
       state.countryData.find(country => country.country === countryCode),

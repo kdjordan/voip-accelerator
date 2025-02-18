@@ -38,8 +38,8 @@
                   class="w-3 h-3 rounded-full"
                   :class="
                     dbStatus.connected
-                      ? 'bg-green-500 animate-status-pulse-success'
-                      : 'bg-red-500 animate-status-pulse-error'
+                      ? 'bg-accent animate-status-pulse-success'
+                      : 'bg-destructive animate-status-pulse-error'
                   "
                 ></div>
                 <span
@@ -59,8 +59,8 @@
                   class="w-3 h-3 rounded-full"
                   :class="[
                     isLergLocallyStored
-                      ? 'bg-green-500 animate-status-pulse-success'
-                      : 'bg-red-500 animate-status-pulse-error',
+                      ? 'bg-accent animate-status-pulse-success'
+                      : 'bg-destructive animate-status-pulse-error',
                   ]"
                 ></div>
               </div>
@@ -303,10 +303,13 @@
           <button
             @click="$refs.lergFileInput.click()"
             :disabled="isLergUploading"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            :class="{ 'opacity-50 cursor-not-allowed': isLergUploading }"
+            class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
+            :class="{ 'animate-upload-pulse': isLergUploading }"
           >
-            Choose File
+            <div class="flex items-center justify-center space-x-2">
+              <ArrowUpTrayIcon class="w-4 h-4 text-accent" />
+              <span class="text-sm text-accent">Choose File</span>
+            </div>
           </button>
           <p class="text-sm text-gray-400 mt-2">or drag and drop your LERG file here</p>
           <p class="text-xs text-gray-500 mt-1">Supports TXT files (max 500MB)</p>
@@ -330,14 +333,15 @@
     </div> -->
 
     <!-- Danger Zone -->
-    <div class="bg-red-900/20 border border-red-500/50 rounded-lg p-6">
-      <h2 class="text-xl font-semibold text-red-400 mb-4">Danger Zone</h2>
-      <div class="flex items-center justify-end space-x-4">
+    <div class="bg-destructive/10 border border-destructive/50 rounded-lg p-6">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-medium text-destructive">Danger Zone</h3>
         <button
           @click="confirmClearLergData"
-          class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm border border-destructive/50 bg-destructive/20 hover:bg-destructive/30 text-destructive transition-all rounded-md"
         >
-          Clear LERG Data
+          <TrashIcon class="w-3.5 h-3.5" />
+          LERG
         </button>
       </div>
     </div>
@@ -348,9 +352,9 @@
   import { ref, computed, onMounted } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
-  import { ChevronDownIcon } from '@heroicons/vue/24/outline';
-  import { getCountryName } from '@/constants/country-codes';
-  import { getStateName } from '@/constants/state-codes';
+  import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
+  import { getCountryName } from '@/types/country-codes';
+  import { getStateName } from '@/types/state-codes';
 
   const store = useLergStore();
   const lergStats = computed(() => store.stats);
@@ -534,37 +538,3 @@
     }
   }
 </script>
-
-<style>
-  @keyframes status-pulse-success {
-    0%,
-    100% {
-      opacity: 1;
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-    }
-    50% {
-      opacity: 0.6;
-      box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
-    }
-  }
-
-  @keyframes status-pulse-error {
-    0%,
-    100% {
-      opacity: 1;
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-    }
-    50% {
-      opacity: 0.6;
-      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-    }
-  }
-
-  .animate-status-pulse-success {
-    animation: status-pulse-success 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  .animate-status-pulse-error {
-    animation: status-pulse-error 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-</style>

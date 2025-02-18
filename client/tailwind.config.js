@@ -33,13 +33,39 @@ export default {
         size6xl: 'clamp(4.77rem, 7.48vi + 2.9rem, 8.88rem)',
       },
       keyframes: {
-        pulse: {
-          '0%, 100%': { '@apply bg-green-900/20 border-green-500/50': {} },
-          '50%': { '@apply bg-green-500/20 border-green-500/50': {} },
+        'upload-pulse': {
+          '0%, 100%': {
+            background: 'hsl(160, 100%, 40%, 0.1)',
+          },
+          '50%': {
+            background: 'hsl(160, 100%, 40%, 0.2)',
+          },
+        },
+        'status-pulse-success': {
+          '0%, 100%': {
+            opacity: 1,
+            boxShadow: '0 0 0 0 rgba(var(--accent) / 0.7)',
+          },
+          '50%': {
+            opacity: 0.6,
+            boxShadow: '0 0 0 6px rgba(var(--accent) / 0)',
+          },
+        },
+        'status-pulse-error': {
+          '0%, 100%': {
+            opacity: 1,
+            boxShadow: '0 0 0 0 rgba(var(--destructive) / 0.7)',
+          },
+          '50%': {
+            opacity: 0.6,
+            boxShadow: '0 0 0 6px rgba(var(--destructive) / 0)',
+          },
         },
       },
       animation: {
-        pulse: 'pulse 1s infinite',
+        'upload-pulse': 'upload-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'status-pulse-success': 'status-pulse-success 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'status-pulse-error': 'status-pulse-error 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

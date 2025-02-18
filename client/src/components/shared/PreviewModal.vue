@@ -9,7 +9,7 @@
           class="fixed inset-0 transition-opacity"
           aria-hidden="true"
         >
-          <div class="absolute inset-0 bg-muted opacity-75"></div>
+          <div class="absolute inset-0 bg-fbBlack opacity-75"></div>
         </div>
         <span
           class="hidden sm:inline-block sm:align-middle sm:h-screen"
@@ -17,132 +17,136 @@
           >&#8203;</span
         >
         <div
-          class="inline-block align-bottom rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6 bg-background"
+          class="inline-block align-bottom rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full sm:p-6 bg-fbBlack"
         >
-          <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 rounded-xl border border-gray-500">
-            <div class="sm:flex sm:items-start">
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <div class="flex items-center justify-between">
-                  <h3
-                    class="text-lg leading-6 font-medium text-foreground"
-                    id="modal-title"
+          <div class="rounded-lg border border-fbWhite/20 overflow-hidden">
+            <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div class="sm:flex sm:items-start">
+                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                  <div class="flex items-center justify-between">
+                    <h3
+                      class="text-lg leading-6 font-medium text-fbWhite"
+                      id="modal-title"
+                    >
+                      Select Column Roles {{ isNPANXXDeck ? '(US)' : '(AZ)' }}
+                    </h3>
+                    <div>
+                      <label
+                        for="start-line"
+                        class="block text-sm font-medium text-fbWhite/70"
+                        >Data starts on line:</label
+                      >
+                      <select
+                        id="start-line"
+                        v-model="startLine"
+                        class="select-custom mt-1 block w-32 bg-fbHover text-fbWhite rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
+                      >
+                        <option
+                          v-for="i in 10"
+                          :key="i"
+                          :value="i"
+                        >
+                          {{ i }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div
+                    v-if="isNPANXXDeck"
+                    class="my-4 w-1/3"
                   >
-                    Select Column Roles {{ isNPANXXDeck ? '(US)' : '(AZ)' }}
-                  </h3>
-                  <div>
                     <label
-                      for="start-line"
-                      class="block text-sm font-medium text-mutedForeground"
-                      >Data starts on line:</label
+                      for="indetermRateSelect"
+                      class="block text-sm font-medium text-fbWhite/70"
+                      >Define Indeterminate Rate:</label
                     >
                     <select
-                      id="start-line"
-                      v-model="startLine"
-                      class="select-custom mt-1 block w-32 bg-foreground text-background rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
+                      id="indetermRateSelect"
+                      v-model="indetermRateSelection"
+                      class="select-custom mt-1 block w-full bg-fbHover text-fbWhite rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
                     >
-                      <option
-                        v-for="i in 10"
-                        :key="i"
-                        :value="i"
-                      >
-                        {{ i }}
-                      </option>
+                      <option value="default">By selecting column</option>
+                      <option value="inter">Using Interstate Rate</option>
+                      <option value="intra">Using Intrastate Rate</option>
                     </select>
                   </div>
-                </div>
-                <div
-                  v-if="isNPANXXDeck"
-                  class="my-4 w-1/3"
-                >
-                  <label
-                    for="indetermRateSelect"
-                    class="block text-sm font-medium text-muted-foreground"
-                    >Define Indeterminate Rate:</label
-                  >
-                  <select
-                    id="indetermRateSelect"
-                    v-model="indetermRateSelection"
-                    class="select-custom mt-1 block w-full bg-foreground text-stone-700 rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
-                  >
-                    <option value="default">By selecting column</option>
-                    <option value="inter">Using Interstate Rate</option>
-                    <option value="intra">Using Intrastate Rate</option>
-                  </select>
-                </div>
-                <div class="mt-2 overflow-auto max-h-80">
-                  <table class="min-w-full rounded-lg overflow-hidden">
-                    <thead class="bg-muted">
-                      <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Row</th>
-                        <th
-                          v-for="(col, index) in columns"
-                          :key="index"
-                          class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                        >
-                          <select
-                            v-model="columnRoles[index]"
-                            class="select-custom min-w-[180px] block w-full rounded-md py-2 pl-3 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-accent"
-                            :class="{
-                              'bg-white/50 text-background': columnRoles[index] !== '',
-                              'bg-foreground text-stone-700': columnRoles[index] === '',
-                            }"
+                  <div class="mt-2 overflow-auto max-h-80">
+                    <table class="min-w-full rounded-lg overflow-hidden">
+                      <thead class="bg-fbHover">
+                        <tr>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-fbWhite/70 uppercase tracking-wider">
+                            Row
+                          </th>
+                          <th
+                            v-for="(col, index) in columns"
+                            :key="index"
+                            class="px-6 py-3 text-left text-xs font-medium text-fbWhite/70 uppercase tracking-wider"
                           >
-                            <option value="">Select Column Role</option>
-                            <option
-                              v-for="role in availableRoles(index)"
-                              :key="role.value"
-                              :value="role.value"
+                            <select
+                              v-model="columnRoles[index]"
+                              class="select-custom min-w-[180px] block w-full rounded-md py-2 pl-3 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-accent"
+                              :class="{
+                                'bg-accent/20 text-accent border border-accent/50': columnRoles[index] !== '',
+                                'bg-fbHover text-fbWhite border border-fbWhite/20': columnRoles[index] === '',
+                              }"
                             >
-                              {{ role.label }}
-                            </option>
-                          </select>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="(row, rowIndex) in displayedData"
-                        :key="rowIndex"
-                        :class="['transition-colors', rowIndex % 2 === 0 ? 'bg-transparent' : 'bg-muted/30']"
-                      >
-                        <td class="px-4 py-2">
-                          {{ rowIndex + 1 }}
-                        </td>
-                        <td
-                          v-for="(cell, cellIndex) in row"
-                          :key="cellIndex"
-                          class="px-6 py-4 whitespace-nowrap"
+                              <option value="">Select Column Role</option>
+                              <option
+                                v-for="role in availableRoles(index)"
+                                :key="role.value"
+                                :value="role.value"
+                              >
+                                {{ role.label }}
+                              </option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, rowIndex) in displayedData"
+                          :key="rowIndex"
+                          :class="['transition-colors', rowIndex % 2 === 0 ? 'bg-transparent' : 'bg-fbHover/30']"
                         >
-                          {{ cell }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                          <td class="px-4 py-2">
+                            {{ rowIndex + 1 }}
+                          </td>
+                          <td
+                            v-for="(cell, cellIndex) in row"
+                            :key="cellIndex"
+                            class="px-6 py-4 whitespace-nowrap"
+                          >
+                            {{ cell }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-4">
-            <button
-              @click="confirmColumnRoles"
-              :disabled="!allRequiredRolesSelected"
-              :class="[
-                'py-3 px-6 rounded-lg transition-colors',
-                allRequiredRolesSelected
-                  ? 'bg-mutedForeground hover:bg-white/20 text-background'
-                  : 'bg-muted/50 text-foreground/50 cursor-not-allowed',
-              ]"
-              type="button"
-            >
-              Confirm
-            </button>
-            <button
-              @click="cancelModal"
-              type="button"
-              class="border border-white/20 hover:bg-muted/80 transition-all text-xl rounded-md px-2"
-            >
-              &times;
-            </button>
+
+            <div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-4 bg-fbHover/30 border-t border-fbWhite/10">
+              <button
+                @click="confirmColumnRoles"
+                :disabled="!allRequiredRolesSelected"
+                :class="[
+                  'px-6 py-2 rounded-lg transition-colors',
+                  allRequiredRolesSelected
+                    ? 'bg-accent/20 border border-accent/50 hover:bg-accent/30 text-accent'
+                    : 'bg-fbHover/50 text-fbWhite/50 border border-fbWhite/20 cursor-not-allowed',
+                ]"
+              >
+                Confirm
+              </button>
+              <button
+                @click="cancelModal"
+                type="button"
+                class="border border-destructive/50 bg-destructive/20 hover:bg-destructive/30 text-destructive transition-all text-xl rounded-md px-2"
+              >
+                &times;
+              </button>
+            </div>
           </div>
         </div>
       </div>

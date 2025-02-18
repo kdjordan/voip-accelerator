@@ -20,6 +20,7 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   getPricingReport: P | null;
   getCodeReport: C | null;
   getFileNameByComponent: (componentId: string) => string;
+  hasExistingFile: (fileName: string) => boolean;
 
   // Add temp file methods
   setTempFile: (componentId: string, file: File) => void;
@@ -41,10 +42,8 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   getJourneyState: AZJourneyState;
 }
 
-
 // Union type of all possible standardized data types
 export type StandardizedData = AZStandardizedData | USStandardizedData;
-
 
 // Replace enum with const map for better type safety
 export const DBName = {
