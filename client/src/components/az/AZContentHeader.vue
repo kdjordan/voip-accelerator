@@ -1,21 +1,24 @@
 <template>
   <div class="w-full">
     <!-- Journey Message Section -->
-    <div class="bg-gray-800 rounded-t-lg p-4 border-b border-gray-700/50">
-      <Transition
-        name="fade"
-        mode="out-in"
-      >
-        <div :key="azStore.getJourneyState">
-          <h3 class="text-lg font-medium text-white mb-2">
-            {{ AZ_JOURNEY_MESSAGES[azStore.getJourneyState].title }}
-          </h3>
-          <p
-            class="text-base text-foreground"
-            v-html="AZ_JOURNEY_MESSAGES[azStore.getJourneyState].message"
-          ></p>
-        </div>
-      </Transition>
+    <div class="bg-gray-800 rounded-t-lg p-6">
+      <div class="pb-4">
+        <Transition
+          name="fade"
+          mode="out-in"
+        >
+          <div :key="azStore.getJourneyState">
+            <h3 class="text-lg font-medium text-white mb-2">
+              {{ AZ_JOURNEY_MESSAGES[azStore.getJourneyState].title }}
+            </h3>
+            <p
+              class="text-base text-foreground"
+              v-html="AZ_JOURNEY_MESSAGES[azStore.getJourneyState].message"
+            ></p>
+          </div>
+        </Transition>
+      </div>
+      <div class="border-b border-gray-700/50 mx-2"></div>
     </div>
 
     <!-- Report Type Buttons -->

@@ -3,183 +3,191 @@
     <!-- Upload Zones Box -->
     <div class="bg-gray-800 rounded-b-lg p-6">
       <h2 class="text-lg font-medium text-gray-400 mb-6">Upload Rate Decks</h2>
-      <div class="grid grid-cols-2 gap-8">
-        <!-- Carrier A Upload Zone -->
-        <div class="flex flex-col gap-2">
-          <div
-            class="relative border-2 rounded-lg p-6 min-h-[160px]"
-            :class="[
-              isDragging['az1']
-                ? 'border-accent bg-fbWhite/10'
-                : !azStore.isComponentDisabled('az1')
-                ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed'
-                : '',
-              azStore.isComponentUploading('az1')
-                ? 'animate-pulse cursor-not-allowed'
-                : !azStore.isComponentDisabled('az1')
-                ? 'cursor-pointer'
-                : '',
-              azStore.isComponentDisabled('az1')
-                ? 'bg-accent/20 border-2 border-solid border-accent/50'
-                : 'border-fbWhite',
-            ]"
-            @dragenter.prevent="e => handleDragEnter(e, 'az1')"
-            @dragleave.prevent="e => handleDragLeave(e, 'az1')"
-            @dragover.prevent
-            @drop.prevent="e => handleDrop(e, 'az1')"
-          >
-            <input
-              type="file"
-              accept=".csv"
-              class="absolute inset-0 opacity-0"
-              :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
-              :disabled="
-                azStore.isComponentUploading('az1') ||
-                azStore.isComponentUploading('az2') ||
+      <div class="pb-4 mb-6">
+        <div class="grid grid-cols-2 gap-8">
+          <!-- Carrier A Upload Zone -->
+          <div class="flex flex-col gap-2">
+            <div
+              class="relative border-2 rounded-lg p-6 min-h-[160px]"
+              :class="[
+                isDragging['az1']
+                  ? 'border-accent bg-fbWhite/10'
+                  : !azStore.isComponentDisabled('az1')
+                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed'
+                  : '',
+                azStore.isComponentUploading('az1')
+                  ? 'animate-upload-pulse cursor-not-allowed'
+                  : !azStore.isComponentDisabled('az1')
+                  ? 'cursor-pointer'
+                  : '',
                 azStore.isComponentDisabled('az1')
-              "
-              @change="e => handleFileInput(e, 'az1')"
-            />
+                  ? 'bg-accent/20 border-2 border-solid border-accent/50'
+                  : 'border-fbWhite',
+              ]"
+              @dragenter.prevent="e => handleDragEnter(e, 'az1')"
+              @dragleave.prevent="e => handleDragLeave(e, 'az1')"
+              @dragover.prevent
+              @drop.prevent="e => handleDrop(e, 'az1')"
+            >
+              <input
+                type="file"
+                accept=".csv"
+                class="absolute inset-0 opacity-0"
+                :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
+                :disabled="
+                  azStore.isComponentUploading('az1') ||
+                  azStore.isComponentUploading('az2') ||
+                  azStore.isComponentDisabled('az1')
+                "
+                @change="e => handleFileInput(e, 'az1')"
+              />
 
-            <div class="flex flex-col h-full">
-              <!-- Empty/Processing States -->
-              <template v-if="!azStore.isComponentDisabled('az1') && !azStore.isComponentUploading('az1')">
-                <div class="flex-1 flex items-center justify-center">
-                  <div class="text-center">
-                    <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                    <p class="mt-2 text-sm text-foreground">Drop Carrier A rate deck here or click to select</p>
+              <div class="flex flex-col h-full">
+                <!-- Empty/Processing States -->
+                <template v-if="!azStore.isComponentDisabled('az1') && !azStore.isComponentUploading('az1')">
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="text-center">
+                      <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
+                      <p class="mt-2 text-sm text-foreground">Drop Carrier A rate deck here or click to select</p>
+                    </div>
                   </div>
-                </div>
-              </template>
+                </template>
 
-              <template v-if="azStore.isComponentUploading('az1')">
-                <div class="flex-1 flex items-center justify-center">
-                  <p class="text-sm text-muted animate-pulse">Processing your file...</p>
-                </div>
-              </template>
-
-              <!-- File Uploaded State -->
-              <template v-if="azStore.isComponentDisabled('az1')">
-                <!-- Centered File Info -->
-                <div class="flex-1 flex items-center justify-center">
-                  <div class="flex items-center space-x-2">
-                    <DocumentIcon class="w-5 h-5 text-accent" />
-                    <p class="text-sizeLg text-accent">
-                      {{ azStore.getFileNameByComponent('az1') }}
-                    </p>
+                <template v-if="azStore.isComponentUploading('az1')">
+                  <div
+                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0"
+                  >
+                    <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
-                </div>
-              </template>
+                </template>
+
+                <!-- File Uploaded State -->
+                <template v-if="azStore.isComponentDisabled('az1')">
+                  <!-- Centered File Info -->
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="flex items-center space-x-2">
+                      <DocumentIcon class="w-5 h-5 text-accent" />
+                      <p class="text-sizeLg text-accent">
+                        {{ azStore.getFileNameByComponent('az1') }}
+                      </p>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
+            <!-- Remove File Button -->
+            <button
+              v-if="azStore.isComponentDisabled('az1')"
+              @click="handleRemoveFile('az1')"
+              class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
+            >
+              <div class="flex items-center justify-center space-x-2">
+                <TrashIcon class="w-3.5 h-3.5 text-red-400" />
+                <span class="text-xs text-red-400">Remove</span>
+              </div>
+            </button>
           </div>
-          <!-- Remove File Button -->
-          <button
-            v-if="azStore.isComponentDisabled('az1')"
-            @click="handleRemoveFile('az1')"
-            class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
-          >
-            <div class="flex items-center justify-center space-x-2">
-              <TrashIcon class="w-3.5 h-3.5 text-red-400" />
-              <span class="text-xs text-red-400">Remove</span>
-            </div>
-          </button>
-        </div>
 
-        <!-- Carrier B Upload Zone -->
-        <div class="flex flex-col gap-2">
-          <div
-            class="relative border-2 rounded-lg p-6 min-h-[160px]"
-            :class="[
-              isDragging['az2']
-                ? 'border-accent bg-fbWhite/10'
-                : !azStore.isComponentDisabled('az2')
-                ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed'
-                : '',
-              azStore.isComponentUploading('az2')
-                ? 'animate-pulse cursor-not-allowed'
-                : !azStore.isComponentDisabled('az2')
-                ? 'cursor-pointer'
-                : '',
-              azStore.isComponentDisabled('az2')
-                ? 'bg-accent/20 border-2 border-solid border-accent/50'
-                : 'border-fbWhite',
-            ]"
-            @dragenter.prevent="e => handleDragEnter(e, 'az2')"
-            @dragleave.prevent="e => handleDragLeave(e, 'az2')"
-            @dragover.prevent
-            @drop.prevent="e => handleDrop(e, 'az2')"
-          >
-            <input
-              type="file"
-              accept=".csv"
-              class="absolute inset-0 opacity-0"
-              :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
-              :disabled="
-                azStore.isComponentUploading('az2') ||
-                azStore.isComponentUploading('az1') ||
+          <!-- Carrier B Upload Zone -->
+          <div class="flex flex-col gap-2">
+            <div
+              class="relative border-2 rounded-lg p-6 min-h-[160px]"
+              :class="[
+                isDragging['az2']
+                  ? 'border-accent bg-fbWhite/10'
+                  : !azStore.isComponentDisabled('az2')
+                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed'
+                  : '',
+                azStore.isComponentUploading('az2')
+                  ? 'animate-upload-pulse cursor-not-allowed'
+                  : !azStore.isComponentDisabled('az2')
+                  ? 'cursor-pointer'
+                  : '',
                 azStore.isComponentDisabled('az2')
-              "
-              @change="e => handleFileInput(e, 'az2')"
-            />
+                  ? 'bg-accent/20 border-2 border-solid border-accent/50'
+                  : 'border-fbWhite',
+              ]"
+              @dragenter.prevent="e => handleDragEnter(e, 'az2')"
+              @dragleave.prevent="e => handleDragLeave(e, 'az2')"
+              @dragover.prevent
+              @drop.prevent="e => handleDrop(e, 'az2')"
+            >
+              <input
+                type="file"
+                accept=".csv"
+                class="absolute inset-0 opacity-0"
+                :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
+                :disabled="
+                  azStore.isComponentUploading('az2') ||
+                  azStore.isComponentUploading('az1') ||
+                  azStore.isComponentDisabled('az2')
+                "
+                @change="e => handleFileInput(e, 'az2')"
+              />
 
-            <div class="flex flex-col h-full">
-              <!-- Empty/Processing States -->
-              <template v-if="!azStore.isComponentDisabled('az2') && !azStore.isComponentUploading('az2')">
-                <div class="flex-1 flex items-center justify-center">
-                  <div class="text-center">
-                    <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                    <p class="mt-2 text-sm text-foreground">Drop Carrier B rate deck here or click to browse</p>
+              <div class="flex flex-col h-full">
+                <!-- Empty/Processing States -->
+                <template v-if="!azStore.isComponentDisabled('az2') && !azStore.isComponentUploading('az2')">
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="text-center">
+                      <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
+                      <p class="mt-2 text-sm text-foreground">Drop Carrier B rate deck here or click to browse</p>
+                    </div>
                   </div>
-                </div>
-              </template>
+                </template>
 
-              <template v-if="azStore.isComponentUploading('az2')">
-                <div class="flex-1 flex items-center justify-center">
-                  <p class="text-sm text-muted animate-pulse">Processing your file...</p>
-                </div>
-              </template>
-
-              <!-- File Uploaded State -->
-              <template v-if="azStore.isComponentDisabled('az2')">
-                <!-- Centered File Info -->
-                <div class="flex-1 flex items-center justify-center">
-                  <div class="flex items-center space-x-2">
-                    <DocumentIcon class="w-5 h-5 text-accent" />
-                    <p class="text-sizeLg text-accent">
-                      {{ azStore.getFileNameByComponent('az2') }}
-                    </p>
+                <template v-if="azStore.isComponentUploading('az2')">
+                  <div
+                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0"
+                  >
+                  <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
-                </div>
-              </template>
+                </template>
+
+                <!-- File Uploaded State -->
+                <template v-if="azStore.isComponentDisabled('az2')">
+                  <!-- Centered File Info -->
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="flex items-center space-x-2">
+                      <DocumentIcon class="w-5 h-5 text-accent" />
+                      <p class="text-sizeLg text-accent">
+                        {{ azStore.getFileNameByComponent('az2') }}
+                      </p>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
+            <!-- Remove File Button -->
+            <button
+              v-if="azStore.isComponentDisabled('az2')"
+              @click="handleRemoveFile('az2')"
+              class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
+            >
+              <div class="flex items-center justify-center space-x-2">
+                <TrashIcon class="w-3.5 h-3.5 text-red-400" />
+                <span class="text-xs text-red-400">Remove</span>
+              </div>
+            </button>
           </div>
-          <!-- Remove File Button -->
-          <button
-            v-if="azStore.isComponentDisabled('az2')"
-            @click="handleRemoveFile('az2')"
-            class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
-          >
-            <div class="flex items-center justify-center space-x-2">
-              <TrashIcon class="w-3.5 h-3.5 text-red-400" />
-              <span class="text-xs text-red-400">Remove</span>
-            </div>
-          </button>
         </div>
       </div>
-      <!-- Reports Button -->
-      <div class="flex justify-end mt-8">
-        <button
-          v-if="!azStore.reportsGenerated"
-          @click="handleReportsAction"
-          :disabled="!azStore.isFull || isGeneratingReports"
-          class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
-          :class="{ 'animate-pulse': isGeneratingReports }"
-        >
-          <div class="flex items-center justify-center space-x-2">
-            <ArrowRightIcon class="w-4 h-4 text-accent" />
-            <span class="text-sm text-accent">{{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}</span>
-          </div>
-        </button>
+      <div class="border-t border-gray-700/50">
+        <!-- Reports Button -->
+        <div class="flex justify-end mt-8">
+          <button
+            v-if="!azStore.reportsGenerated"
+            @click="handleReportsAction"
+            :disabled="!azStore.isFull || isGeneratingReports"
+            class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
+            :class="{ 'animate-pulse': isGeneratingReports }"
+          >
+            <div class="flex items-center justify-center space-x-2">
+              <ArrowRightIcon class="w-4 h-4 text-accent" />
+              <span class="text-sm text-accent">{{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}</span>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -261,6 +269,12 @@
 
   async function handleFileSelected(file: File, componentId: string) {
     if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId)) return;
+
+    // Check if file name already exists using store method
+    if (azStore.hasExistingFile(file.name)) {
+      alert('A file with this name has already been uploaded. Please rename the file and try again.');
+      return;
+    }
 
     azStore.setComponentUploading(componentId, true);
     try {

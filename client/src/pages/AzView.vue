@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-col items-center w-full min-h-screen mt-8">
-    <h1 class="text-3xl font-bold text-white mb-8 self-start">AZ Rate Deck Analysis</h1>
+  <div class="min-h-screen text-white p-8 w-full">
+    <h1 class="text-3xl font-bold mb-8">AZ Rate Deck Analysis</h1>
     <AZContentHeader />
 
-    <div class="w-full">
+    <div>
       <transition
         name="fade"
         mode="out-in"

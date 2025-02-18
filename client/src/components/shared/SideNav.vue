@@ -2,7 +2,7 @@
   <div class="relative">
     <nav :class="['sidebar', 'border-r border-muted fixed top-0 left-0 bottom-0', isOpen ? 'w-[200px]' : 'w-[64px]']">
       <h1 class="text-center py-2 mb-4">
-        <div class="flex items-center text-fbGreen px-4 mb-0">
+        <div class="flex items-center text-accent px-4 mb-0">
           <span class="text-3xl">V</span>
           <BoltIcon class="w-8 h-8 -ml-1 flex-shrink-0" />
         </div>
