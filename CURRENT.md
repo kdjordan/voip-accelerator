@@ -1,24 +1,70 @@
-## what we are doing - focus on the AZ file upload, parsing and storing using Dexie
+# Current Development Task: Add Preview Functionality to LERG Upload
 
-- we are using dexie to create a database for each of the files we are uploading
-- we are using the createDatabase function to create a new database instance
-- we are using the getDatabase function to get an existing database instance
-- we are using the useAZFileHandler composable to handle the AZ file upload
-- we are using the AZService to process the AZ file
+## Objective
 
-1. Update database.ts:
+Add file preview and column selection functionality to the LERG file upload process, matching the functionality in AZFileUploads.vue
 
-   - [ ] Separate AZ and US configs
-   - [ ] Rename databases to follow pattern
-   - [ ] Update schema definitions
+## Required LERG Column Roles
 
-2. Update AZService:
+- NPA
+- NXX
+- State
+- Country
 
-   - [ ] Use dedicated az_rate_deck_db
-   - [ ] Clean up file processing
-   - [ ] Add proper error handling
+## Components to Modify
 
-3. Create USService:
-   - [ ] Mirror AZ pattern
-   - [ ] Implement US-specific processing
-   - [ ] Add US validation
+### 1. Types (lerg-types.ts)
+
+- [x] Define LERG column roles
+- [x] Add LERG_COLUMN_ROLE_OPTIONS constant
+- [x] Add LergColumnRole type
+- [x] Add LergPreviewData interface
+- [x] Add LergColumnMapping interface
+
+### 2. Store (lerg-store.ts)
+
+- [ ] Add preview data handling
+- [ ] Add column mapping functionality
+- [ ] Add journey state management
+- [ ] Add preview data state
+- [ ] Add column mapping state
+- [ ] Add methods for handling preview data
+- [ ] Add methods for handling column mapping
+
+### 3. UI (AdminLergView.vue)
+
+- [ ] Update upload zone styling to match AZFileUploads.vue
+- [ ] Modify handleLergFileChange to include preview step
+- [ ] Add PreviewModal integration
+- [ ] Add hover effects and loading states
+- [ ] Add isDragging state
+- [ ] Add file upload status handling
+- [ ] Add preview modal state management
+
+## Implementation Steps
+
+1. [x] Define types and interfaces
+2. [ ] Expand store functionality
+3. [ ] Update UI components
+4. [ ] Test and verify functionality
+
+## Implementation Order
+
+1. [x] Define LERG column roles and types
+2. [ ] Update LERG store with preview functionality
+3. [ ] Add preview modal to AdminLergView
+4. [ ] Update file upload handler
+5. [ ] Add upload zone styling
+6. [ ] Test full upload flow
+
+## Files to Modify
+
+- [x] client/src/types/lerg-types.ts
+- client/src/stores/lerg-store.ts
+- client/src/pages/AdminLergView.vue
+- client/src/constants/lerg-messages.ts (new file for journey messages)
+
+## Reference Components
+
+- client/src/components/az/AZFileUploads.vue (for upload functionality)
+- client/src/components/shared/PreviewModal.vue (for preview functionality)
