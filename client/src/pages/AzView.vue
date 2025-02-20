@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="text-3xl font-bold mb-8">AZ Rate Deck Analysis</h1>
+    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8">AZ Rate Deck Analysis</h1>
     <AZContentHeader />
 
     <div>

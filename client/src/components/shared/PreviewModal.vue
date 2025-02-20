@@ -159,7 +159,7 @@
   import { AZColumnRole } from '@/types/az-types';
   import { USColumnRole } from '@/types/us-types';
   import { DBName } from '@/types';
-  import { type DBNameType, type ColumnRoleOption } from '@/types/app-types';
+  
 
   const props = defineProps<{
     showModal: boolean;

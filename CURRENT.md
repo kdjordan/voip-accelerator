@@ -11,7 +11,7 @@ Add file preview and column selection functionality to the LERG file upload proc
 - State
 - Country
 
-## Components to Modify
+## Files to Modify
 
 ### 1. Types (lerg-types.ts)
 

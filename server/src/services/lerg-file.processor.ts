@@ -10,6 +10,13 @@ export class LERGFileProcessor extends EventEmitter {
   private totalLines = 0;
   private batchSize = 1000;
   private errorLogPath: string;
+  private currentLine = 0;
+  private stats = {
+    invalidNpa: 0,
+    invalidState: 0,
+    invalidCountry: 0,
+    emptyLines: 0,
+  };
 
   constructor() {
     super();
@@ -24,11 +31,14 @@ export class LERGFileProcessor extends EventEmitter {
     fs.appendFileSync(this.errorLogPath, logEntry);
   }
 
-  public async processFile(fileContent: Buffer | string): Promise<LERGRecord[]> {
+  public async processFile(
+    fileContent: Buffer | string,
+    mappings: Record<string, string>,
+    startLine: number
+  ): Promise<LERGRecord[]> {
     try {
       const records: LERGRecord[] = [];
       const content = fileContent.toString();
-      console.log('🔍 Starting LERG file processing');
       const stream = Readable.from(content);
       const rl = createInterface({
         input: stream,
@@ -40,8 +50,15 @@ export class LERGFileProcessor extends EventEmitter {
       let skippedRecords = 0;
 
       for await (const line of rl) {
+        this.currentLine++;
+
+        // Skip lines before startLine
+        if (this.currentLine < startLine) {
+          continue;
+        }
+
         this.processedLines++;
-        const record = this.parseLergLine(line);
+        const record = this.parseLergLine(line, mappings);
         if (record) {
           validRecords++;
           console.debug('[lerg-file.processor.ts] Valid record found:', { npa: record.npa, state: record.state });
@@ -76,34 +93,52 @@ export class LERGFileProcessor extends EventEmitter {
   }
 
   // Parse individual lines
-  private parseLergLine(line: string): LERGRecord | null {
+  private parseLergLine(line: string, mappings: Record<string, string>): LERGRecord | null {
     try {
       if (!line.trim()) return null;
 
-      const parts = line.split(',').map(part => part.replace(/^"|"$/g, '').trim());
+      // Split by comma but preserve empty cells
+      const parts = line.split(',').map(part => {
+        // Remove quotes and trim, but keep empty cells as empty strings
+        const cleaned = part.replace(/^"|"$/g, '').trim();
+        return cleaned === '' ? '' : cleaned;
+      });
 
-      // Skip header line
-      if (parts[0].toUpperCase() === 'NPA') return null;
+      // Ensure we have enough elements in the array
+      while (
+        parts.length <=
+        Math.max(
+          this.findColumnIndex(mappings, 'npa'),
+          this.findColumnIndex(mappings, 'state'),
+          this.findColumnIndex(mappings, 'country')
+        )
+      ) {
+        parts.push('');
+      }
 
-      const npa = parts[0];
-      const state = parts[3];
-      const country = parts[parts.length - 1];
+
+      // Use mappings to get values
+      const npa = parts[this.findColumnIndex(mappings, 'npa')];
+      const state = parts[this.findColumnIndex(mappings, 'state')];
+      const country = parts[this.findColumnIndex(mappings, 'country')];
+
+
 
       // Validate NPA
       if (!/^\d{3}$/.test(npa)) {
-        this.logError('Invalid NPA', { line, npa });
+        this.stats.invalidNpa++;
         return null;
       }
 
       // Validate state is 2 characters
       if (!state || state.length !== 2) {
-        this.logError('Invalid state', { line, state });
+        this.stats.invalidState++;
         return null;
       }
 
       // Validate country is 2 characters
       if (!country || country.length !== 2) {
-        this.logError('Invalid country', { line, country });
+        this.stats.invalidCountry++;
         return null;
       }
 
@@ -120,5 +155,10 @@ export class LERGFileProcessor extends EventEmitter {
       });
       return null;
     }
+  }
+
+  private findColumnIndex(mappings: Record<string, string>, fieldName: string): number {
+    const entry = Object.entries(mappings).find(([_, value]) => value.toLowerCase() === fieldName.toLowerCase());
+    return entry ? parseInt(entry[0]) : -1;
   }
 }

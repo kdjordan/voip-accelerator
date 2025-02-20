@@ -82,32 +82,56 @@ export class LergService {
     countryData: CountryLergData[];
   }> {
     const records = await this.db.table('lerg').toArray();
+    console.log('Records from IndexedDB:', records);
 
     // Process state mappings
     const stateMapping: StateNPAMapping = {};
     const canadaProvinces: Record<string, Set<string>> = {};
     const countryMap = new Map<string, Set<string>>();
 
-    for (const record of records) {
-      // Handle state mappings (US only)
-      if (record.country === 'US') {
-        if (!stateMapping[record.state]) {
-          stateMapping[record.state] = [];
-        }
-        if (!stateMapping[record.state].includes(record.npa)) {
-          stateMapping[record.state].push(record.npa);
-        }
+    // First pass - identify all US records including California
+    const usRecords = records.filter(
+      record => record.country === 'US' || (record.state === 'CA' && record.country === 'US')
+    );
+
+    // Second pass - identify true Canadian records
+    const canadianRecords = records.filter(
+      record => record.country === 'CA' && !(record.state === 'CA' && record.country === 'US')
+    );
+
+    // Third pass - other countries
+    const otherRecords = records.filter(record => record.country !== 'US' && record.country !== 'CA');
+
+    // Process US records
+    for (const record of usRecords) {
+      if (!stateMapping[record.state]) {
+        stateMapping[record.state] = [];
+      }
+      if (!stateMapping[record.state].includes(record.npa)) {
+        stateMapping[record.state].push(record.npa);
       }
 
-      // Handle Canadian provinces
-      if (record.country === 'CA') {
-        if (!canadaProvinces[record.state]) {
-          canadaProvinces[record.state] = new Set();
-        }
-        canadaProvinces[record.state].add(record.npa);
+      if (!countryMap.has('US')) {
+        countryMap.set('US', new Set());
       }
+      countryMap.get('US')!.add(record.npa);
+    }
 
-      // Handle country mappings
+    // Process Canadian records
+    for (const record of canadianRecords) {
+      if (!canadaProvinces[record.state]) {
+        canadaProvinces[record.state] = new Set();
+      }
+      canadaProvinces[record.state].add(record.npa);
+
+      if (!countryMap.has('CA')) {
+        countryMap.set('CA', new Set());
+      }
+      countryMap.get('CA')!.add(record.npa);
+    }
+
+    // Process other countries
+    for (const record of otherRecords) {
       if (!countryMap.has(record.country)) {
         countryMap.set(record.country, new Set());
       }

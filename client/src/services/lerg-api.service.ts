@@ -16,9 +16,12 @@ export const lergApiService = {
       console.log('Server data status:', hasServerData);
 
       const lergData = await this.getLergData();
+      console.log('Raw LERG data from server:', lergData.data);
       await service.initializeLergTable(lergData.data || []);
 
       const { stateMapping, countryData } = await service.processLergData();
+      console.log('Processed state mapping:', stateMapping);
+      console.log('Processed country data:', countryData);
       store.setStateNPAs(stateMapping);
       store.setCountryData(countryData);
       store.setLergStats(lergData.stats?.totalRecords || 0);

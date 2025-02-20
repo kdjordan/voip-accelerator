@@ -7,12 +7,15 @@
           name="fade"
           mode="out-in"
         >
-          <div :key="azStore.getJourneyState">
-            <h3 class="text-lg font-medium text-white mb-2">
+          <div
+            :key="azStore.getJourneyState"
+            class="min-h-24"
+          >
+            <h3 class="text-sizeLg tracking-wide text-white mb-2">
               {{ AZ_JOURNEY_MESSAGES[azStore.getJourneyState].title }}
             </h3>
             <p
-              class="text-base text-foreground"
+              class="text-base text-gray-400"
               v-html="AZ_JOURNEY_MESSAGES[azStore.getJourneyState].message"
             ></p>
           </div>
@@ -53,9 +56,9 @@
 <script setup lang="ts">
   import { useAzStore } from '@/stores/az-store';
   import { ReportTypes, type ReportType } from '@/types';
-  import { AZ_JOURNEY_MESSAGES, type AZJourneyState } from '@/constants/az-messages';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
+  import { AZ_JOURNEY_MESSAGES, type JourneyState } from '@/constants/messages';
 
   const azStore = useAzStore();
   const { deleteObjectStore, deleteDatabase } = useDexieDB();
