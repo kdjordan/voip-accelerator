@@ -1,24 +1,33 @@
 <template>
-  <div
-    class="flex flex-col items-center"
-    id="us-file-uploads"
-  >
-    <div class="mb-4 text-center">
-      <p
-        v-if="!usStore.isFull"
-        class="text-center text-sizeBase text-foreground mb-8"
-      >
-        Upload
-        <span class="uppercase text-white">your</span>
-        current rates and the rates of your
-        <span class="uppercase text-white">prospective carrier.</span>
-        <br />
-        We will generate you a report showing the best opportunities for you to buy and sell.
-      </p>
+  <div class="w-full">
+    <!-- Journey Message Section -->
+    <div class="bg-gray-800 rounded-t-lg p-6">
+      <div class="pb-4">
+        <Transition
+          name="fade"
+          mode="out-in"
+        >
+          <div
+            :key="usStore.getJourneyState"
+            class="min-h-24"
+          >
+            <h3 class="text-sizeLg tracking-wide text-white mb-2">
+              {{ US_JOURNEY_MESSAGES[usStore.getJourneyState].title }}
+            </h3>
+            <p
+              class="text-base text-gray-400"
+              v-html="US_JOURNEY_MESSAGES[usStore.getJourneyState].message"
+            ></p>
+          </div>
+        </Transition>
+      </div>
+      <div class="border-b border-gray-700/50 mx-2"></div>
     </div>
+
+    <!-- Report Type Buttons -->
     <div
       v-if="usStore.reportsGenerated"
-      class="flex justify-center my-4"
+      class="flex items-center space-x-4 mb-8"
     >
       <button
         v-for="type in reportTypes"
@@ -52,6 +61,7 @@
   import { ReportTypes, type ReportType } from '@/types/app-types';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
+  import { US_JOURNEY_MESSAGES } from '@/constants/messages';
 
   const usStore = useUsStore();
   const { deleteObjectStore } = useDexieDB();

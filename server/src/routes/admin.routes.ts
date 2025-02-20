@@ -18,7 +18,7 @@ function handleError(message: string, error: unknown) {
 
 // POST /admin/lerg/upload
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
-  console.log('got hit /upload', req.file);
+  console.log('got hit /upload', { file: req.file, body: req.body });
   try {
     if (!req.file) {
       console.error('[admin.routes.ts] No file uploaded');
@@ -28,8 +28,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       });
     }
 
+    const mappings = JSON.parse(req.body.mappings);
+    const startLine = parseInt(req.body.startLine);
+
+    if (!mappings || !startLine) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters',
+      });
+    }
+
     console.info('[admin.routes.ts] Processing uploaded file');
-    const result = await lergService.processLergFile(req.file.buffer);
+    const result = await lergService.processLergFile(req.file.buffer, mappings, startLine);
     console.info('[admin.routes.ts] File processed successfully:', result);
 
     return res.json({

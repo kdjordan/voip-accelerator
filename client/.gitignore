@@ -33,3 +33,5 @@ coverage
 .env
 .env.local
 .env.*.local
+
+server/logs/*

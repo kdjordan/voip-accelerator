@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import type { USPricingReport, USCodeReport } from '../types/us-types';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
+import { JOURNEY_STATE, type JourneyState } from '@/constants/messages';
 
 export const useUsStore = defineStore('npanxxStore', {
   state: () => ({
@@ -15,6 +16,14 @@ export const useUsStore = defineStore('npanxxStore', {
   }),
 
   getters: {
+    getJourneyState(state): JourneyState {
+      if (state.reportsGenerated) return JOURNEY_STATE.REPORTS_READY;
+      if (state.uploadingComponents['us1'] || state.uploadingComponents['us2']) return JOURNEY_STATE.PROCESSING;
+      if (state.filesUploaded.size === 2) return JOURNEY_STATE.TWO_FILES;
+      if (state.filesUploaded.size === 1) return JOURNEY_STATE.ONE_FILE;
+      return JOURNEY_STATE.INITIAL;
+    },
+
     isComponentDisabled:
       state =>
       (componentName: string): boolean =>

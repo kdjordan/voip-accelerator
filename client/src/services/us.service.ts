@@ -1,12 +1,12 @@
-import { type AZStandardizedData } from '@/types/az-types';
+import { type USStandardizedData } from '@/types/us-types';
 import { DBName } from '@/types/app-types';
 import Dexie, { Table } from 'dexie';
-import { useAzStore } from '@/stores/az-store';
+import { useUsStore } from '@/stores/us-store';
 import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB';
 
-export class AZService {
-  private store = useAzStore();
+export class USService {
+  private store = useUsStore();
   private db: Dexie | null = null;
 
   constructor() {
@@ -16,7 +16,7 @@ export class AZService {
   async initializeDB() {
     if (!this.db) {
       const { getDB } = useDexieDB();
-      this.db = await getDB(DBName.AZ);
+      this.db = await getDB(DBName.US);
       await this.db.open();
     }
     return this.db;
@@ -26,7 +26,7 @@ export class AZService {
     file: File,
     columnMapping: Record<string, number>,
     startLine: number
-  ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
+  ): Promise<{ fileName: string; records: USStandardizedData[] }> {
     const tableName = file.name.toLowerCase().replace('.csv', '');
 
     // Ensure db is initialized
@@ -37,7 +37,7 @@ export class AZService {
     if (!db.tables.some((t: Table) => t.name === tableName)) {
       await db.close();
       db.version(db.verno! + 1).stores({
-        [tableName]: '++id, destName, dialCode, rate',
+        [tableName]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, &npanxx',
       });
       await db.open();
     }
@@ -48,18 +48,17 @@ export class AZService {
         skipEmptyLines: true,
         complete: async (results: { data: string[][] }) => {
           try {
-            // Skip to user-specified start line
             const dataRows = results.data.slice(startLine - 1);
-            const records: AZStandardizedData[] = dataRows.map(row => {
-              // The columnMapping should contain the indices selected by user
-              return {
-                destName: row[columnMapping.destination]?.trim() || '',
-                dialCode: row[columnMapping.dialcode]?.trim() || '',
-                rate: parseFloat(row[columnMapping.rate]) || 0,
-              };
-            });
+            const records: USStandardizedData[] = dataRows.map(row => ({
+              npa: row[columnMapping.npa]?.trim() || '',
+              nxx: row[columnMapping.nxx]?.trim() || '',
+              npanxx: `${row[columnMapping.npa]?.trim() || ''}${row[columnMapping.nxx]?.trim() || ''}`,
+              interRate: parseFloat(row[columnMapping.interRate]) || 0,
+              intraRate: parseFloat(row[columnMapping.intraRate]) || 0,
+              indetermRate: parseFloat(row[columnMapping.indetermRate]) || 0,
+            }));
 
-            // Store in the new table
+            // Store in chunks
             const chunkSize = 1000;
             for (let i = 0; i < records.length; i += chunkSize) {
               const chunk = records.slice(i, i + chunkSize);
@@ -81,10 +80,10 @@ export class AZService {
     try {
       const db = await this.initializeDB();
       if (!db) throw new Error('Failed to initialize database');
-      await db.table('az').clear();
+      await db.table('us').clear();
       this.store.resetFiles();
     } catch (error) {
-      console.error('Failed to clear AZ data:', error);
+      console.error('Failed to clear US data:', error);
       throw error;
     }
   }
@@ -94,14 +93,10 @@ export class AZService {
       const db = await this.initializeDB();
       if (!db) throw new Error('Failed to initialize database');
 
-      // Close the database to modify schema
       await db.close();
-
-      // Remove the table by setting it to null in the next version
       db.version(db.verno! + 1).stores({
-        [tableName]: null, // This deletes the table
+        [tableName]: null,
       });
-
       await db.open();
       console.log(`Table ${tableName} removed successfully`);
     } catch (error) {

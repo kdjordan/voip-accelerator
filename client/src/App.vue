@@ -32,7 +32,6 @@
   import { onMounted, onBeforeUnmount } from 'vue';
   import { DBName, type DBNameType } from '@/types/app-types';
   import { useSharedStore } from '@/stores/shared-store';
-  import { lergApiService } from '@/services/lerg-api.service';
   import { cleanupDatabases } from '@/utils/cleanup';
 
   import { loadSampleDecks } from '@/utils/load-sample-data';
@@ -76,10 +75,7 @@
       console.log('Starting application initialization...');
 
       // console.log('Loading sample decks...');
-      // await loadSampleDecks([DBName.AZ]);
-
-      console.log('Initializing LERG service...');
-      await lergApiService.initialize();
+      await loadSampleDecks([DBName.AZ]);
     } catch (error) {
       console.error('Error during initialization:', error);
     }

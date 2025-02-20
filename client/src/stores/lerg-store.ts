@@ -42,7 +42,12 @@ export const useLergStore = defineStore('lerg', {
   getters: {
     sortedStatesWithNPAs: (state): StateWithNPAs[] => {
       return Object.entries(state.stateNPAs)
-        .filter(([code]) => !COUNTRY_CODES[code])
+        .filter(([code, npas]) => {
+          return (
+            !COUNTRY_CODES[code] ||
+            (code === 'CA' && state.countryData.find(c => c.country === 'US')?.npas.some(npa => npas.includes(npa)))
+          );
+        })
         .map(([code, npas]) => ({
           code,
           country: 'US',
@@ -68,8 +73,7 @@ export const useLergStore = defineStore('lerg', {
           npas: [...npas].sort(),
         }));
 
-      return [...territoryData, ...state.countryData]
-        .sort((a, b) => b.npaCount - a.npaCount);
+      return [...territoryData, ...state.countryData].sort((a, b) => b.npaCount - a.npaCount);
     },
 
     getCountryByCode: state => (countryCode: string) =>

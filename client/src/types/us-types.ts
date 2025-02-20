@@ -1,4 +1,4 @@
-export interface USStandardizedData  {
+export interface USStandardizedData {
   npanxx: string;
   npa: string;
   nxx: string;
@@ -7,31 +7,9 @@ export interface USStandardizedData  {
   indetermRate: number;
 }
 
-// Rate type constants
-export const NPANXXRateType = {
-  INTERSTATE: 'interstate',
-  INTRASTATE: 'intrastate',
-  INDETERMINATE: 'indeterminate',
-} as const;
-
-export type NPANXXRateType = (typeof NPANXXRateType)[keyof typeof NPANXXRateType];
-
-// Column roles for CSV mapping
-export const USColumnRole = {
-  NPA: 'npa',
-  NXX: 'nxx',
-  NPANXX: 'npanxx',
-  INTERSTATE: 'interRate',
-  INTRASTATE: 'intraRate',
-  INDETERMINATE: 'ijRate',
-  SELECT: '',
-} as const;
-
-export type USColumnRole = (typeof USColumnRole)[keyof typeof USColumnRole];
-
 // Rate comparison result
 export interface RateComparison {
-  type: NPANXXRateType;
+  type: USRateType;
   difference: number;
   isHigher: boolean;
   isEqual: boolean;
@@ -54,7 +32,7 @@ export interface USFileReport {
   uniqueNXX: number;
   coveragePercentage: number;
   rateStats: {
-    [key in NPANXXRateType]: RateStats;
+    [key in USRateType]: RateStats;
   };
 }
 
@@ -107,3 +85,39 @@ export interface USPricingReport {
     totalEqual: number;
   };
 }
+
+// Rate type constants
+export const USRateType = {
+  INTERSTATE: 'interstate',
+  INTRASTATE: 'intrastate',
+  INDETERMINATE: 'indeterminate',
+} as const;
+
+export type USRateType = (typeof USRateType)[keyof typeof USRateType];
+
+// Column roles for CSV mapping
+export const USColumnRole = {
+  NPA: 'npa',
+  NXX: 'nxx',
+  NPANXX: 'npanxx',
+  INTERSTATE: 'interRate',
+  INTRASTATE: 'intraRate',
+  INDETERMINATE: 'ijRate',
+  SELECT: '',
+} as const;
+
+export type USColumnRole = (typeof USColumnRole)[keyof typeof USColumnRole];
+
+export interface ColumnRoleOption {
+  value: USColumnRole;
+  label: string;
+}
+
+export const US_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
+  { value: USColumnRole.NPANXX, label: 'NPANXX' },
+  { value: USColumnRole.NPA, label: 'NPA' },
+  { value: USColumnRole.NXX, label: 'NXX' },
+  { value: USColumnRole.INTERSTATE, label: 'Interstate Rate' },
+  { value: USColumnRole.INTRASTATE, label: 'Intrastate Rate' },
+  { value: USColumnRole.INDETERMINATE, label: 'Indeterminate Rate' },
+];

@@ -2,18 +2,18 @@
   <div class="flex flex-col gap-8 w-full">
     <!-- Upload Zones Box -->
     <div class="bg-gray-800 rounded-b-lg p-6">
-      <h2 class="text-lg font-medium text-gray-400 mb-6">Upload Rate Decks</h2>
       <div class="pb-4 mb-6">
         <div class="grid grid-cols-2 gap-8">
           <!-- Carrier A Upload Zone -->
           <div class="flex flex-col gap-2">
+            <h2 class="text-base text-fbWhite mb-4">Your Rates Here</h2>
             <div
-              class="relative border-2 rounded-lg p-6 min-h-[160px]"
+              class="relative border-2 rounded-lg p-8 min-h-[120px] flex items-center justify-center"
               :class="[
                 isDragging['az1']
                   ? 'border-accent bg-fbWhite/10'
                   : !azStore.isComponentDisabled('az1')
-                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed'
+                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 dashed'
                   : '',
                 azStore.isComponentUploading('az1')
                   ? 'animate-upload-pulse cursor-not-allowed'
@@ -48,7 +48,7 @@
                   <div class="flex-1 flex items-center justify-center">
                     <div class="text-center">
                       <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                      <p class="mt-2 text-sm text-foreground">Drop Carrier A rate deck here or click to select</p>
+                      <p class="mt-2 text-base text-foreground">Drop YOUR rate deck here or click to select</p>
                     </div>
                   </div>
                 </template>
@@ -90,13 +90,14 @@
 
           <!-- Carrier B Upload Zone -->
           <div class="flex flex-col gap-2">
+            <h2 class="text-base text-fbWhite mb-4">Prospect's Rates Here</h2>
             <div
-              class="relative border-2 rounded-lg p-6 min-h-[160px]"
+              class="relative border-2 rounded-lg p-8 min-h-[120px] flex items-center justify-center"
               :class="[
                 isDragging['az2']
                   ? 'border-accent bg-fbWhite/10'
                   : !azStore.isComponentDisabled('az2')
-                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed'
+                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 '
                   : '',
                 azStore.isComponentUploading('az2')
                   ? 'animate-upload-pulse cursor-not-allowed'
@@ -131,7 +132,9 @@
                   <div class="flex-1 flex items-center justify-center">
                     <div class="text-center">
                       <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                      <p class="mt-2 text-sm text-foreground">Drop Carrier B rate deck here or click to browse</p>
+                      <p class="mt-2 text-base text-foreground">
+                        Drop the PROSPECT'S rate deck here or click to browse
+                      </p>
                     </div>
                   </div>
                 </template>
@@ -140,7 +143,7 @@
                   <div
                     class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0"
                   >
-                  <p class="text-sizeMd text-accent">Processing your file...</p>
+                    <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
                 </template>
 
@@ -191,16 +194,16 @@
       </div>
     </div>
 
-    <!-- Preview Modal -->
-    <PreviewModal
+    <!-- New Preview Modal -->
+    <PreviewModal2
       v-if="showPreviewModal"
       :showModal="showPreviewModal"
       :columns="columns"
-      :previewData="previewData"
-      :columnRoles="columnRoles"
-      :startLine="startLine"
-      :columnRoleOptions="AZ_COLUMN_ROLE_OPTIONS"
-      :deckType="DBName.AZ"
+      :preview-data="previewData"
+      :start-line="startLine"
+      :column-options="AZ_COLUMN_ROLE_OPTIONS"
+      @update:mappings="handleMappingUpdate"
+      @update:valid="isValid => (isModalValid = isValid)"
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
@@ -210,7 +213,7 @@
 <script setup lang="ts">
   import { ref, reactive } from 'vue';
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
-  import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useAzStore } from '@/stores/az-store';
   import useDexieDB from '@/composables/useDexieDB';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
@@ -233,9 +236,12 @@
   const showPreviewModal = ref(false);
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
-  const columnRoles = ref<string[]>([]);
   const startLine = ref(1);
   const activeComponent = ref<string>('');
+
+  // Preview state
+  const isModalValid = ref(false);
+  const columnMappings = ref<Record<string, string>>({});
 
   // Drag and drop handlers
   function handleDragEnter(event: DragEvent, componentId: string) {
@@ -306,29 +312,30 @@
   }
 
   async function handleReportsAction() {
-    if (azStore.reportsGenerated) {
-      azStore.showUploadComponents = false;
-    } else {
-      await generateReports();
-    }
-  }
+    if (!azStore.isFull || isGeneratingReports.value) return;
 
-  async function generateReports() {
     isGeneratingReports.value = true;
     try {
-      const fileNames = azStore.getFileNames;
-      console.log('File names from store:', fileNames);
+      console.log('Starting report generation with files:', azStore.getFileNames);
 
-      const file1Data = await loadFromDexieDB(DBName.AZ, fileNames[0]);
-      console.log('File 1 data loaded:', { length: file1Data?.length, sample: file1Data?.[0] });
+      // Load data from DexieDB
+      const fileData = await Promise.all(
+        azStore.getFileNames.map(async fileName => {
+          console.log('Loading data for file:', fileName);
+          // Remove .csv extension for store name
+          const storeName = fileName.toLowerCase().replace('.csv', '');
+          const data = await loadFromDexieDB(DBName.AZ, storeName);
+          if (!data) {
+            throw new Error(`No data found for file ${fileName}`);
+          }
+          return data as AZStandardizedData[];
+        })
+      );
 
-      const file2Data = await loadFromDexieDB(DBName.AZ, fileNames[1]);
-      console.log('File 2 data loaded:', { length: file2Data?.length, sample: file2Data?.[0] });
-
-      if (file1Data && file2Data) {
+      if (fileData.length === 2) {
         console.log('Making comparison with data lengths:', {
-          file1Length: file1Data.length,
-          file2Length: file2Data.length,
+          file1Length: fileData[0].length,
+          file2Length: fileData[1].length,
         });
 
         // Create worker and process data
@@ -346,10 +353,10 @@
             };
 
             const input: AZReportsInput = {
-              fileName1: fileNames[0],
-              fileName2: fileNames[1],
-              file1Data: file1Data as AZStandardizedData[],
-              file2Data: file2Data as AZStandardizedData[],
+              fileName1: azStore.getFileNames[0],
+              fileName2: azStore.getFileNames[1],
+              file1Data: fileData[0],
+              file2Data: fileData[1],
             };
 
             worker.postMessage(input);
@@ -405,7 +412,7 @@
   }
 
   // Modal handlers
-  async function handleModalConfirm(confirmation: { columnRoles: string[]; startLine: number }) {
+  async function handleModalConfirm(mappings: Record<string, string>) {
     const file = azStore.getTempFile(activeComponent.value);
     if (!file) return;
 
@@ -413,13 +420,16 @@
     azStore.setComponentUploading(activeComponent.value, true);
 
     try {
+      // Convert the new mappings format to the expected columnMapping format
       const columnMapping = {
-        destination: confirmation.columnRoles.indexOf(AZColumnRole.DESTINATION),
-        dialcode: confirmation.columnRoles.indexOf(AZColumnRole.DIALCODE),
-        rate: confirmation.columnRoles.indexOf(AZColumnRole.RATE),
+        destination: Number(
+          Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DESTINATION)?.[0] ?? -1
+        ),
+        dialcode: Number(Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DIALCODE)?.[0] ?? -1),
+        rate: Number(Object.entries(mappings).find(([_, value]) => value === AZColumnRole.RATE)?.[0] ?? -1),
       };
 
-      const result = await azService.processFile(file, columnMapping, confirmation.startLine);
+      const result = await azService.processFile(file, columnMapping, startLine.value);
       await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
@@ -433,5 +443,9 @@
     showPreviewModal.value = false;
     azStore.clearTempFile(activeComponent.value);
     activeComponent.value = '';
+  }
+
+  function handleMappingUpdate(newMappings: Record<string, string>) {
+    columnMappings.value = newMappings;
   }
 </script>

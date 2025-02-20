@@ -14,13 +14,17 @@ export class LERGService {
     this.fileProcessor = new LERGFileProcessor();
   }
 
-  async processLergFile(fileContent: Buffer | string): Promise<LERGUploadResponse> {
+  async processLergFile(
+    fileContent: Buffer | string,
+    mappings: Record<string, string>,
+    startLine: number
+  ): Promise<LERGUploadResponse> {
     try {
       // First clear all existing LERG data
       await this.clearLergData();
       console.log('[lerg.service.ts] Cleared existing LERG data');
 
-      const records = await this.fileProcessor.processFile(fileContent);
+      const records = await this.fileProcessor.processFile(fileContent, mappings, startLine);
       let processedRecords = 0;
       let totalRecords = records.length;
 
@@ -66,8 +70,6 @@ export class LERGService {
   }
 
   private async insertBatch(records: LERGRecord[]) {
-    console.debug('Attempting to insert records:', records);
-
     const values = records.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(',');
 
     const params = records.flatMap(record => [record.npa, record.state, record.country, record.last_updated]);
@@ -91,6 +93,8 @@ export class LERGService {
       console.error('Batch insert error:', error);
       throw error;
     }
+    // Return the count of records that would have been inserted
+    return records.length;
   }
 
   async getLergData() {
@@ -102,7 +106,6 @@ export class LERGService {
             SELECT npa, state, country
             FROM lerg_codes 
             ORDER BY npa
-            LIMIT 100000
           ) l
         ),
         'stats', json_build_object(
@@ -161,7 +164,7 @@ export class LERGService {
       }
 
       // Process the file
-      await this.processLergFile(mostRecentFile.path);
+      await this.processLergFile(mostRecentFile.path, {}, 0);
     } catch (error) {
       console.error('Error reloading LERG data:', error);
       throw error;

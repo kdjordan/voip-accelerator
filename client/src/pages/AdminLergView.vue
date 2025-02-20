@@ -166,7 +166,9 @@
               <!-- Full width rows for multi-NPA countries -->
               <div class="space-y-2">
                 <div
-                  v-for="country in store.getCountryData.filter(c => c.country !== 'US' && c.npaCount > 1)"
+                  v-for="country in store.getCountryData.filter(
+                    c => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount > 1
+                  )"
                   :key="country.country"
                   @click="toggleExpandCountry(country.country)"
                   class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
@@ -262,7 +264,9 @@
               <!-- Grid for single NPA countries -->
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div
-                  v-for="country in store.getCountryData.filter(c => c.country !== 'US' && c.npaCount === 1)"
+                  v-for="country in store.getCountryData.filter(
+                    c => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount === 1
+                  )"
                   :key="country.country"
                   class="bg-gray-900/50 p-4 rounded-lg"
                 >
@@ -297,7 +301,7 @@
             type="file"
             ref="lergFileInput"
             class="hidden"
-            accept=".txt"
+            accept=".csv"
             @change="handleLergFileChange"
           />
           <button
@@ -311,8 +315,7 @@
               <span class="text-sm text-accent">Choose File</span>
             </div>
           </button>
-          <p class="text-sm text-gray-400 mt-2">or drag and drop your LERG file here</p>
-          <p class="text-xs text-gray-500 mt-1">Supports TXT files (max 500MB)</p>
+          <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
         </div>
         <!-- Upload Status -->
         <div
@@ -345,6 +348,20 @@
         </button>
       </div>
     </div>
+
+    <!-- New Preview Modal -->
+    <PreviewModal2
+      v-if="showPreviewModal"
+      :showModal="showPreviewModal"
+      :columns="columns"
+      :preview-data="previewData"
+      :start-line="startLine"
+      :column-options="LERG_COLUMN_ROLE_OPTIONS"
+      @update:mappings="handleMappingUpdate"
+      @update:valid="isValid => (isModalValid = isValid)"
+      @confirm="handleModalConfirm"
+      @cancel="handleModalCancel"
+    />
   </div>
 </template>
 
@@ -355,10 +372,14 @@
   import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
   import { getCountryName } from '@/types/country-codes';
   import { getStateName } from '@/types/state-codes';
+  import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/lerg-types';
+  import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
+  import Papa from 'papaparse';
+  import type { ParseResult } from 'papaparse';
 
   const store = useLergStore();
+  const lergFileInput = ref<HTMLInputElement>();
   const lergStats = computed(() => store.stats);
-  const isLergProcessing = computed(() => store.isProcessing);
   const expandedCountries = ref<string[]>([]);
   const showStateDetails = ref(false);
   const expandedStates = ref<string[]>([]);
@@ -374,13 +395,20 @@
 
   const isLergUploading = ref(false);
 
-  const stateNPAs = computed(() => store.stateNPAs);
-  console.log('Current state mappings:', stateNPAs.value);
-
   const dbStatus = ref({
     connected: false,
     error: '',
   });
+
+  // Preview state
+  const showPreviewModal = ref(false);
+  const columns = ref<string[]>([]);
+  const previewData = ref<string[][]>([]);
+  const columnRoles = ref<string[]>([]);
+  const startLine = ref(0);
+  const isModalValid = ref(false);
+  const columnMappings = ref<Record<string, string>>({});
+  const selectedFile = ref<File | null>(null);
 
   async function checkConnection() {
     try {
@@ -399,6 +427,8 @@
 
   onMounted(async () => {
     await checkConnection();
+    console.log('Initializing LERG service...');
+    await lergApiService.initialize();
   });
 
   function formatNumber(num: number): string {
@@ -419,48 +449,56 @@
   async function handleLergFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    selectedFile.value = file;
 
-    if (
-      !confirm(
-        'Uploading a new LERG file will delete all existing LERG data. This action cannot be undone. Are you sure you want to continue?'
-      )
-    ) {
-      // Clear the file input
-      if (event.target) {
-        (event.target as HTMLInputElement).value = '';
-      }
-      return;
-    }
-
-    console.log('📁 File received in AdminLergView:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
+    Papa.parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results: ParseResult<string[]>) => {
+        columns.value = results.data[0].map(h => h.trim());
+        previewData.value = results.data
+          .slice(0, 10)
+          .map(row => (Array.isArray(row) ? row.map(cell => cell?.trim() || '') : []));
+        startLine.value = 1;
+        showPreviewModal.value = true;
+      },
     });
+  }
 
-    // Validate file type
-    if (!file.name.endsWith('.txt') || file.type !== 'text/plain') {
-      lergUploadStatus.value = {
-        type: 'error',
-        message: 'Error uploading - please reload page and try again',
-      };
-      return;
-    }
+  async function handleModalConfirm(mappings: Record<string, string>) {
+    console.log('Modal confirmed with mappings:', mappings);
+    showPreviewModal.value = false;
+    columnMappings.value = mappings;
+
+    // Continue with file upload using mapped columns
+    const file = selectedFile.value;
+    console.log('File to upload:', file);
+    if (!file) return;
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('mappings', JSON.stringify(columnMappings.value));
+    formData.append('startLine', startLine.value.toString());
+
+    console.log('FormData contents:', {
+      file: formData.get('file'),
+      mappings: formData.get('mappings'),
+      startLine: formData.get('startLine'),
+    });
 
     try {
       isLergUploading.value = true;
       lergUploadStatus.value = { type: 'success', message: 'Uploading LERG file...' };
 
+      console.log('About to call lergApiService.uploadLergFile');
       await lergApiService.uploadLergFile(formData);
       lergUploadStatus.value = { type: 'success', message: 'LERG file uploaded successfully' };
-      setTimeout(() => {
-        if (lergUploadStatus.value?.type === 'success') {
-          lergUploadStatus.value = null;
-        }
-      }, 5000);
+
+      // Clear the selected file after successful upload
+      selectedFile.value = null;
+      if (lergFileInput.value) {
+        lergFileInput.value.value = '';
+      }
     } catch (error) {
       console.error('Failed to upload LERG file:', error);
       lergUploadStatus.value = {
@@ -469,6 +507,13 @@
       };
     } finally {
       isLergUploading.value = false;
+    }
+  }
+
+  function handleModalCancel() {
+    showPreviewModal.value = false;
+    if (lergFileInput.value) {
+      lergFileInput.value.value = '';
     }
   }
 
@@ -482,15 +527,6 @@
       console.log('LERG codes cleared successfully');
     } catch (error) {
       console.error('Failed to clear LERG data:', error);
-    }
-  }
-
-  function toggleExpand(countryName: string) {
-    const index = expandedCountries.value.indexOf(countryName);
-    if (index === -1) {
-      expandedCountries.value.push(countryName);
-    } else {
-      expandedCountries.value.splice(index, 1);
     }
   }
 
@@ -536,5 +572,9 @@
     } else {
       expandedProvinces.value.splice(index, 1);
     }
+  }
+
+  function handleMappingUpdate(newMappings: Record<string, string>) {
+    columnMappings.value = newMappings;
   }
 </script>

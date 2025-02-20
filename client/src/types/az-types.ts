@@ -1,18 +1,14 @@
+export const AZ_DB_CONFIG = {
+  version: 1,
+  schema: '++id, destName, dialCode, rate',
+} as const;
+
 export interface AZStandardizedData {
   id?: number;
   destName: string;
   dialCode: string;
   rate: number;
 }
-
-export const AZColumnRole = {
-  DESTINATION: 'destName',
-  DIALCODE: 'dialCode',
-  RATE: 'rate',
-  SELECT: '', // For "Select Column Role" option
-} as const;
-
-export type AZColumnRole = (typeof AZColumnRole)[keyof typeof AZColumnRole];
 
 export interface AZReportsInput {
   fileName1: string;
@@ -89,6 +85,15 @@ export interface ColumnRoleOption {
   value: AZColumnRole;
   label: string;
 }
+
+export const AZColumnRole = {
+  DESTINATION: 'destName',
+  DIALCODE: 'dialCode',
+  RATE: 'rate',
+  SELECT: '', // For "Select Column Role" option
+} as const;
+
+export type AZColumnRole = (typeof AZColumnRole)[keyof typeof AZColumnRole];
 
 export const AZ_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
   { value: AZColumnRole.DESTINATION, label: 'Destination Name' },

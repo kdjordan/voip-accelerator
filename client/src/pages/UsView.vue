@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-col items-center w-full min-h-[400px]">
-    <h1 class="text-4xl my-2 text-white inline-block">US Pricing</h1>
+  <div class="min-h-screen text-white p-8 w-full">
+    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8">US Rate Deck Analysis</h1>
     <USContentHeader />
 
-    <div class="w-full max-w-5xl">
+    <div>
       <transition
         name="fade"
         mode="out-in"

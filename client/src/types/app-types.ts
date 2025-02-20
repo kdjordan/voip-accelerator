@@ -47,8 +47,8 @@ export type StandardizedData = AZStandardizedData | USStandardizedData;
 
 // Replace enum with const map for better type safety
 export const DBName = {
-  AZ: 'az',
-  US: 'us',
+  AZ: 'az_rate_deck_db',
+  US: 'us_rate_deck_db',
   LERG: 'lerg',
   RATE_SHEET: 'rate_sheet',
 } as const;
