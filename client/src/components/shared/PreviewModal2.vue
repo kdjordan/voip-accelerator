@@ -67,12 +67,12 @@
                           :class="{
                             'bg-accent/20 text-accent border border-accent/50': mappings[index] !== '',
                             'bg-fbHover text-fbWhite border border-fbWhite/20':
-                              mappings[index] === '' && !allColumnsMapped,
+                              mappings[index] === '' && (!allColumnsMapped || props.validateRequired),
                             'bg-fbHover/30 text-fbWhite/30 border border-fbWhite/10 cursor-not-allowed':
-                              mappings[index] === '' && allColumnsMapped,
+                              mappings[index] === '' && allColumnsMapped && !props.validateRequired,
                           }"
                           @change="handleMappingChange"
-                          :disabled="mappings[index] === '' && allColumnsMapped"
+                          :disabled="mappings[index] === '' && allColumnsMapped && !props.validateRequired"
                         >
                           <option value="">Select Column Role</option>
                           <option
@@ -153,14 +153,15 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, watch } from 'vue';
 
   interface Props {
     showModal: boolean;
     columns: string[];
     startLine: number;
     previewData: string[][];
-    columnOptions: Array<{ value: string; label: string }>;
+    columnOptions: Array<{ value: string; label: string; required?: boolean }>;
+    validateRequired?: boolean;
   }
 
   const props = defineProps<Props>();
@@ -223,8 +224,23 @@
 
   // Check if all required columns are mapped
   const allColumnsMapped = computed(() => {
-    const selectedCount = Object.values(mappings.value).filter(value => value !== '').length;
-    return selectedCount === props.columnOptions.length;
+    if (props.validateRequired) {
+      // Only check required columns
+      const requiredOptions = props.columnOptions.filter(option => option.required);
+      const mappedRoles = new Set(Object.values(mappings.value));
+      return requiredOptions.every(option => mappedRoles.has(option.value));
+    } else {
+      // Original behavior: check all columns
+      const selectedCount = Object.values(mappings.value).filter(value => value !== '').length;
+      return selectedCount === props.columnOptions.length;
+    }
+  });
+
+  const shouldDisableSelects = computed(() => {
+    if (props.validateRequired) {
+      return false; // Never disable selects in validateRequired mode
+    }
+    return allColumnsMapped.value;
   });
 
   function handleMappingChange() {

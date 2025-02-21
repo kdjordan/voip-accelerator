@@ -36,16 +36,14 @@
         <!-- File Upload Section -->
         <div v-if="!isLocallyStored">
           <div
-            class="relative border-2 border-dashed rounded-lg p-6 min-h-[160px] flex items-center justify-center"
-            :class="[
-              isDragging ? 'border-accent bg-fbWhite/10' : 'hover:border-accent-hover hover:bg-fbWhite/10',
-              isProcessing ? 'animate-pulse border-muted bg-muted/30 cursor-not-allowed' : 'cursor-pointer',
-              uploadError ? 'border-red-500 bg-red-500/5' : 'border-fbWhite',
-            ]"
-            @dragenter.prevent="handleDragEnter"
-            @dragleave.prevent="handleDragLeave"
             @dragover.prevent
-            @drop.prevent="handleFileDrop"
+            @drop.prevent="handleRfFileDrop"
+            class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center relative"
+            :class="[
+              isDragging ? 'border-green-500' : '',
+              rfUploadStatus?.type === 'error' ? 'border-red-500' : '',
+              isRFUploading ? 'border-blue-500' : '',
+            ]"
           >
             <input
               type="file"
@@ -92,6 +90,22 @@
     >
       <RateSheetTable />
     </div>
+
+    <!-- Preview Modal -->
+    <PreviewModal2
+      v-if="showPreviewModal"
+      :show-modal="showPreviewModal"
+      :columns="columns"
+      :preview-data="previewData"
+      :column-options="RF_COLUMN_ROLE_OPTIONS"
+      :start-line="startLine"
+      :validate-required="true"
+      @update:mappings="handleMappingUpdate"
+      @update:valid="newValid => (isValid = newValid)"
+      @update:start-line="newStartLine => (startLine = newStartLine)"
+      @confirm="handleModalConfirm"
+      @cancel="handleModalCancel"
+    />
   </div>
 </template>
 
@@ -102,26 +116,50 @@
   import { ArrowUpTrayIcon, TrashIcon } from '@heroicons/vue/24/outline';
   import { useRateSheetFileHandler } from '@/composables/useRateSheetFileHandler';
   import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
+  import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
+  import { RF_COLUMN_ROLE_OPTIONS, type RFColumnRole } from '@/types/rate-sheet-types';
+  import Papa from 'papaparse';
+  import type { ParseResult } from 'papaparse';
 
   const store = useRateSheetStore();
   const isLocallyStored = computed(() => store.isLocallyStored);
   const isDragging = ref(false);
   const isProcessing = ref(false);
   const uploadError = ref<string | null>(null);
+  const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+  const isRFUploading = ref(false);
+
+  // Preview Modal state
+  const showPreviewModal = ref(false);
+  const previewData = ref<string[][]>([]);
+  const columns = ref<string[]>([]);
+  const startLine = ref(1);
+  const columnMappings = ref<Record<string, string>>({});
+  const isValid = ref(false);
+  const selectedFile = ref<File | null>(null);
 
   const { handleFileInput } = useRateSheetFileHandler();
 
-  function handleDragEnter(event: DragEvent) {
-    event.preventDefault();
-    isDragging.value = true;
+  async function handleFileChange(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    selectedFile.value = file;
+
+    Papa.parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results: ParseResult<string[]>) => {
+        columns.value = results.data[0].map(h => h.trim());
+        previewData.value = results.data
+          .slice(0, 10)
+          .map(row => (Array.isArray(row) ? row.map(cell => cell?.trim() || '') : []));
+        startLine.value = 1;
+        showPreviewModal.value = true;
+      },
+    });
   }
 
-  function handleDragLeave(event: DragEvent) {
-    event.preventDefault();
-    isDragging.value = false;
-  }
-
-  async function handleFileDrop(event: DragEvent) {
+  async function handleRfFileDrop(event: DragEvent) {
     event.preventDefault();
     isDragging.value = false;
     const file = event.dataTransfer?.files[0];
@@ -130,34 +168,37 @@
     }
   }
 
-  async function handleFileChange(event: Event) {
-    if (!event.target) return;
+  async function handleModalConfirm(mappings: Record<string, string>) {
+    showPreviewModal.value = false;
+    const file = selectedFile.value;
+    columnMappings.value = mappings;
 
-    isProcessing.value = true;
-    uploadError.value = null;
-    try {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) {
-        uploadError.value = 'No file selected';
-        return;
-      }
-      if (!file.name.endsWith('.csv')) {
-        uploadError.value = 'Please upload a CSV file';
-        return;
-      }
-      await handleFileInput(event);
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('Missing required columns')) {
-          uploadError.value =
-            'Invalid CSV format. Required columns: name, prefix, rate, effective, min duration, increments';
-        } else {
-          uploadError.value = error.message;
-        }
-      }
-    } finally {
-      isProcessing.value = false;
-    }
+    isRFUploading.value = true;
+    rfUploadStatus.value = { type: 'success', message: 'Processing rate sheet...' };
+    if (!file) return;
+
+    // try {
+    //   await handleFileInput({
+    //     file,
+    //     mappings,
+    //     startLine: startLine.value,
+    //   });
+    //   rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
+    // } catch (error) {
+    //   console.error('Failed to process rate sheet:', error);
+    //   rfUploadStatus.value = {
+    //     type: 'error',
+    //     message: error instanceof Error ? error.message : 'Failed to process rate sheet',
+    //   };
+    // } finally {
+    //   isRFUploading.value = false;
+    //   selectedFile.value = null;
+    // }
+  }
+
+  function handleModalCancel() {
+    showPreviewModal.value = false;
+    selectedFile.value = null;
   }
 
   async function handleClearData() {
@@ -172,4 +213,17 @@
       }
     }
   }
+
+  function handleMappingUpdate(newMappings: Record<string, string>) {
+    columnMappings.value = newMappings;
+  }
+  // function handleDragEnter(event: DragEvent) {
+  //   event.preventDefault();
+  //   isDragging.value = true;
+  // }
+
+  // function handleDragLeave(event: DragEvent) {
+  //   event.preventDefault();
+  //   isDragging.value = false;
+  // }
 </script>
