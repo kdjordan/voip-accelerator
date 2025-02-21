@@ -3,3 +3,8 @@ Reflect on 5-7 different possible sources of the problem, distill those down to 
 
 
 
+ Reminder to add this git setting to your bash rc file:
+
+git config --global branch.sort -committerdate
+
+`git branch -l` lists alphabetically by default, so it's hard to find recent branches. This sorts by date instead!

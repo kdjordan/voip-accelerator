@@ -359,6 +359,7 @@
       :column-options="LERG_COLUMN_ROLE_OPTIONS"
       @update:mappings="handleMappingUpdate"
       @update:valid="isValid => (isModalValid = isValid)"
+      @update:start-line="newStartLine => (startLine = newStartLine)"
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
