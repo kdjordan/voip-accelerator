@@ -2,7 +2,7 @@
   <div class="min-h-screen text-white p-8 w-full">
     <h1 class="mb-8">
       <span
-        class="text-sizeXl tracking-wide text-accent uppercase border border-accent rounded-lg px-4 py-2 bg-accent/10"
+        class="text-sizeXl tracking-wide text-accent uppercase px-4 py-2"
       >
         Rate Sheet Formalizer
       </span>
