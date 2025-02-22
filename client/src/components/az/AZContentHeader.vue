@@ -7,16 +7,17 @@
           name="fade"
           mode="out-in"
         >
+          <!-- User Journey Section -->
           <div
             :key="currentJourneyState"
             class="min-h-24"
           >
-            <h3 class="text-sizeLg tracking-wide text-white mb-2">
-              {{ azStore.getJourneyState.title }}
-            </h3>
+            <!-- Title -->
+            <h3 class="text-sizeLg tracking-wide text-white mb-2">{{ journeyMessage.title }}</h3>
+            <!-- Message -->
             <p
               class="text-base text-gray-400"
-              v-html="azStore.getJourneyState"
+              v-html="journeyMessage.message"
             ></p>
           </div>
         </Transition>
@@ -55,17 +56,39 @@
 </template>
 <script setup lang="ts">
   import { useAzStore } from '@/stores/az-store';
-  import { computed } from 'vue';
   import { ReportTypes, type ReportType } from '@/types';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
-  import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE } from '@/constants/messages';
+  import { computed } from 'vue';
+  import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/constants/messages';
 
   const azStore = useAzStore();
-  const currentJourneyState = computed(() => azStore.getJourneyState);
   const { deleteDatabase } = useDexieDB();
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
+
+  const currentJourneyState = computed<JourneyState>(() => {
+    if (azStore.reportsGenerated) {
+      return JOURNEY_STATE.REPORTS_READY;
+    }
+
+    const uploadedCount = azStore.getNumberOfFilesUploaded;
+
+    switch (uploadedCount) {
+      case 0:
+        return JOURNEY_STATE.INITIAL;
+      case 1:
+        return JOURNEY_STATE.ONE_FILE;
+      case 2:
+        return JOURNEY_STATE.TWO_FILES;
+      default:
+        return JOURNEY_STATE.INITIAL;
+    }
+  });
+
+  const journeyMessage = computed(() => {
+    return AZ_JOURNEY_MESSAGES[currentJourneyState.value];
+  });
 
   async function handleReset() {
     try {
@@ -91,8 +114,6 @@
   }
 
   // Log on component mount
-  console.log('Store Instance:', azStore);
-  console.log('Messages Structure:', AZ_JOURNEY_MESSAGES);
 </script>
 
 <style>
