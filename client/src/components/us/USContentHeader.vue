@@ -8,15 +8,15 @@
           mode="out-in"
         >
           <div
-            :key="usStore.getJourneyState"
+            :key="currentJourneyState"
             class="min-h-24"
           >
             <h3 class="text-sizeLg tracking-wide text-white mb-2">
-              {{ US_JOURNEY_MESSAGES[usStore.getJourneyState].title }}
+              {{ journeyMessage.title }}
             </h3>
             <p
               class="text-base text-gray-400"
-              v-html="US_JOURNEY_MESSAGES[usStore.getJourneyState].message"
+              v-html="journeyMessage.message"
             ></p>
           </div>
         </Transition>
@@ -61,12 +61,36 @@
   import { ReportTypes, type ReportType } from '@/types/app-types';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
-  import { US_JOURNEY_MESSAGES } from '@/constants/messages';
+  import { US_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/constants/messages';
+  import { computed } from 'vue';
 
   const usStore = useUsStore();
-  const { deleteObjectStore } = useDexieDB();
+  const { deleteDatabase } = useDexieDB();
 
   const reportTypes: readonly ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING] as const;
+
+  const currentJourneyState = computed<JourneyState>(() => {
+    if (usStore.reportsGenerated) {
+      return JOURNEY_STATE.REPORTS_READY;
+    }
+
+    const uploadedCount = usStore.getNumberOfFilesUploaded;
+
+    switch (uploadedCount) {
+      case 0:
+        return JOURNEY_STATE.INITIAL;
+      case 1:
+        return JOURNEY_STATE.ONE_FILE;
+      case 2:
+        return JOURNEY_STATE.TWO_FILES;
+      default:
+        return JOURNEY_STATE.INITIAL;
+    }
+  });
+
+  const journeyMessage = computed(() => {
+    return US_JOURNEY_MESSAGES[currentJourneyState.value];
+  });
 
   async function handleReset() {
     try {
@@ -82,7 +106,7 @@
 
       // Clean up Dexie stores using actual file names
       if (fileNames.length > 0) {
-        await Promise.all(fileNames.map(fileName => deleteObjectStore(DBName.US, fileName)));
+        await Promise.all(fileNames.map(fileName => deleteDatabase(DBName.US)));
       }
 
       console.log('Reset completed successfully');

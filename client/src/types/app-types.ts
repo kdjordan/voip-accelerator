@@ -1,6 +1,5 @@
 import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/types/az-types';
 import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/us-types';
-import type { JourneyState } from '@/constants/messages';
 
 // Add this type definition
 export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;
@@ -21,6 +20,7 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   getCodeReport: C | null;
   getFileNameByComponent: (componentId: string) => string;
   hasExistingFile: (fileName: string) => boolean;
+  getNumberOfFilesUploaded: number;
 
   // Add temp file methods
   setTempFile: (componentId: string, file: File) => void;
@@ -37,7 +37,6 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   resetFiles: () => void;
-  getJourneyState: () => JourneyState;
 }
 
 // Union type of all possible standardized data types
@@ -63,7 +62,7 @@ export const ReportTypes = {
 export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
 
 // Define supported DB types for schemas
-export type SchemaDBType = typeof DBName.AZ | typeof DBName.US | typeof DBName.RATE_SHEET;
+export type SchemaDBType = typeof DBName.AZ | typeof DBName.US | typeof DBName.RATE_SHEET | typeof DBName.LERG;
 
 export const DBSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
@@ -74,5 +73,5 @@ export const DBSchemas = {
 
 // Type guard to check if a DBNameType is supported for schemas
 export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
-  return dbName === DBName.AZ || dbName === DBName.US || dbName === DBName.RATE_SHEET;
+  return dbName === DBName.AZ || dbName === DBName.US || dbName === DBName.RATE_SHEET || dbName === DBName.LERG;
 }
