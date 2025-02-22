@@ -1,12 +1,19 @@
 <template>
   <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8">Rate Sheet Formalizer</h1>
+    <h1 class="mb-8">
+      <span
+        class="text-sizeXl tracking-wide text-accent uppercase px-4 py-2"
+      >
+        Rate Sheet Formalizer
+      </span>
+    </h1>
 
     <!-- Stats Dashboard -->
-    <div class="flex flex-col gap-6 mb-8">
-      <div class="bg-gray-800 rounded-lg p-6">
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <!-- Header Section -->
+      <div class="p-6 border-b border-gray-700/50">
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 gap-3 border-b border-gray-700/50 pb-4 mb-6">
+        <div class="grid grid-cols-1 gap-3">
           <!-- Storage Status -->
           <div>
             <div class="flex justify-between items-center">
@@ -34,11 +41,14 @@
         </div>
 
         <!-- File Upload Section -->
-        <div v-if="!isLocallyStored">
+        <div
+          v-if="!isLocallyStored"
+          class="mt-6"
+        >
           <div
             @dragover.prevent
             @drop.prevent="handleRfFileDrop"
-            class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center relative"
+            class="border-2 border-dashed border-gray-600 p-8 text-center relative"
             :class="[
               isDragging ? 'border-green-500' : '',
               rfUploadStatus?.type === 'error' ? 'border-red-500' : '',
@@ -72,23 +82,15 @@
             </div>
           </div>
         </div>
-
-        <!-- Instructions when data exists -->
-        <div
-          v-else
-          class="text-center text-sm text-gray-400"
-        >
-          Use the table below to review and fix rate discrepancies
-        </div>
       </div>
-    </div>
 
-    <!-- Data Table -->
-    <div
-      v-if="isLocallyStored"
-      class="mt-8"
-    >
-      <RateSheetTable />
+      <!-- Data Table -->
+      <div
+        v-if="isLocallyStored"
+        class="mt-8"
+      >
+        <RateSheetTable />
+      </div>
     </div>
 
     <!-- Preview Modal -->
@@ -139,7 +141,6 @@
   const isValid = ref(false);
   const selectedFile = ref<File | null>(null);
 
-
   async function handleFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -187,7 +188,7 @@
       };
 
       const result = await rateSheetService.processFile(file, columnMapping, startLine.value);
-      store.isLocallyStored = true;
+      store.setOptionalFields(mappings);
       rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
     } catch (error) {
       console.error('Failed to process rate sheet:', error);

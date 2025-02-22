@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-lg p-6 min-w-content">
+  <div class="rounded-lg p-6 min-w-content bg-gray-800 pt-4">
     <div
       v-if="report"
       class="space-y-8"
@@ -10,15 +10,15 @@
           :key="file"
           class="rounded-lg overflow-hidden border border-fbBorder"
         >
-          <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-fbBorder">
-            <span class="text-fbWhite">{{ getFileName(file) }}</span>
+          <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
+            <span class="text-accent">{{ getFileName(file) }}</span>
           </h2>
           <div class="p-6">
             <table class="w-full">
               <tbody>
                 <tr class="border-b border-gray-700">
                   <td class="py-2 text-gray-400">Total Codes:</td>
-                  <td class="py-2 text-right text-fbWhite">
+                  <td class="py-2 text-right">
                     {{ getTotalCodes(file) }}
                   </td>
                 </tr>
@@ -39,8 +39,8 @@
       </div>
 
       <div class="rounded-lg overflow-hidden border border-fbBorder">
-        <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-fbBorder">
-          <span class="text-fbWhite">Comparison</span>
+        <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
+          <span class="text-accent">Comparison</span>
         </h2>
         <div class="p-6">
           <table class="w-full">
@@ -82,10 +82,6 @@
 
 <script setup lang="ts">
   import { type AzCodeReport } from '@/types/az-types';
-  import { resetReportApi } from '@/API/api';
-  import { useAzStore } from '@/stores/az-store';
-
-  const azStore = useAzStore();
 
   const props = defineProps<{
     report: AzCodeReport | null;

@@ -8,6 +8,9 @@ export const useRateSheetStore = defineStore('rateSheet', {
     isLocallyStored: false,
     groupedData: [],
     originalData: [],
+    hasEffectiveDate: false,
+    hasMinDuration: false,
+    hasIncrements: false,
   }),
 
   actions: {
@@ -29,6 +32,13 @@ export const useRateSheetStore = defineStore('rateSheet', {
 
     setOriginalData(data: RateSheetRecord[]) {
       this.originalData = data;
+    },
+
+    setOptionalFields(mappings: Record<string, string>) {
+      this.hasEffectiveDate = 'effective' in mappings;
+      this.hasMinDuration = 'minDuration' in mappings;
+      this.hasIncrements = 'increments' in mappings;
+      this.isLocallyStored = true;
     },
 
     async updateDestinationRate(destinationName: string, newRate: number) {
@@ -71,17 +81,35 @@ export const useRateSheetStore = defineStore('rateSheet', {
         // Calculate rate statistics
         const rateMap = new Map<number, number>();
         records.forEach(record => {
-          rateMap.set(parseFloat(record.rate), (rateMap.get(parseFloat(record.rate)) || 0) + 1);
+          const rate = typeof record.rate === 'string' ? parseFloat(record.rate) : record.rate;
+          rateMap.set(rate, (rateMap.get(rate) || 0) + 1);
+        });
+
+        // Calculate total records for percentage
+        const totalRecords = records.length;
+
+        // Convert rate map to array of rate statistics
+        const rates: RateStatistics[] = Array.from(rateMap.entries()).map(([rate, count]) => ({
+          rate,
+          count,
+          percentage: (count / totalRecords) * 100,
+          isCommon: false, // Will be set after determining most common rate
+        }));
+
+        // Find the most common rate
+        const maxCount = Math.max(...rates.map(r => r.count));
+        rates.forEach(rate => {
+          rate.isCommon = rate.count === maxCount;
         });
 
         return {
           destinationName: name,
           codes: records.map(r => r.prefix),
-          rates: Array.from(rateMap.entries()).map(([rate, count]) => ({ rate, count })),
+          rates,
           hasDiscrepancy: rateMap.size > 1,
-          effectiveDate: records[0].effective || '', // Provide default value
-          minDuration: records[0].minDuration || 0, // Provide default value
-          increments: records[0].increments || 0, // Provide default value
+          effectiveDate: records[0]?.effective,
+          minDuration: records[0]?.minDuration,
+          increments: records[0]?.increments,
         };
       });
     },

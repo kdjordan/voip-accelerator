@@ -1,11 +1,11 @@
 <template>
   <div
     v-if="report"
-    class="space-y-10"
+    class="space-y-10 bg-gray-800 p-6"
   >
     <!-- Buy Section -->
-    <div class="border border-fbBorder rounded-lg">
-      <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6 border-b border-fbBorder">
+    <div class="rounded-lg">
+      <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6 border-b border-gray-700">
         <span class="text-fbWhite">
           <span class="uppercase">{{ report.fileName1 }}</span>
           should BUY these destinations from
@@ -66,7 +66,7 @@
     </div>
 
     <!-- Sell Section -->
-    <div class="border border-fbBorder rounded-lg w-full">
+    <div class="rounded-lg w-full">
       <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6 border-b border-fbBorder">
         <span class="text-fbWhite">
           <span class="uppercase">{{ report.fileName1 }}</span>
@@ -245,7 +245,6 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { useAzStore } from '@/stores/az-store';
-  import { resetReportApi } from '@/API/api';
   import type { AzPricingReport } from '@/types/az-types';
 
   const azStore = useAzStore();

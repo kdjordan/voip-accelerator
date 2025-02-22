@@ -102,6 +102,11 @@ export class RateSheetService {
             await db.table(tableName).clear();
             await db.table(tableName).bulkPut(records);
 
+            // Process records into grouped data
+            const groupedData = this.processRecordsIntoGroups(records);
+            this.store.setGroupedData(groupedData);
+            this.store.setOriginalData(records);
+
             resolve({ fileName: file.name, records });
           } catch (error) {
             reject(error);
@@ -109,6 +114,46 @@ export class RateSheetService {
         },
         error: error => reject(new Error(`Failed to process CSV: ${error.message}`)),
       });
+    });
+  }
+
+  private processRecordsIntoGroups(records: RateSheetRecord[]): GroupedRateData[] {
+    // Group records by destination name
+    const groupedByName = new Map<string, RateSheetRecord[]>();
+    records.forEach(record => {
+      const existing = groupedByName.get(record.name) || [];
+      groupedByName.set(record.name, [...existing, record]);
+    });
+
+    return Array.from(groupedByName.entries()).map(([name, records]) => {
+      const rateMap = new Map<number, number>();
+      records.forEach(record => {
+        const rate = typeof record.rate === 'string' ? parseFloat(record.rate) : record.rate;
+        rateMap.set(rate, (rateMap.get(rate) || 0) + 1);
+      });
+
+      const totalRecords = records.length;
+      const rates: RateStatistics[] = Array.from(rateMap.entries()).map(([rate, count]) => ({
+        rate,
+        count,
+        percentage: (count / totalRecords) * 100,
+        isCommon: false,
+      }));
+
+      const maxCount = Math.max(...rates.map(r => r.count));
+      rates.forEach(rate => {
+        rate.isCommon = rate.count === maxCount;
+      });
+
+      return {
+        destinationName: name,
+        codes: records.map(r => r.prefix),
+        rates,
+        hasDiscrepancy: rateMap.size > 1,
+        effectiveDate: records[0]?.effective,
+        minDuration: records[0]?.minDuration,
+        increments: records[0]?.increments,
+      };
     });
   }
 }
