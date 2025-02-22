@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { DBConfig } from '@/config/database';
+import { DBName, type DBNameType } from '@/types/app-types';
 
 /**
  * Cleanup all application databases on exit
@@ -10,29 +10,12 @@ export async function cleanupDatabases(): Promise<void> {
     const dbNames = await Dexie.getDatabaseNames();
     console.log('Found databases:', dbNames);
 
-    // Define known database patterns
-    const knownPatterns = [
-      DBConfig.LERG.name,
-      'lerg_db', // Backup check
-      'lerg', // Another possible name
-      '_db$', // Sample databases ending with _db
-      'az_rate_deck_db',
-      'az'
-    ];
+    // Get all our known DB names from the DBName constant
+    const knownDatabases = Object.values(DBName) as DBNameType[];
+    console.log('Known databases:', knownDatabases);
 
     // Filter for our application databases only
-    const ourDbs = dbNames.filter(name => {
-      const matches = knownPatterns.some(pattern => {
-        if (pattern.endsWith('$')) {
-          // Handle regex pattern
-          return name.match(new RegExp(pattern));
-        }
-        return name === pattern;
-      });
-      console.log(`Checking ${name}:`, { matches });
-      return matches;
-    });
-
+    const ourDbs = dbNames.filter(name => knownDatabases.includes(name as DBNameType));
     console.log('Databases to clean:', ourDbs);
 
     // Delete each database

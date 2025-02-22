@@ -10,6 +10,7 @@ export class AZService {
   private db: Dexie | null = null;
 
   constructor() {
+    console.log('Initializing AZ service');
     this.initializeDB();
   }
 

@@ -71,26 +71,17 @@ export const useRateSheetStore = defineStore('rateSheet', {
         // Calculate rate statistics
         const rateMap = new Map<number, number>();
         records.forEach(record => {
-          const rate = Number(record.rate.toFixed(6)); // 6 decimal precision
-          rateMap.set(rate, (rateMap.get(rate) || 0) + 1);
+          rateMap.set(parseFloat(record.rate), (rateMap.get(parseFloat(record.rate)) || 0) + 1);
         });
-
-        const totalRecords = records.length;
-        const rates: RateStatistics[] = Array.from(rateMap.entries()).map(([rate, count]) => ({
-          rate,
-          count,
-          percentage: (count / totalRecords) * 100,
-          isCommon: count === Math.max(...Array.from(rateMap.values())),
-        }));
 
         return {
           destinationName: name,
           codes: records.map(r => r.prefix),
-          rates,
-          hasDiscrepancy: rates.length > 1,
-          effectiveDate: records[0].effective,
-          minDuration: records[0].minDuration,
-          increments: records[0].increments,
+          rates: Array.from(rateMap.entries()).map(([rate, count]) => ({ rate, count })),
+          hasDiscrepancy: rateMap.size > 1,
+          effectiveDate: records[0].effective || '', // Provide default value
+          minDuration: records[0].minDuration || 0, // Provide default value
+          increments: records[0].increments || 0, // Provide default value
         };
       });
     },

@@ -1,6 +1,6 @@
 import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/types/az-types';
 import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/us-types';
-import type { AZJourneyState } from '@/constants/az-messages';
+import type { JourneyState } from '@/constants/messages';
 
 // Add this type definition
 export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;
@@ -37,9 +37,6 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   resetFiles: () => void;
-
-  // Add the journey state getter
-  getJourneyState: AZJourneyState;
 }
 
 // Union type of all possible standardized data types
@@ -49,8 +46,8 @@ export type StandardizedData = AZStandardizedData | USStandardizedData;
 export const DBName = {
   AZ: 'az_rate_deck_db',
   US: 'us_rate_deck_db',
-  LERG: 'lerg',
-  RATE_SHEET: 'rate_sheet',
+  LERG: 'lerg_db',
+  RATE_SHEET: 'rate_sheet_db',
 } as const;
 
 export type DBNameType = (typeof DBName)[keyof typeof DBName];
@@ -71,6 +68,7 @@ export const DBSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
   [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx',
   [DBName.RATE_SHEET]: '++id, destinationName, code, rate, effectiveDate, minDuration, increments',
+  [DBName.LERG]: 'npa, *state, *country',
 } as const;
 
 // Type guard to check if a DBNameType is supported for schemas
