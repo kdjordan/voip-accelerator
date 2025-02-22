@@ -1,70 +1,142 @@
-# Current Development Task: Add Preview Functionality to LERG Upload
+## Implementation Details
 
-## Objective
+### 1. Base Database Service
 
-Add file preview and column selection functionality to the LERG file upload process, matching the functionality in AZFileUploads.vue
+`services/base/database.service.ts`
 
-## Required LERG Column Roles
+- Core database operations
+- Connection management
+- Error handling
+- Common utilities
+- TypeScript interfaces for database operations
 
-- NPA
-- NXX
-- State
-- Country
+### 2. Service Registry
 
-## Files to Modify
+`services/base/service.registry.ts`
 
-### 1. Types (lerg-types.ts)
+- Service instantiation and tracking
+- Lazy loading of services
+- Resource management
+- Cross-service coordination
+- State management
 
-- [x] Define LERG column roles
-- [x] Add LERG_COLUMN_ROLE_OPTIONS constant
-- [x] Add LergColumnRole type
-- [x] Add LergPreviewData interface
-- [x] Add LergColumnMapping interface
+### 3. Domain Services
 
-### 2. Store (lerg-store.ts)
+Each domain service (AZ, US, LERG, RateSheet) will:
 
-- [ ] Add preview data handling
-- [ ] Add column mapping functionality
-- [ ] Add journey state management
-- [ ] Add preview data state
-- [ ] Add column mapping state
-- [ ] Add methods for handling preview data
-- [ ] Add methods for handling column mapping
+- Extend base functionality
+- Implement domain-specific logic
+- Maintain singleton pattern
+- Handle business rules
+- Manage domain-specific state
 
-### 3. UI (AdminLergView.vue)
+### 4. File Changes Required
 
-- [ ] Update upload zone styling to match AZFileUploads.vue
-- [ ] Modify handleLergFileChange to include preview step
-- [ ] Add PreviewModal integration
-- [ ] Add hover effects and loading states
-- [ ] Add isDragging state
-- [ ] Add file upload status handling
-- [ ] Add preview modal state management
+#### Existing Files to Modify:
 
-## Implementation Steps
+1. `services/az.service.ts`:
 
-1. [x] Define types and interfaces
-2. [ ] Expand store functionality
-3. [ ] Update UI components
-4. [ ] Test and verify functionality
+   - Convert to new pattern
+   - Implement singleton
+   - Use base database service
+   - Update initialization logic
 
-## Implementation Order
+2. `components/az/AZFileUploads.vue`:
 
-1. [x] Define LERG column roles and types
-2. [ ] Update LERG store with preview functionality
-3. [ ] Add preview modal to AdminLergView
-4. [ ] Update file upload handler
-5. [ ] Add upload zone styling
-6. [ ] Test full upload flow
+   - Update service import
+   - Remove direct service instantiation
+   - Use registry for service access
 
-## Files to Modify
+3. `stores/az-store.ts`:
 
-- [x] client/src/types/lerg-types.ts
-- client/src/stores/lerg-store.ts
-- client/src/pages/AdminLergView.vue
-- client/src/constants/lerg-messages.ts (new file for journey messages)
+   - Update service integration
+   - Add service state management
+   - Handle initialization
 
-## Reference Components
+4. `types/app-types.ts`:
+   - Add service interfaces
+   - Update database types
+   - Add registry types
 
-- client/src/components/az/AZFileUploads.vue (for upload functionality)
-- client/src/components/shared/PreviewModal.vue (for preview functionality)
+#### New Type Definitions
+
+// services/base/types.ts
+interface DatabaseService {
+initialized: boolean;
+initialize(): Promise<void>;
+connect(): Promise<void>;
+disconnect(): Promise<void>;
+}
+interface DomainService extends DatabaseService {
+readonly dbName: string;
+readonly storeName: string;
+}
+interface ServiceRegistry {
+get<T extends DomainService>(name: string): T;
+register(name: string, service: DomainService): void;
+}
+
+## Implementation Phases
+
+### Phase 1: Base Infrastructure
+
+1. Create base database service
+2. Implement service registry
+3. Define core interfaces and types
+
+### Phase 2: AZ Service Migration
+
+1. Update AZ service to new pattern
+2. Modify AZ components
+3. Update AZ store
+4. Test and verify
+
+### Phase 3: Additional Services
+
+1. Implement US service
+2. Implement LERG service
+3. Implement RateSheet service
+4. Update respective components
+
+### Phase 4: Integration
+
+1. Cross-service functionality
+2. Resource management
+3. Error handling
+4. Performance optimization
+
+## Benefits
+
+- Consistent service pattern
+- Efficient resource management
+- Clear separation of concerns
+- Type safety
+- Easier testing
+- Scalable architecture
+- Predictable behavior
+
+## Considerations
+
+- Service lifecycle management
+- Cross-service dependencies
+- Error handling strategy
+- Testing approach
+- Migration strategy
+- Performance impact
+
+## Testing Strategy
+
+1. Unit tests for base services
+2. Integration tests for registry
+3. Domain service tests
+4. Component integration tests
+5. End-to-end testing
+
+## Migration Strategy
+
+1. Implement new infrastructure
+2. Migrate AZ service as proof of concept
+3. Validate approach
+4. Gradually migrate other services
+5. Update components and stores
+6. Comprehensive testing
