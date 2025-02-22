@@ -25,32 +25,40 @@
       <div class="border-b border-gray-700/50 mx-2"></div>
     </div>
 
-    <!-- Report Type Buttons -->
+    <!-- Report Type Tabs -->
     <div
       v-if="azStore.reportsGenerated"
-      class="flex items-center space-x-4 mb-8"
+      class="bg-gray-800 px-6 pb-6"
     >
-      <button
-        v-for="type in reportTypes"
-        :key="type"
-        @click="azStore.setActiveReportType(type)"
-        :class="[
-          'py-2 px-4 rounded-lg transition-colors',
-          {
-            'btn-active': azStore.activeReportType === type,
-            'btn-inactive': azStore.activeReportType !== type,
-          },
-        ]"
-      >
-        <span v-if="type !== 'files'">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
-        <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
-      </button>
-      <button
-        @click="handleReset"
-        class="btn-lg btn-destructive ml-auto"
-      >
-        Reset
-      </button>
+      <div class="flex items-center border-b border-gray-700">
+        <button
+          v-for="type in reportTypes"
+          :key="type"
+          @click="azStore.setActiveReportType(type)"
+          class="mr-8 py-4 px-1 relative"
+          :class="[
+            'hover:text-white transition-colors',
+            {
+              'text-white': azStore.activeReportType === type,
+              'text-gray-400': azStore.activeReportType !== type,
+            },
+          ]"
+        >
+          <span v-if="type !== 'files'">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
+          <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
+          <!-- Active Tab Indicator -->
+          <div
+            v-if="azStore.activeReportType === type"
+            class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          ></div>
+        </button>
+        <button
+          @click="handleReset"
+          class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors ml-auto text-red-400"
+        >
+          Reset
+        </button>
+      </div>
     </div>
   </div>
 </template>
