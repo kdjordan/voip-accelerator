@@ -12,11 +12,11 @@
             class="min-h-24"
           >
             <h3 class="text-sizeLg tracking-wide text-white mb-2">
-              {{ AZ_JOURNEY_MESSAGES[currentJourneyState].title }}
+              {{ azStore.getJourneyState.title }}
             </h3>
             <p
               class="text-base text-gray-400"
-              v-html="AZ_JOURNEY_MESSAGES[currentJourneyState].message"
+              v-html="azStore.getJourneyState"
             ></p>
           </div>
         </Transition>
@@ -89,6 +89,10 @@
       console.error('Error during reset:', error);
     }
   }
+
+  // Log on component mount
+  console.log('Store Instance:', azStore);
+  console.log('Messages Structure:', AZ_JOURNEY_MESSAGES);
 </script>
 
 <style>
