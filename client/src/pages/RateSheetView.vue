@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="text-3xl font-bold mb-8">Rate Sheet Formalizer</h1>
+    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8">Rate Sheet Formalizer</h1>
 
     <!-- Stats Dashboard -->
     <div class="flex flex-col gap-6 mb-8">
@@ -114,14 +114,15 @@
 
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
   import { ArrowUpTrayIcon, TrashIcon } from '@heroicons/vue/24/outline';
-  import { useRateSheetFileHandler } from '@/composables/useRateSheetFileHandler';
   import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
-  import { RF_COLUMN_ROLE_OPTIONS, type RFColumnRole } from '@/types/rate-sheet-types';
+  import { RF_COLUMN_ROLE_OPTIONS } from '@/types/rate-sheet-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
+  import { RateSheetService } from '@/services/rate-sheet.service';
 
   const store = useRateSheetStore();
+  const rateSheetService = new RateSheetService();
   const isLocallyStored = computed(() => store.isLocallyStored);
   const isDragging = ref(false);
   const isProcessing = ref(false);
@@ -138,7 +139,6 @@
   const isValid = ref(false);
   const selectedFile = ref<File | null>(null);
 
-  const { handleFileInput } = useRateSheetFileHandler();
 
   async function handleFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
@@ -171,29 +171,34 @@
   async function handleModalConfirm(mappings: Record<string, string>) {
     showPreviewModal.value = false;
     const file = selectedFile.value;
-    columnMappings.value = mappings;
-
-    isRFUploading.value = true;
-    rfUploadStatus.value = { type: 'success', message: 'Processing rate sheet...' };
     if (!file) return;
 
-    // try {
-    //   await handleFileInput({
-    //     file,
-    //     mappings,
-    //     startLine: startLine.value,
-    //   });
-    //   rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
-    // } catch (error) {
-    //   console.error('Failed to process rate sheet:', error);
-    //   rfUploadStatus.value = {
-    //     type: 'error',
-    //     message: error instanceof Error ? error.message : 'Failed to process rate sheet',
-    //   };
-    // } finally {
-    //   isRFUploading.value = false;
-    //   selectedFile.value = null;
-    // }
+    isRFUploading.value = true;
+
+    try {
+      // Convert the new mappings format to the expected columnMapping format
+      const columnMapping = {
+        name: Number(Object.entries(mappings).find(([_, value]) => value === 'name')?.[0] ?? -1),
+        prefix: Number(Object.entries(mappings).find(([_, value]) => value === 'prefix')?.[0] ?? -1),
+        rate: Number(Object.entries(mappings).find(([_, value]) => value === 'rate')?.[0] ?? -1),
+        effective: Number(Object.entries(mappings).find(([_, value]) => value === 'effective')?.[0] ?? -1),
+        minDuration: Number(Object.entries(mappings).find(([_, value]) => value === 'minDuration')?.[0] ?? -1),
+        increments: Number(Object.entries(mappings).find(([_, value]) => value === 'increments')?.[0] ?? -1),
+      };
+
+      const result = await rateSheetService.processFile(file, columnMapping, startLine.value);
+      store.isLocallyStored = true;
+      rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
+    } catch (error) {
+      console.error('Failed to process rate sheet:', error);
+      rfUploadStatus.value = {
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to process rate sheet',
+      };
+    } finally {
+      isRFUploading.value = false;
+      selectedFile.value = null;
+    }
   }
 
   function handleModalCancel() {
@@ -201,29 +206,17 @@
     selectedFile.value = null;
   }
 
-  async function handleClearData() {
-    if (confirm('Are you sure you want to clear all rate sheet data?')) {
-      isProcessing.value = true;
-      try {
-        await store.clearData();
-      } catch (error) {
-        console.error('Error clearing data:', error);
-      } finally {
-        isProcessing.value = false;
-      }
-    }
-  }
-
   function handleMappingUpdate(newMappings: Record<string, string>) {
     columnMappings.value = newMappings;
   }
-  // function handleDragEnter(event: DragEvent) {
-  //   event.preventDefault();
-  //   isDragging.value = true;
-  // }
 
-  // function handleDragLeave(event: DragEvent) {
-  //   event.preventDefault();
-  //   isDragging.value = false;
-  // }
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    isDragging.value = true;
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    isDragging.value = false;
+  }
 </script>

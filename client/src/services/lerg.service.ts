@@ -1,62 +1,60 @@
-import Dexie from 'dexie';
+import Dexie, { Table } from 'dexie';
 import type { LERGRecord, StateNPAMapping, CountryLergData } from '@/types/lerg-types';
 import { useLergStore } from '@/stores/lerg-store';
-import { DBConfig, createDatabase } from '@/config/database';
+import { DBName } from '@/types/app-types';
+import useDexieDB from '@/composables/useDexieDB';
 
 export class LergService {
   private store = useLergStore();
-  private db: Dexie;
+  private db: Dexie | null = null;
 
   constructor() {
-    console.log('Initializing LERG service with database:', DBConfig.LERG.name);
-    this.db = createDatabase(DBConfig.LERG);
+    console.log('Initializing LERG service');
+    this.initializeDB();
   }
 
-  // Private implementation
-  private async handleProcessingSuccess(data: LERGRecord[]) {
-    console.log('Processing completed successfully');
-    await this.db.table('lerg').bulkPut(data);
-
-    // Process the data and update the store
-    const { stateMapping, countryData } = await this.processLergData();
-
-    this.store.isLocallyStored = true;
-    this.store.setLergStats(data.length);
-    this.store.setStateNPAs(stateMapping);
-    this.store.countryData = countryData;
-
-    const count = await this.db.table('lerg').count();
-    console.log('Count of LERG records:', count);
-  }
-
-  private handleProcessingError(error: string | Error) {
-    const errorMessage = error instanceof Error ? error.message : error;
-    this.store.isProcessing = false;
-    this.store.setError(errorMessage);
-    this.store.setLergStats(0);
-    this.store.setStateNPAs({}); // Reset state mappings on error
+  async initializeDB() {
+    if (!this.db) {
+      const { getDB } = useDexieDB();
+      this.db = await getDB(DBName.LERG);
+      await this.db.open();
+    }
+    return this.db;
   }
 
   async initializeLergTable(lergData: LERGRecord[]): Promise<void> {
     try {
-      console.log('Initializing LERG table with records:', lergData?.length);
-      await this.db.table('lerg').clear();
-      await this.db.table('lerg').bulkPut(lergData);
+      const db = await this.initializeDB();
+      if (!db) throw new Error('Failed to initialize database');
+
+      // Only create new schema if table doesn't exist
+      if (!db.tables.some((t: Table) => t.name === 'lerg')) {
+        await db.close();
+        db.version(db.verno! + 1).stores({
+          lerg: '++id, npa, *state, *country',
+        });
+        await db.open();
+      }
+
+      await db.table('lerg').clear();
+      await db.table('lerg').bulkPut(lergData);
       console.log('Data initialization completed successfully');
-    } catch (error: unknown) {
-      console.error('Failed to initialize data:', error);
+    } catch (error) {
+      console.error('Failed to clear LERG data:', error);
       throw error;
     }
   }
 
   async getLergData(): Promise<LERGRecord[]> {
-    return await this.db.table('lerg').toArray();
+    const db = await this.initializeDB();
+    return await db.table('lerg').toArray();
   }
 
   async clearLergData(): Promise<void> {
     try {
       // Clear IndexDB
-      await this.db.table('lerg').clear();
+      const db = await this.initializeDB();
+      await db.table('lerg').clear();
       console.log('IndexDB LERG data cleared');
 
       // Clear store
@@ -81,7 +79,8 @@ export class LergService {
     stateMapping: StateNPAMapping;
     countryData: CountryLergData[];
   }> {
-    const records = await this.db.table('lerg').toArray();
+    const db = await this.initializeDB();
+    const records = await db.table('lerg').toArray();
     console.log('Records from IndexedDB:', records);
 
     // Process state mappings
