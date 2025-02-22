@@ -28,9 +28,9 @@ export interface GroupedRateData {
   codes: string[];
   rates: RateStatistics[];
   hasDiscrepancy: boolean;
-  effectiveDate: string;
-  minDuration: number;
-  increments: number;
+  effectiveDate?: string;
+  minDuration?: number;
+  increments?: number;
 }
 
 export interface RateSheetState {
@@ -39,6 +39,9 @@ export interface RateSheetState {
   isLocallyStored: boolean;
   groupedData: GroupedRateData[];
   originalData: RateSheetRecord[];
+  hasEffectiveDate?: boolean;
+  hasMinDuration?: boolean;
+  hasIncrements?: boolean;
 }
 
 export const RequiredRFColumnRole = {
@@ -75,3 +78,12 @@ export const RF_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
   { value: RFColumnRole.MIN_DURATION, label: 'Min Duration' },
   { value: RFColumnRole.INCREMENTS, label: 'Increments' },
 ];
+
+export const RF_COLUMN_ROLE_OPTIONS_NEW = {
+  name: { label: 'Destination Name', required: true },
+  prefix: { label: 'Prefix', required: true },
+  rate: { label: 'Rate', required: true },
+  effective: { label: 'Effective Date', required: false },
+  minDuration: { label: 'Min Duration', required: false },
+  increments: { label: 'Increments', required: false },
+} as const;

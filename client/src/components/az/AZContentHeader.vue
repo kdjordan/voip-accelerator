@@ -8,15 +8,15 @@
           mode="out-in"
         >
           <div
-            :key="azStore.getJourneyState"
+            :key="currentJourneyState"
             class="min-h-24"
           >
             <h3 class="text-sizeLg tracking-wide text-white mb-2">
-              {{ AZ_JOURNEY_MESSAGES[azStore.getJourneyState].title }}
+              {{ AZ_JOURNEY_MESSAGES[currentJourneyState].title }}
             </h3>
             <p
               class="text-base text-gray-400"
-              v-html="AZ_JOURNEY_MESSAGES[azStore.getJourneyState].message"
+              v-html="AZ_JOURNEY_MESSAGES[currentJourneyState].message"
             ></p>
           </div>
         </Transition>
@@ -55,13 +55,15 @@
 </template>
 <script setup lang="ts">
   import { useAzStore } from '@/stores/az-store';
+  import { computed } from 'vue';
   import { ReportTypes, type ReportType } from '@/types';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
-  import { AZ_JOURNEY_MESSAGES, type JourneyState } from '@/constants/messages';
+  import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE } from '@/constants/messages';
 
   const azStore = useAzStore();
-  const { deleteObjectStore, deleteDatabase } = useDexieDB();
+  const currentJourneyState = computed(() => azStore.getJourneyState);
+  const { deleteDatabase } = useDexieDB();
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
 
@@ -79,7 +81,7 @@
 
       // Clean up Dexie stores using actual file names
       if (fileNames.length > 0) {
-        await Promise.all(fileNames.map(fileName => deleteObjectStore(DBName.AZ, fileName)));
+        await Promise.all(fileNames.map(fileName => deleteDatabase(DBName.AZ)));
       }
 
       console.log('Reset completed successfully');

@@ -3,7 +3,7 @@ import type { AzPricingReport, AzCodeReport } from '@/types/az-types';
 import type { DomainStore, ReportType } from '@/types';
 import { JOURNEY_STATE, type JourneyState } from '@/constants/messages';
 
-export const useAzStore = defineStore('azStore', {
+export const useAzStore = defineStore('az', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
     uploadingComponents: {} as Record<string, boolean>,
@@ -49,7 +49,7 @@ export const useAzStore = defineStore('azStore', {
       return JOURNEY_STATE.REPORTS_READY;
     },
 
-    hasExistingFile: (state) => (fileName: string) => {
+    hasExistingFile: state => (fileName: string) => {
       return Array.from(state.filesUploaded.values()).some(f => f.fileName === fileName);
     },
   },

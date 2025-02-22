@@ -37,6 +37,7 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   resetFiles: () => void;
+  getJourneyState: () => JourneyState;
 }
 
 // Union type of all possible standardized data types
