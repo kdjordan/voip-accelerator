@@ -24,34 +24,40 @@
       <div class="border-b border-gray-700/50 mx-2"></div>
     </div>
 
-    <!-- Report Type Buttons -->
+    <!-- Report Type Tabs -->
     <div
       v-if="usStore.reportsGenerated"
-      class="flex items-center space-x-4 mb-8"
+      class="bg-gray-800 px-6"
     >
-      <button
-        v-for="type in reportTypes"
-        :key="type"
-        @click="usStore.setActiveReportType(type)"
-        :class="[
-          'py-3 px-6 mx-2 rounded-lg transition-colors',
-          {
-            'btn-active': usStore.activeReportType === type,
-            'btn-inactive': usStore.activeReportType !== type,
-          },
-        ]"
-      >
-        <span v-if="type !== ReportTypes.FILES"> {{ type.charAt(0).toUpperCase() + type.slice(1) }} Report </span>
-        <span v-else>
-          {{ type.charAt(0).toUpperCase() + type.slice(1) }}
-        </span>
-      </button>
-      <button
-        @click="handleReset"
-        class="btn-lg btn-destructive"
-      >
-        Reset
-      </button>
+      <div class="flex items-center border-b border-gray-700">
+        <button
+          v-for="type in reportTypes"
+          :key="type"
+          @click="usStore.setActiveReportType(type)"
+          class="mr-8 py-4 px-1 relative"
+          :class="[
+            'hover:text-white transition-colors',
+            {
+              'text-white': usStore.activeReportType === type,
+              'text-gray-400': usStore.activeReportType !== type,
+            },
+          ]"
+        >
+          <span v-if="type !== ReportTypes.FILES">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
+          <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
+          <!-- Active Tab Indicator -->
+          <div
+            v-if="usStore.activeReportType === type"
+            class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+          ></div>
+        </button>
+        <button
+          @click="handleReset"
+          class="btn-destructive ml-auto mb-2"
+        >
+          Reset
+        </button>
+      </div>
     </div>
   </div>
 </template>

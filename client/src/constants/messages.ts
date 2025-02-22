@@ -23,7 +23,7 @@ export const AZ_JOURNEY_MESSAGES: Record<JourneyState, JourneyMessage> = {
   },
   TWO_FILES: {
     title: 'FILES UPLOADED',
-    message: 'Processing your files. Please wait...',
+    message: 'Use the report tabs below to explore your opportunities.',
   },
   REPORTS_READY: {
     title: 'Analysis complete',
