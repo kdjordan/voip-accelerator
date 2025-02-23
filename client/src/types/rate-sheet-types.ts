@@ -33,15 +33,22 @@ export interface GroupedRateData {
   increments?: number;
 }
 
+export interface InvalidRow {
+  destinationName: string;
+  prefix: string;
+  invalidRate: string;
+}
+
 export interface RateSheetState {
   error: string | null;
   isProcessing: boolean;
   isLocallyStored: boolean;
   groupedData: GroupedRateData[];
   originalData: RateSheetRecord[];
-  hasEffectiveDate?: boolean;
-  hasMinDuration?: boolean;
-  hasIncrements?: boolean;
+  hasEffectiveDate: boolean;
+  hasMinDuration: boolean;
+  hasIncrements: boolean;
+  invalidRows: InvalidRow[];
 }
 
 export const RequiredRFColumnRole = {

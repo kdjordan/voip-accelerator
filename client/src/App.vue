@@ -30,11 +30,8 @@
   import SideNav from '@/components/shared/SideNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
   import { onMounted, onBeforeUnmount } from 'vue';
-  import { DBName, type DBNameType } from '@/types/app-types';
   import { useSharedStore } from '@/stores/shared-store';
   import { cleanupDatabases } from '@/utils/cleanup';
-
-  import { loadSampleDecks } from '@/utils/load-sample-data';
 
   const sharedStore = useSharedStore();
 
@@ -73,9 +70,6 @@
 
     try {
       console.log('Starting application initialization...');
-
-      // console.log('Loading sample decks...');
-      await loadSampleDecks([DBName.AZ]);
     } catch (error) {
       console.error('Error during initialization:', error);
     }
