@@ -2,7 +2,6 @@ import { defineStore } from 'pinia';
 import type { AzPricingReport, AzCodeReport } from '@/types/az-types';
 import type { DomainStore, ReportType } from '@/types';
 
-
 export const useAzStore = defineStore('az', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
