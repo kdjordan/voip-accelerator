@@ -51,8 +51,8 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
     nonMatchedCodesPercentage: 0,
   };
 
-  const dialCodeMapFile1 = new Map<number, { destName: string; rate: number }>();
-  const dialCodeMapFile2 = new Map<number, { destName: string; rate: number }>();
+  const dialCodeMapFile1 = new Map<string, { destName: string; rate: number }>();
+  const dialCodeMapFile2 = new Map<string, { destName: string; rate: number }>();
 
   file1Data.forEach(entry => {
     dialCodeMapFile1.set(entry.dialCode, { destName: entry.destName, rate: Number(entry.rate) });
