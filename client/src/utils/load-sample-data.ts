@@ -3,7 +3,7 @@ import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import useDexieDB from '@/composables/useDexieDB';
 import { AZService } from '@/services/az.service';
-import { createUSCSVService } from '@/services/us-csv.service';
+
 
 function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
@@ -14,7 +14,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const azStore = useAzStore();
   const usStore = useUsStore();
   const azService = new AZService();
-  const usCSVService = createUSCSVService();
+  
 
   try {
     console.log('Starting sample deck loading for:', dbNames);
