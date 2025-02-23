@@ -8,7 +8,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../pages/AzView.vue'),
+      component: () => import('../pages/RateSheetView.vue'),
     },
     {
       path: '/rate-sheet',

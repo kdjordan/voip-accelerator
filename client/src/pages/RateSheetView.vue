@@ -42,13 +42,15 @@
           class="mt-6"
         >
           <div
+            @dragenter.prevent="handleDragEnter"
+            @dragleave.prevent="handleDragLeave"
             @dragover.prevent
             @drop.prevent="handleRfFileDrop"
             class="border-2 border-dashed border-gray-600 p-8 text-center relative"
             :class="[
-              isDragging ? 'border-green-500' : '',
+              isDragging ? 'border-accent bg-fbWhite/10' : '',
               rfUploadStatus?.type === 'error' ? 'border-red-500' : '',
-              isRFUploading ? 'border-blue-500' : '',
+              isRFUploading ? 'border-accent/20 animate-upload-pulse' : 'hover:border-accent-hover hover:bg-fbWhite/10',
             ]"
           >
             <input
@@ -66,6 +68,9 @@
               <p class="mt-2 text-sm text-foreground">
                 <template v-if="uploadError">
                   <span class="text-red-400">{{ uploadError }}</span>
+                </template>
+                <template v-else-if="isRFUploading">
+                  <span class="text-accent">Processing your file...</span>
                 </template>
                 <template v-else> Drop your rate sheet CSV file here or click to browse </template>
               </p>
