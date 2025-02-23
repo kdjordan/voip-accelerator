@@ -27,6 +27,10 @@ coverage
 *.sln
 *.sw?
 
+*.js
+!*.config.js
+*.js.map
+
 *.tsbuildinfo
 
 # Environment variables
