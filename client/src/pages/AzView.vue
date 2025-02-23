@@ -38,6 +38,16 @@
   import AZContentHeader from '@/components/az/AZContentHeader.vue';
   import { useAzStore } from '@/stores/az-store';
   import { ReportTypes } from '@/types/app-types';
+  import { onMounted } from 'vue';
+  import { loadSampleDecks } from '@/utils/load-sample-data';
+  import { DBName } from '@/types/app-types';
 
   const azStore = useAzStore();
+
+  onMounted(async () => {
+    const sampleDecks = setTimeout(async () => {
+      await loadSampleDecks([DBName.AZ]);
+    }, 1000);
+    return () => clearTimeout(sampleDecks);
+  });
 </script>
