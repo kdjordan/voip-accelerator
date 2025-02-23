@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "noEmit": true,
     "target": "esnext", // or es2020, es2022
     "module": "esnext", // or es2020, es2022
     "moduleResolution": "node",
@@ -15,7 +16,7 @@
       "@/*": ["./src/*"],
       "@domains/*": ["./src/domains/*"]
     },
-    "isolatedModules": true
+    "isolatedModules": true,
   },
   "include": [
     "src/**/*.ts",

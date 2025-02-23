@@ -162,26 +162,26 @@
   }
 
   const items = ref([
-    {
-      name: 'AZ Reporting',
-      to: '/azview',
-      icon: DocumentCurrencyDollarIcon,
-    },
-    {
-      name: 'US Reporting',
-      to: '/usview',
-      icon: DocumentCurrencyDollarIcon,
-    },
+    // {
+    //   name: 'AZ Reporting',
+    //   to: '/azview',
+    //   icon: DocumentCurrencyDollarIcon,
+    // },
+    // {
+    //   name: 'US Reporting',
+    //   to: '/usview',
+    //   icon: DocumentCurrencyDollarIcon,
+    // },
     {
       name: 'Rate Sheet',
       to: '/rate-sheet',
       icon: CurrencyDollarIcon,
     },
-    {
-      name: 'Lerg Admin',
-      to: '/admin/lerg',
-      icon: Cog6ToothIcon,
-    },
+    // {
+    //   name: 'Lerg Admin',
+    //   to: '/admin/lerg',
+    //   icon: Cog6ToothIcon,
+    // },
   ]);
 
   const dropdownItems = ref([

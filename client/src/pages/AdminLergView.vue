@@ -304,7 +304,7 @@
             accept=".csv"
             @change="handleLergFileChange"
           />
-          <button
+          <!-- <button
             @click="$refs.lergFileInput.click()"
             :disabled="isLergUploading"
             class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
@@ -314,7 +314,7 @@
               <ArrowUpTrayIcon class="w-4 h-4 text-accent" />
               <span class="text-sm text-accent">Choose File</span>
             </div>
-          </button>
+          </button> -->
           <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
         </div>
         <!-- Upload Status -->

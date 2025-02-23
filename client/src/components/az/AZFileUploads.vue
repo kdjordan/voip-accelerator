@@ -23,6 +23,7 @@
                 azStore.isComponentDisabled('az1')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
                   : 'border-fbWhite',
+                uploadError ? 'border-red-500' : '',
               ]"
               @dragenter.prevent="e => handleDragEnter(e, 'az1')"
               @dragleave.prevent="e => handleDragLeave(e, 'az1')"
@@ -107,6 +108,7 @@
                 azStore.isComponentDisabled('az2')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
                   : 'border-fbWhite',
+                uploadError ? 'border-red-500' : '',
               ]"
               @dragenter.prevent="e => handleDragEnter(e, 'az2')"
               @dragleave.prevent="e => handleDragLeave(e, 'az2')"
@@ -243,6 +245,9 @@
   const isModalValid = ref(false);
   const columnMappings = ref<Record<string, string>>({});
 
+  // Add new ref
+  const uploadError = ref<string | null>(null);
+
   // Drag and drop handlers
   function handleDragEnter(event: DragEvent, componentId: string) {
     event.preventDefault();
@@ -276,9 +281,17 @@
   async function handleFileSelected(file: File, componentId: string) {
     if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId)) return;
 
-    // Check if file name already exists using store method
+    // Clear previous errors
+    uploadError.value = null;
+
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError.value = 'Only CSV files are accepted';
+      return;
+    }
+
     if (azStore.hasExistingFile(file.name)) {
-      alert('A file with this name has already been uploaded. Please rename the file and try again.');
+      uploadError.value = 'A file with this name has already been uploaded';
       return;
     }
 
