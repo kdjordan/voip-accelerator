@@ -27,11 +27,88 @@
               </div>
             </div>
           </div>
+          <!-- Invalid Rows Status -->
+          <div v-if="store.hasInvalidRows">
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Invalid Rows Processed</h3>
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 rounded-full bg-accent animate-status-pulse-success"></div>
+                <span class="text-2xl font-bold">{{ store.getGroupedInvalidRows.length }}</span>
+              </div>
+            </div>
+          </div>
           <!-- Discrepancy Count -->
           <div>
             <div class="flex justify-between items-center">
               <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
               <div class="text-2xl font-bold">{{ store.getDiscrepancyCount }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- After the Stats Grid, before the File Upload Section -->
+        <div
+          v-if="store.hasInvalidRows"
+          class="space-y-6 mt-6 border-t border-gray-700/50 pt-6"
+        >
+          <!-- Invalid Rows Section -->
+          <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+            <div
+              @click="toggleInvalidRowsDetails"
+              class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+            >
+              <div class="flex justify-between items-center">
+                <span class="font-medium">Invalid Rows</span>
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': showInvalidRowsDetails }"
+                  class="w-4 h-4 transition-transform"
+                />
+              </div>
+            </div>
+
+            <!-- Invalid Rows Content -->
+            <div
+              v-if="showInvalidRowsDetails"
+              class="p-4 space-y-4"
+            >
+              <div class="space-y-2">
+                <div
+                  v-for="group in store.getGroupedInvalidRows"
+                  :key="group.destinationName"
+                  @click="toggleExpandInvalidRow(group.destinationName)"
+                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+                >
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium">{{ group.destinationName }}</span>
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
+                        <span class="text-sm text-gray-400">{{ group.count }} invalid rates</span>
+                        <ChevronDownIcon
+                          :class="{ 'transform rotate-180': expandedInvalidRows.includes(group.destinationName) }"
+                          class="w-4 h-4 transition-transform"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Expanded invalid rates list -->
+                  <div
+                    v-if="expandedInvalidRows.includes(group.destinationName)"
+                    class="mt-3 pl-4"
+                  >
+                    <div class="space-y-2">
+                      <div
+                        v-for="row in group.rows"
+                        :key="row.prefix"
+                        class="flex justify-between items-center bg-gray-800/50 px-3 py-2 rounded"
+                      >
+                        <span class="text-gray-300">{{ row.prefix }}</span>
+                        <span class="text-red-400">{{ row.invalidRate }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -78,7 +155,7 @@
                 v-if="uploadError"
                 class="mt-1 text-xs text-red-400"
               >
-                Please try again with a correctly formatted CSV file
+                Please try again with a CSV file
               </p>
             </div>
           </div>
@@ -116,7 +193,7 @@
   import { computed, ref } from 'vue';
 
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
-  import { ArrowUpTrayIcon, TrashIcon } from '@heroicons/vue/24/outline';
+  import { ArrowUpTrayIcon, TrashIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
   import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { RF_COLUMN_ROLE_OPTIONS } from '@/types/rate-sheet-types';
@@ -142,9 +219,20 @@
   const isValid = ref(false);
   const selectedFile = ref<File | null>(null);
 
+  // Invalid Rows state
+  const showInvalidRowsDetails = ref(false);
+  const expandedInvalidRows = ref<string[]>([]);
+
   async function handleFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError.value = 'Only CSV files are accepted';
+      return;
+    }
+
     selectedFile.value = file;
 
     Papa.parse(file, {
@@ -165,9 +253,15 @@
     event.preventDefault();
     isDragging.value = false;
     const file = event.dataTransfer?.files[0];
-    if (file) {
-      await handleFileChange({ target: { files: [file] } } as unknown as Event);
+    if (!file) return;
+
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError.value = 'Only CSV files are accepted';
+      return;
     }
+
+    await handleFileChange({ target: { files: [file] } } as unknown as Event);
   }
 
   async function handleModalConfirm(mappings: Record<string, string>) {
@@ -220,5 +314,18 @@
   function handleDragLeave(event: DragEvent) {
     event.preventDefault();
     isDragging.value = false;
+  }
+
+  function toggleInvalidRowsDetails() {
+    showInvalidRowsDetails.value = !showInvalidRowsDetails.value;
+  }
+
+  function toggleExpandInvalidRow(destinationName: string) {
+    const index = expandedInvalidRows.value.indexOf(destinationName);
+    if (index === -1) {
+      expandedInvalidRows.value.push(destinationName);
+    } else {
+      expandedInvalidRows.value.splice(index, 1);
+    }
   }
 </script>

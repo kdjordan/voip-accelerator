@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia';
-import type { RateSheetState, RateSheetRecord, GroupedRateData, RateStatistics } from '@/types/rate-sheet-types';
+import type {
+  RateSheetState,
+  RateSheetRecord,
+  GroupedRateData,
+  RateStatistics,
+  InvalidRow,
+} from '@/types/rate-sheet-types';
 
 export const useRateSheetStore = defineStore('rateSheet', {
   state: (): RateSheetState => ({
@@ -11,6 +17,7 @@ export const useRateSheetStore = defineStore('rateSheet', {
     hasEffectiveDate: false,
     hasMinDuration: false,
     hasIncrements: false,
+    invalidRows: [],
   }),
 
   actions: {
@@ -57,6 +64,15 @@ export const useRateSheetStore = defineStore('rateSheet', {
       this.originalData = [];
       this.groupedData = [];
       this.isLocallyStored = false;
+      this.invalidRows = [];
+    },
+
+    addInvalidRow(row: InvalidRow) {
+      this.invalidRows.push(row);
+    },
+
+    clearInvalidRows() {
+      this.invalidRows = [];
     },
   },
 
@@ -112,6 +128,24 @@ export const useRateSheetStore = defineStore('rateSheet', {
           increments: records[0]?.increments,
         };
       });
+    },
+
+    hasInvalidRows: (state): boolean => state.invalidRows.length > 0,
+
+    getGroupedInvalidRows: state => {
+      const grouped = new Map<string, { prefix: string; invalidRate: string }[]>();
+
+      state.invalidRows.forEach((row: InvalidRow) => {
+        const existing = grouped.get(row.destinationName) || [];
+        existing.push({ prefix: row.prefix, invalidRate: row.invalidRate });
+        grouped.set(row.destinationName, existing);
+      });
+
+      return Array.from(grouped.entries()).map(([name, rows]) => ({
+        destinationName: name,
+        rows,
+        count: rows.length,
+      }));
     },
   },
 });
