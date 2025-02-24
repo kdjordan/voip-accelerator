@@ -6,9 +6,9 @@
         <div class="grid grid-cols-2 gap-8">
           <!-- Carrier A Upload Zone -->
           <div class="flex flex-col gap-2">
-            <h2 class="text-base text-fbWhite mb-4">Your Rates Here</h2>
+            <h2 class="text-base text-fbWhite mb-4">Your Rates Here :</h2>
             <div
-              class="relative border-2 rounded-lg p-8 min-h-[120px] flex items-center justify-center"
+              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
                 isDragging['az1']
                   ? 'border-accent bg-fbWhite/10'
@@ -46,17 +46,21 @@
               <div class="flex flex-col h-full">
                 <!-- Empty/Processing States -->
                 <template v-if="!azStore.isComponentDisabled('az1') && !azStore.isComponentUploading('az1')">
-                  <div class="flex-1 flex items-center justify-center">
+                  <div class="flex-1 flex items-center justify-center min-h-[120px]">
                     <div class="text-center">
-                      <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                      <p class="mt-2 text-base text-foreground">Drop YOUR rate deck here or click to select</p>
+                      <ArrowUpTrayIcon
+                        class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+                      />
+                      <p class="mt-2 text-base text-foreground text-accent">
+                        DRAG & DROP to upload or CLICK to select file
+                      </p>
                     </div>
                   </div>
                 </template>
 
                 <template v-if="azStore.isComponentUploading('az1')">
                   <div
-                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0"
+                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
                   >
                     <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
@@ -66,9 +70,9 @@
                 <template v-if="azStore.isComponentDisabled('az1')">
                   <!-- Centered File Info -->
                   <div class="flex-1 flex items-center justify-center">
-                    <div class="flex items-center space-x-2">
-                      <DocumentIcon class="w-5 h-5 text-accent" />
-                      <p class="text-sizeLg text-accent">
+                    <div class="flex items-center space-x-3">
+                      <DocumentIcon class="w-6 h-6 text-accent" />
+                      <p class="text-xl text-accent">
                         {{ azStore.getFileNameByComponent('az1') }}
                       </p>
                     </div>
@@ -91,9 +95,9 @@
 
           <!-- Carrier B Upload Zone -->
           <div class="flex flex-col gap-2">
-            <h2 class="text-base text-fbWhite mb-4">Prospect's Rates Here</h2>
+            <h2 class="text-base text-fbWhite mb-4">Prospect's Rates Here :</h2>
             <div
-              class="relative border-2 rounded-lg p-8 min-h-[120px] flex items-center justify-center"
+              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
                 isDragging['az2']
                   ? 'border-accent bg-fbWhite/10'
@@ -131,11 +135,13 @@
               <div class="flex flex-col h-full">
                 <!-- Empty/Processing States -->
                 <template v-if="!azStore.isComponentDisabled('az2') && !azStore.isComponentUploading('az2')">
-                  <div class="flex-1 flex items-center justify-center">
+                  <div class="flex-1 flex items-center justify-center min-h-[120px]">
                     <div class="text-center">
-                      <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                      <p class="mt-2 text-base text-foreground">
-                        Drop the PROSPECT'S rate deck here or click to browse
+                      <ArrowUpTrayIcon
+                        class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+                      />
+                      <p class="mt-2 text-base text-foreground text-accent">
+                        DRAG & DROP to upload or CLICK to select file
                       </p>
                     </div>
                   </div>
@@ -143,7 +149,7 @@
 
                 <template v-if="azStore.isComponentUploading('az2')">
                   <div
-                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0"
+                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
                   >
                     <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
@@ -153,9 +159,9 @@
                 <template v-if="azStore.isComponentDisabled('az2')">
                   <!-- Centered File Info -->
                   <div class="flex-1 flex items-center justify-center">
-                    <div class="flex items-center space-x-2">
-                      <DocumentIcon class="w-5 h-5 text-accent" />
-                      <p class="text-sizeLg text-accent">
+                    <div class="flex items-center space-x-3">
+                      <DocumentIcon class="w-6 h-6 text-accent" />
+                      <p class="text-xl text-accent">
                         {{ azStore.getFileNameByComponent('az2') }}
                       </p>
                     </div>

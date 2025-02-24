@@ -288,43 +288,65 @@
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Upload LERG File</h2>
         <div
+          class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
+          :class="[
+            isDragging
+              ? 'border-accent bg-fbWhite/10'
+              : 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600',
+            isLergUploading ? 'animate-upload-pulse cursor-not-allowed' : 'cursor-pointer',
+            lergUploadStatus?.type === 'error' ? 'border-red-500' : '',
+          ]"
+          @dragenter.prevent="() => (isDragging = true)"
+          @dragleave.prevent="() => (isDragging = false)"
           @dragover.prevent
           @drop.prevent="handleLergFileDrop"
-          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center relative"
-          :class="[
-            isDragging ? 'border-green-500' : '',
-            lergUploadStatus?.type === 'error' ? 'border-red-500' : '',
-            isLergUploading ? 'border-blue-500' : '',
-          ]"
         >
           <input
             type="file"
             ref="lergFileInput"
-            class="hidden"
+            class="absolute inset-0 opacity-0 cursor-pointer"
+            :class="{ 'pointer-events-none': isLergUploading }"
             accept=".csv"
             @change="handleLergFileChange"
           />
-          <!-- <button
-            @click="$refs.lergFileInput.click()"
-            :disabled="isLergUploading"
-            class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
-            :class="{ 'animate-upload-pulse': isLergUploading }"
+
+          <!-- Empty State -->
+          <div
+            v-if="!isLergUploading && !lergUploadStatus"
+            class="text-center"
           >
-            <div class="flex items-center justify-center space-x-2">
-              <ArrowUpTrayIcon class="w-4 h-4 text-accent" />
-              <span class="text-sm text-accent">Choose File</span>
-            </div>
-          </button> -->
-          <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
-        </div>
-        <!-- Upload Status -->
-        <div
-          v-if="lergUploadStatus"
-          class="mt-4 text-center"
-        >
-          <p :class="['text-sm', lergUploadStatus.type === 'error' ? 'text-red-400' : 'text-green-400']">
-            {{ lergUploadStatus.message }}
-          </p>
+            <ArrowUpTrayIcon
+              class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+            />
+            <p class="mt-2 text-base text-foreground text-accent">DRAG & DROP to upload or CLICK to select file</p>
+            <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
+          </div>
+
+          <!-- Processing State -->
+          <div
+            v-if="isLergUploading"
+            class="text-center"
+          >
+            <p class="text-sizeMd text-accent">Processing your file...</p>
+          </div>
+
+          <!-- Error State -->
+          <div
+            v-if="lergUploadStatus?.type === 'error'"
+            class="text-center"
+          >
+            <p class="text-red-400">{{ lergUploadStatus.message }}</p>
+            <p class="text-xs text-red-400 mt-1">Please try again</p>
+          </div>
+
+          <!-- Success State -->
+          <div
+            v-if="lergUploadStatus?.type === 'success'"
+            class="text-center"
+          >
+            <DocumentIcon class="w-6 h-6 text-accent mx-auto" />
+            <p class="mt-2 text-xl text-accent">{{ lergUploadStatus.message }}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -370,7 +392,7 @@
   import { ref, computed, onMounted } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
-  import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
+  import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon } from '@heroicons/vue/24/outline';
   import { getCountryName } from '@/types/country-codes';
   import { getStateName } from '@/types/state-codes';
   import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/lerg-types';
