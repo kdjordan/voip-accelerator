@@ -72,17 +72,19 @@ export const useAzStore = defineStore('az', {
       this.activeReportType = type;
     },
 
-    removeFile(componentName: string) {
-      this.filesUploaded.delete(componentName);
-      this.uploadingComponents[componentName] = false;
+    removeFile(fileName: string) {
+      this.filesUploaded.delete(fileName);
 
-      if (this.filesUploaded.size === 0) {
+      // Reset reports and UI state if we no longer have 2 files
+      if (this.filesUploaded.size < 2) {
         this.reportsGenerated = false;
         this.pricingReport = null;
         this.codeReport = null;
-        this.showUploadComponents = true;
         this.activeReportType = 'files';
       }
+
+      // Reset upload components visibility
+      this.showUploadComponents = true;
     },
 
     checkFileNameAvailable(fileName: string): boolean {
