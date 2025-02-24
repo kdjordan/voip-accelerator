@@ -77,10 +77,10 @@
               class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
             >
               <div class="flex justify-between items-center">
-                <span class="font-medium">US States</span>
+                <span class="font-medium text-lg">US States</span>
                 <ChevronDownIcon
                   :class="{ 'transform rotate-180': showStateDetails }"
-                  class="w-4 h-4 transition-transform"
+                  class="w-5 h-5 transition-transform"
                 />
               </div>
             </div>
@@ -98,15 +98,15 @@
                   class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
                 >
                   <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ getStateName(state.code, 'US') }}</span>
-                    <div class="flex items-center space-x-4">
-                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
-                        <span class="text-sm text-gray-400">{{ state.npas.length }} NPAs</span>
-                        <ChevronDownIcon
-                          :class="{ 'transform rotate-180': expandedStates.includes(state.code) }"
-                          class="w-4 h-4 transition-transform"
-                        />
-                      </div>
+                    <span class="font-medium text-lg">{{ getStateName(state.code, 'US') }}</span>
+                    <div class="flex items-center space-x-3">
+                      <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                        {{ state.npas.length }} NPAs
+                      </span>
+                      <ChevronDownIcon
+                        :class="{ 'transform rotate-180': expandedStates.includes(state.code) }"
+                        class="w-5 h-5 transition-transform"
+                      />
                     </div>
                   </div>
 
@@ -151,10 +151,10 @@
               class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
             >
               <div class="flex justify-between items-center">
-                <span class="font-medium">Non-US States</span>
+                <span class="font-medium text-lg">Non-US States</span>
                 <ChevronDownIcon
                   :class="{ 'transform rotate-180': showCountryDetails }"
-                  class="w-4 h-4 transition-transform"
+                  class="w-5 h-5 transition-transform"
                 />
               </div>
             </div>
@@ -174,15 +174,15 @@
                   class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
                 >
                   <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ getCountryName(country.country) }}</span>
-                    <div class="flex items-center space-x-4">
-                      <div class="flex items-center space-x-2 px-2 py-1 rounded">
-                        <span class="text-sm text-gray-400">{{ country.npaCount }} NPAs</span>
-                        <ChevronDownIcon
-                          :class="{ 'transform rotate-180': expandedCountries.includes(country.country) }"
-                          class="w-4 h-4 transition-transform"
-                        />
-                      </div>
+                    <span class="font-medium text-lg">{{ getCountryName(country.country) }}</span>
+                    <div class="flex items-center space-x-3">
+                      <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                        {{ country.npaCount }} NPAs
+                      </span>
+                      <ChevronDownIcon
+                        :class="{ 'transform rotate-180': expandedCountries.includes(country.country) }"
+                        class="w-5 h-5 transition-transform"
+                      />
                     </div>
                   </div>
 
@@ -204,12 +204,14 @@
                         @click.stop="toggleExpandProvince(province.code)"
                       >
                         <div class="flex justify-between items-center">
-                          <span class="font-medium">{{ getStateName(province.code, 'CA') }}</span>
-                          <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-400">{{ province.npas.length }} NPAs</span>
+                          <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
+                          <div class="flex items-center space-x-3">
+                            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                              {{ province.npas.length }} NPAs
+                            </span>
                             <ChevronDownIcon
                               :class="{ 'transform rotate-180': expandedProvinces.includes(province.code) }"
-                              class="w-4 h-4 transition-transform"
+                              class="w-5 h-5 transition-transform"
                             />
                           </div>
                         </div>
@@ -238,7 +240,7 @@
                           class="bg-gray-800/50 p-4 rounded-lg"
                         >
                           <div class="flex justify-between items-center">
-                            <span class="font-medium">{{ getStateName(province.code, 'CA') }}</span>
+                            <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
                             <span class="text-gray-300">{{ province.npas[0] }}</span>
                           </div>
                         </div>

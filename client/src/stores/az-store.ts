@@ -65,6 +65,7 @@ export const useAzStore = defineStore('az', {
       this.codeReport = code;
       this.reportsGenerated = true;
       this.showUploadComponents = false;
+      this.activeReportType = 'code';
     },
 
     setActiveReportType(type: ReportType) {

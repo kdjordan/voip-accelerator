@@ -1,234 +1,251 @@
 <template>
   <div
     v-if="report"
-    class="space-y-10 bg-gray-800 p-6"
+    class="space-y-6 bg-gray-800 p-6"
   >
     <!-- Buy Section -->
-    <div class="rounded-lg">
-      <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6 border-b border-gray-700">
-        <span class="text-fbWhite">
-          <span class="uppercase">{{ report.fileName1 }}</span>
-          should BUY these destinations from
-          <span class="uppercase">{{ report.fileName2 }}</span>
-        </span>
-      </h2>
-      <div class="p-6 overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-700">
-              <th class="py-3 text-left text-gray-400 px-4 max-w-[250px] w-[250px]">Dial Code(s)</th>
-              <th class="py-3 text-left text-gray-400 px-4">Destination</th>
-              <th class="py-3 text-right text-gray-400 px-4">Rate - {{ report.fileName1 }}</th>
-              <th class="py-3 text-right text-gray-400 px-4">Rate - {{ report.fileName2 }}</th>
-              <th class="py-3 text-right text-gray-400 px-4">Difference (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in report.higherRatesForFile1"
-              :key="item.dialCode"
-              class="border-b border-gray-700"
-            >
-              <td class="py-3 text-foreground px-4 max-w-[250px] w-[250px]">
-                <div v-if="item.dialCode.split(',').length > 3">
-                  <span v-if="!isRowExpanded(item.dialCode)">
-                    {{ item.dialCode.split(',')[0] }}
-                  </span>
-                  <span v-else>
-                    {{ item.dialCode }}
-                  </span>
+    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+      <div
+        @click="toggleSection('buy')"
+        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+      >
+        <div class="flex justify-between items-center">
+          <span class="font-medium text-lg">
+            <span class="uppercase">{{ report.fileName1 }}</span> should BUY from
+            <span class="uppercase">{{ report.fileName2 }}</span>
+          </span>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ report.higherRatesForFile1.length }} destinations
+            </span>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': expandedSections.buy }"
+              class="w-5 h-5 transition-transform"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Buy Content -->
+      <div
+        v-if="expandedSections.buy"
+        class="p-4 space-y-4"
+      >
+        <div
+          v-for="item in report.higherRatesForFile1"
+          :key="item.dialCode"
+          class="bg-gray-900/80 p-4 rounded-lg hover:bg-gray-600/40 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <div class="space-y-1">
+              <div class="font-medium">{{ item.destName }}</div>
+              <div class="text-sm text-gray-400">
+                <span v-if="!isRowExpanded(item.dialCode) && item.dialCode.split(',').length > 3">
+                  {{ item.dialCode.split(',')[0] }}
                   <button
-                    @click="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-800 transition-colors duration-300"
-                    w
+                    @click.stop="toggleExpandRow(item.dialCode)"
+                    class="ml-2 text-accent hover:text-accent/80"
                   >
-                    {{ isRowExpanded(item.dialCode) ? 'Show Less' : 'Show More' }}
+                    Show All ({{ item.dialCode.split(',').length }})
                   </button>
-                </div>
-                <div v-else>
-                  {{ item.dialCode }}
-                </div>
-              </td>
-              <td class="py-3 text-foreground px-4">{{ item.destName }}</td>
-              <td class="py-3 text-right text-foreground px-4">
-                {{ item.rateFile1 }}
-              </td>
-              <td class="py-3 text-right text-foreground px-4">
-                {{ item.rateFile2 }}
-              </td>
-              <td class="py-3 text-right text-green-500 px-4">
-                {{ formatPercentage(item.percentageDifference) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </span>
+                <span v-else>{{ item.dialCode }}</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-8 text-right">
+              <div>
+                <div class="text-sm text-gray-400">Current Rate</div>
+                <div class="font-medium">{{ item.rateFile1 }}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-400">Target Rate</div>
+                <div class="font-medium">{{ item.rateFile2 }}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-400">Difference</div>
+                <div class="font-medium text-green-500">{{ formatPercentage(item.percentageDifference) }}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Sell Section -->
-    <div class="rounded-lg w-full">
-      <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6 border-b border-fbBorder">
-        <span class="text-fbWhite">
-          <span class="uppercase">{{ report.fileName1 }}</span>
-          should SELL these destinations from
-          <span class="uppercase">{{ report.fileName2 }}</span>
-        </span>
-      </h2>
-      <div class="p-6 overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-fbBorder">
-              <th class="py-3 text-left px-4 max-w-[250px] w-[250px]">Dial Code(s)</th>
-              <th class="py-3 text-left text-gray-400 px-4">Destination</th>
-              <th class="py-3 text-right text-gray-400 px-4">Rate - {{ report.fileName1 }}</th>
-              <th class="py-3 text-right text-gray-400 px-4">Rate - {{ report.fileName2 }}</th>
-              <th class="py-3 text-right text-gray-400 px-4">Difference (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in report.higherRatesForFile2"
-              :key="item.dialCode"
-              class="border-b border-gray-700"
-            >
-              <td class="py-3 text-foreground px-4 max-w-[250px] w-[250px]">
-                <div v-if="item.dialCode.split(',').length > 3">
-                  <span v-if="!isRowExpanded(item.dialCode)">
-                    {{ item.dialCode.split(',')[0] }}
-                  </span>
-                  <span v-else>
-                    {{ item.dialCode }}
-                  </span>
+    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+      <div
+        @click="toggleSection('sell')"
+        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+      >
+        <div class="flex justify-between items-center">
+          <span class="font-medium text-lg">
+            <span class="uppercase">{{ report.fileName1 }}</span> should SELL to
+            <span class="uppercase">{{ report.fileName2 }}</span>
+          </span>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ report.higherRatesForFile2.length }} destinations
+            </span>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': expandedSections.sell }"
+              class="w-5 h-5 transition-transform"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Sell Content -->
+      <div
+        v-if="expandedSections.sell"
+        class="p-4 space-y-4"
+      >
+        <div
+          v-for="item in report.higherRatesForFile2"
+          :key="item.dialCode"
+          class="bg-gray-900/80 p-4 rounded-lg hover:bg-gray-600/40 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <div class="space-y-1">
+              <div class="font-medium">{{ item.destName }}</div>
+              <div class="text-sm text-gray-400">
+                <span v-if="!isRowExpanded(item.dialCode) && item.dialCode.split(',').length > 3">
+                  {{ item.dialCode.split(',')[0] }}
                   <button
-                    @click="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-800 transition-colors duration-300"
+                    @click.stop="toggleExpandRow(item.dialCode)"
+                    class="ml-2 text-accent hover:text-accent/80"
                   >
-                    {{ isRowExpanded(item.dialCode) ? 'Show Less' : 'Show More' }}
+                    Show All ({{ item.dialCode.split(',').length }})
                   </button>
-                </div>
-                <div v-else>
-                  {{ item.dialCode }}
-                </div>
-              </td>
-              <td class="py-3 text-foreground px-4">{{ item.destName }}</td>
-              <td class="py-3 text-right text-foreground px-4">
-                {{ item.rateFile1 }}
-              </td>
-              <td class="py-3 text-right text-foreground px-4">
-                {{ item.rateFile2 }}
-              </td>
-              <td class="py-3 text-right text-red-500 px-4">
-                {{ formatPercentage(item.percentageDifference) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </span>
+                <span v-else>{{ item.dialCode }}</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-8 text-right">
+              <div>
+                <div class="text-sm text-gray-400">Current Rate</div>
+                <div class="font-medium">{{ item.rateFile1 }}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-400">Target Rate</div>
+                <div class="font-medium">{{ item.rateFile2 }}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-400">Difference</div>
+                <div class="font-medium text-red-500">{{ formatPercentage(item.percentageDifference) }}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Same Rates Section -->
-    <div class="rounded-lg overflow-hidden border border-fbBorder">
-      <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6 border-b border-fbBorder">Same Rates</h2>
-      <div class="p-6 overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-700">
-              <th class="py-3 text-left text-gray-400 px-4 max-w-[250px] w-[250px]">Dial Code(s)</th>
-              <th class="py-3 text-left text-gray-400 px-4">Destination</th>
-              <th class="py-3 text-right text-gray-400 px-4">Rate - {{ report.fileName1 }}</th>
-              <th class="py-3 text-right text-gray-400 px-4">Rate - {{ report.fileName2 }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in report.sameRates"
-              :key="item.dialCode"
-              class="border-b border-gray-700"
-            >
-              <td class="py-3 text-foreground px-4 max-w-[250px] w-[250px]">
-                <div v-if="item.dialCode.split(',').length > 3">
-                  <span v-if="!isRowExpanded(item.dialCode)">
-                    {{ item.dialCode.split(',')[0] }}
-                  </span>
-                  <span v-else>
-                    {{ item.dialCode }}
-                  </span>
+    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+      <div
+        @click="toggleSection('same')"
+        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+      >
+        <div class="flex justify-between items-center">
+          <span class="font-medium text-lg">Same Rates</span>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ report.sameRates.length }} destinations
+            </span>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': expandedSections.same }"
+              class="w-5 h-5 transition-transform"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Same Rates Content -->
+      <div
+        v-if="expandedSections.same"
+        class="p-4 space-y-4"
+      >
+        <div
+          v-for="item in report.sameRates"
+          :key="item.dialCode"
+          class="bg-gray-900/80 p-4 rounded-lg hover:bg-gray-600/40 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <div class="space-y-1">
+              <div class="font-medium">{{ item.destName }}</div>
+              <div class="text-sm text-gray-400">
+                <span v-if="!isRowExpanded(item.dialCode) && item.dialCode.split(',').length > 3">
+                  {{ item.dialCode.split(',')[0] }}
                   <button
-                    @click="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-800 transition-colors duration-300"
+                    @click.stop="toggleExpandRow(item.dialCode)"
+                    class="ml-2 text-accent hover:text-accent/80"
                   >
-                    {{ isRowExpanded(item.dialCode) ? 'Show Less' : 'Show More' }}
+                    Show All ({{ item.dialCode.split(',').length }})
                   </button>
-                </div>
-                <div v-else>
-                  {{ item.dialCode }}
-                </div>
-              </td>
-              <td class="py-3 text-foreground px-4">{{ item.destName }}</td>
-              <td class="py-3 text-right text-foreground px-4">
-                {{ item.rateFile1 }}
-              </td>
-              <td class="py-3 text-right text-foreground px-4">
-                {{ item.rateFile2 }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </span>
+                <span v-else>{{ item.dialCode }}</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-8 text-right">
+              <div>
+                <div class="text-sm text-gray-400">Rate</div>
+                <div class="font-medium">{{ item.rateFile1 }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Unmatched Codes Section -->
-    <div class="rounded-lg overflow-hidden border border-fbBorder">
-      <div class="py-4 px-6 flex justify-between items-center border-b border-fbBorder">
-        <div class="w-1/4"></div>
-        <h2 class="py-4 text-sizeLg text-center text-fbWhite px-6">Unmatched Codes</h2>
-        <div class="w-1/4 flex justify-end">
-          <button
-            @click="toggleUnmatchedCodes"
-            class="btn-accent btn-lg"
-          >
-            {{ showUnmatchedCodes ? 'Hide' : 'Show' }}
-          </button>
+    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+      <div
+        @click="toggleSection('unmatched')"
+        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+      >
+        <div class="flex justify-between items-center">
+          <span class="font-medium text-lg">Unmatched Codes</span>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ report.nonMatchingCodes.length }} destinations
+            </span>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': expandedSections.unmatched }"
+              class="w-5 h-5 transition-transform"
+            />
+          </div>
         </div>
       </div>
-      <div class="p-6">
-        <div v-if="showUnmatchedCodes">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-gray-700">
-                <th class="py-3 text-left text-gray-400 px-4 max-w-[250px] w-[250px]">Dial Code(s)</th>
-                <th class="py-3 text-left text-gray-400 px-4">Destination</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="code in report.nonMatchingCodes"
-                :key="code.dialCode"
-                class="border-b border-gray-700"
-              >
-                <td class="py-3 text-foreground px-4 max-w-[250px] w-[250px]">
-                  <div v-if="code.dialCode.split(',').length > 3">
-                    <span v-if="!isRowExpanded(code.dialCode)">
-                      {{ code.dialCode.split(',')[0] }}
-                    </span>
-                    <span v-else>
-                      {{ code.dialCode }}
-                    </span>
-                    <button
-                      @click="toggleExpandRow(code.dialCode)"
-                      class="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-800 transition-colors duration-300"
-                    >
-                      {{ isRowExpanded(code.dialCode) ? 'Show Less' : 'Show More' }}
-                    </button>
-                  </div>
-                  <div v-else>
-                    {{ code.dialCode }}
-                  </div>
-                </td>
-                <td class="py-3 text-foreground px-4">{{ code.destName }}</td>
-              </tr>
-            </tbody>
-          </table>
+
+      <!-- Unmatched Content -->
+      <div
+        v-if="expandedSections.unmatched"
+        class="p-4 space-y-4"
+      >
+        <div
+          v-for="code in report.nonMatchingCodes"
+          :key="code.dialCode"
+          class="bg-gray-900/80 p-4 rounded-lg hover:bg-gray-600/40 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <div class="space-y-1">
+              <div class="font-medium">{{ code.destName }}</div>
+              <div class="text-sm text-gray-400">
+                <span v-if="!isRowExpanded(code.dialCode) && code.dialCode.split(',').length > 3">
+                  {{ code.dialCode.split(',')[0] }}
+                  <button
+                    @click.stop="toggleExpandRow(code.dialCode)"
+                    class="ml-2 text-accent hover:text-accent/80"
+                  >
+                    Show All ({{ code.dialCode.split(',').length }})
+                  </button>
+                </span>
+                <span v-else>{{ code.dialCode }}</span>
+              </div>
+            </div>
+            <div class="text-sm text-gray-400">
+              Found in: <span class="text-accent">{{ code.file }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -243,21 +260,24 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
-  import { useAzStore } from '@/stores/az-store';
+  import { ref, reactive } from 'vue';
+  import { ChevronDownIcon } from '@heroicons/vue/24/outline';
   import type { AzPricingReport } from '@/types/domains/az-types';
-
-  const azStore = useAzStore();
-  const expandedRows = ref<Set<string>>(new Set());
 
   const props = defineProps<{
     report: AzPricingReport | null;
   }>();
 
-  const showUnmatchedCodes = ref(false);
+  const expandedRows = ref<Set<string>>(new Set());
+  const expandedSections = reactive({
+    buy: false,
+    sell: false,
+    same: false,
+    unmatched: false,
+  });
 
-  function toggleUnmatchedCodes() {
-    showUnmatchedCodes.value = !showUnmatchedCodes.value;
+  function toggleSection(section: keyof typeof expandedSections) {
+    expandedSections[section] = !expandedSections[section];
   }
 
   function toggleExpandRow(dialCode: string) {
