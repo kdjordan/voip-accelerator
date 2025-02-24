@@ -1,5 +1,5 @@
-import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/types/az-types';
-import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/us-types';
+import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/types/domains/az-types';
+import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/domains/us-types';
 
 // Add this type definition
 export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;

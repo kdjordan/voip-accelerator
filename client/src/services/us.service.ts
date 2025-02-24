@@ -1,4 +1,4 @@
-import { type USStandardizedData } from '@/types/us-types';
+import { type USStandardizedData } from '@/types/domains/us-types';
 import { DBName } from '@/types/app-types';
 import Dexie, { Table } from 'dexie';
 import { useUsStore } from '@/stores/us-store';

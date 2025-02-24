@@ -1,4 +1,4 @@
-import { type AZStandardizedData } from '@/types/az-types';
+import { type AZStandardizedData } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import Dexie, { Table } from 'dexie';
 import { useAzStore } from '@/stores/az-store';

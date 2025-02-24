@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import type { RateSheetRecord, GroupedRateData, RateStatistics } from '@/types/rate-sheet-types';
+import type { RateSheetRecord, GroupedRateData, RateStatistics } from '@/types/domains/rate-sheet-types';
 import { useRateSheetStore } from '@/stores/rate-sheet-store';
 import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';

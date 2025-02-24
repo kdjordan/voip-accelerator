@@ -46,7 +46,7 @@
               <div class="flex flex-col h-full">
                 <!-- Empty/Processing States -->
                 <template v-if="!azStore.isComponentDisabled('az1') && !azStore.isComponentUploading('az1')">
-                  <div class="flex-1 flex items-center justify-center min-h-[120px]">
+                  <div class="flex items-center justify-center w-full h-full">
                     <div class="text-center">
                       <ArrowUpTrayIcon
                         class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
@@ -135,7 +135,7 @@
               <div class="flex flex-col h-full">
                 <!-- Empty/Processing States -->
                 <template v-if="!azStore.isComponentDisabled('az2') && !azStore.isComponentUploading('az2')">
-                  <div class="flex-1 flex items-center justify-center min-h-[120px]">
+                  <div class="flex items-center justify-center w-full h-full">
                     <div class="text-center">
                       <ArrowUpTrayIcon
                         class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
@@ -225,10 +225,10 @@
   import { useAzStore } from '@/stores/az-store';
   import useDexieDB from '@/composables/useDexieDB';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
-  import type { AzPricingReport, AzCodeReport, AZReportsInput, AZStandardizedData } from '@/types/az-types';
-  import { AZ_COLUMN_ROLE_OPTIONS } from '@/types/az-types';
+  import type { AzPricingReport, AzCodeReport, AZReportsInput, AZStandardizedData } from '@/types/domains/az-types';
+  import { AZ_COLUMN_ROLE_OPTIONS } from '@/types/domains/az-types';
   import { DBName } from '@/types/app-types';
-  import { AZColumnRole } from '@/types/az-types';
+  import { AZColumnRole } from '@/types/domains/az-types';
   import Papa from 'papaparse';
   import { AZService } from '@/services/az.service';
 

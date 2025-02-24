@@ -1,5 +1,5 @@
-import { AZStandardizedData } from '@/types/az-types';
-import { USStandardizedData } from '@/types/us-types';
+import { AZStandardizedData } from '@/types/domains/az-types';
+import { USStandardizedData } from '@/types/domains/us-types';
 import type { DBNameType } from '@/types/app-types';
 
 import { DBName } from '@/types/app-types';
@@ -7,7 +7,7 @@ import { useSharedStore } from '@/stores/shared-store';
 import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import { PlanTier, type UserInfo } from '@/types/user-types';
-import { LERGRecord } from '@/types/lerg-types';
+import { LERGRecord } from '@/types/domains/lerg-types';
 
 type DataType = (typeof DBName)[keyof typeof DBName];
 
@@ -74,19 +74,7 @@ function processData(csvText: string, dataType: DataType): (AZStandardizedData |
   return processedRows.filter((row): row is AZStandardizedData | USStandardizedData => row !== null);
 }
 
-
-
-
-
-
-
-
-
-
 // Exported functions
 export function setUser(plan: string, populateDb: boolean, dataTypes: DataType[] = []) {
- return 1;
+  return 1;
 }
-
-
-

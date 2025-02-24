@@ -393,9 +393,9 @@
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
   import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon } from '@heroicons/vue/24/outline';
-  import { getCountryName } from '@/types/country-codes';
-  import { getStateName } from '@/types/state-codes';
-  import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/lerg-types';
+  import { getCountryName } from '@/types/constants/country-codes';
+  import { getStateName } from '@/types/constants/state-codes';
+  import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/domains/lerg-types';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';

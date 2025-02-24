@@ -4,7 +4,7 @@ import type {
   AzCodeReport,
   ConsolidatedData,
   NonMatchingCode,
-} from '@/types/az-types';
+} from '@/types/domains/az-types';
 // type DialCodeMap = Map<number, { destName: string; rate: number }>;
 
 // Respond to messages from main thread

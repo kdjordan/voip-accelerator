@@ -245,7 +245,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { useAzStore } from '@/stores/az-store';
-  import type { AzPricingReport } from '@/types/az-types';
+  import type { AzPricingReport } from '@/types/domains/az-types';
 
   const azStore = useAzStore();
   const expandedRows = ref<Set<string>>(new Set());

@@ -108,12 +108,12 @@ export const USColumnRole = {
 
 export type USColumnRole = (typeof USColumnRole)[keyof typeof USColumnRole];
 
-export interface ColumnRoleOption {
+export interface USColumnRoleOption {
   value: USColumnRole;
   label: string;
 }
 
-export const US_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
+export const US_COLUMN_ROLE_OPTIONS: USColumnRoleOption[] = [
   { value: USColumnRole.NPANXX, label: 'NPANXX' },
   { value: USColumnRole.NPA, label: 'NPA' },
   { value: USColumnRole.NXX, label: 'NXX' },

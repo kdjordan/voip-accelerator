@@ -67,7 +67,7 @@
   import { ReportTypes, type ReportType } from '@/types/app-types';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
-  import { US_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/constants/messages';
+  import { US_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
   import { computed } from 'vue';
 
   const usStore = useUsStore();

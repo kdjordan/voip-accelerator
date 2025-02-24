@@ -3,13 +3,13 @@ import {
   type ConsolidatedData,
   type AZReportsInput,
   type NonMatchingCode,
-  type AzCodeReport
-  } from '@/types/az-types';
+  type AzCodeReport,
+} from '@/types/domains/az-types';
 
-export function generateReports(input: AZReportsInput): { pricingReport: AzPricingReport, codeReport: AzCodeReport } {
+export function generateReports(input: AZReportsInput): { pricingReport: AzPricingReport; codeReport: AzCodeReport } {
   const { fileName1, fileName2, file1Data, file2Data } = input;
 
-  console.log('generateReports input', input);  
+  console.log('generateReports input', input);
 
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
     throw new Error('Missing a file name or fileData in worker !!');
@@ -56,7 +56,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
     higherRatesForFile1: [],
     higherRatesForFile2: [],
     sameRates: [],
-    nonMatchingCodes: []
+    nonMatchingCodes: [],
   };
 
   const codeReport: AzCodeReport = {
@@ -64,18 +64,18 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
       fileName: fileName1,
       totalCodes: file1Data.length,
       totalDestinations: new Set(file1Data.map(entry => entry.destName)).size,
-      uniqueDestinationsPercentage: (new Set(file1Data.map(entry => entry.destName)).size / file1Data.length) * 100
+      uniqueDestinationsPercentage: (new Set(file1Data.map(entry => entry.destName)).size / file1Data.length) * 100,
     },
     file2: {
       fileName: fileName2,
       totalCodes: file2Data.length,
       totalDestinations: new Set(file2Data.map(entry => entry.destName)).size,
-      uniqueDestinationsPercentage: (new Set(file2Data.map(entry => entry.destName)).size / file2Data.length) * 100
+      uniqueDestinationsPercentage: (new Set(file2Data.map(entry => entry.destName)).size / file2Data.length) * 100,
     },
     matchedCodes: 0,
     nonMatchedCodes: 0,
     matchedCodesPercentage: 0,
-    nonMatchedCodesPercentage: 0
+    nonMatchedCodesPercentage: 0,
   };
 
   consolidatedEntries.forEach(entry => {
@@ -92,7 +92,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
           destName: entry1.destName,
           rateFile1: entry1.rate,
           rateFile2: entry2.rate,
-          percentageDifference
+          percentageDifference,
         });
       } else if (rateDiff < 0) {
         pricingReport.higherRatesForFile1.push({
@@ -100,7 +100,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
           destName: entry1.destName,
           rateFile1: entry1.rate,
           rateFile2: entry2.rate,
-          percentageDifference
+          percentageDifference,
         });
       } else {
         pricingReport.sameRates.push({
@@ -108,7 +108,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
           destName: entry1.destName,
           rateFile1: entry1.rate,
           rateFile2: entry2.rate,
-          percentageDifference: 0 // Add this line
+          percentageDifference: 0, // Add this line
         });
       }
 
@@ -119,7 +119,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
           dialCode: entry1.dialCode.toString(),
           destName: entry1.destName,
           rate: entry1.rate,
-          file: 'file1'
+          file: 'file1',
         });
       }
       if (entry2) {
@@ -127,7 +127,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
           dialCode: entry2.dialCode.toString(),
           destName: entry2.destName,
           rate: entry2.rate,
-          file: 'file2'
+          file: 'file2',
         });
       }
       codeReport.nonMatchedCodes++;
@@ -145,7 +145,7 @@ export function generateReports(input: AZReportsInput): { pricingReport: AzPrici
 }
 
 export function consolidateDialCodesForNonMatching(group: NonMatchingCode[]): NonMatchingCode {
-  const consolidatedDialCode = group.map(entry => entry.dialCode).join(", ");
+  const consolidatedDialCode = group.map(entry => entry.dialCode).join(', ');
   const { destName, rate, file } = group[0]; // Assuming all entries in the group have the same destName, rate, and file.
   return { dialCode: consolidatedDialCode, destName, rate, file };
 }
