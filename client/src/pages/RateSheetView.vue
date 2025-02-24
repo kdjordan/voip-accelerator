@@ -139,17 +139,19 @@
             />
             <div class="text-center">
               <ArrowUpTrayIcon
-                class="w-6 h-6 mx-auto"
+                class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
                 :class="uploadError ? 'text-red-500' : 'text-accent'"
               />
-              <p class="mt-2 text-sm text-foreground">
+              <p class="mt-2 text-base text-foreground">
                 <template v-if="uploadError">
                   <span class="text-red-400">{{ uploadError }}</span>
                 </template>
                 <template v-else-if="isRFUploading">
                   <span class="text-accent">Processing your file...</span>
                 </template>
-                <template v-else> Drop your rate sheet CSV file here or click to browse </template>
+                <template v-else>
+                  <span class="text-accent">DRAG & DROP to upload or CLICK to select file</span>
+                </template>
               </p>
               <p
                 v-if="uploadError"

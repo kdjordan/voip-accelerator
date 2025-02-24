@@ -40,8 +40,8 @@
                 <template v-if="!usStore.isComponentDisabled(component1)">
                   <div class="flex-1 flex items-center justify-center">
                     <div class="text-center">
-                      <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                      <p class="mt-2 text-base text-foreground">Drop YOUR rate deck here or click to select</p>
+                      <ArrowUpTrayIcon class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10" />
+                      <p class="mt-2 text-base text-foreground text-accent">DRAG & DROP to upload or CLICK to select file</p>
                     </div>
                   </div>
                 </template>
@@ -114,8 +114,8 @@
                 <template v-if="!usStore.isComponentDisabled(component2)">
                   <div class="flex-1 flex items-center justify-center">
                     <div class="text-center">
-                      <ArrowUpTrayIcon class="w-6 h-6 text-accent mx-auto" />
-                      <p class="mt-2 text-base text-foreground">Drop YOUR rate deck here or click to select</p>
+                      <ArrowUpTrayIcon class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10" />
+                      <p class="mt-2 text-base text-foreground text-accent">DRAG & DROP to upload or CLICK to select file</p>
                     </div>
                   </div>
                 </template>
