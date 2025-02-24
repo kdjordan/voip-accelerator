@@ -1,13 +1,28 @@
 <template>
   <div class="relative">
     <nav :class="['sidebar', 'border-r border-muted fixed top-0 left-0 bottom-0', isOpen ? 'w-[200px]' : 'w-[64px]']">
-      <h1 class="text-center py-2 mb-4">
-        <div class="flex items-center text-accent px-4 mb-0">
+      <!-- Logo -->
+      <div class="px-4 py-2">
+        <div class="flex items-center text-accent">
           <span class="text-3xl">V</span>
           <BoltIcon class="w-8 h-8 -ml-1 flex-shrink-0" />
         </div>
-      </h1>
-      <ul class="flex-grow">
+      </div>
+
+      <!-- Collapse Control -->
+      <div class="px-4 py-2 flex justify-end">
+        <button
+          @click="toggleSidebar"
+          class="flex items-center justify-center p-1.5 rounded hover:bg-fbHover transition-all"
+        >
+          <ChevronLeftIcon
+            class="w-5 h-5 text-accent transition-transform"
+            :class="{ 'rotate-180': !isOpen }"
+          />
+        </button>
+      </div>
+
+      <ul class="flex-grow mt-4">
         <li
           v-for="item in items"
           :key="item.name"
@@ -35,19 +50,7 @@
           </RouterLink>
         </li>
       </ul>
-      <!-- Collapse Arrow -->
-      <div class="px-2">
-        <button
-          @click="toggleSidebar"
-          class="flex items-center justify-center h-8 w-8 rounded-md border border-fbBorder hover:bg-fbHover transition-all"
-          :class="[isOpen ? 'ml-auto' : 'mx-auto']"
-        >
-          <ChevronLeftIcon
-            class="w-5 h-5 text-fbWhite transition-transform"
-            :class="{ 'rotate-180': !isOpen }"
-          />
-        </button>
-      </div>
+
       <!-- User Dropdown -->
       <div class="p-4 relative">
         <!-- Dropdown Menu -->
