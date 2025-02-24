@@ -15,16 +15,21 @@
         >
           <RouterLink
             :to="item.to"
-            class="flex items-center py-2 px-3 rounded-md transition-colors hover:bg-fbHover overflow-hidden"
-            :class="[isOpen ? 'space-x-2' : 'justify-center', { 'bg-fbHover': $route.path === item.to }]"
+            class="flex items-center py-2 px-3 rounded-md border transition-all overflow-hidden"
+            :class="[
+              isOpen ? 'space-x-2' : 'justify-center',
+              $route.path === item.to ? 'bg-accent/20 border-accent/50' : 'hover:bg-fbHover border-transparent',
+            ]"
           >
             <component
               :is="item.icon"
-              class="w-5 h-5 text-fbWhite flex-shrink-0"
+              class="w-5 h-5 flex-shrink-0"
+              :class="[$route.path === item.to ? 'text-accent' : 'text-fbWhite']"
             />
             <span
               v-if="isOpen"
-              class="text-fbWhite whitespace-nowrap"
+              class="whitespace-nowrap"
+              :class="[$route.path === item.to ? 'text-accent' : 'text-fbWhite']"
               >{{ item.name }}</span
             >
           </RouterLink>
@@ -127,17 +132,15 @@
   import { useSharedStore } from '@/stores/shared-store';
   import { PlanTier } from '@/types/user-types';
   import {
-    DocumentCurrencyDollarIcon,
-    BarsArrowDownIcon,
-    PercentBadgeIcon,
     ChevronLeftIcon,
     ChevronUpDownIcon,
     BoltIcon,
     CreditCardIcon,
     ArrowRightEndOnRectangleIcon,
-    HeartIcon,
     Cog6ToothIcon,
-    CurrencyDollarIcon,
+    GlobeAltIcon,
+    GlobeAmericasIcon,
+    AdjustmentsVerticalIcon,
   } from '@heroicons/vue/24/outline';
 
   const userStore = useSharedStore();
@@ -165,37 +168,22 @@
     {
       name: 'AZ Reporting',
       to: '/azview',
-      icon: DocumentCurrencyDollarIcon,
+      icon: GlobeAltIcon,
     },
     {
       name: 'US Reporting',
       to: '/usview',
-      icon: DocumentCurrencyDollarIcon,
+      icon: GlobeAmericasIcon,
     },
     {
       name: 'Rate Sheet',
       to: '/rate-sheet',
-      icon: CurrencyDollarIcon,
+      icon: AdjustmentsVerticalIcon,
     },
     {
       name: 'Lerg Admin',
       to: '/admin/lerg',
       icon: Cog6ToothIcon,
-    },
-  ]);
-
-  const dropdownItems = ref([
-    {
-      label: 'Profile',
-      icon: DocumentCurrencyDollarIcon,
-    },
-    {
-      label: 'Settings',
-      icon: BarsArrowDownIcon,
-    },
-    {
-      label: 'Logout',
-      icon: PercentBadgeIcon,
     },
   ]);
 
