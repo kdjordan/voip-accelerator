@@ -313,7 +313,7 @@
 <script setup lang="ts">
   import { ref, computed, nextTick } from 'vue';
   import { ChevronRightIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-  import type { GroupedRateData } from '@/types/rate-sheet-types';
+  import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
 
   const store = useRateSheetStore();

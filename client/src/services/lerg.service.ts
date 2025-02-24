@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import type { LERGRecord, StateNPAMapping, CountryLergData } from '@/types/lerg-types';
+import type { LERGRecord, StateNPAMapping, CountryLergData } from '@/types/domains/lerg-types';
 import { useLergStore } from '@/stores/lerg-store';
 import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';

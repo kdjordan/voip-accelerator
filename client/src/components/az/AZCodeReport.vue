@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-  import { type AzCodeReport } from '@/types/az-types';
+  import { type AzCodeReport } from '@/types/domains/az-types';
 
   const props = defineProps<{
     report: AzCodeReport | null;

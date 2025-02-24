@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import type { LergState, StateWithNPAs, StateNPAMapping, CountryLergData } from '@/types/lerg-types';
+import type { LergState, StateWithNPAs, StateNPAMapping, CountryLergData } from '@/types/domains/lerg-types';
 import { computed } from 'vue';
-import { COUNTRY_CODES } from '@/types/country-codes';
+import { COUNTRY_CODES } from '@/types/constants/country-codes';
 
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({

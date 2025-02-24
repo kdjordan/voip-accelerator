@@ -198,7 +198,7 @@
   import { ArrowUpTrayIcon, TrashIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
   import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
-  import { RF_COLUMN_ROLE_OPTIONS } from '@/types/rate-sheet-types';
+  import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
   import { RateSheetService } from '@/services/rate-sheet.service';

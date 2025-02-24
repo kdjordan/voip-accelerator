@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-  import type { USPricingReport } from '../../types/us-types';
+  import type { USPricingReport } from '../../types/domains/us-types';
 
   defineProps<{
     report: USPricingReport | null;

@@ -5,7 +5,7 @@ import type {
   GroupedRateData,
   RateStatistics,
   InvalidRow,
-} from '@/types/rate-sheet-types';
+} from '@/types/domains/rate-sheet-types';
 
 export const useRateSheetStore = defineStore('rateSheet', {
   state: (): RateSheetState => ({

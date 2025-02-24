@@ -1,4 +1,4 @@
-import { PROVINCE_CODES } from '@/types/province-codes';
+import { PROVINCE_CODES } from '@/types/constants/province-codes';
 
 export interface StateMapping {
   name: string;

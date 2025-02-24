@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { USPricingReport, USCodeReport } from '../types/us-types';
+import type { USPricingReport, USCodeReport } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
 
@@ -15,7 +15,6 @@ export const useUsStore = defineStore('npanxxStore', {
   }),
 
   getters: {
-
     isComponentDisabled:
       state =>
       (componentName: string): boolean =>

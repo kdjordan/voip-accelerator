@@ -71,13 +71,13 @@ export const RFColumnRole = {
 
 export type RFColumnRole = (typeof RFColumnRole)[keyof typeof RFColumnRole];
 
-export interface ColumnRoleOption {
+export interface RFColumnRoleOption {
   value: RFColumnRole;
   label: string;
   required?: boolean;
 }
 
-export const RF_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
+export const RF_COLUMN_ROLE_OPTIONS: RFColumnRoleOption[] = [
   { value: RFColumnRole.NAME, label: 'Name', required: true },
   { value: RFColumnRole.PREFIX, label: 'Prefix', required: true },
   { value: RFColumnRole.RATE, label: 'Rate', required: true },

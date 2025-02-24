@@ -68,7 +68,7 @@
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types';
   import { computed } from 'vue';
-  import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/constants/messages';
+  import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
 
   const azStore = useAzStore();
   const { deleteDatabase } = useDexieDB();
