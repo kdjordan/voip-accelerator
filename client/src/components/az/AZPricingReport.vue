@@ -605,7 +605,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, computed } from 'vue';
+  import { ref, reactive, computed, nextTick } from 'vue';
   import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
   import type { AzPricingReport } from '@/types/domains/az-types';
 
@@ -763,7 +763,19 @@
   });
 
   function toggleSection(section: keyof typeof expandedSections) {
-    expandedSections[section] = !expandedSections[section];
+    if (expandedSections[section]) {
+      expandedSections[section] = false;
+    } else {
+      Object.keys(expandedSections).forEach(key => {
+        expandedSections[key as keyof typeof expandedSections] = false;
+      });
+      expandedSections[section] = true;
+
+      // Scroll to top of page after expansion
+      nextTick(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
   }
 
   function toggleDestinationExpand(section: keyof typeof expandedDestinations, dialCode: string) {
