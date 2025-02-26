@@ -10,3 +10,6 @@ git config --global branch.sort -committerdate
 `git branch -l` lists alphabetically by default, so it's hard to find recent branches. This sorts by date instead!
 
 
+Make sure you're properly doing function calls when looking for files and creating/editing files.
+
+
