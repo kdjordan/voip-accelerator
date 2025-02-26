@@ -41,7 +41,7 @@
         class="p-4 space-y-4"
       >
         <!-- Search Filter -->
-        <div class="mb-4 bg-gray-700 p-4 rounded-lg border border-gray-700 shadow-inner">
+        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
           <div class="flex items-center gap-8">
             <div class="w-1/3">
               <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
@@ -72,75 +72,79 @@
           </div>
         </div>
 
-        <div class="divide-y divide-gray-800 bg-gray-900/80 rounded-lg overflow-hidden">
-          <div
-            v-for="item in filteredBuyItems"
-            :key="item.dialCode"
-          >
-            <!-- Destination Header (Always Visible) - Simplify to show only name -->
+        <div class="bg-gray-900/80 rounded-lg overflow-hidden">
+          <div>
             <div
-              @click="toggleDestinationExpand('buy', item.dialCode)"
-              class="px-3 py-4 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
+              v-for="item in filteredBuyItems"
+              :key="item.dialCode"
             >
-              <ChevronRightIcon
-                class="h-5 w-5 text-gray-400 transition-transform mr-3"
-                :class="{ 'rotate-90': expandedDestinations.buy.has(item.dialCode) }"
-              />
-
-              <div class="flex-1">
-                <div class="font-medium text-white">{{ item.destName }}</div>
-              </div>
-            </div>
-
-            <!-- Expanded Content for Buy Section -->
-            <div
-              v-if="expandedDestinations.buy.has(item.dialCode)"
-              class="bg-gray-900/30 px-3 py-4 border-t border-gray-800"
-            >
-              <!-- Code info only - removed redundant rate comparison -->
-              <div class="pl-8 mb-4">
-                <span class="text-sm text-gray-300">
-                  {{ item.dialCode.split(',').length }} codes
-                  <button
-                    v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
-                    @click.stop="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
-                  >
-                    Show
-                  </button>
-                  <button
-                    v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
-                    @click.stop="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
-                  >
-                    Hide
-                  </button>
-                </span>
-              </div>
-
-              <!-- Dial Codes if expanded -->
+              <!-- Destination Header (Always Visible) -->
               <div
-                v-if="isCodeExpanded(item.dialCode)"
-                class="mb-4 pl-8"
+                @click="toggleDestinationExpand('buy', item.dialCode)"
+                class="px-3 py-3 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
               >
-                <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
-                <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                <ChevronRightIcon
+                  class="h-5 w-5 text-gray-400 transition-transform mr-3"
+                  :class="{ 'rotate-90': expandedDestinations.buy.has(item.dialCode) }"
+                />
+
+                <div class="flex-1">
+                  <div class="font-medium text-white">{{ item.destName }}</div>
+                </div>
               </div>
 
-              <!-- Rate Comparison Details - evenly spaced at 1/3 each -->
-              <div class="pl-8 grid grid-cols-3 gap-4">
-                <div class="col-span-1">
-                  <div class="text-sm text-gray-400 mb-1">Your Rate</div>
-                  <div class="font-medium text-base">{{ item.rateFile1 }}</div>
-                </div>
-                <div class="col-span-1">
-                  <div class="text-sm text-gray-400 mb-1">Their Rate</div>
-                  <div class="font-medium text-base">{{ item.rateFile2 }}</div>
-                </div>
-                <div class="col-span-1">
-                  <div class="text-sm text-gray-400 mb-1">Savings</div>
-                  <div class="font-medium text-base text-green-500">
-                    {{ formatPercentage(item.percentageDifference) }}%
+              <!-- Expanded Content for Buy Section -->
+              <div
+                v-if="expandedDestinations.buy.has(item.dialCode)"
+                class="bg-black/60 border-t border-gray-800"
+              >
+                <div class="px-3 py-4">
+                  <!-- Code info only -->
+                  <div class="pl-8 mb-4">
+                    <span class="text-sm text-gray-300">
+                      {{ item.dialCode.split(',').length }} codes
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
+                      >
+                        Show
+                      </button>
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
+                      >
+                        Hide
+                      </button>
+                    </span>
+                  </div>
+
+                  <!-- Dial Codes if expanded -->
+                  <div
+                    v-if="isCodeExpanded(item.dialCode)"
+                    class="mb-4 pl-8"
+                  >
+                    <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
+                    <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                  </div>
+
+                  <!-- Rate Comparison Details - evenly spaced at 1/3 each -->
+                  <div class="pl-8 grid grid-cols-3 gap-4">
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Your Rate</div>
+                      <div class="font-medium text-base">{{ item.rateFile1 }}</div>
+                    </div>
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Their Rate</div>
+                      <div class="font-medium text-base">{{ item.rateFile2 }}</div>
+                    </div>
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Savings</div>
+                      <div class="font-medium text-base text-green-500">
+                        {{ formatPercentage(item.percentageDifference) }}%
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -188,7 +192,7 @@
         class="p-4 space-y-4"
       >
         <!-- Search Filter -->
-        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-accent/10 shadow-inner">
+        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
           <div class="flex items-center gap-8">
             <div class="w-1/3">
               <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
@@ -219,75 +223,79 @@
           </div>
         </div>
 
-        <div class="divide-y divide-gray-800 bg-gray-900/80 rounded-lg overflow-hidden">
-          <div
-            v-for="item in filteredSellItems"
-            :key="item.dialCode"
-          >
-            <!-- Destination Header (Always Visible) - Simplified -->
+        <div class="bg-gray-900/80 rounded-lg overflow-hidden">
+          <div>
             <div
-              @click="toggleDestinationExpand('sell', item.dialCode)"
-              class="px-3 py-4 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
+              v-for="item in filteredSellItems"
+              :key="item.dialCode"
             >
-              <ChevronRightIcon
-                class="h-5 w-5 text-gray-400 transition-transform mr-3"
-                :class="{ 'rotate-90': expandedDestinations.sell.has(item.dialCode) }"
-              />
-
-              <div class="flex-1">
-                <div class="font-medium text-white">{{ item.destName }}</div>
-              </div>
-            </div>
-
-            <!-- Expanded Content for Sell Section -->
-            <div
-              v-if="expandedDestinations.sell.has(item.dialCode)"
-              class="bg-gray-900/30 px-3 py-4 border-t border-gray-800"
-            >
-              <!-- Code info only - removed redundant rate comparison -->
-              <div class="pl-8 mb-4">
-                <span class="text-sm text-gray-300">
-                  {{ item.dialCode.split(',').length }} codes
-                  <button
-                    v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
-                    @click.stop="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
-                  >
-                    Show
-                  </button>
-                  <button
-                    v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
-                    @click.stop="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
-                  >
-                    Hide
-                  </button>
-                </span>
-              </div>
-
-              <!-- Dial Codes if expanded -->
+              <!-- Destination Header (Always Visible) -->
               <div
-                v-if="isCodeExpanded(item.dialCode)"
-                class="mb-4 pl-8"
+                @click="toggleDestinationExpand('sell', item.dialCode)"
+                class="px-3 py-3 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
               >
-                <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
-                <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                <ChevronRightIcon
+                  class="h-5 w-5 text-gray-400 transition-transform mr-3"
+                  :class="{ 'rotate-90': expandedDestinations.sell.has(item.dialCode) }"
+                />
+
+                <div class="flex-1">
+                  <div class="font-medium text-white">{{ item.destName }}</div>
+                </div>
               </div>
 
-              <!-- Rate Comparison Details - evenly spaced at 1/3 each -->
-              <div class="pl-8 grid grid-cols-3 gap-4">
-                <div class="col-span-1">
-                  <div class="text-sm text-gray-400 mb-1">Your Rate</div>
-                  <div class="font-medium text-base">{{ item.rateFile1 }}</div>
-                </div>
-                <div class="col-span-1">
-                  <div class="text-sm text-gray-400 mb-1">Their Rate</div>
-                  <div class="font-medium text-base">{{ item.rateFile2 }}</div>
-                </div>
-                <div class="col-span-1">
-                  <div class="text-sm text-gray-400 mb-1">Profit Margin</div>
-                  <div class="font-medium text-base text-red-500">
-                    {{ formatPercentage(item.percentageDifference) }}%
+              <!-- Expanded Content for Sell Section -->
+              <div
+                v-if="expandedDestinations.sell.has(item.dialCode)"
+                class="bg-black/60 border-t border-gray-800"
+              >
+                <div class="px-3 py-4">
+                  <!-- Code info only -->
+                  <div class="pl-8 mb-4">
+                    <span class="text-sm text-gray-300">
+                      {{ item.dialCode.split(',').length }} codes
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
+                      >
+                        Show
+                      </button>
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
+                      >
+                        Hide
+                      </button>
+                    </span>
+                  </div>
+
+                  <!-- Dial Codes if expanded -->
+                  <div
+                    v-if="isCodeExpanded(item.dialCode)"
+                    class="mb-4 pl-8"
+                  >
+                    <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
+                    <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                  </div>
+
+                  <!-- Rate Comparison Details - evenly spaced at 1/3 each -->
+                  <div class="pl-8 grid grid-cols-3 gap-4">
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Your Rate</div>
+                      <div class="font-medium text-base">{{ item.rateFile1 }}</div>
+                    </div>
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Their Rate</div>
+                      <div class="font-medium text-base">{{ item.rateFile2 }}</div>
+                    </div>
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Profit Margin</div>
+                      <div class="font-medium text-base text-red-500">
+                        {{ formatPercentage(item.percentageDifference) }}%
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -323,10 +331,10 @@
         class="p-4 space-y-4"
       >
         <!-- Search Filter -->
-        <div class="mb-4 bg-gray-900/50 p-3 rounded-lg">
+        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
           <div class="flex items-center gap-4">
             <div class="w-1/3">
-              <label class="block text-sm text-gray-400 mb-1">Search Destinations</label>
+              <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
               <input
                 v-model="sameSearchQuery"
                 type="text"
@@ -335,7 +343,7 @@
               />
             </div>
             <div class="w-2/3">
-              <label class="block text-sm text-gray-400 mb-1">Sort By</label>
+              <label class="block text-sm text-gray-300 mb-1">Sort By</label>
               <div class="flex gap-3">
                 <button
                   @click="sameSortBy = 'name-asc'"
@@ -386,65 +394,67 @@
           </div>
         </div>
 
-        <div
-          v-for="item in filteredSameRates"
-          :key="item.dialCode"
-          class="bg-gray-900/80 rounded-lg overflow-hidden"
-        >
-          <!-- Destination Header (Always Visible) - Simplified -->
-          <div
-            @click="toggleDestinationExpand('same', item.dialCode)"
-            class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer flex justify-between items-center"
-          >
-            <div class="font-medium">{{ item.destName }}</div>
-            <ChevronDownIcon
-              :class="{ 'transform rotate-180': expandedDestinations.same.has(item.dialCode) }"
-              class="w-4 h-4 transition-transform"
-            />
-          </div>
+        <div class="bg-gray-900/80 rounded-lg overflow-hidden">
+          <div>
+            <div
+              v-for="item in filteredSameRates"
+              :key="item.dialCode"
+            >
+              <!-- Destination Header (Always Visible) -->
+              <div
+                @click="toggleDestinationExpand('same', item.dialCode)"
+                class="px-3 py-3 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
+              >
+                <ChevronRightIcon
+                  class="h-5 w-5 text-gray-400 transition-transform mr-3"
+                  :class="{ 'rotate-90': expandedDestinations.same.has(item.dialCode) }"
+                />
 
-          <!-- Destination Details (Expandable) for Same Rates -->
-          <div
-            v-if="expandedDestinations.same.has(item.dialCode)"
-            class="p-4 pt-0 border-t border-gray-700/30"
-          >
-            <!-- Code info - simplified -->
-            <div class="mb-4">
-              <div class="text-sm text-gray-400">
-                <span>
-                  {{ item.dialCode.split(',').length }} codes
-                  <button
-                    v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
-                    @click.stop="toggleExpandRow(item.dialCode)"
-                    class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
-                  >
-                    Show
-                  </button>
-                  <button
-                    v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
-                    @click.stop="toggleExpandRow(item.dialCode)"
-                    class="px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
-                  >
-                    Hide
-                  </button>
-                </span>
-
-                <div
-                  v-if="isCodeExpanded(item.dialCode)"
-                  class="mt-2 text-xs"
-                >
-                  <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
-                  <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                <div class="flex-1">
+                  <div class="font-medium text-white">{{ item.destName }}</div>
                 </div>
               </div>
-            </div>
 
-            <!-- Rate Info - made full width since there's only one piece of info -->
-            <div class="bg-gray-900/50 rounded-lg p-3">
-              <div class="grid grid-cols-3 gap-4">
-                <div class="col-span-3">
-                  <div class="text-sm text-gray-400 mb-1">Rate</div>
-                  <div class="font-medium text-lg">{{ item.rateFile1 }}</div>
+              <!-- Destination Details (Expandable) for Same Rates -->
+              <div
+                v-if="expandedDestinations.same.has(item.dialCode)"
+                class="bg-black/60 border-t border-gray-800"
+              >
+                <div class="px-3 py-4">
+                  <!-- Code info -->
+                  <div class="pl-8 mb-4">
+                    <span class="text-sm text-gray-300">
+                      {{ item.dialCode.split(',').length }} codes
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
+                      >
+                        Show
+                      </button>
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
+                      >
+                        Hide
+                      </button>
+                    </span>
+
+                    <div
+                      v-if="isCodeExpanded(item.dialCode)"
+                      class="mt-2"
+                    >
+                      <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
+                      <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                    </div>
+                  </div>
+
+                  <!-- Rate Info -->
+                  <div class="pl-8">
+                    <div class="text-sm text-gray-400 mb-1">Rate</div>
+                    <div class="font-medium text-lg">{{ item.rateFile1 }}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -479,10 +489,10 @@
         class="p-4 space-y-4"
       >
         <!-- Search Filter -->
-        <div class="mb-4 bg-gray-900/50 p-3 rounded-lg">
+        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
           <div class="flex items-center gap-4">
             <div class="w-1/3">
-              <label class="block text-sm text-gray-400 mb-1">Search Destinations</label>
+              <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
               <input
                 v-model="unmatchedSearchQuery"
                 type="text"
@@ -491,7 +501,7 @@
               />
             </div>
             <div class="w-2/3">
-              <label class="block text-sm text-gray-400 mb-1">Sort By</label>
+              <label class="block text-sm text-gray-300 mb-1">Sort By</label>
               <div class="flex gap-3">
                 <button
                   @click="unmatchedSortBy = 'name-asc'"
@@ -531,63 +541,68 @@
           </div>
         </div>
 
-        <div
-          v-for="code in filteredUnmatchedCodes"
-          :key="code.dialCode"
-          class="bg-gray-900/80 rounded-lg overflow-hidden"
-        >
-          <!-- Destination Header (Always Visible) - Simplified -->
-          <div
-            @click="toggleDestinationExpand('unmatched', code.dialCode)"
-            class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer flex justify-between items-center"
-          >
-            <div class="font-medium">{{ code.destName }}</div>
-            <ChevronDownIcon
-              :class="{ 'transform rotate-180': expandedDestinations.unmatched.has(code.dialCode) }"
-              class="w-4 h-4 transition-transform"
-            />
-          </div>
+        <div class="bg-gray-900/80 rounded-lg overflow-hidden">
+          <div>
+            <div
+              v-for="code in filteredUnmatchedCodes"
+              :key="code.dialCode"
+            >
+              <!-- Destination Header (Always Visible) -->
+              <div
+                @click="toggleDestinationExpand('unmatched', code.dialCode)"
+                class="px-3 py-3 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
+              >
+                <ChevronRightIcon
+                  class="h-5 w-5 text-gray-400 transition-transform mr-3"
+                  :class="{ 'rotate-90': expandedDestinations.unmatched.has(code.dialCode) }"
+                />
 
-          <!-- Destination Details (Expandable) for Unmatched -->
-          <div
-            v-if="expandedDestinations.unmatched.has(code.dialCode)"
-            class="p-4 pt-0 border-t border-gray-700/30"
-          >
-            <!-- Code info - simplified -->
-            <div class="mb-4">
-              <div class="text-sm text-gray-400">
-                <span>
-                  {{ code.dialCode.split(',').length }} codes
-                  <button
-                    v-if="code.dialCode.split(',').length > 0 && !isCodeExpanded(code.dialCode)"
-                    @click.stop="toggleExpandRow(code.dialCode)"
-                    class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
-                  >
-                    Show
-                  </button>
-                  <button
-                    v-if="code.dialCode.split(',').length > 0 && isCodeExpanded(code.dialCode)"
-                    @click.stop="toggleExpandRow(code.dialCode)"
-                    class="px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
-                  >
-                    Hide
-                  </button>
-                </span>
-
-                <div
-                  v-if="isCodeExpanded(code.dialCode)"
-                  class="mt-2 text-xs"
-                >
-                  <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
-                  <div class="text-sm text-gray-300">{{ code.dialCode }}</div>
+                <div class="flex-1">
+                  <div class="font-medium text-white">{{ code.destName }}</div>
                 </div>
               </div>
-            </div>
 
-            <!-- File Info - kept similar to original -->
-            <div class="bg-gray-900/50 rounded-lg p-3">
-              <div class="text-sm text-gray-400">
-                Found in: <span class="text-accent">{{ code.file }}</span>
+              <!-- Destination Details (Expandable) for Unmatched -->
+              <div
+                v-if="expandedDestinations.unmatched.has(code.dialCode)"
+                class="bg-black/60 border-t border-gray-800"
+              >
+                <div class="px-3 py-4">
+                  <!-- Code info -->
+                  <div class="pl-8 mb-4">
+                    <span class="text-sm text-gray-300">
+                      {{ code.dialCode.split(',').length }} codes
+                      <button
+                        v-if="code.dialCode.split(',').length > 0 && !isCodeExpanded(code.dialCode)"
+                        @click.stop="toggleExpandRow(code.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
+                      >
+                        Show
+                      </button>
+                      <button
+                        v-if="code.dialCode.split(',').length > 0 && isCodeExpanded(code.dialCode)"
+                        @click.stop="toggleExpandRow(code.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
+                      >
+                        Hide
+                      </button>
+                    </span>
+
+                    <div
+                      v-if="isCodeExpanded(code.dialCode)"
+                      class="mt-2"
+                    >
+                      <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
+                      <div class="text-sm text-gray-300">{{ code.dialCode }}</div>
+                    </div>
+                  </div>
+
+                  <!-- File Info -->
+                  <div class="pl-8">
+                    <div class="text-sm text-gray-400 mb-1">Found In</div>
+                    <div class="text-accent">{{ code.file }}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
