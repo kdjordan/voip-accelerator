@@ -12,6 +12,7 @@ export const useAzStore = defineStore('az', {
     pricingReport: null as AzPricingReport | null,
     codeReport: null as AzCodeReport | null,
     tempFiles: new Map<string, File>(),
+    invalidRows: [],
   }),
 
   getters: {

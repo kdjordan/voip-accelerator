@@ -4,7 +4,6 @@ import { useUsStore } from '@/stores/us-store';
 import useDexieDB from '@/composables/useDexieDB';
 import { AZService } from '@/services/az.service';
 
-
 function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
 }
@@ -14,18 +13,17 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const azStore = useAzStore();
   const usStore = useUsStore();
   const azService = new AZService();
-  
 
   try {
     console.log('Starting sample deck loading for:', dbNames);
 
     if (dbNames.includes(DBName.AZ)) {
-      // Load AZtest.csv data
-      const azTestFile = 'AZtest.csv';
+      // Load AZ-Test1.csv data
+      const azTestFile = 'AZ-Test1.csv';
       const azTestResponse = await fetch(`/src/data/sample/${azTestFile}`);
       const azTestBlob = new File([await azTestResponse.blob()], azTestFile);
 
-      // New column mapping structure for AZService
+      // Column mapping structure for AZService
       const columnMapping = {
         destination: 0, // Index of destination column
         dialcode: 1, // Index of dialcode column
@@ -35,12 +33,12 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const result = await azService.processFile(azTestBlob, columnMapping, 1);
       await azStore.addFileUploaded('az1', result.fileName);
 
-      // Load AZtest1.csv data
-      const azTest1File = 'AZtest1.csv';
-      const azTest1Response = await fetch(`/src/data/sample/${azTest1File}`);
-      const azTest1Blob = new File([await azTest1Response.blob()], azTest1File);
+      // Load AZ-Test2.csv data
+      const azTest2File = 'AZ-Test2.csv';
+      const azTest2Response = await fetch(`/src/data/sample/${azTest2File}`);
+      const azTest2Blob = new File([await azTest2Response.blob()], azTest2File);
 
-      const result2 = await azService.processFile(azTest1Blob, columnMapping, 1);
+      const result2 = await azService.processFile(azTest2Blob, columnMapping, 1);
       await azStore.addFileUploaded('az2', result2.fileName);
     }
 
