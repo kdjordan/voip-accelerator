@@ -59,6 +59,7 @@ export interface NonMatchingCode {
   rate: number;
   file: string;
 }
+
 export interface AZCSVRow {
   [key: string]: string;
 }
@@ -100,3 +101,53 @@ export const AZ_COLUMN_ROLE_OPTIONS: ColumnRoleOption[] = [
   { value: AZColumnRole.DIALCODE, label: 'Dial Code' },
   { value: AZColumnRole.RATE, label: 'Rate' },
 ];
+
+// For storing invalid rows in the store
+export interface InvalidAzRow {
+  rowIndex: number;
+  destName: string;
+  dialCode: string;
+  invalidRate: string;
+  reason: string;
+}
+
+// Code Report Types
+export interface AzCodeReportFileInfo {
+  fileName: string;
+  totalCodes: number;
+  totalDestinations: number;
+  uniqueDestinationsPercentage: number;
+}
+
+export interface AzCodeReport {
+  file1: AzCodeReportFileInfo;
+  file2: AzCodeReportFileInfo;
+  matchedCodes: number;
+  nonMatchedCodes: number;
+  matchedCodesPercentage: number;
+  nonMatchedCodesPercentage: number;
+}
+
+// Pricing Report Types
+export interface RateComparison {
+  destName: string;
+  dialCode: string;
+  rateFile1: number;
+  rateFile2: number;
+  percentageDifference: number;
+}
+
+export interface NonMatchingCode {
+  destName: string;
+  dialCode: string;
+  file: string;
+}
+
+export interface AzPricingReport {
+  fileName1: string;
+  fileName2: string;
+  higherRatesForFile1: RateComparison[];
+  higherRatesForFile2: RateComparison[];
+  sameRates: RateComparison[];
+  nonMatchingCodes: NonMatchingCode[];
+}

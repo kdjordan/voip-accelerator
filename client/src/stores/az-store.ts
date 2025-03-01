@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { AzPricingReport, AzCodeReport } from '@/types/domains/az-types';
+import type { AzPricingReport, AzCodeReport, InvalidAzRow } from '@/types/domains/az-types';
 import type { DomainStore, ReportType } from '@/types';
 
 export const useAzStore = defineStore('az', {
@@ -12,7 +12,7 @@ export const useAzStore = defineStore('az', {
     pricingReport: null as AzPricingReport | null,
     codeReport: null as AzCodeReport | null,
     tempFiles: new Map<string, File>(),
-    invalidRows: [],
+    invalidRows: new Map<string, InvalidAzRow[]>(),
   }),
 
   getters: {
@@ -44,6 +44,22 @@ export const useAzStore = defineStore('az', {
     hasExistingFile: state => (fileName: string) => {
       return Array.from(state.filesUploaded.values()).some(f => f.fileName === fileName);
     },
+
+    hasInvalidRows: state => (fileName: string) => {
+      return state.invalidRows.has(fileName) && (state.invalidRows.get(fileName)?.length || 0) > 0;
+    },
+
+    getInvalidRowsForFile: state => (fileName: string) => {
+      return state.invalidRows.get(fileName) || [];
+    },
+
+    getAllInvalidRows: state => {
+      const result: Record<string, InvalidAzRow[]> = {};
+      state.invalidRows.forEach((rows, fileName) => {
+        result[fileName] = rows;
+      });
+      return result;
+    },
   },
 
   actions: {
@@ -59,6 +75,7 @@ export const useAzStore = defineStore('az', {
       this.pricingReport = null;
       this.codeReport = null;
       this.showUploadComponents = true;
+      this.invalidRows.clear();
     },
 
     setReports(pricing: AzPricingReport, code: AzCodeReport) {
@@ -75,6 +92,9 @@ export const useAzStore = defineStore('az', {
 
     removeFile(fileName: string) {
       this.filesUploaded.delete(fileName);
+
+      // Clear invalid rows for this file
+      this.invalidRows.delete(fileName);
 
       // Reset reports and UI state if we no longer have 2 files
       if (this.filesUploaded.size < 2) {
@@ -114,6 +134,21 @@ export const useAzStore = defineStore('az', {
 
     clearTempFile(componentId: string) {
       this.tempFiles.delete(componentId);
+    },
+
+    addInvalidRow(fileName: string, row: InvalidAzRow) {
+      if (!this.invalidRows.has(fileName)) {
+        this.invalidRows.set(fileName, []);
+      }
+      this.invalidRows.get(fileName)?.push(row);
+    },
+
+    clearInvalidRowsForFile(fileName: string) {
+      this.invalidRows.delete(fileName);
+    },
+
+    clearAllInvalidRows() {
+      this.invalidRows.clear();
     },
   },
 }) as unknown as () => DomainStore<AzPricingReport, AzCodeReport>;

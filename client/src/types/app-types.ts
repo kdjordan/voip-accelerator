@@ -1,4 +1,4 @@
-import type { AZStandardizedData, AzPricingReport, AzCodeReport } from '@/types/domains/az-types';
+import type { AZStandardizedData, AzPricingReport, AzCodeReport, InvalidAzRow } from '@/types/domains/az-types';
 import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/domains/us-types';
 
 // Add this type definition
@@ -9,6 +9,7 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   reportsGenerated: boolean;
   showUploadComponents: boolean;
   activeReportType: ReportType;
+  invalidRows: Map<string, InvalidAzRow[]>;
 
   // Getters
   isComponentDisabled: (componentName: string) => boolean;
@@ -37,6 +38,8 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   resetFiles: () => void;
+  clearInvalidRowsForFile: (fileName: string) => void;
+  addInvalidRow: (fileName: string, row: InvalidAzRow) => void;
 }
 
 // Union type of all possible standardized data types
