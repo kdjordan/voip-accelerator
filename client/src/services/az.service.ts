@@ -1,4 +1,4 @@
-import { type AZStandardizedData } from '@/types/domains/az-types';
+import { type AZStandardizedData, type InvalidAzRow } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import Dexie, { Table } from 'dexie';
 import { useAzStore } from '@/stores/az-store';
@@ -30,6 +30,9 @@ export class AZService {
   ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
     const tableName = file.name.toLowerCase().replace('.csv', '');
 
+    // Clear any existing invalid rows for this file
+    this.store.clearInvalidRowsForFile(file.name);
+
     // Ensure db is initialized
     const db = await this.initializeDB();
     if (!db) throw new Error('Failed to initialize database');
@@ -51,24 +54,44 @@ export class AZService {
           try {
             // Skip to user-specified start line
             const dataRows = results.data.slice(startLine - 1);
-            const records: AZStandardizedData[] = dataRows.map(row => {
-              // The columnMapping should contain the indices selected by user
-              return {
-                destName: row[columnMapping.destination]?.trim() || '',
-                dialCode: row[columnMapping.dialcode]?.trim() || '',
-                rate: parseFloat(row[columnMapping.rate]) || 0,
-              };
+            const validRecords: AZStandardizedData[] = [];
+
+            dataRows.forEach((row, index) => {
+              const destName = row[columnMapping.destination]?.trim() || '';
+              const dialCode = row[columnMapping.dialcode]?.trim() || '';
+              const rateStr = row[columnMapping.rate];
+              const rate = parseFloat(rateStr);
+
+              // Validate the rate - if not a valid number, add to invalid rows
+              if (isNaN(rate) || !destName || !dialCode) {
+                const invalidRow: InvalidAzRow = {
+                  rowIndex: startLine + index,
+                  destName,
+                  dialCode,
+                  invalidRate: rateStr || '',
+                  reason: isNaN(rate) ? 'Invalid rate' : !destName ? 'Missing destination name' : 'Missing dial code',
+                };
+                this.store.addInvalidRow(file.name, invalidRow);
+              } else {
+                validRecords.push({
+                  destName,
+                  dialCode,
+                  rate,
+                });
+              }
             });
 
-            // Store in the new table
-            const chunkSize = 1000;
-            for (let i = 0; i < records.length; i += chunkSize) {
-              const chunk = records.slice(i, i + chunkSize);
-              await db.table(tableName).bulkPut(chunk);
+            // Store valid records in the database
+            if (validRecords.length > 0) {
+              const chunkSize = 1000;
+              for (let i = 0; i < validRecords.length; i += chunkSize) {
+                const chunk = validRecords.slice(i, i + chunkSize);
+                await db.table(tableName).bulkPut(chunk);
+              }
             }
 
             this.store.addFileUploaded(file.name, tableName);
-            resolve({ fileName: file.name, records });
+            resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
             reject(error);
           }
@@ -84,6 +107,7 @@ export class AZService {
       if (!db) throw new Error('Failed to initialize database');
       await db.table('az').clear();
       this.store.resetFiles();
+      
     } catch (error) {
       console.error('Failed to clear AZ data:', error);
       throw error;
