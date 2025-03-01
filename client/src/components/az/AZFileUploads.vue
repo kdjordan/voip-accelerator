@@ -6,7 +6,7 @@
         <div class="grid grid-cols-2 gap-8">
           <!-- Carrier A Upload Zone -->
           <div class="flex flex-col gap-2">
-            <h2 class="text-base text-fbWhite mb-4">Your Rates Here :</h2>
+            <h2 class="text-base text-fbWhite mb-4 text-center uppercase">Your Rates Here</h2>
             <div
               class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
@@ -95,7 +95,7 @@
 
           <!-- Carrier B Upload Zone -->
           <div class="flex flex-col gap-2">
-            <h2 class="text-base text-fbWhite mb-4">Prospect's Rates Here :</h2>
+            <h2 class="text-base text-fbWhite mb-4 text-center uppercase">Prospect's Rates Here</h2>
             <div
               class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[

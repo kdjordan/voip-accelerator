@@ -16,17 +16,16 @@
               >(<span class="uppercase">{{ report.fileName1 }}</span
               >)</span
             >
-            should BUY
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded mx-1">
-              {{ filteredBuyItems.length }} destinations
-            </span>
-            from Them
+            should BUY from Them
             <span class="text-gray-400 text-sm ml-1"
               >(<span class="uppercase">{{ report.fileName2 }}</span
               >)</span
             >
           </span>
-          <div>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ filteredBuyItems.length }} destinations
+            </span>
             <ChevronDownIcon
               :class="{ 'transform rotate-180': expandedSections.buy }"
               class="w-5 h-5 transition-transform"
@@ -167,17 +166,16 @@
               >(<span class="uppercase">{{ report.fileName1 }}</span
               >)</span
             >
-            should SELL
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded mx-1">
-              {{ filteredSellItems.length }} destinations
-            </span>
-            to Them
+            should SELL to Them
             <span class="text-gray-400 text-sm ml-1"
               >(<span class="uppercase">{{ report.fileName2 }}</span
               >)</span
             >
           </span>
-          <div>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ filteredSellItems.length }} destinations
+            </span>
             <ChevronDownIcon
               :class="{ 'transform rotate-180': expandedSections.sell }"
               class="w-5 h-5 transition-transform"
@@ -330,9 +328,9 @@
         v-if="expandedSections.same"
         class="p-4 space-y-4"
       >
-        <!-- Search Filter -->
+        <!-- Search Filter for Same Rates -->
         <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-8">
             <div class="w-1/3">
               <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
               <input
@@ -342,53 +340,19 @@
                 class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
               />
             </div>
-            <div class="w-2/3">
+            <div class="w-1/3">
               <label class="block text-sm text-gray-300 mb-1">Sort By</label>
-              <div class="flex gap-3">
-                <button
-                  @click="sameSortBy = 'name-asc'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    sameSortBy === 'name-asc'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
+              <div class="relative">
+                <select
+                  v-model="sameSortBy"
+                  class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2 appearance-none cursor-pointer pr-10"
                 >
-                  Name (A-Z)
-                </button>
-                <button
-                  @click="sameSortBy = 'name-desc'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    sameSortBy === 'name-desc'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
-                >
-                  Name (Z-A)
-                </button>
-                <button
-                  @click="sameSortBy = 'rate-asc'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    sameSortBy === 'rate-asc'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
-                >
-                  Rate (Low-High)
-                </button>
-                <button
-                  @click="sameSortBy = 'rate-desc'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    sameSortBy === 'rate-desc'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
-                >
-                  Rate (High-Low)
-                </button>
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                  <ChevronDownIcon class="h-4 w-4" />
+                </div>
               </div>
             </div>
           </div>
@@ -488,9 +452,9 @@
         v-if="expandedSections.unmatched"
         class="p-4 space-y-4"
       >
-        <!-- Search Filter -->
+        <!-- Search Filter for Unmatched -->
         <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-8">
             <div class="w-1/3">
               <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
               <input
@@ -500,42 +464,21 @@
                 class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
               />
             </div>
-            <div class="w-2/3">
+            <div class="w-1/3">
               <label class="block text-sm text-gray-300 mb-1">Sort By</label>
-              <div class="flex gap-3">
-                <button
-                  @click="unmatchedSortBy = 'name-asc'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    unmatchedSortBy === 'name-asc'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
+              <div class="relative">
+                <select
+                  v-model="unmatchedSortBy"
+                  class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2 appearance-none cursor-pointer pr-10"
                 >
-                  Name (A-Z)
-                </button>
-                <button
-                  @click="unmatchedSortBy = 'name-desc'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    unmatchedSortBy === 'name-desc'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
-                >
-                  Name (Z-A)
-                </button>
-                <button
-                  @click="unmatchedSortBy = 'file'"
-                  class="px-3 py-1.5 rounded text-sm transition-colors"
-                  :class="
-                    unmatchedSortBy === 'file'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-                  "
-                >
-                  By File
-                </button>
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="not-in-file1">Not in {{ report?.fileName1 }}</option>
+                  <option value="not-in-file2">Not in {{ report?.fileName2 }}</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                  <ChevronDownIcon class="h-4 w-4" />
+                </div>
               </div>
             </div>
           </div>
@@ -654,7 +597,7 @@
   const buySortBy = ref('percent-desc'); // Default: highest savings first
   const sellSortBy = ref('percent-desc'); // Default: highest margin first
   const sameSortBy = ref('name-asc'); // Default: alphabetical
-  const unmatchedSortBy = ref('name-asc'); // Default: alphabetical
+  const unmatchedSortBy = ref('not-in-file1'); // Default: show codes not in first file
 
   // Computed properties for filtered items
   const filteredBuyItems = computed(() => {
@@ -769,8 +712,12 @@
           return a.destName.localeCompare(b.destName);
         case 'name-desc':
           return b.destName.localeCompare(a.destName);
-        case 'file':
-          return a.file.localeCompare(b.file);
+        case 'not-in-file1':
+          // Show codes that are NOT in file1 (so they're in file2) first
+          return a.file === props.report?.fileName2 ? -1 : 1;
+        case 'not-in-file2':
+          // Show codes that are NOT in file2 (so they're in file1) first
+          return a.file === props.report?.fileName1 ? -1 : 1;
         default:
           return 0;
       }
