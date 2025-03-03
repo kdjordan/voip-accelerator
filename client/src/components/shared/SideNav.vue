@@ -3,10 +3,13 @@
     <nav :class="['sidebar', 'border-r border-muted fixed top-0 left-0 bottom-0', isOpen ? 'w-[200px]' : 'w-[80px]']">
       <!-- Logo and Collapse Control -->
       <div class="px-2 py-3 flex items-center justify-between">
-        <div class="flex items-center text-accent">
+        <RouterLink
+          to="/home"
+          class="flex items-center text-accent"
+        >
           <span class="text-3xl">V</span>
           <BoltIcon class="w-8 h-8 -ml-1 flex-shrink-0" />
-        </div>
+        </RouterLink>
 
         <button
           @click="toggleSidebar"

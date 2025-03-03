@@ -3,7 +3,7 @@
     id="app"
     class="flex min-h-screen bg-fbBlack text-fbWhite font-sans"
   >
-    <SideNav class="z-20" />
+    <SideNav v-if="shouldShowSideNav" />
     <div
       class="flex-1 flex flex-col transition-all duration-300"
       :class="[sharedStore.getSideNavOpen ? 'ml-[200px]' : 'ml-[64px]']"
@@ -32,10 +32,26 @@
   import { onMounted, onBeforeUnmount } from 'vue';
   import { useSharedStore } from '@/stores/shared-store';
   import { cleanupDatabases } from '@/utils/cleanup';
+  import { RouterView, useRoute } from 'vue-router';
+  import { computed } from 'vue';
 
+  const route = useRoute();
   const sharedStore = useSharedStore();
 
   let isCleaningUp = false;
+
+  // Public routes where SideNav should not be shown
+  const publicRoutes = ['/', '/home', '/about', '/pricing', '/login', '/signup'];
+
+  // Compute whether to show the SideNav based on the current route
+  const shouldShowSideNav = computed(() => {
+    return !publicRoutes.includes(route.path);
+  });
+
+  // Get SideNav expanded state from store
+  const sideNavExpanded = computed(() => {
+    return sharedStore.getSideNavOpen;
+  });
 
   const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
     if (isCleaningUp) return;
