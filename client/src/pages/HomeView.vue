@@ -1,88 +1,278 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useIntersectionObserver } from '@vueuse/core'
+  import { ref } from 'vue';
+  import { useIntersectionObserver } from '@vueuse/core';
+  import { BoltIcon, GlobeAltIcon, ChartBarIcon, DocumentDuplicateIcon } from '@heroicons/vue/24/outline';
+  import { RouterLink } from 'vue-router';
+  import TopNav from '../components/shared/TopNav.vue';
+  const heroSection = ref<HTMLElement | null>(null);
+  const isHeroVisible = ref(false);
 
-const heroSection = ref<HTMLElement | null>(null)
-const isHeroVisible = ref(false)
+  useIntersectionObserver(
+    heroSection,
+    ([{ isIntersecting }]) => {
+      isHeroVisible.value = isIntersecting;
+    },
+    { threshold: 0.5 }
+  );
 
-useIntersectionObserver(
-  heroSection,
-  ([{ isIntersecting }]) => {
-    isHeroVisible.value = isIntersecting
-  },
-  { threshold: 0.5 }
-)
-
-const features = [
-  { title: 'Dynamic Pricing', description: 'Automatically adjust prices based on market demand and competition' },
-  { title: 'Data-Driven Insights', description: 'Make informed decisions with real-time analytics and reporting' },
-  { title: 'Customizable Strategies', description: 'Tailor pricing rules to fit your unique business needs' },
-]
+  const features = [
+    { title: 'Dynamic Pricing', description: 'Automatically adjust prices based on market demand and competition' },
+    { title: 'Data-Driven Insights', description: 'Make informed decisions with real-time analytics and reporting' },
+    { title: 'Customizable Strategies', description: 'Tailor pricing rules to fit your unique business needs' },
+  ];
 </script>
 
 <template>
-  <main class="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+  <main class="min-h-screen bg-fbBlack text-fbWhite overflow-x-hidden">
+    <!-- Top Navigation Bar -->
+ <TopNav />
+
     <!-- Hero Section -->
-    <section 
-      ref="heroSection"
-      class="relative min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-700 text-white overflow-hidden"
-    >
-      <div class="absolute inset-0 bg-[url('/path-to-pattern.svg')] opacity-10"></div>
-      <div class="container mx-auto px-4 text-center relative z-10">
-        <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-          Optimize Your Pricing<br>Maximize Your Profits
-        </h1>
-        <p class="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
-          Our intelligent pricing tool helps you stay competitive and boost revenue with data-driven pricing strategies.
-        </p>
-        <button class="bg-white text-blue-600 font-semibold py-3 px-8 rounded-full hover:bg-blue-50 transition duration-300 shadow-lg">
-          Start Free Trial
-        </button>
+    <section class="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-fbBlack via-fbBlack/95 to-accent/20 z-0"></div>
+      <!-- Abstract Background Elements -->
+      <div class="absolute inset-0 overflow-hidden z-0">
+        <div class="absolute -top-[30%] -right-[10%] w-[50%] h-[80%] bg-accent/5 blur-[100px] rounded-full"></div>
+        <div class="absolute top-[60%] -left-[20%] w-[60%] h-[60%] bg-accent/10 blur-[120px] rounded-full"></div>
       </div>
-      <div 
-        class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-50 to-transparent"
-        :class="{ 'opacity-100': isHeroVisible, 'opacity-0': !isHeroVisible }"
-        style="transition: opacity 0.5s ease-in-out;"
-      ></div>
+
+      <div class="container mx-auto px-6 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div class="text-left">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              VOIP Accelerator: <span class="text-accent">Optimize Your Communication Infrastructure</span>
+            </h1>
+            <p class="text-xl mb-8 text-fbLightMuted max-w-xl">
+              Streamline your communication strategy with powerful rate analysis, code comparison, and pricing
+              optimization tools built for modern telecom professionals.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <RouterLink
+                to="/signup"
+                class="bg-accent text-fbBlack font-semibold py-3 px-8 rounded-md hover:bg-accent/90 transition-colors text-center"
+              >
+                Start Accelerating
+              </RouterLink>
+              <RouterLink
+                to="/features"
+                class="text-fbWhite py-3 px-8 rounded-md border border-fbBorder hover:bg-fbHover transition-colors text-center"
+              >
+                Explore Features
+              </RouterLink>
+            </div>
+          </div>
+
+          <div class="relative">
+            <!-- App Preview -->
+            <div
+              class="relative transform rotate-1 scale-105 shadow-2xl rounded-xl border border-fbBorder/80 overflow-hidden"
+            >
+              <div class="bg-fbBlack p-1 border-b border-fbBorder/80">
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+              </div>
+              <div class="grid grid-cols-12 h-[400px]">
+                <!-- Side Navigation -->
+                <div class="col-span-3 border-r border-fbBorder/80 bg-fbBlack/95 p-3">
+                  <div class="flex items-center space-x-2 mb-4">
+                    <span class="text-xl text-accent">V</span>
+                    <BoltIcon class="w-5 h-5 text-accent" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="p-2 rounded bg-accent/20 text-accent text-sm">AZ Reporting</div>
+                    <div class="p-2 rounded text-fbWhite/80 text-sm hover:bg-fbHover">US Reporting</div>
+                    <div class="p-2 rounded text-fbWhite/80 text-sm hover:bg-fbHover">Rate Sheet</div>
+                    <div class="p-2 rounded text-fbWhite/80 text-sm hover:bg-fbHover">Lerg Admin</div>
+                  </div>
+                </div>
+                <!-- Main Content Area -->
+                <div class="col-span-9 bg-fbBlack overflow-hidden">
+                  <div class="p-4">
+                    <h3 class="text-xl font-bold text-accent mb-4">AZ Pricing Report</h3>
+                    <div class="space-y-3">
+                      <!-- Metrics Row -->
+                      <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-fbHover p-3 rounded-md">
+                          <div class="text-sm text-fbLightMuted">Higher Buy Rates</div>
+                          <div class="text-xl font-bold text-fbWhite">34</div>
+                        </div>
+                        <div class="bg-fbHover p-3 rounded-md">
+                          <div class="text-sm text-fbLightMuted">Higher Sell Rates</div>
+                          <div class="text-xl font-bold text-fbWhite">28</div>
+                        </div>
+                        <div class="bg-fbHover p-3 rounded-md">
+                          <div class="text-sm text-fbLightMuted">Same Rates</div>
+                          <div class="text-xl font-bold text-fbWhite">214</div>
+                        </div>
+                      </div>
+                      <!-- Table Preview -->
+                      <div class="bg-[#111] rounded-md border border-fbBorder/50">
+                        <div class="grid grid-cols-6 border-b border-fbBorder/50 text-xs text-fbLightMuted">
+                          <div class="p-2">Destination</div>
+                          <div class="p-2">Dial Code</div>
+                          <div class="p-2">Rate A</div>
+                          <div class="p-2">Rate B</div>
+                          <div class="p-2">Diff</div>
+                          <div class="p-2">Action</div>
+                        </div>
+                        <div class="grid grid-cols-6 border-b border-fbBorder/20 text-sm">
+                          <div class="p-2">Afghanistan</div>
+                          <div class="p-2">93</div>
+                          <div class="p-2 text-green-400">$0.12</div>
+                          <div class="p-2 text-red-400">$0.18</div>
+                          <div class="p-2">+50%</div>
+                          <div class="p-2">
+                            <button class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Details</button>
+                          </div>
+                        </div>
+                        <div class="grid grid-cols-6 border-b border-fbBorder/20 text-sm">
+                          <div class="p-2">Algeria</div>
+                          <div class="p-2">213</div>
+                          <div class="p-2 text-red-400">$0.09</div>
+                          <div class="p-2 text-green-400">$0.07</div>
+                          <div class="p-2">-22%</div>
+                          <div class="p-2">
+                            <button class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Details</button>
+                          </div>
+                        </div>
+                        <div class="grid grid-cols-6 text-sm">
+                          <div class="p-2">Australia</div>
+                          <div class="p-2">61</div>
+                          <div class="p-2 text-fbWhite">$0.04</div>
+                          <div class="p-2 text-fbWhite">$0.04</div>
+                          <div class="p-2">0%</div>
+                          <div class="p-2">
+                            <button class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Details</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Decorative elements -->
+            <div class="absolute -bottom-6 -right-6 w-24 h-24 bg-accent/20 rounded-full blur-xl"></div>
+            <div class="absolute -top-3 -left-3 w-16 h-16 bg-accent/30 rounded-full blur-lg"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Features Section -->
-    <section class="py-20">
-      <div class="container mx-auto px-4">
-        <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">Why Choose Our Pricing Tool?</h2>
+    <section class="py-20 relative z-10">
+      <div class="container mx-auto px-6">
+        <h2 class="text-3xl font-bold text-center mb-4 text-fbWhite">Streamline Your VOIP Operations</h2>
+        <p class="text-center text-fbLightMuted max-w-2xl mx-auto mb-16">
+          Our comprehensive toolset helps you optimize rates, compare codes, and make data-driven decisions for your
+          telecommunications business.
+        </p>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div 
-            v-for="feature in features" 
-            :key="feature.title"
-            class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300"
-          >
-            <h3 class="text-xl font-semibold mb-4 text-blue-600">{{ feature.title }}</h3>
-            <p class="text-gray-600">{{ feature.description }}</p>
+          <div class="bg-fbHover p-6 rounded-lg border border-fbBorder/50 hover:border-accent/50 transition-all">
+            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
+              <ChartBarIcon class="w-6 h-6 text-accent" />
+            </div>
+            <h3 class="text-xl font-bold mb-3 text-fbWhite">Rate Analysis</h3>
+            <p class="text-fbLightMuted">
+              Compare buy and sell rates across different providers to identify opportunities for cost reduction and
+              revenue growth.
+            </p>
+          </div>
+
+          <div class="bg-fbHover p-6 rounded-lg border border-fbBorder/50 hover:border-accent/50 transition-all">
+            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
+              <GlobeAltIcon class="w-6 h-6 text-accent" />
+            </div>
+            <h3 class="text-xl font-bold mb-3 text-fbWhite">Global Coverage</h3>
+            <p class="text-fbLightMuted">
+              Support for both international (AZ) and domestic (US) rate sheets with specialized tools for each market
+              segment.
+            </p>
+          </div>
+
+          <div class="bg-fbHover p-6 rounded-lg border border-fbBorder/50 hover:border-accent/50 transition-all">
+            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
+              <DocumentDuplicateIcon class="w-6 h-6 text-accent" />
+            </div>
+            <h3 class="text-xl font-bold mb-3 text-fbWhite">Code Comparison</h3>
+            <p class="text-fbLightMuted">
+              Easily identify matching and non-matching codes across rate sheets to ensure complete coverage and
+              eliminate gaps.
+            </p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-gradient-to-r from-indigo-600 to-blue-600 py-20 text-white">
-      <div class="container mx-auto px-4 text-center">
-        <h2 class="text-3xl font-bold mb-6">Ready to optimize your pricing?</h2>
-        <p class="text-xl mb-8 max-w-2xl mx-auto">Join thousands of businesses that are increasing their revenue with our intelligent pricing tool.</p>
-        <button class="bg-white text-blue-600 font-semibold py-3 px-8 rounded-full hover:bg-blue-50 transition duration-300 shadow-lg">
-          Get started now
-        </button>
+    <section class="py-16 bg-fbHover relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent"></div>
+      <div class="container mx-auto px-6 relative z-10">
+        <div class="flex flex-col md:flex-row items-center justify-between">
+          <div class="mb-8 md:mb-0">
+            <h2 class="text-3xl font-bold mb-3 text-fbWhite">Ready to optimize your VOIP operations?</h2>
+            <p class="text-fbLightMuted max-w-xl">
+              Join telecom professionals worldwide who trust VOIP Accelerator to streamline their rate management and
+              code analysis.
+            </p>
+          </div>
+          <RouterLink
+            to="/signup"
+            class="bg-accent text-fbBlack font-semibold py-3 px-8 rounded-md hover:bg-accent/90 transition-colors"
+          >
+            Get Started — It's Free
+          </RouterLink>
+        </div>
       </div>
     </section>
 
-    <!-- Testimonial Section -->
-    <section class="py-20 bg-gray-50">
-      <div class="container mx-auto px-4 text-center">
-        <h2 class="text-3xl font-bold mb-12 text-gray-800">What Our Customers Say</h2>
-        <blockquote class="text-xl italic text-gray-600 max-w-3xl mx-auto">
-          "This pricing tool has revolutionized our business. We've seen a 30% increase in revenue since implementing it. The insights and automation are game-changers!"
-        </blockquote>
-        <p class="mt-4 font-semibold text-blue-600">Jane Doe, CEO of TechCorp</p>
+    <!-- Footer -->
+    <footer class="py-12 border-t border-fbBorder/30">
+      <div class="container mx-auto px-6">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+          <div class="flex items-center text-accent mb-4 md:mb-0">
+            <BoltIcon class="w-6 h-6" />
+            <span class="text-xl font-bold ml-2">VOIP Accelerator</span>
+          </div>
+          <div class="flex space-x-6">
+            <RouterLink
+              to="/pricing"
+              class="text-fbLightMuted hover:text-accent transition-colors"
+            >
+              Pricing
+            </RouterLink>
+            <RouterLink
+              to="/about"
+              class="text-fbLightMuted hover:text-accent transition-colors"
+            >
+              About
+            </RouterLink>
+            <RouterLink
+              to="/terms"
+              class="text-fbLightMuted hover:text-accent transition-colors"
+            >
+              Terms
+            </RouterLink>
+            <RouterLink
+              to="/privacy"
+              class="text-fbLightMuted hover:text-accent transition-colors"
+            >
+              Privacy
+            </RouterLink>
+          </div>
+        </div>
+        <div class="mt-8 text-center text-fbLightMuted text-sm">
+          &copy; {{ new Date().getFullYear() }} VOIP Accelerator. All rights reserved.
+        </div>
       </div>
-    </section>
+    </footer>
   </main>
 </template>
+
+<style scoped>
+  /* Add any additional styles here if needed */
+</style>

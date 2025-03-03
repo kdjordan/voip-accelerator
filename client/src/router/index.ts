@@ -30,6 +30,12 @@ const router = createRouter({
       name: 'AdminLerg',
       component: AdminLergView,
     },
+    {
+      path: '/home',
+      name: 'home',
+      component: () => import('../pages/HomeView.vue'),
+    },
+
     // Spread the admin routes
     ...adminRoutes,
   ],
