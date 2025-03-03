@@ -1,28 +1,48 @@
 <template>
   <div
     id="app"
-    class="flex min-h-screen bg-fbBlack text-fbWhite font-sans"
+    class="min-h-screen bg-fbBlack text-fbWhite font-sans"
   >
-    <SideNav v-if="shouldShowSideNav" />
-    <div
-      class="flex-1 flex flex-col transition-all duration-300"
-      :class="[sharedStore.getSideNavOpen ? 'ml-[200px]' : 'ml-[64px]']"
-    >
-      <main class="flex-1">
-        <div class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10">
-          <router-view v-slot="{ Component }">
-            <transition
-              name="fade"
-              mode="out-in"
-              appear
-            >
-              <component :is="Component" />
-            </transition>
-          </router-view>
+    <!-- Different layout for marketing pages -->
+    <template v-if="isMarketingPage">
+      <router-view v-slot="{ Component }">
+        <transition
+          name="fade"
+          mode="out-in"
+          appear
+        >
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </template>
+
+    <!-- App layout with sidebar for non-marketing pages -->
+    <template v-else>
+      <div class="flex min-h-screen">
+        <SideNav v-if="shouldShowSideNav" />
+        <div
+          class="flex-1 flex flex-col transition-all duration-300"
+          :class="[
+            shouldShowSideNav && sharedStore.getSideNavOpen ? 'ml-[200px]' : shouldShowSideNav ? 'ml-[64px]' : '',
+          ]"
+        >
+          <main class="flex-1">
+            <div class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10">
+              <router-view v-slot="{ Component }">
+                <transition
+                  name="fade"
+                  mode="out-in"
+                  appear
+                >
+                  <component :is="Component" />
+                </transition>
+              </router-view>
+            </div>
+          </main>
+          <TheFooter />
         </div>
-      </main>
-      <TheFooter />
-    </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -43,9 +63,17 @@
   // Public routes where SideNav should not be shown
   const publicRoutes = ['/', '/home', '/about', '/pricing', '/login', '/signup'];
 
+  // Marketing pages that need full width
+  const marketingPages = ['/', '/home', '/about', '/pricing'];
+
   // Compute whether to show the SideNav based on the current route
   const shouldShowSideNav = computed(() => {
     return !publicRoutes.includes(route.path);
+  });
+
+  // Determine if current page is a marketing page that should be full width
+  const isMarketingPage = computed(() => {
+    return marketingPages.includes(route.path);
   });
 
   // Get SideNav expanded state from store
@@ -119,5 +147,13 @@
   .fade-enter-from,
   .fade-leave-to {
     opacity: 0;
+  }
+
+  /* Ensure body has proper scroll behavior */
+  html,
+  body {
+    height: 100%;
+    overflow-x: hidden;
+    position: relative;
   }
 </style>
