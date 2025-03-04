@@ -3,156 +3,6 @@
     v-if="report"
     class="space-y-6 bg-gray-800 p-6"
   >
-    <!-- Buy Section -->
-    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
-      <div
-        @click="toggleSection('buy')"
-        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
-      >
-        <div class="flex justify-between items-center">
-          <span class="font-medium text-lg">
-            You
-            <span class="text-gray-400 text-sm ml-1"
-              >(<span class="uppercase">{{ report.fileName1 }}</span
-              >)</span
-            >
-            should BUY from Them
-            <span class="text-gray-400 text-sm ml-1"
-              >(<span class="uppercase">{{ report.fileName2 }}</span
-              >)</span
-            >
-          </span>
-          <div class="flex items-center space-x-3">
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-              {{ filteredBuyItems.length }} destinations
-            </span>
-            <ChevronDownIcon
-              :class="{ 'transform rotate-180': expandedSections.buy }"
-              class="w-5 h-5 transition-transform"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Buy Content -->
-      <div
-        v-if="expandedSections.buy"
-        class="p-4 space-y-4"
-      >
-        <!-- Search Filter -->
-        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
-          <div class="flex items-center gap-8">
-            <div class="w-1/3">
-              <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
-              <input
-                v-model="buySearchQuery"
-                type="text"
-                placeholder="Search destinations..."
-                class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
-              />
-            </div>
-            <div class="w-1/3">
-              <label class="block text-sm text-gray-300 mb-1">Sort By</label>
-              <div class="relative">
-                <select
-                  v-model="buySortBy"
-                  class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2 appearance-none cursor-pointer pr-10"
-                >
-                  <option value="name-asc">Name (A-Z)</option>
-                  <option value="name-desc">Name (Z-A)</option>
-                  <option value="percent-asc">Savings (Low-High)</option>
-                  <option value="percent-desc">Savings (High-Low)</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                  <ChevronDownIcon class="h-4 w-4" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gray-900/80 rounded-lg overflow-hidden">
-          <div>
-            <div
-              v-for="item in filteredBuyItems"
-              :key="item.dialCode"
-            >
-              <!-- Destination Header (Always Visible) -->
-              <div
-                @click="toggleDestinationExpand('buy', item.dialCode)"
-                class="px-3 py-3 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
-              >
-                <ChevronRightIcon
-                  class="h-5 w-5 text-gray-400 transition-transform mr-3"
-                  :class="{ 'rotate-90': expandedDestinations.buy.has(item.dialCode) }"
-                />
-
-                <div class="flex-1">
-                  <div class="font-medium text-white">{{ item.destName }}</div>
-                </div>
-              </div>
-
-              <!-- Expanded Content for Buy Section -->
-              <div
-                v-if="expandedDestinations.buy.has(item.dialCode)"
-                class="bg-black/60 border-t border-gray-800"
-              >
-                <div class="px-3 py-4">
-                  <!-- Code info only -->
-                  <div class="pl-8 mb-4">
-                    <span class="text-sm text-gray-300">
-                      {{ item.dialCode.split(',').length }} codes
-                      <button
-                        v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
-                        @click.stop="toggleExpandRow(item.dialCode)"
-                        class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
-                      >
-                        Show
-                      </button>
-                      <button
-                        v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
-                        @click.stop="toggleExpandRow(item.dialCode)"
-                        class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
-                      >
-                        Hide
-                      </button>
-                    </span>
-                  </div>
-
-                  <!-- Dial Codes if expanded -->
-                  <div
-                    v-if="isCodeExpanded(item.dialCode)"
-                    class="mb-4 pl-8"
-                  >
-                    <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
-                    <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
-                  </div>
-
-                  <!-- Rate Comparison Details - evenly spaced at 1/3 each -->
-                  <div class="pl-8 grid grid-cols-3 gap-4">
-                    <div class="col-span-1">
-                      <div class="text-sm text-gray-400 mb-1">Your Rate</div>
-                      <div class="font-medium text-base">{{ item.rateFile1 }}</div>
-                    </div>
-                    <div class="col-span-1">
-                      <div class="text-sm text-gray-400 mb-1">Their Rate</div>
-                      <div class="font-medium text-base">{{ item.rateFile2 }}</div>
-                    </div>
-                    <div class="col-span-1">
-                      <div class="text-sm text-gray-400 mb-1">Savings</div>
-                      <div class="font-medium text-base text-green-500">
-                        {{ formatPercentage(item.percentageDifference) }}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Sell Section -->
     <div class="bg-gray-900/30 rounded-lg overflow-hidden">
       <div
@@ -160,18 +10,7 @@
         class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
       >
         <div class="flex justify-between items-center">
-          <span class="font-medium text-lg">
-            You
-            <span class="text-gray-400 text-sm ml-1"
-              >(<span class="uppercase">{{ report.fileName1 }}</span
-              >)</span
-            >
-            should SELL to Them
-            <span class="text-gray-400 text-sm ml-1"
-              >(<span class="uppercase">{{ report.fileName2 }}</span
-              >)</span
-            >
-          </span>
+          <span class="font-medium text-lg"> You should <span class="text-accent">SELL</span> to Them </span>
           <div class="flex items-center space-x-3">
             <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
               {{ filteredSellItems.length }} destinations
@@ -291,6 +130,145 @@
                     <div class="col-span-1">
                       <div class="text-sm text-gray-400 mb-1">Profit Margin</div>
                       <div class="font-medium text-base text-red-500">
+                        {{ formatPercentage(item.percentageDifference) }}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buy Section -->
+    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+      <div
+        @click="toggleSection('buy')"
+        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+      >
+        <div class="flex justify-between items-center">
+          <span class="font-medium text-lg"> You should <span class="text-accent">BUY</span> from Them </span>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ filteredBuyItems.length }} destinations
+            </span>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': expandedSections.buy }"
+              class="w-5 h-5 transition-transform"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Buy Content -->
+      <div
+        v-if="expandedSections.buy"
+        class="p-4 space-y-4"
+      >
+        <!-- Search Filter -->
+        <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
+          <div class="flex items-center gap-8">
+            <div class="w-1/3">
+              <label class="block text-sm text-gray-300 mb-1">Search Destinations</label>
+              <input
+                v-model="buySearchQuery"
+                type="text"
+                placeholder="Search destinations..."
+                class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
+              />
+            </div>
+            <div class="w-1/3">
+              <label class="block text-sm text-gray-300 mb-1">Sort By</label>
+              <div class="relative">
+                <select
+                  v-model="buySortBy"
+                  class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2 appearance-none cursor-pointer pr-10"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="percent-asc">Savings (Low-High)</option>
+                  <option value="percent-desc">Savings (High-Low)</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                  <ChevronDownIcon class="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-900/80 rounded-lg overflow-hidden">
+          <div>
+            <div
+              v-for="item in filteredBuyItems"
+              :key="item.dialCode"
+            >
+              <!-- Destination Header (Always Visible) -->
+              <div
+                @click="toggleDestinationExpand('buy', item.dialCode)"
+                class="px-3 py-3 w-full hover:bg-gray-700/50 transition-colors cursor-pointer flex items-center"
+              >
+                <ChevronRightIcon
+                  class="h-5 w-5 text-gray-400 transition-transform mr-3"
+                  :class="{ 'rotate-90': expandedDestinations.buy.has(item.dialCode) }"
+                />
+
+                <div class="flex-1">
+                  <div class="font-medium text-white">{{ item.destName }}</div>
+                </div>
+              </div>
+
+              <!-- Expanded Content for Buy Section -->
+              <div
+                v-if="expandedDestinations.buy.has(item.dialCode)"
+                class="bg-black/60 border-t border-gray-800"
+              >
+                <div class="px-3 py-4">
+                  <!-- Code info only -->
+                  <div class="pl-8 mb-4">
+                    <span class="text-sm text-gray-300">
+                      {{ item.dialCode.split(',').length }} codes
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && !isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors text-xs"
+                      >
+                        Show
+                      </button>
+                      <button
+                        v-if="item.dialCode.split(',').length > 0 && isCodeExpanded(item.dialCode)"
+                        @click.stop="toggleExpandRow(item.dialCode)"
+                        class="ml-2 px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded text-red-400 transition-colors text-xs"
+                      >
+                        Hide
+                      </button>
+                    </span>
+                  </div>
+
+                  <!-- Dial Codes if expanded -->
+                  <div
+                    v-if="isCodeExpanded(item.dialCode)"
+                    class="mb-4 pl-8"
+                  >
+                    <div class="text-xs text-gray-400 mb-1">Dial Codes:</div>
+                    <div class="text-sm text-gray-300">{{ item.dialCode }}</div>
+                  </div>
+
+                  <!-- Rate Comparison Details - evenly spaced at 1/3 each -->
+                  <div class="pl-8 grid grid-cols-3 gap-4">
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Your Rate</div>
+                      <div class="font-medium text-base">{{ item.rateFile1 }}</div>
+                    </div>
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Their Rate</div>
+                      <div class="font-medium text-base">{{ item.rateFile2 }}</div>
+                    </div>
+                    <div class="col-span-1">
+                      <div class="text-sm text-gray-400 mb-1">Savings</div>
+                      <div class="font-medium text-base text-green-500">
                         {{ formatPercentage(item.percentageDifference) }}%
                       </div>
                     </div>
