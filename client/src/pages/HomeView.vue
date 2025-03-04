@@ -5,43 +5,29 @@
 </script>
 
 <template>
-  <div class="min-h-screen bg-fbBlack text-fbWhite overflow-x-hidden">
+  <div class="min-h-screen bg-fbBlack text-white overflow-x-hidden">
     <!-- Top Navigation Bar -->
     <TopNav />
 
     <!-- Hero Section -->
     <section class="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-br from-fbBlack via-fbBlack/95 to-accent/20 z-0"></div>
-      <!-- Abstract Background Elements -->
-      <div class="absolute inset-0 overflow-hidden z-0">
-        <div class="absolute -top-[30%] -right-[10%] w-[50%] h-[80%] bg-accent/5 blur-[100px] rounded-full"></div>
-        <div class="absolute top-[60%] -left-[20%] w-[60%] h-[60%] bg-accent/10 blur-[120px] rounded-full"></div>
-      </div>
-
       <div class="container mx-auto px-6 relative z-10">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div class="text-left">
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              VOIP Accelerator: <span class="text-accent">Optimize Your Communication Infrastructure</span>
-            </h1>
-            <p class="text-xl mb-8 text-fbLightMuted max-w-xl">
-              Streamline your communication strategy with powerful rate analysis, code comparison, and pricing
-              optimization tools built for modern telecom professionals.
-            </p>
-            <div class="flex flex-col sm:flex-row gap-4">
-              <RouterLink
-                to="/azview"
-                class="bg-accent text-fbBlack font-semibold py-3 px-8 rounded-md hover:bg-accent/90 transition-colors text-center"
-              >
-                Start Accelerating
-              </RouterLink>
-              <RouterLink
-                to="/azview"
-                class="text-fbWhite py-3 px-8 rounded-md border border-fbBorder hover:bg-fbHover transition-colors text-center"
-              >
-                Explore Features
-              </RouterLink>
-            </div>
+        <div class="max-w-4xl mx-auto text-center">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+            Supercharge Your VoIP Business with
+            <span class="text-accent block mt-2">Instant Rate Deck Insights</span>
+          </h1>
+          <p class="text-xl mb-10 text-fbLightMuted">
+            Effortlessly upload and compare rate decks, leverage LERG lookups, and keep everything
+            safe in your browser. Simplify your data. Accelerate your decisions.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <RouterLink
+              to="/azview"
+              class="bg-accent text-fbBlack font-semibold py-4 px-8 rounded-md hover:bg-accent/90 transition-colors text-center text-lg"
+            >
+              Let's Go
+            </RouterLink>
           </div>
         </div>
       </div>
@@ -55,8 +41,8 @@
           <section class="relative z-10">
             <h2 class="text-3xl font-bold text-center mb-4 text-fbWhite">Streamline Your VOIP Operations</h2>
             <p class="text-center text-fbLightMuted max-w-2xl mx-auto mb-16">
-              Our comprehensive toolset helps you optimize rates, compare codes, and make data-driven decisions for your
-              telecommunications business.
+              Our toolset helps you optimize rates, compare codes, and make data-driven decisions for your
+              telecommunications business. Create your business case in minutes.
             </p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -64,10 +50,9 @@
                 <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
                   <ChartBarIcon class="w-6 h-6 text-accent" />
                 </div>
-                <h3 class="text-xl font-bold mb-3 text-fbWhite">Rate Analysis</h3>
+                <h3 class="text-xl font-bold mb-3 text-fbWhite">Pricing Tool</h3>
                 <p class="text-fbLightMuted">
-                  Compare buy and sell rates across different providers to identify opportunities for cost reduction and
-                  revenue growth.
+                  Find buy and sell opportunities by comparing your rates with your prospects. No more guesswork. No more Excel.
                 </p>
               </div>
 
@@ -88,8 +73,7 @@
                 </div>
                 <h3 class="text-xl font-bold mb-3 text-fbWhite">Code Comparison</h3>
                 <p class="text-fbLightMuted">
-                  Easily identify matching and non-matching codes across rate sheets to ensure complete coverage and
-                  eliminate gaps.
+                  Identify code mismathces before they impact your bottom line. Gain insight into code coverage statistics and country coverage.
                 </p>
               </div>
             </div>
@@ -101,10 +85,9 @@
             <div class="container mx-auto px-6 relative z-10">
               <div class="flex flex-col md:flex-row items-center justify-between">
                 <div class="mb-8 md:mb-0">
-                  <h2 class="text-3xl font-bold mb-3 text-fbWhite">Ready to optimize your VOIP operations?</h2>
+                  <h2 class="text-3xl font-bold mb-3 text-fbWhite">Ready to optimize your VOIP pricing decisions?</h2>
                   <p class="text-fbLightMuted max-w-xl">
-                    Join telecom professionals worldwide who trust VOIP Accelerator to streamline their rate management
-                    and code analysis.
+                    Start saving time and finding opportunities today.
                   </p>
                 </div>
                 <RouterLink

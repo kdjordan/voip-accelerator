@@ -1,18 +1,18 @@
 <template>
   <header
     ref="header"
-    class="fixed top-0 left-0 right-0 z-[100] w-full transition-transform duration-500"
+    class="fixed top-0 left-0 right-0 z-[100] w-full transition-transform duration-500 tracking-wider"
     :style="{ transform: isVisible ? 'translateY(0)' : 'translateY(-100%)' }"
   >
     <nav
-      class="flex justify-between items-center px-6 h-14 bg-fbBlack/95 w-full border-b border-fbBorder/10 backdrop-blur-sm"
+      class="flex justify-between items-center px-6 h-14 bg-fbBlack/95 w-full border-b border-accent/50 backdrop-blur-sm"
     >
       <RouterLink
         to="/home"
         class="flex items-center text-accent"
       >
         <BoltIcon class="w-5 h-5" />
-        <span class="ml-2 font-medium">VOIP Accelerator</span>
+        <span class="ml-2">VOIP ACCELERATOR</span>
       </RouterLink>
 
       <div class="flex items-center space-x-6">
@@ -59,13 +59,10 @@
 
   function handleScroll() {
     const currentScrollY = window.scrollY;
-    console.log('Current scroll position:', currentScrollY);
 
     if (currentScrollY > lastScrollY) {
-      console.log('Scrolling down');
       isVisible.value = false;
     } else {
-      console.log('Scrolling up');
       isVisible.value = true;
     }
 
@@ -73,7 +70,6 @@
   }
 
   onMounted(() => {
-    console.log('TopNav mounted');
     window.addEventListener('scroll', handleScroll, { passive: true });
   });
 
@@ -82,6 +78,4 @@
   });
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>
