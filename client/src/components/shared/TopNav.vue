@@ -1,7 +1,8 @@
 <template>
   <header
-    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-    :class="{ 'translate-y-0': visible, '-translate-y-full': !visible }"
+    ref="header"
+    class="fixed top-0 left-0 right-0 z-[100] w-full transition-transform duration-500"
+    :style="{ transform: isVisible ? 'translateY(0)' : 'translateY(-100%)' }"
   >
     <nav
       class="flex justify-between items-center px-6 h-14 bg-fbBlack/95 w-full border-b border-fbBorder/10 backdrop-blur-sm"
@@ -52,25 +53,27 @@
   import { BoltIcon } from '@heroicons/vue/24/outline';
   import { RouterLink } from 'vue-router';
 
-  const visible = ref(true);
-  let lastScrollY = 0;
+  const header = ref<HTMLElement | null>(null);
+  const isVisible = ref(true);
+  let lastScrollY = window.scrollY;
 
   function handleScroll() {
     const currentScrollY = window.scrollY;
+    console.log('Current scroll position:', currentScrollY);
 
-    // Always show header at the top of the page
-    if (currentScrollY < 10) {
-      visible.value = true;
-      lastScrollY = currentScrollY;
-      return;
+    if (currentScrollY > lastScrollY) {
+      console.log('Scrolling down');
+      isVisible.value = false;
+    } else {
+      console.log('Scrolling up');
+      isVisible.value = true;
     }
 
-    // Update visibility based on scroll direction
-    visible.value = currentScrollY < lastScrollY;
     lastScrollY = currentScrollY;
   }
 
   onMounted(() => {
+    console.log('TopNav mounted');
     window.addEventListener('scroll', handleScroll, { passive: true });
   });
 
@@ -78,3 +81,7 @@
     window.removeEventListener('scroll', handleScroll);
   });
 </script>
+
+<style scoped>
+
+</style>
