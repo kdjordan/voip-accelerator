@@ -150,10 +150,5 @@
   }
 
   /* Ensure body has proper scroll behavior */
-  html,
-  body {
-    height: 100%;
-    overflow-x: hidden;
-    position: relative;
-  }
+  
 </style>

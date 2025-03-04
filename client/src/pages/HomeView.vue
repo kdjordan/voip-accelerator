@@ -1,25 +1,7 @@
 <script setup lang="ts">
-  import { ref } from 'vue';
-  import { useIntersectionObserver } from '@vueuse/core';
   import { BoltIcon, GlobeAltIcon, ChartBarIcon, DocumentDuplicateIcon } from '@heroicons/vue/24/outline';
   import { RouterLink } from 'vue-router';
   import TopNav from '@/components/shared/TopNav.vue';
-  const heroSection = ref<HTMLElement | null>(null);
-  const isHeroVisible = ref(false);
-
-  useIntersectionObserver(
-    heroSection,
-    ([{ isIntersecting }]) => {
-      isHeroVisible.value = isIntersecting;
-    },
-    { threshold: 0.5 }
-  );
-
-  const features = [
-    { title: 'Dynamic Pricing', description: 'Automatically adjust prices based on market demand and competition' },
-    { title: 'Data-Driven Insights', description: 'Make informed decisions with real-time analytics and reporting' },
-    { title: 'Customizable Strategies', description: 'Tailor pricing rules to fit your unique business needs' },
-  ];
 </script>
 
 <template>
@@ -60,103 +42,6 @@
                 Explore Features
               </RouterLink>
             </div>
-          </div>
-
-          <div class="relative">
-            <!-- App Preview -->
-            <div
-              class="relative transform rotate-1 scale-105 shadow-2xl rounded-xl border border-fbBorder/80 overflow-hidden"
-            >
-              <div class="bg-fbBlack p-1 border-b border-fbBorder/80">
-                <div class="flex space-x-2">
-                  <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-              </div>
-              <div class="grid grid-cols-12 h-[400px]">
-                <!-- Side Navigation -->
-                <div class="col-span-3 border-r border-fbBorder/80 bg-fbBlack/95 p-3">
-                  <div class="flex items-center space-x-2 mb-4">
-                    <span class="text-xl text-accent">V</span>
-                    <BoltIcon class="w-5 h-5 text-accent" />
-                  </div>
-                  <div class="space-y-2">
-                    <div class="p-2 rounded bg-accent/20 text-accent text-sm">AZ Reporting</div>
-                    <div class="p-2 rounded text-fbWhite/80 text-sm hover:bg-fbHover">US Reporting</div>
-                    <div class="p-2 rounded text-fbWhite/80 text-sm hover:bg-fbHover">Rate Sheet</div>
-                    <div class="p-2 rounded text-fbWhite/80 text-sm hover:bg-fbHover">Lerg Admin</div>
-                  </div>
-                </div>
-                <!-- Main Content Area -->
-                <div class="col-span-9 bg-fbBlack overflow-hidden">
-                  <div class="p-4">
-                    <h3 class="text-xl font-bold text-accent mb-4">AZ Pricing Report</h3>
-                    <div class="space-y-3">
-                      <!-- Metrics Row -->
-                      <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-fbHover p-3 rounded-md">
-                          <div class="text-sm text-fbLightMuted">Higher Buy Rates</div>
-                          <div class="text-xl font-bold text-fbWhite">34</div>
-                        </div>
-                        <div class="bg-fbHover p-3 rounded-md">
-                          <div class="text-sm text-fbLightMuted">Higher Sell Rates</div>
-                          <div class="text-xl font-bold text-fbWhite">28</div>
-                        </div>
-                        <div class="bg-fbHover p-3 rounded-md">
-                          <div class="text-sm text-fbLightMuted">Same Rates</div>
-                          <div class="text-xl font-bold text-fbWhite">214</div>
-                        </div>
-                      </div>
-                      <!-- Table Preview -->
-                      <div class="bg-[#111] rounded-md border border-fbBorder/50">
-                        <div class="grid grid-cols-6 border-b border-fbBorder/50 text-xs text-fbLightMuted">
-                          <div class="p-2">Destination</div>
-                          <div class="p-2">Dial Code</div>
-                          <div class="p-2">Rate A</div>
-                          <div class="p-2">Rate B</div>
-                          <div class="p-2">Diff</div>
-                          <div class="p-2">Action</div>
-                        </div>
-                        <div class="grid grid-cols-6 border-b border-fbBorder/20 text-sm">
-                          <div class="p-2">Afghanistan</div>
-                          <div class="p-2">93</div>
-                          <div class="p-2 text-green-400">$0.12</div>
-                          <div class="p-2 text-red-400">$0.18</div>
-                          <div class="p-2">+50%</div>
-                          <div class="p-2">
-                            <button class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Details</button>
-                          </div>
-                        </div>
-                        <div class="grid grid-cols-6 border-b border-fbBorder/20 text-sm">
-                          <div class="p-2">Algeria</div>
-                          <div class="p-2">213</div>
-                          <div class="p-2 text-red-400">$0.09</div>
-                          <div class="p-2 text-green-400">$0.07</div>
-                          <div class="p-2">-22%</div>
-                          <div class="p-2">
-                            <button class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Details</button>
-                          </div>
-                        </div>
-                        <div class="grid grid-cols-6 text-sm">
-                          <div class="p-2">Australia</div>
-                          <div class="p-2">61</div>
-                          <div class="p-2 text-fbWhite">$0.04</div>
-                          <div class="p-2 text-fbWhite">$0.04</div>
-                          <div class="p-2">0%</div>
-                          <div class="p-2">
-                            <button class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Details</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- Decorative elements -->
-            <div class="absolute -bottom-6 -right-6 w-24 h-24 bg-accent/20 rounded-full blur-xl"></div>
-            <div class="absolute -top-3 -left-3 w-16 h-16 bg-accent/30 rounded-full blur-lg"></div>
           </div>
         </div>
       </div>
@@ -326,7 +211,3 @@
     </footer>
   </div>
 </template>
-
-<style scoped>
-  /* Add any additional styles here if needed */
-</style>
