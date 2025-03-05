@@ -1,7 +1,7 @@
 <template>
   <header
     ref="header"
-    class="z-[100] px-24 mx-auto pb-12"
+    class="z-[100] px-24 mx-auto pb-12 font-secondary"
   >
     <nav class="flex justify-between items-center w-full">
       <RouterLink
@@ -9,7 +9,7 @@
         class="flex items-center text-fbBlack"
       >
         <BoltIcon class="w-8 h-8" />
-        <span class="text-sizeLg font-medium ml-2 tracking-wider">VOIP Accelerator</span>
+        <span class="text-sizeLg font-bold ml-2 font-secondary">VOIP Accelerator</span>
       </RouterLink>
 
       <div class="flex items-center space-x-8">
@@ -33,7 +33,7 @@
         </RouterLink>
         <RouterLink
           to="/signup"
-          class="bg-fbWhite text-fbBlack text-sm font-medium px-4 py-1.5 rounded hover:bg-fbWhite/90 transition-colors"
+          class="bg-fbWhite text-fbBlack text-sm font-medium px-4 py-1.5 rounded-3xl hover:bg-fbWhite/90 transition-colors"
         >
           Sign up
         </RouterLink>
