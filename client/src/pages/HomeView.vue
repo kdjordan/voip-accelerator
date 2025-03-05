@@ -19,21 +19,21 @@
       <!-- <div class="absolute inset-0 bg-grid-pattern opacity-10 z-0"></div> -->
 
       <!-- Content container -->
-      <div class="container relative z-10 max-w-5xl w-4/5 mx-auto">
+      <div class="container relative z-10 max-w-7xl mx-auto">
         <div class="space-y-8">
           <!-- Main headline - Large and prominent -->
-          <h1 class="text-6xl md:text-7xl lg:text-5xl font-medium tracking-base">
+          <h1 class="text-6xl md:text-7xl lg:text-size4xl font-medium tracking-tighter">
             Instant Rate Deck Insights
             <!-- <span class="text-accent block mt-2">Instant Rate Deck Insights</span> -->
           </h1>
           <!-- Subheading - Clean and focused -->
-          <p class="text-base md:text-2xl text-fbWhite/80 max-w-3xl tracking-wide">
+          <p class="text-base md:text-2xl text-fbWhite/80 max-w-2xl">
             Compare your rates against theirs, leverage LERG lookups, keep everything safe in your browser, and export
             your reports.
+            <span class="text-white block mt-4 font-secondary text-xl">Simplify your data.</span>
+            <span class="text-white block font-secondary text-xl">Accelerate your decisions.</span>
           </p>
-          <p class="text-base md:text-2xl text-white max-w-3xl tracking-wide">
-            Simplify your data. Accelerate your decisions.
-          </p>
+        
 
           <!-- Call to action buttons -->
           <div class="flex flex-wrap gap-4 pt-4">
@@ -120,7 +120,7 @@
           <div class="flex flex-col items-center justify-center text-center max-w-3xl mx-auto">
             <div class="mb-12">
               <p class="text-fbWhite text-sm mx-auto mb-12 tracking-wider font-secondary">GET STARTED</p>
-              <h2 class="text-3xl mb-4 text-white">Ready to optimize your VOIP pricing?</h2>
+              <h2 class="text-3xl mb-8 text-white">Ready to optimize your VOIP pricing?</h2>
               <p class="text-fbWhite text-xl mx-auto w-2/3 font-secondary">Get the cheat code for buying and selling in the VOIP market.</p>
             </div>
             <RouterLink
