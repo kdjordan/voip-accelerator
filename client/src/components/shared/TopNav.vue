@@ -1,20 +1,15 @@
 <template>
   <header
     ref="header"
-    class="z-[100] w-full transition-all duration-300 py-12"
-    :class="{
-      'translate-y-0': isVisible,
-      '-translate-y-full': !isVisible,
-      'bg-fbBlack/90 backdrop-blur-sm': hasScrolled,
-    }"
+    class="z-[100] px-24 mx-auto pb-12"
   >
     <nav class="flex justify-between items-center w-full">
       <RouterLink
         to="/home"
-        class="flex items-center text-accent"
+        class="flex items-center text-fbBlack"
       >
-        <BoltIcon class="w-6 h-6" />
-        <span class="text-lg font-medium ml-2">VOIP Accelerator</span>
+        <BoltIcon class="w-8 h-8" />
+        <span class="text-sizeLg font-medium ml-2 tracking-wider">VOIP Accelerator</span>
       </RouterLink>
 
       <div class="flex items-center space-x-8">
@@ -55,40 +50,7 @@
   import { BoltIcon } from '@heroicons/vue/24/outline';
   import { RouterLink } from 'vue-router';
 
-  const header = ref<HTMLElement | null>(null);
-  const isVisible = ref(true);
-  const hasScrolled = ref(false);
-  let lastScrollY = 0;
-  let scrollThreshold = 50; // Show background after scrolling this many pixels
-  let scrollDistance = 20; // Only hide after scrolling down this much
-
-  function handleScroll() {
-    const currentScrollY = window.scrollY;
-
-    // Set the background based on scroll position
-    hasScrolled.value = currentScrollY > scrollThreshold;
-
-    // Determine if the navbar should be visible
-    if (currentScrollY > lastScrollY + scrollDistance) {
-      // Scrolling down
-      isVisible.value = false;
-    } else if (currentScrollY < lastScrollY - 5 || currentScrollY < scrollThreshold) {
-      // Scrolling up or near the top
-      isVisible.value = true;
-    }
-
-    lastScrollY = currentScrollY;
-  }
-
-  onMounted(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check of scroll position
-    handleScroll();
-  });
-
-  onUnmounted(() => {
-    window.removeEventListener('scroll', handleScroll);
-  });
+  
 </script>
 
 <style scoped>
