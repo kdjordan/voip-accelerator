@@ -9,8 +9,8 @@ export default {
   theme: {
     fontFamily: {
       // sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
-      sans: ['Geist Sans', 'sans-serif'],
-      // heading: ['Roboto', 'sans-serif'],
+      sans: ['Inter', 'sans-serif'],
+      secondary: ['Roboto Mono', 'monospace'],
       // body: ['Open Sans', 'sans-serif'],
     },
     extend: {
