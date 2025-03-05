@@ -2,27 +2,21 @@
   <div class="relative">
     <nav :class="['sidebar', 'border-r border-muted fixed top-0 left-0 bottom-0', isOpen ? 'w-[200px]' : 'w-[80px]']">
       <!-- Logo and Collapse Control -->
-      <div class="px-2 py-3 flex items-center justify-between">
+      <div class="px-3 py-3 flex items-center">
         <RouterLink
           to="/home"
-          class="flex items-center text-accent"
+          class="flex items-center text-accent gap-2"
         >
-          <span class="text-3xl">V</span>
-          <BoltIcon class="w-8 h-8 -ml-1 flex-shrink-0" />
+          <BoltIcon class="w-8 h-8 flex-shrink-0" />
+          <span
+            v-if="isOpen"
+            class="font-medium text-accent whitespace-nowrap"
+            >VOIP Accelerator</span
+          >
         </RouterLink>
-
-        <button
-          @click="toggleSidebar"
-          class="flex items-center justify-center p-1 rounded hover:bg-gray-700 transition-colors bg-gray-800/50 border border-gray-700 min-w-[24px] min-h-[24px]"
-        >
-          <ChevronLeftIcon
-            class="w-4 h-4 text-accent transition-transform"
-            :class="{ 'rotate-180': !isOpen }"
-          />
-        </button>
       </div>
 
-      <ul class="flex-grow mt-4">
+      <ul class="flex-grow mt-4 font-secondary tracking-tight">
         <li
           v-for="item in items"
           :key="item.name"
@@ -117,11 +111,24 @@
         </div>
       </div>
     </nav>
-    <!-- Add this new border element -->
+
+    <!-- Collapse button positioned on the edge -->
+    <button
+      @click="toggleSidebar"
+      class="fixed top-3 transition-all flex items-center justify-center p-1 rounded hover:bg-accent/20 bg-accent/10 border border-accent/50 min-w-[24px] min-h-[24px] z-20"
+      :style="{ left: isOpen ? '208px' : '88px' }"
+    >
+      <ChevronLeftIcon
+        class="w-4 h-4 text-accent transition-transform"
+        :class="{ 'rotate-180': !isOpen }"
+      />
+    </button>
+
+    <!-- This is the drag handle area -->
     <div
       class="ml-2 fixed top-0 bottom-0 w-[8px] hover:bg-fbHover transition-colors cursor-ew-resize"
       :style="{
-        left: isOpen ? '194px' : '58px' /* Adjusted further left to keep centered on border */,
+        left: isOpen ? '194px' : '58px',
         transform: 'translateX(0)',
       }"
       @click="toggleSidebar"

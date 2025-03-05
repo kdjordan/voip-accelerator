@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8">Lerg Administration</h1>
+    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8 font-secondary">Lerg Administration</h1>
 
     <!-- Stats Dashboard -->
     <div class="flex flex-col gap-6 mb-8">
