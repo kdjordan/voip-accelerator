@@ -1,42 +1,44 @@
 <template>
   <header
     ref="header"
-    class="fixed top-0 left-0 right-0 z-[100] w-full transition-transform duration-500 tracking-wider"
-    :style="{ transform: isVisible ? 'translateY(0)' : 'translateY(-100%)' }"
+    class="z-[100] w-full transition-all duration-300 py-12"
+    :class="{
+      'translate-y-0': isVisible,
+      '-translate-y-full': !isVisible,
+      'bg-fbBlack/90 backdrop-blur-sm': hasScrolled,
+    }"
   >
-    <nav
-      class="flex justify-between items-center px-6 h-14 bg-fbBlack/95 w-full border-b border-accent/50 backdrop-blur-sm"
-    >
+    <nav class="flex justify-between items-center w-full">
       <RouterLink
         to="/home"
         class="flex items-center text-accent"
       >
-        <BoltIcon class="w-5 h-5" />
-        <span class="ml-2">VOIP ACCELERATOR</span>
+        <BoltIcon class="w-6 h-6" />
+        <span class="text-lg font-medium ml-2">VOIP Accelerator</span>
       </RouterLink>
 
-      <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-8">
         <RouterLink
-          to="/azview"
-          class="text-fbWhite/80 hover:text-fbWhite transition-colors text-sm"
+          to="/pricing"
+          class="text-fbWhite/90 hover:text-fbWhite transition-colors text-sm"
         >
           Pricing
         </RouterLink>
         <RouterLink
-          to="/azview"
-          class="text-fbWhite/80 hover:text-fbWhite transition-colors text-sm"
+          to="/about"
+          class="text-fbWhite/90 hover:text-fbWhite transition-colors text-sm"
         >
           About
         </RouterLink>
         <RouterLink
-          to="/azview"
-          class="text-fbWhite/80 hover:text-fbWhite transition-colors text-sm"
+          to="/login"
+          class="text-fbWhite/90 hover:text-fbWhite transition-colors text-sm"
         >
           Log in
         </RouterLink>
         <RouterLink
-          to="/azview"
-          class="bg-fbWhite text-fbBlack text-sm font-medium px-3 py-1 rounded hover:bg-fbWhite/90 transition-colors"
+          to="/signup"
+          class="bg-fbWhite text-fbBlack text-sm font-medium px-4 py-1.5 rounded hover:bg-fbWhite/90 transition-colors"
         >
           Sign up
         </RouterLink>
@@ -55,14 +57,23 @@
 
   const header = ref<HTMLElement | null>(null);
   const isVisible = ref(true);
-  let lastScrollY = window.scrollY;
+  const hasScrolled = ref(false);
+  let lastScrollY = 0;
+  let scrollThreshold = 50; // Show background after scrolling this many pixels
+  let scrollDistance = 20; // Only hide after scrolling down this much
 
   function handleScroll() {
     const currentScrollY = window.scrollY;
 
-    if (currentScrollY > lastScrollY) {
+    // Set the background based on scroll position
+    hasScrolled.value = currentScrollY > scrollThreshold;
+
+    // Determine if the navbar should be visible
+    if (currentScrollY > lastScrollY + scrollDistance) {
+      // Scrolling down
       isVisible.value = false;
-    } else {
+    } else if (currentScrollY < lastScrollY - 5 || currentScrollY < scrollThreshold) {
+      // Scrolling up or near the top
       isVisible.value = true;
     }
 
@@ -71,6 +82,8 @@
 
   onMounted(() => {
     window.addEventListener('scroll', handleScroll, { passive: true });
+    // Initial check of scroll position
+    handleScroll();
   });
 
   onUnmounted(() => {
@@ -78,4 +91,6 @@
   });
 </script>
 
-<style scoped></style>
+<style scoped>
+  /* Additional styling if needed */
+</style>
