@@ -1,34 +1,38 @@
 <script setup lang="ts">
-  import { BoltIcon } from '@heroicons/vue/24/outline';
+  import { ChartBarIcon, GlobeAltIcon, DocumentDuplicateIcon } from '@heroicons/vue/24/outline';
   import { RouterLink } from 'vue-router';
   import TopNav from '@/components/shared/TopNav.vue';
+  import TheFooter from '@/components/shared/TheFooter.vue';
 </script>
 
 <template>
   <div class="min-h-screen bg-fbBlack text-white overflow-x-hidden">
     <!-- Top Navigation Bar -->
-    
+
     <!-- Hero Section - Simplified to match reference design -->
-    <section class="mt-24 border rounded-lg mx-4 py-24">
+    <section class="mt-4 rounded-3xl mx-4 pb-32 pt-16 bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack">
       <TopNav />
       <!-- Colorful gradient background -->
       <!-- <div class="absolute inset-0 bg-gradient-to-br from-accent/20 via-accent/10 to-fbBlack z-0 border border-fbBorder/20 m-8 rounded-lg"></div> -->
 
       <!-- Grid pattern overlay -->
-      <div class="absolute inset-0 bg-grid-pattern opacity-10 z-0"></div>
+      <!-- <div class="absolute inset-0 bg-grid-pattern opacity-10 z-0"></div> -->
 
       <!-- Content container -->
-      <div class="container mx-auto px-8 relative z-10 max-w-5xl">
+      <div class="container relative z-10 max-w-5xl w-4/5 mx-auto">
         <div class="space-y-8">
           <!-- Main headline - Large and prominent -->
-          <h1 class="text-6xl md:text-7xl lg:text-5xl font-bold tracking-tight">
+          <h1 class="text-6xl md:text-7xl lg:text-5xl font-bold tracking-base">
             Supercharge Your VoIP Business with
             <span class="text-accent block mt-2">Instant Rate Deck Insights</span>
           </h1>
 
           <!-- Subheading - Clean and focused -->
-          <p class="text-xl md:text-2xl text-fbWhite/80 max-w-3xl">
-            Effortlessly upload and compare rate decks, leverage LERG lookups, and keep everything safe in your browser.
+          <p class="text-base md:text-2xl text-fbWhite/80 max-w-3xl tracking-wide">
+            Compare your rates aginast theirs, leverage LERG lookups, keep everything safe in your browser, and export
+            your reports.
+          </p>
+          <p class="text-base md:text-2xl text-white max-w-3xl tracking-wide">
             Simplify your data. Accelerate your decisions.
           </p>
 
@@ -54,34 +58,54 @@
 
     <!-- Features Section - Simplified and modernized -->
     <section class="py-24 relative z-10 bg-fbBlack">
-      <div class="container mx-auto px-8">
-        <h2 class="text-4xl font-bold mb-16 text-fbWhite max-w-3xl">
-          Streamline your VoIP operations with powerful tools built for telecom professionals
+      <div class="container mx-auto px-8 tracking-wide">
+        <h2 class="text-4xl max-w-4xl text-center mx-auto mb-4 text-accent">
+          Build VOIP Business Cases with Confidence.
         </h2>
+        <h3 class="text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">Save Time. Find Margin.</h3>
+        <h3 class="text-3xl mb-24 text-fbWhite max-w-3xl text-center mx-auto">All Without Excel...</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div class="p-6 rounded-xl bg-fbHover/40 border border-fbBorder/20 hover:border-accent/30 transition-all">
-            <div class="w-12 h-12 mb-6 text-accent font-bold text-2xl">01</div>
-            <h3 class="text-xl font-bold mb-3 text-fbWhite">Rate Analysis</h3>
-            <p class="text-fbWhite/70">
+          <div
+            class="p-6 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden"
+          >
+            <!-- Spotlight effect for first card -->
+            <div class="absolute -top-10 -right-20 w-40 h-40 bg-accent/40 rounded-full blur-2xl opacity-70"></div>
+            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
+              <ChartBarIcon class="w-6 h-6 text-accent" />
+            </div>
+            <h3 class="text-xl font-bold mb-3 text-white relative z-10">Rate Analysis</h3>
+            <p class="text-fbWhite relative z-10">
               Compare buy and sell rates across different providers to identify opportunities for cost reduction and
               revenue growth.
             </p>
           </div>
 
-          <div class="p-6 rounded-xl bg-fbHover/40 border border-fbBorder/20 hover:border-accent/30 transition-all">
-            <div class="w-12 h-12 mb-6 text-accent font-bold text-2xl">02</div>
-            <h3 class="text-xl font-bold mb-3 text-fbWhite">Global Coverage</h3>
-            <p class="text-fbWhite/70">
+          <div
+            class="p-6 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden"
+          >
+            <!-- Spotlight effect for second card - slightly different position -->
+            <div class="absolute -top-5 -right-24 w-40 h-40 bg-accent/40 rounded-full blur-2xl opacity-70"></div>
+            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
+              <GlobeAltIcon class="w-6 h-6 text-accent" />
+            </div>
+            <h3 class="text-xl font-bold mb-3 text-white relative z-10">Global Coverage</h3>
+            <p class="text-fbWhite relative z-10">
               Support for both international (AZ) and domestic (US) rate sheets with specialized tools for each market
               segment.
             </p>
           </div>
 
-          <div class="p-6 rounded-xl bg-fbHover/40 border border-fbBorder/20 hover:border-accent/30 transition-all">
-            <div class="w-12 h-12 mb-6 text-accent font-bold text-2xl">03</div>
-            <h3 class="text-xl font-bold mb-3 text-fbWhite">Code Comparison</h3>
-            <p class="text-fbWhite/70">
+          <div
+            class="p-6 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden"
+          >
+            <!-- Spotlight effect for third card - slightly different position again -->
+            <div class="absolute -top-12 -right-1 w-40 h-40 bg-accent/40 rounded-full blur-2xl opacity-70"></div>
+            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
+              <DocumentDuplicateIcon class="w-6 h-6 text-accent" />
+            </div>
+            <h3 class="text-xl font-bold mb-3 text-white relative z-10">Code Comparison</h3>
+            <p class="text-fbWhite relative z-10">
               Identify code mismatches before they impact your bottom line. Gain insight into code coverage statistics
               and country coverage.
             </p>
@@ -91,63 +115,29 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20 bg-fbHover/20 relative">
-      <div class="container mx-auto px-8">
-        <div class="flex flex-col md:flex-row items-center justify-between max-w-5xl mx-auto">
-          <div class="mb-8 md:mb-0">
-            <h2 class="text-3xl font-bold mb-4 text-fbWhite">Ready to optimize your VOIP pricing?</h2>
-            <p class="text-fbWhite/70 max-w-xl text-xl">Start saving time and finding opportunities today.</p>
+    <section class="p-[1px] bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack">
+      <div class="border border-accent/20 py-16 bg-fbBlack rounded-3xl">
+        <div class="container mx-auto">
+          <div class="flex flex-col md:flex-row items-center justify-between max-w-5xl mx-auto">
+            <div class="mb-8 md:mb-0">
+              <h2 class="text-3xl font-bold mb-4 text-white">Ready to optimize your VOIP pricing?</h2>
+              <p class="text-fbWhite max-w-xl text-xl">Start saving time and finding opportunities today.</p>
+            </div>
+            <RouterLink
+              to="/azview"
+              class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-md hover:bg-accent/90 transition-colors whitespace-nowrap"
+            >
+              Get Started — It's Free
+            </RouterLink>
           </div>
-          <RouterLink
-            to="/azview"
-            class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-md hover:bg-accent/90 transition-colors whitespace-nowrap"
-          >
-            Get Started — It's Free
-          </RouterLink>
+        </div>
+        <div class="pt-12">
+          <TheFooter />
         </div>
       </div>
     </section>
 
     <!-- Footer -->
-    <footer class="py-12 border-t border-fbBorder/20">
-      <div class="container mx-auto px-8">
-        <div class="flex flex-col md:flex-row justify-between items-center">
-          <div class="flex items-center text-accent mb-6 md:mb-0">
-            <BoltIcon class="w-6 h-6" />
-            <span class="text-xl font-medium ml-2">VOIP Accelerator</span>
-          </div>
-          <div class="flex flex-wrap gap-x-8 gap-y-4">
-            <RouterLink
-              to="/pricing"
-              class="text-fbWhite/70 hover:text-accent transition-colors"
-            >
-              Pricing
-            </RouterLink>
-            <RouterLink
-              to="/about"
-              class="text-fbWhite/70 hover:text-accent transition-colors"
-            >
-              About
-            </RouterLink>
-            <RouterLink
-              to="/terms"
-              class="text-fbWhite/70 hover:text-accent transition-colors"
-            >
-              Terms
-            </RouterLink>
-            <RouterLink
-              to="/privacy"
-              class="text-fbWhite/70 hover:text-accent transition-colors"
-            >
-              Privacy
-            </RouterLink>
-          </div>
-        </div>
-        <div class="mt-12 text-center text-fbWhite/50 text-sm">
-          &copy; {{ new Date().getFullYear() }} VOIP Accelerator. All rights reserved.
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
