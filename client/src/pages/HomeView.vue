@@ -33,7 +33,6 @@
             <span class="text-white block mt-4 font-secondary text-xl">Simplify your data.</span>
             <span class="text-white block font-secondary text-xl">Accelerate your decisions.</span>
           </p>
-        
 
           <!-- Call to action buttons -->
           <div class="flex flex-wrap gap-4 pt-4">
@@ -54,7 +53,24 @@
         </div>
       </div>
     </section>
-
+    <!--Pain Points Section-->
+    <section class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
+      <div class="flex flex-row gap-16">
+        <div class="w-1/3 bg-accent/70 rounded-3xl p-8">
+          <div class="text-size4xl max-w-4xl text-center mx-auto text-fbBlack leading-none">
+            <span class="font-secondary block font-bold">CRUSH</span>
+            <span class="font-secondary block font-bold">YOUR</span>
+            <span class="font-secondary block font-bold">BUSINESS</span>
+            <span class="font-secondary block font-bold">CASES</span>
+          </div>
+        </div>
+        <div class="w-2/3 bg-fbWhite rounded-3xl p-8">
+          <p class="text-4xl max-w-4xl text-right mx-auto text-fbBlack leading-normal uppercase">
+            No more wasted time staring at Excel only to learn nothing actionable. Upload your decks, get pricing and code insights, and find your opportunities - all before your coffee cools.
+          </p>
+        </div>
+      </div>
+    </section>
     <!-- Features Section - Simplified and modernized -->
     <section class="pt-24 pb-48 relative z-10 bg-fbBlack">
       <div class="container mx-auto px-8 tracking-wide">
@@ -103,7 +119,7 @@
             <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
               <DocumentDuplicateIcon class="w-6 h-6 text-accent" />
             </div>
-            <h3 class="text-xl  mb-3 text-white relative z-10">Code Comparison</h3>
+            <h3 class="text-xl mb-3 text-white relative z-10">Code Comparison</h3>
             <p class="text-fbWhite relative z-10">
               Identify code mismatches before they impact your bottom line. Gain insight into code coverage statistics
               and country coverage.
@@ -121,7 +137,9 @@
             <div class="mb-12">
               <p class="text-fbWhite text-sm mx-auto mb-12 tracking-wider font-secondary">GET STARTED</p>
               <h2 class="text-3xl mb-8 text-white">Ready to optimize your VOIP pricing?</h2>
-              <p class="text-fbWhite text-xl mx-auto w-2/3 font-secondary">Get the cheat code for buying and selling in the VOIP market.</p>
+              <p class="text-fbWhite text-xl mx-auto w-2/3 font-secondary">
+                Get the cheat code for buying and selling in the VOIP market.
+              </p>
             </div>
             <RouterLink
               to="/azview"
