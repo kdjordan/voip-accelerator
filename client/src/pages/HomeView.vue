@@ -3,6 +3,7 @@
   import { RouterLink } from 'vue-router';
   import TopNav from '@/components/shared/TopNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
+  import FeatureCards from '@/components/home/FeatureCards.vue';
 </script>
 
 <template>
@@ -55,7 +56,7 @@
     </section>
     <!--Pain Points Section-->
     <section class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
-      <div class="flex flex-row gap-16">
+      <div class="flex flex-row gap-4">
         <div class="w-1/3 bg-accent/70 rounded-3xl p-8">
           <div class="text-size4xl max-w-4xl text-center mx-auto text-fbBlack leading-none">
             <span class="font-secondary block font-bold">CRUSH</span>
@@ -66,67 +67,23 @@
         </div>
         <div class="w-2/3 bg-fbWhite rounded-3xl p-8">
           <p class="text-4xl max-w-4xl text-right mx-auto text-fbBlack leading-normal uppercase">
-            No more wasted time staring at Excel only to learn nothing actionable. Upload your decks, get pricing and code insights, and find your opportunities - all before your coffee cools.
+            No more wasted time staring at Excel only to learn nothing actionable. Upload your decks, get pricing and
+            code insights, and find your opportunities - all before your coffee cools.
           </p>
         </div>
       </div>
     </section>
-    <!-- Features Section - Simplified and modernized -->
-    <section class="pt-24 pb-48 relative z-10 bg-fbBlack">
-      <div class="container mx-auto px-8 tracking-wide">
-        <h2 class="text-4xl max-w-4xl text-center mx-auto mb-4 text-accent">
-          Build VOIP Business Cases with Confidence.
-        </h2>
-        <h3 class="text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">Save Time. Find Margin.</h3>
-        <h3 class="text-3xl mb-24 text-fbWhite max-w-3xl text-center mx-auto">All Without Excel...</h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div
-            class="p-6 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden"
-          >
-            <!-- Spotlight effect for first card -->
-            <div class="absolute -top-10 -right-20 w-40 h-40 bg-accent/40 rounded-full blur-2xl opacity-70"></div>
-            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
-              <ChartBarIcon class="w-6 h-6 text-accent" />
-            </div>
-            <h3 class="text-xl mb-3 text-white relative z-10">Rate Analysis</h3>
-            <p class="text-fbWhite relative z-10">
-              Compare buy and sell rates across different providers to identify opportunities for cost reduction and
-              revenue growth.
-            </p>
-          </div>
-
-          <div
-            class="p-6 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden"
-          >
-            <!-- Spotlight effect for second card - slightly different position -->
-            <div class="absolute -top-5 -right-24 w-40 h-40 bg-accent/40 rounded-full blur-2xl opacity-70"></div>
-            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
-              <GlobeAltIcon class="w-6 h-6 text-accent" />
-            </div>
-            <h3 class="text-xl mb-3 text-white relative z-10">Global Coverage</h3>
-            <p class="text-fbWhite relative z-10">
-              Support for both international (AZ) and domestic (US) rate sheets with specialized tools for each market
-              segment.
-            </p>
-          </div>
-
-          <div
-            class="p-6 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden"
-          >
-            <!-- Spotlight effect for third card - slightly different position again -->
-            <div class="absolute -top-12 -right-1 w-40 h-40 bg-accent/40 rounded-full blur-2xl opacity-70"></div>
-            <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-6 relative z-10">
-              <DocumentDuplicateIcon class="w-6 h-6 text-accent" />
-            </div>
-            <h3 class="text-xl mb-3 text-white relative z-10">Code Comparison</h3>
-            <p class="text-fbWhite relative z-10">
-              Identify code mismatches before they impact your bottom line. Gain insight into code coverage statistics
-              and country coverage.
-            </p>
-          </div>
-        </div>
+    <!-- Features Section with Infinite Scroll -->
+    <section class="pt-8 pb-8 relative z-10 bg-fbBlack">
+      <div class="container mx-auto mb-2 font-secondary w-full">
+        <h2 class="text-size3xl text-center mx-auto mb-4 text-accent uppercase font-">Why You'll Love VOIP Accelerator</h2>
+        <h3 class="text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">Efficiency. Accuracy. Insight.</h3>
+        <h3 class="text-3xl mb-12 text-fbWhite max-w-3xl text-center mx-auto">All Without Excel...</h3>
       </div>
+
+      <!-- Import the Feature Cards component -->
+      <FeatureCards />
     </section>
 
     <!-- CTA Section -->
