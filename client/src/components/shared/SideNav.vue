@@ -186,7 +186,7 @@
       icon: GlobeAmericasIcon,
     },
     {
-      name: 'Rate Sheet',
+      name: 'Rate Sheet Wizard',
       to: '/rate-sheet',
       icon: AdjustmentsVerticalIcon,
     },
