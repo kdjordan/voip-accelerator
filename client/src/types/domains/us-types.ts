@@ -7,6 +7,18 @@ export interface USStandardizedData {
   indetermRate: number;
 }
 
+// Interface for invalid rows during file processing
+export interface InvalidUsRow {
+  rowIndex: number;
+  npanxx: string;
+  npa: string;
+  nxx: string;
+  interRate: number | string;
+  intraRate: number | string;
+  indetermRate: number | string;
+  reason: string;
+}
+
 // Rate comparison result
 export interface RateComparison {
   type: USRateType;

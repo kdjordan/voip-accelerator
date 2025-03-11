@@ -23,7 +23,7 @@
                 azStore.isComponentDisabled('az1')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
                   : 'border-fbWhite',
-                uploadError ? 'border-red-500' : '',
+                uploadError.az1 ? 'border-red-500 border-solid border-2' : '',
               ]"
               @dragenter.prevent="e => handleDragEnter(e, 'az1')"
               @dragleave.prevent="e => handleDragLeave(e, 'az1')"
@@ -47,12 +47,18 @@
                 <!-- Empty/Processing States -->
                 <template v-if="!azStore.isComponentDisabled('az1') && !azStore.isComponentUploading('az1')">
                   <div class="flex items-center justify-center w-full h-full">
-                    <div class="text-center">
+                    <div class="text-center w-full">
+                      <!-- Error notification when there is an error -->
+                      <div v-if="uploadError.az1" class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full">
+                        <p class="text-red-500 font-medium">{{ uploadError.az1 }}</p>
+                      </div>
+                      
                       <ArrowUpTrayIcon
-                        class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+                        class="w-12 h-12 mx-auto border rounded-full p-2"
+                        :class="uploadError.az1 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
                       />
-                      <p class="mt-2 text-base text-foreground text-accent">
-                        DRAG & DROP to upload or CLICK to select file
+                      <p class="mt-2 text-base" :class="uploadError.az1 ? 'text-red-500' : 'text-accent'">
+                        {{ uploadError.az1 ? 'Please try again' : 'DRAG & DROP to upload or CLICK to select file' }}
                       </p>
                     </div>
                   </div>
@@ -112,7 +118,7 @@
                 azStore.isComponentDisabled('az2')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
                   : 'border-fbWhite',
-                uploadError ? 'border-red-500' : '',
+                uploadError.az2 ? 'border-red-500 border-solid border-2' : '',
               ]"
               @dragenter.prevent="e => handleDragEnter(e, 'az2')"
               @dragleave.prevent="e => handleDragLeave(e, 'az2')"
@@ -136,12 +142,18 @@
                 <!-- Empty/Processing States -->
                 <template v-if="!azStore.isComponentDisabled('az2') && !azStore.isComponentUploading('az2')">
                   <div class="flex items-center justify-center w-full h-full">
-                    <div class="text-center">
+                    <div class="text-center w-full">
+                      <!-- Error notification when there is an error -->
+                      <div v-if="uploadError.az2" class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full">
+                        <p class="text-red-500 font-medium">{{ uploadError.az2 }}</p>
+                      </div>
+                      
                       <ArrowUpTrayIcon
-                        class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+                        class="w-12 h-12 mx-auto border rounded-full p-2"
+                        :class="uploadError.az2 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
                       />
-                      <p class="mt-2 text-base text-foreground text-accent">
-                        DRAG & DROP to upload or CLICK to select file
+                      <p class="mt-2 text-base" :class="uploadError.az2 ? 'text-red-500' : 'text-accent'">
+                        {{ uploadError.az2 ? 'Please try again' : 'DRAG & DROP to upload or CLICK to select file' }}
                       </p>
                     </div>
                   </div>
@@ -252,7 +264,10 @@
   const columnMappings = ref<Record<string, string>>({});
 
   // Add new ref
-  const uploadError = ref<string | null>(null);
+  const uploadError = reactive({
+    az1: null as string | null,
+    az2: null as string | null
+  });
 
   // Drag and drop handlers
   function handleDragEnter(event: DragEvent, componentId: string) {
@@ -268,44 +283,58 @@
   function handleDrop(event: DragEvent, componentId: string) {
     event.preventDefault();
     isDragging[componentId] = false;
+    
+    // First check if there are files being dropped
+    if (!event.dataTransfer?.files || event.dataTransfer.files.length === 0) {
+      return;
+    }
 
-    // Add check for disabled state and other processing
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+
+    // Clear any previous errors
+    uploadError[componentId] = null;
+
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = componentId === 'az1' ? 'az2' : 'az1';
+    if (azStore.isComponentUploading(otherComponent)) {
+      uploadError[componentId] = "Please wait for the other file to finish uploading";
+      return;
+    }
+
+    // Check file type first
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError[componentId] = 'Only CSV files are accepted';
+      return;
+    }
+
+    // Check for duplicate filename
+    if (azStore.hasExistingFile(file.name)) {
+      console.log(`Error: File ${file.name} already exists`); // Debug log
+      uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+      return;
+    }
+
+    // Only proceed if component is ready for upload
     if (
       !azStore.isComponentUploading(componentId) &&
-      !azStore.isComponentDisabled(componentId) &&
-      !azStore.isComponentUploading('az1') &&
-      !azStore.isComponentUploading('az2') &&
-      event.dataTransfer?.files
+      !azStore.isComponentDisabled(componentId)
     ) {
-      const file = event.dataTransfer.files[0];
-      if (file) {
-        handleFileSelected(file, componentId);
-      }
+      handleFileSelected(file, componentId);
     }
   }
 
   async function handleFileSelected(file: File, componentId: string) {
     if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId)) return;
 
-    // Clear previous errors
-    uploadError.value = null;
-
-    // Check file type
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      uploadError.value = 'Only CSV files are accepted';
-      return;
-    }
-
-    if (azStore.hasExistingFile(file.name)) {
-      uploadError.value = 'A file with this name has already been uploaded';
-      return;
-    }
-
+    // Don't need to check for duplicates again - already done in handleDrop
+    
     azStore.setComponentUploading(componentId, true);
     try {
       await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
     } catch (error) {
       console.error('Error handling file:', error);
+      uploadError[componentId] = 'Error processing file. Please try again.';
     } finally {
       azStore.setComponentUploading(componentId, false);
     }
@@ -413,6 +442,28 @@
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
+    // Clear any previous errors
+    uploadError[componentId] = null;
+    
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = componentId === 'az1' ? 'az2' : 'az1';
+    if (azStore.isComponentUploading(otherComponent)) {
+      uploadError[componentId] = "Please wait for the other file to finish uploading";
+      return;
+    }
+    
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError[componentId] = 'Only CSV files are accepted';
+      return;
+    }
+    
+    // Check for duplicate filename
+    if (azStore.hasExistingFile(file.name)) {
+      uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+      return;
+    }
+
     azStore.setTempFile(componentId, file);
 
     Papa.parse(file, {
@@ -426,6 +477,7 @@
       error: error => {
         console.error('Error parsing CSV:', error);
         azStore.clearTempFile(componentId);
+        uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
       },
     });
   }
@@ -466,5 +518,12 @@
 
   function handleMappingUpdate(newMappings: Record<string, string>) {
     columnMappings.value = newMappings;
+  }
+
+  // Add this debugging function after the existing handleDragEnter function
+  function setTestError(componentId: string, message: string) {
+    // For testing error states
+    uploadError[componentId] = message;
+    console.log(`Set error for ${componentId}: ${message}`);
   }
 </script>
