@@ -8,71 +8,99 @@
           <div class="flex flex-col gap-2">
             <h2 class="text-base text-fbWhite mb-4 font-secondary text-center uppercase">Your Rates Here</h2>
             <div
-              class="relative border-2 rounded-lg p-8 min-h-[120px] flex items-center justify-center"
+              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
-                isDragging[component1]
+                isDragging['us1']
                   ? 'border-accent bg-fbWhite/10'
-                  : !usStore.isComponentDisabled(component1)
+                  : !usStore.isComponentDisabled('us1')
                   ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 dashed'
                   : '',
-                usStore.isComponentUploading(component1)
+                usStore.isComponentUploading('us1')
                   ? 'animate-upload-pulse cursor-not-allowed'
-                  : !usStore.isComponentDisabled(component1)
+                  : usStore.isComponentUploading('us2')
+                  ? 'opacity-50 cursor-not-allowed border-gray-600'
+                  : !usStore.isComponentDisabled('us1')
                   ? 'cursor-pointer'
                   : '',
-                usStore.isComponentDisabled(component1)
+                usStore.isComponentDisabled('us1')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
                   : 'border-fbWhite',
+                uploadError.us1 ? 'border-red-500 border-solid border-2' : '',
               ]"
+              @dragenter.prevent="e => handleDragEnter(e, 'us1')"
+              @dragleave.prevent="e => handleDragLeave(e, 'us1')"
+              @dragover.prevent
+              @drop.prevent="e => handleDrop(e, 'us1')"
             >
               <!-- File Input and Content -->
               <input
                 type="file"
                 accept=".csv"
                 class="absolute inset-0 opacity-0"
-                :class="{ 'pointer-events-none': usStore.isComponentDisabled(component1) }"
-                :disabled="usStore.isComponentDisabled(component1)"
-                @change="e => handleFileInput(e, component1)"
+                :class="{ 'pointer-events-none': usStore.isComponentDisabled('us1') }"
+                :disabled="
+                  usStore.isComponentUploading('us1') ||
+                  usStore.isComponentUploading('us2') ||
+                  usStore.isComponentDisabled('us1')
+                "
+                @change="e => handleFileInput(e, 'us1')"
               />
 
               <div class="flex flex-col h-full">
-                <!-- Empty State -->
-                <template v-if="!usStore.isComponentDisabled(component1)">
-                  <div class="flex-1 flex items-center justify-center">
-                    <div class="text-center">
+                <!-- Empty/Processing States -->
+                <template v-if="!usStore.isComponentDisabled('us1') && !usStore.isComponentUploading('us1')">
+                  <div class="flex items-center justify-center w-full h-full">
+                    <div class="text-center w-full">
+                      <!-- Error notification when there is an error -->
+                      <div v-if="uploadError.us1" class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full">
+                        <p class="text-red-500 font-medium">{{ uploadError.us1 }}</p>
+                      </div>
+                      
                       <ArrowUpTrayIcon
-                        class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+                        class="w-12 h-12 mx-auto border rounded-full p-2"
+                        :class="uploadError.us1 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
                       />
-                      <p class="mt-2 text-base text-foreground text-accent">
-                        DRAG & DROP to upload or CLICK to select file
+                      <p class="mt-2 text-base" :class="uploadError.us1 ? 'text-red-500' : 'text-accent'">
+                        {{ uploadError.us1 ? 'Please try again' : 'DRAG & DROP to upload or CLICK to select file' }}
                       </p>
                     </div>
                   </div>
                 </template>
 
                 <!-- Uploading State -->
-                <template v-if="usStore.isComponentUploading(component1)">
-                  <div class="flex-1 flex items-center justify-center">
+                <template v-if="usStore.isComponentUploading('us1')">
+                  <div
+                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
+                  >
                     <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
                 </template>
 
                 <!-- File Uploaded State -->
-                <template v-if="usStore.isComponentDisabled(component1)">
+                <template v-if="usStore.isComponentDisabled('us1')">
+                  <!-- Centered File Info -->
                   <div class="flex-1 flex items-center justify-center">
-                    <div class="flex items-center space-x-2">
-                      <DocumentIcon class="w-5 h-5 text-accent" />
-                      <p class="text-sizeLg text-accent">{{ usStore.getFileNameByComponent(component1) }}</p>
+                    <div class="flex items-center space-x-3">
+                      <DocumentIcon class="w-6 h-6 text-accent" />
+                      <p class="text-xl text-accent">
+                        {{ usStore.getFileNameByComponent('us1') }}
+                      </p>
                     </div>
+                  </div>
+                </template>
+
+                <!-- Add waiting state overlay for first upload zone when second is uploading -->
+                <template v-if="!usStore.isComponentDisabled('us1') && usStore.isComponentUploading('us2')">
+                  <div class="flex-1 flex items-center justify-center w-full h-full absolute inset-0 bg-gray-900/30 backdrop-blur-sm z-10">
+                    <p class="text-sizeMd text-accent/80">Please wait for the other file to finish processing...</p>
                   </div>
                 </template>
               </div>
             </div>
-
             <!-- Remove File Button -->
             <button
-              v-if="usStore.isComponentDisabled(component1)"
-              @click="handleRemoveFile(component1)"
+              v-if="usStore.isComponentDisabled('us1')"
+              @click="handleRemoveFile('us1')"
               class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
             >
               <div class="flex items-center justify-center space-x-2">
@@ -86,71 +114,98 @@
           <div class="flex flex-col gap-2">
             <h2 class="text-base text-fbWhite mb-4 font-secondary text-center uppercase">Prospect's Rates Here</h2>
             <div
-              class="relative border-2 rounded-lg p-8 min-h-[120px] flex items-center justify-center"
+              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
-                isDragging[component2]
+                isDragging['us2']
                   ? 'border-accent bg-fbWhite/10'
-                  : !usStore.isComponentDisabled(component2)
+                  : !usStore.isComponentDisabled('us2')
                   ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 '
                   : '',
-                usStore.isComponentUploading(component2)
+                usStore.isComponentUploading('us2')
                   ? 'animate-upload-pulse cursor-not-allowed'
-                  : !usStore.isComponentDisabled(component2)
+                  : usStore.isComponentUploading('us1')
+                  ? 'opacity-50 cursor-not-allowed border-gray-600'
+                  : !usStore.isComponentDisabled('us2')
                   ? 'cursor-pointer'
                   : '',
-                usStore.isComponentDisabled(component2)
+                usStore.isComponentDisabled('us2')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
                   : 'border-fbWhite',
+                uploadError.us2 ? 'border-red-500 border-solid border-2' : '',
               ]"
+              @dragenter.prevent="e => handleDragEnter(e, 'us2')"
+              @dragleave.prevent="e => handleDragLeave(e, 'us2')"
+              @dragover.prevent
+              @drop.prevent="e => handleDrop(e, 'us2')"
             >
               <!-- File Input and Content -->
               <input
                 type="file"
                 accept=".csv"
                 class="absolute inset-0 opacity-0"
-                :class="{ 'pointer-events-none': usStore.isComponentDisabled(component2) }"
-                :disabled="usStore.isComponentDisabled(component2)"
-                @change="e => handleFileInput(e, component2)"
+                :class="{ 'pointer-events-none': usStore.isComponentDisabled('us2') }"
+                :disabled="
+                  usStore.isComponentUploading('us2') ||
+                  usStore.isComponentUploading('us1') ||
+                  usStore.isComponentDisabled('us2')
+                "
+                @change="e => handleFileInput(e, 'us2')"
               />
 
               <div class="flex flex-col h-full">
-                <!-- Empty State -->
-                <template v-if="!usStore.isComponentDisabled(component2)">
-                  <div class="flex-1 flex items-center justify-center">
-                    <div class="text-center">
+                <!-- Empty/Processing States -->
+                <template v-if="!usStore.isComponentDisabled('us2') && !usStore.isComponentUploading('us2')">
+                  <div class="flex items-center justify-center w-full h-full">
+                    <div class="text-center w-full">
+                      <!-- Error notification when there is an error -->
+                      <div v-if="uploadError.us2" class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full">
+                        <p class="text-red-500 font-medium">{{ uploadError.us2 }}</p>
+                      </div>
+                      
                       <ArrowUpTrayIcon
-                        class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+                        class="w-12 h-12 mx-auto border rounded-full p-2"
+                        :class="uploadError.us2 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
                       />
-                      <p class="mt-2 text-base text-foreground text-accent">
-                        DRAG & DROP to upload or CLICK to select file
+                      <p class="mt-2 text-base" :class="uploadError.us2 ? 'text-red-500' : 'text-accent'">
+                        {{ uploadError.us2 ? 'Please try again' : 'DRAG & DROP to upload or CLICK to select file' }}
                       </p>
                     </div>
                   </div>
                 </template>
 
-                <!-- Uploading State -->
-                <template v-if="usStore.isComponentUploading(component2)">
-                  <div class="flex-1 flex items-center justify-center">
+                <template v-if="usStore.isComponentUploading('us2')">
+                  <div
+                    class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
+                  >
                     <p class="text-sizeMd text-accent">Processing your file...</p>
                   </div>
                 </template>
 
                 <!-- File Uploaded State -->
-                <template v-if="usStore.isComponentDisabled(component2)">
+                <template v-if="usStore.isComponentDisabled('us2')">
+                  <!-- Centered File Info -->
                   <div class="flex-1 flex items-center justify-center">
-                    <div class="flex items-center space-x-2">
-                      <DocumentIcon class="w-5 h-5 text-accent" />
-                      <p class="text-sizeLg text-accent">{{ usStore.getFileNameByComponent(component2) }}</p>
+                    <div class="flex items-center space-x-3">
+                      <DocumentIcon class="w-6 h-6 text-accent" />
+                      <p class="text-xl text-accent">
+                        {{ usStore.getFileNameByComponent('us2') }}
+                      </p>
                     </div>
+                  </div>
+                </template>
+
+                <!-- Add waiting state overlay for second upload zone when first is uploading -->
+                <template v-if="!usStore.isComponentDisabled('us2') && usStore.isComponentUploading('us1')">
+                  <div class="flex-1 flex items-center justify-center w-full h-full absolute inset-0 bg-gray-900/30 backdrop-blur-sm z-10">
+                    <p class="text-sizeMd text-accent/80">Please wait for the other file to finish processing...</p>
                   </div>
                 </template>
               </div>
             </div>
-
             <!-- Remove File Button -->
             <button
-              v-if="usStore.isComponentDisabled(component2)"
-              @click="handleRemoveFile(component2)"
+              v-if="usStore.isComponentDisabled('us2')"
+              @click="handleRemoveFile('us2')"
               class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
             >
               <div class="flex items-center justify-center space-x-2">
@@ -173,8 +228,8 @@
             :class="{ 'animate-pulse': isGeneratingReports }"
           >
             <div class="flex items-center justify-center space-x-2">
-              <ArrowRightIcon class="w-4 h-4 text-accent" />
               <span class="text-sm text-accent">{{ isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports' }}</span>
+              <ArrowRightIcon class="w-4 h-4 text-accent" />
             </div>
           </button>
         </div>
@@ -191,6 +246,7 @@
       :column-options="US_COLUMN_ROLE_OPTIONS"
       @update:mappings="handleMappingUpdate"
       @update:valid="isValid => (isModalValid = isValid)"
+      @update:indeterminate-definition="definition => (indeterminateRateDefinition = definition)"
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
@@ -198,7 +254,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive } from 'vue';
+  import { ref, reactive, onMounted } from 'vue';
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useUsStore } from '@/stores/us-store';
@@ -206,19 +262,19 @@
   import useDexieDB from '@/composables/useDexieDB';
   import { USColumnRole, US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
-  // import { USService } from '@/services/us.service';
+  import { USService } from '@/services/us.service';
 
   const usStore = useUsStore();
   const { loadFromDexieDB } = useDexieDB();
+  const usService = new USService();
 
   // Component state
-  const component1 = ref<string>('us1');
-  const component2 = ref<string>('us2');
   const isGeneratingReports = ref<boolean>(false);
   const isDragging = reactive<Record<string, boolean>>({});
   const showPreviewModal = ref(false);
   const isModalValid = ref(false);
   const columnMappings = ref<Record<string, string>>({});
+  const indeterminateRateDefinition = ref('');
 
   // Preview state
   const previewData = ref<string[][]>([]);
@@ -226,9 +282,87 @@
   const startLine = ref(1);
   const activeComponent = ref<string>('');
 
-  // const usService = new USService();
+  // Add error handling
+  const uploadError = reactive({
+    us1: null as string | null,
+    us2: null as string | null
+  });
+
+  // Drag and drop handlers
+  function handleDragEnter(event: DragEvent, componentId: string) {
+    event.preventDefault();
+    isDragging[componentId] = true;
+    // Clear error when user initiates new drag
+    uploadError[componentId] = null;
+  }
+
+  function handleDragLeave(event: DragEvent, componentId: string) {
+    event.preventDefault();
+    isDragging[componentId] = false;
+  }
+
+  function handleDrop(event: DragEvent, componentId: string) {
+    event.preventDefault();
+    isDragging[componentId] = false;
+
+    // First check if there are files being dropped
+    if (!event.dataTransfer?.files || event.dataTransfer.files.length === 0) {
+      return;
+    }
+
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+
+    // Clear any previous errors
+    uploadError[componentId] = null;
+
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
+    if (usStore.isComponentUploading(otherComponent)) {
+      uploadError[componentId] = "Please wait for the other file to finish uploading";
+      return;
+    }
+
+    // Check file type first
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError[componentId] = 'Only CSV files are accepted';
+      return;
+    }
+
+    // Check for duplicate filename
+    if (usStore.hasExistingFile(file.name)) {
+      console.log(`Error: File ${file.name} already exists`); // Debug log
+      uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+      return;
+    }
+
+    // Only proceed if component is ready for upload
+    if (
+      !usStore.isComponentUploading(componentId) &&
+      !usStore.isComponentDisabled(componentId)
+    ) {
+      handleFileSelected(file, componentId);
+    }
+  }
+
+  async function handleFileSelected(file: File, componentId: string) {
+    if (usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId)) return;
+
+    // Don't need to check for duplicates again - already done in handleDrop
+    
+    usStore.setComponentUploading(componentId, true);
+    try {
+      await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
+    } catch (error) {
+      console.error('Error handling file:', error);
+      uploadError[componentId] = 'Error processing file. Please try again.';
+    } finally {
+      usStore.setComponentUploading(componentId, false);
+    }
+  }
 
   async function handleFileUploaded(componentName: string, fileName: string) {
+    console.log('adding file to store', componentName, fileName);
     usStore.addFileUploaded(componentName, fileName);
     console.log(`File uploaded for ${componentName}: ${fileName}`);
   }
@@ -243,34 +377,58 @@
 
   async function generateReports() {
     isGeneratingReports.value = true;
-    // try {
-    //   const fileNames = usStore.getFileNames;
-    //   const file1Data = await loadFromDexieDB(DBName.US, fileNames[0]);
-    //   const file2Data = await loadFromDexieDB(DBName.US, fileNames[1]);
+    try {
+      const fileNames = usStore.getFileNames;
+      const file1Data = await loadFromDexieDB(DBName.US, fileNames[0].toLowerCase().replace('.csv', ''));
+      const file2Data = await loadFromDexieDB(DBName.US, fileNames[1].toLowerCase().replace('.csv', ''));
 
-    //   if (file1Data && file2Data) {
-    //     const { pricing, code } = await makeNpanxxReportsApi({
-    //       fileName1: fileNames[0].split('.')[0],
-    //       fileName2: fileNames[1].split('.')[0],
-    //       file1Data: file1Data as USStandardizedData[],
-    //       file2Data: file2Data as USStandardizedData[],
-    //     });
+      if (file1Data && file2Data) {
+        // This will be implemented later with the worker
+        console.log('Report generation will be implemented in a future update');
+        // const { pricing, code } = await makeNpanxxReportsApi({
+        //   fileName1: fileNames[0],
+        //   fileName2: fileNames[1],
+        //   file1Data: file1Data,
+        //   file2Data: file2Data,
+        // });
 
-    //     if (pricing && code) {
-    //       usStore.setReports(pricing, code);
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error('Error generating reports:', error);
-    // } finally {
-    //   isGeneratingReports.value = false;
-    // }
+        // if (pricing && code) {
+        //   usStore.setReports(pricing, code);
+        // }
+      }
+    } catch (error) {
+      console.error('Error generating reports:', error);
+    } finally {
+      isGeneratingReports.value = false;
+    }
   }
 
   // File handling functions
   async function handleFileInput(event: Event, componentId: string) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+
+    // Clear any previous errors
+    uploadError[componentId] = null;
+    
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
+    if (usStore.isComponentUploading(otherComponent)) {
+      uploadError[componentId] = "Please wait for the other file to finish uploading";
+      return;
+    }
+    
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError[componentId] = 'Only CSV files are accepted';
+      return;
+    }
+    
+    // Check for duplicate filename
+    if (usStore.hasExistingFile(file.name)) {
+      uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+      return;
+    }
 
     usStore.setTempFile(componentId, file);
 
@@ -285,6 +443,7 @@
       error: error => {
         console.error('Error parsing CSV:', error);
         usStore.clearTempFile(componentId);
+        uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
       },
     });
   }
@@ -294,7 +453,7 @@
     columnMappings.value = newMappings;
   }
 
-  async function handleModalConfirm(mappings: Record<string, string>) {
+  async function handleModalConfirm(mappings: Record<string, string>, indeterminateDefinition?: string) {
     const file = usStore.getTempFile(activeComponent.value);
     if (!file) return;
 
@@ -314,11 +473,26 @@
         ),
       };
 
+      console.log(`Processing file for component: ${activeComponent.value}, file: ${file.name}`);
+      console.log('Column mapping:', columnMapping);
+      
       // Process file with mappings
-      // const result = await usService.processFile(file, columnMapping, startLine.value);
-      // await handleFileUploaded(activeComponent.value, result.fileName);
+      const result = await usService.processFile(file, columnMapping, startLine.value, indeterminateDefinition);
+      console.log(`File processed successfully. Records: ${result.records.length}`);
+      
+      // Make sure we're calling handleFileUploaded with the component ID
+      await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
+      uploadError[activeComponent.value] = `Error processing file: ${error instanceof Error ? error.message : String(error)}`;
+      
+      // If there was an error, make sure we clean up any partial data
+      try {
+        const tableName = file.name.toLowerCase().replace('.csv', '');
+        await usService.removeTable(tableName);
+      } catch (cleanupError) {
+        console.error('Error during cleanup:', cleanupError);
+      }
     } finally {
       usStore.setComponentUploading(activeComponent.value, false);
       usStore.clearTempFile(activeComponent.value);
@@ -337,10 +511,65 @@
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
-      // await usService.removeTable(tableName);
+      await usService.removeTable(tableName);
       usStore.removeFile(componentName);
     } catch (error) {
       console.error('Error removing file:', error);
+    }
+  }
+
+  // Add a debug function for testing errors
+  function setTestError(componentId: string, message: string) {
+    // For testing error states
+    uploadError[componentId] = message;
+    console.log(`Set error for ${componentId}: ${message}`);
+  }
+
+  async function checkDatabaseTables() {
+    try {
+      const tables = await usService.listTables();
+      console.log('Current IndexedDB tables and record counts:');
+      console.table(tables);
+      
+      if (tables.length === 0) {
+        console.warn('No tables found in the database.');
+      } else {
+        tables.forEach(table => {
+          if (table.recordCount === 0) {
+            console.warn(`Table '${table.tableName}' exists but contains no records.`);
+          }
+        });
+      }
+      
+      return tables;
+    } catch (error) {
+      console.error('Error checking database tables:', error);
+    }
+  }
+  
+  // Let's run this check when components mount
+  onMounted(async () => {
+    await checkDatabaseTables();
+  });
+
+  async function clearAllData() {
+    try {
+      await usService.clearData();
+      
+      // Reset all component states
+      inactivateAllComponents();
+      
+      // Clear errors and reset upload states
+      Object.keys(uploadError).forEach(component => {
+        uploadError[component] = '';
+      });
+      
+      await checkDatabaseTables();
+      
+      // Toast or notification
+      console.log('All data has been cleared successfully');
+    } catch (error) {
+      console.error('Error clearing data:', error);
     }
   }
 </script>
