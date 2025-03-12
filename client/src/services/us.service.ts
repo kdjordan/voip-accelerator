@@ -95,11 +95,37 @@ export class USService {
                 if (npanxx.length === 6) {
                   npa = npanxx.substring(0, 3);
                   nxx = npanxx.substring(3, 6);
+                } 
+                // Log information about abnormal NPANXX values without modifying them
+                else if (npanxx) {
+                  console.log(`Found NPANXX with abnormal length: "${npanxx}" (length: ${npanxx.length})`);
+                  // We don't modify the data, just log it for debugging
+                  if (npanxx.length >= 3) {
+                    npa = npanxx.substring(0, Math.min(3, npanxx.length));
+                    nxx = npanxx.length > 3 ? npanxx.substring(3) : '';
+                    console.log(`Extracted NPA: "${npa}", NXX: "${nxx}" for analysis purposes`);
+                  }
                 }
               } else if (columnMapping.npa >= 0 && columnMapping.nxx >= 0) {
                 npa = row[columnMapping.npa]?.trim() || '';
                 nxx = row[columnMapping.nxx]?.trim() || '';
+                
+                // Special handling for NPA with country code prefix ("1")
+                if (npa.startsWith('1') && npa.length === 4) {
+                  console.log(`Found NPA with country code: "${npa}", removing leading "1"`);
+                  npa = npa.substring(1); // Remove leading "1" 
+                }
+                
                 npanxx = npa + nxx;
+                
+                // Log the resulting NPANXX
+                console.log(`Constructed NPANXX from NPA+NXX: "${npanxx}" (NPA: "${npa}", NXX: "${nxx}")`);
+              }
+
+              // Log full row data for debugging the first few rows
+              if (index < 5) {
+                console.log(`Row ${index} raw data:`, JSON.stringify(row));
+                console.log(`Column mapping being used:`, JSON.stringify(columnMapping));
               }
 
               // Extract rate values
@@ -117,8 +143,23 @@ export class USService {
                 indetermRate = indeterminateDefinition === 'interstate' ? interRate : intraRate;
               }
 
+              // Debug log for this row
+              console.debug(`Row data - NPANXX: "${npanxx}", InterRate: ${interRate}, IntraRate: ${intraRate}, IndetermRate: ${indetermRate}`);
+
               // Validate the data
               if (!npanxx || npanxx.length !== 6 || isNaN(interRate) || isNaN(intraRate) || isNaN(indetermRate)) {
+                const reason = !npanxx 
+                  ? 'NPANXX is empty' 
+                  : npanxx.length !== 6 
+                    ? `NPANXX length (${npanxx.length}) is not 6 digits` 
+                    : isNaN(interRate) 
+                      ? 'Invalid interstate rate' 
+                      : isNaN(intraRate) 
+                        ? 'Invalid intrastate rate' 
+                        : 'Invalid indeterminate rate';
+                
+                console.warn(`Row ${startLine + index} invalid: ${reason}. Values: NPANXX="${npanxx}", interstate="${interRateStr}", intrastate="${intraRateStr}"`);
+                
                 const invalidRow: InvalidUsRow = {
                   rowIndex: startLine + index,
                   npanxx,
@@ -127,13 +168,7 @@ export class USService {
                   interRate: isNaN(interRate) ? interRateStr : interRate,
                   intraRate: isNaN(intraRate) ? intraRateStr : intraRate,
                   indetermRate: isNaN(indetermRate) ? indetermRateStr : indetermRate,
-                  reason: !npanxx || npanxx.length !== 6 
-                    ? 'Invalid NPANXX format' 
-                    : isNaN(interRate) 
-                      ? 'Invalid interstate rate' 
-                      : isNaN(intraRate) 
-                        ? 'Invalid intrastate rate' 
-                        : 'Invalid indeterminate rate',
+                  reason,
                 };
                 this.store.addInvalidRow(file.name, invalidRow);
               } else {
@@ -241,29 +276,18 @@ export class USService {
         console.log(`Table ${tableName} does not exist, nothing to remove.`);
         return;
       }
-      
+
       // Close the database to modify schema
       await db.close();
-      
-      // Create a new version with this table removed
-      const newVersion = db.verno! + 1;
-      const schemaDefinition: Record<string, null | string> = {};
-      
-      // Keep other tables, remove only the specified one
-      db.tables.forEach(table => {
-        if (table.name === tableName) {
-          schemaDefinition[table.name] = null; // Remove this table
-        } else {
-          // Keep the schema for other tables
-          schemaDefinition[table.name] = db.table(table.name).schema.primKey.src;
-        }
+
+      // Remove the table by setting it to null in the next version
+      // This is the same approach used in the AZ service
+      db.version(db.verno! + 1).stores({
+        [tableName]: null, // This deletes the table
       });
-      
-      // Apply the new schema
-      db.version(newVersion).stores(schemaDefinition);
-      
+
       await db.open();
-      console.log(`Successfully removed table: ${tableName}`);
+      console.log(`Table ${tableName} removed successfully`);
     } catch (error) {
       console.error(`Failed to remove table ${tableName}:`, error);
       throw error;

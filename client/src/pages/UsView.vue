@@ -41,15 +41,15 @@
   // Uncomment to enable sample data loading during development
   onMounted(async () => {
     // Load sample data with a short delay to ensure components are ready
-    const sampleDecks = setTimeout(async () => {
-      try {
-        await loadSampleDecks([DBName.US]);
-        console.log('US sample data loaded successfully');
-      } catch (error) {
-        console.error('Failed to load US sample data:', error);
-      }
-    }, 1000);
+    // const sampleDecks = setTimeout(async () => {
+    //   try {
+    //     await loadSampleDecks([DBName.US]);
+    //     console.log('US sample data loaded successfully');
+    //   } catch (error) {
+    //     console.error('Failed to load US sample data:', error);
+    //   }
+    // }, 1000);
     
-    return () => clearTimeout(sampleDecks);
+    // return () => clearTimeout(sampleDecks);
   });
 </script>

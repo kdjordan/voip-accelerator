@@ -13,6 +13,7 @@ function getStoreNameFromFile(fileName: string): string {
 /**
  * Process US CSV data to convert the NPA/NXX columns into a standard 6-digit NPANXX format
  * This handles the case where a leading "1" (country code) might be present in the NPA
+ * NOTE: This is only used for sample data loading and doesn't affect the production code path
  */
 function processUSCsvData(csvText: string): string {
   const lines = csvText.split('\n');
@@ -46,9 +47,11 @@ function processUSCsvData(csvText: string): string {
       console.warn(`Generated NPANXX "${npanxx}" is not 6 digits (${npanxx.length}). This may cause validation issues.`);
     }
     
-    // Reconstruct the line with the NPANXX as the first data column
+    // FOR SAMPLE DATA: Keep the destination name in the output to maintain the original structure
     const newLine = [
-      npanxx,
+      destinationName,
+      npa,
+      nxx,
       cols[3], // interstate
       cols[4], // intrastate
       cols[5]  // indeterminate
@@ -103,8 +106,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
       const csvText1 = await usTestResponse.text();
       
-      // Process the CSV to create valid NPANXX format (standard is 6 digits, 3 for NPA + 3 for NXX)
-      // This handles the case where a leading "1" might be present in the NPA
+      // Process the CSV to create valid NPANXX format and fix the NPA format
       const processedCSV1 = processUSCsvData(csvText1);
       const usTestBlob = new File([processedCSV1], usTestFile);
 
@@ -112,53 +114,31 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const firstFewLines = processedCSV1.split('\n').slice(0, 5).join('\n');
       console.log('Processed UStest.csv content:', firstFewLines);
 
-      // Create tables directly in the database
-      const db = await usService.initializeDB();
+      // Use the normal USService.processFile method for consistency with production code
+      // Column mapping for US files with processed data
+      const columnMapping1 = {
+        npanxx: -1,       // Not directly available, will be constructed from NPA and NXX
+        npa: 1,           // NPA is in column 1 (after destination name)
+        nxx: 2,           // NXX is in column 2
+        interstate: 3,    // Interstate rate is in column 3
+        intrastate: 4,    // Intrastate rate is in column 4
+        indeterminate: 5  // Indeterminate rate is in column 5
+      };
+
+      console.log('Processing first US test file with column mapping:', columnMapping1);
       
-      // Make sure the table exists
-      if (!db.tables.some(t => t.name === usTestFile.toLowerCase().replace('.csv', ''))) {
-        await db.close();
-        console.log('Creating table for', usTestFile);
-        db.version(db.verno! + 1).stores({
-          [usTestFile.toLowerCase().replace('.csv', '')]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
-        });
-        await db.open();
+      try {
+        const result1 = await usService.processFile(usTestBlob, columnMapping1, 1);
+        console.log('Result from processing UStest.csv:', result1);
+        await usStore.addFileUploaded('us1', result1.fileName);
+        console.log('First US file loaded successfully:', result1.fileName);
+      } catch (error) {
+        console.error('Error processing first US file:', error);
+        
+        // Fallback to direct database approach only if processFile fails
+        console.log('Falling back to direct database approach for first file');
+        await loadUSFileDirect(usService, usStore, 'us1', usTestFile, processedCSV1);
       }
-      
-      // Parse the CSV data manually to control exactly how it's processed
-      const parsedData = processedCSV1.split('\n')
-        .filter(line => line.trim())
-        .map(line => {
-          const [npanxx, interRateStr, intraRateStr, indetermRateStr] = line.split(',');
-          
-          // Extract NPA and NXX from NPANXX
-          const npa = npanxx.substring(0, 3);
-          const nxx = npanxx.substring(3, 6);
-          
-          // Parse rates as floats
-          const interRate = parseFloat(interRateStr);
-          const intraRate = parseFloat(intraRateStr);
-          const indetermRate = parseFloat(indetermRateStr);
-          
-          return {
-            npanxx,
-            npa,
-            nxx,
-            interRate,
-            intraRate,
-            indetermRate
-          };
-        });
-      
-      console.log('Parsed data from UStest.csv:', parsedData);
-      
-      // Store data directly in the database
-      console.log('Storing data in ustest');
-      await db.table(usTestFile.toLowerCase().replace('.csv', '')).bulkPut(parsedData);
-      
-      // Register file in store
-      usStore.addFileUploaded('us1', usTestFile);
-      console.log('First US file loaded successfully:', usTestFile);
       
       // Load second US test file - UStest1.csv
       const usTest2File = 'UStest1.csv';
@@ -173,52 +153,18 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const firstFewLines2 = processedCSV2.split('\n').slice(0, 5).join('\n');
       console.log('Processed UStest1.csv content:', firstFewLines2);
       
-      // Make sure the second table exists
-      if (!db.tables.some(t => t.name === usTest2File.toLowerCase().replace('.csv', ''))) {
-        await db.close();
-        console.log('Creating table for', usTest2File);
-        db.version(db.verno! + 1).stores({
-          [usTest2File.toLowerCase().replace('.csv', '')]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
-        });
-        await db.open();
+      try {
+        const result2 = await usService.processFile(usTest2Blob, columnMapping1, 1);
+        console.log('Result from processing UStest1.csv:', result2);
+        await usStore.addFileUploaded('us2', result2.fileName);
+        console.log('Second US file loaded successfully:', result2.fileName);
+      } catch (error) {
+        console.error('Error processing second US file:', error);
+        
+        // Fallback to direct database approach only if processFile fails
+        console.log('Falling back to direct database approach for second file');
+        await loadUSFileDirect(usService, usStore, 'us2', usTest2File, processedCSV2);
       }
-      
-      // Parse the second CSV data the same way
-      const parsedData2 = processedCSV2.split('\n')
-        .filter(line => line.trim())
-        .map(line => {
-          const [npanxx, interRateStr, intraRateStr, indetermRateStr] = line.split(',');
-          
-          // Extract NPA and NXX from NPANXX
-          const npa = npanxx.substring(0, 3);
-          const nxx = npanxx.substring(3, 6);
-          
-          // Parse rates as floats
-          const interRate = parseFloat(interRateStr);
-          const intraRate = parseFloat(intraRateStr);
-          const indetermRate = parseFloat(indetermRateStr);
-          
-          return {
-            npanxx,
-            npa,
-            nxx,
-            interRate,
-            intraRate,
-            indetermRate
-          };
-        });
-      
-      console.log('Parsed data from UStest1.csv:', parsedData2);
-      
-      // Store data directly in the database
-      console.log('Storing data in ustest1');
-      await db.table(usTest2File.toLowerCase().replace('.csv', '')).bulkPut(parsedData2);
-      
-      // Register file in store
-      usStore.addFileUploaded('us2', usTest2File);
-      console.log('Second US file loaded successfully:', usTest2File);
-      
-      console.log('US sample data stored directly in database');
     }
 
     console.log('Sample decks loaded successfully');
@@ -226,4 +172,65 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
     console.error('Error loading sample decks:', error);
     throw error;
   }
+}
+
+/**
+ * Helper function to load US data directly into the database as a fallback
+ * This is only used for sample data loading when the normal processFile method fails
+ */
+async function loadUSFileDirect(
+  usService: USService, 
+  usStore: any, 
+  componentId: string, 
+  fileName: string, 
+  processedCSV: string
+): Promise<void> {
+  // Create tables directly in the database
+  const db = await usService.initializeDB();
+  
+  // Make sure the table exists
+  const tableName = fileName.toLowerCase().replace('.csv', '');
+  if (!db.tables.some(t => t.name === tableName)) {
+    await db.close();
+    console.log('Creating table for', fileName);
+    db.version(db.verno! + 1).stores({
+      [tableName]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
+    });
+    await db.open();
+  }
+  
+  // Parse the CSV data manually to control exactly how it's processed
+  const parsedData = processedCSV.split('\n')
+    .filter(line => line.trim())
+    .map(line => {
+      const parts = line.split(',');
+      // Skip the destination name and get the relevant fields
+      const npa = parts[1];
+      const nxx = parts[2];
+      const npanxx = npa + nxx;
+      
+      // Parse rates as floats
+      const interRate = parseFloat(parts[3]);
+      const intraRate = parseFloat(parts[4]);
+      const indetermRate = parseFloat(parts[5]);
+      
+      return {
+        npanxx,
+        npa,
+        nxx,
+        interRate,
+        intraRate,
+        indetermRate
+      };
+    });
+  
+  console.log('Parsed data from', fileName, ':', parsedData.slice(0, 2));
+  
+  // Store data directly in the database
+  console.log('Storing data in', tableName);
+  await db.table(tableName).bulkPut(parsedData);
+  
+  // Register file in store
+  usStore.addFileUploaded(componentId, fileName);
+  console.log('File loaded successfully via direct method:', fileName);
 }
