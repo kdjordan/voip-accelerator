@@ -474,11 +474,24 @@
       };
 
       console.log(`Processing file for component: ${activeComponent.value}, file: ${file.name}`);
-      console.log('Column mapping:', columnMapping);
+      console.log('User selected column mapping:', mappings);
+      console.log('Converted column mapping:', JSON.stringify(columnMapping, null, 2));
+      
+      // Log the first few lines of the file to debug format issues
+      console.log('Reading file preview to verify format:');
+      Papa.parse(file, {
+        preview: 3,
+        complete: (results) => {
+          console.log('First 3 rows:', results.data);
+        },
+        error: (error) => {
+          console.error('Error reading preview:', error);
+        }
+      });
       
       // Process file with mappings
       const result = await usService.processFile(file, columnMapping, startLine.value, indeterminateDefinition);
-      console.log(`File processed successfully. Records: ${result.records.length}`);
+      console.log(`File processed. Valid records: ${result.records.length}`);
       
       // Make sure we're calling handleFileUploaded with the component ID
       await handleFileUploaded(activeComponent.value, result.fileName);
@@ -511,6 +524,7 @@
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
+      console.log('removing table', tableName);
       await usService.removeTable(tableName);
       usStore.removeFile(componentName);
     } catch (error) {
