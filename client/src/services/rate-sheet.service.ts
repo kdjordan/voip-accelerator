@@ -1,5 +1,5 @@
-import Dexie, { Table } from 'dexie';
-import type { RateSheetRecord, GroupedRateData, RateStatistics } from '@/types/domains/rate-sheet-types';
+import { ChangeCode } from '@/types/domains/rate-sheet-types';
+import type { RateSheetRecord, GroupedRateData, RateStatistics, InvalidRow, ChangeCodeType } from '@/types/domains/rate-sheet-types';
 import { useRateSheetStore } from '@/stores/rate-sheet-store';
 import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';
@@ -9,45 +9,55 @@ type ValidRecord = {
   name: string;
   prefix: string;
   rate: number;
-  effective: string | undefined;
+  effective: string;
+  changeCode: ChangeCodeType;
   minDuration: number;
   increments: number;
 };
 
 export class RateSheetService {
   private store = useRateSheetStore();
-  private db: Dexie | null = null;
+  private tableName = 'rateSheet';
+  private dexieDB = useDexieDB();
 
   constructor() {
     console.log('Initializing Rate Sheet service');
-    this.initializeDB();
   }
 
-  async initializeDB() {
-    if (!this.db) {
-      const { getDB } = useDexieDB();
-      this.db = await getDB(DBName.RATE_SHEET);
-      await this.db.open();
+  private async getDB() {
+    try {
+      const db = await this.dexieDB.getDB(DBName.RATE_SHEET);
+      return db;
+    } catch (error) {
+      console.error('Failed to get database connection:', error);
+      throw error;
     }
-    return this.db;
+  }
+
+  async ensureTableExists() {
+    try {
+      const db = await this.getDB();
+      
+      if (!db.hasStore(this.tableName)) {
+        console.log(`Creating ${this.tableName} table in database`);
+        await db.addStore(this.tableName);
+      }
+      
+      return db;
+    } catch (error) {
+      console.error(`Error ensuring ${this.tableName} table exists:`, error);
+      throw error;
+    }
   }
 
   async processRateSheetData(data: RateSheetRecord[]): Promise<void> {
     try {
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-
-      // Only create new schema if table doesn't exist
-      if (!db.tables.some((t: Table) => t.name === 'rate_sheet')) {
-        await db.close();
-        db.version(db.verno! + 1).stores({
-          rate_sheet: '++id, name, prefix, rate, *effective, *minDuration, *increments',
-        });
-        await db.open();
-      }
-
-      await db.table('rate_sheet').clear();
-      await db.table('rate_sheet').bulkPut(data);
+      const db = await this.ensureTableExists();
+      
+      // Perform operations within a single transaction if possible
+      await db.table(this.tableName).clear();
+      await db.table(this.tableName).bulkPut(data);
+      
       console.log('Rate sheet data processed successfully');
     } catch (error) {
       console.error('Failed to process rate sheet data:', error);
@@ -57,9 +67,8 @@ export class RateSheetService {
 
   async clearData(): Promise<void> {
     try {
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-      await db.table('rate_sheet').clear();
+      const db = await this.ensureTableExists();
+      await db.table(this.tableName).clear();
       this.store.clearInvalidRows();
       this.store.$reset();
     } catch (error) {
@@ -69,9 +78,13 @@ export class RateSheetService {
   }
 
   async getRateSheetData(): Promise<RateSheetRecord[]> {
-    const db = await this.initializeDB();
-    if (!db) throw new Error('Failed to initialize database');
-    return await db.table('rate_sheet').toArray();
+    try {
+      const db = await this.ensureTableExists();
+      return await db.table(this.tableName).toArray();
+    } catch (error) {
+      console.error('Failed to get rate sheet data:', error);
+      throw error;
+    }
   }
 
   async processFile(
@@ -79,74 +92,105 @@ export class RateSheetService {
     columnMapping: Record<string, number>,
     startLine: number
   ): Promise<{ fileName: string; records: RateSheetRecord[] }> {
-    const tableName = 'rate_sheet';
-    this.store.clearInvalidRows(); // Clear any previous invalid rows
+    try {
+      // Ensure database and table are ready before starting file processing
+      await this.ensureTableExists();
+      
+      this.store.clearInvalidRows();
 
-    const db = await this.initializeDB();
-    if (!db) throw new Error('Failed to initialize database');
+      return new Promise((resolve, reject) => {
+        Papa.parse(file, {
+          header: false,
+          skipEmptyLines: true,
+          complete: async (results: { data: string[][] }) => {
+            try {
+              // Skip to user-specified start line
+              const dataRows = results.data.slice(startLine - 1);
+              const validRecords: RateSheetRecord[] = [];
+              const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
-    if (!db.tables.some((t: Table) => t.name === tableName)) {
-      await db.close();
-      db.version(db.verno! + 1).stores({
-        [tableName]: '++id, name, prefix, rate, *effective, *minDuration, *increments',
-      });
-      await db.open();
-    }
+              dataRows.forEach((row, index) => {
+                // Extract values
+                const name = row[columnMapping.name]?.trim() || '';
+                const prefix = row[columnMapping.prefix]?.trim() || '';
+                const rateStr = row[columnMapping.rate];
+                
+                // Auto-generate effective date as today - no longer read from file
+                const effective = today;
+                
+                // Auto-set changeCode to SAME for newly imported records
+                const changeCode: ChangeCodeType = ChangeCode.SAME;
+                
+                // Parse optional fields
+                let minDuration: number | undefined;
+                let increments: number | undefined;
 
-    return new Promise((resolve, reject) => {
-      Papa.parse(file, {
-        header: false,
-        skipEmptyLines: true,
-        complete: async (results: { data: string[][] }) => {
-          try {
-            const dataRows = results.data.slice(startLine - 1);
-            const validRecords = dataRows
-              .map(row => {
-                const rate = parseFloat(row[columnMapping.rate as number]);
-                const name = row[columnMapping.name as number]?.trim() || '';
-                const prefix = row[columnMapping.prefix as number]?.trim() || '';
-
-                if (isNaN(rate)) {
-                  this.store.addInvalidRow({
-                    destinationName: name,
-                    prefix: prefix,
-                    invalidRate: row[columnMapping.rate as number],
-                  });
-                  return null;
+                if (columnMapping.minDuration >= 0) {
+                  const minDurationStr = row[columnMapping.minDuration]?.trim();
+                  if (minDurationStr && !isNaN(Number(minDurationStr))) {
+                    minDuration = Number(minDurationStr);
+                  }
                 }
 
-                return {
-                  name,
-                  prefix,
-                  rate,
-                  effective: row[columnMapping.effective as number]?.trim(),
-                  minDuration: parseInt(row[columnMapping.minDuration as number]) || 1,
-                  increments: parseInt(row[columnMapping.increments as number]) || 1,
-                } as ValidRecord;
-              })
-              .filter((record): record is ValidRecord => record !== null);
+                if (columnMapping.increments >= 0) {
+                  const incrementsStr = row[columnMapping.increments]?.trim();
+                  if (incrementsStr && !isNaN(Number(incrementsStr))) {
+                    increments = Number(incrementsStr);
+                  }
+                }
 
-            const records = validRecords as RateSheetRecord[];
+                // Parse and validate the rate
+                const rate = parseFloat(rateStr);
+                if (isNaN(rate) || !name || !prefix) {
+                  const invalidRow: InvalidRow = {
+                    destinationName: name || `Row ${startLine + index}`,
+                    prefix: prefix || 'Missing',
+                    invalidRate: rateStr || 'Missing',
+                  };
+                  this.store.addInvalidRow(invalidRow);
+                } else {
+                  validRecords.push({
+                    name,
+                    prefix,
+                    rate,
+                    effective,
+                    changeCode,
+                    ...(minDuration !== undefined && { minDuration }),
+                    ...(increments !== undefined && { increments }),
+                  });
+                }
+              });
 
-            await db.table(tableName).clear();
-            await db.table(tableName).bulkPut(records);
+              if (validRecords.length > 0) {
+                // Use the storeInDexieDB method which handles transaction safety
+                await this.dexieDB.storeInDexieDB(validRecords, DBName.RATE_SHEET, this.tableName);
+                console.log(`Stored ${validRecords.length} valid records`);
+              } else {
+                console.log('No valid records to store');
+              }
 
-            // Process records into grouped data
-            const groupedData = this.processRecordsIntoGroups(records);
-            this.store.setGroupedData(groupedData);
-            this.store.setOriginalData(records);
-
-            resolve({ fileName: file.name, records });
-          } catch (error) {
-            reject(error);
-          }
-        },
-        error: error => reject(new Error(`Failed to process CSV: ${error.message}`)),
+              this.store.setOriginalData(validRecords);
+              
+              // Process records into groups and set the groupedData in the store
+              const groupedData = this.processRecordsIntoGroups(validRecords);
+              this.store.setGroupedData(groupedData);
+              
+              resolve({ fileName: file.name, records: validRecords });
+            } catch (error) {
+              console.error('Error processing file data:', error);
+              reject(error);
+            }
+          },
+          error: error => reject(new Error(`Failed to parse CSV: ${error.message}`)),
+        });
       });
-    });
+    } catch (error) {
+      console.error('Error in processFile:', error);
+      throw error;
+    }
   }
 
-  private processRecordsIntoGroups(records: RateSheetRecord[]): GroupedRateData[] {
+  public processRecordsIntoGroups(records: RateSheetRecord[]): GroupedRateData[] {
     // Group records by destination name
     const groupedByName = new Map<string, RateSheetRecord[]>();
     records.forEach(record => {
@@ -174,12 +218,21 @@ export class RateSheetService {
         rate.isCommon = rate.count === maxCount;
       });
 
+      // Determine if there's a discrepancy (more than one unique rate)
+      const hasDiscrepancy = rateMap.size > 1;
+      
+      // Add debug logging to check rate conflicts
+      if (hasDiscrepancy) {
+        console.log(`Rate conflict detected for ${name}: ${Array.from(rateMap.keys()).join(', ')}`);
+      }
+
       return {
         destinationName: name,
         codes: records.map(r => r.prefix),
         rates,
-        hasDiscrepancy: rateMap.size > 1,
-        effectiveDate: records[0]?.effective,
+        hasDiscrepancy,
+        effectiveDate: records[0]?.effective || new Date().toISOString().split('T')[0],
+        changeCode: records[0]?.changeCode || ChangeCode.SAME as ChangeCodeType,
         minDuration: records[0]?.minDuration,
         increments: records[0]?.increments,
       };

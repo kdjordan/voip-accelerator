@@ -29,6 +29,11 @@
             <option value="all">All Destinations</option>
             <option value="conflicts">Rate Conflicts</option>
             <option value="no-conflicts">No Conflicts</option>
+            <optgroup label="Change Status">
+              <option value="change-same">Same Rate</option>
+              <option value="change-increase">Rate Increase</option>
+              <option value="change-decrease">Rate Decrease</option>
+            </optgroup>
           </select>
         </div>
 
@@ -38,7 +43,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search destinations..."
+            placeholder="Search by Name or Prefix Start..."
             class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
           />
         </div>
@@ -129,15 +134,23 @@
               scope="col"
               class="px-3 py-3 text-left text-sm font-semibold text-gray-300"
             >
+              Change
+            </th>
+            <th
+              scope="col"
+              class="px-3 py-3 text-left text-sm font-semibold text-gray-300"
+            >
               Effective
             </th>
             <th
+              v-if="store.hasMinDuration"
               scope="col"
               class="px-3 py-3 text-left text-sm font-semibold text-gray-300"
             >
               Duration
             </th>
             <th
+              v-if="store.hasIncrements"
               scope="col"
               class="px-3 py-3 text-left text-sm font-semibold text-gray-300"
             >
@@ -180,51 +193,128 @@
                 </template>
                 <template v-else> Multiple Rates </template>
               </td>
-              <td class="px-3 py-4 text-sm text-gray-300">{{ group.effectiveDate }}</td>
-              <td class="px-3 py-4 text-sm text-gray-300">{{ group.minDuration }}</td>
-              <td class="px-3 py-4 text-sm text-gray-300">{{ group.increments }}</td>
+              <!-- Change Code column -->
+              <td class="px-3 py-4 text-sm">
+                <div class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
+                  :class="{
+                    'bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30': group.changeCode === ChangeCode.SAME,
+                    'bg-red-400/10 text-red-400 ring-1 ring-inset ring-red-400/30': group.changeCode === ChangeCode.DECREASE,
+                    'bg-orange-400/10 text-orange-400 ring-1 ring-inset ring-orange-400/30': group.changeCode === ChangeCode.INCREASE
+                  }">
+                  {{ group.changeCode }}
+                </div>
+              </td>
+              <td class="px-3 py-4 text-sm text-gray-300">
+                <div class="flex items-center" 
+                  :class="{
+                    'text-orange-400': group.changeCode === ChangeCode.INCREASE,
+                    'text-red-400': group.changeCode === ChangeCode.DECREASE
+                  }">
+                  <CalendarDaysIcon v-if="group.changeCode !== ChangeCode.SAME" class="h-4 w-4 mr-1" />
+                  {{ formatDate(group.effectiveDate) }}
+                </div>
+              </td>
+              <td v-if="store.hasMinDuration" class="px-3 py-4 text-sm text-gray-300">{{ group.minDuration }}</td>
+              <td v-if="store.hasIncrements" class="px-3 py-4 text-sm text-gray-300">{{ group.increments }}</td>
             </tr>
 
             <!-- Expanded Details -->
             <tr v-if="expandedRows.includes(group.destinationName)">
               <td
-                colspan="7"
+                colspan="8"
                 class="px-3 py-4 bg-gray-900/30"
               >
                 <div class="pl-8">
                   <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-sm font-medium text-gray-300">Rate Distribution</h4>
-                    <button
-                      v-if="hasUnsavedChanges(group.destinationName)"
-                      @click="saveRateSelection(group)"
-                      class="px-3 py-1 text-sm bg-accent hover:bg-accent-hover text-white rounded-md transition-colors"
-                    >
-                      Save Changes
-                    </button>
+                    <h4 class="text-sm font-medium text-white">Rate Distribution</h4>
+                    <div class="flex items-center gap-2">
+                      <button
+                        v-if="!areAllRateCodesExpanded(group.destinationName) && group.rates.length > 1"
+                        @click="toggleAllRateCodesForDestination(group.destinationName, true)"
+                        class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                      >
+                        Show All Codes
+                      </button>
+                      <button
+                        v-if="areAnyRateCodesExpanded(group.destinationName)"
+                        @click="toggleAllRateCodesForDestination(group.destinationName, false)"
+                        class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                      >
+                        Hide All Codes
+                      </button>
+                      <button
+                        v-if="hasUnsavedChanges(group.destinationName)"
+                        @click="saveRateSelection(group)"
+                        class="px-3 py-1 text-sm bg-accent hover:bg-accent-hover text-white rounded-md transition-colors"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
                   </div>
                   <div class="space-y-2">
                     <div
                       v-for="rate in group.rates"
                       :key="rate.rate"
-                      class="flex items-center justify-between text-sm p-2 rounded-md"
-                      :class="{ 'bg-gray-800/50': isSelectedRate(group.destinationName, rate.rate) }"
                     >
-                      <label class="flex items-center gap-2 flex-1 cursor-pointer">
-                        <input
-                          type="radio"
-                          :name="`rate-${group.destinationName}`"
-                          :value="rate.rate"
-                          :checked="isSelectedRate(group.destinationName, rate.rate)"
-                          @change="selectRate(group.destinationName, rate.rate)"
-                          class="text-accent"
-                        />
-                        <div
-                          class="w-2 h-2 rounded-full"
-                          :class="rate.isCommon ? 'bg-green-500' : 'bg-yellow-500'"
-                        ></div>
-                        <span class="text-white">{{ formatRate(rate.rate) }}</span>
-                      </label>
-                      <div class="text-gray-400">{{ rate.count }} codes ({{ Math.round(rate.percentage) }}%)</div>
+                      <!-- Rate row -->
+                      <div
+                        class="flex items-center justify-between text-sm p-2 rounded-md"
+                        :class="{ 'bg-gray-800/50': isSelectedRate(group.destinationName, rate.rate) }"
+                      >
+                        <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            :name="`rate-${group.destinationName}`"
+                            :value="rate.rate"
+                            :checked="isSelectedRate(group.destinationName, rate.rate)"
+                            @change="selectRate(group.destinationName, rate.rate)"
+                            class="text-accent"
+                          />
+                          <span class="text-white">{{ formatRate(rate.rate) }}</span>
+                        </label>
+                        <div 
+                          class="text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 transition-colors"
+                          @click.stop="toggleRateCodes(group.destinationName, rate.rate)"
+                        >
+                          <span>{{ rate.count }} codes ({{ Math.round(rate.percentage) }}%)</span>
+                          <ChevronDownIcon
+                            class="w-4 h-4 transition-transform"
+                            :class="{ 'rotate-180': isRateCodesExpanded(group.destinationName, rate.rate) }"
+                          />
+                        </div>
+                      </div>
+                      
+                      <!-- Codes section directly under the rate -->
+                      <div
+                        v-if="isRateCodesExpanded(group.destinationName, rate.rate)"
+                        class="mt-1 mb-3 bg-gray-900/50 p-3 rounded-md"
+                      >
+                        <div class="flex justify-between items-center mb-2">
+                          <div class="text-xs text-gray-300">Prefixes with rate {{ formatRate(rate.rate) }}:</div>
+                          <div class="text-xs text-gray-400">{{ getCodesForRate(group, rate.rate).length }} total codes</div>
+                        </div>
+                        
+                        <!-- Code grid with responsive layout -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 max-h-60 overflow-y-auto p-1">
+                          <div 
+                            v-for="(code, index) in getCodesForRate(group, rate.rate)" 
+                            :key="index"
+                            class="px-2 py-1 bg-gray-800/50 hover:bg-gray-700/50 rounded text-sm text-gray-300 font-mono transition-colors"
+                            :class="{ 'bg-accent/20 text-accent border border-accent/50 font-medium': isCodeMatchingSearch(group.destinationName, rate.rate, code) }"
+                            :title="code"
+                          >
+                            {{ code }}
+                          </div>
+                        </div>
+                        
+                        <!-- Show when there are many codes -->
+                        <div 
+                          v-if="getCodesForRate(group, rate.rate).length > 24"
+                          class="mt-2 text-xs text-right text-gray-500"
+                        >
+                          Scroll to see all {{ getCodesForRate(group, rate.rate).length }} codes
+                        </div>
+                      </div>
                     </div>
 
                     <!-- Custom Rate Option -->
@@ -311,15 +401,16 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, nextTick } from 'vue';
-  import { ChevronRightIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+  import { ref, computed, nextTick, watch } from 'vue';
+  import { ChevronRightIcon, TrashIcon, ArrowDownTrayIcon, CalendarDaysIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
   import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
+  import { ChangeCode } from '@/types/domains/rate-sheet-types';
 
   const store = useRateSheetStore();
   const groupedData = computed(() => store.getGroupedData);
   const expandedRows = ref<string[]>([]);
-  const filterStatus = ref<'all' | 'conflicts' | 'no-conflicts'>('all');
+  const filterStatus = ref<'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'>('all');
   const searchQuery = ref('');
   const selectedRates = ref<Record<string, number>>({});
   const customRates = ref<Record<string, number>>({});
@@ -335,6 +426,15 @@
   const isBulkProcessing = ref(false);
   const processedCount = ref(0);
   const totalToProcess = ref(0);
+  
+  // Track which rate's codes are expanded
+  const expandedRateCodes = ref<{[key: string]: number[]}>({});
+  
+  // Cache for codes by destination and rate to improve performance
+  const codesCache = ref<{[key: string]: {[rate: number]: string[]}}>({});
+  
+  // Track which codes match the current search query
+  const matchingCodes = ref<{[destinationName: string]: {[rate: number]: string[]}}>({}); 
 
   const filteredData = computed(() => {
     let filtered = groupedData.value;
@@ -344,16 +444,96 @@
       filtered = filtered.filter(group => group.hasDiscrepancy);
     } else if (filterStatus.value === 'no-conflicts') {
       filtered = filtered.filter(group => !group.hasDiscrepancy);
+    } else if (filterStatus.value === 'change-same') {
+      filtered = filtered.filter(group => group.changeCode === ChangeCode.SAME);
+    } else if (filterStatus.value === 'change-increase') {
+      filtered = filtered.filter(group => group.changeCode === ChangeCode.INCREASE);
+    } else if (filterStatus.value === 'change-decrease') {
+      filtered = filtered.filter(group => group.changeCode === ChangeCode.DECREASE);
     }
+
+    // Clear matching codes when search changes
+    matchingCodes.value = {};
 
     // Apply search filter
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase();
-      filtered = filtered.filter(group => group.destinationName.toLowerCase().includes(query));
+      
+      // Filter destinations by name match or code match
+      filtered = filtered.filter(group => {
+        // Match by destination name
+        if (group.destinationName.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Match by code prefix
+        const matchingCodesByRate: {[rate: number]: string[]} = {};
+        
+        // Check all rates and their codes
+        for (const rate of group.rates) {
+          const codesForRate = getCodesForRate(group, rate.rate);
+          const matches = codesForRate.filter(code => code.toLowerCase().startsWith(query));
+          
+          if (matches.length > 0) {
+            matchingCodesByRate[rate.rate] = matches;
+          }
+        }
+        
+        // If any codes match, store them and return true
+        if (Object.keys(matchingCodesByRate).length > 0) {
+          matchingCodes.value[group.destinationName] = matchingCodesByRate;
+          return true;
+        }
+        
+        return false;
+      });
     }
 
     return filtered;
   });
+
+  // Watch for search query changes to handle expansion
+  watch(searchQuery, (newValue, oldValue) => {
+    if (newValue) {
+      // When searching, expand matching destinations and their matching rates
+      Object.keys(matchingCodes.value).forEach(destinationName => {
+        // Expand the destination row
+        if (!expandedRows.value.includes(destinationName)) {
+          expandedRows.value.push(destinationName);
+        }
+        
+        // Expand the matching rates
+        if (!expandedRateCodes.value[destinationName]) {
+          expandedRateCodes.value[destinationName] = [];
+        }
+        
+        // For each matching rate, expand the rate codes section
+        Object.keys(matchingCodes.value[destinationName]).forEach(rateStr => {
+          const rate = parseFloat(rateStr);
+          if (!expandedRateCodes.value[destinationName].includes(rate)) {
+            expandedRateCodes.value[destinationName].push(rate);
+          }
+        });
+      });
+      
+      // Wait for DOM to update, then scroll to the first match
+      nextTick(() => {
+        const firstMatchElement = document.querySelector('.bg-accent\\/10');
+        if (firstMatchElement) {
+          firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    } else if (oldValue) {
+      // When clearing a search, collapse all expanded rows and rate codes
+      expandedRows.value = [];
+      expandedRateCodes.value = {};
+    }
+  });
+
+  function isCodeMatchingSearch(destinationName: string, rate: number, code: string): boolean {
+    return !!searchQuery.value && 
+           !!matchingCodes.value[destinationName]?.[rate]?.includes(code);
+  }
 
   function toggleExpand(destinationName: string) {
     const index = expandedRows.value.indexOf(destinationName);
@@ -470,11 +650,12 @@
 
   function handleExport() {
     // Convert data to CSV format
-    const headers = ['name', 'prefix', 'rate', 'effective', 'min duration', 'increments'];
+    const headers = ['name', 'prefix', 'rate', 'change_code', 'effective', 'min duration', 'increments'];
     const rows = store.originalData.map(record => [
       record.name,
       record.prefix,
       record.rate.toFixed(6),
+      record.changeCode,
       record.effective,
       record.minDuration,
       record.increments,
@@ -492,5 +673,77 @@
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  function formatDate(date: string): string {
+    const formattedDate = new Date(date).toLocaleDateString();
+    return formattedDate;
+  }
+
+  function toggleRateCodes(destinationName: string, rate: number) {
+    if (!expandedRateCodes.value[destinationName]) {
+      expandedRateCodes.value[destinationName] = [];
+    }
+    
+    const index = expandedRateCodes.value[destinationName].indexOf(rate);
+    if (index === -1) {
+      expandedRateCodes.value[destinationName].push(rate);
+    } else {
+      expandedRateCodes.value[destinationName].splice(index, 1);
+    }
+  }
+
+  function isRateCodesExpanded(destinationName: string, rate: number): boolean {
+    return expandedRateCodes.value[destinationName]?.includes(rate) || false;
+  }
+
+  function getCodesForRate(group: GroupedRateData, rate: number): string[] {
+    const cacheKey = group.destinationName;
+    
+    // Initialize cache structure if needed
+    if (!codesCache.value[cacheKey]) {
+      codesCache.value[cacheKey] = {};
+    }
+    
+    // Return cached result if available
+    if (codesCache.value[cacheKey][rate]) {
+      return codesCache.value[cacheKey][rate];
+    }
+    
+    // Get codes and store in cache
+    const destinationRecords = store.originalData.filter(
+      record => record.name === group.destinationName && record.rate === rate
+    );
+    
+    const codes = destinationRecords.map(record => record.prefix);
+    codesCache.value[cacheKey][rate] = codes;
+    
+    return codes;
+  }
+  
+  function toggleAllRateCodesForDestination(destinationName: string, expand: boolean) {
+    // Get all rates for this destination
+    const group = groupedData.value.find(g => g.destinationName === destinationName);
+    if (!group) return;
+    
+    if (expand) {
+      // Expand all rates
+      expandedRateCodes.value[destinationName] = group.rates.map(r => r.rate);
+    } else {
+      // Collapse all rates
+      expandedRateCodes.value[destinationName] = [];
+    }
+  }
+  
+  function areAllRateCodesExpanded(destinationName: string): boolean {
+    const group = groupedData.value.find(g => g.destinationName === destinationName);
+    if (!group) return false;
+    
+    const allRates = group.rates.map(r => r.rate);
+    return allRates.every(rate => isRateCodesExpanded(destinationName, rate));
+  }
+  
+  function areAnyRateCodesExpanded(destinationName: string): boolean {
+    return !!expandedRateCodes.value[destinationName]?.length;
   }
 </script>

@@ -47,6 +47,15 @@
               </div>
             </div>
 
+            <!-- Informational note about auto-generated fields -->
+            <div class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md">
+              <p class="text-sm text-blue-400">
+                <span class="font-medium">Note:</span> 
+                Effective Date is auto-set to today's date, and Change Code is auto-set to 'SAME' for new records.
+                These fields are managed automatically and don't need to be mapped from your CSV.
+              </p>
+            </div>
+
             <!-- US-specific help text -->
             <div v-if="isUSFile" class="mb-4 p-3 bg-accent/10 border border-accent/30 rounded-md">
               <p class="text-sm text-accent">

@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen text-white p-8 w-full">
     <h1 class="mb-8">
-      <span class="text-sizeXl tracking-wide text-accent uppercase px-4 py-2 font-secondary"> Rate Sheet Wizard </span>
+      <span class="text-sizeXl tracking-wide text-accent uppercase px-4 py-2 font-secondary">AZ Rate Sheet Wizard </span>
     </h1>
 
     <!-- Stats Dashboard -->
@@ -198,7 +198,7 @@
   import { ArrowUpTrayIcon, TrashIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
   import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
-  import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
+  import { RF_COLUMN_ROLE_OPTIONS, ChangeCode } from '@/types/domains/rate-sheet-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
   import { RateSheetService } from '@/services/rate-sheet.service';
@@ -236,19 +236,29 @@
     }
 
     selectedFile.value = file;
+    uploadError.value = null;
 
-    Papa.parse(file, {
-      header: false,
-      skipEmptyLines: true,
-      complete: (results: ParseResult<string[]>) => {
-        columns.value = results.data[0].map(h => h.trim());
-        previewData.value = results.data
-          .slice(0, 10)
-          .map(row => (Array.isArray(row) ? row.map(cell => cell?.trim() || '') : []));
-        startLine.value = 1;
-        showPreviewModal.value = true;
-      },
-    });
+    try {
+      Papa.parse(file, {
+        header: false,
+        skipEmptyLines: true,
+        complete: (results: ParseResult<string[]>) => {
+          columns.value = results.data[0].map(h => h.trim());
+          previewData.value = results.data
+            .slice(0, 10)
+            .map(row => (Array.isArray(row) ? row.map(cell => cell?.trim() || '') : []));
+          startLine.value = 1;
+          showPreviewModal.value = true;
+        },
+        error: (error) => {
+          console.error('Error parsing CSV:', error);
+          uploadError.value = 'Failed to parse CSV file: ' + error.message;
+        }
+      });
+    } catch (error) {
+      console.error('Error handling file:', error);
+      uploadError.value = 'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
+    }
   }
 
   async function handleRfFileDrop(event: DragEvent) {
@@ -272,6 +282,7 @@
     if (!file) return;
 
     isRFUploading.value = true;
+    uploadError.value = null;
 
     try {
       // Convert the new mappings format to the expected columnMapping format
@@ -279,16 +290,46 @@
         name: Number(Object.entries(mappings).find(([_, value]) => value === 'name')?.[0] ?? -1),
         prefix: Number(Object.entries(mappings).find(([_, value]) => value === 'prefix')?.[0] ?? -1),
         rate: Number(Object.entries(mappings).find(([_, value]) => value === 'rate')?.[0] ?? -1),
-        effective: Number(Object.entries(mappings).find(([_, value]) => value === 'effective')?.[0] ?? -1),
+        // effective is no longer mapped from CSV, it's auto-generated
         minDuration: Number(Object.entries(mappings).find(([_, value]) => value === 'minDuration')?.[0] ?? -1),
         increments: Number(Object.entries(mappings).find(([_, value]) => value === 'increments')?.[0] ?? -1),
       };
 
-      const result = await rateSheetService.processFile(file, columnMapping, startLine.value);
-      store.setOptionalFields(mappings);
-      rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
+      // Validate required mappings
+      if (columnMapping.name < 0 || columnMapping.prefix < 0 || columnMapping.rate < 0) {
+        throw new Error('Required column mappings (name, prefix, rate) not found');
+      }
+
+      console.log('Processing file with column mapping:', columnMapping);
+      
+      // Attempt to process the file with retries if needed
+      let attempts = 0;
+      const maxAttempts = 3;
+      let lastError;
+      
+      while (attempts < maxAttempts) {
+        try {
+          attempts++;
+          const result = await rateSheetService.processFile(file, columnMapping, startLine.value);
+          store.setOptionalFields(mappings);
+          console.log(`File processed successfully on attempt ${attempts}`);
+          rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
+          return;
+        } catch (error) {
+          console.error(`Attempt ${attempts} failed:`, error);
+          lastError = error;
+          // Wait a bit before retrying
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+
+      // If we get here, all attempts failed
+      throw lastError || new Error('Failed to process rate sheet after multiple attempts');
     } catch (error) {
       console.error('Failed to process rate sheet:', error);
+      uploadError.value = error instanceof Error ? error.message : 'Failed to process rate sheet';
       rfUploadStatus.value = {
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to process rate sheet',

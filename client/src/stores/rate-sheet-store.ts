@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia';
+import { ChangeCode } from '@/types/domains/rate-sheet-types';
 import type {
   RateSheetState,
   RateSheetRecord,
   GroupedRateData,
   RateStatistics,
   InvalidRow,
+  ChangeCodeType,
 } from '@/types/domains/rate-sheet-types';
 
 export const useRateSheetStore = defineStore('rateSheet', {
@@ -14,7 +16,6 @@ export const useRateSheetStore = defineStore('rateSheet', {
     isLocallyStored: false,
     groupedData: [],
     originalData: [],
-    hasEffectiveDate: false,
     hasMinDuration: false,
     hasIncrements: false,
     invalidRows: [],
@@ -38,26 +39,50 @@ export const useRateSheetStore = defineStore('rateSheet', {
     },
 
     setOriginalData(data: RateSheetRecord[]) {
-      this.originalData = data;
+      const today = new Date().toISOString().split('T')[0];
+      
+      this.originalData = data.map(record => ({
+        ...record,
+        effective: record.effective || today,
+        changeCode: record.changeCode || ChangeCode.SAME
+      }));
     },
 
     setOptionalFields(mappings: Record<string, string>) {
-      this.hasEffectiveDate = 'effective' in mappings;
       this.hasMinDuration = 'minDuration' in mappings;
       this.hasIncrements = 'increments' in mappings;
       this.isLocallyStored = true;
     },
 
     async updateDestinationRate(destinationName: string, newRate: number) {
-      // Update the store's original data
+      const today = new Date().toISOString().split('T')[0];
+      
+      const existingRecord = this.originalData.find(record => record.name === destinationName);
+      
+      if (!existingRecord) return;
+      
+      let changeCode: ChangeCodeType = ChangeCode.SAME;
+      let effectiveDate = today;
+      
+      if (newRate > existingRecord.rate) {
+        changeCode = ChangeCode.INCREASE;
+        const sevenDaysLater = new Date();
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+        effectiveDate = sevenDaysLater.toISOString().split('T')[0];
+      } else if (newRate < existingRecord.rate) {
+        changeCode = ChangeCode.DECREASE;
+      }
+      
       this.originalData = this.originalData.map(record =>
-        record.name === destinationName ? { ...record, rate: newRate } : record
+        record.name === destinationName 
+          ? { 
+              ...record, 
+              rate: newRate, 
+              changeCode: changeCode,
+              effective: effectiveDate 
+            } 
+          : record
       );
-
-      // The getGroupedData getter will automatically:
-      // - Group by destination
-      // - Recalculate rates and discrepancies
-      // - Update the UI accordingly
     },
 
     clearData() {
@@ -77,7 +102,12 @@ export const useRateSheetStore = defineStore('rateSheet', {
   },
 
   getters: {
-    getDiscrepancyCount: (state): number => state.groupedData.filter(group => group.hasDiscrepancy).length,
+    getDiscrepancyCount: (state): number => {
+      const count = state.groupedData.filter(group => group.hasDiscrepancy).length;
+      console.log(`Destinations with rate discrepancies: ${count}`);
+      console.log('Discrepancy breakdown:', state.groupedData.filter(group => group.hasDiscrepancy).map(g => g.destinationName));
+      return count;
+    },
 
     getDestinationsByStatus: state => (hasDiscrepancy: boolean) =>
       state.groupedData.filter(group => group.hasDiscrepancy === hasDiscrepancy),
@@ -85,45 +115,43 @@ export const useRateSheetStore = defineStore('rateSheet', {
     getGroupedData: (state): GroupedRateData[] => {
       const groupedByName = new Map<string, RateSheetRecord[]>();
 
-      // Group records by destination name
       state.originalData.forEach(record => {
         const records = groupedByName.get(record.name) || [];
         records.push(record);
         groupedByName.set(record.name, records);
       });
 
-      // Process each group
       return Array.from(groupedByName.entries()).map(([name, records]) => {
-        // Calculate rate statistics
         const rateMap = new Map<number, number>();
         records.forEach(record => {
           const rate = typeof record.rate === 'string' ? parseFloat(record.rate) : record.rate;
           rateMap.set(rate, (rateMap.get(rate) || 0) + 1);
         });
 
-        // Calculate total records for percentage
         const totalRecords = records.length;
 
-        // Convert rate map to array of rate statistics
         const rates: RateStatistics[] = Array.from(rateMap.entries()).map(([rate, count]) => ({
           rate,
           count,
           percentage: (count / totalRecords) * 100,
-          isCommon: false, // Will be set after determining most common rate
+          isCommon: false,
         }));
 
-        // Find the most common rate
         const maxCount = Math.max(...rates.map(r => r.count));
         rates.forEach(rate => {
           rate.isCommon = rate.count === maxCount;
         });
+
+        const effectiveDate = records[0]?.effective || '';
+        const changeCode: ChangeCodeType = records[0]?.changeCode || ChangeCode.SAME;
 
         return {
           destinationName: name,
           codes: records.map(r => r.prefix),
           rates,
           hasDiscrepancy: rateMap.size > 1,
-          effectiveDate: records[0]?.effective,
+          effectiveDate,
+          changeCode,
           minDuration: records[0]?.minDuration,
           increments: records[0]?.increments,
         };
