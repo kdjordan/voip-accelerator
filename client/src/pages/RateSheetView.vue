@@ -192,7 +192,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { computed, ref, onMounted } from 'vue';
 
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
   import { ArrowUpTrayIcon, TrashIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
@@ -205,7 +205,7 @@
 
   const store = useRateSheetStore();
   const rateSheetService = new RateSheetService();
-  const isLocallyStored = computed(() => store.isLocallyStored);
+  const isLocallyStored = computed(() => store.hasStoredData);
   const isDragging = ref(false);
   const isProcessing = ref(false);
   const uploadError = ref<string | null>(null);
@@ -231,6 +231,15 @@
 
   // Invalid Rows state
   const showInvalidRowsDetails = ref(false);
+
+  onMounted(() => {
+    // Check if data is already stored in localStorage via the store
+    if (!store.hasStoredData) {
+      console.log('No rate sheet data found in localStorage');
+    } else {
+      console.log('Rate sheet data loaded from localStorage');
+    }
+  });
 
   async function handleFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];

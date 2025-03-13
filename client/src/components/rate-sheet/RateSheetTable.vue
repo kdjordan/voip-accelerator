@@ -54,26 +54,15 @@
           <div v-if="store.getDiscrepancyCount > 0">
             <label class="block text-sm text-gray-400 mb-1">Bulk Actions</label>
             <div class="space-y-2">
-              <!-- Progress bar when processing -->
-              <div
-                v-if="isBulkProcessing"
-                class="w-full bg-gray-700 rounded-full h-2"
-              >
-                <div
-                  class="bg-accent h-2 rounded-full transition-all duration-200"
-                  :style="{ width: `${(processedCount / totalToProcess) * 100}%` }"
-                ></div>
-              </div>
-
               <!-- Action buttons -->
               <div class="flex gap-2">
                 <button
                   @click="handleBulkUpdate('highest')"
                   :disabled="isBulkProcessing"
                   class="flex-1 px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300"
-                  :class="{ 'opacity-50 cursor-not-allowed': isBulkProcessing }"
+                  :class="{ 'opacity-50 cursor-not-allowed animate-pulse-fast': isBulkProcessing }"
                 >
-                  {{ isBulkProcessing ? `Processing ${processedCount}/${totalToProcess}...` : 'Use Highest' }}
+                  {{ isBulkProcessing ? 'Processing...' : 'Use Highest' }}
                 </button>
                 <button
                   v-if="!isBulkProcessing"
@@ -257,13 +246,13 @@
                   <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
                        :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'processing',
                                 'bg-green-900/30 text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing',
-                                'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing'}">
+                                'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
                     2
                   </div>
                   <div class="ml-2 text-sm transition-all duration-300 font-medium" 
                        :class="{'text-green-500': processingPhase === 'processing', 
                                 'text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing', 
-                                'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing'}">
+                                'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
                     Processing Records
                   </div>
                 </div>
@@ -335,7 +324,7 @@
                 <button 
                   @click="applyEffectiveDateSettings" 
                   class="px-4 py-2 bg-green-900/30 text-green-400 hover:bg-green-900/50 rounded transition-colors"
-                  :class="{ 'animate-pulse': isApplyingSettings, 'opacity-50 cursor-not-allowed': isApplyingSettings }"
+                  :class="{ 'animate-pulse-fast': isApplyingSettings, 'opacity-50 cursor-not-allowed': isApplyingSettings }"
                   :disabled="isApplyingSettings"
                 >
                   {{ isApplyingSettings ? 'APPLYING SETTINGS...' : 'Apply Date Settings' }}
@@ -720,9 +709,9 @@
   const recordsUpdatedSoFar = ref(0);
   const estimatedTimeRemaining = ref<number | undefined>(undefined);
   
-  // Add throttling mechanism for UI updates
+  // Add throttling mechanism for UI updates (minimal throttling for better performance)
   const lastUIUpdateTime = ref(0);
-  const uiUpdateThrottle = 100; // ms between UI updates
+  const uiUpdateThrottle = 50; // increased from 10ms to 50ms for proper UI updates
   const pendingUIUpdates = ref<{[key: string]: any}>({});
   
   // Add detailed log tracking
@@ -847,6 +836,21 @@
       expandedRows.value.splice(index, 1);
     } else {
       expandedRows.value.push(destinationName);
+      
+      // Initialize selected rate if not already set
+      if (selectedRates.value[destinationName] === undefined) {
+        // Find the group for this destination
+        const group = groupedData.value.find(g => g.destinationName === destinationName);
+        if (group) {
+          // If no conflicts, use the only rate. If conflicts, use the most common rate (first one with isCommon=true)
+          const mostCommonRate = group.rates.find(r => r.isCommon)?.rate;
+          if (mostCommonRate !== undefined) {
+            selectedRates.value[destinationName] = mostCommonRate;
+            // Also store as original rate for detecting changes
+            originalRates.value[destinationName] = mostCommonRate;
+          }
+        }
+      }
     }
   }
 
@@ -927,30 +931,41 @@
     const destinationsToFix = groupedData.value.filter(group => group.hasDiscrepancy);
     totalToProcess.value = destinationsToFix.length;
     
+    if (destinationsToFix.length === 0) {
+      isBulkProcessing.value = false;
+      return;
+    }
+    
     // Initialize current discrepancy count
     currentDiscrepancyCount.value = store.getDiscrepancyCount;
-
+    
     try {
-      // Process in chunks to allow UI updates
-      for (let i = 0; i < destinationsToFix.length; i++) {
-        const group = destinationsToFix[i];
+      console.time('bulkUpdate');
+      
+      // Create an array to hold all update operations
+      const updates = destinationsToFix.map(group => {
         const rates = group.rates.map(r => r.rate);
         const newRate = mode === 'highest' ? Math.max(...rates) : Math.min(...rates);
-        await store.updateDestinationRate(group.destinationName, newRate);
-        processedCount.value++;
-        currentDiscrepancyCount.value = Math.max(0, currentDiscrepancyCount.value - 1);
-
-        // Allow UI to update
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
+        return { name: group.destinationName, rate: newRate };
+      });
+      
+      // Use a single operation to update all rates at once for maximum performance
+      await store.bulkUpdateDestinationRates(updates);
+      
+      // Single UI update when complete
+      processedCount.value = totalToProcess.value;
+      currentDiscrepancyCount.value = 0;
+      
       // Force a final update of the grouped data
       store.setGroupedData(store.getGroupedData);
-      // Reset current discrepancy count to the actual count after processing
-      currentDiscrepancyCount.value = store.getDiscrepancyCount;
+      console.timeEnd('bulkUpdate');
+      
+      // Add a small delay to show the button animation
+      // since the operation is now so fast users might miss the feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
     } finally {
       isBulkProcessing.value = false;
-      processedCount.value = 0;
-      totalToProcess.value = 0;
     }
   }
 
@@ -1260,9 +1275,9 @@
     if (updates.result) {
       console.log("Worker completed successfully");
       processingPhase.value = 'updating';
-      processingStatus.value = "Processing complete. Updating database...";
+      processingStatus.value = "Processing complete. Updating store...";
       
-      // Use microtask to allow UI to update before proceeding with heavy database operations
+      // Use microtask to allow UI to update before proceeding with heavy store operations
       queueMicrotask(() => {
         const { updatedRecords, recordsUpdatedCount, updatedGroupedData } = updates.result;
         // Handle worker result with UI breathing room
@@ -1275,7 +1290,7 @@
   async function handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData) {
     try {
       console.log(`Handling worker result: ${updatedRecords.length} records to update`);
-      processingStatus.value = `Saving ${updatedRecords.length} updated records to database...`;
+      processingStatus.value = `Saving ${updatedRecords.length} updated records to store...`;
       
       // Add to processing logs
       processingLogs.value.push({
@@ -1283,47 +1298,31 @@
         message: `Received final results: ${recordsUpdatedCount} records updated`
       });
       
-      // Allow UI to update
+      // Allow UI to update (minimal delay)
       await new Promise(resolve => {
         requestAnimationFrame(() => {
-          setTimeout(resolve, 100);
+          setTimeout(resolve, 50);
         });
       });
       
-      // Only update database if changes were made
+      // Only update if changes were made
       if (updatedRecords.length > 0) {
         processingLogs.value.push({
           time: Date.now(),
-          message: `Starting database update for ${updatedRecords.length} records`
-        });
-        
-        console.log("Updating database with worker results");
-        // Update database in chunks to prevent UI freezing
-        await updateDatabaseInChunks(updatedRecords);
-        
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `Database update completed`
+          message: `Starting store update for ${updatedRecords.length} records`
         });
         
         console.log("Updating store with worker results");
-        processingPhase.value = 'finalizing';
+        processingPhase.value = 'updating';
         processingStatus.value = "Updating application state...";
         
-        // Allow UI to update
-        await new Promise(resolve => {
-          requestAnimationFrame(() => {
-            setTimeout(resolve, 100);
-          });
-        });
+        // Update the store directly with the records from the worker
+        store.updateEffectiveDatesWithRecords(updatedRecords);
         
         processingLogs.value.push({
           time: Date.now(),
-          message: `Starting store update with new effective dates`
+          message: `Store update completed`
         });
-        
-        // Update the original data with the new effective dates
-        await updateOriginalDataWithResults(updatedRecords);
         
         // Update the grouped data with the results from the worker
         if (updatedGroupedData && updatedGroupedData.length > 0) {
@@ -1339,28 +1338,27 @@
         // Calculate the time spent
         const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
         processingStatus.value = `Complete! ${recordsUpdatedCount} records updated in ${processingTime}s`;
+        processingPhase.value = 'finalizing';
         
-        // Allow a moment to see the completion status
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Allow a brief moment to show completion status
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        alert(`Effective dates updated successfully. ${recordsUpdatedCount} records updated.`);
+        // No alert needed - we're showing the completion status in the UI
       } else {
         console.log("No records needed updating, just saving settings");
         processingPhase.value = 'finalizing';
         processingStatus.value = "Saving settings...";
         
         // Still save the settings even if no dates needed updating
-        store.$patch({
-          effectiveDateSettings: { ...effectiveDateSettings.value }
-        });
+        store.setEffectiveDateSettings({ ...effectiveDateSettings.value });
         
         const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
         processingStatus.value = `Complete! Settings saved in ${processingTime}s`;
         
         // Allow a moment to see the completion status
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        alert("Effective date settings saved, but no date changes were needed.");
+        // No alert needed
       }
       
       // Close the section after applying settings
@@ -1368,7 +1366,7 @@
     } catch (error) {
       console.error('Failed to finalize updates:', error);
       processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
-      alert("Failed to complete database updates: " + (error instanceof Error ? error.message : String(error)));
+      alert("Failed to complete updates: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       isApplyingSettings.value = false;
       progressPercentage.value = 0;
@@ -1380,120 +1378,6 @@
         elapsedTimeInterval = null;
       }
     }
-  }
-  
-  // Update database in smaller chunks to prevent UI freezing
-  async function updateDatabaseInChunks(updatedRecords) {
-    const chunkSize = 500; // Process 500 records at a time to prevent UI blocking
-    const totalRecords = updatedRecords.length;
-    
-    if (totalRecords <= chunkSize) {
-      // Small enough to process in one go
-      await rateSheetService.updateEffectiveDatesWithRecords(updatedRecords);
-      return;
-    }
-    
-    // Process in chunks
-    for (let i = 0; i < totalRecords; i += chunkSize) {
-      const chunk = updatedRecords.slice(i, i + chunkSize);
-      processingStatus.value = `Saving records to database (${i} - ${Math.min(i + chunkSize, totalRecords)} of ${totalRecords})...`;
-      
-      // Allow UI to update between chunks
-      await new Promise(resolve => {
-        requestAnimationFrame(() => {
-          setTimeout(async () => {
-            try {
-              await rateSheetService.updateEffectiveDatesWithRecords(chunk);
-              resolve(null);
-            } catch (error) {
-              console.error(`Error updating chunk ${i}-${i+chunkSize}:`, error);
-              processingLogs.value.push({
-                time: Date.now(),
-                message: `Error updating database chunk: ${error instanceof Error ? error.message : String(error)}`
-              });
-              resolve(null); // Still resolve to continue with other chunks
-            }
-          }, 50); // Increase delay between chunks
-        });
-      });
-    }
-  }
-  
-  // New function to update the store data with simplified worker results
-  async function updateOriginalDataWithResults(updatedRecords) {
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Starting to update application state with ${updatedRecords.length} changes`
-    });
-    
-    // First, update the effective date settings
-    store.$patch({
-      effectiveDateSettings: { ...effectiveDateSettings.value }
-    });
-    
-    // Allow UI to refresh
-    await new Promise(resolve => {
-      requestAnimationFrame(() => setTimeout(resolve, 50));
-    });
-    
-    // Create a lookup map for faster access
-    const recordsMap = new Map();
-    for (const record of updatedRecords) {
-      recordsMap.set(`${record.name}|${record.prefix}`, record.effective);
-    }
-    
-    // Update original data in very small batches
-    const originalData = [...store.originalData];
-    const batchSize = 1000;
-    for (let i = 0; i < originalData.length; i += batchSize) {
-      const endIndex = Math.min(i + batchSize, originalData.length);
-      processingStatus.value = `Updating application state (${i} - ${endIndex} of ${originalData.length})...`;
-      
-      // Process this batch
-      for (let j = i; j < endIndex; j++) {
-        const record = originalData[j];
-        const key = `${record.name}|${record.prefix}`;
-        if (recordsMap.has(key)) {
-          originalData[j] = { 
-            ...record, 
-            effective: recordsMap.get(key)
-          };
-        }
-      }
-      
-      // Allow UI to update
-      await new Promise(resolve => {
-        requestAnimationFrame(() => setTimeout(resolve, 10));
-      });
-    }
-    
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Applying changes to store'
-    });
-    
-    // Apply all changes to the store
-    store.$patch({
-      originalData
-    });
-    
-    // Now regenerate the grouped data
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Regenerating grouped data'
-    });
-    
-    await new Promise(resolve => {
-      requestAnimationFrame(() => setTimeout(resolve, 50));
-    });
-    
-    // This will force the store to recompute the grouped data
-    store.setGroupedData(store.getGroupedData);
-    
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Store update complete'
-    });
   }
 
   // Cleanup worker on component unmount
@@ -1633,6 +1517,10 @@
 <style scoped>
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-pulse-fast {
+  animation: pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes pulse {
