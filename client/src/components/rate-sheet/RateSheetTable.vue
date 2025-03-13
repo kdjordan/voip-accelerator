@@ -737,7 +737,7 @@
   let elapsedTimeInterval: number | null = null;
 
   // Add these properties to handle search state
-  let searchDebounceTimeout: number | null = null;
+  let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
   // Load saved effective date settings from store if available
   onMounted(() => {
@@ -1345,7 +1345,11 @@
   }
   
   // Modified handle worker result that gives the UI time to breathe
-  async function handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData) {
+  async function handleWorkerResultWithBreathing(
+    updatedRecords: {name: string; prefix: string; effective: string}[], 
+    recordsUpdatedCount: number, 
+    updatedGroupedData: {destinationName: string; effectiveDate: string; changeCode: ChangeCodeType}[]
+  ) {
     try {
       console.log(`Handling worker result: ${updatedRecords.length} records to update`);
       processingStatus.value = `Saving ${updatedRecords.length} updated records to store...`;
