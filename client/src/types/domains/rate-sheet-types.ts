@@ -57,9 +57,11 @@ export interface RateSheetState {
   isLocallyStored: boolean;
   groupedData: GroupedRateData[];
   originalData: RateSheetRecord[];
-  hasMinDuration: boolean;
-  hasIncrements: boolean;
   invalidRows: InvalidRow[];
+  optionalFields: {
+    hasMinDuration: boolean;
+    hasIncrements: boolean;
+  };
   effectiveDateSettings: {
     same: string;
     increase: string;

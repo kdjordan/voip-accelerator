@@ -412,7 +412,7 @@
   const showCountryDetails = ref(false);
 
   const isLergLocallyStored = computed(() => {
-    return store.isLocallyStored;
+    return store.$state.isLocallyStored;
   });
 
   const isDragging = ref(false);

@@ -1,11 +1,9 @@
 import type { 
-  GroupedRateData, 
-  RateSheetRecord,
   ChangeCodeType
 } from '@/types/domains/rate-sheet-types';
 import { ChangeCode } from '@/types/domains/rate-sheet-types';
 
-// Input interface for the worker - now receiving simplified data
+// Input interface for the worker - simplified data
 interface EffectiveDateUpdateInput {
   // Simplified grouped data with just the necessary properties
   rawGroupedData: {
@@ -32,26 +30,20 @@ interface EffectiveDateUpdateInput {
   };
 }
 
-// Result interface from the worker
+// Result interface from the worker - simplified for direct application to the store
 interface EffectiveDateUpdateResult {
   type: 'result';
-  updatedRecords: SimplifiedRecord[];
+  updatedRecords: {
+    name: string;
+    prefix: string;
+    effective: string;
+  }[];
   recordsUpdatedCount: number;
-  updatedGroupedData: SimplifiedGroupData[]; // Return the updated grouped data
-}
-
-// Simplified interfaces for worker communication to avoid cloning issues
-interface SimplifiedGroupData {
-  destinationName: string;
-  effectiveDate: string;
-  changeCode: ChangeCodeType;
-}
-
-// Even simpler interfaces to prevent cloning issues
-interface SimplifiedRecord {
-  name: string;
-  prefix: string;
-  effective: string;
+  updatedGroupedData: {
+    destinationName: string;
+    effectiveDate: string;
+    changeCode: ChangeCodeType;
+  }[]; 
 }
 
 // Progress notification with enhanced details
@@ -64,40 +56,18 @@ interface ProgressUpdate {
   currentDestination?: string;
   phase: 'preparing' | 'processing' | 'finalizing';
   estimatedTimeRemaining?: number;
-  detail?: string; // Additional context about the current operation
+  detail?: string;
 }
 
 // Error notification
 interface ErrorMessage {
   type: 'error';
   message: string;
-  phase?: string; // Which phase the error occurred in
+  phase?: string;
 }
 
 // Define all possible message types
 type WorkerMessage = EffectiveDateUpdateResult | ProgressUpdate | ErrorMessage;
-
-// Safe way to post messages to avoid cloning errors
-function safePostMessage(message: WorkerMessage) {
-  try {
-    self.postMessage(message);
-  } catch (error) {
-    console.error('Error posting message from worker:', error);
-    // Try to send a simplified error message
-    try {
-      self.postMessage({
-        type: 'error',
-        message: `Failed to send worker message: ${error instanceof Error ? error.message : String(error)}`
-      });
-    } catch (e) {
-      // Last resort if even that fails
-      self.postMessage({
-        type: 'error',
-        message: 'Critical error in worker communication'
-      });
-    }
-  }
-}
 
 // Calculate effective date based on change code and settings
 function calculateEffectiveDate(changeCode: ChangeCodeType, settings: EffectiveDateUpdateInput['effectiveDateSettings']): string {
@@ -139,9 +109,10 @@ function calculateEffectiveDate(changeCode: ChangeCodeType, settings: EffectiveD
   return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 }
 
-// Give the worker a chance to "breathe" and update the UI
+// Give the worker a chance to breathe - use a moderate delay for proper UI updates
 async function takeBreath() {
-  return new Promise(resolve => setTimeout(resolve, 10));
+  // Use a 25ms delay to ensure UI updates have time to render
+  return new Promise(resolve => setTimeout(resolve, 25));
 }
 
 // Listen for messages from the main thread
@@ -158,10 +129,10 @@ self.addEventListener('message', async event => {
     console.log(`Worker received ${input.rawGroupedData.length} groups and ${input.allRecords.length} records`);
     
     // Send initial progress update
-    safePostMessage({
+    self.postMessage({
       type: 'progress',
       processedCount: 0,
-      totalCount: 100, // Using percentage for preparation phase
+      totalCount: 100,
       percentage: 0,
       recordsUpdatedCount: 0,
       phase: 'preparing',
@@ -170,231 +141,126 @@ self.addEventListener('message', async event => {
 
     await takeBreath();
 
-    try {
-      // STEP 1: PREPARE THE DATA (previously done in the main thread)
-      // --------------------------------------------------------
-      safePostMessage({
-        type: 'progress',
-        processedCount: 5,
-        totalCount: 100,
-        percentage: 5,
-        recordsUpdatedCount: 0,
-        phase: 'preparing',
-        detail: `Preparing ${input.rawGroupedData.length} destination groups...`
-      });
+    // STEP 1: PREPARE THE DATA 
+    // Apply effective dates based on change code
+    let preparedGroupedData: {
+      destinationName: string;
+      effectiveDate: string;
+      changeCode: ChangeCodeType;
+    }[] = [];
+
+    const total = input.rawGroupedData.length;
+    let processedCount = 0;
+    
+    // Process in chunks to provide progress updates
+    const chunkSize = Math.max(1, Math.floor(total / 20)); // Split into ~20 chunks for reporting
+    
+    for (let i = 0; i < total; i += chunkSize) {
+      const endIndex = Math.min(i + chunkSize, total);
+      const chunk = input.rawGroupedData.slice(i, endIndex);
       
-      await takeBreath();
-      
-      // Apply effective dates based on change code
-      let preparedGroupedData: SimplifiedGroupData[] = [];
-      let count = 0;
-      let sameCount = 0, increaseCount = 0, decreaseCount = 0;
-      
-      // Process in chunks to allow progress reporting
-      const chunkSize = Math.max(1, Math.floor(input.rawGroupedData.length / 20)); // Split into ~20 chunks for reporting
-      
-      for (let i = 0; i < input.rawGroupedData.length; i += chunkSize) {
-        const endIndex = Math.min(i + chunkSize, input.rawGroupedData.length);
-        const chunk = input.rawGroupedData.slice(i, endIndex);
+      for (const group of chunk) {
+        const changeCode = group.changeCode;
+        const newEffectiveDate = calculateEffectiveDate(changeCode, input.effectiveDateSettings);
         
-        for (const item of chunk) {
-          const changeCode = item.changeCode as ChangeCodeType;
-          const newEffectiveDate = calculateEffectiveDate(changeCode, input.effectiveDateSettings);
-          
-          // Create simplified version of the group data
-          preparedGroupedData.push({
-            destinationName: item.destinationName,
-            effectiveDate: newEffectiveDate,
-            changeCode: changeCode
-          });
-          
-          // Count by type for reporting
-          if (changeCode === ChangeCode.SAME) sameCount++;
-          else if (changeCode === ChangeCode.INCREASE) increaseCount++;
-          else if (changeCode === ChangeCode.DECREASE) decreaseCount++;
-        }
-        
-        count += chunk.length;
-        
-        // Calculate progress as a percentage of preparation
-        const prepProgress = Math.round((count / input.rawGroupedData.length) * 40) + 5; // 5-45%
-        
-        // Report progress
-        safePostMessage({
-          type: 'progress',
-          processedCount: prepProgress,
-          totalCount: 100,
-          percentage: prepProgress,
-          recordsUpdatedCount: 0,
-          phase: 'preparing',
-          detail: `Preparing data: ${count}/${input.rawGroupedData.length} groups processed`
+        preparedGroupedData.push({
+          destinationName: group.destinationName,
+          effectiveDate: newEffectiveDate,
+          changeCode
         });
-        
-        // Take a breath every chunk to allow UI updates
-        await takeBreath();
       }
       
-      // Report breakdown of change types
-      safePostMessage({
+      processedCount += chunk.length;
+      
+      // Report progress (0-50%)
+      const percentage = Math.floor((processedCount / total) * 50);
+      self.postMessage({
         type: 'progress',
-        processedCount: 45,
-        totalCount: 100,
-        percentage: 45,
-        recordsUpdatedCount: 0,
-        phase: 'preparing',
-        detail: `Applied effective dates: ${sameCount} same, ${increaseCount} increase, ${decreaseCount} decrease`
-      });
-      
-      await takeBreath();
-      
-      // Create destination name to effective date map for faster lookups
-      safePostMessage({
-        type: 'progress',
-        processedCount: 50,
-        totalCount: 100,
-        percentage: 50,
-        recordsUpdatedCount: 0,
-        phase: 'preparing',
-        detail: 'Creating lookup maps...'
-      });
-      
-      const nameToEffectiveDateMap = new Map<string, string>();
-      for (const group of preparedGroupedData) {
-        nameToEffectiveDateMap.set(group.destinationName, group.effectiveDate);
-      }
-      
-      await takeBreath();
-      
-      // STEP 2: PROCESSING RECORDS (already in worker)
-      // --------------------------------------------------------
-      safePostMessage({
-        type: 'progress',
-        processedCount: 0,
-        totalCount: preparedGroupedData.length,
-        percentage: 50,
-        recordsUpdatedCount: 0,
-        phase: 'processing',
-        detail: `Starting to process ${input.allRecords.length} records across ${preparedGroupedData.length} destinations`
-      });
-      
-      await takeBreath();
-      
-      // Process the update
-      const total = preparedGroupedData.length;
-      let processedCount = 0;
-      let recordsUpdatedCount = 0;
-      const updatedRecords: SimplifiedRecord[] = [];
-      
-      // We'll process records in smaller batches
-      const BATCH_SIZE = 5000;
-      
-      // Process in small chunks
-      for (let i = 0; i < input.allRecords.length; i += BATCH_SIZE) {
-        const endIndex = Math.min(i + BATCH_SIZE, input.allRecords.length);
-        const recordChunk = input.allRecords.slice(i, endIndex);
-        
-        // Find all destinations in this chunk
-        const destinationsInChunk = new Set<string>();
-        for (const record of recordChunk) {
-          destinationsInChunk.add(record.name);
-        }
-        
-        // Track current position in destination list for progress reporting
-        const destinationsList = Array.from(destinationsInChunk);
-        let lastReportedDestination = '';
-        
-        // Process records in the batch
-        for (const record of recordChunk) {
-          const effectiveDate = nameToEffectiveDateMap.get(record.name);
-          if (effectiveDate && record.effective !== effectiveDate) {
-            // Only store minimal data needed for updates
-            updatedRecords.push({
-              name: record.name,
-              prefix: record.prefix,
-              effective: effectiveDate
-            });
-            recordsUpdatedCount++;
-          }
-          
-          // For progress reporting, we'll use the destination we're currently processing
-          const destination = record.name;
-          if (destination !== lastReportedDestination) {
-            lastReportedDestination = destination;
-            const destinationIndex = destinationsList.indexOf(destination);
-            if (destinationIndex >= 0) {
-              processedCount = Math.min(processedCount + 1, total);
-              
-              // Calculate time metrics for progress updates
-              const elapsedMs = Date.now() - startTime;
-              const msPerItem = processedCount > 0 ? elapsedMs / processedCount : 0;
-              const remainingItems = total - processedCount;
-              const estimatedTimeRemaining = msPerItem > 0 ? Math.round((remainingItems * msPerItem) / 1000) : undefined;
-              
-              // Send progress update for each 1% or at least every 10 items
-              const percentage = Math.round((processedCount / total) * 100);
-              const overallProgress = Math.round(50 + (percentage / 2)); // Map to 50-100% range
-              
-              if (processedCount % Math.max(1, Math.floor(total * 0.01)) === 0) {
-                safePostMessage({
-                  type: 'progress',
-                  processedCount,
-                  totalCount: total,
-                  percentage: overallProgress,
-                  recordsUpdatedCount,
-                  currentDestination: destination,
-                  phase: 'processing',
-                  estimatedTimeRemaining,
-                  detail: `Processing ${destination}: ${recordsUpdatedCount} records updated so far`
-                });
-                
-                // Take a breath every 1% of progress
-                if (processedCount % Math.max(1, Math.floor(total * 0.05)) === 0) {
-                  await takeBreath();
-                }
-              }
-            }
-          }
-        }
-        
-        // Give the browser a chance to breathe between batches
-        await takeBreath();
-      }
-      
-      // Send one final progress update
-      safePostMessage({
-        type: 'progress',
-        processedCount: total,
+        processedCount,
         totalCount: total,
-        percentage: 100,
-        recordsUpdatedCount,
-        phase: 'finalizing',
-        detail: `Finalizing ${recordsUpdatedCount} record updates...`
+        percentage,
+        recordsUpdatedCount: 0,
+        phase: 'preparing',
+        detail: `Calculating effective dates: ${processedCount}/${total}`
       });
       
-      console.log(`Worker completed: ${recordsUpdatedCount} records updated out of ${input.allRecords.length} total`);
-      
-      // Send final result with just the minimal data needed
-      safePostMessage({
-        type: 'result',
-        updatedRecords,
-        recordsUpdatedCount,
-        updatedGroupedData: preparedGroupedData
-      });
-      
-    } catch (error) {
-      console.error('Worker processing error:', error);
-      safePostMessage({ 
-        type: 'error', 
-        message: error instanceof Error ? error.message : String(error),
-        phase: 'processing'
-      });
+      await takeBreath();
     }
+    
+    // Create a map for faster lookups
+    const effectiveDateMap = new Map<string, string>();
+    for (const group of preparedGroupedData) {
+      effectiveDateMap.set(group.destinationName, group.effectiveDate);
+    }
+    
+    // STEP 2: PROCESS RECORDS
+    // Find records that need updating
+    const updatedRecords: {name: string, prefix: string, effective: string}[] = [];
+    let recordsProcessed = 0;
+    let recordsUpdatedCount = 0;
+    
+    // Process in medium-sized batches for balance between performance and UI updates
+    for (let i = 0; i < input.allRecords.length; i += 1000) {
+      const endIndex = Math.min(i + 1000, input.allRecords.length);
+      const recordsBatch = input.allRecords.slice(i, endIndex);
+      
+      // Report progress (50-90%)
+      const percentage = 50 + Math.floor((i / input.allRecords.length) * 40);
+      self.postMessage({
+        type: 'progress',
+        processedCount: i,
+        totalCount: input.allRecords.length,
+        percentage,
+        recordsUpdatedCount,
+        currentDestination: recordsBatch[0]?.name || '',
+        phase: 'processing',
+        detail: `Processing records: ${i}/${input.allRecords.length}`
+      });
+      
+      // Process this batch
+      for (const record of recordsBatch) {
+        const newEffectiveDate = effectiveDateMap.get(record.name);
+        
+        if (newEffectiveDate && record.effective !== newEffectiveDate) {
+          updatedRecords.push({
+            name: record.name,
+            prefix: record.prefix,
+            effective: newEffectiveDate
+          });
+          recordsUpdatedCount++;
+        }
+        
+        recordsProcessed++;
+      }
+      
+      await takeBreath();
+    }
+    
+    // Send final progress update
+    self.postMessage({
+      type: 'progress',
+      processedCount: input.allRecords.length,
+      totalCount: input.allRecords.length,
+      percentage: 100,
+      recordsUpdatedCount,
+      phase: 'finalizing',
+      detail: `Finalizing ${recordsUpdatedCount} record updates...`
+    });
+    
+    // Send the result
+    self.postMessage({
+      type: 'result',
+      updatedRecords,
+      recordsUpdatedCount,
+      updatedGroupedData: preparedGroupedData
+    });
+    
   } catch (error) {
     console.error('Worker error:', error);
-    safePostMessage({ 
-      type: 'error', 
+    self.postMessage({
+      type: 'error',
       message: error instanceof Error ? error.message : String(error),
-      phase: 'initialization'
+      phase: 'processing'
     });
   }
 }); 
