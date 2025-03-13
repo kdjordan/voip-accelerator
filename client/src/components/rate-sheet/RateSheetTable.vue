@@ -40,12 +40,17 @@
         <!-- Search -->
         <div>
           <label class="block text-sm text-gray-400 mb-1">Search</label>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search by Name or Prefix Start..."
-            class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
-          />
+          <div class="relative">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search by Name or Prefix Start..."
+              class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
+            />
+            <div v-if="isSearching" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div class="spinner-accent"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Actions Column -->
@@ -598,7 +603,12 @@
       v-else
       class="text-center py-12 bg-gray-800 rounded-lg"
     >
-      <p class="text-gray-400">No destinations found matching your filters</p>
+      <p class="text-gray-400" v-if="isSearching">
+        <span class="inline-flex items-center gap-2">
+          Searching<span class="dots-loading"></span>
+        </span>
+      </p>
+      <p class="text-gray-400" v-else>No destinations found matching your filters</p>
     </div>
 
     <!-- Custom Rate Modal -->
@@ -656,6 +666,10 @@
   const expandedRows = ref<string[]>([]);
   const filterStatus = ref<'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'>('all');
   const searchQuery = ref('');
+  const debouncedSearchQuery = ref('');
+  const isSearching = ref(false);
+  const searchProgress = ref(0);
+  const searchTotal = ref(0);
   const selectedRates = ref<Record<string, number>>({});
   const customRates = ref<Record<string, number>>({});
   const originalRates = ref<Record<string, number>>({});
@@ -722,6 +736,9 @@
   const displayedElapsedTime = ref(0);
   let elapsedTimeInterval: number | null = null;
 
+  // Add these properties to handle search state
+  let searchDebounceTimeout: number | null = null;
+
   // Load saved effective date settings from store if available
   onMounted(() => {
     const savedSettings = store.getEffectiveDateSettings;
@@ -729,6 +746,20 @@
       effectiveDateSettings.value = { ...savedSettings };
     }
     initWorker();
+    
+    // Setup a watcher with debounce for search
+    watch(searchQuery, (newValue) => {
+      // Cancel any existing debounce timer
+      if (searchDebounceTimeout) {
+        clearTimeout(searchDebounceTimeout);
+      }
+      
+      // Set a new timeout
+      searchDebounceTimeout = setTimeout(() => {
+        debouncedSearchQuery.value = newValue;
+        performAsyncSearch(newValue.toLowerCase());
+      }, 300); // 300ms debounce
+    });
   });
 
   const filteredData = computed(() => {
@@ -747,83 +778,102 @@
       filtered = filtered.filter(group => group.changeCode === ChangeCode.DECREASE);
     }
 
-    // Clear matching codes when search changes
-    matchingCodes.value = {};
+    // If no search query, return filtered data without additional processing
+    if (!debouncedSearchQuery.value) {
+      // Clear matching codes when search is empty
+      matchingCodes.value = {};
+      return filtered;
+    }
 
-    // Apply search filter
-    if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase();
+    const query = debouncedSearchQuery.value.toLowerCase();
+    
+    // Fast path: filter by destination name first (this is very quick)
+    const nameMatches = filtered.filter(group => 
+      group.destinationName.toLowerCase().includes(query)
+    );
+    
+    // If we have name matches, don't need to do expensive code search
+    if (nameMatches.length > 0) {
+      return nameMatches;
+    }
+    
+    // Only search codes if no name matches were found
+    // For code matching, we return the precomputed results from the async search
+    return filtered.filter(group => 
+      !!matchingCodes.value[group.destinationName]
+    );
+  });
+
+  // Add a new function to perform the search asynchronously
+  async function performAsyncSearch(query: string) {
+    if (!query) {
+      matchingCodes.value = {};
+      isSearching.value = false;
+      return;
+    }
+    
+    isSearching.value = true;
+    matchingCodes.value = {};
+    
+    const searchGroups = groupedData.value;
+    
+    // Process in smaller batches to keep UI responsive
+    const batchSize = 5; // Process 5 destinations at a time
+    
+    for (let i = 0; i < searchGroups.length; i += batchSize) {
+      // Give UI thread a chance to update
+      await new Promise(resolve => requestAnimationFrame(resolve));
       
-      // Filter destinations by name match or code match
-      filtered = filtered.filter(group => {
-        // Match by destination name
-        if (group.destinationName.toLowerCase().includes(query)) {
-          return true;
-        }
-        
-        // Match by code prefix
+      const endIndex = Math.min(i + batchSize, searchGroups.length);
+      const batch = searchGroups.slice(i, endIndex);
+      
+      for (const group of batch) {
         const matchingCodesByRate: {[rate: number]: string[]} = {};
         
-        // Check all rates and their codes
+        // Only process rates if we haven't already found a match for this destination
+        // This optimization stops searching once we find any match
+        let foundMatch = false;
+        
         for (const rate of group.rates) {
+          // Skip long lists if we already found a match for this destination
+          if (foundMatch) break;
+          
           const codesForRate = getCodesForRate(group, rate.rate);
+          
+          // Early exit for large code lists - first check if any code starts with query
+          // This avoids scanning the entire array if there's no match
+          if (codesForRate.length > 50) {
+            // Quick check with a for loop is faster than filter for large arrays
+            let hasMatch = false;
+            for (let j = 0; j < Math.min(50, codesForRate.length); j++) {
+              if (codesForRate[j].toLowerCase().startsWith(query)) {
+                hasMatch = true;
+                break;
+              }
+            }
+            
+            // If no match found in our quick check of the first 50 items, skip this rate
+            if (!hasMatch) continue;
+          }
+          
+          // Only do full scan if necessary
           const matches = codesForRate.filter(code => code.toLowerCase().startsWith(query));
           
           if (matches.length > 0) {
             matchingCodesByRate[rate.rate] = matches;
+            foundMatch = true; // Set flag to skip processing other rates
           }
         }
         
-        // If any codes match, store them and return true
+        // Store matches for this destination if any were found
         if (Object.keys(matchingCodesByRate).length > 0) {
           matchingCodes.value[group.destinationName] = matchingCodesByRate;
-          return true;
         }
-        
-        return false;
-      });
+      }
     }
-
-    return filtered;
-  });
-
-  // Watch for search query changes to handle expansion
-  watch(searchQuery, (newValue, oldValue) => {
-    if (newValue) {
-      // When searching, expand matching destinations and their matching rates
-      Object.keys(matchingCodes.value).forEach(destinationName => {
-        // Expand the destination row
-        if (!expandedRows.value.includes(destinationName)) {
-          expandedRows.value.push(destinationName);
-        }
-        
-        // Expand the matching rates
-        if (!expandedRateCodes.value[destinationName]) {
-          expandedRateCodes.value[destinationName] = [];
-        }
-        
-        // For each matching rate, expand the rate codes section
-        Object.keys(matchingCodes.value[destinationName]).forEach(rateStr => {
-          const rate = parseFloat(rateStr);
-          if (!expandedRateCodes.value[destinationName].includes(rate)) {
-            expandedRateCodes.value[destinationName].push(rate);
-          }
-        });
-      });
-      
-      // Wait for DOM to update, then scroll to the first match
-      nextTick(() => {
-        const firstMatchElement = document.querySelector('.bg-accent\\/20');
-        if (firstMatchElement) {
-          firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      });
-    } else if (oldValue) {
-      // When clearing a search, collapse all expanded rows and rate codes
-      expandedRows.value = [];
-      expandedRateCodes.value = {};
-    }
-  });
+    
+    isSearching.value = false;
+  }
 
   function isCodeMatchingSearch(destinationName: string, rate: number, code: string): boolean {
     return !!searchQuery.value && 
@@ -926,6 +976,14 @@
   async function handleBulkUpdate(mode: 'highest' | 'lowest') {
     isBulkProcessing.value = true;
     processedCount.value = 0;
+
+    // Give the browser a chance to update the UI and show the animation
+    // by using requestAnimationFrame and a small setTimeout
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 50);
+      });
+    });
 
     // Get all destinations with discrepancies
     const destinationsToFix = groupedData.value.filter(group => group.hasDiscrepancy);
@@ -1393,6 +1451,12 @@
       clearInterval(elapsedTimeInterval);
       elapsedTimeInterval = null;
     }
+    
+    // Clean up search debounce
+    if (searchDebounceTimeout) {
+      clearTimeout(searchDebounceTimeout);
+      searchDebounceTimeout = null;
+    }
   });
   
   // Update the applyEffectiveDateSettings function to use the worker
@@ -1512,6 +1576,47 @@
     }
     return setting;
   }
+
+  // Watch for debounced search query changes to handle expansion
+  watch(debouncedSearchQuery, (newValue, oldValue) => {
+    if (newValue) {
+      // When search results are available, expand matching destinations
+      nextTick(() => {
+        // When searching, expand matching destinations and their matching rates
+        Object.keys(matchingCodes.value).forEach(destinationName => {
+          // Expand the destination row
+          if (!expandedRows.value.includes(destinationName)) {
+            expandedRows.value.push(destinationName);
+          }
+          
+          // Expand the matching rates
+          if (!expandedRateCodes.value[destinationName]) {
+            expandedRateCodes.value[destinationName] = [];
+          }
+          
+          // For each matching rate, expand the rate codes section
+          Object.keys(matchingCodes.value[destinationName]).forEach(rateStr => {
+            const rate = parseFloat(rateStr);
+            if (!expandedRateCodes.value[destinationName].includes(rate)) {
+              expandedRateCodes.value[destinationName].push(rate);
+            }
+          });
+        });
+        
+        // Wait for DOM to update, then scroll to the first match
+        nextTick(() => {
+          const firstMatchElement = document.querySelector('.bg-accent\\/20');
+          if (firstMatchElement) {
+            firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      });
+    } else if (oldValue) {
+      // When clearing a search, collapse all expanded rows and rate codes
+      expandedRows.value = [];
+      expandedRateCodes.value = {};
+    }
+  });
 </script>
 
 <style scoped>
@@ -1530,5 +1635,40 @@
   50% {
     opacity: 0.5;
   }
+}
+
+.spinner-accent {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--color-accent, #10b981); /* Use theme accent color with fallback to green */
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dots-loading {
+  display: inline-block;
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+.dots-loading:after {
+  content: "...";
+  font-weight: bold;
+  color: var(--color-accent, #10b981);
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: "."; }
+  40% { content: ".."; }
+  60%, 100% { content: "..."; }
 }
 </style>
