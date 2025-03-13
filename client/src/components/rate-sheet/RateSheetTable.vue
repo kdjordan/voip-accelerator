@@ -128,106 +128,221 @@
           </button>
         </div>
         
-        <div v-if="showEffectiveDateSettings" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- SAME Rate Effective Date -->
-          <div class="bg-gray-900/30 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-400">SAME Rate</span>
-              <span class="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">No Change</span>
+        <div v-if="showEffectiveDateSettings" class="mt-4">
+          <!-- Date settings UI -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <!-- SAME Rate Effective Date -->
+            <div class="bg-gray-900/30 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-400">SAME Rate</span>
+                <span class="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">No Change</span>
+              </div>
+              <div class="flex flex-col space-y-2">
+                <div class="flex items-center">
+                  <input id="same-today" v-model="effectiveDateSettings.same" type="radio" value="today" class="mr-2" />
+                  <label for="same-today" class="text-sm">Today</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="same-tomorrow" v-model="effectiveDateSettings.same" type="radio" value="tomorrow" class="mr-2" />
+                  <label for="same-tomorrow" class="text-sm">Tomorrow</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="same-custom" v-model="effectiveDateSettings.same" type="radio" value="custom" class="mr-2" />
+                  <label for="same-custom" class="text-sm">Custom</label>
+                </div>
+                <div v-if="effectiveDateSettings.same === 'custom'" class="pt-2">
+                  <input 
+                    type="date" 
+                    v-model="effectiveDateSettings.sameCustomDate" 
+                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="flex flex-col space-y-2">
-              <div class="flex items-center">
-                <input id="same-today" v-model="effectiveDateSettings.same" type="radio" value="today" class="mr-2" />
-                <label for="same-today" class="text-sm">Today</label>
-              </div>
-              <div class="flex items-center">
-                <input id="same-tomorrow" v-model="effectiveDateSettings.same" type="radio" value="tomorrow" class="mr-2" />
-                <label for="same-tomorrow" class="text-sm">Tomorrow</label>
-              </div>
-              <div class="flex items-center">
-                <input id="same-custom" v-model="effectiveDateSettings.same" type="radio" value="custom" class="mr-2" />
-                <label for="same-custom" class="text-sm">Custom</label>
-              </div>
-              <div v-if="effectiveDateSettings.same === 'custom'" class="pt-2">
-                <input 
-                  type="date" 
-                  v-model="effectiveDateSettings.sameCustomDate" 
-                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          </div>
 
-          <!-- INCREASE Rate Effective Date -->
-          <div class="bg-gray-900/30 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
-              <span class="px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded">↑ Rate Up</span>
+            <!-- INCREASE Rate Effective Date -->
+            <div class="bg-gray-900/30 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
+                <span class="px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded">↑ Rate Up</span>
+              </div>
+              <div class="flex flex-col space-y-2">
+                <div class="flex items-center">
+                  <input id="increase-today" v-model="effectiveDateSettings.increase" type="radio" value="today" class="mr-2" />
+                  <label for="increase-today" class="text-sm">Today</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="increase-tomorrow" v-model="effectiveDateSettings.increase" type="radio" value="tomorrow" class="mr-2" />
+                  <label for="increase-tomorrow" class="text-sm">Tomorrow</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="increase-week" v-model="effectiveDateSettings.increase" type="radio" value="week" class="mr-2" />
+                  <label for="increase-week" class="text-sm">7 Days (Default)</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="increase-custom" v-model="effectiveDateSettings.increase" type="radio" value="custom" class="mr-2" />
+                  <label for="increase-custom" class="text-sm">Custom</label>
+                </div>
+                <div v-if="effectiveDateSettings.increase === 'custom'" class="pt-2">
+                  <input 
+                    type="date" 
+                    v-model="effectiveDateSettings.increaseCustomDate" 
+                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="flex flex-col space-y-2">
-              <div class="flex items-center">
-                <input id="increase-today" v-model="effectiveDateSettings.increase" type="radio" value="today" class="mr-2" />
-                <label for="increase-today" class="text-sm">Today</label>
-              </div>
-              <div class="flex items-center">
-                <input id="increase-tomorrow" v-model="effectiveDateSettings.increase" type="radio" value="tomorrow" class="mr-2" />
-                <label for="increase-tomorrow" class="text-sm">Tomorrow</label>
-              </div>
-              <div class="flex items-center">
-                <input id="increase-week" v-model="effectiveDateSettings.increase" type="radio" value="week" class="mr-2" />
-                <label for="increase-week" class="text-sm">7 Days (Default)</label>
-              </div>
-              <div class="flex items-center">
-                <input id="increase-custom" v-model="effectiveDateSettings.increase" type="radio" value="custom" class="mr-2" />
-                <label for="increase-custom" class="text-sm">Custom</label>
-              </div>
-              <div v-if="effectiveDateSettings.increase === 'custom'" class="pt-2">
-                <input 
-                  type="date" 
-                  v-model="effectiveDateSettings.increaseCustomDate" 
-                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          </div>
 
-          <!-- DECREASE Rate Effective Date -->
-          <div class="bg-gray-900/30 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
-              <span class="px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">↓ Rate Down</span>
-            </div>
-            <div class="flex flex-col space-y-2">
-              <div class="flex items-center">
-                <input id="decrease-today" v-model="effectiveDateSettings.decrease" type="radio" value="today" class="mr-2" />
-                <label for="decrease-today" class="text-sm">Today</label>
+            <!-- DECREASE Rate Effective Date -->
+            <div class="bg-gray-900/30 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
+                <span class="px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">↓ Rate Down</span>
               </div>
-              <div class="flex items-center">
-                <input id="decrease-tomorrow" v-model="effectiveDateSettings.decrease" type="radio" value="tomorrow" class="mr-2" />
-                <label for="decrease-tomorrow" class="text-sm">Tomorrow</label>
-              </div>
-              <div class="flex items-center">
-                <input id="decrease-custom" v-model="effectiveDateSettings.decrease" type="radio" value="custom" class="mr-2" />
-                <label for="decrease-custom" class="text-sm">Custom</label>
-              </div>
-              <div v-if="effectiveDateSettings.decrease === 'custom'" class="pt-2">
-                <input 
-                  type="date" 
-                  v-model="effectiveDateSettings.decreaseCustomDate" 
-                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                />
+              <div class="flex flex-col space-y-2">
+                <div class="flex items-center">
+                  <input id="decrease-today" v-model="effectiveDateSettings.decrease" type="radio" value="today" class="mr-2" />
+                  <label for="decrease-today" class="text-sm">Today</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="decrease-tomorrow" v-model="effectiveDateSettings.decrease" type="radio" value="tomorrow" class="mr-2" />
+                  <label for="decrease-tomorrow" class="text-sm">Tomorrow</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="decrease-custom" v-model="effectiveDateSettings.decrease" type="radio" value="custom" class="mr-2" />
+                  <label for="decrease-custom" class="text-sm">Custom</label>
+                </div>
+                <div v-if="effectiveDateSettings.decrease === 'custom'" class="pt-2">
+                  <input 
+                    type="date" 
+                    v-model="effectiveDateSettings.decreaseCustomDate" 
+                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div v-if="showEffectiveDateSettings" class="mt-4 flex justify-end">
-          <button 
-            @click="applyEffectiveDateSettings" 
-            class="px-4 py-2 bg-green-900/30 text-green-400  hover:bg-green-900/50 rounded transition-colors"
-          >
-            Apply Date Settings
-          </button>
+          
+          <!-- Progress and apply button -->
+          <div class="space-y-2">
+            <!-- Multi-step progress indicator -->
+            <div v-if="isApplyingSettings" class="mb-4 bg-gray-900/30 p-3 rounded-lg">
+              <div class="flex justify-between mb-2">
+                <h4 class="text-sm font-medium text-gray-300">Progress</h4>
+                <span class="text-xs text-gray-400" v-if="processingStartTime > 0">
+                  {{ displayedElapsedTime }}s elapsed
+                </span>
+              </div>
+              
+              <!-- Processing steps indicators -->
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
+                       :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'preparing',
+                                'bg-green-900/30 text-green-400': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing',
+                                'bg-gray-800 text-gray-400': processingPhase === 'idle'}">
+                    1
+                  </div>
+                  <div class="ml-2 text-sm transition-all duration-300 font-medium" 
+                       :class="{'text-green-500': processingPhase === 'preparing', 
+                                'text-green-400': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing', 
+                                'text-gray-600': processingPhase === 'idle'}">
+                    Preparing Data
+                  </div>
+                </div>
+                <div class="h-1 flex-1 mx-2 transition-all duration-300" 
+                     :class="{'bg-green-500': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing', 
+                              'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing'}"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
+                       :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'processing',
+                                'bg-green-900/30 text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing',
+                                'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing'}">
+                    2
+                  </div>
+                  <div class="ml-2 text-sm transition-all duration-300 font-medium" 
+                       :class="{'text-green-500': processingPhase === 'processing', 
+                                'text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing', 
+                                'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing'}">
+                    Processing Records
+                  </div>
+                </div>
+                <div class="h-1 flex-1 mx-2 transition-all duration-300" 
+                     :class="{'bg-green-500': processingPhase === 'updating' || processingPhase === 'finalizing', 
+                              'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
+                       :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'updating',
+                                'bg-green-900/30 text-green-400': processingPhase === 'finalizing',
+                                'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
+                    3
+                  </div>
+                  <div class="ml-2 text-sm transition-all duration-300 font-medium" 
+                       :class="{'text-green-500': processingPhase === 'updating', 
+                                'text-green-400': processingPhase === 'finalizing', 
+                                'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
+                    Updating Database
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Processing status message -->
+              <div class="text-sm text-gray-300 mb-2 min-h-[1.5rem]">{{ processingStatus }}</div>
+              
+              <!-- Detailed status info -->
+              <div class="flex justify-between text-xs text-gray-400 mb-2 min-h-[1.5rem]" v-if="isApplyingSettings && processingPhase === 'processing'">
+                <div v-if="currentDestination">Processing: <span class="text-green-400">{{ currentDestination }}</span></div>
+                <div v-if="recordsUpdatedSoFar > 0">{{ recordsUpdatedSoFar }} records updated so far</div>
+                <div v-if="estimatedTimeRemaining !== undefined">
+                  Est. time remaining: <span class="text-green-400">{{ estimatedTimeRemaining > 0 ? `${estimatedTimeRemaining}s` : 'calculating...' }}</span>
+                </div>
+              </div>
+              
+              <!-- Progress bar -->
+              <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div
+                  class="h-3 rounded-full transition-all duration-300 relative"
+                  :class="{ 
+                    'bg-green-500': processingPhase === 'finalizing',
+                    'bg-green-400': processingPhase !== 'finalizing'
+                  }"
+                  :style="{ width: `${progressPercentage}%` }"
+                >
+                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-white/20"></div>
+                </div>
+              </div>
+              
+              <!-- Processing logs (collapsible) -->
+              <div class="mt-3">
+                <div @click="showProcessingLogs = !showProcessingLogs" class="cursor-pointer flex items-center text-xs text-gray-400">
+                  <ChevronRightIcon class="h-3 w-3 mr-1 transition-transform" :class="{ 'rotate-90': showProcessingLogs }" />
+                  <span>Processing logs ({{ processingLogs.length }})</span>
+                </div>
+                
+                <div v-if="showProcessingLogs" class="mt-2 bg-gray-900/70 p-2 rounded text-xs text-gray-500 max-h-40 overflow-y-auto">
+                  <div v-for="(log, index) in processingLogs" :key="index" class="mb-1">
+                    <span class="text-gray-600">{{ new Date(log.time).toLocaleTimeString() }}:</span> 
+                    <span>{{ log.message }}</span>
+                  </div>
+                  <div v-if="processingLogs.length === 0" class="italic">No logs available yet</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-between items-center">
+              <!-- Apply button -->
+              <div class="flex justify-end w-full">
+                <button 
+                  @click="applyEffectiveDateSettings" 
+                  class="px-4 py-2 bg-green-900/30 text-green-400 hover:bg-green-900/50 rounded transition-colors"
+                  :class="{ 'animate-pulse': isApplyingSettings, 'opacity-50 cursor-not-allowed': isApplyingSettings }"
+                  :disabled="isApplyingSettings"
+                >
+                  {{ isApplyingSettings ? 'APPLYING SETTINGS...' : 'Apply Date Settings' }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -533,13 +648,14 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, nextTick, watch, onMounted } from 'vue';
+  import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
   import { ChevronRightIcon, TrashIcon, ArrowDownTrayIcon, CalendarDaysIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
   import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
   import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
   import { RateSheetService } from '@/services/rate-sheet.service';
   import type { EffectiveDateSettings } from '@/stores/rate-sheet-store';
+  import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
 
   // Define emits
   const emit = defineEmits(['update:discrepancy-count']);
@@ -588,6 +704,34 @@
 
   // Controls visibility of effective date settings section
   const showEffectiveDateSettings = ref(false);
+  // Track when settings are being applied
+  const isApplyingSettings = ref(false);
+  // Track the current processing phase
+  const processingPhase = ref<'idle' | 'preparing' | 'processing' | 'updating' | 'finalizing'>('idle');
+  const processingStatus = ref('');
+  const processingStartTime = ref(0);
+
+  // Worker setup
+  let effectiveDateWorker: Worker | null = null;
+  const progressPercentage = ref(0);
+
+  // Further enhance the status message with more detail
+  const currentDestination = ref('');
+  const recordsUpdatedSoFar = ref(0);
+  const estimatedTimeRemaining = ref<number | undefined>(undefined);
+  
+  // Add throttling mechanism for UI updates
+  const lastUIUpdateTime = ref(0);
+  const uiUpdateThrottle = 100; // ms between UI updates
+  const pendingUIUpdates = ref<{[key: string]: any}>({});
+  
+  // Add detailed log tracking
+  const processingLogs = ref<{time: number, message: string}[]>([]);
+  const showProcessingLogs = ref(false);
+  
+  // Add separate timer for elapsed time that won't get blocked
+  const displayedElapsedTime = ref(0);
+  let elapsedTimeInterval: number | null = null;
 
   // Load saved effective date settings from store if available
   onMounted(() => {
@@ -595,6 +739,7 @@
     if (savedSettings) {
       effectiveDateSettings.value = { ...savedSettings };
     }
+    initWorker();
   });
 
   const filteredData = computed(() => {
@@ -966,68 +1111,508 @@
     return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
   }
 
-  // Function to apply effective date settings to all matching rate changes
-  async function applyEffectiveDateSettings() {
+  // Function to initialize and cleanup the worker
+  function initWorker() {
+    console.log("Initializing effective date worker");
+    
+    // Cleanup any existing worker
+    if (effectiveDateWorker) {
+      console.log("Terminating existing worker");
+      effectiveDateWorker.terminate();
+      effectiveDateWorker = null;
+    }
+    
     try {
-      // Get all data that needs updating
-      const allData = [...store.groupedData];
-      let updated = false;
+      // Create new worker
+      console.log("Creating new effective date worker");
+      effectiveDateWorker = new EffectiveDateUpdaterWorker();
       
-      // Apply effective dates based on change code
-      for (const item of allData) {
-        const newEffectiveDate = getEffectiveDate(item.changeCode);
-        if (item.effectiveDate !== newEffectiveDate) {
-          item.effectiveDate = newEffectiveDate;
-          updated = true;
+      // Set up message handler with throttling
+      effectiveDateWorker.onmessage = event => {
+        const message = event.data;
+        
+        // Log all worker messages for debugging
+        console.log("Worker message received:", 
+          'type' in message ? message.type : 'result'
+        );
+        
+        // Add to processing logs
+        const logTime = new Date();
+        const logTimeStr = `${logTime.getHours()}:${logTime.getMinutes()}:${logTime.getSeconds()}.${logTime.getMilliseconds()}`;
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `[${logTimeStr}] Received ${('type' in message ? message.type : 'result')} from worker`
+        });
+        
+        // Queue UI updates instead of applying them immediately
+        queueUIUpdate(message);
+      };
+      
+      effectiveDateWorker.onerror = error => {
+        console.error('Worker error event:', error);
+        processingStatus.value = `Worker error: ${error.message}`;
+        alert(`Error in effective date worker: ${error.message}`);
+        isApplyingSettings.value = false;
+        processingPhase.value = 'idle';
+      };
+      
+      console.log("Worker initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize worker:", error);
+      alert(`Failed to initialize worker: ${error instanceof Error ? error.message : String(error)}`);
+      effectiveDateWorker = null;
+    }
+  }
+  
+  // Queue UI updates and apply them throttled to prevent UI freezing
+  function queueUIUpdate(message: any) {
+    // Store updates in pending queue
+    if ('type' in message && message.type === 'progress') {
+      pendingUIUpdates.value.progress = message;
+    } else if ('type' in message && message.type === 'error') {
+      pendingUIUpdates.value.error = message;
+      // Apply error updates immediately
+      applyUIUpdates();
+    } else {
+      pendingUIUpdates.value.result = message;
+    }
+    
+    // Check if we should apply updates now
+    const now = Date.now();
+    if (now - lastUIUpdateTime.value >= uiUpdateThrottle) {
+      applyUIUpdates();
+    } else {
+      // Schedule update for later if not already scheduled
+      if (!pendingUIUpdates.value.scheduled) {
+        pendingUIUpdates.value.scheduled = true;
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            applyUIUpdates();
+          });
+        }, uiUpdateThrottle);
+      }
+    }
+  }
+  
+  // Apply queued UI updates
+  function applyUIUpdates() {
+    const updates = pendingUIUpdates.value;
+    pendingUIUpdates.value = {};
+    lastUIUpdateTime.value = Date.now();
+    
+    // Process error messages first
+    if (updates.error) {
+      console.error('Worker error:', updates.error.message);
+      processingStatus.value = `Error: ${updates.error.message}`;
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Error in ${updates.error.phase || 'unknown'} phase: ${updates.error.message}`
+      });
+      alert(`Error updating effective dates: ${updates.error.message}`);
+      isApplyingSettings.value = false;
+      processingPhase.value = 'idle';
+      
+      // Clear the elapsed time interval
+      if (elapsedTimeInterval) {
+        clearInterval(elapsedTimeInterval);
+        elapsedTimeInterval = null;
+      }
+      return;
+    }
+    
+    // Process progress updates
+    if (updates.progress) {
+      const message = updates.progress;
+      // Update progress
+      progressPercentage.value = message.percentage;
+      
+      // Update phase if it's changing
+      if (processingPhase.value !== message.phase) {
+        processingPhase.value = message.phase;
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Phase changed to: ${message.phase}`
+        });
+      }
+      
+      // Update detailed status message if available
+      if (message.detail) {
+        processingStatus.value = message.detail;
+        
+        // Log significant progress updates
+        if (message.percentage % 10 === 0 || message.phase === 'finalizing') {
+          processingLogs.value.push({
+            time: Date.now(),
+            message: `${message.phase} (${message.percentage}%): ${message.detail}`
+          });
         }
       }
       
-      if (updated) {
-        // Update the store with direct patches instead of actions
-        store.$patch({
-          // Update the effective date settings
-          effectiveDateSettings: { ...effectiveDateSettings.value },
-          // Update the grouped data
-          groupedData: allData
+      // Update additional progress information
+      if (message.phase === 'processing') {
+        currentDestination.value = message.currentDestination || '';
+        recordsUpdatedSoFar.value = message.recordsUpdatedCount;
+        estimatedTimeRemaining.value = message.estimatedTimeRemaining;
+      }
+    }
+    
+    // Process final result
+    if (updates.result) {
+      console.log("Worker completed successfully");
+      processingPhase.value = 'updating';
+      processingStatus.value = "Processing complete. Updating database...";
+      
+      // Use microtask to allow UI to update before proceeding with heavy database operations
+      queueMicrotask(() => {
+        const { updatedRecords, recordsUpdatedCount, updatedGroupedData } = updates.result;
+        // Handle worker result with UI breathing room
+        handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData);
+      });
+    }
+  }
+  
+  // Modified handle worker result that gives the UI time to breathe
+  async function handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData) {
+    try {
+      console.log(`Handling worker result: ${updatedRecords.length} records to update`);
+      processingStatus.value = `Saving ${updatedRecords.length} updated records to database...`;
+      
+      // Add to processing logs
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Received final results: ${recordsUpdatedCount} records updated`
+      });
+      
+      // Allow UI to update
+      await new Promise(resolve => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 100);
+        });
+      });
+      
+      // Only update database if changes were made
+      if (updatedRecords.length > 0) {
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Starting database update for ${updatedRecords.length} records`
         });
         
-        // Update the underlying data in database
-        try {
-          await rateSheetService.updateEffectiveDates(allData);
-          
-          // Update original data to reflect changes
-          const updatedOriginalData = store.originalData.map(record => {
-            const group = allData.find(item => item.destinationName === record.name);
-            if (group) {
-              return { ...record, effective: group.effectiveDate };
-            }
-            return record;
+        console.log("Updating database with worker results");
+        // Update database in chunks to prevent UI freezing
+        await updateDatabaseInChunks(updatedRecords);
+        
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Database update completed`
+        });
+        
+        console.log("Updating store with worker results");
+        processingPhase.value = 'finalizing';
+        processingStatus.value = "Updating application state...";
+        
+        // Allow UI to update
+        await new Promise(resolve => {
+          requestAnimationFrame(() => {
+            setTimeout(resolve, 100);
+          });
+        });
+        
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Starting store update with new effective dates`
+        });
+        
+        // Update the original data with the new effective dates
+        await updateOriginalDataWithResults(updatedRecords);
+        
+        // Update the grouped data with the results from the worker
+        if (updatedGroupedData && updatedGroupedData.length > 0) {
+          processingLogs.value.push({
+            time: Date.now(),
+            message: `Updating grouped data with ${updatedGroupedData.length} groups from worker`
           });
           
-          // Update original data with patch
-          store.$patch({ originalData: updatedOriginalData });
-          
-          // Visual feedback that update was successful
-          alert("Effective dates updated successfully");
-          
-          // Close the section after applying settings
-          showEffectiveDateSettings.value = false;
-          
-          console.log('Effective dates updated successfully');
-        } catch (error) {
-          console.error('Failed to update effective dates:', error);
-          alert("Failed to update effective dates: " + (error instanceof Error ? error.message : String(error)));
+          // Update grouped data with the results from the worker
+          store.updateGroupedDataEffectiveDates(updatedGroupedData);
         }
+        
+        // Calculate the time spent
+        const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
+        processingStatus.value = `Complete! ${recordsUpdatedCount} records updated in ${processingTime}s`;
+        
+        // Allow a moment to see the completion status
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        alert(`Effective dates updated successfully. ${recordsUpdatedCount} records updated.`);
       } else {
+        console.log("No records needed updating, just saving settings");
+        processingPhase.value = 'finalizing';
+        processingStatus.value = "Saving settings...";
+        
         // Still save the settings even if no dates needed updating
         store.$patch({
           effectiveDateSettings: { ...effectiveDateSettings.value }
         });
-        alert("Effective date settings saved, but no date changes were needed");
+        
+        const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
+        processingStatus.value = `Complete! Settings saved in ${processingTime}s`;
+        
+        // Allow a moment to see the completion status
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        alert("Effective date settings saved, but no date changes were needed.");
       }
+      
+      // Close the section after applying settings
+      showEffectiveDateSettings.value = false;
     } catch (error) {
-      console.error('Error applying effective date settings:', error);
-      alert("Error applying date settings: " + (error instanceof Error ? error.message : String(error)));
+      console.error('Failed to finalize updates:', error);
+      processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
+      alert("Failed to complete database updates: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      isApplyingSettings.value = false;
+      progressPercentage.value = 0;
+      processingPhase.value = 'idle';
+      
+      // Clear the elapsed time interval
+      if (elapsedTimeInterval) {
+        clearInterval(elapsedTimeInterval);
+        elapsedTimeInterval = null;
+      }
+    }
+  }
+  
+  // Update database in smaller chunks to prevent UI freezing
+  async function updateDatabaseInChunks(updatedRecords) {
+    const chunkSize = 500; // Process 500 records at a time to prevent UI blocking
+    const totalRecords = updatedRecords.length;
+    
+    if (totalRecords <= chunkSize) {
+      // Small enough to process in one go
+      await rateSheetService.updateEffectiveDatesWithRecords(updatedRecords);
+      return;
+    }
+    
+    // Process in chunks
+    for (let i = 0; i < totalRecords; i += chunkSize) {
+      const chunk = updatedRecords.slice(i, i + chunkSize);
+      processingStatus.value = `Saving records to database (${i} - ${Math.min(i + chunkSize, totalRecords)} of ${totalRecords})...`;
+      
+      // Allow UI to update between chunks
+      await new Promise(resolve => {
+        requestAnimationFrame(() => {
+          setTimeout(async () => {
+            try {
+              await rateSheetService.updateEffectiveDatesWithRecords(chunk);
+              resolve(null);
+            } catch (error) {
+              console.error(`Error updating chunk ${i}-${i+chunkSize}:`, error);
+              processingLogs.value.push({
+                time: Date.now(),
+                message: `Error updating database chunk: ${error instanceof Error ? error.message : String(error)}`
+              });
+              resolve(null); // Still resolve to continue with other chunks
+            }
+          }, 50); // Increase delay between chunks
+        });
+      });
+    }
+  }
+  
+  // New function to update the store data with simplified worker results
+  async function updateOriginalDataWithResults(updatedRecords) {
+    processingLogs.value.push({
+      time: Date.now(),
+      message: `Starting to update application state with ${updatedRecords.length} changes`
+    });
+    
+    // First, update the effective date settings
+    store.$patch({
+      effectiveDateSettings: { ...effectiveDateSettings.value }
+    });
+    
+    // Allow UI to refresh
+    await new Promise(resolve => {
+      requestAnimationFrame(() => setTimeout(resolve, 50));
+    });
+    
+    // Create a lookup map for faster access
+    const recordsMap = new Map();
+    for (const record of updatedRecords) {
+      recordsMap.set(`${record.name}|${record.prefix}`, record.effective);
+    }
+    
+    // Update original data in very small batches
+    const originalData = [...store.originalData];
+    const batchSize = 1000;
+    for (let i = 0; i < originalData.length; i += batchSize) {
+      const endIndex = Math.min(i + batchSize, originalData.length);
+      processingStatus.value = `Updating application state (${i} - ${endIndex} of ${originalData.length})...`;
+      
+      // Process this batch
+      for (let j = i; j < endIndex; j++) {
+        const record = originalData[j];
+        const key = `${record.name}|${record.prefix}`;
+        if (recordsMap.has(key)) {
+          originalData[j] = { 
+            ...record, 
+            effective: recordsMap.get(key)
+          };
+        }
+      }
+      
+      // Allow UI to update
+      await new Promise(resolve => {
+        requestAnimationFrame(() => setTimeout(resolve, 10));
+      });
+    }
+    
+    processingLogs.value.push({
+      time: Date.now(),
+      message: 'Applying changes to store'
+    });
+    
+    // Apply all changes to the store
+    store.$patch({
+      originalData
+    });
+    
+    // Now regenerate the grouped data
+    processingLogs.value.push({
+      time: Date.now(),
+      message: 'Regenerating grouped data'
+    });
+    
+    await new Promise(resolve => {
+      requestAnimationFrame(() => setTimeout(resolve, 50));
+    });
+    
+    // This will force the store to recompute the grouped data
+    store.setGroupedData(store.getGroupedData);
+    
+    processingLogs.value.push({
+      time: Date.now(),
+      message: 'Store update complete'
+    });
+  }
+
+  // Cleanup worker on component unmount
+  onBeforeUnmount(() => {
+    if (effectiveDateWorker) {
+      console.log("Cleaning up worker on component unmount");
+      effectiveDateWorker.terminate();
+      effectiveDateWorker = null;
+    }
+    
+    // Clean up timer interval
+    if (elapsedTimeInterval) {
+      clearInterval(elapsedTimeInterval);
+      elapsedTimeInterval = null;
+    }
+  });
+  
+  // Update the applyEffectiveDateSettings function to use the worker
+  async function applyEffectiveDateSettings() {
+    if (isApplyingSettings.value || !effectiveDateWorker) return;
+    
+    // Clear previous logs when starting a new operation
+    processingLogs.value = [];
+    processingLogs.value.push({
+      time: Date.now(),
+      message: "Starting effective date update process"
+    });
+    
+    // Check if there are any conflicts before proceeding
+    const conflictCount = store.getDiscrepancyCount;
+    if (conflictCount > 0) {
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Cannot proceed: ${conflictCount} rate conflicts detected`
+      });
+      alert(`Cannot apply effective dates while ${conflictCount} rate conflicts exist. Please resolve all conflicts first.`);
+      return;
+    }
+    
+    isApplyingSettings.value = true;
+    progressPercentage.value = 0;
+    processingPhase.value = 'preparing';
+    processingStatus.value = 'Initializing worker...';
+    processingStartTime.value = Date.now();
+    displayedElapsedTime.value = 0;
+    
+    // Start separate timer for UI updates
+    if (elapsedTimeInterval) {
+      clearInterval(elapsedTimeInterval);
+    }
+    elapsedTimeInterval = window.setInterval(() => {
+      if (processingStartTime.value > 0) {
+        displayedElapsedTime.value = Math.floor((Date.now() - processingStartTime.value) / 1000);
+      }
+    }, 100);
+    
+    // Show logs automatically when applying settings
+    showProcessingLogs.value = true;
+    
+    try {
+      console.log("Starting effective date update process");
+      processingLogs.value.push({
+        time: Date.now(),
+        message: "Preparing data for worker"
+      });
+      
+      // Create simplified versions of the data to send to the worker
+      // Extract only the properties we need to ensure everything is serializable
+      
+      // Get the raw data 
+      const rawGroupedData = store.groupedData.map(group => ({
+        destinationName: group.destinationName,
+        changeCode: group.changeCode,
+        effectiveDate: group.effectiveDate
+      }));
+      
+      // Simplify records too - only send what's needed
+      const simplifiedRecords = store.originalData.map(record => ({
+        name: record.name,
+        prefix: record.prefix,
+        effective: record.effective
+      }));
+      
+      processingStatus.value = 'Sending data to worker...';
+      
+      console.log(`Sending ${rawGroupedData.length} simplified groups and ${simplifiedRecords.length} simplified records to worker`);
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Sending ${rawGroupedData.length} groups and ${simplifiedRecords.length} records to worker`
+      });
+      
+      // Send to worker with only the required data
+      effectiveDateWorker.postMessage({
+        rawGroupedData,
+        allRecords: simplifiedRecords,
+        effectiveDateSettings: { ...effectiveDateSettings.value }
+      });
+      
+      processingLogs.value.push({
+        time: Date.now(),
+        message: "Data sent to worker, awaiting results"
+      });
+      
+    } catch (error) {
+      console.error('Error starting effective date update:', error);
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`
+      });
+      processingStatus.value = `Error starting update: ${error instanceof Error ? error.message : String(error)}`;
+      alert("Error starting update: " + (error instanceof Error ? error.message : String(error)));
+      isApplyingSettings.value = false;
+      processingPhase.value = 'idle';
+      
+      // Clear the elapsed time interval
+      if (elapsedTimeInterval) {
+        clearInterval(elapsedTimeInterval);
+        elapsedTimeInterval = null;
+      }
     }
   }
 
@@ -1044,3 +1629,18 @@
     return setting;
   }
 </script>
+
+<style scoped>
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+</style>

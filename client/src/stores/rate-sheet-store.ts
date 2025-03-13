@@ -130,6 +130,33 @@ export const useRateSheetStore = defineStore('rateSheet', {
         }
         return item;
       });
+    },
+    
+    // Method to update grouped data with effective dates from worker
+    updateGroupedDataEffectiveDates(updatedGroups: {destinationName: string, effectiveDate: string, changeCode: ChangeCodeType}[]) {
+      // Create a lookup map for efficient updates
+      const updateMap = new Map<string, {effectiveDate: string, changeCode: ChangeCodeType}>();
+      
+      // Build the lookup map
+      updatedGroups.forEach(group => {
+        updateMap.set(group.destinationName, {
+          effectiveDate: group.effectiveDate,
+          changeCode: group.changeCode
+        });
+      });
+      
+      // Update the grouped data
+      this.groupedData = this.groupedData.map(group => {
+        const update = updateMap.get(group.destinationName);
+        if (update) {
+          return {
+            ...group,
+            effectiveDate: update.effectiveDate,
+            changeCode: update.changeCode
+          };
+        }
+        return group;
+      });
     }
   },
 
@@ -137,7 +164,6 @@ export const useRateSheetStore = defineStore('rateSheet', {
     getDiscrepancyCount: (state): number => {
       const count = state.groupedData.filter(group => group.hasDiscrepancy).length;
       console.log(`Destinations with rate discrepancies: ${count}`);
-      console.log('Discrepancy breakdown:', state.groupedData.filter(group => group.hasDiscrepancy).map(g => g.destinationName));
       return count;
     },
 

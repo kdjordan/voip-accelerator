@@ -124,6 +124,30 @@ export class RateSheetService {
     }
   }
 
+  /**
+   * Updates effective dates using pre-processed records from the worker
+   * @param updatedRecords Records with updated effective dates
+   * @returns void
+   */
+  async updateEffectiveDatesWithRecords(updatedRecords: RateSheetRecord[]): Promise<void> {
+    try {
+      if (!updatedRecords || updatedRecords.length === 0) {
+        console.log('No records to update');
+        return;
+      }
+      
+      console.log(`Updating ${updatedRecords.length} records in database`);
+      const db = await this.ensureTableExists();
+      
+      // Perform batch update
+      await db.table(this.tableName).bulkPut(updatedRecords);
+      console.log(`Updated effective dates for ${updatedRecords.length} records in database`);
+    } catch (error) {
+      console.error('Failed to update effective dates with records:', error);
+      throw error;
+    }
+  }
+
   async processFile(
     file: File,
     columnMapping: Record<string, number>,
