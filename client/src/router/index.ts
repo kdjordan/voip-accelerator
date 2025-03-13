@@ -11,6 +11,11 @@ const router = createRouter({
       component: () => import('../pages/RateSheetView.vue'),
     },
     {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../pages/DashBoard.vue'),
+    },
+    {
       path: '/rate-sheet',
       name: 'rateSheet',
       component: () => import('../pages/RateSheetView.vue'),

@@ -1,51 +1,46 @@
 import { type USStandardizedData, type InvalidUsRow } from '@/types/domains/us-types';
 import { DBName } from '@/types/app-types';
-import Dexie, { Table } from 'dexie';
 import { useUsStore } from '@/stores/us-store';
 import Papa from 'papaparse';
-import useDexieDB from '@/composables/useDexieDB';
+import { StorageService, useStorage } from '@/services/storage/storage.service';
+import { storageConfig } from '@/config/storage-config';
 
 // Define the store type to avoid type mismatch
 interface UsStore {
   addInvalidRow: (fileName: string, row: InvalidUsRow) => void;
   clearInvalidRowsForFile: (fileName: string) => void;
-  // Add other methods as needed
   resetFiles: () => void;
   addFileUploaded: (componentName: string, fileName: string) => void;
+  // In-memory storage methods
+  storeInMemoryData: (tableName: string, data: USStandardizedData[]) => void;
+  getInMemoryData: (tableName: string) => USStandardizedData[];
+  getInMemoryDataCount: (tableName: string) => number;
+  removeInMemoryData: (tableName: string) => void;
+  clearAllInMemoryData: () => void;
+  getInMemoryTables: Record<string, number>;
 }
 
 export class USService {
   private store: UsStore;
-  private db: Dexie | null = null;
+  private storageService: StorageService<USStandardizedData>;
 
   constructor() {
     console.log('Initializing US service');
     this.store = useUsStore() as unknown as UsStore;
-    this.initializeDB();
+    this.storageService = useStorage<USStandardizedData>(DBName.US);
+    this.initializeStorage();
   }
 
-  async initializeDB() {
-    try {
-      if (!this.db) {
-        console.log('Creating new Dexie instance for US database');
-        const { getDB } = useDexieDB();
-        this.db = await getDB(DBName.US);
-        
-        // Add better error handling for database opening
-        try {
-          await this.db.open();
-          console.log('US database opened successfully');
-          console.log('Available tables:', this.db.tables.map(t => t.name).join(', ') || 'None');
-        } catch (openError) {
-          console.error('Error opening US database:', openError);
-          throw openError;
-        }
-      }
-      return this.db;
-    } catch (error) {
-      console.error('Failed to initialize US database:', error);
-      throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+  async initializeStorage(): Promise<StorageService<USStandardizedData>> {
+    await this.storageService.initialize();
+    return this.storageService;
+  }
+
+  /**
+   * Check if we're using in-memory storage
+   */
+  private isUsingMemoryStorage(): boolean {
+    return storageConfig.storageType === 'memory';
   }
 
   async processFile(
@@ -59,18 +54,8 @@ export class USService {
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
 
-    // Ensure db is initialized
-    const db = await this.initializeDB();
-    if (!db) throw new Error('Failed to initialize database');
-
-    // Only create new schema if table doesn't exist
-    if (!db.tables.some((t: Table) => t.name === tableName)) {
-      await db.close();
-      db.version(db.verno! + 1).stores({
-        [tableName]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
-      });
-      await db.open();
-    }
+    // Ensure storage is initialized
+    await this.initializeStorage();
 
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
@@ -183,17 +168,14 @@ export class USService {
               }
             });
 
-            // Store valid records in the database
+            // Store valid records based on storage strategy
             if (validRecords.length > 0) {
-              console.log(`Storing ${validRecords.length} records to table '${tableName}'`);
-              try {
-                // First, check if the table exists
-                const doesTableExist = db.tables.some(table => table.name === tableName);
-                if (!doesTableExist) {
-                  console.error(`Table ${tableName} does not exist in the database schema!`);
-                  throw new Error(`Table ${tableName} does not exist in the database schema`);
-                }
-                
+              if (this.isUsingMemoryStorage()) {
+                // Store in-memory
+                this.store.storeInMemoryData(tableName, validRecords);
+                console.log(`[USService] Stored ${validRecords.length} records in memory for table: ${tableName}`);
+              } else {
+                // Store using the storage service
                 const chunkSize = 1000;
                 for (let i = 0; i < validRecords.length; i += chunkSize) {
                   const chunk = validRecords.slice(i, i + chunkSize);
@@ -204,25 +186,14 @@ export class USService {
                     await new Promise(resolve => setTimeout(resolve, 100));
                   }
                   
-                  try {
-                    await db.table(tableName).bulkPut(chunk);
-                    console.log(`Successfully inserted chunk ${i / chunkSize + 1}`);
-                  } catch (chunkError: unknown) {
-                    console.error(`Error inserting chunk ${i / chunkSize + 1}:`, chunkError);
-                    console.error('First few records in the failed chunk:', JSON.stringify(chunk.slice(0, 3)));
-                    throw chunkError;
-                  }
+                  await this.storageService.storeData(tableName, chunk);
                 }
-                console.log(`Successfully stored all records to table '${tableName}'`);
-              } catch (dbError: unknown) {
-                console.error(`Error storing data to IndexedDB table '${tableName}':`, dbError);
-                throw new Error(`Failed to store data: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
               }
             } else {
               console.warn(`No valid records to store for file '${file.name}'`);
             }
             
-            // We should keep this line - it tells the store that the table should be associated with the file
+            // Tell the store which file was uploaded
             this.store.addFileUploaded(file.name, tableName);
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
@@ -237,28 +208,16 @@ export class USService {
 
   async clearData(): Promise<void> {
     try {
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-      
-      // Get all table names
-      const tableNames = db.tables.map(table => table.name);
-      
-      // Close the database to modify schema
-      await db.close();
-      
-      // Create a new version with all tables removed
-      const newVersion = db.verno! + 1;
-      const schemaDefinition: Record<string, null> = {};
-      
-      tableNames.forEach(name => {
-        schemaDefinition[name] = null;
-      });
-      
-      db.version(newVersion).stores(schemaDefinition);
-      
-      await db.open();
+      if (this.isUsingMemoryStorage()) {
+        // Clear in-memory data
+        this.store.clearAllInMemoryData();
+        console.log('[USService] Cleared all in-memory data');
+      } else {
+        // Clear database data
+        await this.initializeStorage();
+        await this.storageService.clearAllData();
+      }
       this.store.resetFiles();
-      
     } catch (error) {
       console.error('Failed to clear US data:', error);
       throw error;
@@ -267,26 +226,15 @@ export class USService {
 
   async removeTable(tableName: string): Promise<void> {
     try {
-      console.log(`Attempting to remove table: ${tableName}`);
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-      
-      // Check if the table exists
-      if (!db.tables.some(table => table.name === tableName)) {
-        console.log(`Table ${tableName} does not exist, nothing to remove.`);
-        return;
+      if (this.isUsingMemoryStorage()) {
+        // Remove from in-memory
+        this.store.removeInMemoryData(tableName);
+        console.log(`[USService] Removed in-memory table: ${tableName}`);
+      } else {
+        // Remove from database
+        await this.initializeStorage();
+        await this.storageService.removeData(tableName);
       }
-
-      // Close the database to modify schema
-      await db.close();
-
-      // Remove the table by setting it to null in the next version
-      // This is the same approach used in the AZ service
-      db.version(db.verno! + 1).stores({
-        [tableName]: null, // This deletes the table
-      });
-
-      await db.open();
       console.log(`Table ${tableName} removed successfully`);
     } catch (error) {
       console.error(`Failed to remove table ${tableName}:`, error);
@@ -294,25 +242,104 @@ export class USService {
     }
   }
 
-  async listTables(): Promise<{ tableName: string; recordCount: number }[]> {
+  async getData(tableName: string): Promise<USStandardizedData[]> {
     try {
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-      
-      const tableInfo = [];
-      
-      for (const table of db.tables) {
-        const count = await table.count();
-        tableInfo.push({
-          tableName: table.name,
-          recordCount: count
-        });
+      if (this.isUsingMemoryStorage()) {
+        // Get from in-memory
+        const data = this.store.getInMemoryData(tableName);
+        console.log(`[USService] Retrieved ${data.length} records from in-memory table: ${tableName}`);
+        return data;
+      } else {
+        // Get from database
+        await this.initializeStorage();
+        return await this.storageService.getData(tableName);
       }
-      
-      return tableInfo;
+    } catch (error) {
+      console.error(`Failed to get data from table ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  async getRecordCount(tableName: string): Promise<number> {
+    try {
+      if (this.isUsingMemoryStorage()) {
+        // Count from in-memory
+        const count = this.store.getInMemoryDataCount(tableName);
+        console.log(`[USService] Count for in-memory table ${tableName}: ${count}`);
+        return count;
+      } else {
+        // Count from database
+        await this.initializeStorage();
+        return await this.storageService.getCount(tableName);
+      }
+    } catch (error) {
+      console.error(`Failed to get record count for table ${tableName}:`, error);
+      return 0;
+    }
+  }
+
+  async listTables(): Promise<Record<string, number>> {
+    try {
+      if (this.isUsingMemoryStorage()) {
+        // List in-memory tables
+        const tables = this.store.getInMemoryTables;
+        console.log(`[USService] Listed ${Object.keys(tables).length} in-memory tables`);
+        return tables;
+      } else {
+        // List database tables
+        await this.initializeStorage();
+        return await this.storageService.listTables();
+      }
     } catch (error) {
       console.error('Failed to list tables:', error);
-      throw new Error(`Failed to list tables: ${error instanceof Error ? error.message : String(error)}`);
+      return {};
+    }
+  }
+
+  /**
+   * Switch storage strategy at runtime
+   * This will migrate all data between strategies
+   */
+  async switchStorageStrategy(newStrategy: 'memory' | 'indexeddb'): Promise<void> {
+    if (newStrategy === storageConfig.storageType) {
+      console.log(`[USService] Already using ${newStrategy} strategy, no change needed`);
+      return;
+    }
+
+    console.log(`[USService] Switching storage strategy from ${storageConfig.storageType} to ${newStrategy}`);
+    
+    try {
+      if (newStrategy === 'memory') {
+        // Switching from IndexedDB to memory
+        // First, get all data from IndexedDB
+        await this.initializeStorage();
+        const tables = await this.storageService.listTables();
+        
+        // For each table, get the data and store it in memory
+        for (const tableName of Object.keys(tables)) {
+          const data = await this.storageService.getData(tableName);
+          this.store.storeInMemoryData(tableName, data);
+          console.log(`[USService] Migrated ${data.length} records from IndexedDB to memory for table: ${tableName}`);
+        }
+      } else {
+        // Switching from memory to IndexedDB
+        // First, get all in-memory tables
+        const tables = this.store.getInMemoryTables;
+        
+        // For each table, get the data and store it in IndexedDB
+        for (const tableName of Object.keys(tables)) {
+          const data = this.store.getInMemoryData(tableName);
+          await this.storageService.storeData(tableName, data);
+          console.log(`[USService] Migrated ${data.length} records from memory to IndexedDB for table: ${tableName}`);
+        }
+      }
+      
+      // Update the storage config
+      storageConfig.storageType = newStrategy;
+      console.log(`[USService] Storage strategy switched to ${newStrategy}`);
+    } catch (error) {
+      console.error(`Failed to switch storage strategy to ${newStrategy}:`, error);
+      throw error;
     }
   }
 }

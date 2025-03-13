@@ -49,7 +49,7 @@
 <script setup lang="ts">
   import SideNav from '@/components/shared/SideNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
-  import { onMounted, onBeforeUnmount } from 'vue';
+  import { onMounted, onBeforeUnmount, ref } from 'vue';
   import { useSharedStore } from '@/stores/shared-store';
   import { cleanupDatabases } from '@/utils/cleanup';
   import { RouterView, useRoute } from 'vue-router';

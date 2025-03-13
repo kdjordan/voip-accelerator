@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
-import type { USPricingReport, USCodeReport, InvalidUsRow } from '../types/domains/us-types';
+import type { USPricingReport, USCodeReport, InvalidUsRow, USStandardizedData } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
+import { storageConfig } from '@/config/storage-config';
 
 export const useUsStore = defineStore('npanxxStore', {
   state: () => ({
@@ -12,8 +13,10 @@ export const useUsStore = defineStore('npanxxStore', {
     pricingReport: null as USPricingReport | null,
     codeReport: null as USCodeReport | null,
     uploadingComponents: {} as Record<string, boolean>,
-    tempFiles: {} as Record<string, File>,
-    invalidRows: {} as Record<string, InvalidUsRow[]>,
+    tempFiles: new Map<string, File>(),
+    invalidRows: new Map<string, InvalidUsRow[]>(),
+    // Add in-memory storage
+    inMemoryData: new Map<string, USStandardizedData[]>(),
   }),
 
   getters: {
@@ -46,10 +49,38 @@ export const useUsStore = defineStore('npanxxStore', {
         return file ? file.fileName : '';
       },
       
-    getInvalidRows: state => (fileName: string): InvalidUsRow[] => state.invalidRows[fileName] || [],
+    getInvalidRows: state => (fileName: string): InvalidUsRow[] => {
+      return state.invalidRows.get(fileName) || [];
+    },
     
-    hasInvalidRows: state => (fileName: string): boolean => 
-      !!state.invalidRows[fileName] && state.invalidRows[fileName].length > 0,
+    hasInvalidRows: state => (fileName: string): boolean => {
+      return state.invalidRows.has(fileName) && (state.invalidRows.get(fileName)?.length || 0) > 0;
+    },
+    
+    hasExistingFile: state => (fileName: string): boolean => {
+      return Array.from(state.filesUploaded.values()).some(f => f.fileName === fileName);
+    },
+    
+    isUsingMemoryStorage: () => {
+      return storageConfig.storageType === 'memory';
+    },
+    
+    // In-memory storage getters
+    getInMemoryData: state => (tableName: string) => {
+      return state.inMemoryData.get(tableName) || [];
+    },
+    
+    getInMemoryDataCount: state => (tableName: string) => {
+      return state.inMemoryData.get(tableName)?.length || 0;
+    },
+    
+    getInMemoryTables: state => {
+      const result: Record<string, number> = {};
+      state.inMemoryData.forEach((data, tableName) => {
+        result[tableName] = data.length;
+      });
+      return result;
+    },
   },
 
   actions: {
@@ -67,7 +98,8 @@ export const useUsStore = defineStore('npanxxStore', {
       this.pricingReport = null;
       this.codeReport = null;
       this.showUploadComponents = true;
-      this.invalidRows = {};
+      this.invalidRows.clear();
+      this.inMemoryData.clear();
     },
 
     setReports(pricing: USPricingReport, code: USCodeReport) {
@@ -78,6 +110,17 @@ export const useUsStore = defineStore('npanxxStore', {
     },
 
     removeFile(componentName: string) {
+      const fileName = this.getFileNameByComponent(componentName);
+      if (fileName) {
+        // Get the tableName from the filename
+        const tableName = fileName.toLowerCase().replace('.csv', '');
+        
+        // Remove from in-memory data if using memory storage
+        if (this.isUsingMemoryStorage) {
+          this.inMemoryData.delete(tableName);
+        }
+      }
+      
       this.filesUploaded.delete(componentName);
 
       // Reset reports if no files left
@@ -89,15 +132,6 @@ export const useUsStore = defineStore('npanxxStore', {
         this.activeReportType = 'files';
       }
     },
-    
-    hasExistingFile(fileName: string): boolean {
-      for (const file of this.filesUploaded.values()) {
-        if (file.fileName === fileName) {
-          return true;
-        }
-      }
-      return false;
-    },
 
     setComponentUploading(componentName: string, isUploading: boolean) {
       this.uploadingComponents[componentName] = isUploading;
@@ -105,27 +139,44 @@ export const useUsStore = defineStore('npanxxStore', {
     
     // Temp file handling for preview
     setTempFile(componentName: string, file: File) {
-      this.tempFiles[componentName] = file;
+      this.tempFiles.set(componentName, file);
     },
     
-    getTempFile(componentName: string): File | null {
-      return this.tempFiles[componentName] || null;
+    getTempFile(componentName: string): File | undefined {
+      return this.tempFiles.get(componentName);
     },
     
     clearTempFile(componentName: string) {
-      delete this.tempFiles[componentName];
+      this.tempFiles.delete(componentName);
     },
     
     // Invalid rows handling
     addInvalidRow(fileName: string, row: InvalidUsRow) {
-      if (!this.invalidRows[fileName]) {
-        this.invalidRows[fileName] = [];
+      if (!this.invalidRows.has(fileName)) {
+        this.invalidRows.set(fileName, []);
       }
-      this.invalidRows[fileName].push(row);
+      this.invalidRows.get(fileName)?.push(row);
     },
     
     clearInvalidRowsForFile(fileName: string) {
-      this.invalidRows[fileName] = [];
+      this.invalidRows.delete(fileName);
     },
+    
+    clearAllInvalidRows() {
+      this.invalidRows.clear();
+    },
+    
+    // In-memory storage actions
+    storeInMemoryData(tableName: string, data: USStandardizedData[]) {
+      this.inMemoryData.set(tableName, data);
+    },
+    
+    removeInMemoryData(tableName: string) {
+      this.inMemoryData.delete(tableName);
+    },
+    
+    clearAllInMemoryData() {
+      this.inMemoryData.clear();
+    }
   },
 }) as unknown as () => DomainStore<USPricingReport, USCodeReport>;
