@@ -9,6 +9,16 @@ import type {
   ChangeCodeType,
 } from '@/types/domains/rate-sheet-types';
 
+// Define interface for effective date settings
+export interface EffectiveDateSettings {
+  same: string;
+  increase: string;
+  decrease: string;
+  sameCustomDate: string;
+  increaseCustomDate: string;
+  decreaseCustomDate: string;
+}
+
 export const useRateSheetStore = defineStore('rateSheet', {
   state: (): RateSheetState => ({
     error: null,
@@ -19,6 +29,14 @@ export const useRateSheetStore = defineStore('rateSheet', {
     hasMinDuration: false,
     hasIncrements: false,
     invalidRows: [],
+    effectiveDateSettings: {
+      same: 'today',
+      increase: 'week',
+      decrease: 'today',
+      sameCustomDate: new Date().toISOString().split('T')[0],
+      increaseCustomDate: new Date().toISOString().split('T')[0],
+      decreaseCustomDate: new Date().toISOString().split('T')[0]
+    }
   }),
 
   actions: {
@@ -49,8 +67,8 @@ export const useRateSheetStore = defineStore('rateSheet', {
     },
 
     setOptionalFields(mappings: Record<string, string>) {
-      this.hasMinDuration = 'minDuration' in mappings;
-      this.hasIncrements = 'increments' in mappings;
+      this.hasMinDuration = Object.values(mappings).includes('minDuration');
+      this.hasIncrements = Object.values(mappings).includes('increments');
       this.isLocallyStored = true;
     },
 
@@ -99,6 +117,20 @@ export const useRateSheetStore = defineStore('rateSheet', {
     clearInvalidRows() {
       this.invalidRows = [];
     },
+
+    setEffectiveDateSettings(settings: EffectiveDateSettings) {
+      this.effectiveDateSettings = { ...settings };
+    },
+
+    updateEffectiveDates(changeCode: ChangeCodeType, newDate: string) {
+      // Update effective dates for all items with the specified change code
+      this.groupedData = this.groupedData.map(item => {
+        if (item.changeCode === changeCode) {
+          return { ...item, effectiveDate: newDate };
+        }
+        return item;
+      });
+    }
   },
 
   getters: {
@@ -175,5 +207,49 @@ export const useRateSheetStore = defineStore('rateSheet', {
         count: rows.length,
       }));
     },
+
+    getEffectiveDateSettings: (state): EffectiveDateSettings => {
+      return state.effectiveDateSettings;
+    },
+
+    getEffectiveDateForChangeCode: (state) => (changeCode: ChangeCodeType): string => {
+      const { same, increase, decrease, sameCustomDate, increaseCustomDate, decreaseCustomDate } = state.effectiveDateSettings;
+      const today = new Date();
+      let date = today;
+
+      if (changeCode === ChangeCode.SAME) {
+        if (same === 'today') {
+          date = today;
+        } else if (same === 'tomorrow') {
+          date = new Date(today);
+          date.setDate(today.getDate() + 1);
+        } else if (same === 'custom') {
+          return sameCustomDate;
+        }
+      } else if (changeCode === ChangeCode.INCREASE) {
+        if (increase === 'today') {
+          date = today;
+        } else if (increase === 'tomorrow') {
+          date = new Date(today);
+          date.setDate(today.getDate() + 1);
+        } else if (increase === 'week') {
+          date = new Date(today);
+          date.setDate(today.getDate() + 7);
+        } else if (increase === 'custom') {
+          return increaseCustomDate;
+        }
+      } else if (changeCode === ChangeCode.DECREASE) {
+        if (decrease === 'today') {
+          date = today;
+        } else if (decrease === 'tomorrow') {
+          date = new Date(today);
+          date.setDate(today.getDate() + 1);
+        } else if (decrease === 'custom') {
+          return decreaseCustomDate;
+        }
+      }
+
+      return date.toISOString().split('T')[0];
+    }
   },
 });

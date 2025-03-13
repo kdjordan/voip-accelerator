@@ -18,7 +18,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <!-- Filter -->
         <div>
           <label class="block text-sm text-gray-400 mb-1">View Filter</label>
@@ -96,6 +96,138 @@
               Export Rate Sheet
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Effective Date Settings (collapsible) -->
+      <div class="border-t border-gray-700/50 pt-4 mb-4">
+        <div 
+          @click="showEffectiveDateSettings = !showEffectiveDateSettings"
+          class="flex items-center justify-between cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-medium text-gray-300">Effective Date Settings</h3>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-gray-400">(</span>
+              <span class="text-gray-400">Same:</span>
+              <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.same) }}</span>
+              <span class="text-gray-400">|</span>
+              <span class="text-green-400">↑ Increase:</span>
+              <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.increase) }}</span>
+              <span class="text-gray-400">|</span>
+              <span class="text-red-400">↓ Decrease:</span>
+              <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.decrease) }}</span>
+              <span class="text-gray-400">)</span>
+            </div>
+          </div>
+          <button class="p-1 text-gray-400 hover:text-white rounded-full transition-colors">
+            <ChevronDownIcon 
+              class="w-5 h-5 transition-transform" 
+              :class="{ 'rotate-180': showEffectiveDateSettings }"
+            />
+          </button>
+        </div>
+        
+        <div v-if="showEffectiveDateSettings" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- SAME Rate Effective Date -->
+          <div class="bg-gray-900/30 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-400">SAME Rate</span>
+              <span class="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">No Change</span>
+            </div>
+            <div class="flex flex-col space-y-2">
+              <div class="flex items-center">
+                <input id="same-today" v-model="effectiveDateSettings.same" type="radio" value="today" class="mr-2" />
+                <label for="same-today" class="text-sm">Today</label>
+              </div>
+              <div class="flex items-center">
+                <input id="same-tomorrow" v-model="effectiveDateSettings.same" type="radio" value="tomorrow" class="mr-2" />
+                <label for="same-tomorrow" class="text-sm">Tomorrow</label>
+              </div>
+              <div class="flex items-center">
+                <input id="same-custom" v-model="effectiveDateSettings.same" type="radio" value="custom" class="mr-2" />
+                <label for="same-custom" class="text-sm">Custom</label>
+              </div>
+              <div v-if="effectiveDateSettings.same === 'custom'" class="pt-2">
+                <input 
+                  type="date" 
+                  v-model="effectiveDateSettings.sameCustomDate" 
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- INCREASE Rate Effective Date -->
+          <div class="bg-gray-900/30 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
+              <span class="px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded">↑ Rate Up</span>
+            </div>
+            <div class="flex flex-col space-y-2">
+              <div class="flex items-center">
+                <input id="increase-today" v-model="effectiveDateSettings.increase" type="radio" value="today" class="mr-2" />
+                <label for="increase-today" class="text-sm">Today</label>
+              </div>
+              <div class="flex items-center">
+                <input id="increase-tomorrow" v-model="effectiveDateSettings.increase" type="radio" value="tomorrow" class="mr-2" />
+                <label for="increase-tomorrow" class="text-sm">Tomorrow</label>
+              </div>
+              <div class="flex items-center">
+                <input id="increase-week" v-model="effectiveDateSettings.increase" type="radio" value="week" class="mr-2" />
+                <label for="increase-week" class="text-sm">7 Days (Default)</label>
+              </div>
+              <div class="flex items-center">
+                <input id="increase-custom" v-model="effectiveDateSettings.increase" type="radio" value="custom" class="mr-2" />
+                <label for="increase-custom" class="text-sm">Custom</label>
+              </div>
+              <div v-if="effectiveDateSettings.increase === 'custom'" class="pt-2">
+                <input 
+                  type="date" 
+                  v-model="effectiveDateSettings.increaseCustomDate" 
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- DECREASE Rate Effective Date -->
+          <div class="bg-gray-900/30 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
+              <span class="px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">↓ Rate Down</span>
+            </div>
+            <div class="flex flex-col space-y-2">
+              <div class="flex items-center">
+                <input id="decrease-today" v-model="effectiveDateSettings.decrease" type="radio" value="today" class="mr-2" />
+                <label for="decrease-today" class="text-sm">Today</label>
+              </div>
+              <div class="flex items-center">
+                <input id="decrease-tomorrow" v-model="effectiveDateSettings.decrease" type="radio" value="tomorrow" class="mr-2" />
+                <label for="decrease-tomorrow" class="text-sm">Tomorrow</label>
+              </div>
+              <div class="flex items-center">
+                <input id="decrease-custom" v-model="effectiveDateSettings.decrease" type="radio" value="custom" class="mr-2" />
+                <label for="decrease-custom" class="text-sm">Custom</label>
+              </div>
+              <div v-if="effectiveDateSettings.decrease === 'custom'" class="pt-2">
+                <input 
+                  type="date" 
+                  v-model="effectiveDateSettings.decreaseCustomDate" 
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="showEffectiveDateSettings" class="mt-4 flex justify-end">
+          <button 
+            @click="applyEffectiveDateSettings" 
+            class="px-4 py-2 bg-green-900/30 text-green-400  hover:bg-green-900/50 rounded transition-colors"
+          >
+            Apply Date Settings
+          </button>
         </div>
       </div>
     </div>
@@ -401,16 +533,20 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, nextTick, watch } from 'vue';
+  import { ref, computed, nextTick, watch, onMounted } from 'vue';
   import { ChevronRightIcon, TrashIcon, ArrowDownTrayIcon, CalendarDaysIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
   import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
-  import { ChangeCode } from '@/types/domains/rate-sheet-types';
+  import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
+  import { RateSheetService } from '@/services/rate-sheet.service';
+  import type { EffectiveDateSettings } from '@/stores/rate-sheet-store';
 
   // Define emits
   const emit = defineEmits(['update:discrepancy-count']);
   
+  // Initialize store and service
   const store = useRateSheetStore();
+  const rateSheetService = new RateSheetService();
   const groupedData = computed(() => store.getGroupedData);
   const expandedRows = ref<string[]>([]);
   const filterStatus = ref<'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'>('all');
@@ -439,6 +575,27 @@
   
   // Track which codes match the current search query
   const matchingCodes = ref<{[destinationName: string]: {[rate: number]: string[]}}>({}); 
+
+  // Effective Date Settings
+  const effectiveDateSettings = ref<EffectiveDateSettings>({
+    same: 'today',
+    increase: 'week',
+    decrease: 'today',
+    sameCustomDate: new Date().toISOString().split('T')[0],
+    increaseCustomDate: new Date().toISOString().split('T')[0],
+    decreaseCustomDate: new Date().toISOString().split('T')[0]
+  });
+
+  // Controls visibility of effective date settings section
+  const showEffectiveDateSettings = ref(false);
+
+  // Load saved effective date settings from store if available
+  onMounted(() => {
+    const savedSettings = store.getEffectiveDateSettings;
+    if (savedSettings) {
+      effectiveDateSettings.value = { ...savedSettings };
+    }
+  });
 
   const filteredData = computed(() => {
     let filtered = groupedData.value;
@@ -768,4 +925,122 @@
       emit('update:discrepancy-count', newCount);
     }
   }, { immediate: true });
+
+  // Function to calculate date based on setting
+  function getEffectiveDate(changeCode: ChangeCodeType): string {
+    const today = new Date();
+    let effectiveDate = today;
+    
+    if (changeCode === ChangeCode.SAME) {
+      if (effectiveDateSettings.value.same === 'today') {
+        effectiveDate = today;
+      } else if (effectiveDateSettings.value.same === 'tomorrow') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 1);
+      } else if (effectiveDateSettings.value.same === 'custom') {
+        return effectiveDateSettings.value.sameCustomDate;
+      }
+    } else if (changeCode === ChangeCode.INCREASE) {
+      if (effectiveDateSettings.value.increase === 'today') {
+        effectiveDate = today;
+      } else if (effectiveDateSettings.value.increase === 'tomorrow') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 1);
+      } else if (effectiveDateSettings.value.increase === 'week') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 7);
+      } else if (effectiveDateSettings.value.increase === 'custom') {
+        return effectiveDateSettings.value.increaseCustomDate;
+      }
+    } else if (changeCode === ChangeCode.DECREASE) {
+      if (effectiveDateSettings.value.decrease === 'today') {
+        effectiveDate = today;
+      } else if (effectiveDateSettings.value.decrease === 'tomorrow') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 1);
+      } else if (effectiveDateSettings.value.decrease === 'custom') {
+        return effectiveDateSettings.value.decreaseCustomDate;
+      }
+    }
+    
+    return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+  }
+
+  // Function to apply effective date settings to all matching rate changes
+  async function applyEffectiveDateSettings() {
+    try {
+      // Get all data that needs updating
+      const allData = [...store.groupedData];
+      let updated = false;
+      
+      // Apply effective dates based on change code
+      for (const item of allData) {
+        const newEffectiveDate = getEffectiveDate(item.changeCode);
+        if (item.effectiveDate !== newEffectiveDate) {
+          item.effectiveDate = newEffectiveDate;
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        // Update the store with direct patches instead of actions
+        store.$patch({
+          // Update the effective date settings
+          effectiveDateSettings: { ...effectiveDateSettings.value },
+          // Update the grouped data
+          groupedData: allData
+        });
+        
+        // Update the underlying data in database
+        try {
+          await rateSheetService.updateEffectiveDates(allData);
+          
+          // Update original data to reflect changes
+          const updatedOriginalData = store.originalData.map(record => {
+            const group = allData.find(item => item.destinationName === record.name);
+            if (group) {
+              return { ...record, effective: group.effectiveDate };
+            }
+            return record;
+          });
+          
+          // Update original data with patch
+          store.$patch({ originalData: updatedOriginalData });
+          
+          // Visual feedback that update was successful
+          alert("Effective dates updated successfully");
+          
+          // Close the section after applying settings
+          showEffectiveDateSettings.value = false;
+          
+          console.log('Effective dates updated successfully');
+        } catch (error) {
+          console.error('Failed to update effective dates:', error);
+          alert("Failed to update effective dates: " + (error instanceof Error ? error.message : String(error)));
+        }
+      } else {
+        // Still save the settings even if no dates needed updating
+        store.$patch({
+          effectiveDateSettings: { ...effectiveDateSettings.value }
+        });
+        alert("Effective date settings saved, but no date changes were needed");
+      }
+    } catch (error) {
+      console.error('Error applying effective date settings:', error);
+      alert("Error applying date settings: " + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  function getEffectiveDateLabel(setting: string): string {
+    if (setting === 'today') {
+      return 'Today';
+    } else if (setting === 'tomorrow') {
+      return 'Tomorrow';
+    } else if (setting === 'week') {
+      return '7 Days';
+    } else if (setting === 'custom') {
+      return 'Custom';
+    }
+    return setting;
+  }
 </script>
