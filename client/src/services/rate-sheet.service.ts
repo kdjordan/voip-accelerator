@@ -5,15 +5,6 @@ import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';
 import Papa from 'papaparse';
 
-type ValidRecord = {
-  name: string;
-  prefix: string;
-  rate: number;
-  effective: string;
-  changeCode: ChangeCodeType;
-  minDuration: number;
-  increments: number;
-};
 
 export class RateSheetService {
   private store = useRateSheetStore();
@@ -146,6 +137,7 @@ export class RateSheetService {
                     destinationName: name || `Row ${startLine + index}`,
                     prefix: prefix || 'Missing',
                     invalidRate: rateStr || 'Missing',
+                    rowNumber: startLine + index
                   };
                   this.store.addInvalidRow(invalidRow);
                 } else {

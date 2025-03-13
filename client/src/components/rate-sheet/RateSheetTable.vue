@@ -221,7 +221,7 @@
             <!-- Expanded Details -->
             <tr v-if="expandedRows.includes(group.destinationName)">
               <td
-                colspan="8"
+                :colspan="6 + (store.hasMinDuration ? 1 : 0) + (store.hasIncrements ? 1 : 0)"
                 class="px-3 py-4 bg-gray-900/30"
               >
                 <div class="pl-8">
@@ -407,6 +407,9 @@
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
   import { ChangeCode } from '@/types/domains/rate-sheet-types';
 
+  // Define emits
+  const emit = defineEmits(['update:discrepancy-count']);
+  
   const store = useRateSheetStore();
   const groupedData = computed(() => store.getGroupedData);
   const expandedRows = ref<string[]>([]);
@@ -426,6 +429,7 @@
   const isBulkProcessing = ref(false);
   const processedCount = ref(0);
   const totalToProcess = ref(0);
+  const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
   
   // Track which rate's codes are expanded
   const expandedRateCodes = ref<{[key: string]: number[]}>({});
@@ -518,7 +522,7 @@
       
       // Wait for DOM to update, then scroll to the first match
       nextTick(() => {
-        const firstMatchElement = document.querySelector('.bg-accent\\/10');
+        const firstMatchElement = document.querySelector('.bg-accent\\/20');
         if (firstMatchElement) {
           firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -620,6 +624,9 @@
     // Get all destinations with discrepancies
     const destinationsToFix = groupedData.value.filter(group => group.hasDiscrepancy);
     totalToProcess.value = destinationsToFix.length;
+    
+    // Initialize current discrepancy count
+    currentDiscrepancyCount.value = store.getDiscrepancyCount;
 
     try {
       // Process in chunks to allow UI updates
@@ -629,12 +636,15 @@
         const newRate = mode === 'highest' ? Math.max(...rates) : Math.min(...rates);
         await store.updateDestinationRate(group.destinationName, newRate);
         processedCount.value++;
+        currentDiscrepancyCount.value = Math.max(0, currentDiscrepancyCount.value - 1);
 
         // Allow UI to update
         await new Promise(resolve => setTimeout(resolve, 0));
       }
       // Force a final update of the grouped data
       store.setGroupedData(store.getGroupedData);
+      // Reset current discrepancy count to the actual count after processing
+      currentDiscrepancyCount.value = store.getDiscrepancyCount;
     } finally {
       isBulkProcessing.value = false;
       processedCount.value = 0;
@@ -746,4 +756,16 @@
   function areAnyRateCodesExpanded(destinationName: string): boolean {
     return !!expandedRateCodes.value[destinationName]?.length;
   }
+
+  // Watch for changes in currentDiscrepancyCount and emit to parent
+  watch(currentDiscrepancyCount, (newCount) => {
+    emit('update:discrepancy-count', newCount);
+  });
+
+  watch(() => store.getDiscrepancyCount, (newCount) => {
+    if (!isBulkProcessing.value) {
+      currentDiscrepancyCount.value = newCount;
+      emit('update:discrepancy-count', newCount);
+    }
+  }, { immediate: true });
 </script>

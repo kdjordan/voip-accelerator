@@ -48,6 +48,7 @@ export interface InvalidRow {
   destinationName: string;
   prefix: string;
   invalidRate: string;
+  rowNumber?: number;
 }
 
 export interface RateSheetState {
