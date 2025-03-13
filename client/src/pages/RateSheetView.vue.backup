@@ -75,16 +75,13 @@
                 <thead class="bg-gray-800/80">
                   <tr>
                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                      ROW
-                    </th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                      NAME
+                      name ROW
                     </th>
                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
                       PREFIX
                     </th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">
-                      RATE
+                    <th class="px-4 py-2 text-right text-xs font-medium text-red-400 rounded-tr-md">
+                      RATE (inter)
                     </th>
                   </tr>
                 </thead>
@@ -95,10 +92,7 @@
                     class="hover:bg-gray-800/50"
                   >
                     <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                      {{ row.rowNumber }}
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                      {{ row.destinationName }}
+                      {{ row.destinationName }} <span class="ml-1 text-xs text-gray-500">{{ row.rowNumber }}</span>
                     </td>
                     <td class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50">
                       {{ row.prefix }}

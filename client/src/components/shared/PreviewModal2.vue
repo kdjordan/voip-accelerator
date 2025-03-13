@@ -57,7 +57,7 @@
             </div>
 
             <!-- US-specific help text -->
-            <div v-if="isUSFile" class="mb-4 p-3 bg-accent/10 border border-accent/30 rounded-md">
+            <div v-if="isUSFile" class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md">
               <p class="text-sm text-accent">
                 <span class="font-medium">US File Requirements:</span> 
                 Either select NPANXX column <strong>or</strong> both NPA and NXX columns. 
