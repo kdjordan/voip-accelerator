@@ -231,11 +231,10 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive } from 'vue';
+  import { ref, reactive, onMounted } from 'vue';
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useAzStore } from '@/stores/az-store';
-  import useDexieDB from '@/composables/useDexieDB';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
   import type { AzPricingReport, AzCodeReport, AZReportsInput, AZStandardizedData } from '@/types/domains/az-types';
   import { AZ_COLUMN_ROLE_OPTIONS } from '@/types/domains/az-types';
@@ -243,9 +242,12 @@
   import { AZColumnRole } from '@/types/domains/az-types';
   import Papa from 'papaparse';
   import { AZService } from '@/services/az.service';
+  import { storageConfig } from '@/config/storage-config';
+
+  // Define the component ID type to avoid TypeScript errors
+  type ComponentId = 'az1' | 'az2';
 
   const azStore = useAzStore();
-  const { loadFromDexieDB } = useDexieDB();
   const azService = new AZService();
 
   const isDragging = reactive<Record<string, boolean>>({});
@@ -257,30 +259,30 @@
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
   const startLine = ref(1);
-  const activeComponent = ref<string>('');
+  const activeComponent = ref<ComponentId>('az1');
 
   // Preview state
   const isModalValid = ref(false);
   const columnMappings = ref<Record<string, string>>({});
 
-  // Add new ref
-  const uploadError = reactive({
-    az1: null as string | null,
-    az2: null as string | null
+  // Add new ref with proper typing
+  const uploadError = reactive<Record<ComponentId, string | null>>({
+    az1: null,
+    az2: null
   });
 
   // Drag and drop handlers
-  function handleDragEnter(event: DragEvent, componentId: string) {
+  function handleDragEnter(event: DragEvent, componentId: ComponentId) {
     event.preventDefault();
     isDragging[componentId] = true;
   }
 
-  function handleDragLeave(event: DragEvent, componentId: string) {
+  function handleDragLeave(event: DragEvent, componentId: ComponentId) {
     event.preventDefault();
     isDragging[componentId] = false;
   }
 
-  function handleDrop(event: DragEvent, componentId: string) {
+  function handleDrop(event: DragEvent, componentId: ComponentId) {
     event.preventDefault();
     isDragging[componentId] = false;
     
@@ -324,7 +326,7 @@
     }
   }
 
-  async function handleFileSelected(file: File, componentId: string) {
+  async function handleFileSelected(file: File, componentId: ComponentId) {
     if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId)) return;
 
     // Don't need to check for duplicates again - already done in handleDrop
@@ -346,7 +348,7 @@
     console.log(`File uploaded for ${componentName}: ${fileName}`);
   }
 
-  async function handleRemoveFile(componentName: string) {
+  async function handleRemoveFile(componentName: ComponentId) {
     try {
       const fileName = azStore.getFileNameByComponent(componentName);
       if (!fileName) return;
@@ -366,17 +368,17 @@
     try {
       console.log('Starting report generation with files:', azStore.getFileNames);
 
-      // Load data from DexieDB
+      // Load data using the AZService which handles both storage strategies
       const fileData = await Promise.all(
         azStore.getFileNames.map(async fileName => {
           console.log('Loading data for file:', fileName);
-          // Remove .csv extension for store name
-          const storeName = fileName.toLowerCase().replace('.csv', '');
-          const data = await loadFromDexieDB(DBName.AZ, storeName);
-          if (!data) {
+          // Remove .csv extension for table name
+          const tableName = fileName.toLowerCase().replace('.csv', '');
+          const data = await azService.getData(tableName);
+          if (!data || data.length === 0) {
             throw new Error(`No data found for file ${fileName}`);
           }
-          return data as AZStandardizedData[];
+          return data;
         })
       );
 
@@ -384,7 +386,22 @@
         console.log('Making comparison with data lengths:', {
           file1Length: fileData[0].length,
           file2Length: fileData[1].length,
+          storageType: storageConfig.storageType
         });
+
+        // Ensure data is cloneable by creating a clean copy
+        // This avoids issues with DataCloneError when using in-memory storage
+        const cleanData1 = fileData[0].map(item => ({
+          destName: item.destName,
+          dialCode: item.dialCode,
+          rate: item.rate
+        }));
+        
+        const cleanData2 = fileData[1].map(item => ({
+          destName: item.destName,
+          dialCode: item.dialCode,
+          rate: item.rate
+        }));
 
         // Create worker and process data
         const worker = new AzComparisonWorker();
@@ -403,10 +420,14 @@
             const input: AZReportsInput = {
               fileName1: azStore.getFileNames[0],
               fileName2: azStore.getFileNames[1],
-              file1Data: fileData[0],
-              file2Data: fileData[1],
+              file1Data: cleanData1,
+              file2Data: cleanData2,
             };
 
+            // Log the size of data being sent to worker
+            console.log('Sending data to worker:', 
+              `Clean data sizes: ${JSON.stringify(cleanData1).length}, ${JSON.stringify(cleanData2).length} bytes`);
+              
             worker.postMessage(input);
           }
         );
@@ -438,7 +459,7 @@
   }
 
   // File handling implementation...
-  async function handleFileInput(event: Event, componentId: string) {
+  async function handleFileInput(event: Event, componentId: ComponentId) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
@@ -504,6 +525,7 @@
       await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
+      uploadError[activeComponent.value] = 'Error processing file. Please try again.';
     } finally {
       azStore.setComponentUploading(activeComponent.value, false);
       azStore.clearTempFile(activeComponent.value);
@@ -513,7 +535,7 @@
   function handleModalCancel() {
     showPreviewModal.value = false;
     azStore.clearTempFile(activeComponent.value);
-    activeComponent.value = '';
+    activeComponent.value = 'az1';
   }
 
   function handleMappingUpdate(newMappings: Record<string, string>) {
@@ -521,7 +543,7 @@
   }
 
   // Add this debugging function after the existing handleDragEnter function
-  function setTestError(componentId: string, message: string) {
+  function setTestError(componentId: ComponentId, message: string) {
     // For testing error states
     uploadError[componentId] = message;
     console.log(`Set error for ${componentId}: ${message}`);

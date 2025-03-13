@@ -45,9 +45,9 @@
   const azStore = useAzStore();
 
   onMounted(async () => {
-    // const sampleDecks = setTimeout(async () => {
-    //   await loadSampleDecks([DBName.AZ]);
-    // }, 1000);
-    // return () => clearTimeout(sampleDecks);
+    const sampleDecks = setTimeout(async () => {
+      await loadSampleDecks([DBName.AZ]);
+    }, 1000);
+    return () => clearTimeout(sampleDecks);
   });
 </script>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import type { AzPricingReport, AzCodeReport, InvalidAzRow } from '@/types/domains/az-types';
+import type { AzPricingReport, AzCodeReport, InvalidAzRow, AZStandardizedData } from '@/types/domains/az-types';
 import type { DomainStore, ReportType } from '@/types';
+import { storageConfig } from '@/config/storage-config';
 
 export const useAzStore = defineStore('az', {
   state: () => ({
@@ -13,6 +14,7 @@ export const useAzStore = defineStore('az', {
     codeReport: null as AzCodeReport | null,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidAzRow[]>(),
+    inMemoryData: new Map<string, AZStandardizedData[]>(),
   }),
 
   getters: {
@@ -60,6 +62,22 @@ export const useAzStore = defineStore('az', {
       });
       return result;
     },
+
+    isUsingMemoryStorage: () => {
+      return storageConfig.storageType === 'memory';
+    },
+
+    getInMemoryData: state => (tableName: string) => {
+      return state.inMemoryData.get(tableName) || [];
+    },
+
+    getInMemoryTables: state => {
+      const result: Record<string, number> = {};
+      state.inMemoryData.forEach((data, tableName) => {
+        result[tableName] = data.length;
+      });
+      return result;
+    },
   },
 
   actions: {
@@ -76,6 +94,7 @@ export const useAzStore = defineStore('az', {
       this.codeReport = null;
       this.showUploadComponents = true;
       this.invalidRows.clear();
+      this.inMemoryData.clear();
     },
 
     setReports(pricing: AzPricingReport, code: AzCodeReport) {
@@ -91,12 +110,16 @@ export const useAzStore = defineStore('az', {
     },
 
     removeFile(fileName: string) {
+      const tableName = fileName.toLowerCase().replace('.csv', '');
+      
       this.filesUploaded.delete(fileName);
 
-      // Clear invalid rows for this file
       this.invalidRows.delete(fileName);
+      
+      if (this.isUsingMemoryStorage) {
+        this.inMemoryData.delete(tableName);
+      }
 
-      // Reset reports and UI state if we no longer have 2 files
       if (this.filesUploaded.size < 2) {
         this.reportsGenerated = false;
         this.pricingReport = null;
@@ -104,7 +127,6 @@ export const useAzStore = defineStore('az', {
         this.activeReportType = 'files';
       }
 
-      // Reset upload components visibility
       this.showUploadComponents = true;
     },
 
@@ -150,5 +172,21 @@ export const useAzStore = defineStore('az', {
     clearAllInvalidRows() {
       this.invalidRows.clear();
     },
+
+    storeInMemoryData(tableName: string, data: AZStandardizedData[]) {
+      this.inMemoryData.set(tableName, data);
+    },
+
+    getInMemoryDataCount(tableName: string): number {
+      return this.inMemoryData.get(tableName)?.length || 0;
+    },
+
+    removeInMemoryData(tableName: string) {
+      this.inMemoryData.delete(tableName);
+    },
+
+    clearAllInMemoryData() {
+      this.inMemoryData.clear();
+    }
   },
 }) as unknown as () => DomainStore<AzPricingReport, AzCodeReport>;

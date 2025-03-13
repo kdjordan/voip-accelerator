@@ -43,7 +43,7 @@
                   usStore.isComponentUploading('us2') ||
                   usStore.isComponentDisabled('us1')
                 "
-                @change="e => handleFileInput(e, 'us1')"
+                @change="e => handleFileChange(e, 'us1')"
               />
 
               <div class="flex flex-col h-full">
@@ -149,7 +149,7 @@
                   usStore.isComponentUploading('us1') ||
                   usStore.isComponentDisabled('us2')
                 "
-                @change="e => handleFileInput(e, 'us2')"
+                @change="e => handleFileChange(e, 'us2')"
               />
 
               <div class="flex flex-col h-full">
@@ -258,16 +258,30 @@
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useUsStore } from '@/stores/us-store';
+  // Comment out the worker import since it's not implemented yet
+  // import USComparisonWorker from '@/workers/us-comparison.worker?worker';
   import { DBName } from '@/types/app-types';
-  import useDexieDB from '@/composables/useDexieDB';
-  import { USColumnRole, US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
+  import { type USPricingReport, type USCodeReport, type USStandardizedData } from '@/types/domains/us-types';
+  import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
+  import { USColumnRole } from '@/types/domains/us-types';
   import Papa from 'papaparse';
   import { USService } from '@/services/us.service';
+  import { storageConfig } from '@/config/storage-config';
+
+  // First, define a type for component IDs to ensure type safety
+  type ComponentId = 'us1' | 'us2';
+
+  // Define the USReportsInput interface inline since it might not exist in us-types.ts yet
+  interface USReportsInput {
+    fileName1: string;
+    fileName2: string;
+    file1Data: USStandardizedData[];
+    file2Data: USStandardizedData[];
+  }
 
   const usStore = useUsStore();
-  const { loadFromDexieDB } = useDexieDB();
   const usService = new USService();
-
+  
   // Component state
   const isGeneratingReports = ref<boolean>(false);
   const isDragging = reactive<Record<string, boolean>>({});
@@ -280,28 +294,28 @@
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
   const startLine = ref(1);
-  const activeComponent = ref<string>('');
+  const activeComponent = ref<ComponentId>('us1');
 
-  // Add error handling
-  const uploadError = reactive({
-    us1: null as string | null,
-    us2: null as string | null
+  // Properly type the uploadError object with ComponentId keys
+  const uploadError = reactive<Record<ComponentId, string | null>>({
+    us1: null,
+    us2: null
   });
 
   // Drag and drop handlers
-  function handleDragEnter(event: DragEvent, componentId: string) {
+  function handleDragEnter(event: DragEvent, componentId: ComponentId) {
     event.preventDefault();
     isDragging[componentId] = true;
     // Clear error when user initiates new drag
     uploadError[componentId] = null;
   }
 
-  function handleDragLeave(event: DragEvent, componentId: string) {
+  function handleDragLeave(event: DragEvent, componentId: ComponentId) {
     event.preventDefault();
     isDragging[componentId] = false;
   }
 
-  function handleDrop(event: DragEvent, componentId: string) {
+  function handleDrop(event: DragEvent, componentId: ComponentId) {
     event.preventDefault();
     isDragging[componentId] = false;
 
@@ -345,14 +359,21 @@
     }
   }
 
-  async function handleFileSelected(file: File, componentId: string) {
+  async function handleFileSelected(file: File, componentId: ComponentId) {
     if (usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId)) return;
 
     // Don't need to check for duplicates again - already done in handleDrop
     
     usStore.setComponentUploading(componentId, true);
     try {
-      await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
+      // Create a fake event object with the file
+      const fakeEvent = {
+        target: {
+          files: [file]
+        }
+      } as unknown as Event;
+      
+      await handleFileChange(fakeEvent, componentId);
     } catch (error) {
       console.error('Error handling file:', error);
       uploadError[componentId] = 'Error processing file. Please try again.';
@@ -361,7 +382,7 @@
     }
   }
 
-  async function handleFileUploaded(componentName: string, fileName: string) {
+  async function handleFileUploaded(componentName: ComponentId, fileName: string) {
     console.log('adding file to store', componentName, fileName);
     usStore.addFileUploaded(componentName, fileName);
     console.log(`File uploaded for ${componentName}: ${fileName}`);
@@ -371,81 +392,220 @@
     if (usStore.reportsGenerated) {
       usStore.showUploadComponents = false;
     } else {
-      await generateReports();
+      try {
+        await generateReports();
+        
+        // Add a notification that reports are limited
+        console.warn('Report generation is limited due to missing worker implementation');
+        alert('Reports generated with limited functionality. Worker implementation is pending.');
+      } catch (error) {
+        console.error('Failed to generate reports:', error);
+        alert('Failed to generate reports. Please try again later.');
+      }
     }
   }
 
   async function generateReports() {
     isGeneratingReports.value = true;
     try {
+      // Load data using the USService which handles both storage strategies
       const fileNames = usStore.getFileNames;
-      const file1Data = await loadFromDexieDB(DBName.US, fileNames[0].toLowerCase().replace('.csv', ''));
-      const file2Data = await loadFromDexieDB(DBName.US, fileNames[1].toLowerCase().replace('.csv', ''));
+      console.log('Starting report generation with files:', fileNames);
 
-      if (file1Data && file2Data) {
-        // This will be implemented later with the worker
-        console.log('Report generation will be implemented in a future update');
-        // const { pricing, code } = await makeNpanxxReportsApi({
-        //   fileName1: fileNames[0],
-        //   fileName2: fileNames[1],
-        //   file1Data: file1Data,
-        //   file2Data: file2Data,
-        // });
+      const fileData = await Promise.all(
+        fileNames.map(async fileName => {
+          console.log('Loading data for file:', fileName);
+          // Remove .csv extension for table name
+          const tableName = fileName.toLowerCase().replace('.csv', '');
+          const data = await usService.getData(tableName);
+          if (!data || data.length === 0) {
+            throw new Error(`No data found for file ${fileName}`);
+          }
+          return data;
+        })
+      );
 
-        // if (pricing && code) {
-        //   usStore.setReports(pricing, code);
-        // }
+      if (fileData.length === 2) {
+        console.log('Making comparison with data lengths:', {
+          file1Length: fileData[0].length,
+          file2Length: fileData[1].length,
+          storageType: storageConfig.storageType
+        });
+
+        // Ensure data is cloneable by creating a clean copy
+        // This avoids issues with DataCloneError when using in-memory storage
+        const cleanData1 = fileData[0].map(item => ({
+          npanxx: item.npanxx,
+          npa: item.npa,
+          nxx: item.nxx,
+          interRate: item.interRate,
+          intraRate: item.intraRate,
+          indetermRate: item.indetermRate
+        }));
+        
+        const cleanData2 = fileData[1].map(item => ({
+          npanxx: item.npanxx,
+          npa: item.npa,
+          nxx: item.nxx,
+          interRate: item.interRate,
+          intraRate: item.intraRate,
+          indetermRate: item.indetermRate
+        }));
+
+        // Comment out worker-related code since the worker is not implemented yet
+        /*
+        // Create worker and process data
+        const worker = new USComparisonWorker();
+        const reports = await new Promise<{ pricingReport: USPricingReport; codeReport: USCodeReport }>(
+          (resolve, reject) => {
+            worker.onmessage = event => {
+              const { pricingReport, codeReport } = event.data;
+              resolve({ pricingReport, codeReport });
+            };
+
+            worker.onerror = error => {
+              console.error('Worker error:', error);
+              reject(error);
+            };
+
+            const input: USReportsInput = {
+              fileName1: fileNames[0],
+              fileName2: fileNames[1],
+              file1Data: cleanData1,
+              file2Data: cleanData2,
+            };
+
+            // Log the size of data being sent to worker
+            console.log('Sending data to worker:', 
+              `Clean data sizes: ${JSON.stringify(cleanData1).length}, ${JSON.stringify(cleanData2).length} bytes`);
+              
+            worker.postMessage(input);
+          }
+        );
+
+        console.log('Reports generated:', {
+          hasPricingReport: !!reports.pricingReport,
+          hasCodeReport: !!reports.codeReport,
+        });
+
+        if (reports.pricingReport && reports.codeReport) {
+          usStore.setReports(reports.pricingReport, reports.codeReport);
+        }
+
+        // Clean up worker
+        worker.terminate();
+        */
+        
+        // Add temporary placeholder for reports
+        console.log('Worker not implemented yet - using placeholder reports');
+        // TODO: Implement proper report generation when worker is available
+        
+        // Create placeholder file report that matches the USFileReport interface
+        const createFileReport = (fileName: string): any => ({
+          fileName,
+          totalNPANXX: 0,
+          uniqueNPA: 0,
+          uniqueNXX: 0,
+          coveragePercentage: 0,
+          rateStats: {
+            interstate: {
+              average: 0,
+              median: 0,
+              min: 0,
+              max: 0,
+              count: 0
+            },
+            intrastate: {
+              average: 0,
+              median: 0,
+              min: 0,
+              max: 0,
+              count: 0
+            },
+            indeterminate: {
+              average: 0,
+              median: 0,
+              min: 0,
+              max: 0,
+              count: 0
+            }
+          }
+        });
+        
+        // Create minimal placeholder reports that match the interfaces
+        const placeholderPricingReport: USPricingReport = {
+          file1: {
+            fileName: fileNames[0],
+            averageInterRate: 0,
+            averageIntraRate: 0,
+            averageIJRate: 0,
+            medianInterRate: 0,
+            medianIntraRate: 0,
+            medianIJRate: 0
+          },
+          file2: {
+            fileName: fileNames[1],
+            averageInterRate: 0,
+            averageIntraRate: 0,
+            averageIJRate: 0,
+            medianInterRate: 0,
+            medianIntraRate: 0,
+            medianIJRate: 0
+          },
+          comparison: {
+            interRateDifference: 0,
+            intraRateDifference: 0,
+            ijRateDifference: 0,
+            totalHigher: 0,
+            totalLower: 0,
+            totalEqual: 0
+          }
+        };
+        
+        const placeholderCodeReport: USCodeReport = {
+          file1: createFileReport(fileNames[0]),
+          file2: createFileReport(fileNames[1]),
+          matchedCodes: 0,
+          nonMatchedCodes: 0,
+          matchedCodesPercentage: 0,
+          nonMatchedCodesPercentage: 0
+        };
+        
+        usStore.setReports(placeholderPricingReport, placeholderCodeReport);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating reports:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        });
+      }
     } finally {
       isGeneratingReports.value = false;
     }
   }
 
   // File handling functions
-  async function handleFileInput(event: Event, componentId: string) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
+  async function handleFileChange(event: Event, componentId: ComponentId) {
+    const target = event.target as HTMLInputElement;
+    if (!target.files || target.files.length === 0) return;
+    
+    const file = target.files[0];
+    
+    // Clear file input so same file can be uploaded again after removal
+    target.value = '';
+    
     // Clear any previous errors
     uploadError[componentId] = null;
     
-    // Check if OTHER component is uploading (not this one)
-    const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
-    if (usStore.isComponentUploading(otherComponent)) {
-      uploadError[componentId] = "Please wait for the other file to finish uploading";
-      return;
-    }
-    
-    // Check file type
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      uploadError[componentId] = 'Only CSV files are accepted';
-      return;
-    }
-    
-    // Check for duplicate filename
     if (usStore.hasExistingFile(file.name)) {
       uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
       return;
     }
-
-    usStore.setTempFile(componentId, file);
-
-    Papa.parse(file, {
-      preview: 5,
-      complete: results => {
-        previewData.value = results.data.slice(1) as string[][];
-        columns.value = results.data[0] as string[];
-        activeComponent.value = componentId;
-        showPreviewModal.value = true;
-      },
-      error: error => {
-        console.error('Error parsing CSV:', error);
-        usStore.clearTempFile(componentId);
-        uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
-      },
-    });
+    
+    await handleFileSelected(file, componentId);
   }
 
   // Modal handlers
@@ -515,16 +675,15 @@
   function handleModalCancel() {
     showPreviewModal.value = false;
     usStore.clearTempFile(activeComponent.value);
-    activeComponent.value = '';
+    activeComponent.value = 'us1';
   }
 
-  async function handleRemoveFile(componentName: string) {
+  async function handleRemoveFile(componentName: ComponentId) {
     try {
       const fileName = usStore.getFileNameByComponent(componentName);
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
-      console.log('removing table', tableName);
       await usService.removeTable(tableName);
       usStore.removeFile(componentName);
     } catch (error) {
@@ -533,7 +692,7 @@
   }
 
   // Add a debug function for testing errors
-  function setTestError(componentId: string, message: string) {
+  function setTestError(componentId: ComponentId, message: string) {
     // For testing error states
     uploadError[componentId] = message;
     console.log(`Set error for ${componentId}: ${message}`);
@@ -545,10 +704,20 @@
       console.log('Current IndexedDB tables and record counts:');
       console.table(tables);
       
-      if (tables.length === 0) {
+      // Check if tables is a Record or an array
+      if (Object.keys(tables).length === 0) {
         console.warn('No tables found in the database.');
       } else {
-        tables.forEach(table => {
+        // Convert the tables object to array entries if it's not already an array
+        const tableEntries = Array.isArray(tables) 
+          ? tables 
+          : Object.entries(tables).map(([tableName, recordCount]) => ({ 
+              tableName, 
+              recordCount 
+            }));
+        
+        // Now iterate through the table entries
+        tableEntries.forEach(table => {
           if (table.recordCount === 0) {
             console.warn(`Table '${table.tableName}' exists but contains no records.`);
           }
@@ -575,7 +744,8 @@
       
       // Clear errors and reset upload states
       Object.keys(uploadError).forEach(component => {
-        uploadError[component] = '';
+        const id = component as ComponentId;
+        uploadError[id] = '';
       });
       
       await checkDatabaseTables();
@@ -585,5 +755,62 @@
     } catch (error) {
       console.error('Error clearing data:', error);
     }
+  }
+
+  // Add missing inactivateAllComponents function
+  function inactivateAllComponents() {
+    // Reset states for all components
+    Object.keys(isDragging).forEach(key => {
+      const id = key as ComponentId;
+      isDragging[id] = false;
+    });
+  }
+
+  // Add back the handleFileInput function
+  async function handleFileInput(event: Event, componentId: ComponentId) {
+    console.log(`File input for component ${componentId}`);
+    const files = (event.target as HTMLInputElement).files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Clear any previous errors
+    uploadError[componentId] = null;
+    
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
+    if (usStore.isComponentUploading(otherComponent)) {
+      uploadError[componentId] = "Please wait for the other file to finish uploading";
+      return;
+    }
+    
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      uploadError[componentId] = 'Only CSV files are accepted';
+      return;
+    }
+    
+    // Check for duplicate filename
+    if (usStore.hasExistingFile(file.name)) {
+      uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+      return;
+    }
+    
+    usStore.setTempFile(componentId, file);
+    
+    Papa.parse(file, {
+      preview: 5,
+      complete: results => {
+        previewData.value = results.data.slice(1) as string[][];
+        columns.value = results.data[0] as string[];
+        activeComponent.value = componentId;
+        showPreviewModal.value = true;
+      },
+      error: error => {
+        console.error('Error parsing CSV:', error);
+        usStore.clearTempFile(componentId);
+        uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
+      },
+    });
   }
 </script>

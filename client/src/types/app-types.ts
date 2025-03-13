@@ -4,11 +4,16 @@ import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/
 // Add this type definition
 export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;
 
-export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeReport | USCodeReport> {
+export interface DomainStore<P, C> {
   // State properties
-  reportsGenerated: boolean;
+  filesUploaded: Map<string, { fileName: string }>;
+  uploadingComponents: Record<string, boolean>;
   showUploadComponents: boolean;
+  reportsGenerated: boolean;
   activeReportType: ReportType;
+  pricingReport: P | null;
+  codeReport: C | null;
+  tempFiles: Map<string, File>;
   invalidRows: Map<string, InvalidAzRow[]>;
 
   // Getters
@@ -20,26 +25,40 @@ export interface DomainStore<P = AzPricingReport | USPricingReport, C = AzCodeRe
   getPricingReport: P | null;
   getCodeReport: C | null;
   getFileNameByComponent: (componentId: string) => string;
-  hasExistingFile: (fileName: string) => boolean;
   getNumberOfFilesUploaded: number;
-
-  // Add temp file methods
-  setTempFile: (componentId: string, file: File) => void;
-  getTempFile: (componentId: string) => File | undefined;
-  clearTempFile: (componentId: string) => void;
+  hasExistingFile: (fileName: string) => boolean;
+  hasInvalidRows: (fileName: string) => boolean;
+  getInvalidRowsForFile: (fileName: string) => InvalidAzRow[];
+  getAllInvalidRows: Record<string, InvalidAzRow[]>;
 
   // Actions
-  setComponentUploading: (componentName: string, isUploading: boolean) => void;
   addFileUploaded: (componentName: string, fileName: string) => void;
-  removeFile: (fileName: string) => void;
+  resetFiles: () => void;
   setReports: (pricing: P, code: C) => void;
   setActiveReportType: (type: ReportType) => void;
+  removeFile: (fileName: string) => void;
   checkFileNameAvailable: (fileName: string) => boolean;
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
-  resetFiles: () => void;
+  setComponentUploading: (componentName: string, isUploading: boolean) => void;
+  
+  // File management
+  setTempFile: (componentId: string, file: File) => void;
+  getTempFile: (componentId: string) => File | undefined;
+  clearTempFile: (componentId: string) => void;
+  
+  // Invalid row handling
   clearInvalidRowsForFile: (fileName: string) => void;
   addInvalidRow: (fileName: string, row: InvalidAzRow) => void;
+  clearAllInvalidRows: () => void;
+  
+  // In-memory storage related methods
+  storeInMemoryData: (tableName: string, data: any[]) => void;
+  getInMemoryData: (tableName: string) => any[];
+  getInMemoryDataCount: (tableName: string) => number;
+  removeInMemoryData: (tableName: string) => void;
+  clearAllInMemoryData: () => void;
+  getInMemoryTables: Record<string, number>;
 }
 
 // Union type of all possible standardized data types

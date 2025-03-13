@@ -1,26 +1,30 @@
 import { type AZStandardizedData, type InvalidAzRow } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
-import Dexie, { Table } from 'dexie';
 import { useAzStore } from '@/stores/az-store';
 import Papa from 'papaparse';
-import useDexieDB from '@/composables/useDexieDB';
+import { StorageService, useStorage } from '@/services/storage/storage.service';
+import { storageConfig } from '@/config/storage-config';
 
 export class AZService {
   private store = useAzStore();
-  private db: Dexie | null = null;
+  private storageService: StorageService<AZStandardizedData>;
 
   constructor() {
     console.log('Initializing AZ service');
-    this.initializeDB();
+    this.storageService = useStorage<AZStandardizedData>(DBName.AZ);
+    this.initializeStorage();
   }
 
-  async initializeDB() {
-    if (!this.db) {
-      const { getDB } = useDexieDB();
-      this.db = await getDB(DBName.AZ);
-      await this.db.open();
-    }
-    return this.db;
+  async initializeStorage(): Promise<StorageService<AZStandardizedData>> {
+    await this.storageService.initialize();
+    return this.storageService;
+  }
+
+  /**
+   * Check if we're using in-memory storage
+   */
+  private isUsingMemoryStorage(): boolean {
+    return storageConfig.storageType === 'memory';
   }
 
   async processFile(
@@ -33,18 +37,8 @@ export class AZService {
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
 
-    // Ensure db is initialized
-    const db = await this.initializeDB();
-    if (!db) throw new Error('Failed to initialize database');
-
-    // Only create new schema if table doesn't exist
-    if (!db.tables.some((t: Table) => t.name === tableName)) {
-      await db.close();
-      db.version(db.verno! + 1).stores({
-        [tableName]: '++id, destName, dialCode, rate',
-      });
-      await db.open();
-    }
+    // Ensure storage is initialized
+    await this.initializeStorage();
 
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
@@ -81,12 +75,15 @@ export class AZService {
               }
             });
 
-            // Store valid records in the database
+            // Store valid records based on storage strategy
             if (validRecords.length > 0) {
-              const chunkSize = 1000;
-              for (let i = 0; i < validRecords.length; i += chunkSize) {
-                const chunk = validRecords.slice(i, i + chunkSize);
-                await db.table(tableName).bulkPut(chunk);
+              if (this.isUsingMemoryStorage()) {
+                // Store in-memory
+                this.store.storeInMemoryData(tableName, validRecords);
+                console.log(`[AZService] Stored ${validRecords.length} records in memory for table: ${tableName}`);
+              } else {
+                // Store using IndexedDB
+                await this.storageService.storeData(tableName, validRecords);
               }
             }
 
@@ -103,11 +100,16 @@ export class AZService {
 
   async clearData(): Promise<void> {
     try {
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-      await db.table('az').clear();
+      if (this.isUsingMemoryStorage()) {
+        // Clear in-memory data
+        this.store.clearAllInMemoryData();
+        console.log('[AZService] Cleared all in-memory data');
+      } else {
+        // Clear database data
+        await this.initializeStorage();
+        await this.storageService.clearAllData();
+      }
       this.store.resetFiles();
-      
     } catch (error) {
       console.error('Failed to clear AZ data:', error);
       throw error;
@@ -116,21 +118,119 @@ export class AZService {
 
   async removeTable(tableName: string): Promise<void> {
     try {
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
-
-      // Close the database to modify schema
-      await db.close();
-
-      // Remove the table by setting it to null in the next version
-      db.version(db.verno! + 1).stores({
-        [tableName]: null, // This deletes the table
-      });
-
-      await db.open();
+      if (this.isUsingMemoryStorage()) {
+        // Remove from in-memory
+        this.store.removeInMemoryData(tableName);
+        console.log(`[AZService] Removed in-memory table: ${tableName}`);
+      } else {
+        // Remove from database
+        await this.initializeStorage();
+        await this.storageService.removeData(tableName);
+      }
       console.log(`Table ${tableName} removed successfully`);
     } catch (error) {
       console.error(`Failed to remove table ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  async getData(tableName: string): Promise<AZStandardizedData[]> {
+    try {
+      if (this.isUsingMemoryStorage()) {
+        // Get from in-memory
+        const data = this.store.getInMemoryData(tableName);
+        console.log(`[AZService] Retrieved ${data.length} records from in-memory table: ${tableName}`);
+        return data;
+      } else {
+        // Get from database
+        await this.initializeStorage();
+        return await this.storageService.getData(tableName);
+      }
+    } catch (error) {
+      console.error(`Failed to get data from table ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  async getRecordCount(tableName: string): Promise<number> {
+    try {
+      if (this.isUsingMemoryStorage()) {
+        // Count from in-memory
+        const count = this.store.getInMemoryDataCount(tableName);
+        console.log(`[AZService] Count for in-memory table ${tableName}: ${count}`);
+        return count;
+      } else {
+        // Count from database
+        await this.initializeStorage();
+        return await this.storageService.getCount(tableName);
+      }
+    } catch (error) {
+      console.error(`Failed to get record count for table ${tableName}:`, error);
+      return 0;
+    }
+  }
+
+  async listTables(): Promise<Record<string, number>> {
+    try {
+      if (this.isUsingMemoryStorage()) {
+        // List in-memory tables
+        const tables = this.store.getInMemoryTables;
+        console.log(`[AZService] Listed ${Object.keys(tables).length} in-memory tables`);
+        return tables;
+      } else {
+        // List database tables
+        await this.initializeStorage();
+        return await this.storageService.listTables();
+      }
+    } catch (error) {
+      console.error('Failed to list tables:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Switch storage strategy at runtime
+   * This will migrate all data between strategies
+   */
+  async switchStorageStrategy(newStrategy: 'memory' | 'indexeddb'): Promise<void> {
+    if (newStrategy === storageConfig.storageType) {
+      console.log(`[AZService] Already using ${newStrategy} strategy, no change needed`);
+      return;
+    }
+
+    console.log(`[AZService] Switching storage strategy from ${storageConfig.storageType} to ${newStrategy}`);
+    
+    try {
+      if (newStrategy === 'memory') {
+        // Switching from IndexedDB to memory
+        // First, get all data from IndexedDB
+        await this.initializeStorage();
+        const tables = await this.storageService.listTables();
+        
+        // For each table, get the data and store it in memory
+        for (const tableName of Object.keys(tables)) {
+          const data = await this.storageService.getData(tableName);
+          this.store.storeInMemoryData(tableName, data);
+          console.log(`[AZService] Migrated ${data.length} records from IndexedDB to memory for table: ${tableName}`);
+        }
+      } else {
+        // Switching from memory to IndexedDB
+        // First, get all in-memory tables
+        const tables = this.store.getInMemoryTables;
+        
+        // For each table, get the data and store it in IndexedDB
+        for (const tableName of Object.keys(tables)) {
+          const data = this.store.getInMemoryData(tableName);
+          await this.storageService.storeData(tableName, data);
+          console.log(`[AZService] Migrated ${data.length} records from memory to IndexedDB for table: ${tableName}`);
+        }
+      }
+      
+      // Update the storage config
+      storageConfig.storageType = newStrategy;
+      console.log(`[AZService] Storage strategy switched to ${newStrategy}`);
+    } catch (error) {
+      console.error(`Failed to switch storage strategy to ${newStrategy}:`, error);
       throw error;
     }
   }

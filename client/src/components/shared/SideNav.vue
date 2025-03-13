@@ -151,6 +151,7 @@
     GlobeAltIcon,
     GlobeAmericasIcon,
     AdjustmentsVerticalIcon,
+    HomeIcon,
   } from '@heroicons/vue/24/outline';
 
   const userStore = useSharedStore();
@@ -175,6 +176,11 @@
   }
 
   const items = ref([
+    {
+      name: 'Dashboard',
+      to: '/dashboard',
+      icon: HomeIcon,
+    },
     {
       name: 'AZ Reporting',
       to: '/azview',
