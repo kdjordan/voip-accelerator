@@ -60,6 +60,14 @@ export interface RateSheetState {
   hasMinDuration: boolean;
   hasIncrements: boolean;
   invalidRows: InvalidRow[];
+  effectiveDateSettings: {
+    same: string;
+    increase: string;
+    decrease: string;
+    sameCustomDate: string;
+    increaseCustomDate: string;
+    decreaseCustomDate: string;
+  };
 }
 
 export const RequiredRFColumnRole = {

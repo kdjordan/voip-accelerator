@@ -78,6 +78,52 @@ export class RateSheetService {
     }
   }
 
+  async updateEffectiveDates(groupedData: GroupedRateData[]): Promise<void> {
+    try {
+      console.log("Starting updateEffectiveDates with", groupedData.length, "groups");
+      const db = await this.ensureTableExists();
+      const records = await this.getRateSheetData();
+      
+      // Create a map for efficient lookup
+      const recordsMap = new Map<string, RateSheetRecord[]>();
+      
+      // Group records by destination name
+      records.forEach(record => {
+        const existing = recordsMap.get(record.name) || [];
+        existing.push(record);
+        recordsMap.set(record.name, existing);
+      });
+      
+      // Prepare batch updates
+      const updates: RateSheetRecord[] = [];
+      
+      // Update effective dates based on grouped data
+      for (const group of groupedData) {
+        const recordsForDestination = recordsMap.get(group.destinationName) || [];
+        console.log(`Processing ${recordsForDestination.length} records for ${group.destinationName} with effective date ${group.effectiveDate}`);
+        
+        // Apply new effective date to all records for this destination
+        recordsForDestination.forEach(record => {
+          if (record.effective !== group.effectiveDate) {
+            record.effective = group.effectiveDate;
+            updates.push(record);
+          }
+        });
+      }
+      
+      if (updates.length > 0) {
+        // Perform batch update
+        await db.table(this.tableName).bulkPut(updates);
+        console.log(`Updated effective dates for ${updates.length} records`);
+      } else {
+        console.log('No effective date updates needed');
+      }
+    } catch (error) {
+      console.error('Failed to update effective dates:', error);
+      throw error;
+    }
+  }
+
   async processFile(
     file: File,
     columnMapping: Record<string, number>,
