@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { ChartBarIcon, GlobeAltIcon, DocumentDuplicateIcon } from '@heroicons/vue/24/outline';
   import { RouterLink } from 'vue-router';
   import TopNav from '@/components/shared/TopNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
@@ -38,14 +37,14 @@
           <!-- Call to action buttons -->
           <div class="flex flex-wrap gap-4 pt-4">
             <RouterLink
-              to="/azview"
+              to="/dashboard"
               class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-3xl hover:bg-accent/90 transition-colors text-center"
             >
               Let's Go
             </RouterLink>
 
             <RouterLink
-              to="/pricing"
+              to="/dashboard"
               class="bg-transparent border border-fbWhite/20 text-fbWhite font-medium px-8 py-3 rounded-3xl hover:bg-fbWhite/10 transition-colors text-center"
             >
               See pricing
@@ -99,7 +98,7 @@
               </p>
             </div>
             <RouterLink
-              to="/azview"
+              to="/dashboard"
               class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-3xl hover:bg-accent/90 transition-colors whitespace-nowrap"
             >
               Get Started — It's Free

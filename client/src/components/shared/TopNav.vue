@@ -30,13 +30,13 @@
           About
         </RouterLink> -->
         <RouterLink
-          to="/azview"
+          to="/dashboard"
           class="text-fbWhite/90 hover:text-fbWhite transition-colors text-sm"
         >
           Log in
         </RouterLink>
         <RouterLink
-          to="/azview"
+          to="/dashboard"
           class="bg-fbWhite text-fbBlack text-sm font-medium px-4 py-1.5 rounded-3xl hover:bg-fbWhite/90 transition-colors"
         >
           Sign up

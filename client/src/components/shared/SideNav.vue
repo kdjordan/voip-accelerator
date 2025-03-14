@@ -52,12 +52,12 @@
     <!-- Collapse button positioned on the edge -->
     <button
       @click="toggleSidebar"
-      class="fixed top-3 transition-all flex items-center justify-center p-1 rounded hover:bg-accent/20 bg-accent/10 border border-accent/50 min-w-[24px] min-h-[24px] z-20"
+      class="fixed top-3 transition-all flex items-center justify-center p-1 rounded  min-w-[24px] min-h-[24px] z-20"
       :style="{ left: isOpen ? '208px' : '88px' }"
     >
-      <ChevronLeftIcon
-        class="w-4 h-4 text-accent transition-transform"
-        :class="{ 'rotate-180': !isOpen }"
+      <component 
+        :is="isOpen ? ArrowLeftEndOnRectangleIcon : ArrowRightStartOnRectangleIcon"
+        class="w-4 h-4 text-accent"
       />
     </button>
 
@@ -80,10 +80,9 @@
   import { PlanTier } from '@/types/user-types';
   import {
     ChevronLeftIcon,
-    ChevronUpDownIcon,
+    ArrowLeftEndOnRectangleIcon,
+    ArrowRightStartOnRectangleIcon,
     BoltIcon,
-    CreditCardIcon,
-    ArrowRightEndOnRectangleIcon,
     Cog6ToothIcon,
     GlobeAltIcon,
     GlobeAmericasIcon,
@@ -129,7 +128,7 @@
       icon: GlobeAmericasIcon,
     },
     {
-      name: 'Rate Sheet Wizard',
+      name: 'AZ Rate Wizard',
       to: '/rate-sheet',
       icon: AdjustmentsVerticalIcon,
     },
