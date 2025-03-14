@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8 font-secondary">US Rate Deck Analysis</h1>
+    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8 font-secondary">US Rate Deck Analyzer</h1>
     <USContentHeader />
 
     <div>

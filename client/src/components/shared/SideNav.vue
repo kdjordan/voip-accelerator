@@ -46,70 +46,7 @@
       </ul>
 
       <!-- User Dropdown -->
-      <div class="p-4 relative">
-        <!-- Dropdown Menu -->
-        <div
-          v-if="dropdownOpen"
-          ref="dropdownRef"
-          class="dropdown fixed bottom-[72px] left-4 w-[240px] p-2 bg-fbBlack border border-fbBorder/70 rounded-lg z-50"
-        >
-          <!-- Email -->
-          <div class="px-3 py-2 text-sm text-fbLightMuted">
-            {{ userStore.userEmail }}
-          </div>
-
-          <!-- User Info -->
-          <div class="px-3 py-2 flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-md bg-gradient-to-br from-fbGreen/90 to-fbGray/80"></div>
-            <div>
-              <div class="text-sizeSm">{{ userStore.username }}</div>
-              <div class="text-xs text-fbLightMuted">{{ userStore.currentPlan }}</div>
-            </div>
-          </div>
-
-          <div class="border-t border-fbBorder my-2"></div>
-
-          <!-- Menu Items -->
-          <button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md flex items-center space-x-2">
-            <CreditCardIcon class="w-4 h-4 text-foreground" />
-            <span>Billing</span>
-          </button>
-          <button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md flex items-center space-x-2">
-            <ArrowRightEndOnRectangleIcon class="w-4 h-4 text-fbWhite" />
-            <span>Sign Out</span>
-          </button>
-
-          <div class="border-t border-fbBorder my-2"></div>
-
-          <!-- Upgrade Plan -->
-          <button class="w-full text-left px-3 py-2 hover:bg-fbHover rounded-md">Upgrade Plan</button>
-        </div>
-
-        <!-- User Button -->
-        <div class="px-2 flex justify-center">
-          <button
-            @click="toggleDropdown"
-            @click.stop
-            class="flex items-center hover:bg-fbHover rounded-md transition-all overflow-hidden min-w-[32px] min-h-[32px] p-0"
-            :class="[isOpen ? 'w-full p-2 space-x-3' : 'w-8 h-8']"
-          >
-            <div class="h-8 w-8 rounded-md bg-gradient-to-br from-accent/80 to-fbBlack flex-shrink-0"></div>
-            <div
-              v-if="isOpen"
-              class="flex-grow text-left"
-            >
-              <div class="text-sm text-fbWhite whitespace-nowrap">{{ userStore.username }}</div>
-              <div class="text-xs text-muted-foreground whitespace-nowrap">
-                {{ userStore.currentPlan === PlanTier.PRO ? 'Pro' : 'Free' }}
-              </div>
-            </div>
-            <ChevronUpDownIcon
-              v-if="isOpen"
-              class="w-4 h-4 text-muted-foreground"
-            />
-          </button>
-        </div>
-      </div>
+     
     </nav>
 
     <!-- Collapse button positioned on the edge -->

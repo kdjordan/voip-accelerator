@@ -9,8 +9,15 @@ export const useSharedStore = defineStore('shared', {
       isGlobalLoading: false,
     },
     user: {
-      info: null as UserInfo | null,
-      currentPlan: PlanTier.FREE as PlanTierType,
+      info: {
+        id: 'usr_12345',
+        username: 'Sarah Johnson',
+        email: 'sarah.johnson@example.com',
+        planTier: PlanTier.PRO,
+        lastLoggedIn: new Date('2023-11-12T14:30:00'),
+        createdAt: new Date('2022-06-15T09:00:00')
+      } as UserInfo,
+      currentPlan: PlanTier.PRO as PlanTierType,
       features: {
         unlimitedUploads: false,
         advancedAnalytics: false,
@@ -21,9 +28,9 @@ export const useSharedStore = defineStore('shared', {
         exportFormats: ['csv'],
       } as PlanFeatures,
       usage: {
-        uploadsToday: 0,
-        storageUsed: 0,
-        comparisonsToday: 0,
+        uploadsToday: 3,
+        storageUsed: 12.5,
+        comparisonsToday: 7,
       },
     },
   }),
@@ -84,7 +91,7 @@ export const useSharedStore = defineStore('shared', {
     },
 
     clearUser() {
-      this.user.info = null;
+      this.user.info = null as unknown as UserInfo;
       this.user.currentPlan = PlanTier.FREE;
       this.updateFeatures();
       this.ui.isSideNavOpen = false;

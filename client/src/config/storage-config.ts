@@ -4,6 +4,7 @@
  * This file provides configuration options for the application's storage strategy.
  * It allows toggling between in-memory storage (Pinia store) and IndexedDB (DexieJS) storage.
  */
+import { reactive } from 'vue';
 
 export type StorageType = 'memory' | 'indexeddb';
 
@@ -23,8 +24,9 @@ export interface StorageConfig {
 
 /**
  * Default configuration settings for application storage
+ * Using Vue's reactive to ensure changes trigger updates in components
  */
-export const storageConfig: StorageConfig = {
+export const storageConfig = reactive<StorageConfig>({
   // Set to 'memory' to use Pinia store, 'indexeddb' to use DexieJS
   storageType: 'memory',
   
@@ -36,18 +38,24 @@ export const storageConfig: StorageConfig = {
   
   // Enable detailed logging of storage operations
   enableLogging: true
-};
+});
 
 /**
  * Updates the storage configuration at runtime
  * @param newConfig Partial configuration to update
  */
 export function updateStorageConfig(newConfig: Partial<StorageConfig>): void {
+  // Using Object.assign with reactive object will maintain reactivity
   Object.assign(storageConfig, newConfig);
   
   if (storageConfig.enableLogging) {
     console.log('[Storage Config] Updated configuration:', storageConfig);
   }
+
+  // Trigger custom event to notify components of config changes
+  window.dispatchEvent(new CustomEvent('storage-config-updated', { 
+    detail: { ...storageConfig }
+  }));
 }
 
 /**
@@ -55,10 +63,17 @@ export function updateStorageConfig(newConfig: Partial<StorageConfig>): void {
  * @returns The updated config
  */
 export function useMemoryStorage(): StorageConfig {
-  storageConfig.storageType = 'memory';
-  if (storageConfig.enableLogging) {
-    console.log('[Storage Config] Switched to in-memory storage');
+  // Update configuration to use memory
+  updateStorageConfig({ storageType: 'memory' });
+  
+  // Dispatch event to notify of manual strategy change
+  if (typeof window !== 'undefined') {
+    const event = new CustomEvent('storage-strategy-changed', { 
+      detail: { newType: 'memory', reason: 'user-requested' } 
+    });
+    window.dispatchEvent(event);
   }
+  
   return { ...storageConfig };
 }
 
@@ -67,9 +82,16 @@ export function useMemoryStorage(): StorageConfig {
  * @returns The updated config
  */
 export function useIndexedDbStorage(): StorageConfig {
-  storageConfig.storageType = 'indexeddb';
-  if (storageConfig.enableLogging) {
-    console.log('[Storage Config] Switched to IndexedDB storage');
+  // Update configuration to use IndexedDB
+  updateStorageConfig({ storageType: 'indexeddb' });
+  
+  // Dispatch event to notify of manual strategy change
+  if (typeof window !== 'undefined') {
+    const event = new CustomEvent('storage-strategy-changed', { 
+      detail: { newType: 'indexeddb', reason: 'user-requested' } 
+    });
+    window.dispatchEvent(event);
   }
+  
   return { ...storageConfig };
 } 
