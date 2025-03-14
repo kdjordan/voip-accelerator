@@ -4,7 +4,7 @@
       <span
         class="text-sizeXl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
       >
-        AZ Rate Deck Analysis
+        AZ Rate Deck Analyzer
       </span>
     </h1>
     <AZContentHeader />
@@ -45,9 +45,9 @@
   const azStore = useAzStore();
 
   onMounted(async () => {
-    const sampleDecks = setTimeout(async () => {
-      await loadSampleDecks([DBName.AZ]);
-    }, 1000);
-    return () => clearTimeout(sampleDecks);
+    // const sampleDecks = setTimeout(async () => {
+    //   await loadSampleDecks([DBName.AZ]);
+    // }, 1000);
+    // return () => clearTimeout(sampleDecks);
   });
 </script>

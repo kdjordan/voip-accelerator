@@ -16,10 +16,9 @@ app.use(router).use(pinia);
 
 // Set up memory monitoring if in browser environment
 if (typeof window !== 'undefined') {
-  // Enable memory monitoring for production use
+  // Set an appropriate memory threshold, but let UI control whether auto-fallback is enabled
   updateStorageConfig({
-    autoFallbackOnMemoryPressure: true,
-    memoryThresholdMB: 350 // Set an appropriate threshold
+    memoryThresholdMB: 350
   });
   
   // Initialize memory monitoring
