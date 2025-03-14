@@ -3,10 +3,23 @@
     <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8 font-secondary">Admin Dashboard</h1>
 
     <!-- Stats Dashboard -->
-    <div class="flex flex-col gap-6 mb-8">
+    <div class="flex flex-col gap-6">
       <!-- Combined Stats Box -->
       <div class="bg-gray-800 rounded-lg p-6">
+        <!-- Collapsible LERG Details header -->
+        <div 
+          @click="toggleLergDetails" 
+          class="flex justify-between items-center cursor-pointer hover:bg-gray-700/30 p-2 rounded-md -m-2"
+        >
+          <h2 class="text-xl font-semibold">LERG Details</h2>
+          <ChevronDownIcon
+            :class="{ 'transform rotate-180': showLergDetails }"
+            class="w-5 h-5 transition-transform"
+          />
+        </div>
+        
         <!-- LERG Stats Grid -->
+        <div v-if="showLergDetails" class="mt-6 space-y-6">
         <div class="grid grid-cols-1 gap-3 border-b border-gray-700/50 pb-4 mb-6">
           <!-- Last Updated -->
           <div>
@@ -285,7 +298,7 @@
     </div>
 
     <!-- LERG Management Section -->
-    <div class="grid grid-cols-1 gap-6 mb-8">
+    <div class="grid grid-cols-1 gap-6">
       <div class="bg-gray-800 rounded-lg p-6">
         <!-- Expandable section header -->
         <div 
@@ -339,17 +352,21 @@
                 <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
               </div>
 
-              <!-- Processing State -->
+              <!-- Processing/Uploading State -->
               <div
-                v-if="isLergUploading"
+                v-else-if="isLergUploading"
                 class="text-center"
               >
-                <p class="text-sizeMd text-accent">Processing your file...</p>
+                <DocumentIcon class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10 animate-pulse" />
+                <p class="mt-2 text-base text-accent">Processing your file...</p>
+                <div class="w-full mt-2 h-2 rounded-full bg-gray-700">
+                  <div class="h-full bg-accent rounded-full animate-pulse-width"></div>
+                </div>
               </div>
 
               <!-- Error State -->
               <div
-                v-if="lergUploadStatus?.type === 'error'"
+                v-else-if="lergUploadStatus?.type === 'error'"
                 class="text-center"
               >
                 <p class="text-red-400">{{ lergUploadStatus.message }}</p>
@@ -358,17 +375,17 @@
 
               <!-- Success State -->
               <div
-                v-if="lergUploadStatus?.type === 'success'"
+                v-else-if="lergUploadStatus?.type === 'success'"
                 class="text-center"
               >
-                <DocumentIcon class="w-6 h-6 text-accent mx-auto" />
+                <DocumentIcon class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10" />
                 <p class="mt-2 text-xl text-accent">{{ lergUploadStatus.message }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Danger Zone (moved from bottom) -->
-          <div class="bg-destructive/10 border border-destructive/50 rounded-lg p-6">
+          <!-- Danger Zone -->
+          <div class="bg-destructive/10 border border-destructive/50 rounded-lg p-6 mt-6">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-destructive">Danger Zone</h3>
               <button
@@ -385,12 +402,22 @@
     </div>
 
     <!-- Storage Management Section (moved from Dashboard) -->
-    <div class="grid grid-cols-1 gap-6 mb-8">
+    <div class="grid grid-cols-1 gap-6">
       <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Storage Management</h2>
+        <!-- Expandable section header -->
+        <div 
+          @click="toggleStorageSection" 
+          class="flex justify-between items-center cursor-pointer hover:bg-gray-700/30 p-2 rounded-md -m-2"
+        >
+          <h2 class="text-xl font-semibold">Storage Management</h2>
+          <ChevronDownIcon
+            :class="{ 'transform rotate-180': showStorageSection }"
+            class="w-5 h-5 transition-transform"
+          />
+        </div>
         
         <!-- Storage Statistics Dashboard -->
-        <div class="flex flex-col gap-6">
+        <div v-if="showStorageSection" class="flex flex-col gap-6 mt-6">
           <!-- Combined Stats Box -->
           <div class="bg-gray-900/30 rounded-lg p-6">
             <div class="flex justify-between items-center mb-2">
@@ -593,6 +620,7 @@
       @cancel="handleModalCancel"
     />
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -607,7 +635,7 @@
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
   // Added imports for storage management functionality
-  import { storageConfig, updateStorageConfig, useMemoryStorage, useIndexedDbStorage } from '@/config/storage-config';
+  import { storageConfig, updateStorageConfig } from '@/config/storage-config';
   import { forceRefreshStrategies } from '@/services/storage/storage-factory';
   import { runPerformanceTest, type PerformanceMetric } from '@/services/storage/storage-test-utils';
   import { DBName } from '@/types/app-types';
@@ -623,6 +651,8 @@
   const expandedProvinces = ref<string[]>([]);
   const showCountryDetails = ref(false);
   const showLergSection = ref(false);
+  const showLergDetails = ref(false);
+  const showStorageSection = ref(false);
 
   const isLergLocallyStored = computed(() => {
     return store.$state.isLocallyStored;
@@ -737,7 +767,19 @@
   onMounted(async () => {
     await checkConnection();
     console.log('Initializing LERG service...');
-    await lergApiService.initialize();
+    
+    try {
+      // Initialize LERG service with proper error handling
+      await lergApiService.initialize();
+      console.log('LERG service initialization complete');
+    } catch (error) {
+      console.error('Failed to initialize LERG service:', error);
+      // Update UI to show error state
+      dbStatus.value = {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Initialization failed',
+      };
+    }
     
     // Added initialization for storage monitoring
     updateMemoryUsage();
@@ -794,42 +836,39 @@
     }
   }
 
-  async function switchToMemory() {
-    console.log('[AdminLergView] Switching to Memory Storage');
+  function switchToMemory() {
+    updateStorageConfig({
+      storageType: 'memory',
+      autoFallbackOnMemoryPressure: autoFallback.value
+    });
     
-    try {
-      // Update the storage config to use memory
-      await useMemoryStorage();
-      
-      // Force refresh all strategies
-      await forceRefreshStrategies();
-      
-      console.log('[AdminLergView] Successfully switched to Memory Storage');
-      
-      // Force UI update
-      updateMemoryUsage();
-    } catch (error) {
-      console.error('[AdminLergView] Error switching to Memory Storage:', error);
-    }
+    console.log('Switched to memory storage');
+    
+    // Force refresh all strategy instances to ensure they use the new storage type
+    forceRefreshStrategies();
   }
 
-  async function switchToIndexedDB() {
-    console.log('[AdminLergView] Switching to IndexedDB Storage');
+  function switchToIndexedDB() {
+    updateStorageConfig({
+      storageType: 'indexeddb',
+      autoFallbackOnMemoryPressure: autoFallback.value
+    });
     
-    try {
-      // Update the storage config to use IndexedDB
-      await useIndexedDbStorage();
-      
-      // Force refresh all strategies
-      await forceRefreshStrategies();
-      
-      console.log('[AdminLergView] Successfully switched to IndexedDB Storage');
-      
-      // Force UI update
-      updateMemoryUsage();
-    } catch (error) {
-      console.error('[AdminLergView] Error switching to IndexedDB Storage:', error);
-    }
+    console.log('Switched to IndexedDB storage');
+    
+    // Force refresh all strategy instances to ensure they use the new storage type
+    forceRefreshStrategies();
+  }
+
+  function refreshStorageState() {
+    updateMemoryUsage();
+    
+    // Force refresh all strategy instances to ensure configuration is applied
+    forceRefreshStrategies();
+    
+    console.log('Storage state refreshed');
+    console.log('Current strategy:', currentStrategy.value);
+    console.log('Auto-fallback enabled:', autoFallback.value);
   }
 
   async function runPerformanceTests() {
@@ -910,10 +949,12 @@
 
     try {
       isLergUploading.value = true;
-      lergUploadStatus.value = { type: 'success', message: 'Uploading LERG file...' };
+      // Don't set success status until upload is actually complete
+      // lergUploadStatus.value = { type: 'success', message: 'Uploading LERG file...' };
 
       console.log('About to call lergApiService.uploadLergFile');
       await lergApiService.uploadLergFile(formData);
+      isLergUploading.value = false; // Set to false before showing success
       lergUploadStatus.value = { type: 'success', message: 'LERG file uploaded successfully' };
 
       // Clear the selected file after successful upload
@@ -923,12 +964,11 @@
       }
     } catch (error) {
       console.error('Failed to upload LERG file:', error);
+      isLergUploading.value = false; // Set to false before showing error
       lergUploadStatus.value = {
         type: 'error',
         message: 'Error uploading - please reload page and try again',
       };
-    } finally {
-      isLergUploading.value = false;
     }
   }
 
@@ -1000,6 +1040,14 @@
     showLergSection.value = !showLergSection.value;
   }
 
+  function toggleLergDetails() {
+    showLergDetails.value = !showLergDetails.value;
+  }
+
+  function toggleStorageSection() {
+    showStorageSection.value = !showStorageSection.value;
+  }
+
   function handleMappingUpdate(newMappings: Record<string, string>) {
     columnMappings.value = newMappings;
   }
@@ -1009,26 +1057,6 @@
     console.log(`[AdminLergView] autoFallback changed: ${oldVal} -> ${newVal}`);
   }, { immediate: true });
 
-  async function refreshStorageState() {
-    console.log('[AdminLergView] Refreshing storage state');
-    
-    try {
-      // Force refresh all strategies
-      await forceRefreshStrategies();
-      
-      // Force an update of the memory usage
-      updateMemoryUsage();
-      
-      // Log the current state for debugging
-      console.log('[Storage Refresh] Current strategy:', storageConfig.storageType);
-      console.log('[Storage Refresh] Auto-fallback enabled:', storageConfig.autoFallbackOnMemoryPressure);
-      
-      console.log('[AdminLergView] Storage state refreshed successfully');
-    } catch (error) {
-      console.error('[AdminLergView] Error refreshing storage state:', error);
-    }
-  }
-
   function handleStorageStrategyChanged(event: Event) {
     console.log('[AdminLergView] Storage strategy changed event received');
     
@@ -1036,3 +1064,37 @@
     updateMemoryUsage();
   }
 </script>
+
+<style>
+@keyframes pulse-width {
+  0% { width: 5%; }
+  50% { width: 75%; }
+  100% { width: 5%; }
+}
+
+.animate-pulse-width {
+  animation: pulse-width 2s infinite ease-in-out;
+}
+
+.animate-status-pulse-success {
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.5);
+}
+
+.animate-status-pulse-error {
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 12px rgba(244, 67, 54, 0.5);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+</style>

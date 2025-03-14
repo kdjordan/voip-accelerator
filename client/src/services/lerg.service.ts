@@ -10,52 +10,94 @@ export class LergService {
 
   constructor() {
     console.log('Initializing LERG service');
-    this.initializeDB();
+    // Don't automatically call initializeDB in constructor
+    // This avoids potential race conditions
   }
 
   async initializeDB() {
     if (!this.db) {
       const { getDB } = useDexieDB();
       this.db = await getDB(DBName.LERG);
-      await this.db.open();
+      
+      // Don't automatically open the database here
+      // We'll open it when needed in specific methods
     }
     return this.db;
   }
 
   async initializeLergTable(lergData: LERGRecord[]): Promise<void> {
     try {
+      // Get DB but don't auto-open it
       const db = await this.initializeDB();
       if (!db) throw new Error('Failed to initialize database');
 
-      // Only create new schema if table doesn't exist
-      if (!db.tables.some((t: Table) => t.name === 'lerg')) {
+      // Close any existing connection first
+      if (db.isOpen()) {
+        console.log('Closing existing LERG database before schema modification');
         await db.close();
-        db.version(db.verno! + 1).stores({
-          lerg: '++id, npa, *state, *country',
-        });
-        await db.open();
       }
 
+      // Check if the schema already exists and initialize if needed
+      const hasLergTable = db.tables.some((t: Table) => t.name === 'lerg');
+      if (!hasLergTable) {
+        console.log('Creating new schema for LERG database');
+        // Create a new version with the lerg table
+        const newVersion = (db.verno || 0) + 1;
+        db.version(newVersion).stores({
+          lerg: '++id, npa, *state, *country',
+        });
+      }
+
+      // Now open the database with the correct schema
+      await db.open();
+      console.log('LERG database opened with schema version:', db.verno);
+
+      // Clear and populate the table
+      console.log(`Clearing LERG table before inserting ${lergData.length} records`);
       await db.table('lerg').clear();
-      await db.table('lerg').bulkPut(lergData);
-      console.log('Data initialization completed successfully');
+      console.log('LERG table cleared successfully');
+      
+      // Insert the data in smaller batches to avoid transaction limits
+      const BATCH_SIZE = 1000;
+      for (let i = 0; i < lergData.length; i += BATCH_SIZE) {
+        const batch = lergData.slice(i, i + BATCH_SIZE);
+        await db.table('lerg').bulkPut(batch);
+        console.log(`Added batch ${i / BATCH_SIZE + 1} of LERG data: ${batch.length} records`);
+      }
+      
+      console.log('LERG data initialization completed successfully');
     } catch (error) {
-      console.error('Failed to clear LERG data:', error);
+      console.error('Failed to initialize LERG data:', error);
       throw error;
     }
   }
 
   async getLergData(): Promise<LERGRecord[]> {
     const db = await this.initializeDB();
+    if (!db.isOpen()) {
+      await db.open();
+    }
     return await db.table('lerg').toArray();
   }
 
   async clearLergData(): Promise<void> {
     try {
-      // Clear IndexDB
+      // Get DB reference
       const db = await this.initializeDB();
-      await db.table('lerg').clear();
-      console.log('IndexDB LERG data cleared');
+      
+      // Make sure the database is open
+      if (!db.isOpen()) {
+        await db.open();
+      }
+      
+      // Clear IndexedDB table if it exists
+      if (db.tables.some(t => t.name === 'lerg')) {
+        console.log('Clearing LERG data from IndexedDB');
+        await db.table('lerg').clear();
+        console.log('IndexedDB LERG data cleared');
+      } else {
+        console.log('No LERG table found in IndexedDB to clear');
+      }
 
       // Clear store
       const store = useLergStore();
@@ -69,6 +111,7 @@ export class LergService {
           lastUpdated: null,
         },
       });
+      console.log('LERG store cleared');
     } catch (error) {
       console.error('Failed to clear LERG data:', error);
       throw error;
@@ -80,8 +123,23 @@ export class LergService {
     countryData: CountryLergData[];
   }> {
     const db = await this.initializeDB();
+    
+    // Ensure database is open
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    // Check if lerg table exists
+    if (!db.tables.some(t => t.name === 'lerg')) {
+      console.log('No LERG table found, returning empty data');
+      return {
+        stateMapping: {},
+        countryData: [],
+      };
+    }
+    
     const records = await db.table('lerg').toArray();
-    console.log('Records from IndexedDB:', records);
+    console.log(`Processing ${records.length} LERG records from IndexedDB`);
 
     // Process state mappings
     const stateMapping: StateNPAMapping = {};

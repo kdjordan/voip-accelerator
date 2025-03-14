@@ -4,7 +4,7 @@ import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
 import { storageConfig } from '@/config/storage-config';
 
-export const useUsStore = defineStore('npanxxStore', {
+export const useUsStore = defineStore('usStore', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
     showUploadComponents: true,
