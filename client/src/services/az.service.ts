@@ -107,56 +107,20 @@ export class AZService {
    * @param fileName The name of the file
    * @param data The standardized data for the file
    */
-  async generateSingleFileReport(fileName: string, data: AZStandardizedData[]): Promise<void> {
-    try {
-      console.log(`[AZService] Generating single file report for ${fileName}`);
-      
-      // Calculate metrics for the single file
-      const uniqueDestinations = new Set(data.map(item => item.destName)).size;
-      const totalCodes = data.length;
-      const uniqueDestinationsPercentage = (uniqueDestinations / totalCodes) * 100;
-      
-      // Group codes by destination to count them
-      const codesByDestination = data.reduce((acc, item) => {
-        if (!acc[item.destName]) {
-          acc[item.destName] = [];
-        }
-        acc[item.destName].push(item.dialCode);
-        return acc;
-      }, {} as Record<string, string[]>);
-      
-      // Count total destinations (unique destination names)
-      const totalDestinations = Object.keys(codesByDestination).length;
-      
-      // Create the single file report
-      const singleFileReport: AzCodeReport = {
-        file1: {
-          fileName,
-          totalCodes,
-          totalDestinations,
-          uniqueDestinationsPercentage
-        },
-        file2: {
-          fileName: '',
-          totalCodes: 0,
-          totalDestinations: 0,
-          uniqueDestinationsPercentage: 0
-        },
-        matchedCodes: 0,
-        nonMatchedCodes: totalCodes,
-        matchedCodesPercentage: 0,
-        nonMatchedCodesPercentage: 100
-      };
-      
-      // Update the store with the single file report
-      this.store.setSingleFileReport(singleFileReport);
-      
-      // Set the active report type to code report
-      this.store.setSingleFileReportReady(true);
-    } catch (error) {
-      console.error('Failed to generate single file report:', error);
-      throw error;
-    }
+  async generateSingleFileReport(fileName: string, records: AZStandardizedData[]): Promise<AzCodeReport> {
+    const totalCodes = records.length;
+    const destinations = new Set(records.map(r => r.destination));
+    const totalDestinations = destinations.size;
+    const uniqueDestinationsPercentage = Math.round((totalDestinations / totalCodes) * 100);
+
+    return {
+      fileName,
+      totalCodes,
+      totalDestinations,
+      uniqueDestinationsPercentage,
+      matchedCodes: 0,
+      nonMatchedCodes: 0,
+    };
   }
 
   async clearData(): Promise<void> {
