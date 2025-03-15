@@ -2,6 +2,7 @@ import { LergService } from '@/services/lerg.service';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDBStore } from '@/stores/db-store';
 import { DBName } from '@/types/app-types';
+import useDexieDB from '@/composables/useDexieDB';
 
 const API_BASE = '/api';
 const PUBLIC_URL = `${API_BASE}/lerg`;
@@ -14,6 +15,53 @@ let lergServiceInstance: LergService | null = null;
 let isInitializing = false;
 
 export const lergApiService = {
+  /**
+   * Checks if LERG data already exists in IndexedDB
+   * @returns Promise<{exists: boolean, count: number}> Object indicating if data exists and how many records
+   */
+  async checkLergDataExists(): Promise<{exists: boolean, count: number}> {
+    try {
+      const { getDB } = useDexieDB();
+      const db = await getDB(DBName.LERG);
+      
+      // Open the database to check for data
+      if (!db.isOpen()) {
+        await db.open();
+      }
+      
+      // Check if the lerg table exists and has data
+      if (db.tables.some((t: any) => t.name === 'lerg')) {
+        const count = await db.table('lerg').count();
+        console.log(`Found ${count} LERG records in IndexedDB`);
+        
+        // Close the database connection we opened for checking
+        await db.close();
+        
+        return { 
+          exists: count > 0, 
+          count 
+        };
+      }
+      
+      // Close the database connection we opened for checking
+      await db.close();
+      
+      return { 
+        exists: false, 
+        count: 0 
+      };
+    } catch (error) {
+      console.error('Error checking IndexedDB for LERG data:', error);
+      return { 
+        exists: false, 
+        count: 0 
+      };
+    }
+  },
+
+  /**
+   * Initializes the LERG service and loads data if needed
+   */
   async initialize(): Promise<void> {
     // Prevent concurrent initialization attempts
     if (isInitializing) {
