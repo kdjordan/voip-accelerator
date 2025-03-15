@@ -1,185 +1,268 @@
-import { LergService } from '@/services/lerg.service';
+import { LergService, LergDataError, LergConnectionError } from '@/services/lerg.service';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDBStore } from '@/stores/db-store';
 import { DBName } from '@/types/app-types';
-import useDexieDB from '@/composables/useDexieDB';
 
+/**
+ * API endpoints for LERG service
+ */
 const API_BASE = '/api';
 const PUBLIC_URL = `${API_BASE}/lerg`;
 const ADMIN_URL = `${API_BASE}/admin/lerg`;
 
-// Singleton instance to prevent multiple service instantiations
-let lergServiceInstance: LergService | null = null;
+/**
+ * Custom error types for LERG API service operations
+ */
+export class LergApiError extends Error {
+  constructor(message: string, public status?: number) {
+    super(message);
+    this.name = 'LergApiError';
+  }
+}
 
-// Flag to prevent concurrent initialization
-let isInitializing = false;
+export class LergNetworkError extends LergApiError {
+  constructor(message: string, public originalError?: Error) {
+    super(`LERG network error: ${message}`);
+    this.name = 'LergNetworkError';
+  }
+}
 
+export class LergServerError extends LergApiError {
+  constructor(message: string, status: number) {
+    super(`LERG server error (${status}): ${message}`, status);
+    this.name = 'LergServerError';
+  }
+}
+
+/**
+ * Initialization states for the LERG service
+ */
+export enum InitState {
+  IDLE = 'idle',
+  INITIALIZING = 'initializing',
+  SUCCESS = 'success',
+  ERROR = 'error'
+}
+
+// Current initialization state
+let initState: InitState = InitState.IDLE;
+let initError: Error | null = null;
+
+// Cache for API responses
+const apiCache = new Map<string, {
+  data: any;
+  timestamp: number;
+}>();
+
+// Cache expiration time in milliseconds (5 minutes)
+const CACHE_EXPIRATION_MS = 5 * 60 * 1000;
+
+/**
+ * LERG API Service
+ * Responsible for communication with the LERG API
+ */
 export const lergApiService = {
   /**
-   * Checks if LERG data already exists in IndexedDB
-   * @returns Promise<{exists: boolean, count: number}> Object indicating if data exists and how many records
+   * Get the current initialization state
+   * @returns The current initialization state
    */
-  async checkLergDataExists(): Promise<{exists: boolean, count: number}> {
-    try {
-      const { getDB } = useDexieDB();
-      const db = await getDB(DBName.LERG);
-      
-      // Open the database to check for data
-      if (!db.isOpen()) {
-        await db.open();
-      }
-      
-      // Check if the lerg table exists and has data
-      if (db.tables.some((t: any) => t.name === 'lerg')) {
-        const count = await db.table('lerg').count();
-        console.log(`Found ${count} LERG records in IndexedDB`);
-        
-        // Close the database connection we opened for checking
-        await db.close();
-        
-        return { 
-          exists: count > 0, 
-          count 
-        };
-      }
-      
-      // Close the database connection we opened for checking
-      await db.close();
-      
-      return { 
-        exists: false, 
-        count: 0 
-      };
-    } catch (error) {
-      console.error('Error checking IndexedDB for LERG data:', error);
-      return { 
-        exists: false, 
-        count: 0 
-      };
+  getInitState(): { state: InitState; error: Error | null } {
+    return {
+      state: initState,
+      error: initError
+    };
+  },
+
+  /**
+   * Reset the initialization state
+   */
+  resetInitState(): void {
+    initState = InitState.IDLE;
+    initError = null;
+  },
+
+  /**
+   * Clear the API cache
+   * @param endpoint Optional specific endpoint to clear, or all if not specified
+   */
+  clearCache(endpoint?: string): void {
+    if (endpoint) {
+      apiCache.delete(endpoint);
+      console.log(`Cleared cache for endpoint: ${endpoint}`);
+    } else {
+      apiCache.clear();
+      console.log('Cleared all API cache');
     }
   },
 
   /**
-   * Initializes the LERG service and loads data if needed
+   * Make an API request with caching and error handling
+   * @param url The URL to request
+   * @param options Fetch options
+   * @param useCache Whether to use and update the cache
+   * @returns The response data
    */
-  async initialize(): Promise<void> {
-    // Prevent concurrent initialization attempts
-    if (isInitializing) {
-      console.log('LERG initialization already in progress, skipping duplicate call');
-      return;
+  async makeRequest<T>(
+    url: string,
+    options: RequestInit = {},
+    useCache = true
+  ): Promise<T> {
+    // Check cache first if GET request and caching is enabled
+    const isGetRequest = !options.method || options.method === 'GET';
+    if (useCache && isGetRequest && apiCache.has(url)) {
+      const cachedData = apiCache.get(url)!;
+      const now = Date.now();
+      if (now - cachedData.timestamp < CACHE_EXPIRATION_MS) {
+        console.log(`Using cached response for ${url}`);
+        return cachedData.data as T;
+      } else {
+        // Cache expired
+        apiCache.delete(url);
+      }
     }
 
-    isInitializing = true;
-    const store = useLergStore();
-    const dbStore = useDBStore();
-
     try {
-      store.isProcessing = true;
+      const response = await fetch(url, options);
       
-      // Close any existing connection to ensure clean initialization
-      await dbStore.closeConnection(DBName.LERG);
-
-      // Get or create service instance
-      if (!lergServiceInstance) {
-        lergServiceInstance = new LergService();
-      }
-
-      // Test connection to server
-      const hasServerData = await this.testConnection();
-      console.log('Server data status:', hasServerData);
-      
-      if (!hasServerData) {
-        console.warn('No LERG data available on server');
-        store.isProcessing = false;
-        isInitializing = false;
-        return;
-      }
-
-      // Fetch data from server
-      const lergData = await this.getLergData();
-      console.log(`Raw LERG data from server: ${lergData.data?.length || 0} records`);
-      
-      if (!lergData.data || lergData.data.length === 0) {
-        console.warn('No LERG data received from server');
-        store.isProcessing = false;
-        isInitializing = false;
-        return;
+      // Handle HTTP errors
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new LergServerError(errorText, response.status);
       }
       
-      // Initialize database with fetched data
-      await lergServiceInstance.initializeLergTable(lergData.data);
-
-      // Process data for application use
-      const { stateMapping, countryData } = await lergServiceInstance.processLergData();
+      // Parse JSON response
+      const data = await response.json();
       
-      // Update store with processed data
-      store.setStateNPAs(stateMapping);
-      store.setCountryData(countryData);
-      store.setLergStats(lergData.stats?.totalRecords || lergData.data.length);
-      store.isLocallyStored = lergData.data.length > 0;
+      // Cache the response if it's a GET request and caching is enabled
+      if (useCache && isGetRequest) {
+        apiCache.set(url, {
+          data,
+          timestamp: Date.now()
+        });
+      }
       
-      console.log('LERG initialization completed successfully');
+      return data as T;
     } catch (error) {
-      console.error('LERG Initialization failed:', error);
-      store.error = error instanceof Error ? error.message : 'Unknown error';
-    } finally {
-      store.isProcessing = false;
-      isInitializing = false;
+      // Handle network errors vs server errors
+      if (error instanceof LergServerError) {
+        throw error;
+      } else {
+        const networkError = error instanceof Error ? error : new Error(String(error));
+        throw new LergNetworkError('Request failed', networkError);
+      }
     }
   },
 
+  /**
+   * Test connection to the LERG API
+   * @returns Promise resolving to true if connection is successful
+   */
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${PUBLIC_URL}/test-connection`);
-      if (!response.ok) throw new Error('Failed to test connection');
-      return response.json();
+      return await this.makeRequest<boolean>(`${PUBLIC_URL}/test-connection`);
     } catch (error) {
       console.error('Failed to test connection to LERG service:', error);
       return false;
     }
   },
 
-  async getLergData() {
+  /**
+   * Fetch LERG data from the server
+   * @param forceRefresh Force a refresh of the cache
+   * @returns Promise resolving to LERG data
+   */
+  async fetchLergData(forceRefresh = false): Promise<{
+    data: any[];
+    stats: { totalRecords: number; lastUpdated?: string };
+  }> {
     try {
-      const response = await fetch(`${PUBLIC_URL}/lerg-data`);
-      if (!response.ok) throw new Error('Failed to fetch LERG data');
-      return response.json();
+      return await this.makeRequest<{
+        data: any[];
+        stats: { totalRecords: number; lastUpdated?: string };
+      }>(`${PUBLIC_URL}/lerg-data`, {}, !forceRefresh);
     } catch (error) {
       console.error('Failed to fetch LERG data:', error);
       return { data: [], stats: { totalRecords: 0 } };
     }
   },
 
-  async uploadLergFile(formData: FormData) {
-    const response = await fetch(`${ADMIN_URL}/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-    if (!response.ok) throw new Error('Failed to upload LERG file');
-    return response.json();
-  },
-
-  async clearAllData(): Promise<void> {
+  /**
+   * Upload a LERG file to the server
+   * @param formData The form data containing the file
+   * @returns Promise resolving to the upload result
+   */
+  async uploadLergFile(formData: FormData): Promise<any> {
     try {
-      // First close any existing connections to prevent database being open
-      const dbStore = useDBStore();
-      await dbStore.closeConnection(DBName.LERG);
+      const result = await this.makeRequest<any>(`${ADMIN_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      }, false);
       
-      // Then clear data from the server
-      const response = await fetch(`${ADMIN_URL}/clear`, { method: 'DELETE' });
-      if (!response.ok) {
-        throw new Error('Failed to clear LERG data on server');
-      }
+      // Clear cache after successful upload
+      this.clearCache();
       
-      // Then clear client-side data
-      if (lergServiceInstance) {
-        await lergServiceInstance.clearLergData();
-      }
-      
-      console.log('LERG data cleared successfully');
+      return result;
     } catch (error) {
-      console.error('Failed to clear LERG data:', error);
-      throw error;
+      if (error instanceof LergServerError) {
+        throw new LergApiError(`Failed to upload LERG file: ${error.message}`);
+      } else if (error instanceof LergNetworkError) {
+        throw new LergApiError('Network error while uploading LERG file');
+      } else {
+        throw new LergApiError('Unknown error while uploading LERG file');
+      }
     }
   },
+
+  /**
+   * Clear LERG data on the server
+   * @returns Promise resolving when data is cleared
+   */
+  async clearServerData(): Promise<void> {
+    try {
+      await this.makeRequest<void>(`${ADMIN_URL}/clear`, {
+        method: 'DELETE'
+      }, false);
+      
+      // Clear cache after successful clear
+      this.clearCache();
+      
+      console.log('LERG data cleared on server successfully');
+    } catch (error) {
+      if (error instanceof LergServerError) {
+        throw new LergApiError(`Failed to clear LERG data on server: ${error.message}`);
+      } else if (error instanceof LergNetworkError) {
+        throw new LergApiError('Network error while clearing LERG data');
+      } else {
+        throw new LergApiError('Unknown error while clearing LERG data');
+      }
+    }
+  },
+
+  /**
+   * @deprecated Use lergFacadeService.initialize() instead
+   * Initialize the LERG service
+   * This method is kept for backward compatibility
+   * In the future, this should be moved to the facade service
+   */
+  async initialize(): Promise<void> {
+    console.warn('LergApiService.initialize() is deprecated. Use lergFacadeService.initialize() instead.');
+    
+    // Import dynamically to avoid circular dependencies
+    const { lergFacadeService } = await import('@/services/lerg-facade.service');
+    await lergFacadeService.initialize();
+  },
+
+  /**
+   * @deprecated Use lergFacadeService.clearAllData() instead
+   * Clear all LERG data (server and client)
+   * This method is kept for backward compatibility
+   * In the future, this should be moved to the facade service
+   */
+  async clearAllData(): Promise<void> {
+    console.warn('LergApiService.clearAllData() is deprecated. Use lergFacadeService.clearAllData() instead.');
+    
+    // Import dynamically to avoid circular dependencies
+    const { lergFacadeService } = await import('@/services/lerg-facade.service');
+    await lergFacadeService.clearAllData();
+  }
 };

@@ -5,11 +5,11 @@
     <!-- Stats Dashboard -->
     <div class="flex flex-col gap-6">
       <!-- Combined Stats Box -->
-      <div class="bg-gray-800 rounded-lg p-6">
+      <div class="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-600/40">
         <!-- Collapsible LERG Details header -->
         <div 
           @click="toggleLergDetails" 
-          class="flex justify-between items-center cursor-pointer hover:bg-gray-700/30 p-2 rounded-md -m-2"
+          class="flex justify-between items-center  p-2 rounded-md -m-2"
         >
           <h2 class="text-xl font-semibold">LERG Details</h2>
           <ChevronDownIcon
@@ -58,10 +58,16 @@
                 <span
                   v-if="!dbStatus.connected"
                   class="text-red-400 text-sm"
-                  >{{ dbStatus.error }}</span
                 >
+                  {{ dbStatus.error }}
+                  <span v-if="dbStatus.details" class="block text-xs mt-1 text-red-300">{{ dbStatus.details }}</span>
+                </span>
+                <span v-else class="text-green-400 text-sm">Connected</span>
               </div>
             </div>
+          </div>
+          <div class="text-xs text-gray-500 mt-1 text-right">
+            Last checked: {{ formatTime(dbStatus.lastChecked) }}
           </div>
           <!-- Storage Status -->
           <div>
@@ -299,11 +305,11 @@
 
     <!-- LERG Management Section -->
     <div class="grid grid-cols-1 gap-6">
-      <div class="bg-gray-800 rounded-lg p-6">
+      <div class="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-600/40">
         <!-- Expandable section header -->
         <div 
           @click="toggleLergSection" 
-          class="flex justify-between items-center cursor-pointer hover:bg-gray-700/30 p-2 rounded-md -m-2"
+          class="flex justify-between items-center p-2 rounded-md -m-2"
         >
           <h2 class="text-xl font-semibold">LERG File Management</h2>
           <ChevronDownIcon
@@ -369,8 +375,26 @@
                 v-else-if="lergUploadStatus?.type === 'error'"
                 class="text-center"
               >
-                <p class="text-red-400">{{ lergUploadStatus.message }}</p>
-                <p class="text-xs text-red-400 mt-1">Please try again</p>
+                <div class="bg-red-500/10 p-4 rounded-lg">
+                  <p class="text-red-400 font-medium">{{ lergUploadStatus.message }}</p>
+                  <p v-if="lergUploadStatus.source" class="text-xs text-red-300 mt-1">Source: {{ lergUploadStatus.source }}</p>
+                  <p v-if="lergUploadStatus.details" class="text-xs text-red-300 mt-1">{{ lergUploadStatus.details }}</p>
+                  <p class="text-xs text-red-400 mt-2">Please try again or contact support if the issue persists</p>
+                </div>
+              </div>
+
+              <!-- Warning State -->
+              <div
+                v-else-if="lergUploadStatus?.type === 'warning'"
+                class="text-center"
+              >
+                <div class="bg-yellow-500/10 p-4 rounded-lg">
+                  <p class="text-yellow-400 font-medium">{{ lergUploadStatus.message }}</p>
+                  <p v-if="lergUploadStatus.details" class="text-xs text-yellow-300 mt-1">{{ lergUploadStatus.details }}</p>
+                  <div class="w-full mt-3 h-2 rounded-full bg-gray-700">
+                    <div class="h-full bg-yellow-500 rounded-full animate-pulse-width"></div>
+                  </div>
+                </div>
               </div>
 
               <!-- Success State -->
@@ -378,8 +402,11 @@
                 v-else-if="lergUploadStatus?.type === 'success'"
                 class="text-center"
               >
-                <DocumentIcon class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10" />
-                <p class="mt-2 text-xl text-accent">{{ lergUploadStatus.message }}</p>
+                <div class="bg-green-500/10 p-4 rounded-lg">
+                  <DocumentIcon class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10" />
+                  <p class="mt-2 text-xl text-accent">{{ lergUploadStatus.message }}</p>
+                  <p v-if="lergUploadStatus.details" class="text-sm text-accent/80 mt-1">{{ lergUploadStatus.details }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -403,11 +430,11 @@
 
     <!-- Storage Management Section (moved from Dashboard) -->
     <div class="grid grid-cols-1 gap-6">
-      <div class="bg-gray-800 rounded-lg p-6">
+      <div class="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-600/40">
         <!-- Expandable section header -->
         <div 
           @click="toggleStorageSection" 
-          class="flex justify-between items-center cursor-pointer hover:bg-gray-700/30 p-2 rounded-md -m-2"
+          class="flex justify-between items-center p-2 rounded-md -m-2"
         >
           <h2 class="text-xl font-semibold">Storage Management</h2>
           <ChevronDownIcon
@@ -626,8 +653,7 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
-  import { lergApiService } from '@/services/lerg-api.service';
-  import { LergService } from '@/services/lerg.service';
+  import { lergFacadeService, OperationStatus, ErrorSource, type ErrorInfo } from '@/services/lerg-facade.service';
   import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon } from '@heroicons/vue/24/outline';
   import { getCountryName } from '@/types/constants/country-codes';
   import { getStateName } from '@/types/constants/state-codes';
@@ -640,9 +666,7 @@
   import { forceRefreshStrategies } from '@/services/storage/storage-factory';
   import { runPerformanceTest, type PerformanceMetric } from '@/services/storage/storage-test-utils';
   import { DBName } from '@/types/app-types';
-  import { AZService } from '@/services/az.service';
-  import { USService } from '@/services/us.service';
-  import useDexieDB from '@/composables/useDexieDB';
+
 
   const store = useLergStore();
   const lergFileInput = ref<HTMLInputElement>();
@@ -660,14 +684,29 @@
     return store.$state.isLocallyStored;
   });
 
+  // Define interfaces for status objects
+  interface UploadStatus {
+    type: 'success' | 'error' | 'warning';
+    message: string;
+    details?: string;
+    source?: string;
+  }
+
+  interface DbStatus {
+    connected: boolean;
+    error: string;
+    details: string;
+    lastChecked: Date;
+  }
+
   const isDragging = ref(false);
-  const lergUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
-
+  const lergUploadStatus = ref<UploadStatus | null>(null);
   const isLergUploading = ref(false);
-
-  const dbStatus = ref({
+  const dbStatus = ref<DbStatus>({
     connected: false,
     error: '',
+    details: '',
+    lastChecked: new Date()
   });
 
   // Preview state
@@ -747,17 +786,90 @@
     return Object.values(groups);
   });
 
+  /**
+   * Format error message based on error source and details
+   */
+  function formatErrorMessage(error: Error, source?: ErrorSource, details?: Record<string, any>): {
+    message: string;
+    details?: string;
+    source?: string;
+  } {
+    let message = error.message || 'An unknown error occurred';
+    let detailsMessage = '';
+    let sourceLabel = '';
+    
+    // Add source-specific context
+    if (source) {
+      switch (source) {
+        case ErrorSource.API:
+          sourceLabel = 'API Error';
+          message = `Server communication error: ${message}`;
+          break;
+        case ErrorSource.DATABASE:
+          sourceLabel = 'Database Error';
+          message = `Database error: ${message}`;
+          break;
+        case ErrorSource.NETWORK:
+          sourceLabel = 'Network Error';
+          message = `Network error: ${message}`;
+          break;
+        default:
+          sourceLabel = 'System Error';
+      }
+    }
+    
+    // Add details if available
+    if (details) {
+      const detailsArray = [];
+      
+      if (details.errorType) {
+        detailsArray.push(`Type: ${details.errorType}`);
+      }
+      
+      if (details.errorMessage && details.errorMessage !== message) {
+        detailsArray.push(`Details: ${details.errorMessage}`);
+      }
+      
+      detailsMessage = detailsArray.join(' | ');
+    }
+    
+    return {
+      message,
+      details: detailsMessage,
+      source: sourceLabel
+    };
+  }
+
   async function checkConnection() {
     try {
-      await lergApiService.testConnection();
+      dbStatus.value.lastChecked = new Date();
+      const result = await lergFacadeService.checkDataExists();
       dbStatus.value = {
-        connected: true,
+        connected: result.onServer,
         error: '',
+        details: '',
+        lastChecked: new Date()
       };
     } catch (error) {
+      console.error('Connection check failed:', error);
+      
+      // Get error details if available
+      let errorInfo: Partial<ErrorInfo> | undefined;
+      if (error && typeof error === 'object' && 'errorInfo' in error) {
+        errorInfo = error.errorInfo as Partial<ErrorInfo>;
+      }
+      
+      const formattedError = formatErrorMessage(
+        error instanceof Error ? error : new Error('Connection failed'),
+        errorInfo?.source,
+        errorInfo?.details
+      );
+      
       dbStatus.value = {
         connected: false,
-        error: error instanceof Error ? error.message : 'Connection failed',
+        error: formattedError.message,
+        details: formattedError.details || '',
+        lastChecked: new Date()
       };
     }
   }
@@ -773,30 +885,43 @@
         dbStatus.value = {
           connected: true,
           error: '',
+          details: '',
+          lastChecked: new Date()
         };
       } else {
-        // Check if data exists in IndexedDB before initializing
-        const { exists, count } = await lergApiService.checkLergDataExists();
+        // Check if data exists before initializing
+        const dataStatus = await lergFacadeService.checkDataExists();
         
-        if (exists) {
-          console.log(`LERG data already exists in IndexedDB with ${count} records, initializing from local data`);
+        if (dataStatus.exists) {
+          console.log(`LERG data already exists with ${dataStatus.stats.totalRecords} records`);
           
-          // Initialize the service but don't redownload data
-          // The service will load data from IndexedDB
-          if (!store.isLocallyStored) {
-            // Only process the data if it's not already in the store
-            const lergService = new LergService();
-            const { stateMapping, countryData } = await lergService.processLergData();
+          // Initialize the service to load data
+          const result = await lergFacadeService.initialize(false);
+          
+          if (result.status === OperationStatus.ERROR) {
+            const error = result.error || new Error('Failed to initialize LERG data');
+            const formattedError = formatErrorMessage(
+              error,
+              result.errorInfo?.source,
+              result.errorInfo?.details
+            );
             
-            // Update store with processed data
-            store.setStateNPAs(stateMapping);
-            store.setCountryData(countryData);
-            store.setLergStats(count);
-            store.isLocallyStored = true;
+            throw new Error(formattedError.message);
           }
         } else {
-          console.log('No LERG data found in IndexedDB, initializing with fresh data');
-          await lergApiService.initialize();
+          console.log('No LERG data found, initializing with fresh data');
+          const result = await lergFacadeService.initialize(true);
+          
+          if (result.status === OperationStatus.ERROR) {
+            const error = result.error || new Error('Failed to initialize LERG data');
+            const formattedError = formatErrorMessage(
+              error,
+              result.errorInfo?.source,
+              result.errorInfo?.details
+            );
+            
+            throw new Error(formattedError.message);
+          }
         }
       }
       
@@ -804,13 +929,38 @@
       dbStatus.value = {
         connected: true,
         error: '',
+        details: '',
+        lastChecked: new Date()
       };
     } catch (error) {
       console.error('Failed to initialize LERG service:', error);
+      
+      // Get error details if available
+      let errorInfo: Partial<ErrorInfo> | undefined;
+      if (error && typeof error === 'object' && 'errorInfo' in error) {
+        errorInfo = error.errorInfo as Partial<ErrorInfo>;
+      }
+      
+      const formattedError = formatErrorMessage(
+        error instanceof Error ? error : new Error('Initialization failed'),
+        errorInfo?.source,
+        errorInfo?.details
+      );
+      
       // Update UI to show error state
       dbStatus.value = {
         connected: false,
-        error: error instanceof Error ? error.message : 'Initialization failed',
+        error: formattedError.message,
+        details: formattedError.details || '',
+        lastChecked: new Date()
+      };
+      
+      // Also show error in upload status for visibility
+      lergUploadStatus.value = {
+        type: 'error',
+        message: 'LERG service initialization failed',
+        details: formattedError.details,
+        source: formattedError.source
       };
     }
     
@@ -848,6 +998,15 @@
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  }
+
+  function formatTime(date: Date): string {
+    if (!date) return 'Never';
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   }
 
@@ -967,40 +1126,81 @@
     // Continue with file upload using mapped columns
     const file = selectedFile.value;
     console.log('File to upload:', file);
-    if (!file) return;
+    if (!file) {
+      lergUploadStatus.value = {
+        type: 'error',
+        message: 'No file selected for upload',
+        details: 'Please select a file and try again'
+      };
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('mappings', JSON.stringify(columnMappings.value));
-    formData.append('startLine', startLine.value.toString());
-
-    console.log('FormData contents:', {
-      file: formData.get('file'),
-      mappings: formData.get('mappings'),
-      startLine: formData.get('startLine'),
+    console.log('Upload parameters:', {
+      mappings: columnMappings.value,
+      startLine: startLine.value,
     });
 
     try {
       isLergUploading.value = true;
-      // Don't set success status until upload is actually complete
-      // lergUploadStatus.value = { type: 'success', message: 'Uploading LERG file...' };
-
-      console.log('About to call lergApiService.uploadLergFile');
-      await lergApiService.uploadLergFile(formData);
-      isLergUploading.value = false; // Set to false before showing success
-      lergUploadStatus.value = { type: 'success', message: 'LERG file uploaded successfully' };
-
-      // Clear the selected file after successful upload
-      selectedFile.value = null;
-      if (lergFileInput.value) {
-        lergFileInput.value.value = '';
+      lergUploadStatus.value = {
+        type: 'warning',
+        message: 'Uploading LERG file...',
+        details: 'This may take a few minutes for large files'
+      };
+      
+      // Use the facade service to upload the file with the mappings and startLine
+      const result = await lergFacadeService.uploadFile(file, {
+        mappings: columnMappings.value,
+        startLine: startLine.value
+      });
+      
+      isLergUploading.value = false; // Set to false before showing status
+      
+      if (result.status === OperationStatus.SUCCESS) {
+        lergUploadStatus.value = { 
+          type: 'success', 
+          message: 'LERG file uploaded successfully',
+          details: `Processed ${result.data?.count || 0} records${
+            result.data?.totalRecords ? ` out of ${result.data.totalRecords} total records` : ''
+          }`
+        };
+        
+        // Clear the selected file after successful upload
+        selectedFile.value = null;
+        if (lergFileInput.value) {
+          lergFileInput.value.value = '';
+        }
+      } else {
+        const error = result.error || new Error('Upload failed');
+        const formattedError = formatErrorMessage(
+          error,
+          result.errorInfo?.source,
+          result.errorInfo?.details
+        );
+        
+        throw new Error(formattedError.message);
       }
     } catch (error) {
       console.error('Failed to upload LERG file:', error);
+      
+      // Get error details if available
+      let errorInfo: Partial<ErrorInfo> | undefined;
+      if (error && typeof error === 'object' && 'errorInfo' in error) {
+        errorInfo = error.errorInfo as Partial<ErrorInfo>;
+      }
+      
+      const formattedError = formatErrorMessage(
+        error instanceof Error ? error : new Error('Upload failed'),
+        errorInfo?.source,
+        errorInfo?.details
+      );
+      
       isLergUploading.value = false; // Set to false before showing error
       lergUploadStatus.value = {
         type: 'error',
-        message: 'Error uploading - please reload page and try again',
+        message: formattedError.message,
+        details: formattedError.details,
+        source: formattedError.source
       };
     }
   }
@@ -1010,6 +1210,9 @@
     if (lergFileInput.value) {
       lergFileInput.value.value = '';
     }
+    
+    // Clear any previous upload status
+    lergUploadStatus.value = null;
   }
 
   async function confirmClearLergData() {
@@ -1018,10 +1221,58 @@
     }
 
     try {
-      await fetch('/api/admin/lerg/clear/lerg', { method: 'DELETE' });
-      console.log('LERG codes cleared successfully');
+      isLergUploading.value = true;
+      lergUploadStatus.value = {
+        type: 'warning',
+        message: 'Clearing LERG data...',
+        details: 'This may take a moment'
+      };
+      
+      // Use the facade service to clear all data
+      const result = await lergFacadeService.clearAllData();
+      
+      isLergUploading.value = false;
+      
+      if (result.status === OperationStatus.SUCCESS) {
+        lergUploadStatus.value = { 
+          type: 'success', 
+          message: 'LERG data cleared successfully' 
+        };
+        
+        // Refresh connection status
+        await checkConnection();
+      } else {
+        const error = result.error || new Error('Failed to clear LERG data');
+        const formattedError = formatErrorMessage(
+          error,
+          result.errorInfo?.source,
+          result.errorInfo?.details
+        );
+        
+        throw new Error(formattedError.message);
+      }
     } catch (error) {
       console.error('Failed to clear LERG data:', error);
+      
+      // Get error details if available
+      let errorInfo: Partial<ErrorInfo> | undefined;
+      if (error && typeof error === 'object' && 'errorInfo' in error) {
+        errorInfo = error.errorInfo as Partial<ErrorInfo>;
+      }
+      
+      const formattedError = formatErrorMessage(
+        error instanceof Error ? error : new Error('Failed to clear data'),
+        errorInfo?.source,
+        errorInfo?.details
+      );
+      
+      isLergUploading.value = false;
+      lergUploadStatus.value = {
+        type: 'error',
+        message: formattedError.message,
+        details: formattedError.details,
+        source: formattedError.source
+      };
     }
   }
 
