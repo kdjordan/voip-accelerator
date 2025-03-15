@@ -107,11 +107,13 @@
             </div>
             
             <!-- Single File Report Section (Only visible when one file is uploaded) -->
-            <div v-if="azStore.hasSingleFileReport && !azStore.reportsGenerated" class="mt-8 pt-8 border-t border-gray-700/50">
+            <div  v-if="azStore.getFileNameByComponent('az1') !== ''" class="mt-8 pt-8 border-t border-gray-700/50">
               <!-- Code Report heading with file name pill -->
               <div class="mb-4 flex items-center justify-between">
-                <span class="text-xl text-accent font-medium">Code Report</span>
-                <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/20 border border-accent/50">
+                <span class="text-xl text-fbWhite font-secondary">Code Report</span>
+
+                
+                <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50">
                   <span class="text-sm text-accent">{{ azStore.getFileNameByComponent('az1') }}</span>
                 </div>
               </div>
@@ -121,17 +123,17 @@
                 <div class="space-y-4">
                   <div class="bg-gray-800 p-3 rounded-lg">
                     <div class="text-gray-400 mb-1">Total Codes:</div>
-                    <div class="text-xl text-white">{{ singleFileStats.totalCodes }}</div>
+                    <div class="text-xl text-white">{{ fileStats['az1'].totalCodes }}</div>
                   </div>
                   
                   <div class="bg-gray-800 p-3 rounded-lg">
                     <div class="text-gray-400 mb-1">Total Destinations:</div>
-                    <div class="text-xl text-white">{{ singleFileStats.totalDestinations }}</div>
+                    <div class="text-xl text-white">{{ fileStats['az1'].totalDestinations }}</div>
                   </div>
                   
                   <div class="bg-gray-800 p-3 rounded-lg">
                     <div class="text-gray-400 mb-1">Unique Destinations Percentage:</div>
-                    <div class="text-xl text-white">{{ singleFileStats.uniqueDestinationsPercentage }}%</div>
+                    <div class="text-xl text-white">{{ fileStats['az1'].uniqueDestinationsPercentage }}%</div>
                   </div>
                 </div>
               </div>
@@ -235,6 +237,37 @@
                   </div>
                 </button>
               </div>
+              
+              <!-- Single File Report Section for second file -->
+              <div v-if="azStore.getFileNameByComponent('az2') !== ''" class="mt-8 pt-8 border-t border-gray-700/50">
+                <!-- Code Report heading with file name pill -->
+                <div class="mb-4 flex items-center justify-between">
+                  <span class="text-xl text-fbWhite font-secondary">Code Report</span>
+                  <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50">
+                    <span class="text-sm text-accent">{{ azStore.getFileNameByComponent('az2') }}</span>
+                  </div>
+                </div>
+                
+                <!-- Code Report Content - Dark bento box style -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <div class="space-y-4">
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                      <div class="text-gray-400 mb-1">Total Codes:</div>
+                      <div class="text-xl text-white">{{ fileStats['az2'].totalCodes }}</div>
+                    </div>
+                    
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                      <div class="text-gray-400 mb-1">Total Destinations:</div>
+                      <div class="text-xl text-white">{{ fileStats['az2'].totalDestinations }}</div>
+                    </div>
+                    
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                      <div class="text-gray-400 mb-1">Unique Destinations Percentage:</div>
+                      <div class="text-xl text-white">{{ fileStats['az2'].uniqueDestinationsPercentage }}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <!-- Empty State Message when no first file is uploaded -->
             <div 
@@ -334,18 +367,27 @@
   });
 
   // Single file stats
-  const singleFileStats = reactive({
-    totalCodes: 0,
-    totalDestinations: 0,
-    uniqueDestinationsPercentage: 0
+  const fileStats = reactive<Record<ComponentId, {
+    totalCodes: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
+  }>>({
+    az1: {
+      totalCodes: 0,
+      totalDestinations: 0,
+      uniqueDestinationsPercentage: 0
+    },
+    az2: {
+      totalCodes: 0,
+      totalDestinations: 0,
+      uniqueDestinationsPercentage: 0
+    }
   });
 
   // Load single file stats when a file is uploaded
-  async function loadSingleFileStats() {
-    if (!azStore.hasSingleFileReport || azStore.isFull) return;
-    
+  async function loadSingleFileStats(componentId: ComponentId) {
     try {
-      const fileName = azStore.getFileNameByComponent('az1');
+      const fileName = azStore.getFileNameByComponent(componentId);
       if (!fileName) return;
       
       const tableName = fileName.toLowerCase().replace('.csv', '');
@@ -358,10 +400,12 @@
       const uniqueDestinations = new Set(data.map(item => item.destName)).size;
       const uniquePercentage = ((uniqueDestinations / totalCodes) * 100).toFixed(2);
       
-      // Update reactive object
-      singleFileStats.totalCodes = totalCodes;
-      singleFileStats.totalDestinations = uniqueDestinations;
-      singleFileStats.uniqueDestinationsPercentage = parseFloat(uniquePercentage);
+      // Update reactive object for the specific component
+      fileStats[componentId] = {
+        totalCodes,
+        totalDestinations: uniqueDestinations,
+        uniqueDestinationsPercentage: parseFloat(uniquePercentage)
+      };
     } catch (error) {
       console.error('Error loading single file stats:', error);
     }
@@ -370,7 +414,7 @@
   // Watch for changes in file uploads
   watch(() => azStore.hasSingleFileReport, (newValue) => {
     if (newValue) {
-      loadSingleFileStats();
+      loadSingleFileStats('az1');
     }
   });
 
@@ -445,15 +489,13 @@
     }
   }
 
-  async function handleFileUploaded(componentName: string, fileName: string) {
+  async function handleFileUploaded(componentName: ComponentId, fileName: string) {
     console.log('adding file to store', componentName, fileName);
     azStore.addFileUploaded(componentName, fileName);
     console.log(`File uploaded for ${componentName}: ${fileName}`);
     
-    // If this is the first file, load the stats
-    if (componentName === 'az1' && !azStore.isFull) {
-      await loadSingleFileStats();
-    }
+    // Load stats for the uploaded file
+    await loadSingleFileStats(componentName);
   }
 
   async function handleRemoveFile(componentName: ComponentId) {
@@ -665,7 +707,7 @@
   // Load stats on component mount if a file is already uploaded
   onMounted(async () => {
     if (azStore.hasSingleFileReport && !azStore.isFull) {
-      await loadSingleFileStats();
+      await loadSingleFileStats('az1');
     }
   });
 </script>

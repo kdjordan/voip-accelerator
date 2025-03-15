@@ -130,22 +130,15 @@ export const useAzStore = defineStore('az', {
       this.pricingReport = pricing;
       this.codeReport = code;
       this.reportsGenerated = true;
-      this.singleFileReportReady = false; // Clear single file report state when full reports are generated
-      this.singleFileReport = null;
-      this.showUploadComponents = false;
-      this.activeReportType = 'code';
+      // Don't clear single file reports or hide upload components
+      this.activeReportType = 'files'; // Default to files view when reports are generated
     },
 
     setSingleFileReport(report: AzCodeReport) {
       this.singleFileReport = report;
       this.singleFileReportReady = true;
-      
-      // If this is the first file, automatically switch to code report view
-      if (this.filesUploaded.size === 1) {
-        this.activeReportType = 'code';
-      }
-      // If this is the second file, we don't want to automatically switch tabs
-      // so we don't set activeReportType here
+      // Don't automatically switch to code view anymore since code reports
+      // are shown under the upload zones
     },
 
     setSingleFileReportReady(ready: boolean) {

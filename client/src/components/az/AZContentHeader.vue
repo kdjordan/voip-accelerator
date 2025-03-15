@@ -52,7 +52,6 @@
             v-if="azStore.activeReportType === type"
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
           >
-        {{ azStore.activeReportType }}
         </div>
         </button>
         <button
@@ -78,30 +77,20 @@
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
   
-  // Computed property to determine if report tabs should be shown
-  const showReportTabs = computed(() => {
-    return azStore.reportsGenerated || azStore.hasSingleFileReport;
-  });
-  
   // Compute available report types based on the current state
   const availableReportTypes = computed(() => {
-    // If we have full reports, show all report types
+    // If we have full reports generated, show Files and Code Compare tabs
     if (azStore.reportsGenerated) {
-      return reportTypes;
-    }
-    
-    // If we have two files uploaded, show Files and Code tabs
-    if (azStore.isFull) {
       return [ReportTypes.FILES, ReportTypes.CODE];
     }
     
-    // If we have a single file report, only show files tab
-    if (azStore.hasSingleFileReport) {
-      return [ReportTypes.FILES];
-    }
-    
-    // Default to just files
+    // In all other cases, only show Files tab
     return [ReportTypes.FILES];
+  });
+
+  const showReportTabs = computed(() => {
+    // Only show tabs when reports are generated (two files compared)
+    return azStore.reportsGenerated;
   });
 
   const currentJourneyState = computed<JourneyState>(() => {
