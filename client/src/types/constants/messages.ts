@@ -1,6 +1,7 @@
 export const JOURNEY_STATE = {
   INITIAL: 'INITIAL',
   ONE_FILE: 'ONE_FILE',
+  ONE_FILE_REPORT: 'ONE_FILE_REPORT',
   TWO_FILES: 'TWO_FILES',
   REPORTS_READY: 'REPORTS_READY',
 } as const;
@@ -14,20 +15,24 @@ interface JourneyMessage {
 
 export const AZ_JOURNEY_MESSAGES: Record<JourneyState, JourneyMessage> = {
   INITIAL: {
-    title: 'AZ File Upload',
-    message: 'Upload <span class="text-white font-medium uppercase">your rates</span> and the rates of your <span class="text-white font-medium uppercase">prospective carrier</span>.<br />We will generate you a report showing the best opportunities for you to buy and sell.',
+    title: 'AZ Rate Deck Analyzer',
+    message: "Let's analyze some AZ decks, shall we?<br> Upload a rate deck to get started!",
   },
   ONE_FILE: {
     title: 'Great start!',
-    message: 'Now upload your second rate deck to compare rates and codes to find opportunities.',
+    message: 'Your file has been analyzed!<br> You can see the code report below.<br>Upload a second file to compare and find opportunities.',
+  },
+  ONE_FILE_REPORT: {
+    title: 'Single File Analysis',
+    message: 'Your file has been analyzed!<br> You can see the code report below.<br>Upload a second file to compare and find buy/sell opportunities.',
   },
   TWO_FILES: {
-    title: 'FILES UPLOADED',
-    message: 'Use the report tabs below to explore your opportunities.',
+    title: 'Ready for comparison',
+    message: 'Both files are uploaded. Click "Get Reports" to see a detailed comparison and find opportunities.',
   },
   REPORTS_READY: {
     title: 'Analysis complete',
-    message: 'Use the report tabs below to explore your opportunities.',
+    message: 'Use the report tabs to explore your opportunities.',
   },
 };
 
@@ -40,6 +45,10 @@ export const US_JOURNEY_MESSAGES = {
   [JOURNEY_STATE.ONE_FILE]: {
     title: 'Great start!',
     message: 'Now upload your second rate deck to compare rates and codes to find opportunities.',
+  },
+  [JOURNEY_STATE.ONE_FILE_REPORT]: {
+    title: 'Single File Analysis',
+    message: 'Your file has been analyzed! View the code report to see details about your rate deck.<br />Upload a second file to get a full comparison and find buying/selling opportunities.',
   },
   [JOURNEY_STATE.TWO_FILES]: {
     title: 'Ready for analysis',

@@ -18,11 +18,11 @@
         <div :key="azStore.getActiveReportType">
           <AZFileUploads v-if="azStore.getActiveReportType === ReportTypes.FILES" />
           <CodeReportAZ
-            v-if="azStore.getActiveReportType === ReportTypes.CODE"
+            v-if="azStore.getActiveReportType === ReportTypes.CODE && (azStore.hasSingleFileReport || azStore.reportsGenerated)"
             :report="azStore.getCodeReport"
           />
           <PricingReportAZ
-            v-if="azStore.getActiveReportType === ReportTypes.PRICING"
+            v-if="azStore.getActiveReportType === ReportTypes.PRICING && azStore.reportsGenerated"
             :report="azStore.getPricingReport"
           />
         </div>
@@ -45,9 +45,9 @@
   const azStore = useAzStore();
 
   onMounted(async () => {
-    const sampleDecks = setTimeout(async () => {
-      await loadSampleDecks([DBName.AZ]);
-    }, 1000);
-    return () => clearTimeout(sampleDecks);
+    // const sampleDecks = setTimeout(async () => {
+    //   await loadSampleDecks([DBName.AZ]);
+    // }, 1000);
+    // return () => clearTimeout(sampleDecks);
   });
 </script>

@@ -9,9 +9,11 @@ export const useAzStore = defineStore('az', {
     uploadingComponents: {} as Record<string, boolean>,
     showUploadComponents: true,
     reportsGenerated: false,
+    singleFileReportReady: false,
     activeReportType: 'files' as ReportType,
     pricingReport: null as AzPricingReport | null,
     codeReport: null as AzCodeReport | null,
+    singleFileReport: null as AzCodeReport | null,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidAzRow[]>(),
     inMemoryData: new Map<string, AZStandardizedData[]>(),
@@ -34,7 +36,24 @@ export const useAzStore = defineStore('az', {
 
     getPricingReport: state => state.pricingReport,
 
-    getCodeReport: state => state.codeReport,
+    getCodeReport: state => {
+      // If we have a full comparison report, return that
+      if (state.reportsGenerated && state.codeReport) {
+        return state.codeReport;
+      }
+      
+      // Otherwise, if we have a single file report, return that
+      if (state.singleFileReportReady && state.singleFileReport) {
+        return state.singleFileReport;
+      }
+      
+      // If no reports are available, return null
+      return null;
+    },
+
+    hasSingleFileReport: state => state.singleFileReportReady && state.singleFileReport !== null,
+
+    getSingleFileReport: state => state.singleFileReport,
 
     getFileNameByComponent: state => (componentId: string) => {
       const file = state.filesUploaded.get(componentId);
@@ -78,6 +97,14 @@ export const useAzStore = defineStore('az', {
       });
       return result;
     },
+
+    shouldShowCodeReport: state => {
+      return state.reportsGenerated || state.singleFileReportReady;
+    },
+
+    shouldShowPricingReport: state => {
+      return state.reportsGenerated;
+    },
   },
 
   actions: {
@@ -90,8 +117,10 @@ export const useAzStore = defineStore('az', {
     resetFiles() {
       this.filesUploaded.clear();
       this.reportsGenerated = false;
+      this.singleFileReportReady = false;
       this.pricingReport = null;
       this.codeReport = null;
+      this.singleFileReport = null;
       this.showUploadComponents = true;
       this.invalidRows.clear();
       this.inMemoryData.clear();
@@ -101,8 +130,26 @@ export const useAzStore = defineStore('az', {
       this.pricingReport = pricing;
       this.codeReport = code;
       this.reportsGenerated = true;
+      this.singleFileReportReady = false; // Clear single file report state when full reports are generated
+      this.singleFileReport = null;
       this.showUploadComponents = false;
       this.activeReportType = 'code';
+    },
+
+    setSingleFileReport(report: AzCodeReport) {
+      this.singleFileReport = report;
+      this.singleFileReportReady = true;
+      
+      // If this is the first file, automatically switch to code report view
+      if (this.filesUploaded.size === 1) {
+        this.activeReportType = 'code';
+      }
+      // If this is the second file, we don't want to automatically switch tabs
+      // so we don't set activeReportType here
+    },
+
+    setSingleFileReportReady(ready: boolean) {
+      this.singleFileReportReady = ready;
     },
 
     setActiveReportType(type: ReportType) {
@@ -125,6 +172,25 @@ export const useAzStore = defineStore('az', {
         this.pricingReport = null;
         this.codeReport = null;
         this.activeReportType = 'files';
+      }
+
+      if (this.filesUploaded.size === 0) {
+        this.singleFileReportReady = false;
+        this.singleFileReport = null;
+      } else if (this.filesUploaded.size === 1) {
+        // If we still have one file, regenerate the single file report
+        const remainingComponentId = Array.from(this.filesUploaded.keys())[0];
+        const remainingFileName = this.getFileNameByComponent(remainingComponentId);
+        const tableName = remainingFileName.toLowerCase().replace('.csv', '');
+        
+        // Get the data for the remaining file
+        const data = this.getInMemoryData(tableName);
+        
+        // Regenerate the single file report asynchronously
+        setTimeout(() => {
+          const azService = new (require('@/services/az.service').AZService)();
+          azService.generateSingleFileReport(remainingFileName, data);
+        }, 0);
       }
 
       this.showUploadComponents = true;

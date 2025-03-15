@@ -1,6 +1,26 @@
 <template>
+  <!-- Message for single file scenario -->
   <div
-    v-if="report"
+    v-if="!hasTwoFiles"
+    class="bg-gray-800 p-6 rounded-lg"
+  >
+    <div class="text-center py-12">
+      <h3 class="text-xl text-accent mb-4">Pricing Comparison Not Available</h3>
+      <p class="text-gray-300 max-w-lg mx-auto">
+        The pricing comparison report requires two files to be uploaded. 
+        Please upload a second file to see pricing opportunities.
+      </p>
+      <button
+        @click="goToFilesTab"
+        class="mt-6 px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors"
+      >
+        <span class="text-sm text-accent">Upload Another File</span>
+      </button>
+    </div>
+  </div>
+
+  <div
+    v-else-if="report"
     class="space-y-6 bg-gray-800 p-6"
   >
     <!-- Sell Section -->
@@ -544,10 +564,14 @@
   import { ref, reactive, computed, nextTick } from 'vue';
   import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
   import type { AzPricingReport } from '@/types/domains/az-types';
+  import { useAzStore } from '@/stores/az-store';
+  import { ReportTypes } from '@/types';
 
   const props = defineProps<{
     report: AzPricingReport | null;
   }>();
+  
+  const azStore = useAzStore();
 
   const expandedRows = ref<Set<string>>(new Set());
   const expandedSections = reactive({
@@ -576,6 +600,16 @@
   const sellSortBy = ref('percent-desc'); // Default: highest margin first
   const sameSortBy = ref('name-asc'); // Default: alphabetical
   const unmatchedSortBy = ref('not-in-file1'); // Default: show codes not in first file
+  
+  // Check if we have two files for comparison
+  const hasTwoFiles = computed(() => {
+    return azStore.reportsGenerated && props.report !== null;
+  });
+
+  // Function to navigate to the files tab
+  function goToFilesTab() {
+    azStore.setActiveReportType(ReportTypes.FILES);
+  }
 
   // Computed properties for filtered items
   const filteredBuyItems = computed(() => {
