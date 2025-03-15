@@ -29,9 +29,9 @@ export const useLergStore = defineStore('lerg', {
       this.countryData = countryData;
     },
 
-    setLergStats(totalRecords: number) {
+    setLergStats(totalRecords: number, lastUpdated?: string | null) {
       this.stats.totalRecords = totalRecords;
-      this.stats.lastUpdated = new Date().toISOString();
+      this.stats.lastUpdated = lastUpdated || new Date().toISOString();
     },
 
     setError(error: string | null) {

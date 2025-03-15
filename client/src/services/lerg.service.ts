@@ -4,52 +4,370 @@ import { useLergStore } from '@/stores/lerg-store';
 import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';
 
+/**
+ * Custom error types for LERG service operations
+ */
+export class LergServiceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LergServiceError';
+  }
+}
+
+export class LergConnectionError extends LergServiceError {
+  constructor(message: string, public originalError?: Error) {
+    super(`LERG database connection error: ${message}`);
+    this.name = 'LergConnectionError';
+  }
+}
+
+export class LergDataError extends LergServiceError {
+  constructor(message: string, public originalError?: Error) {
+    super(`LERG data error: ${message}`);
+    this.name = 'LergDataError';
+  }
+}
+
+export class LergSchemaError extends LergServiceError {
+  constructor(message: string, public originalError?: Error) {
+    super(`LERG schema error: ${message}`);
+    this.name = 'LergSchemaError';
+  }
+}
+
+/**
+ * Service for managing LERG data in IndexedDB
+ * Implemented as a singleton to ensure consistent database access
+ */
 export class LergService {
+  // Singleton instance
+  private static instance: LergService | null = null;
+  
   private store = useLergStore();
   private db: Dexie | null = null;
 
-  constructor() {
-    console.log('Initializing LERG service');
-    // Don't automatically call initializeDB in constructor
-    // This avoids potential race conditions
+  // Connection management properties
+  private connectionCount = 0;
+  private isConnecting = false;
+  private connectionError: Error | null = null;
+  
+  // Retry configuration
+  private readonly MAX_RETRIES = 3;
+  private readonly RETRY_DELAY_MS = 500;
+
+  // Cache for processed data
+  private processedDataCache: {
+    stateMapping: StateNPAMapping | null;
+    countryData: CountryLergData[] | null;
+    timestamp: number;
+    recordCount: number;
+  } = {
+    stateMapping: null,
+    countryData: null,
+    timestamp: 0,
+    recordCount: 0
+  };
+
+  // Cache expiration time in milliseconds (5 minutes)
+  private readonly CACHE_EXPIRATION_MS = 5 * 60 * 1000;
+
+  /**
+   * Private constructor to prevent direct instantiation
+   * Use LergService.getInstance() instead
+   */
+  private constructor() {
+    console.log('Initializing LERG service singleton instance');
   }
 
-  async initializeDB() {
-    if (!this.db) {
-      const { getDB } = useDexieDB();
-      this.db = await getDB(DBName.LERG);
-      
-      // Don't automatically open the database here
-      // We'll open it when needed in specific methods
+  /**
+   * Get the singleton instance of LergService
+   * @returns The singleton instance
+   */
+  public static getInstance(): LergService {
+    if (!LergService.instance) {
+      LergService.instance = new LergService();
     }
-    return this.db;
+    return LergService.instance;
   }
 
+  /**
+   * Execute a database operation with retry logic for transient errors
+   * @param operation The operation to execute
+   * @param operationName Name of the operation for logging
+   * @param maxRetries Maximum number of retries
+   * @returns The result of the operation
+   */
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxRetries = this.MAX_RETRIES
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        // Don't retry if we've reached the maximum number of retries
+        if (attempt > maxRetries) {
+          console.error(`${operationName} failed after ${maxRetries} retries:`, error);
+          throw lastError;
+        }
+        
+        // Only retry for specific error types that might be transient
+        const errorMessage = lastError.message.toLowerCase();
+        const isTransient = 
+          errorMessage.includes('timeout') || 
+          errorMessage.includes('connection') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('temporarily');
+          
+        if (!isTransient) {
+          console.error(`${operationName} failed with non-transient error:`, error);
+          throw lastError;
+        }
+        
+        // Wait before retrying
+        const delay = this.RETRY_DELAY_MS * attempt;
+        console.warn(`${operationName} failed, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    // This should never happen, but TypeScript requires a return
+    throw lastError || new LergServiceError(`${operationName} failed for unknown reason`);
+  }
+
+  /**
+   * Get a connection to the database
+   * This method implements reference counting to manage connections
+   * @returns A promise that resolves to the database instance
+   */
+  async getConnection(): Promise<Dexie> {
+    try {
+      // Initialize DB if needed
+      if (!this.db) {
+        const { getDB } = useDexieDB();
+        this.db = await this.executeWithRetry(
+          async () => await getDB(DBName.LERG),
+          'Database initialization'
+        );
+      }
+      
+      // Open the database if it's not already open
+      if (!this.db.isOpen() && !this.isConnecting) {
+        this.isConnecting = true;
+        try {
+          await this.executeWithRetry(
+            async () => await this.db!.open(),
+            'Database open'
+          );
+          this.connectionError = null;
+          console.log('LERG database connection opened');
+        } catch (error) {
+          const connectionError = error instanceof Error ? error : new Error(String(error));
+          this.connectionError = new LergConnectionError(
+            'Failed to open database connection',
+            connectionError
+          );
+          console.error('Failed to open LERG database:', error);
+          throw this.connectionError;
+        } finally {
+          this.isConnecting = false;
+        }
+      }
+      
+      // Increment connection count
+      this.connectionCount++;
+      return this.db;
+    } catch (error) {
+      const connectionError = error instanceof Error ? error : new Error(String(error));
+      throw new LergConnectionError('Error getting database connection', connectionError);
+    }
+  }
+  
+  /**
+   * Release a database connection
+   * When all connections are released, the database will be closed
+   */
+  async releaseConnection(): Promise<void> {
+    if (!this.db) return;
+    
+    this.connectionCount = Math.max(0, this.connectionCount - 1);
+    
+    // Only close if no active connections and not in the middle of an operation
+    if (this.connectionCount === 0 && this.db.isOpen() && !this.isConnecting) {
+      try {
+        await this.executeWithRetry(
+          async () => await this.db!.close(),
+          'Database close'
+        );
+        console.log('LERG database connection closed');
+      } catch (error) {
+        console.error('Error closing LERG database connection:', error);
+      }
+    }
+  }
+
+  /**
+   * Check if the database has a connection error
+   * @returns True if there is a connection error
+   */
+  hasConnectionError(): boolean {
+    return this.connectionError !== null;
+  }
+
+  /**
+   * Get the current connection error if any
+   * @returns The connection error or null
+   */
+  getConnectionError(): Error | null {
+    return this.connectionError;
+  }
+
+  /**
+   * Get the current connection count
+   * @returns The number of active connections
+   */
+  getConnectionCount(): number {
+    return this.connectionCount;
+  }
+
+  /**
+   * Check if the database is currently connecting
+   * @returns True if the database is connecting
+   */
+  isCurrentlyConnecting(): boolean {
+    return this.isConnecting;
+  }
+
+  /**
+   * Deprecated: Use getConnection() instead
+   * Kept for backward compatibility
+   */
+  async initializeDB() {
+    console.warn('initializeDB() is deprecated, use getConnection() instead');
+    return this.getConnection();
+  }
+
+  /**
+   * Check if the cache is valid
+   * @returns True if the cache is valid and can be used
+   */
+  private isCacheValid(): boolean {
+    const now = Date.now();
+    const cacheAge = now - this.processedDataCache.timestamp;
+    
+    return (
+      this.processedDataCache.stateMapping !== null &&
+      this.processedDataCache.countryData !== null &&
+      this.processedDataCache.recordCount > 0 &&
+      cacheAge < this.CACHE_EXPIRATION_MS
+    );
+  }
+
+  /**
+   * Invalidate the processed data cache
+   * This should be called whenever the LERG data changes
+   */
+  invalidateCache(): void {
+    this.processedDataCache = {
+      stateMapping: null,
+      countryData: null,
+      timestamp: 0,
+      recordCount: 0
+    };
+    console.log('LERG processed data cache invalidated');
+  }
+
+  /**
+   * Check if LERG data exists in the database
+   * @returns Promise resolving to true if data exists, false otherwise
+   */
+  async hasData(): Promise<boolean> {
+    try {
+      const db = await this.getConnection();
+      
+      // Check if lerg table exists
+      if (!db.tables.some(t => t.name === 'lerg')) {
+        return false;
+      }
+      
+      // Check if there are records
+      const count = await db.table('lerg').count();
+      return count > 0;
+    } catch (error) {
+      console.error('Error checking if LERG data exists:', error);
+      return false;
+    } finally {
+      await this.releaseConnection();
+    }
+  }
+
+  /**
+   * Get the count of LERG records in the database
+   * @returns Promise resolving to the number of records
+   */
+  async getRecordCount(): Promise<number> {
+    try {
+      const db = await this.getConnection();
+      
+      // Check if lerg table exists
+      if (!db.tables.some(t => t.name === 'lerg')) {
+        return 0;
+      }
+      
+      // Get the count
+      return await db.table('lerg').count();
+    } catch (error) {
+      console.error('Error getting LERG record count:', error);
+      return 0;
+    } finally {
+      await this.releaseConnection();
+    }
+  }
+
+  /**
+   * Initialize the LERG table with data
+   * @param lergData The LERG data to initialize
+   */
   async initializeLergTable(lergData: LERGRecord[]): Promise<void> {
     try {
       // Get DB but don't auto-open it
-      const db = await this.initializeDB();
-      if (!db) throw new Error('Failed to initialize database');
+      const db = await this.getConnection();
+      if (!db) throw new LergConnectionError('Failed to initialize database');
 
       // Close any existing connection first
       if (db.isOpen()) {
         console.log('Closing existing LERG database before schema modification');
         await db.close();
+        this.connectionCount = 0; // Reset connection count since we closed the DB
       }
 
       // Check if the schema already exists and initialize if needed
       const hasLergTable = db.tables.some((t: Table) => t.name === 'lerg');
       if (!hasLergTable) {
         console.log('Creating new schema for LERG database');
-        // Create a new version with the lerg table
-        const newVersion = (db.verno || 0) + 1;
-        db.version(newVersion).stores({
-          lerg: '++id, npa, *state, *country',
-        });
+        try {
+          // Create a new version with the lerg table
+          const newVersion = (db.verno || 0) + 1;
+          db.version(newVersion).stores({
+            lerg: '++id, npa, *state, *country',
+          });
+        } catch (error) {
+          throw new LergSchemaError('Failed to create schema', 
+            error instanceof Error ? error : new Error(String(error))
+          );
+        }
       }
 
       // Now open the database with the correct schema
-      await db.open();
+      await this.executeWithRetry(
+        async () => await db.open(),
+        'Database open after schema modification'
+      );
       console.log('LERG database opened with schema version:', db.verno);
 
       // Clear and populate the table
@@ -59,41 +377,79 @@ export class LergService {
       
       // Insert the data in smaller batches to avoid transaction limits
       const BATCH_SIZE = 1000;
+      let processedCount = 0;
+      
       for (let i = 0; i < lergData.length; i += BATCH_SIZE) {
         const batch = lergData.slice(i, i + BATCH_SIZE);
-        await db.table('lerg').bulkPut(batch);
-        console.log(`Added batch ${i / BATCH_SIZE + 1} of LERG data: ${batch.length} records`);
+        await this.executeWithRetry(
+          async () => await db.table('lerg').bulkPut(batch),
+          `Data batch ${i / BATCH_SIZE + 1} insertion`
+        );
+        
+        processedCount += batch.length;
+        const progressPercent = Math.round((processedCount / lergData.length) * 100);
+        console.log(`Added batch ${i / BATCH_SIZE + 1} of LERG data: ${batch.length} records (${progressPercent}% complete)`);
       }
+      
+      // Invalidate cache since data has changed
+      this.invalidateCache();
       
       console.log('LERG data initialization completed successfully');
     } catch (error) {
-      console.error('Failed to initialize LERG data:', error);
-      throw error;
+      const dataError = error instanceof Error ? error : new Error(String(error));
+      throw new LergDataError('Failed to initialize LERG data', dataError);
+    } finally {
+      await this.releaseConnection();
     }
   }
 
+  /**
+   * Get all LERG records from the database
+   * @returns Promise resolving to an array of LERG records
+   */
   async getLergData(): Promise<LERGRecord[]> {
-    const db = await this.initializeDB();
-    if (!db.isOpen()) {
-      await db.open();
+    try {
+      const db = await this.getConnection();
+      
+      if (!db.isOpen()) {
+        await this.executeWithRetry(
+          async () => await db.open(),
+          'Database open for getLergData'
+        );
+      }
+      
+      return await db.table('lerg').toArray();
+    } catch (error) {
+      const dataError = error instanceof Error ? error : new Error(String(error));
+      throw new LergDataError('Failed to get LERG data', dataError);
+    } finally {
+      await this.releaseConnection();
     }
-    return await db.table('lerg').toArray();
   }
 
+  /**
+   * Clear all LERG data from the database and store
+   */
   async clearLergData(): Promise<void> {
     try {
       // Get DB reference
-      const db = await this.initializeDB();
+      const db = await this.getConnection();
       
       // Make sure the database is open
       if (!db.isOpen()) {
-        await db.open();
+        await this.executeWithRetry(
+          async () => await db.open(),
+          'Database open for clearLergData'
+        );
       }
       
       // Clear IndexedDB table if it exists
       if (db.tables.some(t => t.name === 'lerg')) {
         console.log('Clearing LERG data from IndexedDB');
-        await db.table('lerg').clear();
+        await this.executeWithRetry(
+          async () => await db.table('lerg').clear(),
+          'Clear LERG table'
+        );
         console.log('IndexedDB LERG data cleared');
       } else {
         console.log('No LERG table found in IndexedDB to clear');
@@ -111,41 +467,148 @@ export class LergService {
           lastUpdated: null,
         },
       });
+      
+      // Invalidate cache
+      this.invalidateCache();
+      
       console.log('LERG store cleared');
     } catch (error) {
-      console.error('Failed to clear LERG data:', error);
-      throw error;
+      const dataError = error instanceof Error ? error : new Error(String(error));
+      throw new LergDataError('Failed to clear LERG data', dataError);
+    } finally {
+      await this.releaseConnection();
     }
   }
 
+  /**
+   * Get processed LERG data with caching
+   * @param forceRefresh Force a refresh of the cache
+   * @returns Promise resolving to processed LERG data
+   */
+  async getProcessedData(forceRefresh = false): Promise<{
+    stateMapping: StateNPAMapping;
+    countryData: CountryLergData[];
+    count: number;
+  }> {
+    // Check if we can use the cache
+    if (!forceRefresh && this.isCacheValid()) {
+      console.log('Using cached LERG processed data');
+      return {
+        stateMapping: this.processedDataCache.stateMapping!,
+        countryData: this.processedDataCache.countryData!,
+        count: this.processedDataCache.recordCount
+      };
+    }
+    
+    // Process the data if cache is invalid or refresh is forced
+    const result = await this.processLergData();
+    const count = await this.getRecordCount();
+    
+    // Update the cache
+    this.processedDataCache = {
+      stateMapping: result.stateMapping,
+      countryData: result.countryData,
+      timestamp: Date.now(),
+      recordCount: count
+    };
+    
+    return {
+      ...result,
+      count
+    };
+  }
+
+  /**
+   * Process LERG data into application format
+   * @returns Promise resolving to processed LERG data
+   */
   async processLergData(): Promise<{
     stateMapping: StateNPAMapping;
     countryData: CountryLergData[];
   }> {
-    const db = await this.initializeDB();
-    
-    // Ensure database is open
-    if (!db.isOpen()) {
-      await db.open();
-    }
-    
-    // Check if lerg table exists
-    if (!db.tables.some(t => t.name === 'lerg')) {
-      console.log('No LERG table found, returning empty data');
+    try {
+      const db = await this.getConnection();
+      
+      // Ensure database is open
+      if (!db.isOpen()) {
+        await this.executeWithRetry(
+          async () => await db.open(),
+          'Database open for processLergData'
+        );
+      }
+      
+      // Check if lerg table exists
+      if (!db.tables.some(t => t.name === 'lerg')) {
+        console.log('No LERG table found, returning empty data');
+        return {
+          stateMapping: {},
+          countryData: [],
+        };
+      }
+      
+      // Get the total count first
+      const totalCount = await db.table('lerg').count();
+      console.log(`Processing ${totalCount} LERG records from IndexedDB`);
+      
+      // Process data in chunks for better memory usage with large datasets
+      const CHUNK_SIZE = 5000;
+      const stateMapping: StateNPAMapping = {};
+      const canadaProvinces: Record<string, Set<string>> = {};
+      const countryMap = new Map<string, Set<string>>();
+      
+      // Process data in chunks
+      let offset = 0;
+      while (offset < totalCount) {
+        const records = await db.table('lerg')
+          .offset(offset)
+          .limit(CHUNK_SIZE)
+          .toArray();
+          
+        console.log(`Processing LERG chunk ${offset}-${offset + records.length} of ${totalCount}`);
+        
+        // Process this chunk
+        this.processDataChunk(records, stateMapping, canadaProvinces, countryMap);
+        
+        offset += CHUNK_SIZE;
+      }
+      
+      // Convert country map to CountryLergData array
+      const countryData: CountryLergData[] = Array.from(countryMap.entries()).map(([country, npas]) => ({
+        country,
+        npaCount: npas.size,
+        npas: Array.from(npas).sort(),
+        // Add provinces for Canada
+        provinces:
+          country === 'CA'
+            ? Object.entries(canadaProvinces).map(([code, npas]) => ({
+                code,
+                npas: Array.from(npas).sort(),
+              }))
+            : undefined,
+      }));
+
       return {
-        stateMapping: {},
-        countryData: [],
+        stateMapping,
+        countryData: countryData.sort((a, b) => b.npaCount - a.npaCount),
       };
+    } catch (error) {
+      const dataError = error instanceof Error ? error : new Error(String(error));
+      throw new LergDataError('Failed to process LERG data', dataError);
+    } finally {
+      await this.releaseConnection();
     }
-    
-    const records = await db.table('lerg').toArray();
-    console.log(`Processing ${records.length} LERG records from IndexedDB`);
-
-    // Process state mappings
-    const stateMapping: StateNPAMapping = {};
-    const canadaProvinces: Record<string, Set<string>> = {};
-    const countryMap = new Map<string, Set<string>>();
-
+  }
+  
+  /**
+   * Process a chunk of LERG data
+   * Helper method for processLergData to handle data in chunks
+   */
+  private processDataChunk(
+    records: LERGRecord[],
+    stateMapping: StateNPAMapping,
+    canadaProvinces: Record<string, Set<string>>,
+    countryMap: Map<string, Set<string>>
+  ): void {
     // First pass - identify all US records including California
     const usRecords = records.filter(
       record => record.country === 'US' || (record.state === 'CA' && record.country === 'US')
@@ -153,11 +616,13 @@ export class LergService {
 
     // Second pass - identify true Canadian records
     const canadianRecords = records.filter(
-      record => record.country === 'CA' && !(record.state === 'CA' && record.country === 'US')
+      record => record.country === 'CA'
     );
 
-    // Third pass - other countries
-    const otherRecords = records.filter(record => record.country !== 'US' && record.country !== 'CA');
+    // Third pass - other countries 
+    const otherRecords = records.filter(
+      record => record.country !== 'US' && record.country !== 'CA'
+    );
 
     // Process US records
     for (const record of usRecords) {
@@ -194,25 +659,32 @@ export class LergService {
       }
       countryMap.get(record.country)!.add(record.npa);
     }
+  }
 
-    // Convert country map to CountryLergData array
-    const countryData: CountryLergData[] = Array.from(countryMap.entries()).map(([country, npas]) => ({
-      country,
-      npaCount: npas.size,
-      npas: Array.from(npas).sort(),
-      // Add provinces for Canada
-      provinces:
-        country === 'CA'
-          ? Object.entries(canadaProvinces).map(([code, npas]) => ({
-              code,
-              npas: Array.from(npas).sort(),
-            }))
-          : undefined,
-    }));
-
-    return {
-      stateMapping,
-      countryData: countryData.sort((a, b) => b.npaCount - a.npaCount),
-    };
+  /**
+   * Get the last updated timestamp from the database
+   * @returns Promise resolving to an object with the lastUpdated timestamp
+   */
+  public async getLastUpdatedTimestamp(): Promise<{ lastUpdated: string | null }> {
+    try {
+      const db = await this.getConnection();
+      
+      // Get the most recent record to find the last updated timestamp
+      const lastRecord = await db.table('lerg').orderBy('last_updated').reverse().first();
+      
+      await this.releaseConnection();
+      
+      return {
+        lastUpdated: lastRecord?.last_updated || null
+      };
+    } catch (error) {
+      console.error('Failed to get last updated timestamp:', error);
+      await this.releaseConnection();
+      
+      throw new LergDataError(
+        'Failed to get last updated timestamp',
+        error instanceof Error ? error : undefined
+      );
+    }
   }
 }
