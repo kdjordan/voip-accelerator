@@ -27,7 +27,7 @@
 
     <!-- Report Type Tabs -->
     <div
-      v-if="showReportTabs"
+      
       class="bg-gray-800 px-6 pb-6"
     >
       <div class="flex items-center border-b border-gray-700">
@@ -54,7 +54,7 @@
           >
         </div>
         </button>
-        <button
+        <button v-if="azStore.filesUploaded.size > 0"
           @click="handleReset"
           class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors ml-auto text-red-400"
         >
