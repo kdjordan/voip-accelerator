@@ -27,10 +27,18 @@ export interface AzPricingReport {
 }
 
 export interface AzCodeReport {
-  fileName: string;
-  totalCodes: number;
-  totalDestinations: number;
-  uniqueDestinationsPercentage: number;
+  file1: {
+    fileName: string;
+    totalCodes: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
+  };
+  file2: {
+    fileName: string;
+    totalCodes: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
+  };
   matchedCodes: number;
   nonMatchedCodes: number;
   matchedCodesPercentage: number;
