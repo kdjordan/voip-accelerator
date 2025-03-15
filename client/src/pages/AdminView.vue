@@ -627,6 +627,7 @@
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { lergApiService } from '@/services/lerg-api.service';
+  import { LergService } from '@/services/lerg.service';
   import { ChevronDownIcon, TrashIcon, ArrowUpTrayIcon, DocumentIcon } from '@heroicons/vue/24/outline';
   import { getCountryName } from '@/types/constants/country-codes';
   import { getStateName } from '@/types/constants/state-codes';
@@ -641,6 +642,7 @@
   import { DBName } from '@/types/app-types';
   import { AZService } from '@/services/az.service';
   import { USService } from '@/services/us.service';
+  import useDexieDB from '@/composables/useDexieDB';
 
   const store = useLergStore();
   const lergFileInput = ref<HTMLInputElement>();
@@ -694,10 +696,6 @@
   const metrics = ref<PerformanceMetric[]>([]);
   const isRunningTests = ref(false);
   const showPerformanceSection = ref(false);
-  
-  // Services
-  const azService = new AZService();
-  const usService = new USService();
 
   // Computed properties for storage management
   const currentStrategy = computed(() => {
@@ -766,12 +764,47 @@
 
   onMounted(async () => {
     await checkConnection();
-    console.log('Initializing LERG service...');
+    console.log('Checking LERG service status...');
     
     try {
-      // Initialize LERG service with proper error handling
-      await lergApiService.initialize();
-      console.log('LERG service initialization complete');
+      // First check if we already have LERG data in the store
+      if (store.stats?.totalRecords > 0) {
+        console.log('LERG data already loaded in store, skipping initialization');
+        dbStatus.value = {
+          connected: true,
+          error: '',
+        };
+      } else {
+        // Check if data exists in IndexedDB before initializing
+        const { exists, count } = await lergApiService.checkLergDataExists();
+        
+        if (exists) {
+          console.log(`LERG data already exists in IndexedDB with ${count} records, initializing from local data`);
+          
+          // Initialize the service but don't redownload data
+          // The service will load data from IndexedDB
+          if (!store.isLocallyStored) {
+            // Only process the data if it's not already in the store
+            const lergService = new LergService();
+            const { stateMapping, countryData } = await lergService.processLergData();
+            
+            // Update store with processed data
+            store.setStateNPAs(stateMapping);
+            store.setCountryData(countryData);
+            store.setLergStats(count);
+            store.isLocallyStored = true;
+          }
+        } else {
+          console.log('No LERG data found in IndexedDB, initializing with fresh data');
+          await lergApiService.initialize();
+        }
+      }
+      
+      // Update connection status
+      dbStatus.value = {
+        connected: true,
+        error: '',
+      };
     } catch (error) {
       console.error('Failed to initialize LERG service:', error);
       // Update UI to show error state

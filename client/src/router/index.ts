@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { adminRoutes } from './admin-routes';
-import AdminLergView from '../pages/AdminLergView.vue';
+import AdminLergView from '../pages/AdminView.vue';
 
 const router = createRouter({
   history: createWebHistory(),

@@ -134,7 +134,7 @@
     },
     {
       name: 'Lerg Admin',
-      to: '/admin/lerg',
+      to: '/admin',
       icon: Cog6ToothIcon,
     },
   ]);
