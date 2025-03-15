@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen text-white p-8 w-full">
+  <div class="min-h-screen text-fbWhite p-8 w-full">
     <h1 class="mb-8">
       <span
         class="text-sizeXl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
