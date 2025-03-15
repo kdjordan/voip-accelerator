@@ -23,8 +23,8 @@
               </div>
               
               <div class="mt-3 md:mt-0">
-                <span class="bg-accent/20 text-accent px-3 py-1 rounded-full text-sm font-medium">
-                  {{ planLabel }}
+                <span class="bg-accent/20 text-accent px-3 py-1 rounded-full text-sm font-medium uppercase">
+                  {{ sharedStore.user.currentPlan }} Plan
                 </span>
               </div>
             </div>
@@ -224,17 +224,6 @@
       hour: '2-digit',
       minute: '2-digit'
     });
-  });
-  
-  const planLabel = computed(() => {
-    switch (currentPlan.value) {
-      case PlanTier.PRO:
-        return 'Pro Plan';
-      case PlanTier.ENTERPRISE:
-        return 'Enterprise Plan';
-      default:
-        return 'Free Plan';
-    }
   });
 
   // Component state

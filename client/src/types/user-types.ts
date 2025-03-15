@@ -1,6 +1,6 @@
 // User Tiers
 export const PlanTier = {
-  FREE: 'free',
+  BASIC: 'basic',
   PRO: 'pro',
   ENTERPRISE: 'enterprise',
 } as const;
