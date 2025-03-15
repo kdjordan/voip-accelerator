@@ -11,13 +11,13 @@ export const useSharedStore = defineStore('shared', {
     user: {
       info: {
         id: 'usr_12345',
-        username: 'Sarah Johnson',
-        email: 'sarah.johnson@example.com',
-        planTier: PlanTier.PRO,
+        username: 'Craig Phillips',
+        email: 'c.phillips@v-tell.com',
+        planTier: PlanTier.BASIC,
         lastLoggedIn: new Date('2023-11-12T14:30:00'),
         createdAt: new Date('2022-06-15T09:00:00')
       } as UserInfo,
-      currentPlan: PlanTier.PRO as PlanTierType,
+      currentPlan: PlanTier.BASIC as PlanTierType,
       features: {
         unlimitedUploads: false,
         advancedAnalytics: false,
@@ -38,7 +38,7 @@ export const useSharedStore = defineStore('shared', {
   getters: {
     getSideNavOpen: state => state.ui.isSideNavOpen,
     isLoggedIn: state => state.user.info !== null,
-    isPro: state => state.user.currentPlan === PlanTier.PRO,
+    hasPlanType: state => state.user.currentPlan,
     userEmail: state => state.user.info?.email ?? '',
     username: state => state.user.info?.username ?? '',
     currentPlan: state => state.user.currentPlan,
@@ -67,7 +67,7 @@ export const useSharedStore = defineStore('shared', {
     },
 
     updateFeatures() {
-      if (this.user.currentPlan === PlanTier.PRO) {
+      if (this.user.currentPlan === PlanTier.BASIC) {
         this.user.features = {
           unlimitedUploads: true,
           advancedAnalytics: true,
@@ -92,7 +92,7 @@ export const useSharedStore = defineStore('shared', {
 
     clearUser() {
       this.user.info = null as unknown as UserInfo;
-      this.user.currentPlan = PlanTier.FREE;
+      this.user.currentPlan = PlanTier.BASIC;
       this.updateFeatures();
       this.ui.isSideNavOpen = false;
       this.user.usage = {
