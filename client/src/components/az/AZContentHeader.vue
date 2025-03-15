@@ -10,13 +10,13 @@
           <!-- User Journey Section -->
           <div
             :key="currentJourneyState"
-            class="min-h-24"
+            class="min-h-24 "
           >
             <!-- Title -->
             <h3 class="text-sizeLg tracking-wide text-white mb-2">{{ journeyMessage.title }}</h3>
             <!-- Message -->
             <p
-              class="text-base text-gray-400"
+              class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md text-blue-400"
               v-html="journeyMessage.message"
             ></p>
           </div>
@@ -27,12 +27,12 @@
 
     <!-- Report Type Tabs -->
     <div
-      v-if="azStore.reportsGenerated"
+      v-if="showReportTabs"
       class="bg-gray-800 px-6 pb-6"
     >
       <div class="flex items-center border-b border-gray-700">
         <button
-          v-for="type in reportTypes"
+          v-for="type in availableReportTypes"
           :key="type"
           @click="azStore.setActiveReportType(type)"
           class="mr-8 py-4 px-1 relative"
@@ -44,13 +44,16 @@
             },
           ]"
         >
-          <span v-if="type !== 'files'">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
+          <span v-if="type === 'code' && azStore.reportsGenerated">Code Compare</span>
+          <span v-else-if="type !== 'files'">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
           <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
           <!-- Active Tab Indicator -->
           <div
             v-if="azStore.activeReportType === type"
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
-          ></div>
+          >
+        {{ azStore.activeReportType }}
+        </div>
         </button>
         <button
           @click="handleReset"
@@ -74,10 +77,40 @@
   const { deleteDatabase } = useDexieDB();
 
   const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
+  
+  // Computed property to determine if report tabs should be shown
+  const showReportTabs = computed(() => {
+    return azStore.reportsGenerated || azStore.hasSingleFileReport;
+  });
+  
+  // Compute available report types based on the current state
+  const availableReportTypes = computed(() => {
+    // If we have full reports, show all report types
+    if (azStore.reportsGenerated) {
+      return reportTypes;
+    }
+    
+    // If we have two files uploaded, show Files and Code tabs
+    if (azStore.isFull) {
+      return [ReportTypes.FILES, ReportTypes.CODE];
+    }
+    
+    // If we have a single file report, only show files tab
+    if (azStore.hasSingleFileReport) {
+      return [ReportTypes.FILES];
+    }
+    
+    // Default to just files
+    return [ReportTypes.FILES];
+  });
 
   const currentJourneyState = computed<JourneyState>(() => {
     if (azStore.reportsGenerated) {
       return JOURNEY_STATE.REPORTS_READY;
+    }
+    
+    if (azStore.hasSingleFileReport) {
+      return JOURNEY_STATE.ONE_FILE_REPORT;
     }
 
     const uploadedCount = azStore.getNumberOfFilesUploaded;

@@ -30,6 +30,7 @@ export interface DomainStore<P, C> {
   hasInvalidRows: (fileName: string) => boolean;
   getInvalidRowsForFile: (fileName: string) => InvalidAzRow[];
   getAllInvalidRows: Record<string, InvalidAzRow[]>;
+  hasSingleFileReport: boolean;
 
   // Actions
   addFileUploaded: (componentName: string, fileName: string) => void;

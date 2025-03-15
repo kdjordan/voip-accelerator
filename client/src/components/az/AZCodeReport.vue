@@ -6,7 +6,7 @@
     >
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div
-          v-for="file in fileKeys"
+          v-for="file in visibleFileKeys"
           :key="file"
           class="rounded-lg overflow-hidden border border-fbBorder"
         >
@@ -107,7 +107,11 @@
         </div>
       </div>
 
-      <div class="rounded-lg overflow-hidden border border-fbBorder">
+      <!-- Comparison Section - Only show when two files are available -->
+      <div 
+        v-if="isTwoFileReport"
+        class="rounded-lg overflow-hidden border border-fbBorder"
+      >
         <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
           <span class="text-accent">Comparison</span>
         </h2>
@@ -138,6 +142,18 @@
           </table>
         </div>
       </div>
+      
+      <!-- Single File Message - Only show when one file is available -->
+      <div 
+        v-if="!isTwoFileReport"
+        class="rounded-lg overflow-hidden border border-fbBorder bg-accent/5"
+      >
+        <div class="p-6 text-center">
+          <p class="text-gray-300">
+            Upload a second file to see a detailed comparison and find opportunities.
+          </p>
+        </div>
+      </div>
     </div>
 
     <div
@@ -162,6 +178,24 @@
   const store = useAzStore();
   const fileKeys = ['file1', 'file2'] as const;
   type FileKey = (typeof fileKeys)[number];
+  
+  // Determine which file keys to show based on the report
+  const visibleFileKeys = computed(() => {
+    if (!props.report) return [];
+    
+    // If file2 has a filename, show both files
+    if (props.report.file2.fileName) {
+      return fileKeys;
+    }
+    
+    // Otherwise, only show file1
+    return ['file1'];
+  });
+  
+  // Determine if this is a two-file report or a single-file report
+  const isTwoFileReport = computed(() => {
+    return props.report?.file2.fileName !== '';
+  });
 
   // State for invalid rows UI
   const expandedInvalidSections = reactive<Record<FileKey, boolean>>({
