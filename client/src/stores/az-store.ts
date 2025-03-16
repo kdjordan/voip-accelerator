@@ -15,6 +15,11 @@ export const useAzStore = defineStore('az', {
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidAzRow[]>(),
     inMemoryData: new Map<string, AZStandardizedData[]>(),
+    fileStats: new Map<string, {
+      totalCodes: number;
+      totalDestinations: number;
+      uniqueDestinationsPercentage: number;
+    }>(),
   }),
 
   getters: {
@@ -40,18 +45,8 @@ export const useAzStore = defineStore('az', {
         return state.codeReport;
       }
       
-      // Otherwise, if we have a single file report, return that
-      // if (state.singleFileReportReady && state.singleFileReport) {
-      //   return state.singleFileReport;
-      // }
-      
-      // If no reports are available, return null
       return null;
     },
-
-    // hasSingleFileReport: state => state.singleFileReportReady && state.singleFileReport !== null,
-
-    // getSingleFileReport: state => state.singleFileReport,
 
     getFileNameByComponent: state => (componentId: string) => {
       const file = state.filesUploaded.get(componentId);
@@ -96,12 +91,20 @@ export const useAzStore = defineStore('az', {
       return result;
     },
 
-    // shouldShowCodeReport: state => {
-    //   return state.reportsGenerated || state.singleFileReportReady;
-    // },
-
     shouldShowPricingReport: state => {
       return state.reportsGenerated;
+    },
+
+    getFileStats: state => (componentId: string) => {
+      return state.fileStats.get(componentId) || {
+        totalCodes: 0,
+        totalDestinations: 0,
+        uniqueDestinationsPercentage: 0
+      };
+    },
+
+    hasSingleFileReport: state => {
+      return state.fileStats.size > 0 && state.fileStats.size < 2;
     },
   },
 
@@ -122,6 +125,7 @@ export const useAzStore = defineStore('az', {
       this.showUploadComponents = true;
       this.invalidRows.clear();
       this.inMemoryData.clear();
+      this.fileStats.clear();
     },
 
     setReports(pricing: AzPricingReport, code: AzCodeReport) {
@@ -132,17 +136,6 @@ export const useAzStore = defineStore('az', {
       this.activeReportType = 'files'; // Default to files view when reports are generated
     },
 
-    setSingleFileReport(report: AzCodeReport) {
-      // this.singleFileReport = report;
-      // this.singleFileReportReady = true;
-      // Don't automatically switch to code view anymore since code reports
-      // are shown under the upload zones
-    },
-
-    // setSingleFileReportReady(ready: boolean) {
-    //   this.singleFileReportReady = ready;
-    // },
-
     setActiveReportType(type: ReportType) {
       this.activeReportType = type;
     },
@@ -150,14 +143,37 @@ export const useAzStore = defineStore('az', {
     removeFile(fileName: string) {
       const tableName = fileName.toLowerCase().replace('.csv', '');
       
-      this.filesUploaded.delete(fileName);
-
-      this.invalidRows.delete(fileName);
+      // Find the component ID associated with this file
+      let componentId = '';
+      for (const [key, value] of this.filesUploaded.entries()) {
+        if (value.fileName === fileName) {
+          componentId = key;
+          break;
+        }
+      }
       
-      if (this.isUsingMemoryStorage) {
-        this.inMemoryData.delete(tableName);
+      if (componentId) {
+        // Remove the file from filesUploaded
+        this.filesUploaded.delete(componentId);
+        
+        // Clear file stats for this component
+        this.clearFileStats(componentId);
+        
+        console.log(`[AzStore] Removed file ${fileName} from component ${componentId}`);
+      } else {
+        console.warn(`[AzStore] Could not find component ID for file ${fileName}`);
       }
 
+      // Clear any invalid rows for this file
+      this.invalidRows.delete(fileName);
+      
+      // Clear in-memory data if using memory storage
+      if (this.isUsingMemoryStorage) {
+        this.inMemoryData.delete(tableName);
+        console.log(`[AzStore] Cleared in-memory data for ${tableName}`);
+      }
+
+      // Reset reports if we now have fewer than 2 files
       if (this.filesUploaded.size < 2) {
         this.reportsGenerated = false;
         this.pricingReport = null;
@@ -165,17 +181,7 @@ export const useAzStore = defineStore('az', {
         this.activeReportType = 'files';
       }
 
-      if (this.filesUploaded.size === 0) {
-      } else if (this.filesUploaded.size === 1) {
-        // If we still have one file, regenerate the single file report
-        const remainingComponentId = Array.from(this.filesUploaded.keys())[0];
-        const remainingFileName = this.getFileNameByComponent(remainingComponentId);
-        const tableName = remainingFileName.toLowerCase().replace('.csv', '');
-        
-        // Get the data for the remaining file
-        const data = this.getInMemoryData(tableName);
-      }
-
+      // Keep upload components visible
       this.showUploadComponents = true;
     },
 
@@ -236,6 +242,22 @@ export const useAzStore = defineStore('az', {
 
     clearAllInMemoryData() {
       this.inMemoryData.clear();
+    },
+
+    setFileStats(componentId: string, stats: {
+      totalCodes: number;
+      totalDestinations: number;
+      uniqueDestinationsPercentage: number;
+    }) {
+      this.fileStats.set(componentId, stats);
+    },
+
+    clearFileStats(componentId: string) {
+      this.fileStats.delete(componentId);
+    },
+
+    clearAllFileStats() {
+      this.fileStats.clear();
     }
   },
 }) as unknown as () => DomainStore<AzPricingReport, AzCodeReport>;

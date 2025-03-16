@@ -15,6 +15,11 @@ export interface DomainStore<P, C> {
   codeReport: C | null;
   tempFiles: Map<string, File>;
   invalidRows: Map<string, InvalidAzRow[]>;
+  fileStats: Map<string, {
+    totalCodes: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
+  }>;
 
   // Getters
   isComponentDisabled: (componentName: string) => boolean;
@@ -31,6 +36,11 @@ export interface DomainStore<P, C> {
   getInvalidRowsForFile: (fileName: string) => InvalidAzRow[];
   getAllInvalidRows: Record<string, InvalidAzRow[]>;
   hasSingleFileReport: boolean;
+  getFileStats: (componentId: string) => {
+    totalCodes: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
+  };
 
   // Actions
   addFileUploaded: (componentName: string, fileName: string) => void;
@@ -60,6 +70,15 @@ export interface DomainStore<P, C> {
   removeInMemoryData: (tableName: string) => void;
   clearAllInMemoryData: () => void;
   getInMemoryTables: Record<string, number>;
+  
+  // File stats methods
+  setFileStats: (componentId: string, stats: {
+    totalCodes: number;
+    totalDestinations: number;
+    uniqueDestinationsPercentage: number;
+  }) => void;
+  clearFileStats: (componentId: string) => void;
+  clearAllFileStats: () => void;
 }
 
 // Union type of all possible standardized data types

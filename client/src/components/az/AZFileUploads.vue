@@ -60,8 +60,8 @@
                       </div>
                       
                       <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2"
-                        :class="uploadError.az1 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
+                        v-if="!uploadError.az1"
+                        class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
                       />
                       <p class="mt-2 text-base" :class="uploadError.az1 ? 'text-red-500' : 'text-accent'">
                         {{ uploadError.az1 ? 'Please try again' : 'DRAG & DROP to upload or CLICK to select file' }}
@@ -107,37 +107,7 @@
             </div>
             
             <!-- Single File Report Section (Only visible when one file is uploaded) -->
-            <div  v-if="azStore.getFileNameByComponent('az1') !== ''" class="mt-8 pt-8 border-t border-gray-700/50">
-              <!-- Code Report heading with file name pill -->
-              <div class="mb-4 flex items-center justify-between">
-                <span class="text-xl text-fbWhite font-secondary">Code Report</span>
-
-                
-                <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50">
-                  <span class="text-sm text-accent">{{ azStore.getFileNameByComponent('az1') }}</span>
-                </div>
-              </div>
-              
-              <!-- Code Report Content - Dark bento box style -->
-              <div class="bg-gray-900 rounded-lg p-4">
-                <div class="space-y-4">
-                  <div class="bg-gray-800 p-3 rounded-lg">
-                    <div class="text-gray-400 mb-1">Total Codes:</div>
-                    <div class="text-xl text-white">{{ fileStats['az1'].totalCodes }}</div>
-                  </div>
-                  
-                  <div class="bg-gray-800 p-3 rounded-lg">
-                    <div class="text-gray-400 mb-1">Total Destinations:</div>
-                    <div class="text-xl text-white">{{ fileStats['az1'].totalDestinations }}</div>
-                  </div>
-                  
-                  <div class="bg-gray-800 p-3 rounded-lg">
-                    <div class="text-gray-400 mb-1">Unique Destinations Percentage:</div>
-                    <div class="text-xl text-white">{{ fileStats['az1'].uniqueDestinationsPercentage }}%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AzCodeSummary componentId="az1" />
           </div>
 
           <!-- Vertical Divider -->
@@ -193,8 +163,8 @@
                         </div>
                         
                         <ArrowUpTrayIcon
-                          class="w-10 h-10 mx-auto border rounded-full p-2"
-                          :class="uploadError.az2 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
+                          v-if="!uploadError.az2"
+                          class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
                         />
                         <p class="mt-2 text-base" :class="uploadError.az2 ? 'text-red-500' : 'text-accent'">
                           {{ uploadError.az2 ? 'Please try again' : 'DRAG & DROP to upload or CLICK to select file' }}
@@ -239,35 +209,7 @@
               </div>
               
               <!-- Single File Report Section for second file -->
-              <div v-if="azStore.getFileNameByComponent('az2') !== ''" class="mt-8 pt-8 border-t border-gray-700/50">
-                <!-- Code Report heading with file name pill -->
-                <div class="mb-4 flex items-center justify-between">
-                  <span class="text-xl text-fbWhite font-secondary">Code Report</span>
-                  <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50">
-                    <span class="text-sm text-accent">{{ azStore.getFileNameByComponent('az2') }}</span>
-                  </div>
-                </div>
-                
-                <!-- Code Report Content - Dark bento box style -->
-                <div class="bg-gray-900 rounded-lg p-4">
-                  <div class="space-y-4">
-                    <div class="bg-gray-800 p-3 rounded-lg">
-                      <div class="text-gray-400 mb-1">Total Codes:</div>
-                      <div class="text-xl text-white">{{ fileStats['az2'].totalCodes }}</div>
-                    </div>
-                    
-                    <div class="bg-gray-800 p-3 rounded-lg">
-                      <div class="text-gray-400 mb-1">Total Destinations:</div>
-                      <div class="text-xl text-white">{{ fileStats['az2'].totalDestinations }}</div>
-                    </div>
-                    
-                    <div class="bg-gray-800 p-3 rounded-lg">
-                      <div class="text-gray-400 mb-1">Unique Destinations Percentage:</div>
-                      <div class="text-xl text-white">{{ fileStats['az2'].uniqueDestinationsPercentage }}%</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <AzCodeSummary componentId="az2" />
             </div>
             <!-- Empty State Message when no first file is uploaded -->
             <div 
@@ -275,14 +217,6 @@
               class="h-[120px] flex items-center justify-center text-gray-500"
             >
               <p>Upload a file on the left side first</p>
-            </div>
-            
-            <!-- Error State for Duplicate File -->
-            <div v-if="uploadError.az2 && uploadError.az2.includes('already been uploaded')" class="mt-4">
-              <div class="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-center">
-                <p class="text-sm text-red-400">{{ uploadError.az2 }}</p>
-                <p class="text-sm text-red-400 mt-1">Please try again</p>
-              </div>
             </div>
           </div>
         </div>
@@ -325,7 +259,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted, computed, watch } from 'vue';
+  import { ref, reactive, onMounted, computed } from 'vue';
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useAzStore } from '@/stores/az-store';
@@ -338,6 +272,7 @@
   import { AZService } from '@/services/az.service';
   import { storageConfig } from '@/config/storage-config';
   import { ReportTypes } from '@/types';
+  import AzCodeSummary from '@/components/az/AzCodeSummary.vue';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -364,58 +299,6 @@
   const uploadError = reactive<Record<ComponentId, string | null>>({
     az1: null,
     az2: null
-  });
-
-  // Single file stats
-  const fileStats = reactive<Record<ComponentId, {
-    totalCodes: number;
-    totalDestinations: number;
-    uniqueDestinationsPercentage: number;
-  }>>({
-    az1: {
-      totalCodes: 0,
-      totalDestinations: 0,
-      uniqueDestinationsPercentage: 0
-    },
-    az2: {
-      totalCodes: 0,
-      totalDestinations: 0,
-      uniqueDestinationsPercentage: 0
-    }
-  });
-
-  // Load single file stats when a file is uploaded
-  async function loadSingleFileStats(componentId: ComponentId) {
-    try {
-      const fileName = azStore.getFileNameByComponent(componentId);
-      if (!fileName) return;
-      
-      const tableName = fileName.toLowerCase().replace('.csv', '');
-      const data = await azService.getData(tableName);
-      
-      if (!data || data.length === 0) return;
-      
-      // Calculate stats
-      const totalCodes = data.length;
-      const uniqueDestinations = new Set(data.map(item => item.destName)).size;
-      const uniquePercentage = ((uniqueDestinations / totalCodes) * 100).toFixed(2);
-      
-      // Update reactive object for the specific component
-      fileStats[componentId] = {
-        totalCodes,
-        totalDestinations: uniqueDestinations,
-        uniqueDestinationsPercentage: parseFloat(uniquePercentage)
-      };
-    } catch (error) {
-      console.error('Error loading single file stats:', error);
-    }
-  }
-
-  // Watch for changes in file uploads
-  watch(() => azStore.hasSingleFileReport, (newValue) => {
-    if (newValue) {
-      loadSingleFileStats('az1');
-    }
   });
 
   // Drag and drop handlers
@@ -493,9 +376,6 @@
     console.log('adding file to store', componentName, fileName);
     azStore.addFileUploaded(componentName, fileName);
     console.log(`File uploaded for ${componentName}: ${fileName}`);
-    
-    // Load stats for the uploaded file
-    await loadSingleFileStats(componentName);
   }
 
   async function handleRemoveFile(componentName: ComponentId) {
@@ -504,8 +384,15 @@
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
+      
+      // First, remove the data from the appropriate storage
       await azService.removeTable(tableName);
-      azStore.removeFile(componentName);
+      
+      // Then, remove the file from the store
+      // Note: The removeFile method in the store now handles clearing fileStats
+      azStore.removeFile(fileName);
+      
+      console.log(`File ${fileName} removed successfully from component ${componentName}`);
     } catch (error) {
       console.error('Error removing file:', error);
     }
@@ -628,12 +515,6 @@
       uploadError[componentId] = 'Only CSV files are accepted';
       return;
     }
-    
-    // Check for duplicate filename
-    if (azStore.hasExistingFile(file.name)) {
-      uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
-      return;
-    }
 
     azStore.setTempFile(componentId, file);
 
@@ -703,11 +584,4 @@
   function viewSingleFileReport() {
     azStore.setActiveReportType(ReportTypes.CODE);
   }
-
-  // Load stats on component mount if a file is already uploaded
-  onMounted(async () => {
-    if (azStore.hasSingleFileReport && !azStore.isFull) {
-      await loadSingleFileStats('az1');
-    }
-  });
 </script>

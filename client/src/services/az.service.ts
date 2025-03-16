@@ -89,8 +89,24 @@ export class AZService {
 
             this.store.addFileUploaded(file.name, tableName);
             
-            // Generate single-file report after successful upload
-            await this.generateSingleFileReport(file.name, validRecords);
+            // Get the correct component ID based on which upload zone is being used
+            // We need to check the filesUploaded map to determine the correct component ID
+            let componentId = '';
+            
+            // Check if this file was just added to az1 or az2
+            if (this.store.getFileNameByComponent('az1') === file.name) {
+              componentId = 'az1';
+            } else if (this.store.getFileNameByComponent('az2') === file.name) {
+              componentId = 'az2';
+            } else {
+              // If we can't determine the component ID, default to az1 if it's empty
+              componentId = this.store.getFileNameByComponent('az1') ? 'az2' : 'az1';
+            }
+            
+            console.log(`[AZService] Determined component ID for ${file.name}: ${componentId}`);
+            
+            // Calculate and store file stats
+            await this.calculateFileStats(componentId, file.name);
             
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
@@ -103,55 +119,34 @@ export class AZService {
   }
 
   /**
-   * Generate a code report for a single file
-   * @param fileName The name of the file
-   * @param data The standardized data for the file
+   * Calculate file statistics and store them in the store
    */
-  async generateSingleFileReport(fileName: string, data: AZStandardizedData[]): Promise<void> {
+  async calculateFileStats(componentId: string, fileName: string): Promise<void> {
     try {
-      console.log(`[AZService] Generating single file report for ${fileName}`);
+      const tableName = fileName.toLowerCase().replace('.csv', '');
+      const data = await this.getData(tableName);
       
-      // Calculate metrics for the single file
-      const uniqueDestinations = new Set(data.map(item => item.destName)).size;
+      if (!data || data.length === 0) return;
+      
+      // Calculate stats
       const totalCodes = data.length;
-      const uniqueDestinationsPercentage = (uniqueDestinations / totalCodes) * 100;
+      const uniqueDestinations = new Set(data.map(item => item.destName)).size;
+      const uniquePercentage = ((uniqueDestinations / totalCodes) * 100).toFixed(2);
       
-      // Group codes by destination to count them
-      const codesByDestination = data.reduce((acc, item) => {
-        if (!acc[item.destName]) {
-          acc[item.destName] = [];
-        }
-        acc[item.destName].push(item.dialCode);
-        return acc;
-      }, {} as Record<string, string[]>);
+      // Update store
+      this.store.setFileStats(componentId, {
+        totalCodes,
+        totalDestinations: uniqueDestinations,
+        uniqueDestinationsPercentage: parseFloat(uniquePercentage)
+      });
       
-      // Count total destinations (unique destination names)
-      const totalDestinations = Object.keys(codesByDestination).length;
-      
-      // Create the single file report
-      const singleFileReport: AzCodeReport = {
-        file1: {
-          fileName,
-          totalCodes,
-          totalDestinations,
-          uniqueDestinationsPercentage
-        },
-        file2: {
-          fileName: '',
-          totalCodes: 0,
-          totalDestinations: 0,
-          uniqueDestinationsPercentage: 0
-        },
-        matchedCodes: 0,
-        nonMatchedCodes: totalCodes,
-        matchedCodesPercentage: 0,
-        nonMatchedCodesPercentage: 100
-      };
-      
-    
+      console.log(`[AZService] Updated file stats for ${componentId} (${fileName}):`, {
+        totalCodes,
+        totalDestinations: uniqueDestinations,
+        uniqueDestinationsPercentage: parseFloat(uniquePercentage)
+      });
     } catch (error) {
-      console.error('Failed to generate single file report:', error);
-      throw error;
+      console.error('Error calculating file stats:', error);
     }
   }
 
@@ -175,6 +170,21 @@ export class AZService {
 
   async removeTable(tableName: string): Promise<void> {
     try {
+      // Find the component ID associated with this table
+      const fileName = tableName + '.csv';
+      let componentId = '';
+      
+      if (this.store.getFileNameByComponent('az1') === fileName) {
+        componentId = 'az1';
+      } else if (this.store.getFileNameByComponent('az2') === fileName) {
+        componentId = 'az2';
+      }
+      
+      if (componentId) {
+        // Clear file stats for this component
+        this.store.clearFileStats(componentId);
+      }
+      
       if (this.isUsingMemoryStorage()) {
         // Remove from in-memory
         this.store.removeInMemoryData(tableName);

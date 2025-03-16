@@ -8,6 +8,15 @@ export interface RateSheetRecord {
   increments?: number;
 }
 
+export interface EffectiveDateSettings {
+  same: string;
+  increase: string;
+  decrease: string;
+  sameCustomDate: string;
+  increaseCustomDate: string;
+  decreaseCustomDate: string;
+}
+
 export const ChangeCode = {
   SAME: 'SAME',
   INCREASE: 'INCREASE',
