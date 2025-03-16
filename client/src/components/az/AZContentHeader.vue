@@ -52,6 +52,7 @@
             v-if="azStore.activeReportType === type"
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
           >
+          
         </div>
         </button>
         <button v-if="azStore.filesUploaded.size > 0"
@@ -79,12 +80,9 @@
   
   // Compute available report types based on the current state
   const availableReportTypes = computed(() => {
-    // If we have full reports generated, show Files and Code Compare tabs
     if (azStore.reportsGenerated) {
-      return [ReportTypes.FILES, ReportTypes.CODE];
+      return [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
     }
-    
-    // In all other cases, only show Files tab
     return [ReportTypes.FILES];
   });
 

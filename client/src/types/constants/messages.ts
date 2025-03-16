@@ -28,7 +28,7 @@ export const AZ_JOURNEY_MESSAGES: Record<JourneyState, JourneyMessage> = {
   },
   TWO_FILES: {
     title: 'Ready for comparison',
-    message: 'Both files are uploaded. Click "Get Reports" to see a detailed comparison and find opportunities.',
+    message: 'Both files are uploaded.<br>Click "Get Reports" to generate pricing and code comparison reports.',
   },
   REPORTS_READY: {
     title: 'Analysis complete',

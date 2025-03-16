@@ -115,7 +115,7 @@
 
           <!-- Right Side: Second Upload Zone (Only visible after first file is uploaded) -->
           <div class="w-1/2 pl-6">
-            <div v-if="azStore.isComponentDisabled('az1')">  
+            <div>  
               <div
                 class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
                 :class="[
@@ -210,13 +210,6 @@
               
               <!-- Single File Report Section for second file -->
               <AzCodeSummary componentId="az2" />
-            </div>
-            <!-- Empty State Message when no first file is uploaded -->
-            <div 
-              v-if="!azStore.isComponentDisabled('az1')" 
-              class="h-[120px] flex items-center justify-center text-gray-500"
-            >
-              <p>Upload a file on the left side first</p>
             </div>
           </div>
         </div>
