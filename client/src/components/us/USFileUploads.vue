@@ -244,6 +244,7 @@
       :preview-data="previewData"
       :start-line="startLine"
       :column-options="US_COLUMN_ROLE_OPTIONS"
+      :source="'US'"
       @update:mappings="handleMappingUpdate"
       @update:valid="isValid => (isModalValid = isValid)"
       @update:indeterminate-definition="definition => (indeterminateRateDefinition = definition)"

@@ -63,3 +63,35 @@ export const US_JOURNEY_MESSAGES = {
     message: 'Use the report tabs above to explore your opportunities.',
   },
 } as const;
+
+// Define a type for the different parent components that use PreviewModal2
+export type PreviewModalSource = 
+  | 'AZ' 
+  | 'US' 
+  | 'AZ_RATE_DECK' 
+  | 'US_RATE_DECK' 
+  | 'LERG';
+
+// Messages for PreviewModal2 based on the parent component
+export const PREVIEW_MODAL_MESSAGES: Record<PreviewModalSource, JourneyMessage> = {
+  AZ: {
+    title: 'AZ File Column Mapping',
+    message: 'Please map the columns from your CSV file to the required fields.<br>For AZ files, you need to identify the Destination, Dialcode, and Rate columns.'
+  },
+  US: {
+    title: 'US File Column Mapping',
+    message: 'Please map the columns from your CSV file to the required fields.<br>For US files, you need to identify either NPANXX or both NPA and NXX columns, plus Interstate and Intrastate rates.'
+  },
+  AZ_RATE_DECK: {
+    title: 'Rate Sheet Column Mapping',
+    message: 'Please map the columns from your CSV file to the required fields.<br>For Rate Sheets, you need to identify the Name, Prefix, and Rate columns.'
+  },
+  US_RATE_DECK: {
+    title: 'US Rate Sheet Column Mapping',
+    message: 'Please map the columns from your CSV file to the required fields.<br>For US Rate Sheets, you need to identify the NPA and NXX columns, OR NPANXX, Interstate and Intrastate rates.'
+  },
+  LERG: {
+    title: 'LERG Data Column Mapping',
+    message: 'Please map the columns from your CSV file to the required LERG fields.<br>Ensure you identify the NPA, NXX, STATE, and COUNTRY.'
+  }
+};
