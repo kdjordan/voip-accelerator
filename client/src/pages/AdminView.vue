@@ -640,6 +640,7 @@
       :preview-data="previewData"
       :start-line="startLine"
       :column-options="LERG_COLUMN_ROLE_OPTIONS"
+      :source="'LERG'"
       @update:mappings="handleMappingUpdate"
       @update:valid="isValid => (isModalValid = isValid)"
       @update:start-line="newStartLine => (startLine = newStartLine)"

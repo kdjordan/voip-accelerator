@@ -50,9 +50,8 @@
             <!-- Informational note about auto-generated fields -->
             <div class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md">
               <p class="text-sm text-blue-400">
-                <span class="font-medium">Note:</span> 
-                Effective Date is auto-set to today's date, and Change Code is auto-set to 'SAME' for new records.
-                These fields are managed automatically and don't need to be mapped from your CSV.
+                <h3 class="text-lg font-medium">{{ modalMessage.title }}</h3> 
+                <span v-html="modalMessage.message"></span>
               </p>
             </div>
 
@@ -197,6 +196,7 @@
 <script setup lang="ts">
   import { ref, computed, watch } from 'vue';
   import { USColumnRole } from '@/types/domains/us-types';
+  import { PREVIEW_MODAL_MESSAGES, type PreviewModalSource } from '@/types/constants/messages';
 
   interface Props {
     showModal: boolean;
@@ -205,12 +205,20 @@
     previewData: string[][];
     columnOptions: Array<{ value: string; label: string; required?: boolean }>;
     validateRequired?: boolean;
+    source?: PreviewModalSource;
   }
 
   const props = defineProps<Props>();
   const startLine = ref(props.startLine);
   const indeterminateRateDefinition = ref('column');
   const showValidationErrors = ref(false);
+
+  // Get the appropriate message based on the source prop
+  const modalMessage = computed(() => {
+    return props.source && PREVIEW_MODAL_MESSAGES[props.source] 
+      ? PREVIEW_MODAL_MESSAGES[props.source]
+      : PREVIEW_MODAL_MESSAGES.AZ_RATE_DECK; // Default to AZ_RATE_DECK if no source provided
+  });
 
   // Detect if this is a US file by checking for NPA or NPANXX in column options
   const isUSFile = computed(() => {

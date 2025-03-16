@@ -251,6 +251,7 @@
       :column-options="RF_COLUMN_ROLE_OPTIONS"
       :start-line="startLine"
       :validate-required="true"
+      :source="'AZ_RATE_DECK'"
       @update:mappings="handleMappingUpdate"
       @update:valid="newValid => (isValid = newValid)"
       @update:start-line="newStartLine => (startLine = newStartLine)"

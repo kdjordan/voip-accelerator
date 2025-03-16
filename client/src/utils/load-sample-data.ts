@@ -137,7 +137,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
         
         // Fallback to direct database approach only if processFile fails
         console.log('Falling back to direct database approach for first file');
-        await loadUSFileDirect(usService, usStore, 'us1', usTestFile, processedCSV1);
+        // await loadUSFileDirect(usService, usStore, 'us1', usTestFile, processedCSV1);
       }
       
       // Load second US test file - UStest1.csv
@@ -163,7 +163,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
         
         // Fallback to direct database approach only if processFile fails
         console.log('Falling back to direct database approach for second file');
-        await loadUSFileDirect(usService, usStore, 'us2', usTest2File, processedCSV2);
+        // await loadUSFileDirect(usService, usStore, 'us2', usTest2File, processedCSV2);
       }
     }
 
@@ -178,59 +178,59 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
  * Helper function to load US data directly into the database as a fallback
  * This is only used for sample data loading when the normal processFile method fails
  */
-async function loadUSFileDirect(
-  usService: USService, 
-  usStore: any, 
-  componentId: string, 
-  fileName: string, 
-  processedCSV: string
-): Promise<void> {
-  // Create tables directly in the database
-  const db = await usService.initializeDB();
+// async function loadUSFileDirect(
+//   usService: USService, 
+//   usStore: any, 
+//   componentId: string, 
+//   fileName: string, 
+//   processedCSV: string
+// ): Promise<void> {
+//   // Create tables directly in the database
+//   const db = await usService.initializeDB();
   
-  // Make sure the table exists
-  const tableName = fileName.toLowerCase().replace('.csv', '');
-  if (!db.tables.some(t => t.name === tableName)) {
-    await db.close();
-    console.log('Creating table for', fileName);
-    db.version(db.verno! + 1).stores({
-      [tableName]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
-    });
-    await db.open();
-  }
+//   // Make sure the table exists
+//   const tableName = fileName.toLowerCase().replace('.csv', '');
+//   if (!db.tables.some(t => t.name === tableName)) {
+//     await db.close();
+//     console.log('Creating table for', fileName);
+//     db.version(db.verno! + 1).stores({
+//       [tableName]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
+//     });
+//     await db.open();
+//   }
   
-  // Parse the CSV data manually to control exactly how it's processed
-  const parsedData = processedCSV.split('\n')
-    .filter(line => line.trim())
-    .map(line => {
-      const parts = line.split(',');
-      // Skip the destination name and get the relevant fields
-      const npa = parts[1];
-      const nxx = parts[2];
-      const npanxx = npa + nxx;
+//   // Parse the CSV data manually to control exactly how it's processed
+//   const parsedData = processedCSV.split('\n')
+//     .filter(line => line.trim())
+//     .map(line => {
+//       const parts = line.split(',');
+//       // Skip the destination name and get the relevant fields
+//       const npa = parts[1];
+//       const nxx = parts[2];
+//       const npanxx = npa + nxx;
       
-      // Parse rates as floats
-      const interRate = parseFloat(parts[3]);
-      const intraRate = parseFloat(parts[4]);
-      const indetermRate = parseFloat(parts[5]);
+//       // Parse rates as floats
+//       const interRate = parseFloat(parts[3]);
+//       const intraRate = parseFloat(parts[4]);
+//       const indetermRate = parseFloat(parts[5]);
       
-      return {
-        npanxx,
-        npa,
-        nxx,
-        interRate,
-        intraRate,
-        indetermRate
-      };
-    });
+//       return {
+//         npanxx,
+//         npa,
+//         nxx,
+//         interRate,
+//         intraRate,
+//         indetermRate
+//       };
+//     });
   
-  console.log('Parsed data from', fileName, ':', parsedData.slice(0, 2));
+//   console.log('Parsed data from', fileName, ':', parsedData.slice(0, 2));
   
-  // Store data directly in the database
-  console.log('Storing data in', tableName);
-  await db.table(tableName).bulkPut(parsedData);
+//   // Store data directly in the database
+//   console.log('Storing data in', tableName);
+//   await db.table(tableName).bulkPut(parsedData);
   
-  // Register file in store
-  usStore.addFileUploaded(componentId, fileName);
-  console.log('File loaded successfully via direct method:', fileName);
-}
+//   // Register file in store
+//   usStore.addFileUploaded(componentId, fileName);
+//   console.log('File loaded successfully via direct method:', fileName);
+// }

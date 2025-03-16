@@ -250,6 +250,7 @@
       :preview-data="previewData"
       :start-line="startLine"
       :column-options="AZ_COLUMN_ROLE_OPTIONS"
+      :source="'AZ'"
       @update:mappings="handleMappingUpdate"
       @update:valid="isValid => (isModalValid = isValid)"
       @confirm="handleModalConfirm"
