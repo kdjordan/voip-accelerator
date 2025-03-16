@@ -7,17 +7,9 @@ import type {
   RateStatistics,
   InvalidRow,
   ChangeCodeType,
+  EffectiveDateSettings
 } from '@/types/domains/rate-sheet-types';
 
-// Define interface for effective date settings
-export interface EffectiveDateSettings {
-  same: string;
-  increase: string;
-  decrease: string;
-  sameCustomDate: string;
-  increaseCustomDate: string;
-  decreaseCustomDate: string;
-}
 
 const STORAGE_KEY = 'voip-accelerator-rate-sheet-data';
 const STORAGE_KEY_SETTINGS = 'voip-accelerator-rate-sheet-settings';
@@ -473,6 +465,10 @@ export const useRateSheetStore = defineStore('rateSheet', {
       const count = state.groupedData.filter(group => group.hasDiscrepancy).length;
       console.log(`Destinations with rate discrepancies: ${count}`);
       return count;
+    },
+
+    getTotalRecords: (state): number => {
+      return state.originalData.length;
     },
 
     getDestinationsByStatus: state => (hasDiscrepancy: boolean) =>

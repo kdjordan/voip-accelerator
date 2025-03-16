@@ -319,8 +319,27 @@
       let azRecords = 0;
       console.log('AZ Store Structure:', JSON.stringify((azStore as any).$state, null, 2));
       
-      // Try to directly access the inMemoryData from the store
-      if ((azStore as any).$state && (azStore as any).$state.inMemoryData) {
+      // Check for fileStats in the store (new approach)
+      if ((azStore as any).$state?.fileStats && (azStore as any).$state.fileStats instanceof Map) {
+        const fileStats = (azStore as any).$state.fileStats;
+        if (fileStats.size > 0) {
+          // Sum up the totalCodes from all fileStats entries
+          let totalCodes = 0;
+          fileStats.forEach((stats: any) => {
+            if (stats && typeof stats.totalCodes === 'number') {
+              totalCodes += stats.totalCodes;
+            }
+          });
+          
+          if (totalCodes > 0) {
+            azRecords += totalCodes;
+            console.log(`Found AZ data in fileStats: ${totalCodes} total codes`);
+          }
+        }
+      }
+      
+      // Try to directly access the inMemoryData from the store (original approach)
+      if (azRecords === 0 && (azStore as any).$state && (azStore as any).$state.inMemoryData) {
         Object.entries((azStore as any).$state.inMemoryData).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             azRecords += value.length;
@@ -329,7 +348,7 @@
         });
       } 
       // Also check nested inMemoryData property
-      else if (typeof azStore.getInMemoryData === 'function') {
+      else if (azRecords === 0 && typeof azStore.getInMemoryData === 'function') {
         const inMemoryData = azStore.getInMemoryData(DBName.AZ);
         if (inMemoryData && typeof inMemoryData === 'object') {
           Object.entries(inMemoryData).forEach(([key, value]) => {
@@ -341,7 +360,7 @@
         }
       } 
       // Check the direct azStore store for arrays
-      else {
+      else if (azRecords === 0) {
         // Direct inspection of store looking for arrays
         for (const key in azStore) {
           if (key === '$state') continue; // Skip $state as we already checked it
@@ -391,8 +410,27 @@
     try {
       let usRecords = 0;
       
+      // Check for fileStats in the store (new approach - for future implementation)
+      if ((usStore as any).$state?.fileStats && (usStore as any).$state.fileStats instanceof Map) {
+        const fileStats = (usStore as any).$state.fileStats;
+        if (fileStats.size > 0) {
+          // Sum up the totalCodes from all fileStats entries
+          let totalCodes = 0;
+          fileStats.forEach((stats: any) => {
+            if (stats && typeof stats.totalCodes === 'number') {
+              totalCodes += stats.totalCodes;
+            }
+          });
+          
+          if (totalCodes > 0) {
+            usRecords += totalCodes;
+            console.log(`Found US data in fileStats: ${totalCodes} total codes`);
+          }
+        }
+      }
+      
       // Direct access to state inMemoryData
-      if ((usStore as any).$state && (usStore as any).$state.inMemoryData) {
+      if (usRecords === 0 && (usStore as any).$state && (usStore as any).$state.inMemoryData) {
         Object.entries((usStore as any).$state.inMemoryData).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             usRecords += value.length;
@@ -401,7 +439,7 @@
         });
       } 
       // Method-based approach
-      else if (typeof usStore.getInMemoryData === 'function') {
+      else if (usRecords === 0 && typeof usStore.getInMemoryData === 'function') {
         const inMemoryData = usStore.getInMemoryData(DBName.US);
         if (inMemoryData && typeof inMemoryData === 'object') {
           Object.entries(inMemoryData).forEach(([key, value]) => {
@@ -413,7 +451,7 @@
         }
       }
       // Direct store inspection
-      else {
+      else if (usRecords === 0) {
         for (const key in usStore) {
           if (key === '$state') continue;
 
@@ -706,191 +744,51 @@
   }
   
   /**
-   * Debug output to help diagnose why tables aren't showing
-   */
-  function debugDatabaseInfo() {
-    console.log('----------- DATABASE DEBUG INFO -----------');
-    console.log('LERG Store:', lergStore);
-    console.log('LERG Stats:', (lergStore as any).stats);
-    console.log('Memory Tables:', memoryTables.value);
-    console.log('IndexedDB Tables:', indexedDbTables.value);
-    console.log('All Tables:', allDatabaseTables.value);
-    console.log('----------------------------------------');
-  }
-  
-  /**
    * Refresh database information from all sources
    * This function gathers data from both memory (Pinia) and IndexedDB, 
    * regardless of the current storage strategy
    */
-  async function refreshDatabaseInfo() {
-    isLoadingDatabaseInfo.value = true;
+  // async function refreshDatabaseInfo() {
+  //   isLoadingDatabaseInfo.value = true;
     
-    try {
-      console.log('====== REFRESHING DATABASE INFO ======');
-      console.log('Current storage strategy:', storageConfig.storageType);
+  //   try {
+  //     console.log('====== REFRESHING DATABASE INFO ======');
+  //     console.log('Current storage strategy:', storageConfig.storageType);
       
-      // Get tables from memory (Pinia stores) regardless of current strategy
-      // This ensures we detect data even if the current strategy is IndexedDB
-      memoryTables.value = getMemoryTables();
-      console.log(`Found ${memoryTables.value.length} tables in memory`);
+  //     // Get tables from memory (Pinia stores) regardless of current strategy
+  //     // This ensures we detect data even if the current strategy is IndexedDB
+  //     memoryTables.value = getMemoryTables();
+  //     console.log(`Found ${memoryTables.value.length} tables in memory`);
       
-      // Get tables from IndexedDB regardless of current strategy
-      // This ensures we detect data even if the current strategy is memory
-      indexedDbTables.value = await getIndexedDbTables();
-      console.log(`Found ${indexedDbTables.value.length} tables in IndexedDB`);
+  //     // Get tables from IndexedDB regardless of current strategy
+  //     // This ensures we detect data even if the current strategy is memory
+  //     indexedDbTables.value = await getIndexedDbTables();
+  //     console.log(`Found ${indexedDbTables.value.length} tables in IndexedDB`);
       
-      // Combine and sort by name for display
-      // If a table exists in both memory and IndexedDB, we'll show both entries
-      allDatabaseTables.value = [...memoryTables.value, ...indexedDbTables.value]
-        .sort((a, b) => a.name.localeCompare(b.name));
+  //     // Combine and sort by name for display
+  //     // If a table exists in both memory and IndexedDB, we'll show both entries
+  //     allDatabaseTables.value = [...memoryTables.value, ...indexedDbTables.value]
+  //       .sort((a, b) => a.name.localeCompare(b.name));
       
-      // Debug output to help diagnose issues
-      debugDatabaseInfo();
       
-      console.log('Database info refreshed:');
-      console.log('- Memory tables:', memoryTables.value.length); 
-      console.log('- IndexedDB tables:', indexedDbTables.value.length);
-      console.log('- Total unique tables:', allDatabaseTables.value.length);
-      console.log('====== REFRESH COMPLETE ======');
-    } catch (error) {
-      console.error('Failed to refresh database info:', error);
-    } finally {
-      isLoadingDatabaseInfo.value = false;
-    }
-  }
+      
+      
+  //     console.log('Database info refreshed:');
+  //     console.log('- Memory tables:', memoryTables.value.length); 
+  //     console.log('- IndexedDB tables:', indexedDbTables.value.length);
+  //     console.log('- Total unique tables:', allDatabaseTables.value.length);
+  //     console.log('====== REFRESH COMPLETE ======');
+  //   } catch (error) {
+  //     console.error('Failed to refresh database info:', error);
+  //   } finally {
+  //     isLoadingDatabaseInfo.value = false;
+  //   }
+  // }
 
-  // Update memoryTables whenever any of our stores change
-  watch(
-    [azStore, usStore, lergStore, rateSheetStore],
-    () => {
-      console.log('Store changed, updating memory tables');
-      
-      // We need to update our memory tables whenever any of the stores change
-      // but don't need to update indexedDbTables since they don't change with store updates
-      memoryTables.value = getMemoryTables();
-      
-      // Also run the targeted check for specific data structures
-      checkForSpecificData();
-      
-      // Recalculate allDatabaseTables with the new memory tables
-      allDatabaseTables.value = [...memoryTables.value, ...indexedDbTables.value]
-        .sort((a, b) => a.name.localeCompare(b.name));
-      
-      console.log('Updated tables after store change:', { 
-        memory: memoryTables.value.length, 
-        all: allDatabaseTables.value.length 
-      });
-    },
-    { 
-      deep: true,
-      // Debounce updates to prevent too many refreshes when multiple stores change at once
-      flush: 'post'
-    }
-  );
-
-  /**
-   * Handle storage strategy change event
-   */
-  function handleStorageStrategyChange(event: Event) {
-    // Cast to CustomEvent to access the detail property
-    const customEvent = event as CustomEvent;
-    const { newType, reason } = customEvent.detail as { newType: StorageType; reason: string };
-    
-    // Log the event for debugging
-    console.log('Storage strategy changed:', customEvent.detail);
-    
-    // Show notification about the strategy change
-    if (newType === 'indexeddb' && reason === 'memory-pressure') {
-      strategyNotification.value = {
-        title: 'Storage Strategy Changed',
-        message: 'Due to high memory usage, the application has automatically switched to IndexedDB storage for better stability.',
-        type: 'warning'
-      };
-      storageStrategyChanged.value = true;
-    } else if (newType === 'memory') {
-      strategyNotification.value = {
-        title: 'Storage Strategy Changed',
-        message: 'The application is now using in-memory storage for faster performance.',
-        type: 'info'
-      };
-      storageStrategyChanged.value = true;
-    }
-    
-    // Refresh database information to capture the changes
-    refreshDatabaseInfo();
-  }
-
-  /**
-   * Directly inspect the Pinia store for the exact data we're looking for
-   * This is a more targeted approach for specific data structures we know exist
-   */
-  function checkForSpecificData(): void {
-    console.log('Performing targeted data check for AZ in-memory data');
-    
-    // Check for the specific az-test1 and az-test2 arrays
-    try {
-      const inMemoryData = (azStore as any).$state?.inMemoryData;
-      if (inMemoryData) {
-        // Look for az-test1 and az-test2
-        if (Array.isArray(inMemoryData['az-test1']) || Array.isArray(inMemoryData['az-test2'])) {
-          let count = 0;
-          
-          if (Array.isArray(inMemoryData['az-test1'])) {
-            count += inMemoryData['az-test1'].length;
-            console.log(`Found az-test1 array with ${inMemoryData['az-test1'].length} records`);
-          }
-          
-          if (Array.isArray(inMemoryData['az-test2'])) {
-            count += inMemoryData['az-test2'].length;
-            console.log(`Found az-test2 array with ${inMemoryData['az-test2'].length} records`);
-          }
-          
-          if (count > 0) {
-            console.log(`Direct check found total of ${count} AZ records in memory`);
-            
-            // Make sure this data is reflected in our tables
-            const existingAzIndex = memoryTables.value.findIndex(t => t.name === DBName.AZ);
-            if (existingAzIndex >= 0) {
-              memoryTables.value[existingAzIndex].count = count;
-            } else {
-              memoryTables.value.push({
-                name: DBName.AZ,
-                count: count,
-                storage: 'memory'
-              });
-            }
-            
-            // Refresh the combined view
-            allDatabaseTables.value = [...memoryTables.value, ...indexedDbTables.value]
-              .sort((a, b) => a.name.localeCompare(b.name));
-          }
-        }
-      }
-    } catch (error) {
-      console.warn('Error during targeted data check:', error);
-    }
-    
-    // Check for the redundant -storage Pinia stores
-    try {
-      const redundantStores = ['az_rate_deck_db-storage', 'us_rate_deck_db-storage'];
-      console.log(`Checking for existence of redundant stores: ${redundantStores.join(', ')}`);
-      
-      // This is purely informational - they don't affect functionality but are confusing
-      for (const storeName of redundantStores) {
-        if ((azStore as any)[storeName] || (usStore as any)[storeName]) {
-          console.warn(`Found redundant store: ${storeName} - This is a side effect of storage implementation and does not affect functionality`);
-        }
-      }
-    } catch (error) {
-      console.warn('Error checking redundant stores:', error);
-    }
-  }
 
   // Lifecycle hooks
   onMounted(async () => {
     // Listen for storage strategy changes
-    window.addEventListener('storage-strategy-changed', handleStorageStrategyChange);
     
     // Debug: directly examine Pinia store structure 
     console.log('==== EXAMINING STORE STRUCTURE ====');
@@ -914,18 +812,17 @@
     }
     
     // Initial load of database info
-    await refreshDatabaseInfo();
+    // await refreshDatabaseInfo();
+    console.log(azStore.getFileStats('az1'))
+    console.log(azStore.getFileStats('az2'))
+    console.log(usStore.getFileStats('us1'))
+    console.log(usStore.getFileStats('us2'))
     
     // Special check for specific data structures that might be missed
-    checkForSpecificData();
+    
     
     // Log information about redundant stores for debugging
     console.log('Note: az_rate_deck_db-storage and us_rate_deck_db-storage are implementation details');
     console.log('They are used internally by the storage system and should be ignored in the UI');
-  });
-  
-  onUnmounted(() => {
-    // Remove event listeners
-    window.removeEventListener('storage-strategy-changed', handleStorageStrategyChange);
   });
 </script>

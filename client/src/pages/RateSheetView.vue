@@ -27,13 +27,82 @@
               </div>
             </div>
           </div>
+          <div>
+
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Total Records</h3>
+              <div class="text-2xl font-bold">{{ store.getTotalRecords }}</div>
+            </div>
+          </div>
           <!-- Invalid Rows Status -->
           <div v-if="store.hasInvalidRows">
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Invalid Rows Processed</h3>
+            <div 
+              @click="toggleInvalidRowsDetails"
+              class="flex justify-between items-center p-4 bg-red-900/20 border-b border-red-500/30 rounded-lg"
+              :class="[
+                store.hasInvalidRows 
+                  ? 'cursor-pointer hover:bg-red-400/20 transition-colors' 
+                  : 'cursor-default'
+              ]"
+            >
+              <h3 class="font-medium text-red-400">
+                Invalid Rows Not Uploaded
+              </h3>
               <div class="flex items-center space-x-2">
-                <div class="w-3 h-3 rounded-full bg-accent animate-status-pulse-success"></div>
-                <span class="text-2xl font-bold">{{ store.getGroupedInvalidRows.length }}</span>
+                <span class="text-2xl font-bold text-red-400">
+                  {{ store.getGroupedInvalidRows.length }}
+                </span>
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': showInvalidRowsDetails }"
+                  class="w-5 h-5 transition-transform text-red-400"
+                />
+              </div>
+            </div>
+            
+            <!-- Invalid Rows Content -->
+            <div
+              v-if="showInvalidRowsDetails"
+              class="mt-4 bg-gray-900/50 rounded-lg overflow-hidden"
+            >
+              <div class="p-4">
+                <table class="w-full min-w-full border-separate border-spacing-0">
+                  <thead class="bg-gray-800/80">
+                    <tr>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
+                        ROW
+                      </th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
+                        NAME
+                      </th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
+                        PREFIX
+                      </th>
+                      <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">
+                        RATE
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-gray-900/80">
+                    <tr 
+                      v-for="(row, index) in store.invalidRows" 
+                      :key="index + row.prefix"
+                      class="hover:bg-gray-800/50"
+                    >
+                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
+                        {{ row.rowNumber }}
+                      </td>
+                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
+                        {{ row.destinationName }}
+                      </td>
+                      <td class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50">
+                        {{ row.prefix }}
+                      </td>
+                      <td class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50">
+                        {{ row.invalidRate }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -49,9 +118,9 @@
         <!-- After the Stats Grid, before the File Upload Section -->
         <div
           v-if="store.hasInvalidRows"
-          class="space-y-6 mt-6 border-t border-gray-700/50 pt-6"
+          class="space-y-6 mt-6 border-t border-gray-700/50 pt-6 hidden"
         >
-          <!-- Invalid Rows Section -->
+          <!-- Invalid Rows Section - This section is now hidden and replaced by the one above -->
           <div class="bg-gray-900/30 rounded-lg overflow-hidden">
             <div
               @click="toggleInvalidRowsDetails"

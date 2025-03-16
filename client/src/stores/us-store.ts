@@ -17,6 +17,11 @@ export const useUsStore = defineStore('usStore', {
     invalidRows: new Map<string, InvalidUsRow[]>(),
     // Add in-memory storage
     inMemoryData: new Map<string, USStandardizedData[]>(),
+    fileStats: new Map<string, {
+      totalCodes: number;
+      totalDestinations: number;
+      uniqueDestinationsPercentage: number;
+    }>(),
   }),
 
   getters: {
@@ -63,6 +68,14 @@ export const useUsStore = defineStore('usStore', {
     
     isUsingMemoryStorage: () => {
       return storageConfig.storageType === 'memory';
+    },
+
+    getFileStats: state => (componentId: string) => {
+      return state.fileStats.get(componentId) || {
+        totalCodes: 0,
+        totalDestinations: 0,
+        uniqueDestinationsPercentage: 0
+      };
     },
     
     // In-memory storage getters
