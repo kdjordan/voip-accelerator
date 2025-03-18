@@ -1,5 +1,250 @@
 <template>
   <div class="space-y-4">
+    <!-- Effective Date Settings (collapsible) -->
+    <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
+      <div 
+        @click="toggleEffectiveDateSettings()"
+        class="cursor-pointer bg-gray-900/30"
+      >
+        <div class="flex items-center gap-2 w-full justify-between">
+          <h3 class="text-sm font-medium text-gray-300 ">Effective Date Settings</h3>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-gray-400">Same:</span>
+            <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.same) }}</span>
+            <span class="text-gray-400">|</span>
+            <span class="text-green-400">↑ Increase:</span>
+            <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.increase) }}</span>
+            <span class="text-gray-400">|</span>
+            <span class="text-red-400">↓ Decrease:</span>
+            <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.decrease) }}</span>
+          </div>
+        <button class="p-1 text-gray-400 hover:text-white rounded-full transition-colors">
+          <ChevronDownIcon 
+            class="w-5 h-5 transition-transform" 
+            :class="{ 'rotate-180': showEffectiveDateSettings }"
+          />
+        </button>
+        </div>
+      </div>
+      
+      <div v-if="showEffectiveDateSettings" class="mt-4">
+        <!-- Date settings UI -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <!-- SAME Rate Effective Date -->
+          <div class="bg-gray-900/30 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-400">SAME Rate</span>
+              <span class="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">No Change</span>
+            </div>
+            <div class="flex flex-col space-y-2">
+              <div class="flex items-center">
+                <input id="same-today" v-model="effectiveDateSettings.same" type="radio" value="today" class="mr-2" />
+                <label for="same-today" class="text-sm">Today</label>
+              </div>
+              <div class="flex items-center">
+                <input id="same-tomorrow" v-model="effectiveDateSettings.same" type="radio" value="tomorrow" class="mr-2" />
+                <label for="same-tomorrow" class="text-sm">Tomorrow</label>
+              </div>
+              <div class="flex items-center">
+                <input id="same-custom" v-model="effectiveDateSettings.same" type="radio" value="custom" class="mr-2" />
+                <label for="same-custom" class="text-sm">Custom</label>
+              </div>
+              <div v-if="effectiveDateSettings.same === 'custom'" class="pt-2">
+                <input 
+                  type="date" 
+                  v-model="effectiveDateSettings.sameCustomDate" 
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- INCREASE Rate Effective Date -->
+          <div class="bg-gray-900/30 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
+              <span class="px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded">↑ Rate Up</span>
+            </div>
+            <div class="flex flex-col space-y-2">
+              <div class="flex items-center">
+                <input id="increase-today" v-model="effectiveDateSettings.increase" type="radio" value="today" class="mr-2" />
+                <label for="increase-today" class="text-sm">Today</label>
+              </div>
+              <div class="flex items-center">
+                <input id="increase-tomorrow" v-model="effectiveDateSettings.increase" type="radio" value="tomorrow" class="mr-2" />
+                <label for="increase-tomorrow" class="text-sm">Tomorrow</label>
+              </div>
+              <div class="flex items-center">
+                <input id="increase-week" v-model="effectiveDateSettings.increase" type="radio" value="week" class="mr-2" />
+                <label for="increase-week" class="text-sm">7 Days (Default)</label>
+              </div>
+              <div class="flex items-center">
+                <input id="increase-custom" v-model="effectiveDateSettings.increase" type="radio" value="custom" class="mr-2" />
+                <label for="increase-custom" class="text-sm">Custom</label>
+              </div>
+              <div v-if="effectiveDateSettings.increase === 'custom'" class="pt-2">
+                <input 
+                  type="date" 
+                  v-model="effectiveDateSettings.increaseCustomDate" 
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- DECREASE Rate Effective Date -->
+          <div class="bg-gray-900/30 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
+              <span class="px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">↓ Rate Down</span>
+            </div>
+            <div class="flex flex-col space-y-2">
+              <div class="flex items-center">
+                <input id="decrease-today" v-model="effectiveDateSettings.decrease" type="radio" value="today" class="mr-2" />
+                <label for="decrease-today" class="text-sm">Today</label>
+              </div>
+              <div class="flex items-center">
+                <input id="decrease-tomorrow" v-model="effectiveDateSettings.decrease" type="radio" value="tomorrow" class="mr-2" />
+                <label for="decrease-tomorrow" class="text-sm">Tomorrow</label>
+              </div>
+              <div class="flex items-center">
+                <input id="decrease-custom" v-model="effectiveDateSettings.decrease" type="radio" value="custom" class="mr-2" />
+                <label for="decrease-custom" class="text-sm">Custom</label>
+              </div>
+              <div v-if="effectiveDateSettings.decrease === 'custom'" class="pt-2">
+                <input 
+                  type="date" 
+                  v-model="effectiveDateSettings.decreaseCustomDate" 
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Progress and apply button -->
+        <div class="space-y-2">
+          <!-- Multi-step progress indicator -->
+          <div v-if="isApplyingSettings" class="mb-4 bg-gray-900/30 p-3 rounded-lg">
+            <div class="flex justify-between mb-2">
+              <h4 class="text-sm font-medium text-gray-300">Progress</h4>
+              <span class="text-xs text-gray-400" v-if="processingStartTime > 0">
+                {{ displayedElapsedTime }}s elapsed
+              </span>
+            </div>
+            
+            <!-- Processing steps indicators -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
+                     :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'preparing',
+                              'bg-green-900/30 text-green-400': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing',
+                              'bg-gray-800 text-gray-400': processingPhase === 'idle'}">
+                  1
+                </div>
+                <div class="ml-2 text-sm transition-all duration-300 font-medium" 
+                     :class="{'text-green-500': processingPhase === 'preparing', 
+                              'text-green-400': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing', 
+                              'text-gray-600': processingPhase === 'idle'}">
+                  Preparing Data
+                </div>
+              </div>
+              <div class="h-1 flex-1 mx-2 transition-all duration-300" 
+                   :class="{'bg-green-500': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing', 
+                            'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing'}"></div>
+              <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
+                     :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'processing',
+                              'bg-green-900/30 text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing',
+                              'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
+                  2
+                </div>
+                <div class="ml-2 text-sm transition-all duration-300 font-medium" 
+                     :class="{'text-green-500': processingPhase === 'processing', 
+                              'text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing', 
+                              'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
+                  Processing Records
+                </div>
+              </div>
+              <div class="h-1 flex-1 mx-2 transition-all duration-300" 
+                   :class="{'bg-green-500': processingPhase === 'updating' || processingPhase === 'finalizing', 
+                            'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}"></div>
+              <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
+                     :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'updating',
+                              'bg-green-900/30 text-green-400': processingPhase === 'finalizing',
+                              'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
+                  3
+                </div>
+                <div class="ml-2 text-sm transition-all duration-300 font-medium" 
+                     :class="{'text-green-500': processingPhase === 'updating', 
+                              'text-green-400': processingPhase === 'finalizing', 
+                              'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
+                  Updating Database
+                </div>
+              </div>
+            </div>
+            
+            <!-- Processing status message -->
+            <div class="text-sm text-gray-300 mb-2 min-h-[1.5rem]">{{ processingStatus }}</div>
+            
+            <!-- Detailed status info -->
+            <div class="flex justify-between text-xs text-gray-400 mb-2 min-h-[1.5rem]" v-if="isApplyingSettings && processingPhase === 'processing'">
+              <div v-if="currentDestination">Processing: <span class="text-green-400">{{ currentDestination }}</span></div>
+              <div v-if="recordsUpdatedSoFar > 0">{{ recordsUpdatedSoFar }} records updated so far</div>
+              <div v-if="estimatedTimeRemaining !== undefined">
+                Est. time remaining: <span class="text-green-400">{{ estimatedTimeRemaining > 0 ? `${estimatedTimeRemaining}s` : 'calculating...' }}</span>
+              </div>
+            </div>
+            
+            <!-- Progress bar -->
+            <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div
+                class="h-3 rounded-full transition-all duration-300 relative"
+                :class="{ 
+                  'bg-green-500': processingPhase === 'finalizing',
+                  'bg-green-400': processingPhase !== 'finalizing'
+                }"
+                :style="{ width: `${progressPercentage}%` }"
+              >
+                <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-white/20"></div>
+              </div>
+            </div>
+            
+            <!-- Processing logs (collapsible) -->
+            <div class="mt-3">
+              <div @click="showProcessingLogs = !showProcessingLogs" class="cursor-pointer flex items-center text-xs text-gray-400">
+                <ChevronRightIcon class="h-3 w-3 mr-1 transition-transform" :class="{ 'rotate-90': showProcessingLogs }" />
+                <span>Processing logs ({{ processingLogs.length }})</span>
+              </div>
+              
+              <div v-if="showProcessingLogs" class="mt-2 bg-gray-900/70 p-2 rounded text-xs text-gray-500 max-h-40 overflow-y-auto">
+                <div v-for="(log, index) in processingLogs" :key="index" class="mb-1">
+                  <span class="text-gray-600">{{ new Date(log.time).toLocaleTimeString() }}:</span> 
+                  <span>{{ log.message }}</span>
+                </div>
+                <div v-if="processingLogs.length === 0" class="italic">No logs available yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex justify-between items-center">
+            <!-- Apply button -->
+            <div class="flex justify-end w-full">
+              <button 
+                @click="applyEffectiveDateSettings" 
+                class="px-4 py-2 bg-green-900/30 text-green-400 hover:bg-green-900/50 rounded transition-colors"
+                :class="{ 'animate-pulse-fast': isApplyingSettings, 'opacity-50 cursor-not-allowed': isApplyingSettings }"
+                :disabled="isApplyingSettings"
+              >
+                {{ isApplyingSettings ? 'APPLYING SETTINGS...' : 'Apply Date Settings' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Filters -->
     <div class="bg-gray-800 rounded-lg p-4 mb-4">
       <div class="flex items-center justify-between mb-4">
@@ -89,253 +334,6 @@
               <ArrowDownTrayIcon class="w-4 h-4" />
               Export Rate Sheet
             </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Effective Date Settings (collapsible) -->
-      <div class="border-t border-gray-700/50 pt-4 mb-4">
-        <div 
-          @click="showEffectiveDateSettings = !showEffectiveDateSettings"
-          class="flex items-center justify-between cursor-pointer"
-        >
-          <div class="flex items-center gap-2">
-            <h3 class="text-sm font-medium text-gray-300">Effective Date Settings</h3>
-            <div class="flex items-center gap-2 text-xs">
-              <span class="text-gray-400">(</span>
-              <span class="text-gray-400">Same:</span>
-              <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.same) }}</span>
-              <span class="text-gray-400">|</span>
-              <span class="text-green-400">↑ Increase:</span>
-              <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.increase) }}</span>
-              <span class="text-gray-400">|</span>
-              <span class="text-red-400">↓ Decrease:</span>
-              <span class="font-medium text-white">{{ getEffectiveDateLabel(effectiveDateSettings.decrease) }}</span>
-              <span class="text-gray-400">)</span>
-            </div>
-          </div>
-          <button class="p-1 text-gray-400 hover:text-white rounded-full transition-colors">
-            <ChevronDownIcon 
-              class="w-5 h-5 transition-transform" 
-              :class="{ 'rotate-180': showEffectiveDateSettings }"
-            />
-          </button>
-        </div>
-        
-        <div v-if="showEffectiveDateSettings" class="mt-4">
-          <!-- Date settings UI -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <!-- SAME Rate Effective Date -->
-            <div class="bg-gray-900/30 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-400">SAME Rate</span>
-                <span class="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">No Change</span>
-              </div>
-              <div class="flex flex-col space-y-2">
-                <div class="flex items-center">
-                  <input id="same-today" v-model="effectiveDateSettings.same" type="radio" value="today" class="mr-2" />
-                  <label for="same-today" class="text-sm">Today</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="same-tomorrow" v-model="effectiveDateSettings.same" type="radio" value="tomorrow" class="mr-2" />
-                  <label for="same-tomorrow" class="text-sm">Tomorrow</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="same-custom" v-model="effectiveDateSettings.same" type="radio" value="custom" class="mr-2" />
-                  <label for="same-custom" class="text-sm">Custom</label>
-                </div>
-                <div v-if="effectiveDateSettings.same === 'custom'" class="pt-2">
-                  <input 
-                    type="date" 
-                    v-model="effectiveDateSettings.sameCustomDate" 
-                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- INCREASE Rate Effective Date -->
-            <div class="bg-gray-900/30 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
-                <span class="px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded">↑ Rate Up</span>
-              </div>
-              <div class="flex flex-col space-y-2">
-                <div class="flex items-center">
-                  <input id="increase-today" v-model="effectiveDateSettings.increase" type="radio" value="today" class="mr-2" />
-                  <label for="increase-today" class="text-sm">Today</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="increase-tomorrow" v-model="effectiveDateSettings.increase" type="radio" value="tomorrow" class="mr-2" />
-                  <label for="increase-tomorrow" class="text-sm">Tomorrow</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="increase-week" v-model="effectiveDateSettings.increase" type="radio" value="week" class="mr-2" />
-                  <label for="increase-week" class="text-sm">7 Days (Default)</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="increase-custom" v-model="effectiveDateSettings.increase" type="radio" value="custom" class="mr-2" />
-                  <label for="increase-custom" class="text-sm">Custom</label>
-                </div>
-                <div v-if="effectiveDateSettings.increase === 'custom'" class="pt-2">
-                  <input 
-                    type="date" 
-                    v-model="effectiveDateSettings.increaseCustomDate" 
-                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- DECREASE Rate Effective Date -->
-            <div class="bg-gray-900/30 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
-                <span class="px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">↓ Rate Down</span>
-              </div>
-              <div class="flex flex-col space-y-2">
-                <div class="flex items-center">
-                  <input id="decrease-today" v-model="effectiveDateSettings.decrease" type="radio" value="today" class="mr-2" />
-                  <label for="decrease-today" class="text-sm">Today</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="decrease-tomorrow" v-model="effectiveDateSettings.decrease" type="radio" value="tomorrow" class="mr-2" />
-                  <label for="decrease-tomorrow" class="text-sm">Tomorrow</label>
-                </div>
-                <div class="flex items-center">
-                  <input id="decrease-custom" v-model="effectiveDateSettings.decrease" type="radio" value="custom" class="mr-2" />
-                  <label for="decrease-custom" class="text-sm">Custom</label>
-                </div>
-                <div v-if="effectiveDateSettings.decrease === 'custom'" class="pt-2">
-                  <input 
-                    type="date" 
-                    v-model="effectiveDateSettings.decreaseCustomDate" 
-                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Progress and apply button -->
-          <div class="space-y-2">
-            <!-- Multi-step progress indicator -->
-            <div v-if="isApplyingSettings" class="mb-4 bg-gray-900/30 p-3 rounded-lg">
-              <div class="flex justify-between mb-2">
-                <h4 class="text-sm font-medium text-gray-300">Progress</h4>
-                <span class="text-xs text-gray-400" v-if="processingStartTime > 0">
-                  {{ displayedElapsedTime }}s elapsed
-                </span>
-              </div>
-              
-              <!-- Processing steps indicators -->
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
-                       :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'preparing',
-                                'bg-green-900/30 text-green-400': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing',
-                                'bg-gray-800 text-gray-400': processingPhase === 'idle'}">
-                    1
-                  </div>
-                  <div class="ml-2 text-sm transition-all duration-300 font-medium" 
-                       :class="{'text-green-500': processingPhase === 'preparing', 
-                                'text-green-400': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing', 
-                                'text-gray-600': processingPhase === 'idle'}">
-                    Preparing Data
-                  </div>
-                </div>
-                <div class="h-1 flex-1 mx-2 transition-all duration-300" 
-                     :class="{'bg-green-500': processingPhase === 'processing' || processingPhase === 'updating' || processingPhase === 'finalizing', 
-                              'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing'}"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
-                       :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'processing',
-                                'bg-green-900/30 text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing',
-                                'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
-                    2
-                  </div>
-                  <div class="ml-2 text-sm transition-all duration-300 font-medium" 
-                       :class="{'text-green-500': processingPhase === 'processing', 
-                                'text-green-400': processingPhase === 'updating' || processingPhase === 'finalizing', 
-                                'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
-                    Processing Records
-                  </div>
-                </div>
-                <div class="h-1 flex-1 mx-2 transition-all duration-300" 
-                     :class="{'bg-green-500': processingPhase === 'updating' || processingPhase === 'finalizing', 
-                              'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" 
-                       :class="{'bg-green-500 text-white ring-4 ring-green-500/20': processingPhase === 'updating',
-                                'bg-green-900/30 text-green-400': processingPhase === 'finalizing',
-                                'bg-gray-800 text-gray-400': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
-                    3
-                  </div>
-                  <div class="ml-2 text-sm transition-all duration-300 font-medium" 
-                       :class="{'text-green-500': processingPhase === 'updating', 
-                                'text-green-400': processingPhase === 'finalizing', 
-                                'text-gray-600': processingPhase === 'idle' || processingPhase === 'preparing' || processingPhase === 'processing'}">
-                    Updating Database
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Processing status message -->
-              <div class="text-sm text-gray-300 mb-2 min-h-[1.5rem]">{{ processingStatus }}</div>
-              
-              <!-- Detailed status info -->
-              <div class="flex justify-between text-xs text-gray-400 mb-2 min-h-[1.5rem]" v-if="isApplyingSettings && processingPhase === 'processing'">
-                <div v-if="currentDestination">Processing: <span class="text-green-400">{{ currentDestination }}</span></div>
-                <div v-if="recordsUpdatedSoFar > 0">{{ recordsUpdatedSoFar }} records updated so far</div>
-                <div v-if="estimatedTimeRemaining !== undefined">
-                  Est. time remaining: <span class="text-green-400">{{ estimatedTimeRemaining > 0 ? `${estimatedTimeRemaining}s` : 'calculating...' }}</span>
-                </div>
-              </div>
-              
-              <!-- Progress bar -->
-              <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-                <div
-                  class="h-3 rounded-full transition-all duration-300 relative"
-                  :class="{ 
-                    'bg-green-500': processingPhase === 'finalizing',
-                    'bg-green-400': processingPhase !== 'finalizing'
-                  }"
-                  :style="{ width: `${progressPercentage}%` }"
-                >
-                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-white/20"></div>
-                </div>
-              </div>
-              
-              <!-- Processing logs (collapsible) -->
-              <div class="mt-3">
-                <div @click="showProcessingLogs = !showProcessingLogs" class="cursor-pointer flex items-center text-xs text-gray-400">
-                  <ChevronRightIcon class="h-3 w-3 mr-1 transition-transform" :class="{ 'rotate-90': showProcessingLogs }" />
-                  <span>Processing logs ({{ processingLogs.length }})</span>
-                </div>
-                
-                <div v-if="showProcessingLogs" class="mt-2 bg-gray-900/70 p-2 rounded text-xs text-gray-500 max-h-40 overflow-y-auto">
-                  <div v-for="(log, index) in processingLogs" :key="index" class="mb-1">
-                    <span class="text-gray-600">{{ new Date(log.time).toLocaleTimeString() }}:</span> 
-                    <span>{{ log.message }}</span>
-                  </div>
-                  <div v-if="processingLogs.length === 0" class="italic">No logs available yet</div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="flex justify-between items-center">
-              <!-- Apply button -->
-              <div class="flex justify-end w-full">
-                <button 
-                  @click="applyEffectiveDateSettings" 
-                  class="px-4 py-2 bg-green-900/30 text-green-400 hover:bg-green-900/50 rounded transition-colors"
-                  :class="{ 'animate-pulse-fast': isApplyingSettings, 'opacity-50 cursor-not-allowed': isApplyingSettings }"
-                  :disabled="isApplyingSettings"
-                >
-                  {{ isApplyingSettings ? 'APPLYING SETTINGS...' : 'Apply Date Settings' }}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1621,6 +1619,10 @@
       expandedRateCodes.value = {};
     }
   });
+
+  function toggleEffectiveDateSettings() {
+    showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
+  }
 </script>
 
 <style scoped>
