@@ -28,58 +28,50 @@
             </div>
           </div>
           <div>
-
             <div class="flex justify-between items-center">
               <h3 class="text-gray-400">Total Records</h3>
-              <div class="text-2xl font-bold">{{ store.getTotalRecords }}</div>
+              <div class="text-xl">{{ store.getTotalRecords }}</div>
             </div>
+            <div>
+            <div class="flex justify-between items-center">
+              <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
+              <div class="text-xl">{{ currentDiscrepancyCount }}</div>
+            </div>
+            </div>
+
           </div>
           <!-- Invalid Rows Status -->
-          <div v-if="store.hasInvalidRows">
+          <div v-if="store.hasInvalidRows" class="-mx-6">
             <div 
               @click="toggleInvalidRowsDetails"
-              class="flex justify-between items-center p-4 bg-red-900/20 border-b border-red-500/30 rounded-lg"
-              :class="[
-                store.hasInvalidRows 
-                  ? 'cursor-pointer hover:bg-red-400/20 transition-colors' 
-                  : 'cursor-default'
-              ]"
+              class="bg-red-900/50 px-6 py-3 border-y border-red-500/30 cursor-pointer hover:bg-red-900/70 transition-colors"
             >
-              <h3 class="font-medium text-red-400">
-                Invalid Rows Not Uploaded
-              </h3>
-              <div class="flex items-center space-x-2">
-                <span class="text-2xl font-bold text-red-400">
-                  {{ store.getGroupedInvalidRows.length }}
-                </span>
-                <ChevronDownIcon
-                  :class="{ 'transform rotate-180': showInvalidRowsDetails }"
-                  class="w-5 h-5 transition-transform text-red-400"
-                />
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
+                  <span class="text-sm font-medium text-red-400">({{ store.getGroupedInvalidRows.length }})</span>
+                </div>
+                  <component
+                    :is="showInvalidRowsDetails ? ChevronUpIcon : ChevronDownIcon"
+                    class="w-4 h-4 text-red-400"
+                  />
               </div>
             </div>
+            
             
             <!-- Invalid Rows Content -->
             <div
               v-if="showInvalidRowsDetails"
-              class="mt-4 bg-gray-900/50 rounded-lg overflow-hidden"
+              class="transition-all duration-300 ease-in-out bg-red-900/50"
             >
-              <div class="p-4">
+              <div class="px-6 py-4">
                 <table class="w-full min-w-full border-separate border-spacing-0">
                   <thead class="bg-gray-800/80">
                     <tr>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                        ROW
-                      </th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                        NAME
-                      </th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                        PREFIX
-                      </th>
-                      <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">
-                        RATE
-                      </th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">NAME</th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">PREFIX</th>
+                      <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">RATE</th>
                     </tr>
                   </thead>
                   <tbody class="bg-gray-900/80">
@@ -88,18 +80,10 @@
                       :key="index + row.prefix"
                       class="hover:bg-gray-800/50"
                     >
-                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                        {{ row.rowNumber }}
-                      </td>
-                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                        {{ row.destinationName }}
-                      </td>
-                      <td class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50">
-                        {{ row.prefix }}
-                      </td>
-                      <td class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50">
-                        {{ row.invalidRate }}
-                      </td>
+                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">{{ row.rowNumber }}</td>
+                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">{{ row.destinationName }}</td>
+                      <td class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50">{{ row.prefix }}</td>
+                      <td class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50">{{ row.invalidRate }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -107,12 +91,7 @@
             </div>
           </div>
           <!-- Discrepancy Count -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
-              <div class="text-2xl font-bold">{{ currentDiscrepancyCount }}</div>
-            </div>
-          </div>
+         
         </div>
 
         <!-- After the Stats Grid, before the File Upload Section -->
@@ -265,7 +244,12 @@
   import { computed, ref, onMounted } from 'vue';
 
   import { useRateSheetStore } from '@/stores/rate-sheet-store';
-  import { ArrowUpTrayIcon, TrashIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+  import { 
+    ArrowUpTrayIcon, 
+    TrashIcon, 
+    ChevronDownIcon,
+    ChevronUpIcon 
+  } from '@heroicons/vue/24/outline';
   import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { RF_COLUMN_ROLE_OPTIONS, ChangeCode } from '@/types/domains/rate-sheet-types';
