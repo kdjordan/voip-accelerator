@@ -21,23 +21,23 @@
 
   <div
     v-else-if="report"
-    class="space-y-6 bg-gray-800 p-6"
+    class="space-y-4 bg-gray-800"
   >
     <!-- Sell Section -->
-    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+    <div class="bg-gray-900/50">
       <div
         @click="toggleSection('sell')"
-        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+        class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
       >
         <div class="flex justify-between items-center">
           <span class="font-medium text-lg"> You should <span class="text-accent">SELL</span> to Them </span>
           <div class="flex items-center space-x-3">
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+            <span class="text-accent">
               {{ filteredSellItems.length }} destinations
             </span>
             <ChevronDownIcon
               :class="{ 'transform rotate-180': expandedSections.sell }"
-              class="w-5 h-5 transition-transform"
+              class="w-5 h-5 transition-transform text-gray-400"
             />
           </div>
         </div>
@@ -46,7 +46,7 @@
       <!-- Sell Content -->
       <div
         v-if="expandedSections.sell"
-        class="p-4 space-y-4"
+        class="border-t border-gray-700/50 p-6"
       >
         <!-- Search Filter -->
         <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
@@ -163,20 +163,20 @@
     </div>
 
     <!-- Buy Section -->
-    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+    <div class="bg-gray-900/50">
       <div
         @click="toggleSection('buy')"
-        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+        class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
       >
         <div class="flex justify-between items-center">
           <span class="font-medium text-lg"> You should <span class="text-accent">BUY</span> from Them </span>
           <div class="flex items-center space-x-3">
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+            <span class="text-accent">
               {{ filteredBuyItems.length }} destinations
             </span>
             <ChevronDownIcon
               :class="{ 'transform rotate-180': expandedSections.buy }"
-              class="w-5 h-5 transition-transform"
+              class="w-5 h-5 transition-transform text-gray-400"
             />
           </div>
         </div>
@@ -185,7 +185,7 @@
       <!-- Buy Content -->
       <div
         v-if="expandedSections.buy"
-        class="p-4 space-y-4"
+        class="border-t border-gray-700/50 p-6"
       >
         <!-- Search Filter -->
         <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
@@ -302,20 +302,20 @@
     </div>
 
     <!-- Same Rates Section -->
-    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+    <div class="bg-gray-900/50">
       <div
         @click="toggleSection('same')"
-        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+        class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
       >
         <div class="flex justify-between items-center">
           <span class="font-medium text-lg">Same Rates</span>
           <div class="flex items-center space-x-3">
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+            <span class="text-accent">
               {{ filteredSameRates.length }} destinations
             </span>
             <ChevronDownIcon
               :class="{ 'transform rotate-180': expandedSections.same }"
-              class="w-5 h-5 transition-transform"
+              class="w-5 h-5 transition-transform text-gray-400"
             />
           </div>
         </div>
@@ -324,7 +324,7 @@
       <!-- Same Rates Content -->
       <div
         v-if="expandedSections.same"
-        class="p-4 space-y-4"
+        class="border-t border-gray-700/50 p-6"
       >
         <!-- Search Filter for Same Rates -->
         <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
@@ -426,20 +426,20 @@
     </div>
 
     <!-- Unmatched Codes Section -->
-    <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+    <div class="bg-gray-900/50">
       <div
         @click="toggleSection('unmatched')"
-        class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+        class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
       >
         <div class="flex justify-between items-center">
           <span class="font-medium text-lg">Unmatched Codes</span>
           <div class="flex items-center space-x-3">
-            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+            <span class="text-accent">
               {{ filteredUnmatchedCodes.length }} destinations
             </span>
             <ChevronDownIcon
               :class="{ 'transform rotate-180': expandedSections.unmatched }"
-              class="w-5 h-5 transition-transform"
+              class="w-5 h-5 transition-transform text-gray-400"
             />
           </div>
         </div>
@@ -448,7 +448,7 @@
       <!-- Unmatched Content -->
       <div
         v-if="expandedSections.unmatched"
-        class="p-4 space-y-4"
+        class="border-t border-gray-700/50 p-6"
       >
         <!-- Search Filter for Unmatched -->
         <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
