@@ -8,7 +8,7 @@
         <div
           v-for="file in visibleFileKeys"
           :key="file"
-          class="rounded-lg overflow-hidden border border-fbBorder"
+          class="rounded-lg overflow-hidden bg-gray-900/50"
         >
           <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
             <span class="text-accent">{{ getFileName(file) }}</span>
@@ -38,17 +38,17 @@
             <!-- Invalid Rows Section for each file -->
             <div
               v-if="hasInvalidRows(getFileName(file))"
-              class="bg-destructive/10 border border-destructive/50 rounded-lg p-2 mt-4"
+              class="-mx-6 mt-4"
             >
               <div
                 @click="toggleInvalidRowsDetails(file)"
-                class="p-2 w-full cursor-pointer rounded-md"
+                class="px-6 py-2 w-full cursor-pointer bg-destructive/10 border-y border-destructive/50"
               >
                 <div class="flex justify-between items-center">
-                  <span class="font-medium text-red-400">Invalid Rows</span>
+                  <span class="text-xs text-red-400">Invalid Rows Not Uploaded</span>
                   <div class="flex items-center space-x-2">
-                    <span class="text-sm bg-red-900/50 text-red-400 px-2 py-0.5 rounded">
-                      {{ getInvalidRowsForFile(getFileName(file)).length }}
+                    <span class="text-xs text-red-400 px-2 py-0.5 rounded">
+                      ({{ getInvalidRowsForFile(getFileName(file)).length }})
                     </span>
                     <ChevronDownIcon
                       :class="{ 'transform rotate-180': expandedInvalidSections[file] }"
@@ -61,7 +61,7 @@
               <!-- Invalid Rows Content -->
               <div
                 v-if="expandedInvalidSections[file]"
-                class="mt-2 space-y-2 max-h-[300px] overflow-y-auto"
+                class="px-6 py-4 bg-gray-900/20"
               >
                 <!-- Group invalid rows by destination -->
                 <div
@@ -110,7 +110,7 @@
       <!-- Comparison Section - Only show when two files are available -->
       <div 
         v-if="isTwoFileReport"
-        class="rounded-lg overflow-hidden border border-fbBorder"
+        class="rounded-lg overflow-hidden bg-gray-900/50"
       >
         <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
           <span class="text-accent">Comparison</span>
@@ -140,18 +140,6 @@
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-      
-      <!-- Single File Message - Only show when one file is available -->
-      <div 
-        v-if="!isTwoFileReport"
-        class="rounded-lg overflow-hidden border border-fbBorder bg-accent/5"
-      >
-        <div class="p-6 text-center">
-          <p class="text-gray-300">
-            Upload a second file to see a detailed comparison and find opportunities.
-          </p>
         </div>
       </div>
     </div>

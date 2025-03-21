@@ -33,7 +33,7 @@
               <div class="text-xl">{{ store.getTotalRecords }}</div>
             </div>
             <div>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mt-2">
               <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
               <div class="text-xl">{{ currentDiscrepancyCount }}</div>
             </div>

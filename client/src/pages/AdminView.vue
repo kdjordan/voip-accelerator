@@ -3,297 +3,300 @@
     <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8 font-secondary">Admin Dashboard</h1>
 
     <!-- Stats Dashboard -->
-    <div class="flex flex-col gap-6">
-      <!-- Combined Stats Box -->
-      <div class="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-600/40">
-        <!-- Collapsible LERG Details header -->
+    <div class="flex flex-col gap-6 bg-gray-800 pb-6">
+      <!-- LERG Details Section -->
+      <div class="bg-gray-900/50">
         <div 
           @click="toggleLergDetails" 
-          class="flex justify-between items-center  p-2 rounded-md -m-2"
+          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
         >
-          <h2 class="text-xl font-semibold">LERG Details</h2>
-          <ChevronDownIcon
-            :class="{ 'transform rotate-180': showLergDetails }"
-            class="w-5 h-5 transition-transform"
-          />
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">LERG Details</h2>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': showLergDetails }"
+              class="w-5 h-5 transition-transform text-gray-400"
+            />
+          </div>
         </div>
         
         <!-- LERG Stats Grid -->
-        <div v-if="showLergDetails" class="mt-6 space-y-6">
-        <div class="grid grid-cols-1 gap-3 border-b border-gray-700/50 pb-4 mb-6">
-          <!-- Last Updated -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Last Updated</h3>
-              <div class="text-lg">{{ formatDate(lergStats.lastUpdated) }}</div>
-            </div>
-          </div>
-          <!-- Total Records -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Total NPA Records</h3>
-              <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalRecords) }}</div>
-            </div>
-          </div>
-          <!-- Total Countries -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Total Countries</h3>
-              <div class="text-2xl font-bold">{{ store.getCountryCount }}</div>
-            </div>
-          </div>
-          <!-- Database Connection Status -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Database Status</h3>
-              <div class="flex items-center space-x-2">
-                <div
-                  class="w-3 h-3 rounded-full"
-                  :class="
-                    dbStatus.connected
-                      ? 'bg-accent animate-status-pulse-success'
-                      : 'bg-destructive animate-status-pulse-error'
-                  "
-                ></div>
-                <span
-                  v-if="!dbStatus.connected"
-                  class="text-red-400 text-sm"
-                >
-                  {{ dbStatus.error }}
-                  <span v-if="dbStatus.details" class="block text-xs mt-1 text-red-300">{{ dbStatus.details }}</span>
-                </span>
-                <span v-else class="text-green-400 text-sm">Connected</span>
-              </div>
-            </div>
-          </div>
-          <div class="text-xs text-gray-500 mt-1 text-right">
-            Last checked: {{ formatTime(dbStatus.lastChecked) }}
-          </div>
-          <!-- Storage Status -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Storage Status</h3>
-              <div class="flex items-center space-x-2">
-                <div
-                  class="w-3 h-3 rounded-full"
-                  :class="[
-                    isLergLocallyStored
-                      ? 'bg-accent animate-status-pulse-success'
-                      : 'bg-destructive animate-status-pulse-error',
-                  ]"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Breakdown Sections -->
-        <div class="space-y-6">
-          <!-- US States Section -->
-          <div class="bg-gray-900/30 rounded-lg overflow-hidden">
-            <div
-              @click="toggleStateDetails"
-              class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
-            >
+        <div v-if="showLergDetails" class="border-t border-gray-700/50 p-6 space-y-6">
+          <div class="grid grid-cols-1 gap-3 border-b border-gray-700/50 pb-4 mb-6">
+            <!-- Last Updated -->
+            <div>
               <div class="flex justify-between items-center">
-                <span class="font-medium text-lg">US States</span>
-                <ChevronDownIcon
-                  :class="{ 'transform rotate-180': showStateDetails }"
-                  class="w-5 h-5 transition-transform"
-                />
+                <h3 class="text-gray-400">Last Updated</h3>
+                <div class="text-lg">{{ formatDate(lergStats.lastUpdated) }}</div>
               </div>
             </div>
-            <!-- US States Content -->
-            <div
-              v-if="showStateDetails"
-              class="p-4 space-y-4"
-            >
-              <!-- Full width rows for multi-NPA states -->
-              <div class="space-y-2">
-                <div
-                  v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length > 1)"
-                  :key="state.code"
-                  @click="toggleExpandState(state.code)"
-                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
-                >
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium text-lg">{{ getStateName(state.code, 'US') }}</span>
-                    <div class="flex items-center space-x-3">
-                      <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-                        {{ state.npas.length }} NPAs
-                      </span>
-                      <ChevronDownIcon
-                        :class="{ 'transform rotate-180': expandedStates.includes(state.code) }"
-                        class="w-5 h-5 transition-transform"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Expanded NPAs list -->
+            <!-- Total Records -->
+            <div>
+              <div class="flex justify-between items-center">
+                <h3 class="text-gray-400">Total NPA Records</h3>
+                <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalRecords) }}</div>
+              </div>
+            </div>
+            <!-- Total Countries -->
+            <div>
+              <div class="flex justify-between items-center">
+                <h3 class="text-gray-400">Total Countries</h3>
+                <div class="text-2xl font-bold">{{ store.getCountryCount }}</div>
+              </div>
+            </div>
+            <!-- Database Connection Status -->
+            <div>
+              <div class="flex justify-between items-center">
+                <h3 class="text-gray-400">Database Status</h3>
+                <div class="flex items-center space-x-2">
                   <div
-                    v-if="expandedStates.includes(state.code)"
-                    class="mt-3 pl-4"
+                    class="w-3 h-3 rounded-full"
+                    :class="
+                      dbStatus.connected
+                        ? 'bg-accent animate-status-pulse-success'
+                        : 'bg-destructive animate-status-pulse-error'
+                    "
+                  ></div>
+                  <span
+                    v-if="!dbStatus.connected"
+                    class="text-red-400 text-sm"
                   >
-                    <div class="flex flex-wrap gap-2">
-                      <div
-                        v-for="npa in state.npas"
-                        :key="npa"
-                        class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
-                      >
-                        {{ npa }}
+                    {{ dbStatus.error }}
+                    <span v-if="dbStatus.details" class="block text-xs mt-1 text-red-300">{{ dbStatus.details }}</span>
+                  </span>
+                  <span v-else class="text-green-400 text-sm">Connected</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs text-gray-500 mt-1 text-right">
+              Last checked: {{ formatTime(dbStatus.lastChecked) }}
+            </div>
+            <!-- Storage Status -->
+            <div>
+              <div class="flex justify-between items-center">
+                <h3 class="text-gray-400">Storage Status</h3>
+                <div class="flex items-center space-x-2">
+                  <div
+                    class="w-3 h-3 rounded-full"
+                    :class="[
+                      isLergLocallyStored
+                        ? 'bg-accent animate-status-pulse-success'
+                        : 'bg-destructive animate-status-pulse-error',
+                    ]"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Breakdown Sections -->
+          <div class="space-y-6">
+            <!-- US States Section -->
+            <div class="bg-gray-900/50">
+              <div
+                @click="toggleStateDetails"
+                class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
+              >
+                <div class="flex justify-between items-center">
+                  <span class="font-medium text-lg">US States</span>
+                  <ChevronDownIcon
+                    :class="{ 'transform rotate-180': showStateDetails }"
+                    class="w-5 h-5 transition-transform text-gray-400"
+                  />
+                </div>
+              </div>
+              
+              <!-- US States Content -->
+              <div
+                v-if="showStateDetails"
+                class="border-t border-gray-700/50 p-6 space-y-4"
+              >
+                <!-- Full width rows for multi-NPA states -->
+                <div class="space-y-2">
+                  <div
+                    v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length > 1)"
+                    :key="state.code"
+                    @click="toggleExpandState(state.code)"
+                    class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+                  >
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium text-lg">{{ getStateName(state.code, 'US') }}</span>
+                      <div class="flex items-center space-x-3">
+                        <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                          {{ state.npas.length }} NPAs
+                        </span>
+                        <ChevronDownIcon
+                          :class="{ 'transform rotate-180': expandedStates.includes(state.code) }"
+                          class="w-5 h-5 transition-transform"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Expanded NPAs list -->
+                    <div
+                      v-if="expandedStates.includes(state.code)"
+                      class="mt-3 pl-4"
+                    >
+                      <div class="flex flex-wrap gap-2">
+                        <div
+                          v-for="npa in state.npas"
+                          :key="npa"
+                          class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
+                        >
+                          {{ npa }}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Grid for single NPA states -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div
-                  v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length === 1)"
-                  :key="state.code"
-                  class="bg-gray-900/50 p-4 rounded-lg"
-                >
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ getStateName(state.code, 'US') }}</span>
-                    <span class="text-gray-300">{{ state.npas[0] }}</span>
+                <!-- Grid for single NPA states -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                    v-for="state in store.sortedStatesWithNPAs.filter(s => s.npas.length === 1)"
+                    :key="state.code"
+                    class="bg-gray-900/50 p-4 rounded-lg"
+                  >
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium">{{ getStateName(state.code, 'US') }}</span>
+                      <span class="text-gray-300">{{ state.npas[0] }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Non-US States Section -->
-          <div class="bg-gray-900/30 rounded-lg overflow-hidden">
-            <div
-              @click="toggleCountryDetails"
-              class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
-            >
-              <div class="flex justify-between items-center">
-                <span class="font-medium text-lg">Non-US States</span>
-                <ChevronDownIcon
-                  :class="{ 'transform rotate-180': showCountryDetails }"
-                  class="w-5 h-5 transition-transform"
-                />
+            <!-- Non-US States Section -->
+            <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+              <div
+                @click="toggleCountryDetails"
+                class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+              >
+                <div class="flex justify-between items-center">
+                  <span class="font-medium text-lg">Non-US States</span>
+                  <ChevronDownIcon
+                    :class="{ 'transform rotate-180': showCountryDetails }"
+                    class="w-5 h-5 transition-transform"
+                  />
+                </div>
               </div>
-            </div>
-            <!-- Non-US States Content -->
-            <div
-              v-if="showCountryDetails"
-              class="p-4 space-y-4"
-            >
-              <!-- Full width rows for multi-NPA countries -->
-              <div class="space-y-2">
-                <div
-                  v-for="country in store.getCountryData.filter(
-                    c => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount > 1
-                  )"
-                  :key="country.country"
-                  @click="toggleExpandCountry(country.country)"
-                  class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
-                >
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium text-lg">{{ getCountryName(country.country) }}</span>
-                    <div class="flex items-center space-x-3">
-                      <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-                        {{ country.npaCount }} NPAs
-                      </span>
-                      <ChevronDownIcon
-                        :class="{ 'transform rotate-180': expandedCountries.includes(country.country) }"
-                        class="w-5 h-5 transition-transform"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Expanded NPAs list -->
+              <!-- Non-US States Content -->
+              <div
+                v-if="showCountryDetails"
+                class="p-4 space-y-4"
+              >
+                <!-- Full width rows for multi-NPA countries -->
+                <div class="space-y-2">
                   <div
-                    v-if="expandedCountries.includes(country.country)"
-                    class="mt-3 pl-4"
+                    v-for="country in store.getCountryData.filter(
+                      c => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount > 1
+                    )"
+                    :key="country.country"
+                    @click="toggleExpandCountry(country.country)"
+                    class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
                   >
-                    <!-- Show provinces for Canada -->
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium text-lg">{{ getCountryName(country.country) }}</span>
+                      <div class="flex items-center space-x-3">
+                        <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                          {{ country.npaCount }} NPAs
+                        </span>
+                        <ChevronDownIcon
+                          :class="{ 'transform rotate-180': expandedCountries.includes(country.country) }"
+                          class="w-5 h-5 transition-transform"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Expanded NPAs list -->
                     <div
-                      v-if="country.country === 'CA'"
-                      class="space-y-3"
+                      v-if="expandedCountries.includes(country.country)"
+                      class="mt-3 pl-4"
                     >
-                      <!-- Multi-NPA provinces -->
+                      <!-- Show provinces for Canada -->
                       <div
-                        v-for="province in country.provinces?.filter(p => p.npas.length > 1)"
-                        :key="province.code"
-                        class="bg-gray-800/50 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors"
-                        @click.stop="toggleExpandProvince(province.code)"
+                        v-if="country.country === 'CA'"
+                        class="space-y-3"
                       >
-                        <div class="flex justify-between items-center">
-                          <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
-                          <div class="flex items-center space-x-3">
-                            <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-                              {{ province.npas.length }} NPAs
-                            </span>
-                            <ChevronDownIcon
-                              :class="{ 'transform rotate-180': expandedProvinces.includes(province.code) }"
-                              class="w-5 h-5 transition-transform"
-                            />
+                        <!-- Multi-NPA provinces -->
+                        <div
+                          v-for="province in country.provinces?.filter(p => p.npas.length > 1)"
+                          :key="province.code"
+                          class="bg-gray-800/50 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors"
+                          @click.stop="toggleExpandProvince(province.code)"
+                        >
+                          <div class="flex justify-between items-center">
+                            <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
+                            <div class="flex items-center space-x-3">
+                              <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                                {{ province.npas.length }} NPAs
+                              </span>
+                              <ChevronDownIcon
+                                :class="{ 'transform rotate-180': expandedProvinces.includes(province.code) }"
+                                class="w-5 h-5 transition-transform"
+                              />
+                            </div>
+                          </div>
+                          <!-- Expanded NPAs list for provinces -->
+                          <div
+                            v-if="expandedProvinces.includes(province.code)"
+                            class="mt-3"
+                          >
+                            <div class="flex flex-wrap gap-2">
+                              <div
+                                v-for="npa in province.npas"
+                                :key="npa"
+                                class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
+                              >
+                                {{ npa }}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <!-- Expanded NPAs list for provinces -->
-                        <div
-                          v-if="expandedProvinces.includes(province.code)"
-                          class="mt-3"
-                        >
-                          <div class="flex flex-wrap gap-2">
-                            <div
-                              v-for="npa in province.npas"
-                              :key="npa"
-                              class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
-                            >
-                              {{ npa }}
+
+                        <!-- Single-NPA provinces grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div
+                            v-for="province in country.provinces?.filter(p => p.npas.length === 1)"
+                            :key="province.code"
+                            class="bg-gray-800/50 p-4 rounded-lg"
+                          >
+                            <div class="flex justify-between items-center">
+                              <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
+                              <span class="text-gray-300">{{ province.npas[0] }}</span>
                             </div>
                           </div>
                         </div>
                       </div>
-
-                      <!-- Single-NPA provinces grid -->
-                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div
-                          v-for="province in country.provinces?.filter(p => p.npas.length === 1)"
-                          :key="province.code"
-                          class="bg-gray-800/50 p-4 rounded-lg"
-                        >
-                          <div class="flex justify-between items-center">
-                            <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
-                            <span class="text-gray-300">{{ province.npas[0] }}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <!-- Show regular NPA list for other countries -->
-                    <div
-                      v-else
-                      class="flex flex-wrap gap-2"
-                    >
+                      <!-- Show regular NPA list for other countries -->
                       <div
-                        v-for="npa in country.npas"
-                        :key="npa"
-                        class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
+                        v-else
+                        class="flex flex-wrap gap-2"
                       >
-                        {{ npa }}
+                        <div
+                          v-for="npa in country.npas"
+                          :key="npa"
+                          class="text-gray-300 bg-gray-800/50 px-3 py-1 rounded"
+                        >
+                          {{ npa }}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Grid for single NPA countries -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div
-                  v-for="country in store.getCountryData.filter(
-                    c => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount === 1
-                  )"
-                  :key="country.country"
-                  class="bg-gray-900/50 p-4 rounded-lg"
-                >
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium">{{ getCountryName(country.country) }}</span>
-                    <span class="text-gray-300">{{ country.npas[0] }}</span>
+                <!-- Grid for single NPA countries -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                    v-for="country in store.getCountryData.filter(
+                      c => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount === 1
+                    )"
+                    :key="country.country"
+                    class="bg-gray-900/50 p-4 rounded-lg"
+                  >
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium">{{ getCountryName(country.country) }}</span>
+                      <span class="text-gray-300">{{ country.npas[0] }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -301,25 +304,24 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- LERG Management Section -->
-    <div class="grid grid-cols-1 gap-6">
-      <div class="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-600/40">
-        <!-- Expandable section header -->
+      <!-- LERG Management Section -->
+      <div class="bg-gray-900/50">
         <div 
           @click="toggleLergSection" 
-          class="flex justify-between items-center p-2 rounded-md -m-2"
+          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
         >
-          <h2 class="text-xl font-semibold">LERG File Management</h2>
-          <ChevronDownIcon
-            :class="{ 'transform rotate-180': showLergSection }"
-            class="w-5 h-5 transition-transform"
-          />
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">LERG File Management</h2>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': showLergSection }"
+              class="w-5 h-5 transition-transform text-gray-400"
+            />
+          </div>
         </div>
         
         <!-- Expandable content -->
-        <div v-if="showLergSection" class="mt-6 space-y-6">
+        <div v-if="showLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
           <!-- LERG Upload -->
           <div>
             <h3 class="text-lg font-medium mb-4">Upload LERG File</h3>
@@ -426,25 +428,24 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Storage Management Section (moved from Dashboard) -->
-    <div class="grid grid-cols-1 gap-6">
-      <div class="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-600/40">
-        <!-- Expandable section header -->
+      <!-- Storage Management Section -->
+      <div class="bg-gray-900/50">
         <div 
           @click="toggleStorageSection" 
-          class="flex justify-between items-center p-2 rounded-md -m-2"
+          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
         >
-          <h2 class="text-xl font-semibold">Storage Management</h2>
-          <ChevronDownIcon
-            :class="{ 'transform rotate-180': showStorageSection }"
-            class="w-5 h-5 transition-transform"
-          />
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">Storage Management</h2>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': showStorageSection }"
+              class="w-5 h-5 transition-transform text-gray-400"
+            />
+          </div>
         </div>
         
         <!-- Storage Statistics Dashboard -->
-        <div v-if="showStorageSection" class="flex flex-col gap-6 mt-6">
+        <div v-if="showStorageSection" class="border-t border-gray-700/50 p-6 flex flex-col gap-6">
           <!-- Combined Stats Box -->
           <div class="bg-gray-900/30 rounded-lg p-6">
             <div class="flex justify-between items-center mb-2">
@@ -648,7 +649,6 @@
       @cancel="handleModalCancel"
     />
   </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -678,7 +678,7 @@
   const expandedProvinces = ref<string[]>([]);
   const showCountryDetails = ref(false);
   const showLergSection = ref(false);
-  const showLergDetails = ref(false);
+  const showLergDetails = ref(true);
   const showStorageSection = ref(false);
 
   const isLergLocallyStored = computed(() => {
