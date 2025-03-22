@@ -27,7 +27,6 @@
 
     <!-- Report Type Tabs -->
     <div
-      
       class="bg-gray-800 px-6 pb-6"
     >
       <div class="flex items-center border-b border-gray-700">

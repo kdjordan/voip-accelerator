@@ -40,66 +40,50 @@
               v-if="hasInvalidRows(getFileName(file))"
               class="-mx-6 mt-4"
             >
-              <div
+              <div 
                 @click="toggleInvalidRowsDetails(file)"
-                class="px-6 py-2 w-full cursor-pointer bg-destructive/10 border-y border-destructive/50"
+                class="bg-red-900/50 px-6 py-3 border-y border-red-500/30 cursor-pointer hover:bg-red-900/70 transition-colors"
               >
-                <div class="flex justify-between items-center">
-                  <span class="text-xs text-red-400">Invalid Rows Not Uploaded</span>
+                <div class="flex items-center justify-between">
                   <div class="flex items-center space-x-2">
-                    <span class="text-xs text-red-400 px-2 py-0.5 rounded">
-                      ({{ getInvalidRowsForFile(getFileName(file)).length }})
-                    </span>
-                    <ChevronDownIcon
-                      :class="{ 'transform rotate-180': expandedInvalidSections[file] }"
-                      class="w-4 h-4 transition-transform text-gray-400"
-                    />
+                    <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
+                    <span class="text-sm font-medium text-red-400">({{ getInvalidRowsForFile(getFileName(file)).length }})</span>
                   </div>
+                  <ChevronDownIcon
+                    :class="{ 'transform rotate-180': expandedInvalidSections[file] }"
+                    class="w-4 h-4 text-red-400"
+                  />
                 </div>
               </div>
-
+              
               <!-- Invalid Rows Content -->
               <div
                 v-if="expandedInvalidSections[file]"
-                class="px-6 py-4 bg-gray-900/20"
+                class="transition-all duration-300 ease-in-out bg-red-900/50"
               >
-                <!-- Group invalid rows by destination -->
-                <div
-                  v-for="(group, destName) in groupInvalidRowsByDestination(getFileName(file))"
-                  :key="destName"
-                  class="bg-gray-900/80 p-3 rounded-lg"
-                >
-                  <div
-                    @click="toggleExpandInvalidRow(file, destName)"
-                    class="flex justify-between items-center cursor-pointer p-1 rounded"
-                  >
-                    <span class="font-medium text-sm">{{ destName || 'Unknown Destination' }}</span>
-                    <div class="flex items-center space-x-3">
-                      <span class="text-xs text-gray-400">{{ group.length }} invalid entries</span>
-                      <ChevronDownIcon
-                        :class="{ 'transform rotate-180': isDestExpanded(file, destName) }"
-                        class="w-3 h-3 transition-transform"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Expanded invalid entries list -->
-                  <div
-                    v-if="isDestExpanded(file, destName)"
-                    class="mt-2 pl-2 space-y-1"
-                  >
-                    <div
-                      v-for="row in group"
-                      :key="`${row.rowIndex}-${row.dialCode}`"
-                      class="flex justify-between items-center  px-3 py-1.5 rounded text-sm"
-                    >
-                      <div class="flex flex-col">
-                        <span class="text-gray-300">{{ row.dialCode || 'No Code' }}</span>
-                        <span class="text-gray-400 text-xs">{{ row.reason }}</span>
-                      </div>
-                      <span class="text-red-400">{{ row.invalidRate }}</span>
-                    </div>
-                  </div>
+                <div class="px-6 py-4">
+                  <table class="w-full min-w-full border-separate border-spacing-0">
+                    <thead class="bg-gray-800/80">
+                      <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">NAME</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">PREFIX</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">RATE</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-gray-900/80">
+                      <tr 
+                        v-for="row in getInvalidRowsForFile(getFileName(file))" 
+                        :key="`${row.rowIndex}-${row.dialCode}`"
+                        class="hover:bg-gray-800/50"
+                      >
+                        <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">{{ row.rowIndex }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">{{ row.destName || 'Unknown' }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50">{{ row.dialCode || 'No Code' }}</td>
+                        <td class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50">{{ row.invalidRate }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

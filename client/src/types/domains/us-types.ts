@@ -7,6 +7,13 @@ export interface USStandardizedData {
   indetermRate: number;
 }
 
+export interface USReportsInput {
+  fileName1: string;
+  fileName2: string;
+  file1Data: USStandardizedData[];
+  file2Data: USStandardizedData[];
+}
+
 // Interface for invalid rows during file processing
 export interface InvalidUsRow {
   rowIndex: number;
