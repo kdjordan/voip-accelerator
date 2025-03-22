@@ -1,3 +1,5 @@
+// messages.ts - Refactored version
+
 export const JOURNEY_STATE = {
   INITIAL: 'INITIAL',
   ONE_FILE: 'ONE_FILE',
@@ -8,61 +10,86 @@ export const JOURNEY_STATE = {
 
 export type JourneyState = keyof typeof JOURNEY_STATE;
 
+// Define product types
+export type ProductType = 'AZ' | 'US';
+
 interface JourneyMessage {
   title: string;
   message: string;
 }
 
-export const AZ_JOURNEY_MESSAGES: Record<JourneyState, JourneyMessage> = {
+// Base message templates with placeholders
+const BASE_JOURNEY_MESSAGES: Record<JourneyState, {
+  title: string;
+  message: string;
+  titleVariants?: Partial<Record<ProductType, string>>;
+  messageVariants?: Partial<Record<ProductType, string>>;
+}> = {
   INITIAL: {
-    title: 'AZ Rate Deck Analyzer',
-    message: "Let's analyze some AZ decks, shall we?<br> Upload a rate deck to get started!",
+    title: '{product} Rate Deck Analyzer',
+    message: "Let's analyze some {product} decks, shall we?<br> Upload a rate deck to get started!",
+    messageVariants: {
+      'US': "Let's analyze some NPANXX decks, shall we?<br> Upload a rate deck to get started!"
+    }
   },
   ONE_FILE: {
     title: 'Great start!',
-    message: 'Your file has been analyzed!<br> You can see the code report below.<br>Upload a second file to compare and find opportunities.',
+    message: 'Your file has been analyzed!<br> You can see the individual code report below.<br>Upload a second file to compare and find opportunities.',
+    messageVariants: {
+      'US': 'Now upload your second rate deck to compare rates and codes to find opportunities.'
+    }
   },
   ONE_FILE_REPORT: {
     title: 'Single File Analysis',
     message: 'Your file has been analyzed!<br> You can see the code report below.<br>Upload a second file to compare and find buy/sell opportunities.',
+    messageVariants: {
+      'US': 'Your file has been analyzed! View the code report to see details about your rate deck.<br />Upload a second file to get a full comparison and find buying/selling opportunities.'
+    }
   },
   TWO_FILES: {
     title: 'Ready for comparison',
     message: 'Both files are uploaded.<br>Click "Get Reports" to generate pricing and code comparison reports.',
+    titleVariants: {
+      'US': 'Ready for analysis'
+    },
+    messageVariants: {
+      'US': 'Click "Get Reports" below to see your detailed rate and code analyses.'
+    }
   },
   REPORTS_READY: {
     title: 'Analysis complete',
     message: 'Use the report tabs to explore your opportunities.',
+    messageVariants: {
+      'US': 'Use the report tabs above to explore your opportunities.'
+    }
   },
 };
 
-export const US_JOURNEY_MESSAGES = {
-  [JOURNEY_STATE.INITIAL]: {
-    title: 'US File Upload',
-    message:
-      'Upload <span class="text-white font-medium uppercase">your rates</span> and the rates of your <span class="text-white font-medium uppercase">prospective carrier</span>.<br />We will generate you a report showing the best opportunities for you to buy and sell.',
-  },
-  [JOURNEY_STATE.ONE_FILE]: {
-    title: 'Great start!',
-    message: 'Now upload your second rate deck to compare rates and codes to find opportunities.',
-  },
-  [JOURNEY_STATE.ONE_FILE_REPORT]: {
-    title: 'Single File Analysis',
-    message: 'Your file has been analyzed! View the code report to see details about your rate deck.<br />Upload a second file to get a full comparison and find buying/selling opportunities.',
-  },
-  [JOURNEY_STATE.TWO_FILES]: {
-    title: 'Ready for analysis',
-    message: 'Click "Get Reports" below to see your detailed rate and code analyses.',
-  },
-  // [JOURNEY_STATE.PROCESSING]: {
-  //   title: 'Analyzing rates',
-  //   message: 'We are processing your rate decks and generating reports.',
-  // },
-  [JOURNEY_STATE.REPORTS_READY]: {
-    title: 'Analysis complete',
-    message: 'Use the report tabs above to explore your opportunities.',
-  },
-} as const;
+/**
+ * Create journey messages for a specific product type
+ * @param productType - The product type ('AZ' or 'US')
+ * @returns Record of journey messages customized for the product
+ */
+export function createJourneyMessages(productType: ProductType): Record<JourneyState, JourneyMessage> {
+  const result: Record<JourneyState, JourneyMessage> = {} as Record<JourneyState, JourneyMessage>;
+  
+  for (const [state, baseMessage] of Object.entries(BASE_JOURNEY_MESSAGES)) {
+    const title = baseMessage.titleVariants?.[productType] || 
+      baseMessage.title.replace('{product}', productType);
+    
+    const message = baseMessage.messageVariants?.[productType] || 
+      baseMessage.message
+        .replace('{product}', productType);
+    
+    result[state as JourneyState] = { title, message };
+  }
+  
+  return result;
+}
+
+// Generate the specific message sets
+export const AZ_JOURNEY_MESSAGES = createJourneyMessages('AZ');
+export const US_JOURNEY_MESSAGES = createJourneyMessages('US');
 
 // Define a type for the different parent components that use PreviewModal2
 export type PreviewModalSource = 

@@ -7,15 +7,16 @@
           name="fade"
           mode="out-in"
         >
+          <!-- User Journey Section -->
           <div
             :key="currentJourneyState"
-            class="min-h-24"
+            class="min-h-24 "
           >
-            <h3 class="text-sizeLg tracking-wide text-white mb-2">
-              {{ journeyMessage.title }}
-            </h3>
+            <!-- Title -->
+            <h3 class="text-sizeLg tracking-wide text-white mb-2">{{ journeyMessage.title }}</h3>
+            <!-- Message -->
             <p
-              class="text-base text-gray-400"
+              class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md text-blue-400"
               v-html="journeyMessage.message"
             ></p>
           </div>
@@ -26,12 +27,11 @@
 
     <!-- Report Type Tabs -->
     <div
-      v-if="usStore.reportsGenerated"
-      class="bg-gray-800 px-6"
+      class="bg-gray-800 px-6 pb-6"
     >
       <div class="flex items-center border-b border-gray-700">
         <button
-          v-for="type in reportTypes"
+          v-for="type in availableReportTypes"
           :key="type"
           @click="usStore.setActiveReportType(type)"
           class="mr-8 py-4 px-1 relative"
@@ -43,7 +43,8 @@
             },
           ]"
         >
-          <span v-if="type !== ReportTypes.FILES">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
+          <span v-if="type === 'code' && usStore.reportsGenerated">Code Compare</span>
+          <span v-else-if="type !== 'files'">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
           <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
           <!-- Active Tab Indicator -->
           <div
@@ -51,9 +52,9 @@
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
           ></div>
         </button>
-        <button
+        <button v-if="usStore.filesUploaded.size > 0"
           @click="handleReset"
-          class="btn-destructive ml-auto mb-2"
+          class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors ml-auto text-red-400"
         >
           Reset
         </button>
@@ -73,11 +74,26 @@
   const usStore = useUsStore();
   const { deleteDatabase } = useDexieDB();
 
-  const reportTypes: readonly ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING] as const;
+  // Compute available report types based on the current state
+  const availableReportTypes = computed(() => {
+    if (usStore.reportsGenerated) {
+      return [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
+    }
+    return [ReportTypes.FILES];
+  });
+
+  const showReportTabs = computed(() => {
+    // Only show tabs when reports are generated (two files compared)
+    return usStore.reportsGenerated;
+  });
 
   const currentJourneyState = computed<JourneyState>(() => {
     if (usStore.reportsGenerated) {
       return JOURNEY_STATE.REPORTS_READY;
+    }
+    
+    if (usStore.hasSingleFileReport) {
+      return JOURNEY_STATE.ONE_FILE_REPORT;
     }
 
     const uploadedCount = usStore.getNumberOfFilesUploaded;

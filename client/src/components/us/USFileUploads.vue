@@ -6,7 +6,6 @@
         <div class="grid grid-cols-2 gap-8">
           <!-- Your Rates Upload Zone -->
           <div class="flex flex-col gap-2">
-            <h2 class="text-base text-fbWhite mb-4 font-secondary text-center uppercase">Your Rates Here</h2>
             <div
               class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
@@ -112,7 +111,6 @@
 
           <!-- Prospect's Rates Upload Zone -->
           <div class="flex flex-col gap-2">
-            <h2 class="text-base text-fbWhite mb-4 font-secondary text-center uppercase">Prospect's Rates Here</h2>
             <div
               class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
               :class="[
@@ -260,9 +258,8 @@
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useUsStore } from '@/stores/us-store';
   // Comment out the worker import since it's not implemented yet
-  // import USComparisonWorker from '@/workers/us-comparison.worker?worker';
-  import { DBName } from '@/types/app-types';
-  import { type USPricingReport, type USCodeReport, type USStandardizedData } from '@/types/domains/us-types';
+  import { usService } from '@/services/us.service';
+  import { USReportsInput, type USPricingReport, type USCodeReport, type USStandardizedData } from '@/types/domains/us-types';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import { USColumnRole } from '@/types/domains/us-types';
   import Papa from 'papaparse';
@@ -271,14 +268,6 @@
 
   // First, define a type for component IDs to ensure type safety
   type ComponentId = 'us1' | 'us2';
-
-  // Define the USReportsInput interface inline since it might not exist in us-types.ts yet
-  interface USReportsInput {
-    fileName1: string;
-    fileName2: string;
-    file1Data: USStandardizedData[];
-    file2Data: USStandardizedData[];
-  }
 
   const usStore = useUsStore();
   const usService = new USService();
@@ -395,10 +384,6 @@
     } else {
       try {
         await generateReports();
-        
-        // Add a notification that reports are limited
-        console.warn('Report generation is limited due to missing worker implementation');
-        alert('Reports generated with limited functionality. Worker implementation is pending.');
       } catch (error) {
         console.error('Failed to generate reports:', error);
         alert('Failed to generate reports. Please try again later.');
@@ -453,8 +438,6 @@
           indetermRate: item.indetermRate
         }));
 
-        // Comment out worker-related code since the worker is not implemented yet
-        /*
         // Create worker and process data
         const worker = new USComparisonWorker();
         const reports = await new Promise<{ pricingReport: USPricingReport; codeReport: USCodeReport }>(
@@ -495,84 +478,6 @@
 
         // Clean up worker
         worker.terminate();
-        */
-        
-        // Add temporary placeholder for reports
-        console.log('Worker not implemented yet - using placeholder reports');
-        // TODO: Implement proper report generation when worker is available
-        
-        // Create placeholder file report that matches the USFileReport interface
-        const createFileReport = (fileName: string): any => ({
-          fileName,
-          totalNPANXX: 0,
-          uniqueNPA: 0,
-          uniqueNXX: 0,
-          coveragePercentage: 0,
-          rateStats: {
-            interstate: {
-              average: 0,
-              median: 0,
-              min: 0,
-              max: 0,
-              count: 0
-            },
-            intrastate: {
-              average: 0,
-              median: 0,
-              min: 0,
-              max: 0,
-              count: 0
-            },
-            indeterminate: {
-              average: 0,
-              median: 0,
-              min: 0,
-              max: 0,
-              count: 0
-            }
-          }
-        });
-        
-        // Create minimal placeholder reports that match the interfaces
-        const placeholderPricingReport: USPricingReport = {
-          file1: {
-            fileName: fileNames[0],
-            averageInterRate: 0,
-            averageIntraRate: 0,
-            averageIJRate: 0,
-            medianInterRate: 0,
-            medianIntraRate: 0,
-            medianIJRate: 0
-          },
-          file2: {
-            fileName: fileNames[1],
-            averageInterRate: 0,
-            averageIntraRate: 0,
-            averageIJRate: 0,
-            medianInterRate: 0,
-            medianIntraRate: 0,
-            medianIJRate: 0
-          },
-          comparison: {
-            interRateDifference: 0,
-            intraRateDifference: 0,
-            ijRateDifference: 0,
-            totalHigher: 0,
-            totalLower: 0,
-            totalEqual: 0
-          }
-        };
-        
-        const placeholderCodeReport: USCodeReport = {
-          file1: createFileReport(fileNames[0]),
-          file2: createFileReport(fileNames[1]),
-          matchedCodes: 0,
-          nonMatchedCodes: 0,
-          matchedCodesPercentage: 0,
-          nonMatchedCodesPercentage: 0
-        };
-        
-        usStore.setReports(placeholderPricingReport, placeholderCodeReport);
       }
     } catch (error: unknown) {
       console.error('Error generating reports:', error);
@@ -606,7 +511,7 @@
       return;
     }
     
-    await handleFileSelected(file, componentId);
+    await handleFileInput(file, componentId);
   }
 
   // Modal handlers
@@ -635,38 +540,15 @@
       };
 
       console.log(`Processing file for component: ${activeComponent.value}, file: ${file.name}`);
-      console.log('User selected column mapping:', mappings);
-      console.log('Converted column mapping:', JSON.stringify(columnMapping, null, 2));
-      
-      // Log the first few lines of the file to debug format issues
-      console.log('Reading file preview to verify format:');
-      Papa.parse(file, {
-        preview: 3,
-        complete: (results) => {
-          console.log('First 3 rows:', results.data);
-        },
-        error: (error) => {
-          console.error('Error reading preview:', error);
-        }
-      });
       
       // Process file with mappings
       const result = await usService.processFile(file, columnMapping, startLine.value, indeterminateDefinition);
-      console.log(`File processed. Valid records: ${result.records.length}`);
       
       // Make sure we're calling handleFileUploaded with the component ID
       await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
       uploadError[activeComponent.value] = `Error processing file: ${error instanceof Error ? error.message : String(error)}`;
-      
-      // If there was an error, make sure we clean up any partial data
-      try {
-        const tableName = file.name.toLowerCase().replace('.csv', '');
-        await usService.removeTable(tableName);
-      } catch (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
-      }
     } finally {
       usStore.setComponentUploading(activeComponent.value, false);
       usStore.clearTempFile(activeComponent.value);
@@ -692,88 +574,9 @@
     }
   }
 
-  // Add a debug function for testing errors
-  function setTestError(componentId: ComponentId, message: string) {
-    // For testing error states
-    uploadError[componentId] = message;
-    console.log(`Set error for ${componentId}: ${message}`);
-  }
-
-  async function checkDatabaseTables() {
-    try {
-      const tables = await usService.listTables();
-      console.log('Current IndexedDB tables and record counts:');
-      console.table(tables);
-      
-      // Check if tables is a Record or an array
-      if (Object.keys(tables).length === 0) {
-        console.warn('No tables found in the database.');
-      } else {
-        // Convert the tables object to array entries if it's not already an array
-        const tableEntries = Array.isArray(tables) 
-          ? tables 
-          : Object.entries(tables).map(([tableName, recordCount]) => ({ 
-              tableName, 
-              recordCount 
-            }));
-        
-        // Now iterate through the table entries
-        tableEntries.forEach(table => {
-          if (table.recordCount === 0) {
-            console.warn(`Table '${table.tableName}' exists but contains no records.`);
-          }
-        });
-      }
-      
-      return tables;
-    } catch (error) {
-      console.error('Error checking database tables:', error);
-    }
-  }
-  
-  // Let's run this check when components mount
-  onMounted(async () => {
-    await checkDatabaseTables();
-  });
-
-  async function clearAllData() {
-    try {
-      await usService.clearData();
-      
-      // Reset all component states
-      inactivateAllComponents();
-      
-      // Clear errors and reset upload states
-      Object.keys(uploadError).forEach(component => {
-        const id = component as ComponentId;
-        uploadError[id] = '';
-      });
-      
-      await checkDatabaseTables();
-      
-      // Toast or notification
-      console.log('All data has been cleared successfully');
-    } catch (error) {
-      console.error('Error clearing data:', error);
-    }
-  }
-
-  // Add missing inactivateAllComponents function
-  function inactivateAllComponents() {
-    // Reset states for all components
-    Object.keys(isDragging).forEach(key => {
-      const id = key as ComponentId;
-      isDragging[id] = false;
-    });
-  }
-
   // Add back the handleFileInput function
-  async function handleFileInput(event: Event, componentId: ComponentId) {
+  async function handleFileInput(file: File, componentId: ComponentId) {
     console.log(`File input for component ${componentId}`);
-    const files = (event.target as HTMLInputElement).files;
-    if (!files || files.length === 0) return;
-    
-    const file = files[0];
     
     // Clear any previous errors
     uploadError[componentId] = null;
