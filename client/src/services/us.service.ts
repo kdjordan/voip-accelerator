@@ -193,8 +193,6 @@ export class USService {
               console.warn(`No valid records to store for file '${file.name}'`);
             }
             
-            // Tell the store which file was uploaded
-            this.store.addFileUploaded(file.name, tableName);
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
             console.error('Error in processFile:', error);

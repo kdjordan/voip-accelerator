@@ -544,7 +544,7 @@
       // Process file with mappings
       const result = await usService.processFile(file, columnMapping, startLine.value, indeterminateDefinition);
       
-      // Make sure we're calling handleFileUploaded with the component ID
+      // Call handleFileUploaded with the component ID, not the file.name
       await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
