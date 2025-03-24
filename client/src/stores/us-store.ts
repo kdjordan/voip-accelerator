@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia';
-import type { USPricingReport, USCodeReport, InvalidUsRow, USStandardizedData } from '../types/domains/us-types';
+import type {
+  USPricingReport,
+  USCodeReport,
+  InvalidUsRow,
+  USStandardizedData,
+} from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
 import { storageConfig } from '@/config/storage-config';
@@ -17,22 +22,30 @@ export const useUsStore = defineStore('usStore', {
     invalidRows: new Map<string, InvalidUsRow[]>(),
     // Add in-memory storage
     inMemoryData: new Map<string, USStandardizedData[]>(),
-    fileStats: new Map<string, {
-      totalCodes: number;
-      totalDestinations: number;
-      uniqueDestinationsPercentage: number;
-    }>(),
+    fileStats: new Map<
+      string,
+      {
+        totalCodes: number;
+        totalDestinations: number;
+        uniqueDestinationsPercentage: number;
+        usNPACoveragePercentage: number;
+        avgInterRate: number;
+        avgIntraRate: number;
+        avgIndetermRate: number;
+      }
+    >(),
   }),
 
   getters: {
     isComponentDisabled:
-      state =>
+      (state) =>
       (componentName: string): boolean =>
         state.filesUploaded.has(componentName),
 
     isFull: (state): boolean => state.filesUploaded.size === 2,
 
-    getFileNames: (state): string[] => Array.from(state.filesUploaded.values()).map(file => file.fileName),
+    getFileNames: (state): string[] =>
+      Array.from(state.filesUploaded.values()).map((file) => file.fileName),
 
     getActiveReportType: (state): ReportType => state.activeReportType,
 
@@ -40,59 +53,77 @@ export const useUsStore = defineStore('usStore', {
 
     getCodeReport: (state): USCodeReport | null => state.codeReport,
 
-    getNumberOfFilesUploaded: state => state.filesUploaded.size,
+    getNumberOfFilesUploaded: (state) => state.filesUploaded.size,
 
     isComponentUploading:
-      state =>
+      (state) =>
       (componentName: string): boolean =>
         !!state.uploadingComponents[componentName],
-        
+
     getFileNameByComponent:
-      state =>
+      (state) =>
       (componentName: string): string => {
         const file = state.filesUploaded.get(componentName);
         return file ? file.fileName : '';
       },
-      
-    getInvalidRows: state => (fileName: string): InvalidUsRow[] => {
-      return state.invalidRows.get(fileName) || [];
-    },
-    
-    hasInvalidRows: state => (fileName: string): boolean => {
-      return state.invalidRows.has(fileName) && (state.invalidRows.get(fileName)?.length || 0) > 0;
-    },
-    
-    hasExistingFile: state => (fileName: string): boolean => {
-      return Array.from(state.filesUploaded.values()).some(f => f.fileName === fileName);
-    },
-    
+
+    getInvalidRows:
+      (state) =>
+      (fileName: string): InvalidUsRow[] => {
+        return state.invalidRows.get(fileName) || [];
+      },
+
+    hasInvalidRows:
+      (state) =>
+      (fileName: string): boolean => {
+        return (
+          state.invalidRows.has(fileName) && (state.invalidRows.get(fileName)?.length || 0) > 0
+        );
+      },
+
+    hasExistingFile:
+      (state) =>
+      (fileName: string): boolean => {
+        return Array.from(state.filesUploaded.values()).some((f) => f.fileName === fileName);
+      },
+
     isUsingMemoryStorage: () => {
       return storageConfig.storageType === 'memory';
     },
 
-    getFileStats: state => (componentId: string) => {
-      return state.fileStats.get(componentId) || {
-        totalCodes: 0,
-        totalDestinations: 0,
-        uniqueDestinationsPercentage: 0
-      };
+    getFileStats: (state) => (componentId: string) => {
+      return (
+        state.fileStats.get(componentId) || {
+          totalCodes: 0,
+          totalDestinations: 0,
+          uniqueDestinationsPercentage: 0,
+          usNPACoveragePercentage: 0,
+          avgInterRate: 0,
+          avgIntraRate: 0,
+          avgIndetermRate: 0,
+        }
+      );
     },
-    
+
     // In-memory storage getters
-    getInMemoryData: state => (tableName: string) => {
+    getInMemoryData: (state) => (tableName: string) => {
       return state.inMemoryData.get(tableName) || [];
     },
-    
-    getInMemoryDataCount: state => (tableName: string) => {
+
+    getInMemoryDataCount: (state) => (tableName: string) => {
       return state.inMemoryData.get(tableName)?.length || 0;
     },
-    
-    getInMemoryTables: state => {
+
+    getInMemoryTables: (state) => {
       const result: Record<string, number> = {};
       state.inMemoryData.forEach((data, tableName) => {
         result[tableName] = data.length;
       });
       return result;
+    },
+
+    hasSingleFileReport: (state) => {
+      return state.fileStats.size > 0 && state.fileStats.size < 2;
     },
   },
 
@@ -127,14 +158,22 @@ export const useUsStore = defineStore('usStore', {
       if (fileName) {
         // Get the tableName from the filename
         const tableName = fileName.toLowerCase().replace('.csv', '');
-        
+
         // Remove from in-memory data if using memory storage
         if (this.isUsingMemoryStorage) {
           this.inMemoryData.delete(tableName);
         }
       }
-      
+
       this.filesUploaded.delete(componentName);
+
+      // Clear file stats for this component
+      this.clearFileStats(componentName);
+
+      // Clear any invalid rows for this file
+      if (fileName) {
+        this.invalidRows.delete(fileName);
+      }
 
       // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
@@ -149,20 +188,20 @@ export const useUsStore = defineStore('usStore', {
     setComponentUploading(componentName: string, isUploading: boolean) {
       this.uploadingComponents[componentName] = isUploading;
     },
-    
+
     // Temp file handling for preview
     setTempFile(componentName: string, file: File) {
       this.tempFiles.set(componentName, file);
     },
-    
+
     getTempFile(componentName: string): File | undefined {
       return this.tempFiles.get(componentName);
     },
-    
+
     clearTempFile(componentName: string) {
       this.tempFiles.delete(componentName);
     },
-    
+
     // Invalid rows handling
     addInvalidRow(fileName: string, row: InvalidUsRow) {
       if (!this.invalidRows.has(fileName)) {
@@ -170,26 +209,49 @@ export const useUsStore = defineStore('usStore', {
       }
       this.invalidRows.get(fileName)?.push(row);
     },
-    
+
     clearInvalidRowsForFile(fileName: string) {
       this.invalidRows.delete(fileName);
     },
-    
+
     clearAllInvalidRows() {
       this.invalidRows.clear();
     },
-    
+
     // In-memory storage actions
     storeInMemoryData(tableName: string, data: USStandardizedData[]) {
       this.inMemoryData.set(tableName, data);
     },
-    
+
     removeInMemoryData(tableName: string) {
       this.inMemoryData.delete(tableName);
     },
-    
+
     clearAllInMemoryData() {
       this.inMemoryData.clear();
-    }
+    },
+
+    setFileStats(
+      componentId: string,
+      stats: {
+        totalCodes: number;
+        totalDestinations: number;
+        uniqueDestinationsPercentage: number;
+        usNPACoveragePercentage: number;
+        avgInterRate: number;
+        avgIntraRate: number;
+        avgIndetermRate: number;
+      }
+    ) {
+      this.fileStats.set(componentId, stats);
+    },
+
+    clearFileStats(componentId: string) {
+      this.fileStats.delete(componentId);
+    },
+
+    clearAllFileStats() {
+      this.fileStats.clear();
+    },
   },
 }) as unknown as () => DomainStore<USPricingReport, USCodeReport>;

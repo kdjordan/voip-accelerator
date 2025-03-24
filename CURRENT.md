@@ -1,110 +1,73 @@
-# Implementation Plan: Move File Stats to AZ Store
+# VOIP Rate Analysis Service Implementation Plan
 
-## Current State
-- File stats (totalCodes, totalDestinations, uniqueDestinationsPercentage) are currently stored locally in AZFileUploads.vue
-- Stats are calculated when a file is uploaded and when a component is mounted
-- The functionality should be moved to the az-store for persistence
+## Phase 1: File Upload System (Fundamentals)
+- [x] Create upload UI components for US and AZ rate files
+- [x] Implement file validation (CSV format)
+- [x] Add drag-and-drop functionality
+- [x] Implement preview modal to validate file content
+- [x] Build column mapping interface for different file formats
+- [x] Create storage mechanism in Pinia store
+- [X] Fix US file upload component to properly store files in the Pinia store
 
-## Implementation Steps
+## Phase 2: Data Processing & Basic Analysis
+- [ ] Implement basic rate file analysis:
+  - [x] Count total NPA-NXX codes in each file
+  - [x] Extract unique NPAs (area codes)
+  - [x] Calculate rate statistics (min, max, avg) for each file - including interstate, intrastate, and indeterminate rates.
+  - [x] Display summary of single file analysis
+- [ ] Create basic data visualization components
 
-### 1. Update az-store.ts
-- [x] Add fileStats state to the store
-```typescript
-fileStats: new Map<string, {
-  totalCodes: number;
-  totalDestinations: number;
-  uniqueDestinationsPercentage: number;
-}>(),
-```
-- [x] Add getters for file stats
-```typescript
-getFileStats: state => (componentId: string) => {
-  return state.fileStats.get(componentId) || {
-    totalCodes: 0,
-    totalDestinations: 0,
-    uniqueDestinationsPercentage: 0
-  };
-},
-```
-- [x] Add actions to update file stats
-```typescript
-setFileStats(componentId: string, stats: {
-  totalCodes: number;
-  totalDestinations: number;
-  uniqueDestinationsPercentage: number;
-}) {
-  this.fileStats.set(componentId, stats);
-},
+## Phase 3: File Comparison Features
+- [ ] Complete comparison between two uploaded files:
+  - [ ] Identify overlapping NPA-NXX codes
+  - [ ] Calculate gaps (codes in one file but not the other)
+  - [ ] Create rate difference statistics
+  - [ ] Calculate percentage differences
+- [ ] Build comparison visualization components
+- [ ] Implement filtering by:
+  - [ ] Rate differences (higher/lower)
+  - [ ] NPA (area code)
+  - [ ] Rate ranges
 
-clearFileStats(componentId: string) {
-  this.fileStats.delete(componentId);
-},
+## Phase 4: Advanced Features
+- [ ] Add jurisdictional analysis:
+  - [ ] Map NPAs to states/regions
+  - [ ] Calculate state-level pricing statistics
+  - [ ] Create regional visualization
+- [ ] Implement LERG integration:
+  - [ ] Import LERG database or API
+  - [ ] Validate NPA-NXX combinations against LERG
+  - [ ] Display rate center mappings
+  - [ ] Flag invalid or outdated codes
+- [ ] Performance optimizations for large files
 
-clearAllFileStats() {
-  this.fileStats.clear();
-},
-```
-- [x] Update the `removeFile` action to also clear file stats
-- [x] Update the `resetFiles` action to clear all file stats
+## Phase 5: Reporting & Export
+- [ ] Create comprehensive report interface:
+  - [ ] Summary section
+  - [ ] Pricing analysis
+  - [ ] Code coverage analysis
+  - [ ] Jurisdictional breakdown
+- [ ] Implement export functionality:
+  - [ ] Export comparison to CSV
+  - [ ] Export visualization data
+  - [ ] Generate PDF reports
 
-### 2. Update az.service.ts
-- [x] Move the file stats calculation logic from AZFileUploads.vue to az.service.ts
-- [x] Enhance the `generateSingleFileReport` method to also update file stats in the store
-```typescript
-async calculateFileStats(componentId: string, fileName: string): Promise<void> {
-  try {
-    const tableName = fileName.toLowerCase().replace('.csv', '');
-    const data = await this.getData(tableName);
-    
-    if (!data || data.length === 0) return;
-    
-    // Calculate stats
-    const totalCodes = data.length;
-    const uniqueDestinations = new Set(data.map(item => item.destName)).size;
-    const uniquePercentage = ((uniqueDestinations / totalCodes) * 100).toFixed(2);
-    
-    // Update store
-    this.store.setFileStats(componentId, {
-      totalCodes,
-      totalDestinations: uniqueDestinations,
-      uniqueDestinationsPercentage: parseFloat(uniquePercentage)
-    });
-  } catch (error) {
-    console.error('Error calculating file stats:', error);
-  }
-}
-```
-- [x] Call this method after file processing in `processFile`
-- [x] Update the `removeTable` method to also clear file stats for the removed file
+## Phase 6: UI/UX Refinements
+- [ ] Add progress indicators for long operations
+- [ ] Implement contextual help and tooltips
+- [ ] Create onboarding guide for first-time users
+- [ ] Add responsive design for different device sizes
+- [ ] Implement user preferences/settings
 
-### 3. Update AZFileUploads.vue
-- [x] Remove the local fileStats reactive object
-- [x] Replace all references to the local fileStats with calls to the store getter
-- [x] Remove the `loadSingleFileStats` function
-- [x] Remove the watch for hasSingleFileReport
-- [x] Update the `handleFileUploaded` method to remove the call to `loadSingleFileStats`
-- [x] Remove the call to `loadSingleFileStats` in the `onMounted` hook
+## Phase 7: Testing & Optimization
+- [ ] Comprehensive testing with large files
+- [ ] Browser compatibility testing
+- [ ] Performance profiling and optimization
+- [ ] User acceptance testing
 
-### 4. Extract Code Summary to a Separate Component
-- [x] Create a new component `AzCodeSummary.vue` that accepts a componentId prop
-- [x] Move the code report UI from AZFileUploads.vue to the new component
-- [x] Update AZFileUploads.vue to use the new component for both az1 and az2
+## Immediate Next Steps
+1. Fix the US file upload functionality to correctly store files in the store (matching AZ implementation)
+2. Implement the basic analysis for single files (NPA counts, statistics)
+3. Begin building the comparison functionality between two files
 
-### 5. Testing
-- [x] Test uploading a file and verify stats are displayed correctly
-  - Fixed an issue where the component ID was incorrectly determined in the processFile method
-  - Updated the DomainStore interface to include fileStats methods to fix TypeScript errors
-- [x] Test removing a file and verify stats are cleared
-  - Fixed the handleRemoveFile function in AZFileUploads.vue to pass the fileName instead of componentId
-  - Enhanced the removeFile method in az-store.ts to properly clean up all related data
-- [x] Test uploading multiple files and verify stats for each file are maintained separately
-  - Updated the Dashboard.vue to detect and display fileStats data in the database tables section
-  - Added support for detecting fileStats in both az-store and us-store (future implementation)
-- [ ] Test page refresh and verify stats persist
 
-## Benefits
-- File stats will be persistent across component mounts
-- Logic for calculating stats will be centralized in the service
-- Component will be simplified with less local state
-- Better separation of concerns with data management in the store and UI in the component
-- Improved code organization with a dedicated component for the code summary
