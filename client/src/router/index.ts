@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { adminRoutes } from './admin-routes';
-import AdminLergView from '../pages/AdminView.vue';
+import AdminLergView from '@/pages/AdminView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -8,27 +8,27 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../pages/RateSheetView.vue'),
+      component: () => import('@/pages/HomeView.vue'),
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('../pages/DashBoard.vue'),
+      component: () => import('@/pages/DashBoard.vue'),
     },
     {
       path: '/rate-sheet',
       name: 'rateSheet',
-      component: () => import('../pages/RateSheetView.vue'),
+      component: () => import('@/pages/RateSheetView.vue'),
     },
     {
       path: '/azview',
       name: 'azview',
-      component: () => import('../pages/AzView.vue'),
+      component: () => import('@/pages/AzView.vue'),
     },
     {
       path: '/usview',
       name: 'usview',
-      component: () => import('../pages/UsView.vue'),
+      component: () => import('@/pages/UsView.vue'),
     },
     {
       path: '/admin/lerg',
@@ -37,8 +37,8 @@ const router = createRouter({
     },
     {
       path: '/home',
-      name: 'home',
-      component: () => import('../pages/HomeView.vue'),
+      name: 'homeView',
+      component: () => import('@/pages/HomeView.vue'),
     },
 
     // Spread the admin routes
