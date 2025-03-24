@@ -344,7 +344,7 @@ import USCodeSummary from '@/components/us/USCodeSummary.vue';
 type ComponentId = 'us1' | 'us2';
 
 const usStore = useUsStore();
-const usService = new USService();
+const service = new USService();
 
 // Component state
 const isGeneratingReports = ref<boolean>(false);
@@ -474,7 +474,7 @@ async function generateReports() {
         console.log('Loading data for file:', fileName);
         // Remove .csv extension for table name
         const tableName = fileName.toLowerCase().replace('.csv', '');
-        const data = await usService.getData(tableName);
+        const data = await service.getData(tableName);
         if (!data || data.length === 0) {
           throw new Error(`No data found for file ${fileName}`);
         }
@@ -633,7 +633,7 @@ async function handleModalConfirm(
     console.log(`Processing file for component: ${activeComponent.value}, file: ${file.name}`);
 
     // Process file with mappings
-    const result = await usService.processFile(
+    const result = await service.processFile(
       file,
       columnMapping,
       startLine.value,
@@ -667,7 +667,7 @@ async function handleRemoveFile(componentName: ComponentId) {
     const tableName = fileName.toLowerCase().replace('.csv', '');
 
     // First, remove the data from the appropriate storage
-    await usService.removeTable(tableName);
+    await service.removeTable(tableName);
 
     // Then, remove the file from the store
     // Note: The removeFile method in the store now handles clearing fileStats
