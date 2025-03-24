@@ -15,7 +15,7 @@
   - [x] Extract unique NPAs (area codes)
   - [x] Calculate rate statistics (min, max, avg) for each file - including interstate, intrastate, and indeterminate rates.
   - [x] Display summary of single file analysis
-- [ ] Create basic data visualization components
+- [x] Create basic data visualization components
 
 ## Phase 3: File Comparison Features
 - [ ] Complete comparison between two uploaded files:

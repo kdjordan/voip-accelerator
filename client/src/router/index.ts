@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { adminRoutes } from './admin-routes';
-import AdminLergView from '@/pages/AdminView.vue';
+
 
 const router = createRouter({
   history: createWebHistory(),
@@ -25,16 +25,16 @@ const router = createRouter({
       name: 'azview',
       component: () => import('@/pages/AzView.vue'),
     },
-    // {
-    //   path: '/usview',
-    //   name: 'usview',
-    //   component: () => import('@/pages/UsView.vue'),
-    // },
-    // {
-    //   path: '/admin/lerg',
-    //   name: 'AdminLerg',
-    //   component: AdminLergView,
-    // },
+    {
+      path: '/usview',
+      name: 'usview',
+      component: () => import('@/pages/UsView.vue'),
+    },
+    {
+      path: '/admin/lerg',
+      name: 'AdminLerg',
+      component: () => import('@/pages/AdminView.vue'),
+    },
 
     // Spread the admin routes
     ...adminRoutes,
