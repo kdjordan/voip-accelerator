@@ -1,10 +1,34 @@
-import type { AZStandardizedData, AzPricingReport, AzCodeReport, InvalidAzRow } from '@/types/domains/az-types';
-import type { USStandardizedData, USPricingReport, USCodeReport } from '@/types/domains/us-types';
+import type {
+  AZStandardizedData,
+  AzPricingReport,
+  AzCodeReport,
+  InvalidAzRow,
+} from '@/types/domains/az-types';
+import type {
+  USStandardizedData,
+  USPricingReport,
+  USCodeReport,
+  InvalidUsRow,
+} from '@/types/domains/us-types';
+
+// Define a FileStats interface that can be used for both AZ and US
+export interface FileStats {
+  totalCodes: number;
+  totalDestinations: number;
+  uniqueDestinationsPercentage: number;
+  // Include US-specific fields as optional
+  usNPACoveragePercentage?: number;
+  avgInterRate?: number;
+  avgIntraRate?: number;
+  avgIndetermRate?: number;
+}
 
 // Add this type definition
-export type DomainStoreType = DomainStore<AzPricingReport, AzCodeReport> | DomainStore<USPricingReport, USCodeReport>;
+export type DomainStoreType =
+  | DomainStore<AzPricingReport, AzCodeReport, InvalidAzRow>
+  | DomainStore<USPricingReport, USCodeReport, InvalidUsRow>;
 
-export interface DomainStore<P, C> {
+export interface DomainStore<P, C, I> {
   // State properties
   filesUploaded: Map<string, { fileName: string }>;
   uploadingComponents: Record<string, boolean>;
@@ -14,12 +38,8 @@ export interface DomainStore<P, C> {
   pricingReport: P | null;
   codeReport: C | null;
   tempFiles: Map<string, File>;
-  invalidRows: Map<string, InvalidAzRow[]>;
-  fileStats: Map<string, {
-    totalCodes: number;
-    totalDestinations: number;
-    uniqueDestinationsPercentage: number;
-  }>;
+  invalidRows: Map<string, I[]>;
+  fileStats: Map<string, FileStats>;
 
   // Getters
   isComponentDisabled: (componentName: string) => boolean;
@@ -33,14 +53,10 @@ export interface DomainStore<P, C> {
   getNumberOfFilesUploaded: number;
   hasExistingFile: (fileName: string) => boolean;
   hasInvalidRows: (fileName: string) => boolean;
-  getInvalidRowsForFile: (fileName: string) => InvalidAzRow[];
-  getAllInvalidRows: Record<string, InvalidAzRow[]>;
+  getInvalidRowsForFile: (fileName: string) => I[];
+  getAllInvalidRows: Record<string, I[]>;
   hasSingleFileReport: boolean;
-  getFileStats: (componentId: string) => {
-    totalCodes: number;
-    totalDestinations: number;
-    uniqueDestinationsPercentage: number;
-  };
+  getFileStats: (componentId: string) => FileStats;
 
   // Actions
   addFileUploaded: (componentName: string, fileName: string) => void;
@@ -52,17 +68,17 @@ export interface DomainStore<P, C> {
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   setComponentUploading: (componentName: string, isUploading: boolean) => void;
-  
+
   // File management
   setTempFile: (componentId: string, file: File) => void;
   getTempFile: (componentId: string) => File | undefined;
   clearTempFile: (componentId: string) => void;
-  
+
   // Invalid row handling
   clearInvalidRowsForFile: (fileName: string) => void;
-  addInvalidRow: (fileName: string, row: InvalidAzRow) => void;
+  addInvalidRow: (fileName: string, row: I) => void;
   clearAllInvalidRows: () => void;
-  
+
   // In-memory storage related methods
   storeInMemoryData: (tableName: string, data: any[]) => void;
   getInMemoryData: (tableName: string) => any[];
@@ -70,13 +86,9 @@ export interface DomainStore<P, C> {
   removeInMemoryData: (tableName: string) => void;
   clearAllInMemoryData: () => void;
   getInMemoryTables: Record<string, number>;
-  
+
   // File stats methods
-  setFileStats: (componentId: string, stats: {
-    totalCodes: number;
-    totalDestinations: number;
-    uniqueDestinationsPercentage: number;
-  }) => void;
+  setFileStats: (componentId: string, stats: FileStats) => void;
   clearFileStats: (componentId: string) => void;
   clearAllFileStats: () => void;
 }
@@ -104,7 +116,11 @@ export const ReportTypes = {
 export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
 
 // Define supported DB types for schemas
-export type SchemaDBType = typeof DBName.AZ | typeof DBName.US | typeof DBName.RATE_SHEET | typeof DBName.LERG;
+export type SchemaDBType =
+  | typeof DBName.AZ
+  | typeof DBName.US
+  | typeof DBName.RATE_SHEET
+  | typeof DBName.LERG;
 
 export const DBSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
@@ -115,5 +131,10 @@ export const DBSchemas = {
 
 // Type guard to check if a DBNameType is supported for schemas
 export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
-  return dbName === DBName.AZ || dbName === DBName.US || dbName === DBName.RATE_SHEET || dbName === DBName.LERG;
+  return (
+    dbName === DBName.AZ ||
+    dbName === DBName.US ||
+    dbName === DBName.RATE_SHEET ||
+    dbName === DBName.LERG
+  );
 }
