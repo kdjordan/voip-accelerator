@@ -140,3 +140,11 @@ export const US_COLUMN_ROLE_OPTIONS: USColumnRoleOption[] = [
   { value: USColumnRole.INTRASTATE, label: 'Intrastate Rate' },
   { value: USColumnRole.INDETERMINATE, label: 'Indeterminate Rate' },
 ];
+
+// Add missing type definitions
+export type USColumnMappings = Record<string, USColumnRole>;
+
+export interface USColumnsResult {
+  columns: string[];
+  mappings: USColumnMappings;
+}

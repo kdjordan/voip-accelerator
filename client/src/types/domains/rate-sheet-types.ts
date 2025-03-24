@@ -17,10 +17,19 @@ export interface EffectiveDateSettings {
   decreaseCustomDate: string;
 }
 
+export interface EffectiveDateStoreSettings {
+  same: string;
+  increase: string;
+  decrease: string;
+  sameCustomDate: string;
+  increaseCustomDate: string;
+  decreaseCustomDate: string;
+}
+
 export const ChangeCode = {
   SAME: 'SAME',
   INCREASE: 'INCREASE',
-  DECREASE: 'DECREASE'
+  DECREASE: 'DECREASE',
 } as const;
 
 export type ChangeCodeType = (typeof ChangeCode)[keyof typeof ChangeCode];
@@ -71,14 +80,7 @@ export interface RateSheetState {
     hasMinDuration: boolean;
     hasIncrements: boolean;
   };
-  effectiveDateSettings: {
-    same: string;
-    increase: string;
-    decrease: string;
-    sameCustomDate: string;
-    increaseCustomDate: string;
-    decreaseCustomDate: string;
-  };
+  effectiveDateSettings: EffectiveDateStoreSettings;
 }
 
 export const RequiredRFColumnRole = {
