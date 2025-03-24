@@ -25,21 +25,16 @@ const router = createRouter({
       name: 'azview',
       component: () => import('@/pages/AzView.vue'),
     },
-    {
-      path: '/usview',
-      name: 'usview',
-      component: () => import('@/pages/UsView.vue'),
-    },
-    {
-      path: '/admin/lerg',
-      name: 'AdminLerg',
-      component: AdminLergView,
-    },
-    {
-      path: '/home',
-      name: 'homeView',
-      component: () => import('@/pages/HomeView.vue'),
-    },
+    // {
+    //   path: '/usview',
+    //   name: 'usview',
+    //   component: () => import('@/pages/UsView.vue'),
+    // },
+    // {
+    //   path: '/admin/lerg',
+    //   name: 'AdminLerg',
+    //   component: AdminLergView,
+    // },
 
     // Spread the admin routes
     ...adminRoutes,

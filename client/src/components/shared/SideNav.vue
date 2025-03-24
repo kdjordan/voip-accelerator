@@ -126,21 +126,21 @@ const items = ref([
     to: '/azview',
     icon: GlobeAltIcon,
   },
-  {
-    name: 'US Reporting',
-    to: '/usview',
-    icon: GlobeAmericasIcon,
-  },
+  // {
+  //   name: 'US Reporting',
+  //   to: '/usview',
+  //   icon: GlobeAmericasIcon,
+  // },
   {
     name: 'AZ Rate Wizard',
     to: '/rate-sheet',
     icon: AdjustmentsVerticalIcon,
   },
-  {
-    name: 'Lerg Admin',
-    to: '/admin',
-    icon: Cog6ToothIcon,
-  },
+  // {
+  //   name: 'Lerg Admin',
+  //   to: '/admin',
+  //   icon: Cog6ToothIcon,
+  // },
 ]);
 
 onMounted(() => {
