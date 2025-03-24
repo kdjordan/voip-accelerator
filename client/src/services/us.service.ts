@@ -120,11 +120,6 @@ export class USService {
                 }
 
                 npanxx = npa + nxx;
-
-                // Log the resulting NPANXX
-                console.log(
-                  `Constructed NPANXX from NPA+NXX: "${npanxx}" (NPA: "${npa}", NXX: "${nxx}")`
-                );
               }
 
               // Log full row data for debugging the first few rows
