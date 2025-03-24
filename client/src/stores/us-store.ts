@@ -254,4 +254,4 @@ export const useUsStore = defineStore('usStore', {
       this.fileStats.clear();
     },
   },
-}) as unknown as () => DomainStore<USPricingReport, USCodeReport>;
+}) as unknown as () => DomainStore<USPricingReport, USCodeReport, InvalidUsRow>;

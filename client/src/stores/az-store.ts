@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia';
-import type { AzPricingReport, AzCodeReport, InvalidAzRow, AZStandardizedData } from '@/types/domains/az-types';
+import type {
+  AzPricingReport,
+  AzCodeReport,
+  InvalidAzRow,
+  AZStandardizedData,
+} from '@/types/domains/az-types';
 import type { DomainStore, ReportType } from '@/types';
 import { storageConfig } from '@/config/storage-config';
 
@@ -15,59 +20,62 @@ export const useAzStore = defineStore('az', {
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidAzRow[]>(),
     inMemoryData: new Map<string, AZStandardizedData[]>(),
-    fileStats: new Map<string, {
-      totalCodes: number;
-      totalDestinations: number;
-      uniqueDestinationsPercentage: number;
-    }>(),
+    fileStats: new Map<
+      string,
+      {
+        totalCodes: number;
+        totalDestinations: number;
+        uniqueDestinationsPercentage: number;
+      }
+    >(),
   }),
 
   getters: {
-    isComponentDisabled: state => (componentName: string) => {
+    isComponentDisabled: (state) => (componentName: string) => {
       return state.filesUploaded.has(componentName);
     },
 
-    isComponentUploading: state => (componentName: string) => {
+    isComponentUploading: (state) => (componentName: string) => {
       return !!state.uploadingComponents[componentName];
     },
 
-    isFull: state => state.filesUploaded.size === 2,
+    isFull: (state) => state.filesUploaded.size === 2,
 
-    getFileNames: state => Array.from(state.filesUploaded.values()).map(file => file.fileName),
+    getFileNames: (state) => Array.from(state.filesUploaded.values()).map((file) => file.fileName),
 
-    getActiveReportType: state => state.activeReportType,
+    getActiveReportType: (state) => state.activeReportType,
 
-    getPricingReport: state => state.pricingReport,
+    getPricingReport: (state) => state.pricingReport,
 
-    getCodeReport: state => {
+    getCodeReport: (state) => {
       // If we have a full comparison report, return that
       if (state.reportsGenerated && state.codeReport) {
         return state.codeReport;
       }
-      
+
       return null;
     },
 
-    getFileNameByComponent: state => (componentId: string) => {
+    getFileNameByComponent: (state) => (componentId: string) => {
       const file = state.filesUploaded.get(componentId);
       return file ? file.fileName : '';
     },
 
-    getNumberOfFilesUploaded: state => state.filesUploaded.size,
+    getNumberOfFilesUploaded: (state) => state.filesUploaded.size,
 
-    hasExistingFile: state => (fileName: string) => {
-      return Array.from(state.filesUploaded.values()).some(f => f.fileName === fileName);
+    hasExistingFile: (state) => (fileName: string) => {
+      return Array.from(state.filesUploaded.values()).some((f) => f.fileName === fileName);
     },
 
-    hasInvalidRows: state => (fileName: string) => {
+    hasInvalidRows: (state) => (fileName: string) => {
       return state.invalidRows.has(fileName) && (state.invalidRows.get(fileName)?.length || 0) > 0;
     },
 
-    getInvalidRowsForFile: state => (fileName: string) => {
+    getInvalidRowsForFile: (state) => (fileName: string) => {
       return state.invalidRows.get(fileName) || [];
     },
 
-    getAllInvalidRows: state => {
+    getAllInvalidRows: (state) => {
       const result: Record<string, InvalidAzRow[]> = {};
       state.invalidRows.forEach((rows, fileName) => {
         result[fileName] = rows;
@@ -79,11 +87,11 @@ export const useAzStore = defineStore('az', {
       return storageConfig.storageType === 'memory';
     },
 
-    getInMemoryData: state => (tableName: string) => {
+    getInMemoryData: (state) => (tableName: string) => {
       return state.inMemoryData.get(tableName) || [];
     },
 
-    getInMemoryTables: state => {
+    getInMemoryTables: (state) => {
       const result: Record<string, number> = {};
       state.inMemoryData.forEach((data, tableName) => {
         result[tableName] = data.length;
@@ -91,19 +99,21 @@ export const useAzStore = defineStore('az', {
       return result;
     },
 
-    shouldShowPricingReport: state => {
+    shouldShowPricingReport: (state) => {
       return state.reportsGenerated;
     },
 
-    getFileStats: state => (componentId: string) => {
-      return state.fileStats.get(componentId) || {
-        totalCodes: 0,
-        totalDestinations: 0,
-        uniqueDestinationsPercentage: 0
-      };
+    getFileStats: (state) => (componentId: string) => {
+      return (
+        state.fileStats.get(componentId) || {
+          totalCodes: 0,
+          totalDestinations: 0,
+          uniqueDestinationsPercentage: 0,
+        }
+      );
     },
 
-    hasSingleFileReport: state => {
+    hasSingleFileReport: (state) => {
       return state.fileStats.size > 0 && state.fileStats.size < 2;
     },
   },
@@ -142,7 +152,7 @@ export const useAzStore = defineStore('az', {
 
     removeFile(fileName: string) {
       const tableName = fileName.toLowerCase().replace('.csv', '');
-      
+
       // Find the component ID associated with this file
       let componentId = '';
       for (const [key, value] of this.filesUploaded.entries()) {
@@ -151,14 +161,14 @@ export const useAzStore = defineStore('az', {
           break;
         }
       }
-      
+
       if (componentId) {
         // Remove the file from filesUploaded
         this.filesUploaded.delete(componentId);
-        
+
         // Clear file stats for this component
         this.clearFileStats(componentId);
-        
+
         console.log(`[AzStore] Removed file ${fileName} from component ${componentId}`);
       } else {
         console.warn(`[AzStore] Could not find component ID for file ${fileName}`);
@@ -166,7 +176,7 @@ export const useAzStore = defineStore('az', {
 
       // Clear any invalid rows for this file
       this.invalidRows.delete(fileName);
-      
+
       // Clear in-memory data if using memory storage
       if (this.isUsingMemoryStorage) {
         this.inMemoryData.delete(tableName);
@@ -244,11 +254,14 @@ export const useAzStore = defineStore('az', {
       this.inMemoryData.clear();
     },
 
-    setFileStats(componentId: string, stats: {
-      totalCodes: number;
-      totalDestinations: number;
-      uniqueDestinationsPercentage: number;
-    }) {
+    setFileStats(
+      componentId: string,
+      stats: {
+        totalCodes: number;
+        totalDestinations: number;
+        uniqueDestinationsPercentage: number;
+      }
+    ) {
       this.fileStats.set(componentId, stats);
     },
 
@@ -258,6 +271,6 @@ export const useAzStore = defineStore('az', {
 
     clearAllFileStats() {
       this.fileStats.clear();
-    }
+    },
   },
-}) as unknown as () => DomainStore<AzPricingReport, AzCodeReport>;
+}) as unknown as () => DomainStore<AzPricingReport, AzCodeReport, InvalidAzRow>;
