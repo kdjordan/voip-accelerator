@@ -3,11 +3,13 @@
     <!-- Upload Zones Box -->
     <div class="bg-gray-800 rounded-b-lg p-6">
       <div class="pb-4 mb-6">
-        <div class="grid grid-cols-2 gap-8">
-          <!-- Your Rates Upload Zone -->
-          <div class="flex flex-col gap-2">
+        <!-- Change from grid to flex layout -->
+        <div class="flex">
+          <!-- Left Side: First Upload Zone and Single File Report -->
+          <div class="w-1/2 pr-6">
+            <!-- Your Rates Upload Zone -->
             <div
-              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
+              class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
               :class="[
                 isDragging['us1']
                   ? 'border-accent bg-fbWhite/10'
@@ -56,7 +58,7 @@
                       </div>
                       
                       <ArrowUpTrayIcon
-                        class="w-12 h-12 mx-auto border rounded-full p-2"
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
                         :class="uploadError.us1 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
                       />
                       <p class="mt-2 text-base" :class="uploadError.us1 ? 'text-red-500' : 'text-accent'">
@@ -96,23 +98,32 @@
                 </template>
               </div>
             </div>
+            
             <!-- Remove File Button -->
-            <button
-              v-if="usStore.isComponentDisabled('us1')"
-              @click="handleRemoveFile('us1')"
-              class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
-            >
-              <div class="flex items-center justify-center space-x-2">
-                <TrashIcon class="w-3.5 h-3.5 text-red-400" />
-                <span class="text-xs text-red-400">Remove</span>
-              </div>
-            </button>
+            <div class="flex justify-end mt-2" v-if="usStore.isComponentDisabled('us1')">
+              <button
+                @click="handleRemoveFile('us1')"
+                class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
+              >
+                <div class="flex items-center justify-center space-x-2">
+                  <TrashIcon class="w-3.5 h-3.5 text-red-400" />
+                  <span class="text-xs text-red-400">Remove</span>
+                </div>
+              </button>
+            </div>
+            
+            <!-- Add Code Summary for first component -->
+            <USCodeSummary v-if="usStore.isComponentDisabled('us1')" componentId="us1" />
           </div>
 
-          <!-- Prospect's Rates Upload Zone -->
-          <div class="flex flex-col gap-2">
+          <!-- Vertical Divider -->
+          <div class="mx-4 border-l border-gray-700/50"></div>
+
+          <!-- Right Side: Second Upload Zone -->
+          <div class="w-1/2 pl-6">
+            <!-- Prospect's Rates Upload Zone -->
             <div
-              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
+              class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
               :class="[
                 isDragging['us2']
                   ? 'border-accent bg-fbWhite/10'
@@ -161,7 +172,7 @@
                       </div>
                       
                       <ArrowUpTrayIcon
-                        class="w-12 h-12 mx-auto border rounded-full p-2"
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
                         :class="uploadError.us2 ? 'text-red-500 border-red-500/50 bg-red-500/10' : 'text-accent border-accent/50 bg-accent/10'"
                       />
                       <p class="mt-2 text-base" :class="uploadError.us2 ? 'text-red-500' : 'text-accent'">
@@ -200,17 +211,22 @@
                 </template>
               </div>
             </div>
+            
             <!-- Remove File Button -->
-            <button
-              v-if="usStore.isComponentDisabled('us2')"
-              @click="handleRemoveFile('us2')"
-              class="ml-auto px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
-            >
-              <div class="flex items-center justify-center space-x-2">
-                <TrashIcon class="w-3.5 h-3.5 text-red-400" />
-                <span class="text-xs text-red-400">Remove</span>
-              </div>
-            </button>
+            <div class="flex justify-end mt-2" v-if="usStore.isComponentDisabled('us2')">
+              <button
+                @click="handleRemoveFile('us2')"
+                class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
+              >
+                <div class="flex items-center justify-center space-x-2">
+                  <TrashIcon class="w-3.5 h-3.5 text-red-400" />
+                  <span class="text-xs text-red-400">Remove</span>
+                </div>
+              </button>
+            </div>
+            
+            <!-- Add Code Summary for second component -->
+            <USCodeSummary v-if="usStore.isComponentDisabled('us2')" componentId="us2" />
           </div>
         </div>
       </div>
@@ -257,7 +273,6 @@
   import { ArrowUpTrayIcon, DocumentIcon, TrashIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
   import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
   import { useUsStore } from '@/stores/us-store';
-  // Comment out the worker import since it's not implemented yet
   import { usService } from '@/services/us.service';
   import { USReportsInput, type USPricingReport, type USCodeReport, type USStandardizedData } from '@/types/domains/us-types';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
@@ -265,6 +280,10 @@
   import Papa from 'papaparse';
   import { USService } from '@/services/us.service';
   import { storageConfig } from '@/config/storage-config';
+  import USCodeSummary from '@/components/us/USCodeSummary.vue';
+  // Comment out the worker import since it doesn't exist yet
+  // TODO: Create US comparison worker file
+  // import USComparisonWorker from '@/workers/us-comparison.worker?worker';
 
   // First, define a type for component IDs to ensure type safety
   type ComponentId = 'us1' | 'us2';
@@ -438,6 +457,11 @@
           indetermRate: item.indetermRate
         }));
 
+        // TODO: Implement worker for comparison
+        console.log('US Comparison worker not implemented yet');
+        alert('Report generation is not implemented yet');
+
+        /* Comment out worker code until worker is implemented
         // Create worker and process data
         const worker = new USComparisonWorker();
         const reports = await new Promise<{ pricingReport: USPricingReport; codeReport: USCodeReport }>(
@@ -478,6 +502,7 @@
 
         // Clean up worker
         worker.terminate();
+        */
       }
     } catch (error: unknown) {
       console.error('Error generating reports:', error);
@@ -567,8 +592,15 @@
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
+      
+      // First, remove the data from the appropriate storage
       await usService.removeTable(tableName);
+      
+      // Then, remove the file from the store
+      // Note: The removeFile method in the store now handles clearing fileStats
       usStore.removeFile(componentName);
+      
+      console.log(`File ${fileName} removed successfully from component ${componentName}`);
     } catch (error) {
       console.error('Error removing file:', error);
     }
