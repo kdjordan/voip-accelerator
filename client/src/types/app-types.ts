@@ -37,6 +37,7 @@ export interface DomainStore<P, C, I> {
   activeReportType: ReportType;
   pricingReport: P | null;
   codeReport: C | null;
+  enhancedCodeReport: any | null;
   tempFiles: Map<string, File>;
   invalidRows: Map<string, I[]>;
   fileStats: Map<string, FileStats>;
@@ -49,6 +50,7 @@ export interface DomainStore<P, C, I> {
   getActiveReportType: ReportType;
   getPricingReport: P | null;
   getCodeReport: C | null;
+  getEnhancedCodeReport: any | null;
   getFileNameByComponent: (componentId: string) => string;
   getNumberOfFilesUploaded: number;
   hasExistingFile: (fileName: string) => boolean;
@@ -68,6 +70,7 @@ export interface DomainStore<P, C, I> {
   setComponentFileIsUploading: (componentName: string) => void;
   getStoreNameByComponent: (componentName: string) => string;
   setComponentUploading: (componentName: string, isUploading: boolean) => void;
+  setEnhancedCodeReport: (report: any) => void;
 
   // File management
   setTempFile: (componentId: string, file: File) => void;

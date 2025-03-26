@@ -20,7 +20,7 @@ self.addEventListener('message', (event) => {
     self.postMessage({ pricingReport, codeReport });
   } catch (error) {
     console.error('Error generating reports:', error);
-    self.postMessage({ error: error.message });
+    self.postMessage({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 

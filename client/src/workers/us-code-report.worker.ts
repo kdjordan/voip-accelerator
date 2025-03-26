@@ -94,9 +94,13 @@ function processFileData(
   if (lergData && lergData.countryData) {
     lergData.countryData.forEach((country) => {
       if (country.country !== 'US') {
+        const countryCode = country.country;
+        const countryMapping = COUNTRY_CODES[countryCode];
+        const countryName = countryMapping ? countryMapping.name : countryCode;
+
         const countryBreakdown = createCountryBreakdown(
-          country.country,
-          COUNTRY_CODES[country.country] || country.country,
+          countryCode,
+          countryName,
           npaGroups,
           lergData
         );
