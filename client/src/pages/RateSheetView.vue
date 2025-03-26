@@ -280,7 +280,6 @@ import { RF_COLUMN_ROLE_OPTIONS, ChangeCode } from '@/types/domains/rate-sheet-t
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 import { RateSheetService } from '@/services/rate-sheet.service';
-import apiClient from '@/services/api-client';
 
 const store = useRateSheetStore();
 const rateSheetService = new RateSheetService();
@@ -288,7 +287,7 @@ const isLocallyStored = computed(() => store.hasStoredData);
 const isDragging = ref(false);
 const isRFUploading = ref(false);
 const isRFRemoving = ref(false);
-const uploadError = ref('');
+const uploadError = ref<string | null>('');
 const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 const currentDiscrepancyCount = ref(0);
 const isProcessing = computed(() => isRFUploading.value || isRFRemoving.value);

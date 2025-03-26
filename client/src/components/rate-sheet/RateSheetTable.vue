@@ -901,6 +901,7 @@ let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
 // Load saved effective date settings from store if available
 onMounted(() => {
+  console.log('today', new Date().toISOString().split('T')[0]);
   const savedSettings = store.getEffectiveDateSettings;
   if (savedSettings) {
     effectiveDateSettings.value = { ...savedSettings };
@@ -1225,8 +1226,10 @@ function handleExport() {
 }
 
 function formatDate(date: string): string {
-  const formattedDate = new Date(date).toLocaleDateString();
-  return formattedDate;
+  // Parse the date and force it to noon UTC to avoid timezone issues
+  const [year, month, day] = date.split('-').map(Number);
+  const formattedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return formattedDate.toLocaleDateString();
 }
 
 function toggleRateCodes(destinationName: string, rate: number) {
