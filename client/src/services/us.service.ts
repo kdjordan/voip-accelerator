@@ -92,6 +92,13 @@ export class USService {
               // Handle NPANXX extraction - either directly or from NPA and NXX
               if (columnMapping.npanxx >= 0) {
                 npanxx = row[columnMapping.npanxx]?.trim() || '';
+
+                // Handle 7-digit NPANXX with leading "1"
+                if (npanxx.length === 7 && npanxx.startsWith('1')) {
+                  console.log(`Found NPANXX with leading 1: "${npanxx}", removing leading digit`);
+                  npanxx = npanxx.substring(1); // Remove leading "1"
+                }
+
                 // If we have NPANXX but not NPA/NXX, extract them
                 if (npanxx.length === 6) {
                   npa = npanxx.substring(0, 3);

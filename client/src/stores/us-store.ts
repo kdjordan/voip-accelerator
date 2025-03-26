@@ -4,6 +4,7 @@ import type {
   USCodeReport,
   InvalidUsRow,
   USStandardizedData,
+  USEnhancedCodeReport,
 } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
@@ -17,6 +18,7 @@ export const useUsStore = defineStore('usStore', {
     activeReportType: 'files' as ReportType,
     pricingReport: null as USPricingReport | null,
     codeReport: null as USCodeReport | null,
+    enhancedCodeReport: null as USEnhancedCodeReport | null,
     uploadingComponents: {} as Record<string, boolean>,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidUsRow[]>(),
@@ -52,6 +54,8 @@ export const useUsStore = defineStore('usStore', {
     getPricingReport: (state): USPricingReport | null => state.pricingReport,
 
     getCodeReport: (state): USCodeReport | null => state.codeReport,
+
+    getEnhancedCodeReport: (state): USEnhancedCodeReport | null => state.enhancedCodeReport,
 
     getNumberOfFilesUploaded: (state) => state.filesUploaded.size,
 
@@ -141,9 +145,11 @@ export const useUsStore = defineStore('usStore', {
       this.reportsGenerated = false;
       this.pricingReport = null;
       this.codeReport = null;
+      this.enhancedCodeReport = null;
       this.showUploadComponents = true;
       this.invalidRows.clear();
       this.inMemoryData.clear();
+      this.fileStats.clear();
     },
 
     setReports(pricing: USPricingReport, code: USCodeReport) {
@@ -151,6 +157,10 @@ export const useUsStore = defineStore('usStore', {
       this.codeReport = code;
       this.reportsGenerated = true;
       this.showUploadComponents = false;
+    },
+
+    setEnhancedCodeReport(report: USEnhancedCodeReport) {
+      this.enhancedCodeReport = report;
     },
 
     removeFile(componentName: string) {
@@ -180,6 +190,7 @@ export const useUsStore = defineStore('usStore', {
         this.reportsGenerated = false;
         this.pricingReport = null;
         this.codeReport = null;
+        this.enhancedCodeReport = null;
         this.showUploadComponents = true;
         this.activeReportType = 'files';
       }
