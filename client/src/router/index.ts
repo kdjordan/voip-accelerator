@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { adminRoutes } from './admin-routes';
 
-
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -9,6 +8,10 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: () => import('@/pages/HomeView.vue'),
+    },
+    {
+      path: '/home',
+      redirect: '/',
     },
     {
       path: '/dashboard',

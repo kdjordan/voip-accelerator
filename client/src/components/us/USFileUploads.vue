@@ -11,10 +11,10 @@
             <div
               class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
               :class="[
-                isDragging['us1']
-                  ? 'border-accent bg-fbWhite/10'
+                isDraggingUs1
+                  ? 'border-accent bg-fbWhite/10 border-solid'
                   : !usStore.isComponentDisabled('us1')
-                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 dashed'
+                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
                   : '',
                 usStore.isComponentUploading('us1')
                   ? 'animate-upload-pulse cursor-not-allowed'
@@ -25,13 +25,13 @@
                   : '',
                 usStore.isComponentDisabled('us1')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
-                  : 'border-fbWhite',
+                  : '',
                 uploadError.us1 ? 'border-red-500 border-solid border-2' : '',
               ]"
-              @dragenter.prevent="(e) => handleDragEnter(e, 'us1')"
-              @dragleave.prevent="(e) => handleDragLeave(e, 'us1')"
+              @dragenter.prevent="(e) => handleDragEnterUs1(e)"
+              @dragleave.prevent="(e) => handleDragLeaveUs1(e)"
               @dragover.prevent
-              @drop.prevent="(e) => handleDrop(e, 'us1')"
+              @drop.prevent="(e) => handleDropUs1(e)"
             >
               <!-- File Input and Content -->
               <input
@@ -147,10 +147,10 @@
             <div
               class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
               :class="[
-                isDragging['us2']
-                  ? 'border-accent bg-fbWhite/10'
+                isDraggingUs2
+                  ? 'border-accent bg-fbWhite/10 border-solid'
                   : !usStore.isComponentDisabled('us2')
-                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 '
+                  ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
                   : '',
                 usStore.isComponentUploading('us2')
                   ? 'animate-upload-pulse cursor-not-allowed'
@@ -161,13 +161,13 @@
                   : '',
                 usStore.isComponentDisabled('us2')
                   ? 'bg-accent/20 border-2 border-solid border-accent/50'
-                  : 'border-fbWhite',
+                  : '',
                 uploadError.us2 ? 'border-red-500 border-solid border-2' : '',
               ]"
-              @dragenter.prevent="(e) => handleDragEnter(e, 'us2')"
-              @dragleave.prevent="(e) => handleDragLeave(e, 'us2')"
+              @dragenter.prevent="(e) => handleDragEnterUs2(e)"
+              @dragleave.prevent="(e) => handleDragLeaveUs2(e)"
               @dragover.prevent
-              @drop.prevent="(e) => handleDrop(e, 'us2')"
+              @drop.prevent="(e) => handleDropUs2(e)"
             >
               <!-- File Input and Content -->
               <input
@@ -342,6 +342,7 @@ import USCodeSummary from '@/components/us/USCodeSummary.vue';
 import USComparisonWorker from '@/workers/us-comparison.worker?worker';
 import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
 import { useLergStore } from '@/stores/lerg-store';
+import { useDragDrop } from '@/composables/useDragDrop';
 
 // First, define a type for component IDs to ensure type safety
 type ComponentId = 'us1' | 'us2';
@@ -352,7 +353,6 @@ const lergStore = useLergStore();
 
 // Component state
 const isGeneratingReports = ref<boolean>(false);
-const isDragging = reactive<Record<string, boolean>>({});
 const showPreviewModal = ref(false);
 const isModalValid = ref(false);
 const columnMappings = ref<Record<string, string>>({});
@@ -370,30 +370,9 @@ const uploadError = reactive<Record<ComponentId, string | null>>({
   us2: null,
 });
 
-// Drag and drop handlers
-function handleDragEnter(event: DragEvent, componentId: ComponentId) {
-  event.preventDefault();
-  isDragging[componentId] = true;
-  // Clear error when user initiates new drag
-  uploadError[componentId] = null;
-}
-
-function handleDragLeave(event: DragEvent, componentId: ComponentId) {
-  event.preventDefault();
-  isDragging[componentId] = false;
-}
-
-function handleDrop(event: DragEvent, componentId: ComponentId) {
-  event.preventDefault();
-  isDragging[componentId] = false;
-
-  // First check if there are files being dropped
-  if (!event.dataTransfer?.files || event.dataTransfer.files.length === 0) {
-    return;
-  }
-
-  const file = event.dataTransfer.files[0];
-  if (!file) return;
+// Replace the existing handleFileSelected function to work with our composable
+async function handleFileSelected(file: File, componentId: ComponentId) {
+  if (usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId)) return;
 
   // Clear any previous errors
   uploadError[componentId] = null;
@@ -405,40 +384,15 @@ function handleDrop(event: DragEvent, componentId: ComponentId) {
     return;
   }
 
-  // Check file type first
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    uploadError[componentId] = 'Only CSV files are accepted';
-    return;
-  }
-
   // Check for duplicate filename
   if (usStore.hasExistingFile(file.name)) {
-    console.log(`Error: File ${file.name} already exists`); // Debug log
     uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
     return;
   }
 
-  // Only proceed if component is ready for upload
-  if (!usStore.isComponentUploading(componentId) && !usStore.isComponentDisabled(componentId)) {
-    handleFileSelected(file, componentId);
-  }
-}
-
-async function handleFileSelected(file: File, componentId: ComponentId) {
-  if (usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId)) return;
-
-  // Don't need to check for duplicates again - already done in handleDrop
-
   usStore.setComponentUploading(componentId, true);
   try {
-    // Create a fake event object with the file
-    const fakeEvent = {
-      target: {
-        files: [file],
-      },
-    } as unknown as Event;
-
-    await handleFileChange(fakeEvent, componentId);
+    await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
   } catch (error) {
     console.error('Error handling file:', error);
     uploadError[componentId] = 'Error processing file. Please try again.';
@@ -446,6 +400,58 @@ async function handleFileSelected(file: File, componentId: ComponentId) {
     usStore.setComponentUploading(componentId, false);
   }
 }
+
+// Update the useDragDrop implementation with custom validator
+const validateUsFile = (
+  file: File,
+  componentId: ComponentId
+): { valid: boolean; errorMessage?: string } => {
+  // Check file extension
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    return { valid: false, errorMessage: 'Only CSV files are accepted' };
+  }
+
+  // Check if OTHER component is uploading (not this one)
+  const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
+  if (usStore.isComponentUploading(otherComponent)) {
+    return { valid: false, errorMessage: 'Please wait for the other file to finish uploading' };
+  }
+
+  // Check for duplicate filename
+  if (usStore.hasExistingFile(file.name)) {
+    return {
+      valid: false,
+      errorMessage: `A file with name "${file.name}" has already been uploaded`,
+    };
+  }
+
+  return { valid: true };
+};
+
+// Replace the previous useDragDrop calls with updated ones that use our custom validator
+const {
+  isDragging: isDraggingUs1,
+  handleDragEnter: handleDragEnterUs1,
+  handleDragLeave: handleDragLeaveUs1,
+  handleDragOver: handleDragOverUs1,
+  handleDrop: handleDropUs1,
+} = useDragDrop({
+  fileValidator: (file) => validateUsFile(file, 'us1'),
+  onDropCallback: (file) => handleFileSelected(file, 'us1'),
+  onError: (message) => (uploadError['us1'] = message),
+});
+
+const {
+  isDragging: isDraggingUs2,
+  handleDragEnter: handleDragEnterUs2,
+  handleDragLeave: handleDragLeaveUs2,
+  handleDragOver: handleDragOverUs2,
+  handleDrop: handleDropUs2,
+} = useDragDrop({
+  fileValidator: (file) => validateUsFile(file, 'us2'),
+  onDropCallback: (file) => handleFileSelected(file, 'us2'),
+  onError: (message) => (uploadError['us2'] = message),
+});
 
 async function handleFileUploaded(componentName: ComponentId, fileName: string) {
   console.log('adding file to store', componentName, fileName);
@@ -689,15 +695,14 @@ async function handleFileChange(event: Event, componentId: ComponentId) {
   // Clear file input so same file can be uploaded again after removal
   target.value = '';
 
-  // Clear any previous errors
-  uploadError[componentId] = null;
-
-  if (usStore.hasExistingFile(file.name)) {
-    uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+  // Use the same validation logic from our composable
+  const validationResult = validateUsFile(file, componentId);
+  if (!validationResult.valid) {
+    uploadError[componentId] = validationResult.errorMessage || 'Invalid file';
     return;
   }
 
-  await handleFileInput(file, componentId);
+  await handleFileSelected(file, componentId);
 }
 
 // Modal handlers
