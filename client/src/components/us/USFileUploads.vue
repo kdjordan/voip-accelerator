@@ -336,15 +336,16 @@ import { USColumnRole } from '@/types/domains/us-types';
 import Papa from 'papaparse';
 import { storageConfig } from '@/config/storage-config';
 import USCodeSummary from '@/components/us/USCodeSummary.vue';
-// Comment out the worker import since it doesn't exist yet
-// TODO: Create US comparison worker file
-// import USComparisonWorker from '@/workers/us-comparison.worker?worker';
+import USComparisonWorker from '@/workers/us-comparison.worker?worker';
+import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
+import { useLergStore } from '@/stores/lerg-store';
 
 // First, define a type for component IDs to ensure type safety
 type ComponentId = 'us1' | 'us2';
 
 const usStore = useUsStore();
 const service = new USService();
+const lergStore = useLergStore();
 
 // Component state
 const isGeneratingReports = ref<boolean>(false);
@@ -509,52 +510,95 @@ async function generateReports() {
         indetermRate: item.indetermRate,
       }));
 
-      // TODO: Implement worker for comparison
-      console.log('US Comparison worker not implemented yet');
-      alert('Report generation is not implemented yet');
+      // For very large datasets, we might need to sample the data to avoid browser issues
+      // Only process the first 200,000 records to avoid memory issues
+      const MAX_RECORDS = 200000;
+      const sampleData1 =
+        cleanData1.length > MAX_RECORDS ? cleanData1.slice(0, MAX_RECORDS) : cleanData1;
+      const sampleData2 =
+        cleanData2.length > MAX_RECORDS ? cleanData2.slice(0, MAX_RECORDS) : cleanData2;
 
-      /* Comment out worker code until worker is implemented
-        // Create worker and process data
-        const worker = new USComparisonWorker();
-        const reports = await new Promise<{ pricingReport: USPricingReport; codeReport: USCodeReport }>(
-          (resolve, reject) => {
-            worker.onmessage = event => {
-              const { pricingReport, codeReport } = event.data;
-              resolve({ pricingReport, codeReport });
-            };
+      // Warn if we're sampling
+      if (cleanData1.length > MAX_RECORDS || cleanData2.length > MAX_RECORDS) {
+        console.warn(
+          `Large dataset detected: processing first ${MAX_RECORDS} records for comparison`
+        );
+      }
 
-            worker.onerror = error => {
-              console.error('Worker error:', error);
-              reject(error);
-            };
+      // Create worker and process data for comparison
+      const comparisonWorker = new USComparisonWorker();
+      const reports = await new Promise<{
+        pricingReport: USPricingReport;
+        codeReport: USCodeReport;
+      }>((resolve, reject) => {
+        comparisonWorker.onmessage = (event) => {
+          const { pricingReport, codeReport } = event.data;
+          resolve({ pricingReport, codeReport });
+        };
 
-            const input: USReportsInput = {
-              fileName1: fileNames[0],
-              fileName2: fileNames[1],
-              file1Data: cleanData1,
-              file2Data: cleanData2,
-            };
+        comparisonWorker.onerror = (error) => {
+          console.error('Worker error:', error);
+          reject(error);
+        };
 
-            // Log the size of data being sent to worker
-            console.log('Sending data to worker:', 
-              `Clean data sizes: ${JSON.stringify(cleanData1).length}, ${JSON.stringify(cleanData2).length} bytes`);
-              
-            worker.postMessage(input);
-          }
+        const input: USReportsInput = {
+          fileName1: fileNames[0],
+          fileName2: fileNames[1],
+          file1Data: sampleData1,
+          file2Data: sampleData2,
+        };
+
+        // Log the size of data being sent to worker
+        console.log(
+          'Sending data to comparison worker:',
+          `Clean data sizes: ${sampleData1.length}, ${sampleData2.length} records`
         );
 
-        console.log('Reports generated:', {
-          hasPricingReport: !!reports.pricingReport,
-          hasCodeReport: !!reports.codeReport,
-        });
+        comparisonWorker.postMessage(input);
+      });
 
-        if (reports.pricingReport && reports.codeReport) {
-          usStore.setReports(reports.pricingReport, reports.codeReport);
-        }
+      console.log('Reports generated:', {
+        hasPricingReport: !!reports.pricingReport,
+        hasCodeReport: !!reports.codeReport,
+      });
 
-        // Clean up worker
-        worker.terminate();
-        */
+      if (reports.pricingReport && reports.codeReport) {
+        usStore.setReports(reports.pricingReport, reports.codeReport);
+      }
+
+      // Clean up worker
+      comparisonWorker.terminate();
+
+      // After comparison is done, generate enhanced code report for each file
+      // Process a sample of the data for the enhanced code report as well
+      await generateEnhancedCodeReport(fileNames[0], sampleData1);
+      if (fileNames.length > 1) {
+        await generateEnhancedCodeReport(fileNames[1], sampleData2);
+      }
+    } else if (fileData.length === 1) {
+      // Only one file, just generate enhanced code report
+      const cleanData = fileData[0].map((item) => ({
+        npanxx: item.npanxx,
+        npa: item.npa,
+        nxx: item.nxx,
+        interRate: item.interRate,
+        intraRate: item.intraRate,
+        indetermRate: item.indetermRate,
+      }));
+
+      // For very large datasets, we might need to sample the data
+      const MAX_RECORDS = 200000;
+      const sampleData =
+        cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
+
+      // Warn if we're sampling
+      if (cleanData.length > MAX_RECORDS) {
+        console.warn(
+          `Large dataset detected: processing first ${MAX_RECORDS} records for enhanced code report`
+        );
+      }
+
+      await generateEnhancedCodeReport(fileNames[0], sampleData);
     }
   } catch (error: unknown) {
     console.error('Error generating reports:', error);
@@ -567,6 +611,68 @@ async function generateReports() {
     }
   } finally {
     isGeneratingReports.value = false;
+  }
+}
+
+// New function to generate enhanced code report
+async function generateEnhancedCodeReport(fileName: string, data: USStandardizedData[]) {
+  try {
+    // Create code report worker
+    const codeReportWorker = new USCodeReportWorker();
+
+    // Create a serializable version of the LERG data
+    // This avoids DataCloneError by only sending simple serializable data
+    const stateNPAs: Record<string, string[]> = {};
+    Object.keys(lergStore.$state.stateNPAs).forEach((key) => {
+      stateNPAs[key] = [...lergStore.$state.stateNPAs[key]]; // Create a new array with primitive values
+    });
+
+    const countryData = lergStore.$state.countryData.map((country) => ({
+      country: country.country,
+      npaCount: country.npaCount,
+      npas: [...country.npas], // Create a new array with primitive values
+      // Omit provinces or other complex properties that might cause issues
+    }));
+
+    const lergData = {
+      stateNPAs,
+      countryData,
+    };
+
+    // Create a promise to handle the worker
+    const report = await new Promise<USEnhancedCodeReport>((resolve, reject) => {
+      codeReportWorker.onmessage = (event) => {
+        resolve(event.data);
+      };
+
+      codeReportWorker.onerror = (error) => {
+        console.error('Code report worker error:', error);
+        reject(error);
+      };
+
+      const input = {
+        fileName,
+        fileData: data,
+        lergData,
+      };
+
+      console.log(
+        'Sending data to code report worker:',
+        `File: ${fileName}, Data length: ${data.length}`
+      );
+
+      codeReportWorker.postMessage(input);
+    });
+
+    console.log('Enhanced code report generated for', fileName);
+
+    // Store the report
+    usStore.setEnhancedCodeReport(report);
+
+    // Clean up worker
+    codeReportWorker.terminate();
+  } catch (error) {
+    console.error('Error generating enhanced code report:', error);
   }
 }
 

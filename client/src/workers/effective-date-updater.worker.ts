@@ -100,7 +100,13 @@ function calculateEffectiveDate(
     }
   }
 
-  return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+  // Fix: Use locale-aware date formatting to preserve the local date
+  // Format: YYYY-MM-DD
+  const year = effectiveDate.getFullYear();
+  const month = String(effectiveDate.getMonth() + 1).padStart(2, '0');
+  const day = String(effectiveDate.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
 // Give the worker a chance to breathe - use a moderate delay for proper UI updates

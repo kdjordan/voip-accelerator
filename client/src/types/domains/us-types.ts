@@ -1,3 +1,5 @@
+import type { CountryLergData } from '@/types/domains/lerg-types';
+
 export interface USStandardizedData {
   npanxx: string;
   npa: string;
@@ -147,4 +149,86 @@ export type USColumnMappings = Record<string, USColumnRole>;
 export interface USColumnsResult {
   columns: string[];
   mappings: USColumnMappings;
+}
+
+// Enhanced Code Report Types
+export interface USEnhancedCodeReport {
+  file1: USEnhancedFileReport;
+  file2?: USEnhancedFileReport; // Optional for single file reports
+}
+
+export interface USEnhancedFileReport {
+  fileName: string;
+  totalCodes: number;
+  countries: USCountryBreakdown[];
+}
+
+export interface USCountryBreakdown {
+  countryCode: string;
+  countryName: string;
+  npaCoverage: number;
+  totalNPAs: number;
+  states?: USStateBreakdown[]; // For US and Canada
+}
+
+export interface USStateBreakdown {
+  stateCode: string;
+  stateName: string;
+  npas: string[];
+  coverage: number;
+  rateStats: {
+    interstate: USRateStats;
+    intrastate: USRateStats;
+    indeterminate: USRateStats;
+  };
+}
+
+export interface USRateStats {
+  average: number;
+  count: number;
+  coverage: number;
+}
+
+// Enhanced Code Report Worker Input
+export interface USEnhancedCodeReportInput {
+  fileName: string;
+  fileData: USStandardizedData[];
+  lergData?: {
+    stateNPAs: Record<string, string[]>;
+    countryData: CountryLergData[];
+  };
+}
+
+// US Comparison Types
+export interface USComparisonData {
+  dialCode: string;
+  npa: string;
+  destName: string;
+  rateFile1: {
+    interstate: number;
+    intrastate: number;
+    indeterminate: number;
+  };
+  rateFile2: {
+    interstate: number;
+    intrastate: number;
+    indeterminate: number;
+  };
+  percentageDifference: {
+    interstate: number;
+    intrastate: number;
+    indeterminate: number;
+  };
+}
+
+export interface USNonMatchingCode {
+  dialCode: string;
+  npa: string;
+  state: string;
+  rates: {
+    interstate: number;
+    intrastate: number;
+    indeterminate: number;
+  };
+  file: string;
 }

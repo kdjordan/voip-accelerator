@@ -18,6 +18,10 @@
             "
             :report="usStore.getCodeReport"
           />
+          <USEnhancedCodeReport
+            v-if="usStore.activeReportType === ReportTypes.CODE && usStore.enhancedCodeReport"
+            :report="usStore.getEnhancedCodeReport"
+          />
           <USPricingReport
             v-if="usStore.activeReportType === ReportTypes.PRICING && usStore.reportsGenerated"
             :report="usStore.getPricingReport"
@@ -33,6 +37,7 @@ import USFileUploads from '@/components/us/USFileUploads.vue';
 import USCodeReport from '@/components/us/USCodeReport.vue';
 import USPricingReport from '@/components/us/USPricingReport.vue';
 import USContentHeader from '@/components/us/USContentHeader.vue';
+import USEnhancedCodeReport from '@/components/us/USEnhancedCodeReport.vue';
 import { useUsStore } from '@/stores/us-store';
 import { ReportTypes } from '@/types/app-types';
 import { onMounted } from 'vue';
