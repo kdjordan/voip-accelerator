@@ -28,10 +28,10 @@
                   : '',
                 uploadError.us1 ? 'border-red-500 border-solid border-2' : '',
               ]"
-              @dragenter.prevent="(e) => handleDragEnterUs1(e)"
-              @dragleave.prevent="(e) => handleDragLeaveUs1(e)"
-              @dragover.prevent
-              @drop.prevent="(e) => handleDropUs1(e)"
+              @dragenter.prevent="handleDragEnterUs1"
+              @dragleave.prevent="handleDragLeaveUs1"
+              @dragover.prevent="handleDragOverUs1"
+              @drop.prevent="handleDropUs1"
             >
               <!-- File Input and Content -->
               <input
@@ -164,10 +164,10 @@
                   : '',
                 uploadError.us2 ? 'border-red-500 border-solid border-2' : '',
               ]"
-              @dragenter.prevent="(e) => handleDragEnterUs2(e)"
-              @dragleave.prevent="(e) => handleDragLeaveUs2(e)"
-              @dragover.prevent
-              @drop.prevent="(e) => handleDropUs2(e)"
+              @dragenter.prevent="handleDragEnterUs2"
+              @dragleave.prevent="handleDragLeaveUs2"
+              @dragover.prevent="handleDragOverUs2"
+              @drop.prevent="handleDropUs2"
             >
               <!-- File Input and Content -->
               <input
@@ -384,15 +384,15 @@ async function handleFileSelected(file: File, componentId: ComponentId) {
     return;
   }
 
-  // Check for duplicate filename
-  if (usStore.hasExistingFile(file.name)) {
-    uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
-    return;
-  }
-
   usStore.setComponentUploading(componentId, true);
   try {
-    await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
+    // Create a mock event with the file
+    const mockEvent = {
+      target: {
+        files: [file],
+      },
+    };
+    await handleFileInput(mockEvent, componentId);
   } catch (error) {
     console.error('Error handling file:', error);
     uploadError[componentId] = 'Error processing file. Please try again.';
@@ -793,29 +793,35 @@ async function handleRemoveFile(componentName: ComponentId) {
   }
 }
 
-// Add back the handleFileInput function
-async function handleFileInput(file: File, componentId: ComponentId) {
+// Add this before the existing handleRfFileDrop function
+async function handleFileInput(
+  eventOrFile: Event | { target: { files: File[] } },
+  componentId: ComponentId
+) {
   console.log(`File input for component ${componentId}`);
+
+  // Handle different parameters - either an Event or a mocked event with files
+  let file: File | null = null;
+
+  if (eventOrFile instanceof Event) {
+    const target = eventOrFile.target as HTMLInputElement;
+    file = target.files?.[0] || null;
+  } else if (eventOrFile && 'target' in eventOrFile && eventOrFile.target.files) {
+    file = eventOrFile.target.files[0] || null;
+  }
+
+  if (!file) {
+    console.error('No file found in event');
+    return;
+  }
 
   // Clear any previous errors
   uploadError[componentId] = null;
 
-  // Check if OTHER component is uploading (not this one)
-  const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
-  if (usStore.isComponentUploading(otherComponent)) {
-    uploadError[componentId] = 'Please wait for the other file to finish uploading';
-    return;
-  }
-
-  // Check file type
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    uploadError[componentId] = 'Only CSV files are accepted';
-    return;
-  }
-
-  // Check for duplicate filename
-  if (usStore.hasExistingFile(file.name)) {
-    uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
+  // Validate the file
+  const validationResult = validateUsFile(file, componentId);
+  if (!validationResult.valid) {
+    uploadError[componentId] = validationResult.errorMessage || 'Invalid file';
     return;
   }
 
