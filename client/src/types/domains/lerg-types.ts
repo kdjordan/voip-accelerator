@@ -49,6 +49,18 @@ export interface CountryLergData {
   }>;
 }
 
+// Extended Store types for NPA-focused implementation
+export interface NpaRecord {
+  npa: string;
+  state: string;
+  country: string;
+}
+
+export type NpaMap = Map<string, NpaRecord>;
+export type CountryNpaMap = Map<string, Set<string>>;
+export type StateNpaMap = Map<string, Set<string>>;
+export type CountryStateNpaMap = Map<string, Map<string, Set<string>>>;
+
 export interface LergState {
   error: string | null;
   isProcessing: boolean;
@@ -59,6 +71,10 @@ export interface LergState {
     totalRecords: number;
     lastUpdated: string | null;
   };
+  // New properties for NPA-focused implementation
+  npaRecords?: NpaMap;
+  countriesMap?: CountryNpaMap;
+  countryStateMap?: CountryStateNpaMap;
 }
 
 export interface LergDataResponse {
@@ -99,4 +115,21 @@ export interface LergPreviewData {
 
 export interface LergColumnMapping {
   [key: string]: LergColumnRole;
+}
+
+// Data provider interface for abstraction
+export interface LergDataProvider {
+  getNpaRecord(npa: string): NpaRecord | undefined;
+  getStateByNpa(npa: string): { country: string; state: string } | null;
+  getCountryByNpa(npa: string): string | null;
+  getNpasByCountry(country: string): Set<string>;
+  getNpasByState(country: string, state: string): Set<string>;
+  isValidNpa(npa: string): boolean;
+}
+
+// Worker-compatible data structure for efficient transfer
+export interface LergWorkerData {
+  validNpas: string[];
+  npaMappings: Record<string, { country: string; state: string }>;
+  countryGroups: Record<string, string[]>;
 }

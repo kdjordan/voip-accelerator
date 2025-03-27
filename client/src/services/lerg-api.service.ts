@@ -41,7 +41,7 @@ export enum InitState {
   IDLE = 'idle',
   INITIALIZING = 'initializing',
   SUCCESS = 'success',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 // Current initialization state
@@ -49,10 +49,13 @@ let initState: InitState = InitState.IDLE;
 let initError: Error | null = null;
 
 // Cache for API responses
-const apiCache = new Map<string, {
-  data: any;
-  timestamp: number;
-}>();
+const apiCache = new Map<
+  string,
+  {
+    data: any;
+    timestamp: number;
+  }
+>();
 
 // Cache expiration time in milliseconds (5 minutes)
 const CACHE_EXPIRATION_MS = 5 * 60 * 1000;
@@ -69,7 +72,7 @@ export const lergApiService = {
   getInitState(): { state: InitState; error: Error | null } {
     return {
       state: initState,
-      error: initError
+      error: initError,
     };
   },
 
@@ -102,11 +105,7 @@ export const lergApiService = {
    * @param useCache Whether to use and update the cache
    * @returns The response data
    */
-  async makeRequest<T>(
-    url: string,
-    options: RequestInit = {},
-    useCache = true
-  ): Promise<T> {
+  async makeRequest<T>(url: string, options: RequestInit = {}, useCache = true): Promise<T> {
     // Check cache first if GET request and caching is enabled
     const isGetRequest = !options.method || options.method === 'GET';
     if (useCache && isGetRequest && apiCache.has(url)) {
@@ -123,24 +122,24 @@ export const lergApiService = {
 
     try {
       const response = await fetch(url, options);
-      
+
       // Handle HTTP errors
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
         throw new LergServerError(errorText, response.status);
       }
-      
+
       // Parse JSON response
       const data = await response.json();
-      
+
       // Cache the response if it's a GET request and caching is enabled
       if (useCache && isGetRequest) {
         apiCache.set(url, {
           data,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
-      
+
       return data as T;
     } catch (error) {
       // Handle network errors vs server errors
@@ -187,20 +186,56 @@ export const lergApiService = {
   },
 
   /**
+   * Get LERG data from the API
+   * @param forceRefresh Whether to force a refresh from the server
+   * @returns Promise resolving to the LERG data with records
+   */
+  async getLergData(forceRefresh = false): Promise<{
+    records: any[];
+    stats?: { totalRecords: number; lastUpdated?: string };
+  }> {
+    try {
+      console.log('Fetching LERG data from API...');
+      const data = await this.makeRequest<{
+        data: any[];
+        stats: { totalRecords: number; lastUpdated?: string };
+      }>(`${PUBLIC_URL}/lerg-data`, {}, !forceRefresh);
+
+      return {
+        records: data.data || [],
+        stats: data.stats,
+      };
+    } catch (error) {
+      console.error('Failed to fetch LERG data:', error);
+      if (error instanceof LergServerError) {
+        throw new LergApiError(`Failed to fetch LERG data: ${error.message}`);
+      } else if (error instanceof LergNetworkError) {
+        throw new LergApiError('Network error while fetching LERG data');
+      } else {
+        throw new LergApiError('Unknown error while fetching LERG data');
+      }
+    }
+  },
+
+  /**
    * Upload a LERG file to the server
    * @param formData The form data containing the file
    * @returns Promise resolving to the upload result
    */
   async uploadLergFile(formData: FormData): Promise<any> {
     try {
-      const result = await this.makeRequest<any>(`${ADMIN_URL}/upload`, {
-        method: 'POST',
-        body: formData,
-      }, false);
-      
+      const result = await this.makeRequest<any>(
+        `${ADMIN_URL}/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+        false
+      );
+
       // Clear cache after successful upload
       this.clearCache();
-      
+
       return result;
     } catch (error) {
       if (error instanceof LergServerError) {
@@ -219,13 +254,17 @@ export const lergApiService = {
    */
   async clearServerData(): Promise<void> {
     try {
-      await this.makeRequest<void>(`${ADMIN_URL}/clear`, {
-        method: 'DELETE'
-      }, false);
-      
+      await this.makeRequest<void>(
+        `${ADMIN_URL}/clear`,
+        {
+          method: 'DELETE',
+        },
+        false
+      );
+
       // Clear cache after successful clear
       this.clearCache();
-      
+
       console.log('LERG data cleared on server successfully');
     } catch (error) {
       if (error instanceof LergServerError) {
@@ -245,8 +284,10 @@ export const lergApiService = {
    * In the future, this should be moved to the facade service
    */
   async initialize(): Promise<void> {
-    console.warn('LergApiService.initialize() is deprecated. Use lergFacadeService.initialize() instead.');
-    
+    console.warn(
+      'LergApiService.initialize() is deprecated. Use lergFacadeService.initialize() instead.'
+    );
+
     // Import dynamically to avoid circular dependencies
     const { lergFacadeService } = await import('@/services/lerg-facade.service');
     await lergFacadeService.initialize();
@@ -259,10 +300,12 @@ export const lergApiService = {
    * In the future, this should be moved to the facade service
    */
   async clearAllData(): Promise<void> {
-    console.warn('LergApiService.clearAllData() is deprecated. Use lergFacadeService.clearAllData() instead.');
-    
+    console.warn(
+      'LergApiService.clearAllData() is deprecated. Use lergFacadeService.clearAllData() instead.'
+    );
+
     // Import dynamically to avoid circular dependencies
     const { lergFacadeService } = await import('@/services/lerg-facade.service');
     await lergFacadeService.clearAllData();
-  }
+  },
 };
