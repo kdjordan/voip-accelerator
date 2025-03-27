@@ -381,7 +381,7 @@
             <div class="flex justify-end w-full">
               <button
                 @click="applyEffectiveDateSettings"
-                class="px-4 py-2 bg-green-900/30 text-green-400 hover:bg-green-900/50 rounded transition-colors"
+                class="px-4 py-2 bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
                 :class="{
                   'animate-pulse-fast': isApplyingSettings,
                   'opacity-50 cursor-not-allowed': isApplyingSettings,
@@ -408,7 +408,7 @@
         <div class="flex items-center gap-2">
           <button
             @click="handleClearData"
-            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 transition-colors"
+            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 transition-colors border border-red-400/30"
           >
             <TrashIcon class="w-4 h-4" />
             Clear Rate Sheet Data
@@ -462,7 +462,7 @@
                 <button
                   @click="handleBulkUpdate('highest')"
                   :disabled="isBulkProcessing"
-                  class="flex-1 px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300"
+                  class="flex-1 px-3 py-2 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md text-gray-300 transition-colors"
                   :class="{ 'opacity-50 cursor-not-allowed animate-pulse-fast': isBulkProcessing }"
                 >
                   {{ isBulkProcessing ? 'Processing...' : 'Use Highest' }}
@@ -470,7 +470,7 @@
                 <button
                   v-if="!isBulkProcessing"
                   @click="handleBulkUpdate('lowest')"
-                  class="flex-1 px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300"
+                  class="flex-1 px-3 py-2 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md text-gray-300 transition-colors"
                 >
                   Use Lowest
                 </button>
@@ -482,7 +482,7 @@
             <label class="block text-sm text-gray-400 mb-1">Actions</label>
             <button
               @click="handleExport"
-              class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium rounded-md text-green-400 hover:text-green-300 bg-green-400/10 hover:bg-green-400/20 transition-colors"
+              class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium rounded-md text-green-400 hover:text-green-300 bg-green-400/10 hover:bg-green-400/20 transition-colors border border-green-400/30"
             >
               <ArrowDownTrayIcon class="w-4 h-4" />
               Export Rate Sheet
@@ -615,28 +615,28 @@
                           !areAllRateCodesExpanded(group.destinationName) && group.rates.length > 1
                         "
                         @click="toggleAllRateCodesForDestination(group.destinationName, true)"
-                        class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                        class="px-3 py-1.5 text-xs bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md transition-colors"
                       >
                         Show All Codes
                       </button>
                       <button
                         v-if="areAnyRateCodesExpanded(group.destinationName)"
                         @click="toggleAllRateCodesForDestination(group.destinationName, false)"
-                        class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                        class="px-3 py-1.5 text-xs bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md transition-colors"
                       >
                         Hide All Codes
                       </button>
                       <button
-                        v-if="hasUnsavedChanges(group.destinationName)"
+                        v-if="group.hasDiscrepancy || hasUnsavedChanges(group.destinationName)"
                         @click="saveRateSelection(group)"
-                        class="px-3 py-1 text-sm bg-accent hover:bg-accent-hover text-white rounded-md transition-colors"
+                        class="px-3 py-1.5 text-sm bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
                       >
                         Save Changes
                       </button>
                     </div>
                   </div>
                   <div class="space-y-2">
-                    <div v-for="rate in group.rates" :key="rate.rate">
+                    <div v-for="rate in getSortedRates(group)" :key="rate.rate">
                       <!-- Rate row -->
                       <div
                         class="flex items-center justify-between text-sm p-2 rounded-md"
@@ -654,6 +654,18 @@
                             class="text-accent"
                           />
                           <span class="text-white">{{ formatRate(rate.rate) }}</span>
+                          <span
+                            v-if="rate.isHighestPercentage && !rate.hasEqualDistribution"
+                            class="ml-2 text-xs px-1.5 py-0.5 bg-accent/10 text-accent rounded-sm"
+                          >
+                            Most Common
+                          </span>
+                          <span
+                            v-if="rate.hasEqualDistribution"
+                            class="ml-2 text-xs px-1.5 py-0.5 bg-blue-400/10 text-blue-400 rounded-sm"
+                          >
+                            Equal Dist.
+                          </span>
                         </label>
                         <div
                           class="text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 transition-colors"
@@ -732,7 +744,7 @@
                           </span>
                           <button
                             @click.stop="openCustomRateInput(group.destinationName)"
-                            class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded ml-2"
+                            class="px-2 py-1 text-xs bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md ml-2 transition-colors"
                           >
                             {{ customRates[group.destinationName] ? 'Edit' : 'Set Rate' }}
                           </button>
@@ -777,13 +789,13 @@
         <div class="flex justify-end gap-2">
           <button
             @click="customRateModal.isOpen = false"
-            class="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded"
+            class="px-3 py-1.5 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md transition-colors"
           >
             Cancel
           </button>
           <button
             @click="saveCustomRate"
-            class="px-3 py-1 text-sm bg-accent hover:bg-accent-hover text-white rounded"
+            class="px-3 py-1.5 text-sm bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
           >
             Save
           </button>
@@ -1806,6 +1818,58 @@ watch(debouncedSearchQuery, (newValue, oldValue) => {
 
 function toggleEffectiveDateSettings() {
   showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
+}
+
+function getSortedRates(group: GroupedRateData): {
+  rate: number;
+  count: number;
+  percentage: number;
+  isCommon?: boolean;
+  isHighestPercentage?: boolean;
+  hasEqualDistribution?: boolean;
+}[] {
+  // First map the rates
+  const rates = group.rates.map((r) => ({
+    rate: r.rate,
+    count: r.count,
+    percentage: r.percentage,
+    isCommon: r.isCommon,
+    isHighestPercentage: false, // Initialize to false
+    hasEqualDistribution: false, // Initialize to false
+  }));
+
+  // Sort rates by value (lowest to highest)
+  rates.sort((a, b) => a.rate - b.rate);
+
+  // Find the highest percentage
+  let highestPercentage = 0;
+  for (const rate of rates) {
+    if (rate.percentage > highestPercentage) {
+      highestPercentage = rate.percentage;
+    }
+  }
+
+  // Find rates with highest percentage
+  const highestRates = rates.filter((rate) => rate.percentage === highestPercentage);
+
+  // Check if we have equal distribution (multiple rates with same highest percentage)
+  if (highestRates.length > 1) {
+    // Mark all rates with the highest percentage as having equal distribution
+    highestRates.forEach((highestRate) => {
+      const rateIndex = rates.findIndex((r) => r.rate === highestRate.rate);
+      if (rateIndex >= 0) {
+        rates[rateIndex].hasEqualDistribution = true;
+      }
+    });
+  } else if (highestRates.length === 1) {
+    // If only one rate has the highest percentage, mark it as the highest
+    const lowestRateIndex = rates.findIndex((r) => r.rate === highestRates[0].rate);
+    if (lowestRateIndex >= 0) {
+      rates[lowestRateIndex].isHighestPercentage = true;
+    }
+  }
+
+  return rates;
 }
 </script>
 
