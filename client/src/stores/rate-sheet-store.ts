@@ -387,13 +387,12 @@ export const useRateSheetStore = defineStore('rateSheet', {
 
         if (newEffectiveDate) {
           // Also update any UI-related properties that show the change code
-          const changeCode =
-            changeCodesByDestination.get(record.name) || (record.status as ChangeCodeType);
+          const changeCode = changeCodesByDestination.get(record.name) || record.changeCode;
 
           return {
             ...record,
             effective: newEffectiveDate,
-            status: changeCode, // Ensure the status (which is shown in UI) matches the change code
+            changeCode: changeCode,
           };
         }
 
