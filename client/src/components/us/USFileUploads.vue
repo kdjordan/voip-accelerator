@@ -343,6 +343,7 @@ import USComparisonWorker from '@/workers/us-comparison.worker?worker';
 import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDragDrop } from '@/composables/useDragDrop';
+import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
 
 // First, define a type for component IDs to ensure type safety
 type ComponentId = 'us1' | 'us2';
@@ -541,7 +542,14 @@ async function generateReports() {
         codeReport: USCodeReport;
       }>((resolve, reject) => {
         comparisonWorker.onmessage = (event) => {
-          const { pricingReport, codeReport } = event.data;
+          const { pricingReport, codeReport, status } = event.data;
+
+          // Handle the worker's status response
+          if (status === 'lergDataReceived') {
+            console.log('LERG data successfully received by worker');
+            return;
+          }
+
           resolve({ pricingReport, codeReport });
         };
 
@@ -550,6 +558,18 @@ async function generateReports() {
           reject(error);
         };
 
+        // First, send LERG data to the worker
+        const lergData = prepareLergWorkerData();
+        if (lergData) {
+          console.log('Sending LERG data to worker:', getLergDataSummary());
+          comparisonWorker.postMessage({ lergData });
+        } else {
+          console.warn(
+            'No LERG data available for worker - proceeding without jurisdictional analysis'
+          );
+        }
+
+        // Then, send the file data for comparison
         const input: USReportsInput = {
           fileName1: fileNames[0],
           fileName2: fileNames[1],

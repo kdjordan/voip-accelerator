@@ -9,6 +9,7 @@ import {
 import { useLergStore } from '@/stores/lerg-store';
 import { useDBStore } from '@/stores/db-store';
 import { DBName } from '@/types/app-types';
+import type { NpaRecord, LERGRecord } from '@/types/domains/lerg-types';
 
 /**
  * Error types for the LERG Facade Service
@@ -372,176 +373,108 @@ class LergFacadeService {
 
   /**
    * Check if LERG data exists
-   * @returns Promise resolving to an object indicating if data exists and where
+   * @returns Promise resolving to data existence status
    */
   public async checkDataExists(): Promise<{
     exists: boolean;
-    inMemory: boolean;
-    inIndexedDB: boolean;
     onServer: boolean;
-    stats: LergStats;
+    inStore: boolean;
+    stats: { totalRecords: number; lastUpdated: string | null };
   }> {
-    const operation = 'checkDataExists';
-    this.log(LogLevel.INFO, operation, 'Checking if LERG data exists');
+    this.log(LogLevel.INFO, 'check', 'Checking if LERG data exists');
+
+    const store = useLergStore();
 
     try {
-      // Get services and stores
-      const lergService = LergService.getInstance();
-      const store = useLergStore();
-
-      // Check local data
-      this.log(LogLevel.DEBUG, operation, 'Checking for local data in IndexedDB');
-      const hasLocalData = await lergService.hasData();
-      let recordCount = 0;
-
-      if (hasLocalData) {
-        this.log(LogLevel.DEBUG, operation, 'Local data found, getting record count');
-        recordCount = await lergService.getRecordCount();
-        this.log(LogLevel.INFO, operation, `Found ${recordCount} records in IndexedDB`);
-      } else {
-        this.log(LogLevel.INFO, operation, 'No local data found in IndexedDB');
+      // Get API connection status
+      let onServer = false;
+      try {
+        onServer = await lergApiService.testConnection();
+        this.log(LogLevel.DEBUG, 'check', `Server connection available: ${onServer}`);
+      } catch (error) {
+        this.log(LogLevel.WARN, 'check', 'Error checking server connection:', error);
+        onServer = false;
       }
 
-      // Check server data
-      this.log(LogLevel.DEBUG, operation, 'Testing connection to server');
-      const hasServerData = await lergApiService.testConnection();
-      this.log(LogLevel.INFO, operation, `Server data available: ${hasServerData}`);
+      // Check store
+      const inStore = store.stats?.totalRecords > 0;
+      this.log(LogLevel.DEBUG, 'check', `Data in store: ${inStore}`);
 
-      // Determine data source
-      let source: 'local' | 'server' | 'none' = 'none';
-      if (hasLocalData) {
-        source = 'local';
-      } else if (hasServerData) {
-        source = 'server';
-      }
+      // Data exists if it's in either the store or on server
+      const exists = inStore || onServer;
 
       const result = {
-        exists: hasLocalData || hasServerData,
-        inMemory: store.isLocallyStored,
-        inIndexedDB: hasLocalData,
-        onServer: hasServerData,
+        exists,
+        onServer,
+        inStore,
         stats: {
-          totalRecords: recordCount,
-          lastUpdated: store.stats.lastUpdated || undefined,
-          source,
+          totalRecords: store.stats?.totalRecords || 0,
+          lastUpdated: store.stats?.lastUpdated,
         },
       };
 
-      this.log(LogLevel.INFO, operation, 'Data existence check completed', result);
-
+      this.log(LogLevel.INFO, 'check', 'Data check completed', result);
       return result;
     } catch (error) {
-      this.log(LogLevel.ERROR, operation, 'Error checking LERG data existence', error);
-
-      // Create a specific error
-      const facadeError = new LergDataAccessError(
-        'Failed to check LERG data existence',
+      this.log(LogLevel.ERROR, 'check', 'Error checking data existence', error);
+      throw this.createSpecificError(
+        'check',
+        'Failed to check if LERG data exists',
         error instanceof Error ? error : undefined
       );
-
-      // Set operation status
-      this.setOperationStatus(operation, OperationStatus.ERROR, facadeError, { action: operation });
-
-      throw facadeError;
     }
   }
 
   /**
-   * Initialize LERG data
-   * This method coordinates between API and database layers to ensure data is available
-   * @param forceRefresh Whether to force a refresh from the server
-   * @returns Promise resolving to the operation result
+   * Initialize LERG service and load data
+   * @param forceRefresh Whether to force refreshing data from server
+   * @returns Promise resolving to operation result
    */
   public async initialize(forceRefresh = false): Promise<OperationResult> {
     const operation = 'initialize';
 
     // Set operation status to in progress
     this.setOperationStatus(operation, OperationStatus.IN_PROGRESS);
-    this.log(
-      LogLevel.INFO,
-      operation,
-      `Starting initialization${forceRefresh ? ' with force refresh' : ''}`
-    );
+    this.log(LogLevel.INFO, operation, 'Starting initialization', { forceRefresh });
 
     const store = useLergStore();
-    const dbStore = useDBStore();
 
     try {
       store.isProcessing = true;
       store.error = '';
 
-      // Get LergService instance
-      const lergService = LergService.getInstance();
+      // Reset store data if forcing refresh
+      if (forceRefresh) {
+        this.log(LogLevel.INFO, operation, 'Forcing refresh, clearing existing store data');
+        store.clearLergData();
+      }
 
-      // Check if data already exists in IndexedDB and we're not forcing a refresh
-      this.log(LogLevel.DEBUG, operation, 'Checking for existing data in IndexedDB');
-      const hasData = await lergService.hasData();
-      this.log(LogLevel.INFO, operation, `IndexedDB has data: ${hasData}`);
-
-      if (hasData && !forceRefresh) {
-        this.log(LogLevel.INFO, operation, 'Loading data from IndexedDB');
-
-        // Load data from IndexedDB
-        const { stateMapping, countryData, count } = await lergService.getProcessedData();
-        this.log(LogLevel.DEBUG, operation, `Loaded ${count} records from IndexedDB`);
-
-        // Get the last updated timestamp from the database if possible
-        let lastUpdated = null;
-        try {
-          const dbData = await lergService.getLastUpdatedTimestamp();
-          lastUpdated = dbData?.lastUpdated;
-          this.log(LogLevel.DEBUG, operation, `Database last updated: ${lastUpdated || 'unknown'}`);
-        } catch (err) {
-          this.log(
-            LogLevel.WARN,
-            operation,
-            'Could not get last updated timestamp from database',
-            err
-          );
-        }
-
-        // Update store with processed data
-        this.log(LogLevel.DEBUG, operation, 'Updating store with processed data');
-        store.setStateNPAs(stateMapping);
-        store.setCountryData(countryData);
-        store.setLergStats(count, lastUpdated);
-        store.isLocallyStored = true;
+      // Check if data already exists in the store
+      if (store.stats.totalRecords > 0 && !forceRefresh) {
+        this.log(LogLevel.INFO, operation, 'Data already exists in store, using cached data', {
+          recordCount: store.stats.totalRecords,
+        });
 
         this.setOperationStatus(operation, OperationStatus.SUCCESS);
-
-        const result = {
+        return {
           status: OperationStatus.SUCCESS,
-          message: 'LERG data loaded from local database',
-          data: { count, source: 'local' },
+          message: 'Using existing LERG data from store',
+          data: {
+            recordCount: store.stats.totalRecords,
+            source: 'store',
+          },
         };
-
-        this.log(
-          LogLevel.INFO,
-          operation,
-          'Initialization from local data completed successfully',
-          result
-        );
-
-        return result;
       }
 
-      // If we're forcing a refresh or don't have local data, close any existing connection
-      this.log(LogLevel.DEBUG, operation, 'Closing any existing database connections');
-      await dbStore.closeConnection(DBName.LERG);
+      // Get data from API
+      this.log(LogLevel.INFO, operation, 'Fetching LERG data from API');
+      const apiResult = await lergApiService.getLergData();
 
-      // Test connection to server
-      this.log(LogLevel.DEBUG, operation, 'Testing connection to server');
-      const hasServerData = await lergApiService.testConnection();
-      this.log(LogLevel.INFO, operation, `Server data available: ${hasServerData}`);
+      if (!apiResult || !apiResult.records || apiResult.records.length === 0) {
+        const error = new LergDataError('No LERG data returned from API');
+        this.log(LogLevel.ERROR, operation, 'No LERG data returned from API');
 
-      if (!hasServerData) {
-        const error = new LergInitializationError('No LERG data available on server');
-        this.log(LogLevel.ERROR, operation, 'No LERG data available on server');
-
-        this.setOperationStatus(operation, OperationStatus.ERROR, error, {
-          forceRefresh,
-          hasLocalData: hasData,
-        });
+        this.setOperationStatus(operation, OperationStatus.ERROR, error);
 
         store.error = error.message;
         store.isProcessing = false;
@@ -550,104 +483,48 @@ class LergFacadeService {
           status: OperationStatus.ERROR,
           error,
           errorInfo: this.operationErrors.get(operation),
-          message: 'No LERG data available on server',
+          message: 'Failed to fetch LERG data from API',
         };
       }
 
-      // Fetch data from server
-      this.log(LogLevel.INFO, operation, 'Fetching data from server');
-      const lergData = await lergApiService.fetchLergData(forceRefresh);
-      this.log(
-        LogLevel.INFO,
-        operation,
-        `Received ${lergData.data?.length || 0} records from server`
-      );
+      // Process the records and update the store
+      this.log(LogLevel.INFO, operation, `Processing ${apiResult.records.length} LERG records`);
+      this.processLergRecordsToStore(apiResult.records);
+      store.setLergStats(apiResult.records.length);
 
-      if (!lergData.data || lergData.data.length === 0) {
-        const error = new LergInitializationError('No LERG data received from server');
-        this.log(LogLevel.ERROR, operation, 'No LERG data received from server');
+      // Mark data as locally stored in memory (not indexedDB)
+      store.setLergLocallyStored(true);
 
-        this.setOperationStatus(operation, OperationStatus.ERROR, error, {
-          forceRefresh,
-          hasLocalData: hasData,
-          serverResponse: lergData,
-        });
+      this.log(LogLevel.INFO, operation, 'LERG data processed and stored in memory successfully', {
+        recordCount: apiResult.records.length,
+      });
 
-        store.error = error.message;
-        store.isProcessing = false;
-
-        return {
-          status: OperationStatus.ERROR,
-          error,
-          errorInfo: this.operationErrors.get(operation),
-          message: 'No LERG data received from server',
-        };
-      }
-
-      // Initialize database with fetched data
-      this.log(LogLevel.INFO, operation, 'Initializing database with fetched data');
-      await lergService.initializeLergTable(lergData.data);
-
-      // Process data for application use
-      this.log(LogLevel.INFO, operation, 'Processing data for application use');
-      const { stateMapping, countryData, count } = await lergService.getProcessedData();
-      this.log(LogLevel.DEBUG, operation, `Processed ${count} records`);
-
-      // Get the server's last updated timestamp
-      const serverLastUpdated = lergData.stats?.lastUpdated;
-      this.log(LogLevel.DEBUG, operation, `Server last updated: ${serverLastUpdated || 'unknown'}`);
-
-      // Update store with processed data
-      this.log(LogLevel.DEBUG, operation, 'Updating store with processed data');
-      store.setStateNPAs(stateMapping);
-      store.setCountryData(countryData);
-      store.setLergStats(count, serverLastUpdated);
-      store.isLocallyStored = count > 0;
-
+      // Update operation status
       this.setOperationStatus(operation, OperationStatus.SUCCESS);
 
-      const result = {
+      return {
         status: OperationStatus.SUCCESS,
-        message: 'LERG data initialized successfully from server',
-        data: { count, source: 'server' },
+        message: 'LERG data initialized successfully',
+        data: {
+          recordCount: apiResult.records.length,
+          source: 'api',
+        },
       };
-
-      this.log(LogLevel.INFO, operation, 'Initialization completed successfully', result);
-
-      return result;
     } catch (error) {
       this.log(LogLevel.ERROR, operation, 'Initialization failed', error);
 
-      // Create a specific error with the original error
+      // Create specific error with the original error
       const facadeError = this.createSpecificError(
         operation,
         'Failed to initialize LERG data',
         error instanceof Error ? error : undefined
       );
 
-      // Set operation status to error with details
-      this.setOperationStatus(operation, OperationStatus.ERROR, facadeError, {
-        forceRefresh,
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      });
+      // Set operation status
+      this.setOperationStatus(operation, OperationStatus.ERROR, facadeError);
 
       // Update store error
       store.error = facadeError.message;
-
-      // Log specific error types for debugging
-      if (error instanceof LergConnectionError) {
-        this.log(
-          LogLevel.ERROR,
-          operation,
-          'Database connection error during initialization',
-          error
-        );
-      } else if (error instanceof LergDataError) {
-        this.log(LogLevel.ERROR, operation, 'Data processing error during initialization', error);
-      } else if (error instanceof LergApiError) {
-        this.log(LogLevel.ERROR, operation, 'API error during initialization', error);
-      }
 
       return {
         status: OperationStatus.ERROR,
@@ -659,6 +536,82 @@ class LergFacadeService {
       store.isProcessing = false;
       this.log(LogLevel.DEBUG, operation, 'Reset processing state');
     }
+  }
+
+  /**
+   * Process LERG records and update the store
+   * @param records The LERG records to process
+   */
+  private processLergRecordsToStore(records: LERGRecord[]): void {
+    // Process NPA-focused data structures
+    const npaRecords = new Map<string, NpaRecord>();
+    const countriesMap = new Map<string, Set<string>>();
+    const countryStateMap = new Map<string, Map<string, Set<string>>>();
+
+    // Create traditional state and country mappings for backward compatibility
+    const stateNPAs: Record<string, string[]> = {};
+    const countryData: Array<{ country: string; npaCount: number; npas: string[] }> = [];
+    const countryNpaCounts: Record<string, Set<string>> = {};
+
+    // Process each record
+    records.forEach((record) => {
+      const { npa, state, country } = record;
+
+      // Skip records without NPA
+      if (!npa) return;
+
+      // Store in NPA records map
+      npaRecords.set(npa, { npa, state, country });
+
+      // Group by country
+      if (!countriesMap.has(country)) {
+        countriesMap.set(country, new Set<string>());
+      }
+      countriesMap.get(country)!.add(npa);
+
+      // Group by country and state
+      if (!countryStateMap.has(country)) {
+        countryStateMap.set(country, new Map<string, Set<string>>());
+      }
+
+      const stateMap = countryStateMap.get(country)!;
+      if (!stateMap.has(state)) {
+        stateMap.set(state, new Set<string>());
+      }
+
+      stateMap.get(state)!.add(npa);
+
+      // Traditional state mapping
+      if (!stateNPAs[state]) {
+        stateNPAs[state] = [];
+      }
+      if (!stateNPAs[state].includes(npa)) {
+        stateNPAs[state].push(npa);
+      }
+
+      // Count NPAs by country
+      if (!countryNpaCounts[country]) {
+        countryNpaCounts[country] = new Set<string>();
+      }
+      countryNpaCounts[country].add(npa);
+    });
+
+    // Create country data array
+    for (const [country, npas] of Object.entries(countryNpaCounts)) {
+      countryData.push({
+        country,
+        npaCount: npas.size,
+        npas: Array.from(npas),
+      });
+    }
+
+    // Update store with all data structures
+    const store = useLergStore();
+    store.setStateNPAs(stateNPAs);
+    store.setCountryData(countryData);
+    store.setNpaRecords(npaRecords);
+    store.setCountriesMap(countriesMap);
+    store.setCountryStateMap(countryStateMap);
   }
 
   /**
@@ -794,7 +747,7 @@ class LergFacadeService {
   }
 
   /**
-   * Clear all LERG data (server and client)
+   * Clear all LERG data (from store only, not using IndexedDB anymore)
    * @returns Promise resolving to the operation result
    */
   public async clearAllData(): Promise<OperationResult> {
@@ -805,46 +758,32 @@ class LergFacadeService {
     this.log(LogLevel.INFO, operation, 'Starting to clear all LERG data');
 
     const store = useLergStore();
-    const dbStore = useDBStore();
 
     try {
       store.isProcessing = true;
       store.error = '';
 
-      // First close any existing connections to prevent database being open
-      this.log(LogLevel.DEBUG, operation, 'Closing any existing database connections');
-      await dbStore.closeConnection(DBName.LERG);
-
-      // Then clear data from the server
+      // Clear data from the server if needed
       this.log(LogLevel.INFO, operation, 'Clearing data from server');
       await lergApiService.clearServerData();
 
-      // Then clear client-side data
-      this.log(LogLevel.INFO, operation, 'Clearing client-side data');
-      const lergService = LergService.getInstance();
-      await lergService.clearLergData();
+      // Clear client-side data from store
+      this.log(LogLevel.INFO, operation, 'Clearing client-side data from store');
+      store.clearLergData();
+
+      // Reset connection status
+      this.log(LogLevel.INFO, operation, 'Reset connection status');
 
       // Clear cache
       this.log(LogLevel.DEBUG, operation, 'Clearing API cache');
       lergApiService.clearCache();
 
-      // Reset store data
-      this.log(LogLevel.DEBUG, operation, 'Resetting store data');
-      store.setStateNPAs({});
-      store.setCountryData([]);
-      store.setLergStats(0);
-      store.isLocallyStored = false;
-
       this.setOperationStatus(operation, OperationStatus.SUCCESS);
 
-      const result = {
+      return {
         status: OperationStatus.SUCCESS,
         message: 'LERG data cleared successfully',
       };
-
-      this.log(LogLevel.INFO, operation, 'All LERG data cleared successfully');
-
-      return result;
     } catch (error) {
       this.log(LogLevel.ERROR, operation, 'Failed to clear LERG data', error);
 
@@ -855,11 +794,8 @@ class LergFacadeService {
         error instanceof Error ? error : undefined
       );
 
-      // Set operation status to error with details
-      this.setOperationStatus(operation, OperationStatus.ERROR, facadeError, {
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      });
+      // Set operation status to error
+      this.setOperationStatus(operation, OperationStatus.ERROR, facadeError);
 
       // Update store error
       store.error = facadeError.message;
@@ -872,7 +808,6 @@ class LergFacadeService {
       };
     } finally {
       store.isProcessing = false;
-      this.log(LogLevel.DEBUG, operation, 'Reset processing state');
     }
   }
 
