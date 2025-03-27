@@ -75,22 +75,44 @@ export const useRateSheetStore = defineStore('rateSheet', {
     async updateDestinationRate(destinationName: string, newRate: number) {
       const today = new Date().toISOString().split('T')[0];
 
-      const existingRecord = this.originalData.find((record) => record.name === destinationName);
+      // Get all records for this destination to determine the appropriate change code
+      const records = this.originalData.filter((record) => record.name === destinationName);
+      if (records.length === 0) return false;
 
-      if (!existingRecord) return;
+      // Determine the most appropriate change code based on rate comparison
+      // If ANY records show an increase, use INCREASE
+      // Otherwise, if ANY records show a decrease, use DECREASE
+      // Otherwise, use SAME
+      let hasIncrease = false;
+      let hasDecrease = false;
 
+      for (const record of records) {
+        if (newRate > record.rate) {
+          hasIncrease = true;
+          break; // Prioritize INCREASE
+        } else if (newRate < record.rate) {
+          hasDecrease = true;
+        }
+      }
+
+      // Determine the single change code and effective date for all records of this destination
       let changeCode: ChangeCodeType = ChangeCode.SAME;
       let effectiveDate = today;
 
-      if (newRate > existingRecord.rate) {
+      if (hasIncrease) {
         changeCode = ChangeCode.INCREASE;
         const sevenDaysLater = new Date();
         sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
         effectiveDate = sevenDaysLater.toISOString().split('T')[0];
-      } else if (newRate < existingRecord.rate) {
+      } else if (hasDecrease) {
         changeCode = ChangeCode.DECREASE;
       }
 
+      console.log(
+        `Updating destination: ${destinationName}, ChangeCode: ${changeCode}, EffectiveDate: ${effectiveDate}`
+      );
+
+      // Update all records for this destination with the consistent change code and effective date
       this.originalData = this.originalData.map((record) =>
         record.name === destinationName
           ? {
@@ -139,7 +161,7 @@ export const useRateSheetStore = defineStore('rateSheet', {
     async bulkUpdateDestinationRates(updates: { name: string; rate: number }[]) {
       const today = new Date().toISOString().split('T')[0];
 
-      // Create a map for quick lookups
+      // Create a map for quick lookups of new rates
       const updateMap = new Map<string, number>();
       for (const update of updates) {
         updateMap.set(update.name, update.rate);
@@ -149,23 +171,64 @@ export const useRateSheetStore = defineStore('rateSheet', {
       const destinationsToUpdate = new Set<string>();
       updates.forEach((update) => destinationsToUpdate.add(update.name));
 
+      // Pre-compute change codes and effective dates by destination
+      const changeCodeByDestination = new Map<string, ChangeCodeType>();
+      const effectiveDateByDestination = new Map<string, string>();
+
+      // Calculate the appropriate change code and effective date for each destination
+      for (const destination of destinationsToUpdate) {
+        const newRate = updateMap.get(destination) || 0;
+
+        // Get all records for this destination to determine the change code
+        const records = this.originalData.filter((record) => record.name === destination);
+        if (records.length === 0) continue;
+
+        // Determine the most appropriate change code based on rate comparison
+        // If ANY records show an increase, use INCREASE
+        // Otherwise, if ANY records show a decrease, use DECREASE
+        // Otherwise, use SAME
+        let hasIncrease = false;
+        let hasDecrease = false;
+
+        for (const record of records) {
+          if (newRate > record.rate) {
+            hasIncrease = true;
+            break; // Prioritize INCREASE
+          } else if (newRate < record.rate) {
+            hasDecrease = true;
+          }
+        }
+
+        let changeCode: ChangeCodeType = ChangeCode.SAME;
+        let effectiveDate = today;
+
+        if (hasIncrease) {
+          changeCode = ChangeCode.INCREASE;
+          const sevenDaysLater = new Date();
+          sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+          effectiveDate = sevenDaysLater.toISOString().split('T')[0];
+        } else if (hasDecrease) {
+          changeCode = ChangeCode.DECREASE;
+        }
+
+        // Store the consistent values for this destination
+        changeCodeByDestination.set(destination, changeCode);
+        effectiveDateByDestination.set(destination, effectiveDate);
+
+        console.log(
+          `Destination: ${destination}, ChangeCode: ${changeCode}, EffectiveDate: ${effectiveDate}`
+        );
+      }
+
       // Single pass through the originalData array for maximum efficiency
       this.originalData = this.originalData.map((record) => {
         if (destinationsToUpdate.has(record.name)) {
           const newRate = updateMap.get(record.name);
           if (newRate === undefined) return record;
 
-          let changeCode: ChangeCodeType = ChangeCode.SAME;
-          let effectiveDate = today;
-
-          if (newRate > record.rate) {
-            changeCode = ChangeCode.INCREASE;
-            const sevenDaysLater = new Date();
-            sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-            effectiveDate = sevenDaysLater.toISOString().split('T')[0];
-          } else if (newRate < record.rate) {
-            changeCode = ChangeCode.DECREASE;
-          }
+          // Use the pre-computed consistent change code and effective date for this destination
+          const changeCode = changeCodeByDestination.get(record.name) || ChangeCode.SAME;
+          const effectiveDate = effectiveDateByDestination.get(record.name) || today;
 
           return {
             ...record,
@@ -311,15 +374,26 @@ export const useRateSheetStore = defineStore('rateSheet', {
         updateMap.set(`${record.name}|${record.prefix}`, record.effective);
       }
 
+      // Get the change code by destination
+      const changeCodesByDestination = new Map<string, ChangeCodeType>();
+      for (const group of this.groupedData) {
+        changeCodesByDestination.set(group.destinationName, group.changeCode);
+      }
+
       // Apply updates to original data
       this.originalData = this.originalData.map((record) => {
         const key = `${record.name}|${record.prefix}`;
         const newEffectiveDate = updateMap.get(key);
 
         if (newEffectiveDate) {
+          // Also update any UI-related properties that show the change code
+          const changeCode =
+            changeCodesByDestination.get(record.name) || (record.status as ChangeCodeType);
+
           return {
             ...record,
             effective: newEffectiveDate,
+            status: changeCode, // Ensure the status (which is shown in UI) matches the change code
           };
         }
 

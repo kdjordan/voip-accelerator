@@ -144,12 +144,34 @@ self.addEventListener('message', async (event) => {
     await takeBreath();
 
     // STEP 1: PREPARE THE DATA
-    // Apply effective dates based on change code
+    // First, consolidate data by destination to ensure consistent change codes
+    const destinationChangeCodeMap = new Map<string, ChangeCodeType>();
+
+    // First pass: collect all destination names and determine the primary change code for each
+    for (const group of input.rawGroupedData) {
+      const { destinationName, changeCode } = group;
+
+      // Use a priority system for change codes when there are conflicts
+      // Priority: INCREASE > DECREASE > SAME
+      if (
+        !destinationChangeCodeMap.has(destinationName) ||
+        changeCode === ChangeCode.INCREASE ||
+        (changeCode === ChangeCode.DECREASE &&
+          destinationChangeCodeMap.get(destinationName) === ChangeCode.SAME)
+      ) {
+        destinationChangeCodeMap.set(destinationName, changeCode);
+      }
+    }
+
+    // Apply effective dates based on consolidated change codes
     let preparedGroupedData: {
       destinationName: string;
       effectiveDate: string;
       changeCode: ChangeCodeType;
     }[] = [];
+
+    // Keep track of processed destinations to avoid duplicates
+    const processedDestinations = new Set<string>();
 
     const total = input.rawGroupedData.length;
     let processedCount = 0;
@@ -162,14 +184,31 @@ self.addEventListener('message', async (event) => {
       const chunk = input.rawGroupedData.slice(i, endIndex);
 
       for (const group of chunk) {
-        const changeCode = group.changeCode;
-        const newEffectiveDate = calculateEffectiveDate(changeCode, input.effectiveDateSettings);
+        const { destinationName } = group;
 
-        preparedGroupedData.push({
-          destinationName: group.destinationName,
-          effectiveDate: newEffectiveDate,
-          changeCode,
-        });
+        // Only process each destination once to ensure consistency
+        if (!processedDestinations.has(destinationName)) {
+          // Use the consolidated change code for this destination
+          const consolidatedChangeCode =
+            destinationChangeCodeMap.get(destinationName) || group.changeCode;
+          const newEffectiveDate = calculateEffectiveDate(
+            consolidatedChangeCode,
+            input.effectiveDateSettings
+          );
+
+          preparedGroupedData.push({
+            destinationName,
+            effectiveDate: newEffectiveDate,
+            changeCode: consolidatedChangeCode,
+          });
+
+          processedDestinations.add(destinationName);
+
+          // Verbose logging for debugging
+          console.log(
+            `Destination: ${destinationName}, ChangeCode: ${consolidatedChangeCode}, EffectiveDate: ${newEffectiveDate}`
+          );
+        }
       }
 
       processedCount += chunk.length;
@@ -189,10 +228,13 @@ self.addEventListener('message', async (event) => {
       await takeBreath();
     }
 
-    // Create a map for faster lookups
+    // Create maps for faster lookups
     const effectiveDateMap = new Map<string, string>();
+    const changeCodeMap = new Map<string, ChangeCodeType>();
+
     for (const group of preparedGroupedData) {
       effectiveDateMap.set(group.destinationName, group.effectiveDate);
+      changeCodeMap.set(group.destinationName, group.changeCode);
     }
 
     // STEP 2: PROCESS RECORDS
@@ -201,38 +243,71 @@ self.addEventListener('message', async (event) => {
     let recordsProcessed = 0;
     let recordsUpdatedCount = 0;
 
+    // Group records by destination name to ensure consistent updates
+    const recordsByDestination = new Map<
+      string,
+      { name: string; prefix: string; effective: string }[]
+    >();
+
+    // First pass: group records by destination name
+    for (const record of input.allRecords) {
+      if (!recordsByDestination.has(record.name)) {
+        recordsByDestination.set(record.name, []);
+      }
+      recordsByDestination.get(record.name)!.push(record);
+    }
+
     // Process in medium-sized batches for balance between performance and UI updates
-    for (let i = 0; i < input.allRecords.length; i += 1000) {
-      const endIndex = Math.min(i + 1000, input.allRecords.length);
-      const recordsBatch = input.allRecords.slice(i, endIndex);
+    const destinationNames = Array.from(recordsByDestination.keys());
+
+    for (let i = 0; i < destinationNames.length; i += 50) {
+      const endIndex = Math.min(i + 50, destinationNames.length);
+      const destinationBatch = destinationNames.slice(i, endIndex);
 
       // Report progress (50-90%)
-      const percentage = 50 + Math.floor((i / input.allRecords.length) * 40);
+      const percentage = 50 + Math.floor((i / destinationNames.length) * 40);
       self.postMessage({
         type: 'progress',
         processedCount: i,
-        totalCount: input.allRecords.length,
+        totalCount: destinationNames.length,
         percentage,
         recordsUpdatedCount,
-        currentDestination: recordsBatch[0]?.name || '',
+        currentDestination: destinationBatch[0] || '',
         phase: 'processing',
-        detail: `Processing records: ${i}/${input.allRecords.length}`,
+        detail: `Processing destinations: ${i}/${destinationNames.length}`,
       });
 
-      // Process this batch
-      for (const record of recordsBatch) {
-        const newEffectiveDate = effectiveDateMap.get(record.name);
+      // Process each destination in this batch
+      for (const destinationName of destinationBatch) {
+        const records = recordsByDestination.get(destinationName) || [];
+        const newEffectiveDate = effectiveDateMap.get(destinationName);
+        const consolidatedChangeCode = changeCodeMap.get(destinationName);
 
-        if (newEffectiveDate && record.effective !== newEffectiveDate) {
-          updatedRecords.push({
-            name: record.name,
-            prefix: record.prefix,
-            effective: newEffectiveDate,
-          });
-          recordsUpdatedCount++;
+        if (newEffectiveDate) {
+          // Update all records for this destination with the same effective date
+          let updatedAnyForDestination = false;
+
+          for (const record of records) {
+            if (record.effective !== newEffectiveDate) {
+              updatedRecords.push({
+                name: record.name,
+                prefix: record.prefix,
+                effective: newEffectiveDate,
+              });
+              recordsUpdatedCount++;
+              updatedAnyForDestination = true;
+            }
+          }
+
+          // Log detailed updates for debugging
+          if (updatedAnyForDestination) {
+            console.log(
+              `Updated ${records.length} records for destination "${destinationName}" with effective date ${newEffectiveDate} and change code ${consolidatedChangeCode}`
+            );
+          }
         }
 
-        recordsProcessed++;
+        recordsProcessed += records.length;
       }
 
       await takeBreath();
@@ -249,7 +324,17 @@ self.addEventListener('message', async (event) => {
       detail: `Finalizing ${recordsUpdatedCount} record updates...`,
     });
 
-    // Send the result
+    await takeBreath();
+
+    // Calculate processing time and return result
+    const processingTimeMs = Date.now() - startTime;
+    console.log(
+      `Worker completed: ${recordsUpdatedCount} of ${input.allRecords.length} records updated in ${
+        processingTimeMs / 1000
+      }s`
+    );
+
+    // Return the updated records and any other necessary data
     self.postMessage({
       type: 'result',
       updatedRecords,
@@ -261,7 +346,7 @@ self.addEventListener('message', async (event) => {
     self.postMessage({
       type: 'error',
       message: error instanceof Error ? error.message : String(error),
-      phase: 'processing',
+      phase: 'unknown',
     });
   }
 });
