@@ -12,6 +12,7 @@ import type {
 } from '@/types/domains/lerg-types';
 import { computed } from 'vue';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
+import { STATE_CODES } from '@/types/constants/state-codes';
 
 export const useLergStore = defineStore('lerg', {
   state: (): LergState => ({
@@ -77,14 +78,10 @@ export const useLergStore = defineStore('lerg', {
   getters: {
     sortedStatesWithNPAs: (state): StateWithNPAs[] => {
       return Object.entries(state.stateNPAs)
-        .filter(([code, npas]) => {
-          return (
-            !COUNTRY_CODES[code] ||
-            (code === 'CA' &&
-              state.countryData
-                .find((c) => c.country === 'US')
-                ?.npas.some((npa) => npas.includes(npa)))
-          );
+        .filter(([code]) => {
+          // Only include US state codes by checking if the code exists in STATE_CODES
+          // This correctly filters out Canadian provinces like ON and QC
+          return code in STATE_CODES;
         })
         .map(([code, npas]) => ({
           code,
@@ -109,9 +106,8 @@ export const useLergStore = defineStore('lerg', {
       // Add NPAs only from US states (filtering out country codes except US)
       Object.entries(state.stateNPAs)
         .filter(([code]) => {
-          // Only include US state codes and the US country code itself
-          // Exclude any other country codes (like CA for Canada)
-          return (!COUNTRY_CODES[code] && code !== 'CA') || code === 'US';
+          // Only include US state codes by checking if they exist in STATE_CODES
+          return code in STATE_CODES;
         })
         .forEach(([_, npas]) => {
           npas.forEach((npa) => usNPAs.add(npa));
@@ -121,6 +117,7 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getCountryData: (state): CountryLergData[] => {
+      // Get all country codes from stateNPAs (includes countries but not provinces)
       const territoryData = Object.entries(state.stateNPAs)
         .filter(([code]) => COUNTRY_CODES[code])
         .map(([code, npas]) => ({
@@ -129,6 +126,8 @@ export const useLergStore = defineStore('lerg', {
           npas: [...npas].sort(),
         }));
 
+      // Simply combine all country data and let the UI filter as needed
+      // This ensures all countries are available including Canada with provinces
       return [...territoryData, ...state.countryData].sort((a, b) => b.npaCount - a.npaCount);
     },
 
