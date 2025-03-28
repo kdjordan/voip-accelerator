@@ -550,8 +550,16 @@ class LergFacadeService {
 
     // Create traditional state and country mappings for backward compatibility
     const stateNPAs: Record<string, string[]> = {};
-    const countryData: Array<{ country: string; npaCount: number; npas: string[] }> = [];
+    const countryData: Array<{
+      country: string;
+      npaCount: number;
+      npas: string[];
+      provinces?: Array<{ code: string; npas: string[] }>;
+    }> = [];
     const countryNpaCounts: Record<string, Set<string>> = {};
+
+    // Track Canadian provinces separately
+    const canadaProvinces: Record<string, Set<string>> = {};
 
     // Process each record
     records.forEach((record) => {
@@ -594,15 +602,33 @@ class LergFacadeService {
         countryNpaCounts[country] = new Set<string>();
       }
       countryNpaCounts[country].add(npa);
+
+      // Track Canadian provinces
+      if (country === 'CA') {
+        if (!canadaProvinces[state]) {
+          canadaProvinces[state] = new Set<string>();
+        }
+        canadaProvinces[state].add(npa);
+      }
     });
 
     // Create country data array
     for (const [country, npas] of Object.entries(countryNpaCounts)) {
-      countryData.push({
+      const countryEntry = {
         country,
         npaCount: npas.size,
         npas: Array.from(npas),
-      });
+      };
+
+      // Add provinces data for Canada
+      if (country === 'CA' && Object.keys(canadaProvinces).length > 0) {
+        countryEntry.provinces = Object.entries(canadaProvinces).map(([code, npas]) => ({
+          code,
+          npas: Array.from(npas).sort(),
+        }));
+      }
+
+      countryData.push(countryEntry);
     }
 
     // Update store with all data structures
