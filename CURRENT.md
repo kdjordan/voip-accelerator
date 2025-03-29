@@ -21,75 +21,19 @@
 
 ## Phase 2.5: LERG Data Management Refactoring
 
-- [ ] Refactor LERG data storage to use Pinia instead of IndexedDB:
-  - [ ] Modify `lerg-store.ts` to store NPA-focused LERG dataset
-  - [ ] Update data loading mechanism in `UsView.vue` to populate Pinia store directly
-  - [ ] Create comprehensive getters in `lerg-store.ts` for NPA and state-level queries
-  - [ ] Add type definitions for all LERG data structures
-  - [ ] Maintain the current PostgreSQL fetch API (for future Supabase compatibility)
-- [ ] Create service layer for accessing LERG data:
-  - [ ] Implement caching strategy for frequently accessed data
-  - [ ] Add helper functions for common LERG lookups (NPA validation, country/state mapping)
-  - [ ] Ensure compatibility with Web Workers for comparison operations
-- [ ] Design for modularity:
-  - [ ] Create architecture that allows for future NPA population data integration
-  - [ ] Implement flexible filtering and sorting capabilities
-
-### Technical Implementation Details
-
-1. **Store Structure Focus:**
-
-   - Expand the `LergState` interface in `lerg-store.ts` to focus on NPA-level data
-   - Organize data hierarchically by Country → State → NPA for efficient lookup
-   - Design for extension with future population density data
-
-2. **Data Loading Refactoring:**
-
-   - Modify `lerg-facade.service.ts` to load data directly into Pinia store
-   - Remove Dexie/IndexedDB dependencies while maintaining the same API interface
-   - Keep the current initialization sequence in `UsView.vue` but update the target storage
-
-3. **Worker Communication Strategy:**
-
-   - Use `postMessage` to pass minimal required LERG data to the comparison worker
-   - Create a streamlined country/state/NPA mapping for efficient transfer to Web Workers
-   - Implement data request patterns for workers to request specific LERG lookups
-
-4. **Performance Optimizations:**
-
-   - Pre-compute common lookup patterns (NPA→State, State→NPAs)
-   - Design data structures for country-level organization (US, Canada, Other)
-   - Implement lazy loading for detailed LERG data
-
-5. **API Compatibility Layer:**
-   - Create an abstract `LergDataProvider` interface
-   - Implement a `PiniaLergDataProvider` that reads from the store
-   - Future: Implement a `SupabaseLergDataProvider` with the same interface
-
-### Integration with Comparison Workers
-
-1. **Enhanced US and Canada Pricing Reports:**
-
-   - Add jurisdictional analytics to pricing reports by associating NPAs with states/provinces
-   - Calculate country and state-level pricing averages for high-level insights
-   - Highlight non-US/Canada NPAs for awareness
-
-2. **Efficient Data Transfer to Workers:**
-
-   - Create a minimal LERG dataset focused on NPA→Country→State mappings for worker operations
-   - Implement a streamlined JSON structure for efficient transfer to Web Workers
-   - Add lookup methods in workers to validate NPAs against LERG data
-
-3. **Cross-reference with Rate Sheets:**
-
-   - Identify invalid or outdated NPAs in rate sheets by comparing with LERG data
-   - Flag invalid rows during import with clear error messages
-   - Calculate coverage metrics (what percentage of valid NPAs are covered)
-
-4. **Visualization Enhancements:**
-   - Create country and state-level visualizations of pricing patterns
-   - Implement interactive filtering by country/state for comparison reports
-   - Design for future integration with population density data
+- [x] Refactor LERG data storage to use Pinia instead of IndexedDB:
+  - [x] Modify `lerg-store.ts` to store NPA-focused LERG dataset
+  - [x] Update data loading mechanism in `UsView.vue` to populate Pinia store directly
+  - [x] Create comprehensive getters in `lerg-store.ts` for NPA and state-level queries
+  - [x] Add type definitions for all LERG data structures
+  - [x] Maintain the current PostgreSQL fetch API (for future Supabase compatibility)
+- [x] Create service layer for accessing LERG data:
+  - [x] Implement caching strategy for frequently accessed data
+  - [x] Add helper functions for common LERG lookups (NPA validation, country/state mapping)
+  - [x] Ensure compatibility with Web Workers for comparison operations
+- [x] Design for modularity:
+  - [x] Create architecture that allows for future NPA population data integration
+  - [x] Implement flexible filtering and sorting capabilities
 
 ## Phase 3: File Comparison Features
 
@@ -97,31 +41,40 @@
   - [x] Create worker architecture for US code reports and comparison
   - [x] Implement enhanced code report with country and state breakdowns
   - [x] Create initial pricing report with rate comparisons
-  - [ ] Utilize LERG data from Pinia store for enhanced comparisons
-  - [ ] Identify overlapping NPAs between files
-  - [ ] Calculate gaps (codes in one file but not the other)
-  - [ ] Create rate difference statistics by country and state
-  - [ ] Calculate percentage differences
-  - [ ] Implement jurisdictional classification using LERG data
-- [ ] Build comparison visualization components
+  - [x] Utilize LERG data from Pinia store for enhanced comparisons
+  - [x] Identify overlapping NPAs between files
+  - [x] Calculate gaps (codes in one file but not the other)
+  - [x] Create rate difference statistics by country and state
+  - [x] Calculate percentage differences
+  - [x] Implement jurisdictional classification using LERG data
+- [ ] Build comparison visualization components:
+  - [x] Basic rate comparison charts
+  - [ ] Geographic distribution visualization
+  - [ ] Rate difference heatmaps
+  - [ ] Coverage analysis charts
 - [ ] Implement filtering by:
-  - [ ] Rate differences (higher/lower)
-  - [ ] NPA (area code)
-  - [ ] Country/state
+  - [x] Rate differences (higher/lower)
+  - [x] NPA (area code)
+  - [x] Country/state
   - [ ] Rate ranges
+  - [ ] Coverage status
 
 ## Phase 4: Advanced Features
 
-- [ ] Add jurisdictional analysis:
-  - [ ] Map NPAs to states/regions using LERG data
-  - [ ] Calculate state-level pricing statistics
-  - [ ] Create regional visualization
+- [x] Add jurisdictional analysis:
+  - [x] Map NPAs to states/regions using LERG data
+  - [x] Calculate state-level pricing statistics
+  - [x] Create regional visualization
   - [ ] Implement rate center mapping
-- [ ] LERG integration enhancements:
-  - [ ] Validate NPA-NXX combinations against LERG
-  - [ ] Flag invalid or outdated codes
+- [x] LERG integration enhancements:
+  - [x] Validate NPA-NXX combinations against LERG
+  - [x] Flag invalid or outdated codes
   - [ ] Display comprehensive rate center information
-- [ ] Performance optimizations for large files
+- [ ] Performance optimizations for large files:
+  - [x] Implement worker-based processing
+  - [x] Optimize memory usage with streaming
+  - [ ] Add progress tracking for large files
+  - [ ] Implement chunked processing
 
 ## Phase 5: Backend Integration (Supabase)
 
@@ -137,11 +90,11 @@
 
 ## Phase 6: Reporting & Export
 
-- [ ] Create comprehensive report interface:
-  - [ ] Summary section
-  - [ ] Pricing analysis
-  - [ ] Code coverage analysis
-  - [ ] Jurisdictional breakdown
+- [x] Create comprehensive report interface:
+  - [x] Summary section
+  - [x] Pricing analysis
+  - [x] Code coverage analysis
+  - [x] Jurisdictional breakdown
 - [ ] Implement export functionality:
   - [ ] Export comparison to CSV
   - [ ] Export visualization data
@@ -149,11 +102,11 @@
 
 ## Phase 7: UI/UX Refinements
 
-- [ ] Add progress indicators for long operations
-- [ ] Implement contextual help and tooltips
+- [x] Add progress indicators for long operations
+- [x] Implement contextual help and tooltips
 - [ ] Create onboarding guide for first-time users
-- [ ] Add responsive design for different device sizes
-- [ ] Implement user preferences/settings
+- [x] Add responsive design for different device sizes
+- [x] Implement user preferences/settings
 
 ## Phase 8: Testing & Optimization
 
@@ -161,6 +114,28 @@
 - [ ] Browser compatibility testing
 - [ ] Performance profiling and optimization
 - [ ] User acceptance testing
+
+## Current Focus
+
+1. Enhance US rate comparisons with additional features:
+
+   - Add rate trend analysis
+   - Implement more detailed jurisdictional breakdowns
+   - Add historical rate comparison capabilities
+   - Enhance visualization of rate differences
+
+2. Improve comparison reports:
+
+   - Add more detailed statistics
+   - Enhance filtering capabilities
+   - Implement advanced sorting options
+   - Add export functionality
+
+3. Performance optimizations:
+   - Optimize worker communication
+   - Implement better memory management
+   - Add progress tracking for large files
+   - Improve error handling and recovery
 
 ## Immediate Next Steps
 

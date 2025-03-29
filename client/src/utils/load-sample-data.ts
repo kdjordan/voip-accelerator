@@ -17,36 +17,40 @@ function getStoreNameFromFile(fileName: string): string {
  */
 function processUSCsvData(csvText: string): string {
   const lines = csvText.split('\n');
-  const processedLines = lines.map(line => {
+  const processedLines = lines.map((line) => {
     if (!line.trim()) return line; // Skip empty lines
 
     const cols = line.split(',');
     if (cols.length < 6) return line; // Skip malformed lines
-    
+
     // Extract the relevant parts
     const destinationName = cols[0]; // "USA - AK"
     let npa = cols[1]; // "1907"
     const nxx = cols[2]; // "200"
-    
+
     // Remove country code "1" if present at the beginning of NPA
     if (npa.startsWith('1') && npa.length === 4) {
       npa = npa.substring(1); // Remove the leading "1"
       console.log(`Removed leading "1" from NPA: ${cols[1]} -> ${npa}`);
     }
-    
+
     // Ensure NPA is 3 digits and NXX is 3 digits
     if (npa.length !== 3) {
-      console.warn(`NPA "${npa}" is not 3 digits after processing. This may cause validation issues.`);
+      console.warn(
+        `NPA "${npa}" is not 3 digits after processing. This may cause validation issues.`
+      );
     }
-    
+
     // Combine to form a 6-digit NPANXX
     const npanxx = npa + nxx;
-    
+
     // Check if the resulting NPANXX is 6 digits
     if (npanxx.length !== 6) {
-      console.warn(`Generated NPANXX "${npanxx}" is not 6 digits (${npanxx.length}). This may cause validation issues.`);
+      console.warn(
+        `Generated NPANXX "${npanxx}" is not 6 digits (${npanxx.length}). This may cause validation issues.`
+      );
     }
-    
+
     // FOR SAMPLE DATA: Keep the destination name in the output to maintain the original structure
     const newLine = [
       destinationName,
@@ -54,12 +58,12 @@ function processUSCsvData(csvText: string): string {
       nxx,
       cols[3], // interstate
       cols[4], // intrastate
-      cols[5]  // indeterminate
+      cols[5], // indeterminate
     ].join(',');
-    
+
     return newLine;
   });
-  
+
   return processedLines.join('\n');
 }
 
@@ -100,70 +104,61 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 
     if (dbNames.includes(DBName.US)) {
       console.log('Loading US sample data');
-      
+
       // Load first US test file - UStest.csv
       const usTestFile = 'UStest.csv';
       const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
-      const csvText1 = await usTestResponse.text();
-      
-      // Process the CSV to create valid NPANXX format and fix the NPA format
-      const processedCSV1 = processUSCsvData(csvText1);
-      const usTestBlob = new File([processedCSV1], usTestFile);
+      const usTestBlob = new File([await usTestResponse.blob()], usTestFile);
 
-      // Debug: Show the processed content
-      const firstFewLines = processedCSV1.split('\n').slice(0, 5).join('\n');
-      console.log('Processed UStest.csv content:', firstFewLines);
-
-      // Use the normal USService.processFile method for consistency with production code
-      // Column mapping for US files with processed data
+      // Column mapping for UStest.csv
       const columnMapping1 = {
-        npanxx: -1,       // Not directly available, will be constructed from NPA and NXX
-        npa: 1,           // NPA is in column 1 (after destination name)
-        nxx: 2,           // NXX is in column 2
-        interstate: 3,    // Interstate rate is in column 3
-        intrastate: 4,    // Intrastate rate is in column 4
-        indeterminate: 5  // Indeterminate rate is in column 5
+        npanxx: 1, // NPANXX is in column 2 (0-based index)
+        interstate: 2, // Interstate rate is in column 3
+        intrastate: 3, // Intrastate rate is in column 4
+        indeterminate: 3, // Indeterminate rate is also column 4
       };
 
       console.log('Processing first US test file with column mapping:', columnMapping1);
-      
+
       try {
+        // Clear any existing data for this file
+        const tableName1 = usTestFile.toLowerCase().replace('.csv', '');
+        await usService.removeTable(tableName1);
+
         const result1 = await usService.processFile(usTestBlob, columnMapping1, 1);
         console.log('Result from processing UStest.csv:', result1);
         await usStore.addFileUploaded('us1', result1.fileName);
         console.log('First US file loaded successfully:', result1.fileName);
       } catch (error) {
         console.error('Error processing first US file:', error);
-        
-        // Fallback to direct database approach only if processFile fails
-        console.log('Falling back to direct database approach for first file');
-        // await loadUSFileDirect(usService, usStore, 'us1', usTestFile, processedCSV1);
+        throw error;
       }
-      
+
       // Load second US test file - UStest1.csv
       const usTest2File = 'UStest1.csv';
       const usTest2Response = await fetch(`/src/data/sample/${usTest2File}`);
-      const csvText2 = await usTest2Response.text();
-      
-      // Process the second CSV the same way
-      const processedCSV2 = processUSCsvData(csvText2);
-      const usTest2Blob = new File([processedCSV2], usTest2File);
+      const usTest2Blob = new File([await usTest2Response.blob()], usTest2File);
 
-      // Debug: Show the processed content
-      const firstFewLines2 = processedCSV2.split('\n').slice(0, 5).join('\n');
-      console.log('Processed UStest1.csv content:', firstFewLines2);
-      
+      // Column mapping for UStest1.csv (same structure)
+      const columnMapping2 = {
+        npanxx: 1, // NPANXX is in column 2
+        interstate: 2, // Interstate rate is in column 3
+        intrastate: 3, // Intrastate rate is in column 4
+        indeterminate: 3, // Indeterminate rate is also column 4
+      };
+
       try {
-        const result2 = await usService.processFile(usTest2Blob, columnMapping1, 1);
+        // Clear any existing data for this file
+        const tableName2 = usTest2File.toLowerCase().replace('.csv', '');
+        await usService.removeTable(tableName2);
+
+        const result2 = await usService.processFile(usTest2Blob, columnMapping2, 1);
         console.log('Result from processing UStest1.csv:', result2);
         await usStore.addFileUploaded('us2', result2.fileName);
         console.log('Second US file loaded successfully:', result2.fileName);
       } catch (error) {
         console.error('Error processing second US file:', error);
-        
-        // Fallback to direct database approach only if processFile fails
-        console.log('Falling back to direct database approach for second file');
-        // await loadUSFileDirect(usService, usStore, 'us2', usTest2File, processedCSV2);
+        throw error;
       }
     }
 
@@ -179,15 +174,15 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
  * This is only used for sample data loading when the normal processFile method fails
  */
 // async function loadUSFileDirect(
-//   usService: USService, 
-//   usStore: any, 
-//   componentId: string, 
-//   fileName: string, 
+//   usService: USService,
+//   usStore: any,
+//   componentId: string,
+//   fileName: string,
 //   processedCSV: string
 // ): Promise<void> {
 //   // Create tables directly in the database
 //   const db = await usService.initializeDB();
-  
+
 //   // Make sure the table exists
 //   const tableName = fileName.toLowerCase().replace('.csv', '');
 //   if (!db.tables.some(t => t.name === tableName)) {
@@ -198,7 +193,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 //     });
 //     await db.open();
 //   }
-  
+
 //   // Parse the CSV data manually to control exactly how it's processed
 //   const parsedData = processedCSV.split('\n')
 //     .filter(line => line.trim())
@@ -208,12 +203,12 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 //       const npa = parts[1];
 //       const nxx = parts[2];
 //       const npanxx = npa + nxx;
-      
+
 //       // Parse rates as floats
 //       const interRate = parseFloat(parts[3]);
 //       const intraRate = parseFloat(parts[4]);
 //       const indetermRate = parseFloat(parts[5]);
-      
+
 //       return {
 //         npanxx,
 //         npa,
@@ -223,13 +218,13 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 //         indetermRate
 //       };
 //     });
-  
+
 //   console.log('Parsed data from', fileName, ':', parsedData.slice(0, 2));
-  
+
 //   // Store data directly in the database
 //   console.log('Storing data in', tableName);
 //   await db.table(tableName).bulkPut(parsedData);
-  
+
 //   // Register file in store
 //   usStore.addFileUploaded(componentId, fileName);
 //   console.log('File loaded successfully via direct method:', fileName);
