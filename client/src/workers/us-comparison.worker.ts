@@ -7,12 +7,23 @@ import type {
   USNonMatchingCode,
 } from '@/types/domains/us-types';
 
+// Store LERG data in worker scope
+let lergData: any = null;
+
 // Respond to messages from main thread
 self.addEventListener('message', (event) => {
-  // Normalize input data for consistent processing
-  const normalizedInput = normalizeInputData(event.data);
+  // Check if this is a LERG data message
+  if (event.data.lergData) {
+    lergData = event.data.lergData;
+    self.postMessage({ status: 'lergDataReceived' });
+    return;
+  }
 
+  // For file data messages, normalize and process
   try {
+    // Normalize input data for consistent processing
+    const normalizedInput = normalizeInputData(event.data);
+
     // Process comparison and generate reports
     const { pricingReport, codeReport } = generateReports(normalizedInput);
 
