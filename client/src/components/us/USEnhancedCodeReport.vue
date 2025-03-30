@@ -305,53 +305,56 @@ const filteredCountries = computed(() => {
 
     // Process states within the country
     if (country.states) {
-      // Look for California specifically
-      if (country.countryCode === 'US' && query.includes('cal')) {
-        // Special handling for California search
-        const californiaState = country.states.find((state) => state.stateCode === 'CA');
+      // Filter states based on country code
+      const filteredStates = country.states.filter((state) => {
+        // For US country, only include actual US states
+        if (country.countryCode === 'US') {
+          // Check if this is a valid US state code (reject Canadian provinces)
+          if (!(state.stateCode in STATE_CODES)) return false;
 
-        if (californiaState) {
-          filteredCountry.states = [californiaState];
-          includeCountry = true;
+          const displayName =
+            STATE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
 
-          // Make sure it appears expanded in the UI
-          expandedCountries.add(country.countryCode);
-          if (!expandedStates.has(country.countryCode)) {
-            expandedStates.set(country.countryCode, new Set<string>());
-          }
-          expandedStates.get(country.countryCode).add('CA');
-        }
-      } else {
-        // Normal filtering for other states
-        const filteredStates = country.states.filter((state) => {
-          // Skip California in the US list if specifically searching for it
-          if (country.countryCode === 'US' && state.stateCode === 'CA' && query.includes('cal')) {
-            return false;
-          }
-
-          // Get proper display name for state/province
-          let displayName = '';
-          if (country.countryCode === 'CA') {
-            if (!(state.stateCode in PROVINCE_CODES)) return false;
-            displayName = PROVINCE_CODES[state.stateCode].name.toLowerCase();
-          } else {
-            displayName =
-              STATE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
-          }
-
-          // Check if state name matches
+          // Check if state name matches query
           if (displayName.includes(query)) return true;
 
           // Check if any NPA matches
           return state.npas.some((npa) => npa.includes(query));
-        });
-
-        if (filteredStates.length > 0) {
-          filteredCountry.states = filteredStates;
-          includeCountry = true;
-        } else {
-          filteredCountry.states = [];
         }
+        // For Canada, only include Canadian provinces
+        else if (country.countryCode === 'CA') {
+          // Check if this is a valid Canadian province code
+          if (!(state.stateCode in PROVINCE_CODES)) return false;
+
+          // Skip 'CA' in Canadian provinces list (it's California in US)
+          if (state.stateCode === 'CA') return false;
+
+          const displayName =
+            PROVINCE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
+
+          // Check if province name matches query
+          if (displayName.includes(query)) return true;
+
+          // Check if any NPA matches
+          return state.npas.some((npa) => npa.includes(query));
+        }
+        // For other countries
+        else {
+          const displayName = state.stateCode.toLowerCase();
+
+          // Check if state/region name matches
+          if (displayName.includes(query)) return true;
+
+          // Check if any NPA matches
+          return state.npas.some((npa) => npa.includes(query));
+        }
+      });
+
+      if (filteredStates.length > 0) {
+        filteredCountry.states = filteredStates;
+        includeCountry = true;
+      } else {
+        filteredCountry.states = [];
       }
     }
 
@@ -369,34 +372,37 @@ function expandMatchingSections() {
   const query = debouncedSearchQuery.value.toLowerCase();
   if (!query || !props.report?.file1.countries) return;
 
-  // Handle California search specially
-  if (query.includes('cal')) {
-    const usCountry = props.report.file1.countries.find((c) => c.countryCode === 'US');
-    if (usCountry) {
-      expandedCountries.add('US');
-      if (!expandedStates.has('US')) {
-        expandedStates.set('US', new Set<string>());
-      }
-      expandedStates.get('US').add('CA');
-    }
-    return;
-  }
-
-  // Normal expansion for other searches
+  // Normal expansion for searches
   for (const country of props.report.file1.countries) {
     if (!country.states) continue;
 
     let shouldExpandCountry = false;
 
     for (const state of country.states) {
-      let stateName = '';
+      // Skip invalid states/provinces based on country
+      if (country.countryCode === 'US' && !(state.stateCode in STATE_CODES)) {
+        continue;
+      }
 
-      if (country.countryCode === 'CA') {
-        if (!(state.stateCode in PROVINCE_CODES)) continue;
-        stateName = PROVINCE_CODES[state.stateCode].name.toLowerCase();
-      } else {
+      if (country.countryCode === 'CA' && !(state.stateCode in PROVINCE_CODES)) {
+        continue;
+      }
+
+      // Skip California in Canadian provinces
+      if (country.countryCode === 'CA' && state.stateCode === 'CA') {
+        continue;
+      }
+
+      // Get proper display name
+      let stateName = '';
+      if (country.countryCode === 'US') {
         stateName =
           STATE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
+      } else if (country.countryCode === 'CA') {
+        stateName =
+          PROVINCE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
+      } else {
+        stateName = state.stateCode.toLowerCase();
       }
 
       const hasMatchingNPA = state.npas.some((npa) => npa.includes(query));
@@ -449,13 +455,24 @@ function isStateExpanded(countryCode: string, stateCode: string): boolean {
 
 // Update the helper function to properly handle states and provinces
 function getStateDisplayName(stateCode: string, countryCode: string): string {
-  if (countryCode === 'US' && stateCode === 'CA') {
-    return 'California';
+  if (countryCode === 'US') {
+    // Verify this is a valid US state code
+    if (!(stateCode in STATE_CODES)) {
+      return `Unknown state: ${stateCode}`;
+    }
+    return STATE_CODES[stateCode]?.name ?? stateCode;
   }
+
   if (countryCode === 'CA') {
+    // Verify this is a valid Canadian province code
+    if (!(stateCode in PROVINCE_CODES)) {
+      return `Unknown province: ${stateCode}`;
+    }
     return PROVINCE_CODES[stateCode]?.name ?? stateCode;
   }
-  return STATE_CODES[stateCode]?.name ?? stateCode;
+
+  // For other countries, just use the code
+  return stateCode;
 }
 </script>
 

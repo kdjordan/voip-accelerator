@@ -8,6 +8,8 @@ import type {
   USRateStats,
 } from '@/types/domains/us-types';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
+import { STATE_CODES } from '@/types/constants/state-codes';
+import { PROVINCE_CODES } from '@/types/constants/province-codes';
 
 self.addEventListener('message', (event) => {
   const report: USEnhancedCodeReport = generateEnhancedCodeReport(event.data);
@@ -54,8 +56,6 @@ function processFileData(
   // Group data by NPA - process in chunks to avoid blocking
   const npaGroups = new Map<string, USStandardizedData[]>();
   const chunkSize = 5000;
-
-  console.log(`[Worker] Processing ${fileData.length} records in chunks of ${chunkSize}`);
 
   // Process in chunks
   for (let i = 0; i < fileData.length; i += chunkSize) {
@@ -142,13 +142,13 @@ function createCountryBreakdown(
     // Get state NPAs from LERG data
     Object.entries(lergData.stateNPAs)
       .filter(([stateCode]) => {
-        // For US, exclude country codes and CA
+        // For US, only include valid US state codes
         if (countryCode === 'US') {
-          return !COUNTRY_CODES[stateCode] && stateCode !== 'CA';
+          return stateCode in STATE_CODES;
         }
-        // For CA, only include CA
+        // For CA, only include valid Canadian province codes, exclude the California state code 'CA'
         if (countryCode === 'CA') {
-          return stateCode === 'CA';
+          return stateCode in PROVINCE_CODES;
         }
         return false;
       })
@@ -177,7 +177,7 @@ function createCountryBreakdown(
           // Add state breakdown
           stateBreakdowns.push({
             stateCode,
-            stateName: stateCode, // We could add a states map for names
+            stateName: getStateName(stateCode, countryCode),
             npas: stateNPAsInFile,
             coverage: stateCoverage,
             rateStats,
@@ -266,4 +266,15 @@ function calculateRateStats(entries: USStandardizedData[]): {
       coverage: entries.length > 0 ? (indetermCount / entries.length) * 100 : 0,
     },
   };
+}
+
+// Helper function to get the proper state or province name
+function getStateName(code: string, country: string): string {
+  if (country === 'US') {
+    return STATE_CODES[code]?.name || code;
+  }
+  if (country === 'CA') {
+    return PROVINCE_CODES[code]?.name || code;
+  }
+  return code;
 }

@@ -111,7 +111,7 @@
                 <!-- Full width rows for multi-NPA states -->
                 <div class="space-y-2">
                   <div
-                    v-for="state in store.sortedStatesWithNPAs.filter((s) => s.npas.length > 1)"
+                    v-for="state in store.getUSStates.filter((s) => s.npas.length > 1)"
                     :key="state.code"
                     @click="toggleExpandState(state.code)"
                     class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
@@ -147,7 +147,7 @@
                 <!-- Grid for single NPA states -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div
-                    v-for="state in store.sortedStatesWithNPAs.filter((s) => s.npas.length === 1)"
+                    v-for="state in store.getUSStates.filter((s) => s.npas.length === 1)"
                     :key="state.code"
                     class="bg-gray-900/50 p-4 rounded-lg"
                   >
@@ -176,12 +176,94 @@
               </div>
               <!-- Non-US States Content -->
               <div v-if="showCountryDetails" class="p-4 space-y-4">
+                <!-- Canadian Provinces Section -->
+                <div
+                  v-if="store.getCanadianProvinces.length > 0"
+                  class="bg-gray-900/30 rounded-lg overflow-hidden mb-4"
+                >
+                  <div
+                    @click="toggleCanadianDetails"
+                    class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+                  >
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium text-lg">Canada</span>
+                      <div class="flex items-center space-x-3">
+                        <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                          {{ getCanadaTotalNPAs }} NPAs
+                        </span>
+                        <ChevronDownIcon
+                          :class="{ 'transform rotate-180': showCanadianDetails }"
+                          class="w-5 h-5 transition-transform"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-if="showCanadianDetails" class="p-4 border-t border-gray-700/50">
+                    <!-- Multi-NPA provinces -->
+                    <div
+                      v-for="province in store.getCanadianProvinces.filter(
+                        (p) => p.npas.length > 1
+                      )"
+                      :key="province.code"
+                      class="bg-gray-800/50 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors mb-3"
+                      @click.stop="toggleExpandProvince(province.code)"
+                    >
+                      <div class="flex justify-between items-center">
+                        <span class="font-medium text-lg">{{
+                          getStateName(province.code, 'CA')
+                        }}</span>
+                        <div class="flex items-center space-x-3">
+                          <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                            {{ province.npas.length }} NPAs
+                          </span>
+                          <ChevronDownIcon
+                            :class="{
+                              'transform rotate-180': expandedProvinces.includes(province.code),
+                            }"
+                            class="w-5 h-5 transition-transform"
+                          />
+                        </div>
+                      </div>
+                      <!-- Expanded NPAs list for provinces -->
+                      <div v-if="expandedProvinces.includes(province.code)" class="mt-3">
+                        <div class="flex flex-wrap gap-2">
+                          <div
+                            v-for="npa in province.npas"
+                            :key="npa"
+                            class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
+                          >
+                            {{ npa }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Single-NPA provinces grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div
+                        v-for="province in store.getCanadianProvinces.filter(
+                          (p) => p.npas.length === 1
+                        )"
+                        :key="province.code"
+                        class="bg-gray-800/50 p-4 rounded-lg"
+                      >
+                        <div class="flex justify-between items-center">
+                          <span class="font-medium text-lg">{{
+                            getStateName(province.code, 'CA')
+                          }}</span>
+                          <span class="text-gray-300">{{ province.npas[0] }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Other Countries Section -->
                 <!-- Full width rows for multi-NPA countries -->
                 <div class="space-y-2">
                   <div
-                    v-for="country in store.getCountryData.filter(
-                      (c) => c.country !== 'US' && c.npaCount > 1
-                    )"
+                    v-for="country in store.getDistinctCountries.filter((c) => c.npaCount > 1)"
                     :key="country.country"
                     @click="toggleExpandCountry(country.country)"
                     class="bg-gray-900/80 p-4 rounded-lg w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
@@ -203,65 +285,7 @@
 
                     <!-- Expanded NPAs list -->
                     <div v-if="expandedCountries.includes(country.country)" class="mt-3 pl-4">
-                      <!-- Show provinces for Canada -->
-                      <div v-if="country.country === 'CA'" class="space-y-3">
-                        <!-- Multi-NPA provinces -->
-                        <div
-                          v-for="province in country.provinces?.filter((p) => p.npas.length > 1)"
-                          :key="province.code"
-                          class="bg-gray-800/50 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors"
-                          @click.stop="toggleExpandProvince(province.code)"
-                        >
-                          <div class="flex justify-between items-center">
-                            <span class="font-medium text-lg">{{
-                              getStateName(province.code, 'CA')
-                            }}</span>
-                            <div class="flex items-center space-x-3">
-                              <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-                                {{ province.npas.length }} NPAs
-                              </span>
-                              <ChevronDownIcon
-                                :class="{
-                                  'transform rotate-180': expandedProvinces.includes(province.code),
-                                }"
-                                class="w-5 h-5 transition-transform"
-                              />
-                            </div>
-                          </div>
-                          <!-- Expanded NPAs list for provinces -->
-                          <div v-if="expandedProvinces.includes(province.code)" class="mt-3">
-                            <div class="flex flex-wrap gap-2">
-                              <div
-                                v-for="npa in province.npas"
-                                :key="npa"
-                                class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
-                              >
-                                {{ npa }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Single-NPA provinces grid -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div
-                            v-for="province in country.provinces?.filter(
-                              (p) => p.npas.length === 1
-                            )"
-                            :key="province.code"
-                            class="bg-gray-800/50 p-4 rounded-lg"
-                          >
-                            <div class="flex justify-between items-center">
-                              <span class="font-medium text-lg">{{
-                                getStateName(province.code, 'CA')
-                              }}</span>
-                              <span class="text-gray-300">{{ province.npas[0] }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <!-- Show regular NPA list for other countries -->
-                      <div v-else class="flex flex-wrap gap-2">
+                      <div class="flex flex-wrap gap-2">
                         <div
                           v-for="npa in country.npas"
                           :key="npa"
@@ -277,9 +301,7 @@
                 <!-- Grid for single NPA countries -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div
-                    v-for="country in store.getCountryData.filter(
-                      (c) => c.country !== 'US' && c.npaCount === 1
-                    )"
+                    v-for="country in store.getDistinctCountries.filter((c) => c.npaCount === 1)"
                     :key="country.country"
                     class="bg-gray-900/50 p-4 rounded-lg"
                   >
@@ -800,6 +822,9 @@ const metrics = ref<PerformanceMetric[]>([]);
 const isRunningTests = ref(false);
 const showPerformanceSection = ref(false);
 
+// Added state for Canadian provinces section
+const showCanadianDetails = ref(false);
+
 // Computed properties for storage management
 const currentStrategy = computed(() => {
   // Force refresh from the storageConfig
@@ -848,6 +873,13 @@ const groupedMetrics = computed(() => {
   });
 
   return Object.values(groups);
+});
+
+// Computed property to get total Canadian NPAs
+const getCanadaTotalNPAs = computed(() => {
+  return store.getCanadianProvinces.reduce((total, province) => {
+    return total + province.npas.length;
+  }, 0);
 });
 
 /**
@@ -1435,6 +1467,11 @@ function handleStorageStrategyChanged(event: Event) {
 
   // Force UI update
   updateMemoryUsage();
+}
+
+// Toggle function for Canadian section
+function toggleCanadianDetails() {
+  showCanadianDetails.value = !showCanadianDetails.value;
 }
 </script>
 

@@ -10,6 +10,8 @@ import { useLergStore } from '@/stores/lerg-store';
 import { useDBStore } from '@/stores/db-store';
 import { DBName } from '@/types/app-types';
 import type { NpaRecord, LERGRecord } from '@/types/domains/lerg-types';
+import { PROVINCE_CODES } from '@/types/constants/province-codes';
+import { STATE_CODES } from '@/types/constants/state-codes';
 
 /**
  * Error types for the LERG Facade Service
@@ -561,12 +563,40 @@ class LergFacadeService {
     // Track Canadian provinces separately
     const canadaProvinces: Record<string, Set<string>> = {};
 
+    // Fixed mappings for known issues
+    const STATE_PROVINCE_FIXES: Record<string, { country: string; state: string }> = {
+      MB: { country: 'CA', state: 'MB' }, // Manitoba is in Canada
+      ON: { country: 'CA', state: 'ON' }, // Ontario is in Canada
+      QC: { country: 'CA', state: 'QC' }, // Quebec is in Canada
+      BC: { country: 'CA', state: 'BC' }, // British Columbia is in Canada
+      AB: { country: 'CA', state: 'AB' }, // Alberta is in Canada
+      SK: { country: 'CA', state: 'SK' }, // Saskatchewan is in Canada
+      NS: { country: 'CA', state: 'NS' }, // Nova Scotia is in Canada
+      NB: { country: 'CA', state: 'NB' }, // New Brunswick is in Canada
+      NL: { country: 'CA', state: 'NL' }, // Newfoundland and Labrador is in Canada
+      PE: { country: 'CA', state: 'PE' }, // Prince Edward Island is in Canada
+      NT: { country: 'CA', state: 'NT' }, // Northwest Territories is in Canada
+      YT: { country: 'CA', state: 'YT' }, // Yukon is in Canada
+      NU: { country: 'CA', state: 'NU' }, // Nunavut is in Canada
+    };
+
     // Process each record
     records.forEach((record) => {
-      const { npa, state, country } = record;
+      let { npa, state, country } = record;
 
       // Skip records without NPA
       if (!npa) return;
+
+      // Apply fixes for known issues with state assignments
+      if (state in STATE_PROVINCE_FIXES) {
+        country = STATE_PROVINCE_FIXES[state].country;
+        // Keep the state code as is, just ensure it's in the right country
+      }
+
+      // If state code exists in PROVINCE_CODES but not in STATE_CODES, ensure it's in CA
+      if (state in PROVINCE_CODES && !(state in STATE_CODES)) {
+        country = 'CA';
+      }
 
       // Store in NPA records map
       npaRecords.set(npa, { npa, state, country });
