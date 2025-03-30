@@ -110,36 +110,4 @@ function formatErrorMessage(
   };
 }
 
-// Uncomment to enable sample data loading during development
-onMounted(async () => {
-  try {
-    // Check if we already have files loaded
-    if (usStore.uploadedFiles && usStore.uploadedFiles.length >= 2) {
-      console.log('Sample files already loaded, skipping initialization');
-      return;
-    }
-
-    console.log('No LERG data found, initializing with fresh data');
-    const result = await lergFacadeService.initialize(true);
-
-    if (result.status === OperationStatus.ERROR) {
-      const error = result.error || new Error('Failed to initialize LERG data');
-      const formattedError = formatErrorMessage(
-        error,
-        result.errorInfo?.source,
-        result.errorInfo?.details
-      );
-
-      throw new Error(formattedError.message);
-    }
-
-    // Load sample US data after LERG initialization
-    console.log('Loading sample US data...');
-    await loadSampleDecks([DBName.US]);
-    console.log('Sample US data loaded successfully');
-  } catch (error) {
-    console.error('Error during initialization:', error);
-    // You might want to show this error to the user via a notification system
-  }
-});
 </script>

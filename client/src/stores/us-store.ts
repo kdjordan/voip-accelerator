@@ -129,6 +129,15 @@ export const useUsStore = defineStore('usStore', {
     hasSingleFileReport: (state) => {
       return state.fileStats.size > 0 && state.fileStats.size < 2;
     },
+
+    // Add this getter to retrieve file data by component ID
+    getFileDataByComponent: (state) => (componentId: string) => {
+      const fileName = state.filesUploaded.get(componentId)?.fileName;
+      if (!fileName) return [];
+
+      const tableName = fileName.toLowerCase().replace('.csv', '');
+      return state.inMemoryData.get(tableName) || [];
+    },
   },
 
   actions: {

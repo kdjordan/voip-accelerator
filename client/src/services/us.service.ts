@@ -41,7 +41,6 @@ export class USService {
   private storageService: StorageService<USStandardizedData>;
 
   constructor() {
-    console.log('Initializing US service');
     this.store = useUsStore() as unknown as UsStore;
     this.storageService = useStorage<USStandardizedData>(DBName.US);
     this.initializeStorage();
@@ -95,7 +94,6 @@ export class USService {
 
                 // Handle 7-digit NPANXX with leading "1"
                 if (npanxx.length === 7 && npanxx.startsWith('1')) {
-                  console.log(`Found NPANXX with leading 1: "${npanxx}", removing leading digit`);
                   npanxx = npanxx.substring(1); // Remove leading "1"
                 }
 
@@ -104,16 +102,11 @@ export class USService {
                   npa = npanxx.substring(0, 3);
                   nxx = npanxx.substring(3, 6);
                 }
-                // Log information about abnormal NPANXX values without modifying them
+                // Handle abnormal NPANXX values
                 else if (npanxx) {
-                  console.log(
-                    `Found NPANXX with abnormal length: "${npanxx}" (length: ${npanxx.length})`
-                  );
-                  // We don't modify the data, just log it for debugging
                   if (npanxx.length >= 3) {
                     npa = npanxx.substring(0, Math.min(3, npanxx.length));
                     nxx = npanxx.length > 3 ? npanxx.substring(3) : '';
-                    console.log(`Extracted NPA: "${npa}", NXX: "${nxx}" for analysis purposes`);
                   }
                 }
               } else if (columnMapping.npa >= 0 && columnMapping.nxx >= 0) {
@@ -122,17 +115,10 @@ export class USService {
 
                 // Special handling for NPA with country code prefix ("1")
                 if (npa.startsWith('1') && npa.length === 4) {
-                  console.log(`Found NPA with country code: "${npa}", removing leading "1"`);
                   npa = npa.substring(1); // Remove leading "1"
                 }
 
                 npanxx = npa + nxx;
-              }
-
-              // Log full row data for debugging the first few rows
-              if (index < 5) {
-                console.log(`Row ${index} raw data:`, JSON.stringify(row));
-                console.log(`Column mapping being used:`, JSON.stringify(columnMapping));
               }
 
               // Extract rate values
@@ -153,11 +139,6 @@ export class USService {
                 indetermRate = indeterminateDefinition === 'interstate' ? interRate : intraRate;
               }
 
-              // Debug log for this row
-              console.debug(
-                `Row data - NPANXX: "${npanxx}", InterRate: ${interRate}, IntraRate: ${intraRate}, IndetermRate: ${indetermRate}`
-              );
-
               // Validate the data
               if (
                 !npanxx ||
@@ -175,12 +156,6 @@ export class USService {
                   : isNaN(intraRate)
                   ? 'Invalid intrastate rate'
                   : 'Invalid indeterminate rate';
-
-                console.warn(
-                  `Row ${
-                    startLine + index
-                  } invalid: ${reason}. Values: NPANXX="${npanxx}", interstate="${interRateStr}", intrastate="${intraRateStr}"`
-                );
 
                 const invalidRow: InvalidUsRow = {
                   rowIndex: startLine + index,
@@ -210,19 +185,11 @@ export class USService {
               if (this.isUsingMemoryStorage()) {
                 // Store in-memory
                 this.store.storeInMemoryData(tableName, validRecords);
-                console.log(
-                  `[USService] Stored ${validRecords.length} records in memory for table: ${tableName}`
-                );
               } else {
                 // Store using the storage service
                 const chunkSize = 1000;
                 for (let i = 0; i < validRecords.length; i += chunkSize) {
                   const chunk = validRecords.slice(i, i + chunkSize);
-                  console.log(
-                    `Inserting chunk ${i / chunkSize + 1}/${Math.ceil(
-                      validRecords.length / chunkSize
-                    )}, size: ${chunk.length}`
-                  );
 
                   // Add a small delay between chunks to ensure proper DB processing
                   if (i > 0) {
@@ -232,8 +199,6 @@ export class USService {
                   await this.storageService.storeData(tableName, chunk);
                 }
               }
-            } else {
-              console.warn(`No valid records to store for file '${file.name}'`);
             }
 
             // Determine the component ID for the file that was just processed
@@ -246,8 +211,6 @@ export class USService {
               // If we can't determine the component ID, default to us1 if it's empty
               componentId = this.store.getFileNameByComponent('us1') ? 'us2' : 'us1';
             }
-
-            console.log(`[USService] Determined component ID for ${file.name}: ${componentId}`);
 
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
@@ -306,10 +269,6 @@ export class USService {
           });
         });
 
-      console.log(
-        `Unique NPAs in file: ${uniqueNPAs}, Valid US NPAs in file: ${validUSNPAsInFile}, Total US NPAs in LERG: ${totalUSNPAs}`
-      );
-
       // Calculate coverage based on valid US NPAs found in the file against total US NPAs
       const usNPACoveragePercentage =
         totalUSNPAs > 0 ? ((validUSNPAsInFile / totalUSNPAs) * 100).toFixed(2) : '0.00';
@@ -334,16 +293,6 @@ export class USService {
         avgIntraRate: formattedAvgIntraRate,
         avgIndetermRate: formattedAvgIndetermRate,
       });
-
-      console.log(`[USService] Updated file stats for ${componentId}:`, {
-        totalCodes,
-        uniqueNPAs,
-        uniquePercentage,
-        usNPACoveragePercentage,
-        avgInterRate: formattedAvgInterRate,
-        avgIntraRate: formattedAvgIntraRate,
-        avgIndetermRate: formattedAvgIndetermRate,
-      });
     } catch (error) {
       console.error(`Error calculating file stats for ${componentId}:`, error);
     }
@@ -354,7 +303,6 @@ export class USService {
       if (this.isUsingMemoryStorage()) {
         // Clear in-memory data
         this.store.clearAllInMemoryData();
-        console.log('[USService] Cleared all in-memory data');
       } else {
         // Clear database data
         await this.initializeStorage();
@@ -372,13 +320,11 @@ export class USService {
       if (this.isUsingMemoryStorage()) {
         // Remove from in-memory
         this.store.removeInMemoryData(tableName);
-        console.log(`[USService] Removed in-memory table: ${tableName}`);
       } else {
         // Remove from database
         await this.initializeStorage();
         await this.storageService.removeData(tableName);
       }
-      console.log(`Table ${tableName} removed successfully`);
     } catch (error) {
       console.error(`Failed to remove table ${tableName}:`, error);
       throw error;
@@ -389,11 +335,7 @@ export class USService {
     try {
       if (this.isUsingMemoryStorage()) {
         // Get from in-memory
-        const data = this.store.getInMemoryData(tableName);
-        console.log(
-          `[USService] Retrieved ${data.length} records from in-memory table: ${tableName}`
-        );
-        return data;
+        return this.store.getInMemoryData(tableName);
       } else {
         // Get from database
         await this.initializeStorage();
@@ -409,9 +351,7 @@ export class USService {
     try {
       if (this.isUsingMemoryStorage()) {
         // Count from in-memory
-        const count = this.store.getInMemoryDataCount(tableName);
-        console.log(`[USService] Count for in-memory table ${tableName}: ${count}`);
-        return count;
+        return this.store.getInMemoryDataCount(tableName);
       } else {
         // Count from database
         await this.initializeStorage();
@@ -427,9 +367,7 @@ export class USService {
     try {
       if (this.isUsingMemoryStorage()) {
         // List in-memory tables
-        const tables = this.store.getInMemoryTables;
-        console.log(`[USService] Listed ${Object.keys(tables).length} in-memory tables`);
-        return tables;
+        return this.store.getInMemoryTables;
       } else {
         // List database tables
         await this.initializeStorage();
@@ -447,13 +385,8 @@ export class USService {
    */
   async switchStorageStrategy(newStrategy: 'memory' | 'indexeddb'): Promise<void> {
     if (newStrategy === storageConfig.storageType) {
-      console.log(`[USService] Already using ${newStrategy} strategy, no change needed`);
       return;
     }
-
-    console.log(
-      `[USService] Switching storage strategy from ${storageConfig.storageType} to ${newStrategy}`
-    );
 
     try {
       if (newStrategy === 'memory') {
@@ -466,9 +399,6 @@ export class USService {
         for (const tableName of Object.keys(tables)) {
           const data = await this.storageService.getData(tableName);
           this.store.storeInMemoryData(tableName, data);
-          console.log(
-            `[USService] Migrated ${data.length} records from IndexedDB to memory for table: ${tableName}`
-          );
         }
       } else {
         // Switching from memory to IndexedDB
@@ -479,15 +409,11 @@ export class USService {
         for (const tableName of Object.keys(tables)) {
           const data = this.store.getInMemoryData(tableName);
           await this.storageService.storeData(tableName, data);
-          console.log(
-            `[USService] Migrated ${data.length} records from memory to IndexedDB for table: ${tableName}`
-          );
         }
       }
 
       // Update the storage config
       storageConfig.storageType = newStrategy;
-      console.log(`[USService] Storage strategy switched to ${newStrategy}`);
     } catch (error) {
       console.error(`Failed to switch storage strategy to ${newStrategy}:`, error);
       throw error;

@@ -455,9 +455,7 @@ const {
 });
 
 async function handleFileUploaded(componentName: ComponentId, fileName: string) {
-  console.log('adding file to store', componentName, fileName);
   usStore.addFileUploaded(componentName, fileName);
-  console.log(`File uploaded for ${componentName}: ${fileName}`);
 }
 
 async function handleReportsAction() {
@@ -478,11 +476,9 @@ async function generateReports() {
   try {
     // Load data using the USService which handles both storage strategies
     const fileNames = usStore.getFileNames;
-    console.log('Starting report generation with files:', fileNames);
 
     const fileData = await Promise.all(
       fileNames.map(async (fileName) => {
-        console.log('Loading data for file:', fileName);
         // Remove .csv extension for table name
         const tableName = fileName.toLowerCase().replace('.csv', '');
         const data = await service.getData(tableName);
@@ -494,12 +490,6 @@ async function generateReports() {
     );
 
     if (fileData.length === 2) {
-      console.log('Making comparison with data lengths:', {
-        file1Length: fileData[0].length,
-        file2Length: fileData[1].length,
-        storageType: storageConfig.storageType,
-      });
-
       // Ensure data is cloneable by creating a clean copy
       // This avoids issues with DataCloneError when using in-memory storage
       const cleanData1 = fileData[0].map((item) => ({
@@ -528,13 +518,6 @@ async function generateReports() {
       const sampleData2 =
         cleanData2.length > MAX_RECORDS ? cleanData2.slice(0, MAX_RECORDS) : cleanData2;
 
-      // Warn if we're sampling
-      if (cleanData1.length > MAX_RECORDS || cleanData2.length > MAX_RECORDS) {
-        console.warn(
-          `Large dataset detected: processing first ${MAX_RECORDS} records for comparison`
-        );
-      }
-
       // Create worker and process data for comparison
       const comparisonWorker = new USComparisonWorker();
       const reports = await new Promise<{
@@ -546,7 +529,6 @@ async function generateReports() {
 
           // Handle the worker's status response
           if (status === 'lergDataReceived') {
-            console.log('LERG data successfully received by worker');
             return;
           }
 
@@ -561,12 +543,7 @@ async function generateReports() {
         // First, send LERG data to the worker
         const lergData = prepareLergWorkerData();
         if (lergData) {
-          console.log('Sending LERG data to worker:', getLergDataSummary());
           comparisonWorker.postMessage({ lergData });
-        } else {
-          console.warn(
-            'No LERG data available for worker - proceeding without jurisdictional analysis'
-          );
         }
 
         // Then, send the file data for comparison
@@ -577,18 +554,7 @@ async function generateReports() {
           file2Data: sampleData2,
         };
 
-        // Log the size of data being sent to worker
-        console.log(
-          'Sending data to comparison worker:',
-          `Clean data sizes: ${sampleData1.length}, ${sampleData2.length} records`
-        );
-
         comparisonWorker.postMessage(input);
-      });
-
-      console.log('Reports generated:', {
-        hasPricingReport: !!reports.pricingReport,
-        hasCodeReport: !!reports.codeReport,
       });
 
       if (reports.pricingReport && reports.codeReport) {
@@ -619,13 +585,6 @@ async function generateReports() {
       const MAX_RECORDS = 200000;
       const sampleData =
         cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
-
-      // Warn if we're sampling
-      if (cleanData.length > MAX_RECORDS) {
-        console.warn(
-          `Large dataset detected: processing first ${MAX_RECORDS} records for enhanced code report`
-        );
-      }
 
       await generateEnhancedCodeReport(fileNames[0], sampleData);
     }
@@ -685,15 +644,8 @@ async function generateEnhancedCodeReport(fileName: string, data: USStandardized
         lergData,
       };
 
-      console.log(
-        'Sending data to code report worker:',
-        `File: ${fileName}, Data length: ${data.length}`
-      );
-
       codeReportWorker.postMessage(input);
     });
-
-    console.log('Enhanced code report generated for', fileName);
 
     // Store the report
     usStore.setEnhancedCodeReport(report);
@@ -764,8 +716,6 @@ async function handleModalConfirm(
       ),
     };
 
-    console.log(`Processing file for component: ${activeComponent.value}, file: ${file.name}`);
-
     // Process file with mappings
     const result = await service.processFile(
       file,
@@ -806,8 +756,6 @@ async function handleRemoveFile(componentName: ComponentId) {
     // Then, remove the file from the store
     // Note: The removeFile method in the store now handles clearing fileStats
     usStore.removeFile(componentName);
-
-    console.log(`File ${fileName} removed successfully from component ${componentName}`);
   } catch (error) {
     console.error('Error removing file:', error);
   }
@@ -818,8 +766,6 @@ async function handleFileInput(
   eventOrFile: Event | { target: { files: File[] } },
   componentId: ComponentId
 ) {
-  console.log(`File input for component ${componentId}`);
-
   // Handle different parameters - either an Event or a mocked event with files
   let file: File | null = null;
 

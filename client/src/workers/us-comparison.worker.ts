@@ -41,11 +41,34 @@ self.addEventListener('message', (event) => {
 function normalizeInputData(input: USReportsInput): USReportsInput {
   const { fileName1, fileName2, file1Data, file2Data } = input;
 
+  // Helper function to consistently normalize NPANXX
+  function normalizeNpanxx(input: string): string {
+    // Remove all non-numeric characters
+    let cleaned = input.replace(/\D/g, '');
+
+    // If the cleaned string starts with '1' and is 7 digits, remove the '1'
+    if (cleaned.length === 7 && cleaned.startsWith('1')) {
+      cleaned = cleaned.substring(1);
+    }
+
+    // If it's longer than 6 digits, truncate to 6
+    if (cleaned.length > 6) {
+      cleaned = cleaned.substring(0, 6);
+    }
+
+    // If it's less than 6 digits but at least 3, pad with zeros
+    if (cleaned.length < 6 && cleaned.length >= 3) {
+      cleaned = cleaned.padEnd(6, '0');
+    }
+
+    return cleaned;
+  }
+
   // Normalize file1Data
   const normalizedFile1Data = file1Data.map((entry) => {
     const normalized = { ...entry };
-    if (normalized.npanxx.length === 7 && normalized.npanxx.startsWith('1')) {
-      normalized.npanxx = normalized.npanxx.substring(1);
+    if (normalized.npanxx) {
+      normalized.npanxx = normalizeNpanxx(normalized.npanxx);
       normalized.npa = normalized.npanxx.substring(0, 3);
       normalized.nxx = normalized.npanxx.substring(3, 6);
     }
@@ -55,8 +78,8 @@ function normalizeInputData(input: USReportsInput): USReportsInput {
   // Normalize file2Data
   const normalizedFile2Data = file2Data.map((entry) => {
     const normalized = { ...entry };
-    if (normalized.npanxx.length === 7 && normalized.npanxx.startsWith('1')) {
-      normalized.npanxx = normalized.npanxx.substring(1);
+    if (normalized.npanxx) {
+      normalized.npanxx = normalizeNpanxx(normalized.npanxx);
       normalized.npa = normalized.npanxx.substring(0, 3);
       normalized.nxx = normalized.npanxx.substring(3, 6);
     }
@@ -80,10 +103,6 @@ function generateReports(input: USReportsInput): {
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
     throw new Error('Missing a file name or fileData in worker !!');
   }
-
-  console.log(
-    `[Comparison Worker] Processing comparison between ${fileName1} (${file1Data.length} records) and ${fileName2} (${file2Data.length} records)`
-  );
 
   // Calculate all rate statistics first
   const file1Stats = {
@@ -256,165 +275,131 @@ function generateReports(input: USReportsInput): {
     });
   }
 
-  // Count matched and non-matched codes in chunks
+  // Count matched and non-matched codes
   const file1Codes = new Set<string>();
   const file2Codes = new Set<string>();
 
-  // Collect all codes from file1 in chunks
-  for (let i = 0; i < file1Data.length; i += chunkSize) {
-    const end = Math.min(i + chunkSize, file1Data.length);
-    const chunk = file1Data.slice(i, end);
+  // Collect all codes from file1
+  file1Data.forEach((entry) => {
+    file1Codes.add(entry.npanxx);
+  });
 
-    chunk.forEach((entry) => {
-      file1Codes.add(entry.npanxx);
-    });
-  }
+  // Collect all codes from file2
+  file2Data.forEach((entry) => {
+    file2Codes.add(entry.npanxx);
+  });
 
-  // Collect all codes from file2 in chunks
-  for (let i = 0; i < file2Data.length; i += chunkSize) {
-    const end = Math.min(i + chunkSize, file2Data.length);
-    const chunk = file2Data.slice(i, end);
+  // Find exactly matching codes using Set operations
+  const matchedCodes = new Set<string>();
 
-    chunk.forEach((entry) => {
-      file2Codes.add(entry.npanxx);
-    });
-  }
-
-  console.log(
-    `[Comparison Worker] Found ${file1Codes.size} unique codes in file1 and ${file2Codes.size} unique codes in file2`
-  );
-
-  // Process matching in chunks
-  let processedCount = 0;
-  const file1CodesArray = Array.from(file1Codes);
-  const totalCodes = file1CodesArray.length;
-
-  for (let i = 0; i < totalCodes; i += chunkSize) {
-    const end = Math.min(i + chunkSize, totalCodes);
-    const codeChunk = file1CodesArray.slice(i, end);
-
-    codeChunk.forEach((code) => {
-      if (file2Codes.has(code)) {
-        codeReport.matchedCodes++;
-
-        // Compare rates for matched codes
-        const entry1 = npanxxMap1.get(code)!;
-        const entry2 = npanxxMap2.get(code)!;
-
-        // Interstate comparison
-        if (entry1.interRate > entry2.interRate) {
-          pricingReport.comparison.totalHigher++;
-        } else if (entry1.interRate < entry2.interRate) {
-          pricingReport.comparison.totalLower++;
-        } else {
-          pricingReport.comparison.totalEqual++;
-        }
-      } else {
-        codeReport.nonMatchedCodes++;
-      }
-    });
-
-    processedCount += codeChunk.length;
-    if (i + chunkSize < totalCodes) {
-      console.log(
-        `[Comparison Worker] Processed comparison for ${processedCount}/${totalCodes} codes`
-      );
+  // Simply check every code in file1 against file2
+  file1Codes.forEach((code) => {
+    if (file2Codes.has(code)) {
+      matchedCodes.add(code);
     }
-  }
+  });
 
-  // Check for codes in file2 that are not in file1
-  const file2CodesArray = Array.from(file2Codes);
-  for (let i = 0; i < file2CodesArray.length; i += chunkSize) {
-    const end = Math.min(i + chunkSize, file2CodesArray.length);
-    const codeChunk = file2CodesArray.slice(i, end);
+  // Get non-matched codes
+  const nonMatchedCodesFile1 = new Set<string>();
+  const nonMatchedCodesFile2 = new Set<string>();
 
-    codeChunk.forEach((code) => {
-      if (!file1Codes.has(code)) {
-        codeReport.nonMatchedCodes++;
-      }
-    });
-  }
+  file1Codes.forEach((code) => {
+    if (!file2Codes.has(code)) {
+      nonMatchedCodesFile1.add(code);
+    }
+  });
+
+  file2Codes.forEach((code) => {
+    if (!file1Codes.has(code)) {
+      nonMatchedCodesFile2.add(code);
+    }
+  });
+
+  // Set the statistics in the report
+  codeReport.matchedCodes = matchedCodes.size;
+  codeReport.nonMatchedCodes = nonMatchedCodesFile1.size + nonMatchedCodesFile2.size;
+
+  // Calculate rate statistics for matched codes
+  let higherCount = 0;
+  let lowerCount = 0;
+  let equalCount = 0;
+
+  matchedCodes.forEach((code) => {
+    const entry1 = npanxxMap1.get(code)!;
+    const entry2 = npanxxMap2.get(code)!;
+
+    // Interstate comparison
+    if (entry1.interRate > entry2.interRate) {
+      higherCount++;
+    } else if (entry1.interRate < entry2.interRate) {
+      lowerCount++;
+    } else {
+      equalCount++;
+    }
+  });
+
+  pricingReport.comparison.totalHigher = higherCount;
+  pricingReport.comparison.totalLower = lowerCount;
+  pricingReport.comparison.totalEqual = equalCount;
 
   // Calculate percentages
   const totalUniqueNpanxx = new Set([...file1Codes, ...file2Codes]).size;
   codeReport.matchedCodesPercentage = (codeReport.matchedCodes / totalUniqueNpanxx) * 100;
   codeReport.nonMatchedCodesPercentage = (codeReport.nonMatchedCodes / totalUniqueNpanxx) * 100;
 
-  // Calculate coverage percentages (dummy values for now)
+  // Calculate coverage percentages
   codeReport.file1.coveragePercentage = (codeReport.file1.uniqueNPA / 1000) * 100; // Example
   codeReport.file2.coveragePercentage = (codeReport.file2.uniqueNPA / 1000) * 100; // Example
 
   return { pricingReport, codeReport };
 }
 
-// Helper functions for calculations
-function calculateAverage(data: USStandardizedData[], rateType: keyof USStandardizedData): number {
-  const validData = data.filter((d) => d[rateType] !== undefined && d[rateType] !== null);
+// Utility functions for rate calculations
+function calculateAverage(data: USStandardizedData[], field: keyof USStandardizedData): number {
+  if (data.length === 0) return 0;
 
-  if (validData.length === 0) return 0;
-
-  // Type assertion since we know these are numbers
-  const sum = validData.reduce((acc, curr) => acc + (curr[rateType] as number), 0);
-  return sum / validData.length;
+  // Need to cast as any since TypeScript doesn't know these are numbers
+  const total = data.reduce((sum, item) => sum + (item[field] as any), 0);
+  return parseFloat((total / data.length).toFixed(4));
 }
 
-function calculateMedian(data: USStandardizedData[], rateType: keyof USStandardizedData): number {
-  const validRates = data
-    .map((d) => d[rateType] as number)
-    .filter((r) => r !== undefined && r !== null)
-    .sort((a, b) => a - b);
+function calculateMedian(data: USStandardizedData[], field: keyof USStandardizedData): number {
+  if (data.length === 0) return 0;
 
-  if (validRates.length === 0) return 0;
+  // Extract and sort values
+  const values = [...data].map((item) => item[field] as any).sort((a, b) => a - b);
 
-  const midPoint = Math.floor(validRates.length / 2);
+  const mid = Math.floor(values.length / 2);
 
-  if (validRates.length % 2 === 0) {
-    return (validRates[midPoint - 1] + validRates[midPoint]) / 2;
-  } else {
-    return validRates[midPoint];
-  }
-}
-
-function calculateMin(data: USStandardizedData[], rateType: keyof USStandardizedData): number {
-  // Filter for valid rates
-  const validRates = data
-    .map((d) => d[rateType] as number)
-    .filter((r) => r !== undefined && r !== null && r > 0);
-
-  if (validRates.length === 0) return 0;
-
-  // Use loop instead of Math.min(...array) to avoid stack overflow
-  let min = validRates[0];
-  for (let i = 1; i < validRates.length; i++) {
-    if (validRates[i] < min) {
-      min = validRates[i];
-    }
+  // If even length, average the two middle values
+  if (values.length % 2 === 0) {
+    return parseFloat(((values[mid - 1] + values[mid]) / 2).toFixed(4));
   }
 
-  return min;
+  // If odd length, return the middle value
+  return parseFloat(values[mid].toFixed(4));
 }
 
-function calculateMax(data: USStandardizedData[], rateType: keyof USStandardizedData): number {
-  const validRates = data
-    .map((d) => d[rateType] as number)
-    .filter((r) => r !== undefined && r !== null);
+function calculateMin(data: USStandardizedData[], field: keyof USStandardizedData): number {
+  if (data.length === 0) return 0;
 
-  if (validRates.length === 0) return 0;
-
-  // Use loop instead of Math.max(...array) to avoid stack overflow
-  let max = validRates[0];
-  for (let i = 1; i < validRates.length; i++) {
-    if (validRates[i] > max) {
-      max = validRates[i];
-    }
-  }
-
-  return max;
+  // Find minimum value
+  const min = Math.min(...data.map((item) => item[field] as any));
+  return parseFloat(min.toFixed(4));
 }
 
-function calculatePercentageDifference(rate1: number, rate2: number): number {
-  if (rate1 === 0 && rate2 === 0) return 0;
-  if (rate2 === 0) return 100; // Avoid division by zero
+function calculateMax(data: USStandardizedData[], field: keyof USStandardizedData): number {
+  if (data.length === 0) return 0;
 
-  return ((rate1 - rate2) / rate2) * 100;
+  // Find maximum value
+  const max = Math.max(...data.map((item) => item[field] as any));
+  return parseFloat(max.toFixed(4));
+}
+
+function calculatePercentageDifference(value1: number, value2: number): number {
+  if (value1 === 0 && value2 === 0) return 0;
+  if (value2 === 0) return 100; // Avoid division by zero
+
+  const diff = ((value1 - value2) / value2) * 100;
+  return parseFloat(diff.toFixed(2));
 }

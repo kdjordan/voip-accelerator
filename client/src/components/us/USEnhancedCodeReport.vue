@@ -18,9 +18,9 @@
         </div>
       </div>
 
-      <!-- Country List -->
+      <!-- Main Countries (US/Canada) -->
       <div
-        v-for="country in filteredCountries"
+        v-for="country in mainCountries"
         :key="country.countryCode"
         class="bg-gray-900/50 rounded-lg overflow-hidden"
       >
@@ -242,6 +242,100 @@
           </div>
         </div>
       </div>
+
+      <!-- Other Countries Section -->
+      <div class="bg-gray-900/50 rounded-lg overflow-hidden">
+        <!-- Countries Header -->
+        <div
+          @click="toggleOtherCountriesExpanded"
+          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <span class="font-medium text-lg"> Other Countries ({{ otherCountries.length }}) </span>
+            <div class="flex items-center space-x-3">
+              <span class="text-accent">
+                {{ averageOtherCountriesCoverage.toFixed(2) }}% Avg. Coverage
+              </span>
+              <ChevronDownIcon
+                :class="{ 'transform rotate-180': showOtherCountries }"
+                class="w-5 h-5 transition-transform text-gray-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Other Countries Grid View -->
+        <div v-if="showOtherCountries" class="border-t border-gray-700/50 p-6">
+          <!-- Filter for other countries -->
+          <div class="mb-4">
+            <input
+              v-model="otherCountriesFilter"
+              type="text"
+              placeholder="Filter countries..."
+              class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
+            />
+          </div>
+
+          <!-- Countries Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div
+              v-for="country in filteredOtherCountries"
+              :key="country.countryCode"
+              class="bg-gray-800 p-3 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+              @click="toggleCountryDetails(country.countryCode)"
+            >
+              <div class="flex justify-between items-center">
+                <div class="truncate mr-2">
+                  <div class="font-medium text-white truncate">{{ country.countryName }}</div>
+                </div>
+                <div
+                  class="text-sm rounded px-1.5 py-0.5"
+                  :class="getCoverageColorClass(country.npaCoverage)"
+                >
+                  {{ country.npaCoverage.toFixed(1) }}%
+                </div>
+              </div>
+
+              <!-- Expandable Country Detail -->
+              <div
+                v-if="expandedCountryDetails.has(country.countryCode)"
+                class="mt-3 pt-3 border-t border-gray-700/50"
+              >
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span class="text-gray-400">NPAs:</span>
+                    <span class="text-white ml-1">{{ country.totalNPAs }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">Covered:</span>
+                    <span class="text-white ml-1">{{ country.coveredNPAs }}</span>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-xs text-gray-400 mb-1">NPAs in file:</div>
+                  <div class="flex flex-wrap gap-1">
+                    <div
+                      v-for="npa in country.npas.slice(0, 10)"
+                      :key="npa"
+                      class="text-xs bg-gray-900/80 px-1.5 py-0.5 rounded"
+                    >
+                      {{ npa }}
+                    </div>
+                    <div v-if="country.npas.length > 10" class="text-xs text-gray-400">
+                      +{{ country.npas.length - 10 }} more
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No results message -->
+          <div v-if="filteredOtherCountries.length === 0" class="text-center py-6 text-gray-400">
+            No countries match your filter.
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-else class="text-center text-xl text-muted-foreground">
@@ -265,9 +359,12 @@ const props = defineProps<{
 // Set up state
 const expandedCountries = reactive(new Set<string>());
 const expandedStates = reactive(new Map<string, Set<string>>());
+const expandedCountryDetails = reactive(new Set<string>());
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
 const isSearching = ref(false);
+const showOtherCountries = ref(false);
+const otherCountriesFilter = ref('');
 let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
 // Watch for search query changes with debounce
@@ -289,82 +386,63 @@ watch(searchQuery, (newValue) => {
   }, 300); // 300ms debounce
 });
 
-// Filtered countries based on search
-const filteredCountries = computed(() => {
+// Filter to separate main countries (US/Canada) from others
+const mainCountries = computed(() => {
   if (!props.report?.file1.countries) return [];
 
   const query = debouncedSearchQuery.value.toLowerCase();
-  if (!query) return props.report.file1.countries;
+  let countries = props.report.file1.countries.filter(
+    (country) => country.countryCode === 'US' || country.countryCode === 'CA'
+  );
 
-  const results = [];
+  if (!query) return countries;
 
-  // Process each country
-  for (const country of props.report.file1.countries) {
-    const filteredCountry = { ...country };
-    let includeCountry = country.countryName.toLowerCase().includes(query);
+  // If there's a search query, apply filtering similar to the original function
+  return countries.filter((country) => {
+    const matchesCountry = country.countryName.toLowerCase().includes(query);
 
-    // Process states within the country
-    if (country.states) {
-      // Filter states based on country code
-      const filteredStates = country.states.filter((state) => {
-        // For US country, only include actual US states
-        if (country.countryCode === 'US') {
-          // Check if this is a valid US state code (reject Canadian provinces)
-          if (!(state.stateCode in STATE_CODES)) return false;
+    // Check if any states match
+    const hasMatchingStates = country.states?.some((state) => {
+      // Get proper display name based on country
+      let stateName = getStateDisplayName(state.stateCode, country.countryCode).toLowerCase();
 
-          const displayName =
-            STATE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
+      // Check if state name or any NPA matches
+      return stateName.includes(query) || state.npas.some((npa) => npa.includes(query));
+    });
 
-          // Check if state name matches query
-          if (displayName.includes(query)) return true;
+    return matchesCountry || hasMatchingStates;
+  });
+});
 
-          // Check if any NPA matches
-          return state.npas.some((npa) => npa.includes(query));
-        }
-        // For Canada, only include Canadian provinces
-        else if (country.countryCode === 'CA') {
-          // Check if this is a valid Canadian province code
-          if (!(state.stateCode in PROVINCE_CODES)) return false;
+// Compute other countries (not US or CA)
+const otherCountries = computed(() => {
+  if (!props.report?.file1.countries) return [];
 
-          // Skip 'CA' in Canadian provinces list (it's California in US)
-          if (state.stateCode === 'CA') return false;
+  return props.report.file1.countries.filter(
+    (country) => country.countryCode !== 'US' && country.countryCode !== 'CA'
+  );
+});
 
-          const displayName =
-            PROVINCE_CODES[state.stateCode]?.name.toLowerCase() || state.stateCode.toLowerCase();
+// Filtered other countries based on the specific filter for that section
+const filteredOtherCountries = computed(() => {
+  const query = otherCountriesFilter.value.toLowerCase();
+  if (!query) return otherCountries.value;
 
-          // Check if province name matches query
-          if (displayName.includes(query)) return true;
+  return otherCountries.value.filter((country) => {
+    return (
+      country.countryName.toLowerCase().includes(query) ||
+      country.countryCode.toLowerCase().includes(query)
+    );
+  });
+});
 
-          // Check if any NPA matches
-          return state.npas.some((npa) => npa.includes(query));
-        }
-        // For other countries
-        else {
-          const displayName = state.stateCode.toLowerCase();
+// Calculate average coverage percentage for other countries
+const averageOtherCountriesCoverage = computed(() => {
+  if (otherCountries.value.length === 0) return 0;
 
-          // Check if state/region name matches
-          if (displayName.includes(query)) return true;
+  const totalCoverage = otherCountries.value.reduce((sum, country) => sum + country.npaCoverage, 0);
 
-          // Check if any NPA matches
-          return state.npas.some((npa) => npa.includes(query));
-        }
-      });
-
-      if (filteredStates.length > 0) {
-        filteredCountry.states = filteredStates;
-        includeCountry = true;
-      } else {
-        filteredCountry.states = [];
-      }
-    }
-
-    // Add country to results if it should be included
-    if (includeCountry) {
-      results.push(filteredCountry);
-    }
-  }
-
-  return results;
+  return totalCoverage / otherCountries.value.length;
 });
 
 // Simplify the expand matching sections function
@@ -451,6 +529,29 @@ function toggleStateExpanded(countryCode: string, stateCode: string) {
 function isStateExpanded(countryCode: string, stateCode: string): boolean {
   const stateSet = expandedStates.get(countryCode);
   return !!stateSet && stateSet.has(stateCode);
+}
+
+// Toggle detailed view for a specific country
+function toggleCountryDetails(countryCode: string) {
+  if (expandedCountryDetails.has(countryCode)) {
+    expandedCountryDetails.delete(countryCode);
+  } else {
+    expandedCountryDetails.add(countryCode);
+  }
+}
+
+// Toggle other countries section
+function toggleOtherCountriesExpanded() {
+  showOtherCountries.value = !showOtherCountries.value;
+}
+
+// Function to get coverage color class based on percentage
+function getCoverageColorClass(coverage: number): string {
+  if (coverage === 0) return 'bg-gray-900 text-gray-400';
+  if (coverage < 20) return 'bg-red-900/30 text-red-400';
+  if (coverage < 50) return 'bg-yellow-900/30 text-yellow-400';
+  if (coverage < 80) return 'bg-blue-900/30 text-blue-400';
+  return 'bg-green-900/30 text-green-400';
 }
 
 // Update the helper function to properly handle states and provinces

@@ -78,10 +78,27 @@
                   {{ report.matchedCodesPercentage.toFixed(2) }}%
                 </td>
               </tr>
-              <tr>
+              <tr class="border-b border-gray-700">
                 <td class="py-2 font-medium text-gray-400">Non-Matched Codes Percentage:</td>
                 <td class="py-2 text-right text-foreground">
                   {{ report.nonMatchedCodesPercentage.toFixed(2) }}%
+                </td>
+              </tr>
+              <!-- NPA Match Information -->
+              <tr v-if="report.matchedNPAs !== undefined" class="border-b border-gray-700">
+                <td class="py-2 font-medium text-gray-400">Matched Area Codes (NPAs):</td>
+                <td class="py-2 text-right text-foreground">
+                  {{ report.matchedNPAs }} of {{ report.totalUniqueNPAs }}
+                </td>
+              </tr>
+              <tr v-if="report.matchedNPAs !== undefined">
+                <td class="py-2 font-medium text-gray-400">Area Code Match Percentage:</td>
+                <td class="py-2 text-right text-foreground">
+                  {{
+                    report.totalUniqueNPAs
+                      ? ((report.matchedNPAs / report.totalUniqueNPAs) * 100).toFixed(2)
+                      : '0.00'
+                  }}%
                 </td>
               </tr>
             </tbody>

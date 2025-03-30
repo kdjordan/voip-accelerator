@@ -76,6 +76,8 @@ export interface USCodeReport {
   nonMatchedCodes: number;
   matchedCodesPercentage: number;
   nonMatchedCodesPercentage: number;
+  matchedNPAs?: number; // Number of NPAs that match between files
+  totalUniqueNPAs?: number; // Total number of unique NPAs across both files
 }
 
 export interface USPricingReport {
