@@ -1,0 +1,115 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Standardized code style, file organization, and best practices for VoIP Accelerator (Vue 3, TypeScript, Tailwind, Supabase, Vite)
+globs:
+alwaysApply: true
+---
+
+# ✨ Coding Rules & Architecture Guidelines
+
+You are an expert in **TypeScript**, **Node.js**, **Vite**, **Vue 3 (Composition API)**, **Vue Router**, **Pinia**, **VueUse**, and **Tailwind CSS**, with a deep understanding of performance optimization and clean architecture. Follow the rules below for all code completions, refactors, and scaffolding.
+
+---
+
+## 🔧 Code Style & Structure
+
+- Write **concise, maintainable, and technically accurate TypeScript**
+- Use **functional + declarative patterns** (avoid `class`)
+- Favor **iteration**, **modularization**, and **DRY principles**
+- Use **descriptive variables** with auxiliary verbs (`isLoading`, `hasError`)
+- Structure files logically:
+  - Each file should contain only related content: component, helper, or types
+  - Co-locate subcomponents and composables when necessary
+
+---
+
+## 🧱 .vue File Conventions
+
+- Always use **Composition API** with `<script setup lang="ts">`
+- Organize sections in this order:
+  1. `<template>`
+  2. `<script setup>`
+  3. `<style>` (if needed)
+- Put **all logic** in the `<script>` section
+- Use **Tailwind CSS** classes for all styling — avoid scoped styles unless necessary
+- Apply custom theme tokens from Tailwind config
+
+---
+
+## 📁 Naming Conventions
+
+- Use **kebab-case** for directories and filenames (`components/auth-wizard`)
+- Use **PascalCase** for Vue component names
+- Favor **named exports** for functions and composables
+- Use consistent naming across stores, composables, and utils
+
+---
+
+## 🟦 TypeScript Standards
+
+- Use **TypeScript everywhere**
+- Prefer `interface` over `type` (better for extension and declaration merging)
+- **Avoid `enum`** — use object maps for type safety and runtime flexibility
+- Never inline types in components or services — place all types in `types/`
+- Use `function` keyword (not arrow funcs) for standalone/pure functions
+
+---
+
+## 🎨 UI & Tailwind Styling
+
+- Use **Tailwind CSS** for all layout and UI styling
+- Build **mobile-first**, fully responsive UIs
+- Use **theme colors and spacing variables** (from `tailwind.config.js`)
+- Maintain consistent UI spacing, padding, and font sizes
+- Use utility classes to compose layout — avoid CSS abstraction unless necessary
+
+---
+
+## ⚡ Performance & Optimization
+
+- Use **VueUse** composables when available to enhance reactivity
+- Lazy load non-critical components (`defineAsyncComponent`)
+- Use **WebP** for image assets; enable lazy loading where applicable
+- Implement **code splitting** via Vite chunking strategies
+- Optimize **Web Vitals**:
+  - Largest Contentful Paint (LCP)
+  - First Input Delay (FID)
+  - Cumulative Layout Shift (CLS)
+
+---
+
+## ✅ Git Commit Conventions
+
+Use the following format for all Git commit messages:
+
+- Use **present tense** and **imperative mood**
+- Keep messages to **50 characters or less**
+- Prefix with scope tag:
+
+| Tag        | Use Case                     |
+|------------|------------------------------|
+| `FEAT:`    | New feature                  |
+| `FIX:`     | Bug fix                      |
+| `DOCS:`    | Documentation changes        |
+| `STYLE:`   | Code style, formatting       |
+| `REFACTOR:`| Refactor, no behavior change |
+| `PERF:`    | Performance optimization     |
+| `TEST:`    | Add or update tests          |
+| `CHORE:`   | Tooling, CI, build-related   |
+
+**Example**:  
+`FEAT: add drag-and-drop support to AZ uploader`
+
+---
+
+## 🧠 Cursor Agent Notes
+
+Always follow these rules when:
+- Creating new components or composables
+- Refactoring Vue or service logic
+- Typing functions, props, and state
+- Writing Edge Functions in Supabase

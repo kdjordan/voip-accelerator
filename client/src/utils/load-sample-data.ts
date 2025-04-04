@@ -110,12 +110,13 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
       const usTestBlob = new File([await usTestResponse.blob()], usTestFile);
 
-      // Column mapping for UStest.csv
+      // Column mapping for UStest.csv based on actual file structure:
+      // prefix, rate (inter), intrastate, intrastate, effective
       const columnMapping1 = {
-        npanxx: 1, // NPANXX is in column 2 (0-based index)
-        interstate: 2, // Interstate rate is in column 3
-        intrastate: 3, // Intrastate rate is in column 4
-        indeterminate: 3, // Indeterminate rate is also column 4
+        npanxx: 0, // prefix is in column 1 (0-based index)
+        interstate: 1, // rate (inter) is in column 2
+        intrastate: 2, // intrastate is in column 3
+        indeterminate: 2, // Using the same intrastate column for indeterminate
       };
 
       console.log('Processing first US test file with column mapping:', columnMapping1);
@@ -141,10 +142,10 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 
       // Column mapping for UStest1.csv (same structure)
       const columnMapping2 = {
-        npanxx: 1, // NPANXX is in column 2
-        interstate: 2, // Interstate rate is in column 3
-        intrastate: 3, // Intrastate rate is in column 4
-        indeterminate: 3, // Indeterminate rate is also column 4
+        npanxx: 0, // prefix is in column 1 (0-based index)
+        interstate: 1, // rate (inter) is in column 2
+        intrastate: 2, // intrastate is in column 3
+        indeterminate: 2, // Using the same intrastate column for indeterminate
       };
 
       try {

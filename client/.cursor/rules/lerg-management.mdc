@@ -1,0 +1,141 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: LERG (Local Exchange Routing Guide) data management strategy for VoIP Accelerator, covering upload, storage, and distribution
+globs: 
+alwaysApply: false
+---
+
+# LERG Data Management
+
+## Overview
+This rule outlines the **LERG data management** strategy for VoIP Accelerator. The focus is on:
+- Superadmin LERG upload workflow
+- Supabase storage and distribution
+- Client-side LERG data handling
+- Access control and validation
+
+LERG data serves as the authoritative source for US routing information.
+
+---
+
+## Core Principles
+
+- LERG data is managed exclusively by superadmin
+- Data is stored centrally in Supabase
+- Distributed to clients via IndexedDB (using DexieJS)
+- Read-only access for regular users
+- Monthly update cycle
+
+---
+
+## /// Data Structure
+
+### Essential Fields
+- NPA
+- Country
+- State
+- last upadted
+
+
+### Database Schema
+```sql
+CREATE TABLE IF NOT EXISTS lerg_codes (
+  id SERIAL PRIMARY KEY,
+  npa CHAR(3) NOT NULL,
+  state CHAR(2) NOT NULL,
+  country CHAR(2) NOT NULL,
+  last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT lerg_codes_npa_unique UNIQUE (npa)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lerg_country ON lerg_codes(country);
+CREATE INDEX IF NOT EXISTS idx_lerg_state ON lerg_codes(state); 
+```
+
+---
+
+## /// Update Process
+
+### Monthly Cycle
+1. Superadmin receives new LERG data (CSV or TXT format)
+2. Bulk insert to Supabase
+
+### Validation Rules
+Controlled by frontend parsing - code already written
+
+---
+
+## /// Distribution Strategy
+
+### Initial Download
+- Triggered on user login
+- Full dataset via chunked transfer
+- Progress indicator in UI
+- Stored in IndexedDB using DexieJS
+
+### Updates
+- Users notified of new LERG version via last updated
+- Background download
+
+---
+
+## /// Access Control
+
+### Role-Based Access
+- Superadmin: Full CRUD access
+- Regular users: Read-only access
+- No direct database access
+
+---
+
+## /// Performance
+
+### Data Volume
+- ~200MB total size
+- ~1M records
+- Monthly updates
+
+### Optimization
+- Compressed transfers
+- Indexed fields
+- Chunked downloads
+- Cache headers
+
+---
+
+## /// Error Handling
+
+### Upload Validation
+- Schema validation
+- Data integrity checks
+- Duplicate detection
+- Format verification
+
+### Download Recovery
+- Automatic retry (2x)
+- Resume capability
+- Fallback to previous version
+- Manual retry option
+
+---
+
+## /// User Experience
+
+### Progress Indicators
+- Upload progress (admin)
+- Download progress (users)
+- Version information
+- Update notifications
+
+### Search/Filter
+- NPA
+- State filter
+- Country filter
+
+
+
+

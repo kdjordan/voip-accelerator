@@ -52,6 +52,17 @@ import { DBName } from '@/types/app-types';
 
 const usStore = useUsStore();
 
+onMounted(async () => {
+  try {
+    console.log('UsView mounted, loading sample data...');
+    // Using direct access to the state property
+    await loadSampleDecks([DBName.US]);
+    console.log('Sample data loaded successfully');
+  } catch (error) {
+    console.error('Failed to load sample data:', error);
+  }
+});
+
 /**
  * Format error message based on error source and details
  */
@@ -109,5 +120,4 @@ function formatErrorMessage(
     source: sourceLabel,
   };
 }
-
 </script>

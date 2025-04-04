@@ -1,0 +1,51 @@
+# Performance Optimization
+
+## Core Questions
+
+### Client-Side Performance
+1. What are our target performance metrics (FCP, LCP, TTI)?
+2. How should we implement code splitting?
+3. What assets need to be optimized?
+4. What caching strategies should we use for static assets?
+
+### Data Loading
+1. What is the maximum acceptable initial load time?
+2. How should we implement progressive loading?
+3. Should we implement virtual scrolling for large datasets?
+4. What preloading strategies should we implement?
+
+### IndexedDB Optimization
+1. What is the optimal IndexedDB schema for our use case?
+2. How should we handle large dataset queries?
+3. What indexing strategy should we use?
+4. How do we optimize write operations?
+
+### Memory Management
+1. What is our target memory footprint?
+2. How should we handle large dataset processing?
+3. When should we implement cleanup operations?
+4. How do we prevent memory leaks?
+
+### Network Optimization
+1. What data should be cached?
+2. How should we handle slow network conditions?
+3. What compression techniques should we use?
+4. How do we optimize API requests?
+
+### Computation Optimization
+1. Which operations need to be moved to Web Workers?
+2. How should we handle CPU-intensive tasks?
+3. What operations can be deferred or batched?
+4. How do we optimize complex calculations?
+
+### Monitoring & Analytics
+1. What performance metrics should we track?
+2. How do we implement performance monitoring?
+3. What alerting thresholds should we set?
+4. How do we track user-perceived performance?
+
+### Testing & Validation
+1. What performance testing tools should we use?
+2. How do we test with different device profiles?
+3. What are our performance budgets?
+4. How do we validate performance improvements? 

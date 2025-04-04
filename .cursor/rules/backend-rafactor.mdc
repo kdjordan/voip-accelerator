@@ -1,0 +1,95 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Migration plan and feature parity checklist for replacing Express backend with Supabase and edge functions
+globs:
+alwaysApply: false
+---
+
+# 🧱 Backend Refactor: Express → Supabase
+
+## 🎯 Goal
+
+Replace the legacy Express.js backend with Supabase-hosted services, including:
+
+- **Database**: Supabase Postgres
+- **Auth**: Supabase Auth
+- **APIs**: Supabase Edge Functions
+- **Storage**: Supabase Storage
+- **Admin Controls**: Role-based access (e.g., superadmin-only routes)
+
+---
+
+## ✅ Existing Functionality (Express)
+
+| Feature                  | Status | Notes                                                  |
+|--------------------------|--------|--------------------------------------------------------|
+| CSV Upload & Parsing     | ✅     | Dexie handles client-side processing                    |
+| LERG Upload & Filtering  | ✅     | Move upload endpoint to Supabase Edge                  |
+| Rate Deck Comparison API| ✅     | Replace with Dexie-driven logic                        |
+| User Auth (Custom)       | ⚠️     | Replace with Supabase Auth                             |
+| Admin Routes             | ✅     | Role check logic in Express → move to Supabase claims  |
+
+---
+
+## 🔄 Migration Tasks
+
+### Phase 1: Supabase Setup
+
+- [x] Create Supabase project
+- [x] Configure Supabase Auth (email/password)
+- [x] Migrate `lerg_codes` table to Supabase
+- [x] Create roles: `user`, `superadmin`
+
+### Phase 2: Replace Express Routes
+
+- [ ] Audit existing Express routes
+- [ ] For each route:
+  - [ ] Determine if still needed
+  - [ ] Convert to Supabase Edge Function or move logic to client
+
+**Example Routes to Migrate**:
+
+| Express Route         | Target Destination            | Notes                             |
+|-----------------------|-------------------------------|-----------------------------------|
+| `/upload/lerg`        | `uploadLerg` Edge Function     | `superadmin` only                 |
+| `/compare/az`         | Dexie + client logic           | Local-only comparison             |
+| `/compare/us`         | Dexie + client logic           | Uses LERG sync data               |
+
+### Phase 3: Dexie + Supabase Sync
+
+- [ ] Write client sync logic (Supabase → IndexedDB)
+- [ ] Use `last_updated` to determine changes
+- [ ] Future: Dexie → Supabase sync for uploads
+
+### Phase 4: Deprecate Express
+
+- [ ] Remove `/server` folder from monorepo
+- [ ] Delete unused middleware and utilities
+- [ ] Update dev scripts and README.mdc
+
+---
+
+## 🧩 Edge Function Design
+
+| Function Name   | Purpose                            |
+|------------------|-------------------------------------|
+| `uploadLerg`     | Admin-only handler for LERG CSV     |
+| `getLergMeta`    | Returns LERG version + metadata     |
+| `pingStatus`     | Simple health check for MCP         |
+
+---
+
+## 🧠 Agent Notes
+
+When working on this migration:
+
+- Supabase Edge Functions are `export async function` endpoints
+- Role checks should use Supabase Auth claims (`superadmin`)
+- Replace Express-style routing with individual endpoint files
+- Use Zod or types on the client for validation (no more middleware)
+- Use Supabase Storage or Edge DB access instead of local file uploads
+

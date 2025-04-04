@@ -1,0 +1,147 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Supabase integration strategy for VoIP Accelerator, covering database design, edge functions, authentication, and security
+globs: 
+alwaysApply: false
+---
+
+# Supabase Integration
+
+## Overview
+This document outlines our Supabase integration strategy for the VoIP Accelerator application. It details the migration from a standalone Express/PostgreSQL backend to Supabase's hosted services.
+
+---
+
+## /// Database Design
+
+### Core Tables
+```sql
+-- LERG data storage
+DROP TABLE IF EXISTS lerg_codes;
+CREATE TABLE IF NOT EXISTS lerg_codes (
+  id SERIAL PRIMARY KEY,
+  npa CHAR(3) NOT NULL,
+  state CHAR(2) NOT NULL,
+  country CHAR(2) NOT NULL,
+  last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT lerg_codes_npa_unique UNIQUE (npa)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lerg_country ON lerg_codes(country);
+CREATE INDEX IF NOT EXISTS idx_lerg_state ON lerg_codes(state); 
+---
+
+## /// Edge Functions
+
+### Core Functions
+1. `process-lerg-upload`: Handles LERG data validation and processing
+2. `auth-webhook`: Custom authentication logic for external services
+
+---
+
+## /// Authentication
+
+### Auth Strategy
+- Email/password authentication
+- JWT-based session management
+- Role-based access control (RBAC)
+- Session timeout: 24 hours
+
+### User Roles
+- `superadmin`: Full access, including LERG management
+- `user`: Standard access to LERG downloads
+
+### Implementation
+```typescript
+// Client-side auth setup
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+// Sign-in example
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password123'
+})
+
+// Get user role from metadata
+const { data: { user } } = await supabase.auth.getUser()
+const role = user?.user_metadata?.role || 'user'
+```
+
+---
+
+## /// Row-Level Security (RLS)
+
+### Policies
+```sql
+-- Allow users to read all LERG data
+CREATE POLICY "LERG data is viewable by all authenticated users" 
+ON lerg_codes FOR SELECT 
+TO authenticated 
+USING (true);
+
+-- Only superadmins can modify LERG data
+CREATE POLICY "Only superadmins can insert LERG data" 
+ON lerg_codes FOR INSERT 
+TO authenticated 
+USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'superadmin');
+```
+
+---
+
+## /// Real-time Features
+
+### Subscriptions
+- LERG data updates for logged-in users
+- Admin dashboard activity monitoring
+
+### Implementation
+```typescript
+// Example real-time subscription
+const subscription = supabase
+  .channel('schema-db-changes')
+  .on(
+    'postgres_changes',
+    { event: 'UPDATE', schema: 'public', table: 'lerg_codes' },
+    (payload) => {
+      console.log('LERG update:', payload)
+      // Trigger user notification
+    }
+  )
+  .subscribe()
+```
+
+---
+
+## /// Migration Strategy
+
+### Phased Approach
+1. Set up Supabase project and database schema
+2. Implement user authentication
+3. Implement edge functions for core operations
+4. Upload LERG data management
+5. Decommission Express backend
+
+## /// Performance Monitoring
+
+### Key Metrics
+- Edge function execution time
+- LERG Database download performance
+- Client-side load times
+- Authentication success rates
+
+### Toolse
+- Supabase Dashboard
+- Custom logging in edge functions
+- Front-end performance tracking
+
+
+

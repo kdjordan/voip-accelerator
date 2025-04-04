@@ -1,0 +1,103 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# VoIP Accelerator – Project Overview
+
+## 🛠 Project Purpose
+
+VoIP Accelerator is a modern, local-first web application designed to help telecom professionals analyze and compare VoIP pricing and code data across different carriers. The app focuses on three primary data types and is optimized for fast, offline-first performance with IndexedDB (via DexieJS) and Supabase for cloud storage and user management.
+
+---
+
+## 📁 CSV File Types
+
+| File Type | Description |
+|-----------|-------------|
+| `AZ` | International Rate Deck |
+| `US` | Domestic Rate Deck |
+| `LERG` | US Routing Guide (from Telcordia). See: [LERG on Wikipedia](mdc:https:/en.wikipedia.org/wiki/LERG_Routing_Guide) |
+
+Each CSV may contain varied headers. A preview modal is shown on upload, allowing users to map columns to standardized fields.
+We have multiple types of CSVs that we will expect and that the user will need to define the column roles for : AZ, US, LERG (admin only), and rate-sheet.
+
+---
+
+## ⚙️ Data Processing Flow
+
+1. **Drag & Drop Upload**  
+   User uploads one of the 3 supported CSV types.
+
+2. **Column Mapping Modal**  
+   A modal appears allowing user to assign columns. Depending upon the CSV type, different column headings are avaialable for selection by the user
+
+3. **Standardization & Storage**  
+   The app converts the CSV into a standardized format and stores it using **DexieJS** in IndexedDB.
+
+4. **Data Sync (Planned)**  
+   Supabase will store LERG data. LERG data can only can only be uploaded by the Superadmin(me). But LERG data will downloaded for all users and stored in IndexDB when the user logs in. This allows for comparisons with US CSVs as the user uploads. This helps us build the rate comparison and pricing reports for US rate decks.
+
+5. **LERG Handling**  
+   - Superadmin(me only) uploads the latest LERG CSV (admin-only route)
+   - LERG stored in Supabase
+   - Copied down to IndexedDB for each logged-in user for offline analysis
+
+---
+
+## 🧱 Architecture Overview
+
+### 🧩 Client
+
+- **Framework**: Vue 3 w/ Composition API
+- **Bundler**: Vite
+- **Typescript**: Config is in tsconfig.json. All types shoudld be store in approriate file in /types folder
+- **CSS**: Tailwind - tailwind.config.js is the source of truth.
+- **Styling**: TailwindCSS
+- **Router**: Vue Router
+- **State Management**: Pinia
+- **HTTP Client**: `fetch` with typed responses
+- **IndexedDB**: Dexie.js
+- **Auth**: Supabase Auth
+- **Payments**: Stripe (Monthly + Annual plans, planned)
+- **Environment**: Monorepo
+
+### 🧑‍💻 Backend (Deprecated)
+
+We are phasing out the Express/Postgres backend in favor of:
+
+- **Supabase Hosted DB**
+- **Edge Functions**
+- **Supabase Client SDK**
+- **Supabase MCP**
+
+---
+
+## 🔐 Auth & Roles
+
+| Role        | Capabilities                                                   |
+|-------------|----------------------------------------------------------------|
+| `superadmin`| Upload LERG, manage special code DB                            |
+| `user`      | Upload AZ/US decks, view reports, access synced LERG locally   |
+
+All routes are protected by Supabase Auth.  
+Only one route is gated for `superadmin` role: LERG Management.
+
+---
+
+## 🗂 Project Structure
+
+```bash
+monorepo-root/
+├── client/                # Vue 3 app
+│   ├── components/
+│   │   └── shared/        # Footer, Header, Sidebar
+│   ├── composables/       # Shared logic (CSV parsing, Dexie hooks, etc.)
+│   ├── pages/             # Routed pages
+│   ├── stores/
+│   │   ├── azStore.ts
+│   │   ├── usStore.ts
+│   │   └── sharedStore.ts
+│   └── utils/             # CSV utilities, etc.
+├── supabase/              # Supabase edge functions, auth config, etc.
+└── README.mdc             # Project metadata

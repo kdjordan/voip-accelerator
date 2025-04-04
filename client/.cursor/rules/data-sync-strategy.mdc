@@ -1,0 +1,116 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Dexie-based data synchronization strategy for LERG and user-uploaded rate decks in the VoIP Accelerator client app
+globs: 
+alwaysApply: false
+---
+
+# Data Synchronization Strategy
+
+## Overview
+This rule outlines the **client-side** data synchronization strategy for the VoIP Accelerator application. The focus is on:
+- LERG data management (read-only)
+- Local-first storage for user-uploaded CSVs
+- Session-level IndexedDB handling using **Dexie.js**
+- Minimal reliance on network during user interactions
+
+Dexie is used as the interface to IndexedDB for all local storage operations.
+
+---
+
+## Core Principles
+
+- Local-first architecture with offline access via IndexedDB
+- Read-only sync of authoritative LERG data from Supabase
+- IndexedDB cleanup on logout, tab close, or session end
+- Minimal bandwidth use — data pulled once per session
+- No multi-device synchronization (each device operates independently)
+
+---
+
+## /// SYNC TARGET: LERG
+
+- On successful user login, LERG data is **downloaded from Supabase** and stored locally via Dexie
+- LERG data is **read-only** and not modifiable by users
+- Sync occurs **once per session** per device
+- Sync is scoped to authenticated sessions only
+- Data is cleared on logout or session timeout
+
+### Retry Logic
+
+- 2 automatic retries on download failure
+- If retries fail, a manual retry option appears in the UI dashboard
+
+### UI Feedback
+
+- Sync status shown in the dashboard (`loading`, `error`, `synced`)
+- Manual retry button appears after failures
+- Visual progress indicator during download operation
+
+---
+
+## /// SYNC TARGET: USER DATA (AZ/US Decks)
+
+- User-uploaded CSV data (AZ, US) is parsed, normalized, and stored in Dexie
+- All user data is transient unless explicitly synced to Supabase
+- No automatic persistence across sessions/devices
+- IndexedDB quotas are respected
+- Cleanup happens on logout, tab close, or session expiration
+
+---
+
+## Progress & Error Handling
+
+### Progress Indicators
+
+- Real-time indicators for LERG sync status
+- Modal feedback during CSV parsing
+- Alerts for sync success/failure
+
+### Error Management
+
+- LERG download failure triggers 2 automatic retries
+- Failure after retries shows dashboard notification
+- Manual retry option shown
+- No data conflict resolution is required due to LERG's read-only status
+
+---
+
+## Performance Considerations
+
+- LERG data volume is small — no batching or compression required
+- Full dataset is downloaded in a single operation
+- Dexie handles IndexedDB interactions efficiently in modern browsers
+- No pagination or streaming needed for current scale
+
+---
+
+## Security & Authentication
+
+- All data transfer occurs over HTTPS
+- Authentication required for all sync operations (handled by Supabase Auth)
+- No encryption-at-rest required in IndexedDB (no sensitive data stored)
+- Supabase handles role-based access control
+
+---
+
+## Data Cleanup
+
+- Automatic purge of all IndexedDB data on:
+  - User logout
+  - Session expiration
+  - Browser or tab close
+- No long-term or historical persistence
+- No background syncing
+
+---
+
+## Cross-Device Behavior
+
+- Each device/session maintains its **own isolated copy** of LERG and user data
+- No sync across devices
+- On login from a new device, a fresh LERG download is triggered
