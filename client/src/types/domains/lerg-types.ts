@@ -167,4 +167,11 @@ export interface LERGStateInterface {
     canadaTotalNPAs: number;
     lastUpdated: Date | null;
   };
+
+  // Legacy compatibility properties
+  npaRecords?: NpaMap;
+  countriesMap?: CountryNpaMap;
+  countryStateMap?: CountryStateNpaMap;
+  stateNPAs: StateNPAMapping;
+  countryData: CountryLergData[];
 }

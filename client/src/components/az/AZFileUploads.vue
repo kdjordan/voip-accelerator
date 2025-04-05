@@ -268,7 +268,7 @@
     </div>
 
     <!-- New Preview Modal -->
-    <PreviewModal2
+    <PreviewModal
       v-if="showPreviewModal"
       :showModal="showPreviewModal"
       :columns="columns"
@@ -292,7 +292,7 @@ import {
   TrashIcon,
   ArrowRightIcon,
 } from '@heroicons/vue/24/outline';
-import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
+import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { useAzStore } from '@/stores/az-store';
 import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
 import type {
@@ -306,7 +306,6 @@ import { DBName } from '@/types/app-types';
 import { AZColumnRole } from '@/types/domains/az-types';
 import Papa from 'papaparse';
 import { AZService } from '@/services/az.service';
-import { storageConfig } from '@/config/storage-config';
 import { ReportTypes } from '@/types';
 import AzCodeSummary from '@/components/az/AzCodeSummary.vue';
 import { useDragDrop } from '@/composables/useDragDrop';
@@ -458,7 +457,7 @@ async function handleReportsAction() {
       console.log('Making comparison with data lengths:', {
         file1Length: fileData[0].length,
         file2Length: fileData[1].length,
-        storageType: storageConfig.storageType,
+        storageType: true,
       });
 
       // Ensure data is cloneable by creating a clean copy

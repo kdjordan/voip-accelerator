@@ -361,7 +361,7 @@ const fileData = computed(() => {
 // Extract NPAs from file data
 const fileNPAs = computed(() => {
   const npas = new Set<string>();
-  fileData.value.forEach((entry) => {
+  fileData.value.forEach((entry: any) => {
     if (entry.npa) {
       npas.add(entry.npa);
     }

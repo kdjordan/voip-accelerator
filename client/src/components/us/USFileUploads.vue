@@ -297,7 +297,7 @@
     </div>
 
     <!-- Preview Modal -->
-    <PreviewModal2
+    <PreviewModal
       v-if="showPreviewModal"
       :showModal="showPreviewModal"
       :columns="columns"
@@ -322,7 +322,7 @@ import {
   TrashIcon,
   ArrowRightIcon,
 } from '@heroicons/vue/24/outline';
-import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
+import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { useUsStore } from '@/stores/us-store';
 import { USService } from '@/services/us.service';
 import {
@@ -337,7 +337,6 @@ import {
 } from '@/types/domains/us-types';
 import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
 import Papa from 'papaparse';
-import { storageConfig } from '@/config/storage-config';
 import USCodeSummary from '@/components/us/USCodeSummary.vue';
 import USComparisonWorker from '@/workers/us-comparison.worker?worker';
 import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
@@ -367,6 +366,8 @@ const activeComponent = ref<ComponentId>('us1');
 const uploadError = reactive<Record<ComponentId, string | null>>({
   us1: null,
   us2: null,
+  az1: null,
+  az2: null,
 });
 
 // Replace the existing handleFileSelected function to work with our composable

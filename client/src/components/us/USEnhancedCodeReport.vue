@@ -391,9 +391,12 @@ const mainCountries = computed(() => {
   if (!props.report?.file1.countries) return [];
 
   const query = debouncedSearchQuery.value.toLowerCase();
-  let countries = props.report.file1.countries.filter(
-    (country) => country.countryCode === 'US' || country.countryCode === 'CA'
-  );
+  let countries = props.report.file1.countries
+    .filter((country) => country.countryCode === 'US' || country.countryCode === 'CA')
+    .map((country) => ({
+      ...country,
+      coveredNPAs: Math.round((country.totalNPAs * country.npaCoverage) / 100),
+    }));
 
   if (!query) return countries;
 
@@ -418,9 +421,12 @@ const mainCountries = computed(() => {
 const otherCountries = computed(() => {
   if (!props.report?.file1.countries) return [];
 
-  return props.report.file1.countries.filter(
-    (country) => country.countryCode !== 'US' && country.countryCode !== 'CA'
-  );
+  return props.report.file1.countries
+    .filter((country) => country.countryCode !== 'US' && country.countryCode !== 'CA')
+    .map((country) => ({
+      ...country,
+      coveredNPAs: Math.round((country.totalNPAs * country.npaCoverage) / 100),
+    }));
 });
 
 // Filtered other countries based on the specific filter for that section
@@ -491,7 +497,12 @@ function expandMatchingSections() {
         if (!expandedStates.has(country.countryCode)) {
           expandedStates.set(country.countryCode, new Set<string>());
         }
-        expandedStates.get(country.countryCode).add(state.stateCode);
+
+        // Add a null check before accessing the Set
+        const stateSet = expandedStates.get(country.countryCode);
+        if (stateSet) {
+          stateSet.add(state.stateCode);
+        }
       }
     }
 

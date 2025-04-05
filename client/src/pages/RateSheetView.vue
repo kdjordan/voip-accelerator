@@ -246,7 +246,7 @@
     </div>
 
     <!-- Preview Modal -->
-    <PreviewModal2
+    <PreviewModal
       v-if="showPreviewModal"
       :show-modal="showPreviewModal"
       :columns="columns"
@@ -275,7 +275,7 @@ import {
   ChevronUpIcon,
 } from '@heroicons/vue/24/outline';
 import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
-import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
+import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { RF_COLUMN_ROLE_OPTIONS, ChangeCode } from '@/types/domains/rate-sheet-types';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';

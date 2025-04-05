@@ -6,7 +6,6 @@ import type {
   AZStandardizedData,
 } from '@/types/domains/az-types';
 import type { DomainStore, ReportType } from '@/types';
-import { storageConfig } from '@/config/storage-config';
 
 export const useAzStore = defineStore('az', {
   state: () => ({
@@ -84,7 +83,7 @@ export const useAzStore = defineStore('az', {
     },
 
     isUsingMemoryStorage: () => {
-      return storageConfig.storageType === 'memory';
+      return true; // Always use memory storage since config was removed
     },
 
     getInMemoryData: (state) => (tableName: string) => {

@@ -8,7 +8,6 @@ import type {
 } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 import type { DomainStore } from '@/types';
-import { storageConfig } from '@/config/storage-config';
 
 export const useUsStore = defineStore('usStore', {
   state: () => ({
@@ -92,7 +91,7 @@ export const useUsStore = defineStore('usStore', {
       },
 
     isUsingMemoryStorage: () => {
-      return storageConfig.storageType === 'memory';
+      return true; // Always use memory storage since config was removed
     },
 
     getFileStats: (state) => (componentId: string) => {

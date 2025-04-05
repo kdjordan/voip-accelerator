@@ -458,10 +458,10 @@
           </div>
         </div>
       </div>
-    </div>
+    </div>    
 
     <!-- New Preview Modal -->
-    <PreviewModal2
+    <PreviewModal
       v-if="showPreviewModal"
       :showModal="showPreviewModal"
       :columns="columns"
@@ -490,9 +490,10 @@ import {
   DocumentIcon,
 } from '@heroicons/vue/24/outline';
 import { getCountryName } from '@/types/constants/country-codes';
-import { getStateName, STATE_CODES, PROVINCE_CODES } from '@/types/constants/state-codes';
+import { getStateName, STATE_CODES } from '@/types/constants/state-codes';
+import { PROVINCE_CODES } from '@/types/constants/province-codes';
 import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/domains/lerg-types';
-import PreviewModal2 from '@/components/shared/PreviewModal2.vue';
+import PreviewModal from '@/components/shared/PreviewModal.vue';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 
@@ -634,7 +635,7 @@ function formatNumber(num: number): string {
   return new Intl.NumberFormat().format(num);
 }
 
-function formatDate(date: string | null): string {
+function formatDate(date: Date | string | null): string {
   if (!date) return 'Never';
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',

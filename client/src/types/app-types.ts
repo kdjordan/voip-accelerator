@@ -74,6 +74,7 @@ export interface BasePreviewModalEmits {
   'update:mappings': [mappings: Record<string, string>];
   'update:valid': [isValid: boolean];
   'update:start-line': [startLine: number];
+  'update:indeterminate-definition': [definition: string];
   confirm: [mappings: Record<string, string>, ...any[]];
   cancel: [];
 }
@@ -120,6 +121,7 @@ export interface DomainStore<P, C, I> {
   getCodeReport: C | null;
   getEnhancedCodeReport: any | null;
   getFileNameByComponent: (componentId: string) => string;
+  getFileDataByComponent: (componentId: string) => any[];
   getNumberOfFilesUploaded: number;
   hasExistingFile: (fileName: string) => boolean;
   hasInvalidRows: (fileName: string) => boolean;

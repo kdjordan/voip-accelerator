@@ -1,9 +1,12 @@
-import { type AZStandardizedData, type InvalidAzRow, type AzCodeReport } from '@/types/domains/az-types';
+import {
+  type AZStandardizedData,
+  type InvalidAzRow,
+  type AzCodeReport,
+} from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import Papa from 'papaparse';
 import { StorageService, useStorage } from '@/services/storage/storage.service';
-import { storageConfig } from '@/config/storage-config';
 
 export class AZService {
   private store = useAzStore();
@@ -24,7 +27,7 @@ export class AZService {
    * Check if we're using in-memory storage
    */
   private isUsingMemoryStorage(): boolean {
-    return storageConfig.storageType === 'memory';
+    return true;
   }
 
   async processFile(
@@ -63,7 +66,11 @@ export class AZService {
                   destName,
                   dialCode,
                   invalidRate: rateStr || '',
-                  reason: isNaN(rate) ? 'Invalid rate' : !destName ? 'Missing destination name' : 'Missing dial code',
+                  reason: isNaN(rate)
+                    ? 'Invalid rate'
+                    : !destName
+                    ? 'Missing destination name'
+                    : 'Missing dial code',
                 };
                 this.store.addInvalidRow(file.name, invalidRow);
               } else {
@@ -80,7 +87,9 @@ export class AZService {
               if (this.isUsingMemoryStorage()) {
                 // Store in-memory
                 this.store.storeInMemoryData(tableName, validRecords);
-                console.log(`[AZService] Stored ${validRecords.length} records in memory for table: ${tableName}`);
+                console.log(
+                  `[AZService] Stored ${validRecords.length} records in memory for table: ${tableName}`
+                );
               } else {
                 // Store using IndexedDB
                 await this.storageService.storeData(tableName, validRecords);
@@ -88,11 +97,11 @@ export class AZService {
             }
 
             this.store.addFileUploaded(file.name, tableName);
-            
+
             // Get the correct component ID based on which upload zone is being used
             // We need to check the filesUploaded map to determine the correct component ID
             let componentId = '';
-            
+
             // Check if this file was just added to az1 or az2
             if (this.store.getFileNameByComponent('az1') === file.name) {
               componentId = 'az1';
@@ -102,18 +111,18 @@ export class AZService {
               // If we can't determine the component ID, default to az1 if it's empty
               componentId = this.store.getFileNameByComponent('az1') ? 'az2' : 'az1';
             }
-            
+
             console.log(`[AZService] Determined component ID for ${file.name}: ${componentId}`);
-            
+
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
-            
+
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
             reject(error);
           }
         },
-        error: error => reject(new Error(`Failed to process CSV: ${error.message}`)),
+        error: (error) => reject(new Error(`Failed to process CSV: ${error.message}`)),
       });
     });
   }
@@ -125,25 +134,25 @@ export class AZService {
     try {
       const tableName = fileName.toLowerCase().replace('.csv', '');
       const data = await this.getData(tableName);
-      
+
       if (!data || data.length === 0) return;
-      
+
       // Calculate stats
       const totalCodes = data.length;
-      const uniqueDestinations = new Set(data.map(item => item.destName)).size;
+      const uniqueDestinations = new Set(data.map((item) => item.destName)).size;
       const uniquePercentage = ((uniqueDestinations / totalCodes) * 100).toFixed(2);
-      
+
       // Update store
       this.store.setFileStats(componentId, {
         totalCodes,
         totalDestinations: uniqueDestinations,
-        uniqueDestinationsPercentage: parseFloat(uniquePercentage)
+        uniqueDestinationsPercentage: parseFloat(uniquePercentage),
       });
-      
+
       console.log(`[AZService] Updated file stats for ${componentId} (${fileName}):`, {
         totalCodes,
         totalDestinations: uniqueDestinations,
-        uniqueDestinationsPercentage: parseFloat(uniquePercentage)
+        uniqueDestinationsPercentage: parseFloat(uniquePercentage),
       });
     } catch (error) {
       console.error('Error calculating file stats:', error);
@@ -173,18 +182,18 @@ export class AZService {
       // Find the component ID associated with this table
       const fileName = tableName + '.csv';
       let componentId = '';
-      
+
       if (this.store.getFileNameByComponent('az1') === fileName) {
         componentId = 'az1';
       } else if (this.store.getFileNameByComponent('az2') === fileName) {
         componentId = 'az2';
       }
-      
+
       if (componentId) {
         // Clear file stats for this component
         this.store.clearFileStats(componentId);
       }
-      
+
       if (this.isUsingMemoryStorage()) {
         // Remove from in-memory
         this.store.removeInMemoryData(tableName);
@@ -206,7 +215,9 @@ export class AZService {
       if (this.isUsingMemoryStorage()) {
         // Get from in-memory
         const data = this.store.getInMemoryData(tableName);
-        console.log(`[AZService] Retrieved ${data.length} records from in-memory table: ${tableName}`);
+        console.log(
+          `[AZService] Retrieved ${data.length} records from in-memory table: ${tableName}`
+        );
         return data;
       } else {
         // Get from database
@@ -260,41 +271,28 @@ export class AZService {
    * This will migrate all data between strategies
    */
   async switchStorageStrategy(newStrategy: 'memory' | 'indexeddb'): Promise<void> {
-    if (newStrategy === storageConfig.storageType) {
-      console.log(`[AZService] Already using ${newStrategy} strategy, no change needed`);
+    if (newStrategy === 'memory') {
+      console.log(`[AZService] Already using memory strategy, no change needed`);
       return;
     }
 
-    console.log(`[AZService] Switching storage strategy from ${storageConfig.storageType} to ${newStrategy}`);
-    
+    console.log(`[AZService] Switching storage strategy from memory to ${newStrategy}`);
+
     try {
-      if (newStrategy === 'memory') {
-        // Switching from IndexedDB to memory
-        // First, get all data from IndexedDB
-        await this.initializeStorage();
-        const tables = await this.storageService.listTables();
-        
-        // For each table, get the data and store it in memory
-        for (const tableName of Object.keys(tables)) {
-          const data = await this.storageService.getData(tableName);
-          this.store.storeInMemoryData(tableName, data);
-          console.log(`[AZService] Migrated ${data.length} records from IndexedDB to memory for table: ${tableName}`);
-        }
-      } else {
-        // Switching from memory to IndexedDB
-        // First, get all in-memory tables
-        const tables = this.store.getInMemoryTables;
-        
-        // For each table, get the data and store it in IndexedDB
-        for (const tableName of Object.keys(tables)) {
-          const data = this.store.getInMemoryData(tableName);
-          await this.storageService.storeData(tableName, data);
-          console.log(`[AZService] Migrated ${data.length} records from memory to IndexedDB for table: ${tableName}`);
-        }
+      // Switching from memory to IndexedDB
+      // First, get all in-memory tables
+      const tables = this.store.getInMemoryTables;
+
+      // For each table, get the data and store it in IndexedDB
+      for (const tableName of Object.keys(tables)) {
+        const data = this.store.getInMemoryData(tableName);
+        await this.storageService.storeData(tableName, data);
+        console.log(
+          `[AZService] Migrated ${data.length} records from memory to IndexedDB for table: ${tableName}`
+        );
       }
-      
+
       // Update the storage config
-      storageConfig.storageType = newStrategy;
       console.log(`[AZService] Storage strategy switched to ${newStrategy}`);
     } catch (error) {
       console.error(`Failed to switch storage strategy to ${newStrategy}:`, error);
