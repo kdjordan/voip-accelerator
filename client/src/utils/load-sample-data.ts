@@ -1,7 +1,6 @@
 import { DBName, type DBNameType } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
-import useDexieDB from '@/composables/useDexieDB';
 import { AZService } from '@/services/az.service';
 import { USService } from '@/services/us.service';
 import { USColumnRole } from '@/types/domains/us-types';
@@ -68,16 +67,15 @@ function processUSCsvData(csvText: string): string {
 }
 
 export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
-  const { storeInDexieDB } = useDexieDB();
   const azStore = useAzStore();
   const usStore = useUsStore();
-  const azService = new AZService();
-  const usService = new USService();
 
   try {
     console.log('Starting sample deck loading for:', dbNames);
 
     if (dbNames.includes(DBName.AZ)) {
+      const azService = new AZService();
+
       // Load AZ-Test1.csv data
       const azTestFile = 'AZ-Test1.csv';
       const azTestResponse = await fetch(`/src/data/sample/${azTestFile}`);
@@ -90,20 +88,33 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
         rate: 2, // Index of rate column
       };
 
-      const result = await azService.processFile(azTestBlob, columnMapping, 1);
-      await azStore.addFileUploaded('az1', result.fileName);
+      try {
+        console.log(`Processing ${azTestFile}...`);
+        const result = await azService.processFile(azTestBlob, columnMapping, 1);
+        console.log(`Sample data loaded for ${azTestFile}: ${result.records.length} records`);
+        await azStore.addFileUploaded('az1', result.fileName);
+      } catch (error) {
+        console.error(`Error loading sample data for ${azTestFile}:`, error);
+      }
 
       // Load AZ-Test2.csv data
       const azTest2File = 'AZ-Test2.csv';
       const azTest2Response = await fetch(`/src/data/sample/${azTest2File}`);
       const azTest2Blob = new File([await azTest2Response.blob()], azTest2File);
 
-      const result2 = await azService.processFile(azTest2Blob, columnMapping, 1);
-      await azStore.addFileUploaded('az2', result2.fileName);
+      try {
+        console.log(`Processing ${azTest2File}...`);
+        const result2 = await azService.processFile(azTest2Blob, columnMapping, 1);
+        console.log(`Sample data loaded for ${azTest2File}: ${result2.records.length} records`);
+        await azStore.addFileUploaded('az2', result2.fileName);
+      } catch (error) {
+        console.error(`Error loading sample data for ${azTest2File}:`, error);
+      }
     }
 
     if (dbNames.includes(DBName.US)) {
       console.log('Loading US sample data');
+      const usService = new USService();
 
       // Load first US test file - UStest.csv
       const usTestFile = 'UStest.csv';
