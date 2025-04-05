@@ -54,7 +54,7 @@ You are an expert in **TypeScript**, **Node.js**, **Vite**, **Vue 3 (Composition
 - Use **TypeScript everywhere**
 - Prefer `interface` over `type` (better for extension and declaration merging)
 - **Avoid `enum`** — use object maps for type safety and runtime flexibility
-- Never inline types in components or services — place all types in `types/`
+- Never add types or interfaces in components or services — place all types in `types/` and in their appropriate folders/subfolders
 - Use `function` keyword (not arrow funcs) for standalone/pure functions
 
 ---

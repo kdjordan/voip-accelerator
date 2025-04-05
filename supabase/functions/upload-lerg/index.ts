@@ -71,11 +71,13 @@ serve(async (req) => {
 
     console.log(`[upload-lerg] Processing ${records.length} records`);
 
-    // Clear existing LERG data
+    // Clear existing LERG data using DELETE instead of RPC
     console.log("[upload-lerg] Truncating existing LERG data");
-    const { error: truncateError } = await supabaseClient.rpc(
-      "truncate_lerg_codes"
-    );
+    const { error: truncateError } = await supabaseClient
+      .from("lerg_codes")
+      .delete()
+      .neq("npa", "000"); // This will delete all records
+
     if (truncateError) {
       console.error("[upload-lerg] Error truncating table:", truncateError);
       throw truncateError;
@@ -97,19 +99,36 @@ serve(async (req) => {
         }/${Math.ceil(records.length / CHUNK_SIZE)}`
       );
 
-      const { error: insertError } = await supabaseClient
-        .from("lerg_codes")
-        .insert(chunk);
+      try {
+        const { error: insertError } = await supabaseClient
+          .from("lerg_codes")
+          .insert(chunk);
 
-      if (insertError) {
-        console.error("[upload-lerg] Error inserting records:", insertError);
-        throw insertError;
+        if (insertError) {
+          console.error("[upload-lerg] Error inserting records:", {
+            error: insertError,
+            chunk: chunk.length,
+            firstRecord: chunk[0],
+          });
+          throw insertError;
+        }
+
+        totalProcessed += chunk.length;
+        console.log(
+          `[upload-lerg] Progress: ${totalProcessed}/${records.length} records processed`
+        );
+
+        // Add a small delay between chunks to prevent rate limiting
+        if (i + CHUNK_SIZE < records.length) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      } catch (err) {
+        console.error("[upload-lerg] Chunk insertion failed:", {
+          chunkIndex: Math.floor(i / CHUNK_SIZE) + 1,
+          error: err,
+        });
+        throw err;
       }
-
-      totalProcessed += chunk.length;
-      console.log(
-        `[upload-lerg] Progress: ${totalProcessed}/${records.length} records processed`
-      );
     }
 
     const result = {
@@ -134,6 +153,7 @@ serve(async (req) => {
           err instanceof Error
             ? err.message
             : "An error occurred during upload",
+        details: err,
       }),
       {
         status: 500,

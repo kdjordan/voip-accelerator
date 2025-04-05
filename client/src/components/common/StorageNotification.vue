@@ -128,13 +128,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { StorageType } from '@/config/storage-config';
-
-export type NotificationType = 'info' | 'success' | 'warning' | 'error';
-
-export interface NotificationAction {
-  label: string;
-  handler: () => void;
-}
+import { NotificationType, NotificationAction } from '@/types/components/common-types';
 
 interface Props {
   title?: string;

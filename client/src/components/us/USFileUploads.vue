@@ -344,9 +344,7 @@ import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDragDrop } from '@/composables/useDragDrop';
 import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
-
-// First, define a type for component IDs to ensure type safety
-type ComponentId = 'us1' | 'us2';
+import { ComponentId } from '@/types/components/file-upload-types';
 
 const usStore = useUsStore();
 const service = new USService();

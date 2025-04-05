@@ -1,0 +1,77 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+The LERG stores all information related to what NPAs are accociated with all +1 countries.
+Furthermore, what country and state/province and NPA belongs to.
+
+***The United States***
+The United States ('US' country in LERG) is the only entitiy that will have states - there are 51 as defined in @state-codes.ts. 
+All of these state abbreviations should mapped to their full names using @state-codes.ts
+ALl states should be contained in a 'US States' expandable section.
+Each state should also be expandable, and when open should show all NPAs for that state.
+
+***Canada***
+Canada ('CA' country in LERG) is the only country with provinces and those are defined in @province-codes.ts
+Like the US - Canada should have it's own expandable section.
+Instead of states, all Provinces should have their own expandable sections.
+When open - the NPAs for a particular province should be visible
+
+***All other countries***
+All other countries defined in @country-codes.ts should be listed in their own expnadable content sections.
+When open we should see the NPAs associated with those countries.
+
+***known issues***
+We have struggled in the past with the differentiation with the abbreviation 'CA'.
+CA is california in the United States.
+CA is the country abbreviation for Canada as well.
+We need to do all initial filtering for country and then find states and provinces for 'US' and 'CA'
+All other countries can be avoided for those unique operations.
+
+# Implementation Plan
+
+## 1. Data Structure Setup
+- [ ] Define interfaces for LERG data in Pinia store
+  - [ ] Create CountryNPAMap type for general countries
+  - [ ] Create USStateNPAMap type for US states
+  - [ ] Create CanadaProvinceNPAMap type for Canadian provinces
+  - [ ] Create LERGState interface combining all maps
+
+## 2. Pinia Store Implementation
+- [ ] Create base store with state interface
+- [ ] Implement getters:
+  - [ ] getUSStatesWithNPAs (returns state -> NPAs mapping)
+  - [ ] getCanadianProvincesWithNPAs (returns province -> NPAs mapping)
+  - [ ] getOtherCountriesWithNPAs (returns country -> NPAs mapping)
+  - [ ] getTotalNPACount (returns total count across all maps)
+  - [ ] getCountryCount (returns count of unique countries)
+
+## 3. Data Processing Pipeline
+- [ ] Create initialization routine:
+  - [ ] Load data from Dexie on app start
+  - [ ] Process raw LERG data into country maps
+  - [ ] Handle 'CA' ambiguity by processing US data first
+  - [ ] Create separate maps for US states and Canadian provinces
+  - [ ] Create map for remaining countries
+
+## 4. Filtering Implementation
+- [ ] Add filter capabilities to store:
+  - [ ] Filter by country name/code
+  - [ ] Filter by state/province name/code
+  - [ ] Filter by NPA
+  - [ ] Implement composite filters
+
+## 5. Component Integration
+- [ ] Update AdminView.vue to use new store structure:
+  - [ ] Replace existing computed properties with new getters
+  - [ ] Implement filtering UI
+  - [ ] Update expandable sections to use new data structure
+  - [ ] Add loading states for data processing
+
+## 6. Testing & Validation
+- [ ] Test data processing pipeline
+- [ ] Verify 'CA' disambiguation works correctly
+- [ ] Test filtering functionality
+- [ ] Validate expandable sections work as expected
+- [ ] Performance testing with large datasets 

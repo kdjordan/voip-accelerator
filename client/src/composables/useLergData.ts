@@ -92,9 +92,9 @@ export function useLergData() {
       console.log('📄 Reading and parsing CSV file...');
       const fileText = await file.text();
 
-      // Parse CSV with Papa Parse
-      const { data: csvData, errors } = Papa.parse<CSVRow>(fileText, {
-        header: true,
+      // Parse CSV with Papa Parse - without headers
+      const { data: csvData, errors } = Papa.parse<string[]>(fileText, {
+        header: false,
         skipEmptyLines: true,
         transform: (value) => value.trim(),
       });
@@ -110,10 +110,6 @@ export function useLergData() {
       const mappings = options?.mappings || {};
       console.log('📋 Using column mappings:', mappings);
 
-      // Get the available columns from the CSV
-      const csvColumns = Object.keys(csvData[0] || {});
-      console.log('📑 CSV columns:', csvColumns);
-
       // Find the indices for our required fields
       const npaIndex = Object.entries(mappings).find(
         ([_, val]) => val.toUpperCase() === 'NPA'
@@ -125,7 +121,7 @@ export function useLergData() {
         ([_, val]) => val.toUpperCase() === 'COUNTRY'
       )?.[0];
 
-      console.log('🔍 Found indices:', { npaIndex, stateIndex, countryIndex });
+      console.log('🔍 Found column indices:', { npaIndex, stateIndex, countryIndex });
 
       if (!npaIndex || !stateIndex || !countryIndex) {
         console.error('❌ Missing required mappings:', {
@@ -137,18 +133,38 @@ export function useLergData() {
         throw new Error('Required mappings (NPA, State, Country) not found');
       }
 
+      // Skip header row if specified
+      const startLine = options?.startLine || 0;
+      const dataRows = startLine > 0 ? csvData.slice(startLine) : csvData;
+
       // Process and deduplicate records
       console.log('🔄 Processing and deduplicating records...');
       const uniqueRecords = new Map<string, LERGRecord>();
 
-      for (const row of csvData) {
-        // Get values by numeric index
-        const values = Object.values(row);
-        const npa = values[parseInt(npaIndex)]?.trim();
-        const state = values[parseInt(stateIndex)]?.trim();
-        const country = values[parseInt(countryIndex)]?.trim();
+      for (const row of dataRows) {
+        const npa = row[parseInt(npaIndex)]?.trim();
+        const state = row[parseInt(stateIndex)]?.trim();
+        const country = row[parseInt(countryIndex)]?.trim();
 
         if (npa && state && country) {
+          // Validate NPA format (3 digits)
+          if (!/^[0-9]{3}$/.test(npa)) {
+            console.warn('⚠️ Skipping invalid NPA:', npa);
+            continue;
+          }
+
+          // Validate state (2 characters)
+          if (state.length !== 2) {
+            console.warn('⚠️ Skipping invalid state:', state);
+            continue;
+          }
+
+          // Validate country (2 characters)
+          if (country.length !== 2) {
+            console.warn('⚠️ Skipping invalid country:', country);
+            continue;
+          }
+
           if (!uniqueRecords.has(npa)) {
             uniqueRecords.set(npa, {
               npa,
@@ -160,7 +176,9 @@ export function useLergData() {
       }
 
       const records = Array.from(uniqueRecords.values());
-      console.log(`✨ Processed ${records.length} unique records`);
+      console.log(
+        `✨ Processed ${records.length} unique records from ${dataRows.length} total rows`
+      );
 
       // Send to edge function
       console.log('🚀 Sending records to edge function...');
