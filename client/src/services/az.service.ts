@@ -6,42 +6,26 @@ import {
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import Papa from 'papaparse';
-import { StorageService, useStorage } from '@/services/storage/storage.service';
+import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
 
 export class AZService {
   private store = useAzStore();
-  private storageService: StorageService<AZStandardizedData>;
 
   constructor() {
-    console.log('Initializing AZ service');
-    this.storageService = useStorage<AZStandardizedData>(DBName.AZ);
-    this.initializeStorage();
+    console.log('Initializing simplified AZ service');
   }
 
-  async initializeStorage(): Promise<StorageService<AZStandardizedData>> {
-    await this.storageService.initialize();
-    return this.storageService;
-  }
-
-  /**
-   * Check if we're using in-memory storage
-   */
-  private isUsingMemoryStorage(): boolean {
-    return true;
-  }
-
+  // Process file and store directly in Dexie
   async processFile(
     file: File,
     columnMapping: Record<string, number>,
     startLine: number
   ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
     const tableName = file.name.toLowerCase().replace('.csv', '');
+    const { storeInDexieDB } = useDexieDB();
 
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
-
-    // Ensure storage is initialized
-    await this.initializeStorage();
 
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
@@ -82,18 +66,12 @@ export class AZService {
               }
             });
 
-            // Store valid records based on storage strategy
+            // Store directly in Dexie - no storage strategy conditional logic
             if (validRecords.length > 0) {
-              if (this.isUsingMemoryStorage()) {
-                // Store in-memory
-                this.store.storeInMemoryData(tableName, validRecords);
-                console.log(
-                  `[AZService] Stored ${validRecords.length} records in memory for table: ${tableName}`
-                );
-              } else {
-                // Store using IndexedDB
-                await this.storageService.storeData(tableName, validRecords);
-              }
+              await storeInDexieDB(validRecords, DBName.AZ, tableName);
+              console.log(
+                `[AZService] Stored ${validRecords.length} records in Dexie for table: ${tableName}`
+              );
             }
 
             this.store.addFileUploaded(file.name, tableName);
@@ -161,15 +139,12 @@ export class AZService {
 
   async clearData(): Promise<void> {
     try {
-      if (this.isUsingMemoryStorage()) {
-        // Clear in-memory data
-        this.store.clearAllInMemoryData();
-        console.log('[AZService] Cleared all in-memory data');
-      } else {
-        // Clear database data
-        await this.initializeStorage();
-        await this.storageService.clearAllData();
-      }
+      // Use Dexie directly to delete the database
+      const { deleteDatabase } = useDexieDB();
+      await deleteDatabase(DBName.AZ);
+      console.log('[AZService] Cleared all Dexie data for AZ');
+
+      // Reset the file tracking in the store
       this.store.resetFiles();
     } catch (error) {
       console.error('Failed to clear AZ data:', error);
@@ -194,16 +169,14 @@ export class AZService {
         this.store.clearFileStats(componentId);
       }
 
-      if (this.isUsingMemoryStorage()) {
-        // Remove from in-memory
-        this.store.removeInMemoryData(tableName);
-        console.log(`[AZService] Removed in-memory table: ${tableName}`);
-      } else {
-        // Remove from database
-        await this.initializeStorage();
-        await this.storageService.removeData(tableName);
+      // Use DexieDB directly
+      const { getDB } = useDexieDB();
+      const db = await getDB(DBName.AZ);
+
+      if (db.hasStore(tableName)) {
+        await db.deleteStore(tableName);
+        console.log(`Table ${tableName} removed successfully from Dexie`);
       }
-      console.log(`Table ${tableName} removed successfully`);
     } catch (error) {
       console.error(`Failed to remove table ${tableName}:`, error);
       throw error;
@@ -212,18 +185,11 @@ export class AZService {
 
   async getData(tableName: string): Promise<AZStandardizedData[]> {
     try {
-      if (this.isUsingMemoryStorage()) {
-        // Get from in-memory
-        const data = this.store.getInMemoryData(tableName);
-        console.log(
-          `[AZService] Retrieved ${data.length} records from in-memory table: ${tableName}`
-        );
-        return data;
-      } else {
-        // Get from database
-        await this.initializeStorage();
-        return await this.storageService.getData(tableName);
-      }
+      // Get data directly from Dexie
+      const { loadFromDexieDB } = useDexieDB();
+      const data = await loadFromDexieDB<AZStandardizedData>(DBName.AZ, tableName);
+      console.log(`[AZService] Retrieved ${data.length} records from Dexie table: ${tableName}`);
+      return data;
     } catch (error) {
       console.error(`Failed to get data from table ${tableName}:`, error);
       throw error;
@@ -232,16 +198,16 @@ export class AZService {
 
   async getRecordCount(tableName: string): Promise<number> {
     try {
-      if (this.isUsingMemoryStorage()) {
-        // Count from in-memory
-        const count = this.store.getInMemoryDataCount(tableName);
-        console.log(`[AZService] Count for in-memory table ${tableName}: ${count}`);
+      // Count records directly from Dexie
+      const { getDB } = useDexieDB();
+      const db = await getDB(DBName.AZ);
+
+      if (db.hasStore(tableName)) {
+        const count = await db.table(tableName).count();
+        console.log(`[AZService] Count for Dexie table ${tableName}: ${count}`);
         return count;
-      } else {
-        // Count from database
-        await this.initializeStorage();
-        return await this.storageService.getCount(tableName);
       }
+      return 0;
     } catch (error) {
       console.error(`Failed to get record count for table ${tableName}:`, error);
       return 0;
@@ -250,53 +216,21 @@ export class AZService {
 
   async listTables(): Promise<Record<string, number>> {
     try {
-      if (this.isUsingMemoryStorage()) {
-        // List in-memory tables
-        const tables = this.store.getInMemoryTables;
-        console.log(`[AZService] Listed ${Object.keys(tables).length} in-memory tables`);
-        return tables;
-      } else {
-        // List database tables
-        await this.initializeStorage();
-        return await this.storageService.listTables();
+      // Get all tables and their counts directly from Dexie
+      const { getDB } = useDexieDB();
+      const db = await getDB(DBName.AZ);
+
+      const result: Record<string, number> = {};
+      for (const table of db.tables) {
+        const count = await table.count();
+        result[table.name] = count;
       }
+
+      console.log(`[AZService] Listed ${Object.keys(result).length} Dexie tables`);
+      return result;
     } catch (error) {
       console.error('Failed to list tables:', error);
       return {};
-    }
-  }
-
-  /**
-   * Switch storage strategy at runtime
-   * This will migrate all data between strategies
-   */
-  async switchStorageStrategy(newStrategy: 'memory' | 'indexeddb'): Promise<void> {
-    if (newStrategy === 'memory') {
-      console.log(`[AZService] Already using memory strategy, no change needed`);
-      return;
-    }
-
-    console.log(`[AZService] Switching storage strategy from memory to ${newStrategy}`);
-
-    try {
-      // Switching from memory to IndexedDB
-      // First, get all in-memory tables
-      const tables = this.store.getInMemoryTables;
-
-      // For each table, get the data and store it in IndexedDB
-      for (const tableName of Object.keys(tables)) {
-        const data = this.store.getInMemoryData(tableName);
-        await this.storageService.storeData(tableName, data);
-        console.log(
-          `[AZService] Migrated ${data.length} records from memory to IndexedDB for table: ${tableName}`
-        );
-      }
-
-      // Update the storage config
-      console.log(`[AZService] Storage strategy switched to ${newStrategy}`);
-    } catch (error) {
-      console.error(`Failed to switch storage strategy to ${newStrategy}:`, error);
-      throw error;
     }
   }
 }
