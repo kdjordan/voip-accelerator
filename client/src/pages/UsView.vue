@@ -41,25 +41,23 @@ import USEnhancedCodeReport from '@/components/us/USEnhancedCodeReport.vue';
 import { useUsStore } from '@/stores/us-store';
 import { ReportTypes } from '@/types/app-types';
 import { onMounted } from 'vue';
-import {
-  lergFacadeService,
-  OperationStatus,
-  ErrorSource,
-  type ErrorInfo,
-} from '@/services/lerg-facade.service';
+import { useLergData } from '@/composables/useLergData';
 import { loadSampleDecks } from '@/utils/load-sample-data';
 import { DBName } from '@/types/app-types';
 
 const usStore = useUsStore();
+const { ping, error } = useLergData();
 
 onMounted(async () => {
   try {
-    console.log('UsView mounted, loading sample data...');
-    // Using direct access to the state property
-    await loadSampleDecks([DBName.US]);
-    console.log('Sample data loaded successfully');
+    console.log('UsView mounted, checking LERG data status...');
+    const isOnline = await ping();
+    if (!isOnline) {
+      console.warn('LERG data is not available');
+    }
+    console.log('LERG data status checked successfully');
   } catch (error) {
-    console.error('Failed to load sample data:', error);
+    console.error('Failed to check LERG data status:', error);
   }
 });
 
@@ -68,7 +66,7 @@ onMounted(async () => {
  */
 function formatErrorMessage(
   error: Error,
-  source?: ErrorSource,
+  source?: string,
   details?: Record<string, any>
 ): {
   message: string;
@@ -77,27 +75,7 @@ function formatErrorMessage(
 } {
   let message = error.message || 'An unknown error occurred';
   let detailsMessage = '';
-  let sourceLabel = '';
-
-  // Add source-specific context
-  if (source) {
-    switch (source) {
-      case ErrorSource.API:
-        sourceLabel = 'API Error';
-        message = `Server communication error: ${message}`;
-        break;
-      case ErrorSource.DATABASE:
-        sourceLabel = 'Database Error';
-        message = `Database error: ${message}`;
-        break;
-      case ErrorSource.NETWORK:
-        sourceLabel = 'Network Error';
-        message = `Network error: ${message}`;
-        break;
-      default:
-        sourceLabel = 'System Error';
-    }
-  }
+  let sourceLabel = source || 'System Error';
 
   // Add details if available
   if (details) {
