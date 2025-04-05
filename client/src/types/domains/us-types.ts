@@ -234,3 +234,40 @@ export interface USNonMatchingCode {
   };
   file: string;
 }
+
+/**
+ * State for US file upload components
+ */
+export interface USFileUploadState {
+  isGeneratingReports: boolean;
+  showPreviewModal: boolean;
+  previewData: string[][];
+  columns: string[];
+  startLine: number;
+  activeComponent: 'us1' | 'us2';
+  isModalValid: boolean;
+  columnMappings: Record<string, string>;
+  uploadError: Record<'us1' | 'us2', string | null>;
+}
+
+/**
+ * Props and emits for US preview modal component
+ */
+export interface USPreviewModalProps {
+  showModal: boolean;
+  columns: string[];
+  startLine: number;
+  previewData: string[][];
+  columnOptions: Array<{ value: string; label: string; required?: boolean }>;
+  validateRequired?: boolean;
+  source?: 'US' | 'US_RATE_DECK';
+}
+
+export interface USPreviewModalEmits {
+  'update:mappings': [mappings: Record<string, string>];
+  'update:valid': [isValid: boolean];
+  'update:start-line': [startLine: number];
+  'update:indeterminate-definition': [definition: string];
+  confirm: [mappings: Record<string, string>, indeterminateDefinition?: string];
+  cancel: [];
+}

@@ -37,7 +37,7 @@ serve(async (req) => {
     console.log("[get-lerg-data] Querying lerg_codes table");
     const { data: lergData, error: lergError } = await supabaseClient
       .from("lerg_codes")
-      .select("npa, state, country")
+      .select("npa, state, country, last_updated")
       .order("npa");
 
     if (lergError) {
@@ -74,11 +74,21 @@ serve(async (req) => {
       throw lastUpdatedError;
     }
 
+    // Process the records to include timestamp information
+    console.log("[get-lerg-data] Processing records to include timestamps");
+    const lastUpdated = lastUpdatedData?.[0]?.last_updated || null;
+
+    // Add timestamp to each record if it doesn't already have one
+    const processedData = lergData.map((record: any) => ({
+      ...record,
+      last_updated: record.last_updated || lastUpdated,
+    }));
+
     const result = {
-      data: lergData,
+      data: processedData,
       stats: {
         totalRecords: countData,
-        lastUpdated: lastUpdatedData?.[0]?.last_updated || null,
+        lastUpdated: lastUpdated,
       },
     };
 

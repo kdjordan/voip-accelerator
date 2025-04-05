@@ -151,3 +151,39 @@ export interface AzPricingReport {
   sameRates: RateComparison[];
   nonMatchingCodes: NonMatchingCode[];
 }
+
+/**
+ * State for AZ file upload components
+ */
+export interface AZFileUploadState {
+  isGeneratingReports: boolean;
+  showPreviewModal: boolean;
+  previewData: string[][];
+  columns: string[];
+  startLine: number;
+  activeComponent: 'az1' | 'az2';
+  isModalValid: boolean;
+  columnMappings: Record<string, string>;
+  uploadError: Record<'az1' | 'az2', string | null>;
+}
+
+/**
+ * Props and emits for AZ preview modal component
+ */
+export interface AZPreviewModalProps {
+  showModal: boolean;
+  columns: string[];
+  startLine: number;
+  previewData: string[][];
+  columnOptions: Array<{ value: string; label: string; required?: boolean }>;
+  validateRequired?: boolean;
+  source?: 'AZ' | 'AZ_RATE_DECK';
+}
+
+export interface AZPreviewModalEmits {
+  'update:mappings': [mappings: Record<string, string>];
+  'update:valid': [isValid: boolean];
+  'update:start-line': [startLine: number];
+  confirm: [mappings: Record<string, string>];
+  cancel: [];
+}

@@ -2,7 +2,15 @@ import { ref } from 'vue';
 import { LergService } from '@/services/lerg.service';
 import { supabase } from '@/utils/supabase';
 import { useLergStore } from '@/stores/lerg-store';
-import type { LERGRecord, StateNPAMapping, CountryLergData } from '@/types/domains/lerg-types';
+import type {
+  LERGRecord,
+  StateNPAMapping,
+  CountryLergData,
+  NPAEntry,
+  USStateNPAMap,
+  CanadaProvinceNPAMap,
+  CountryNPAMap,
+} from '@/types/domains/lerg-types';
 import Papa from 'papaparse';
 
 interface CSVRow {
@@ -82,7 +90,21 @@ export function useLergData() {
         if (lergData?.data?.length) {
           console.log(`✅ Found ${lergData.data.length} existing LERG records`);
           console.log('📝 Initializing local database...');
-          await lergService.initializeLergTable(lergData.data);
+
+          // Extract the last_updated timestamp from the first record
+          const lastUpdated = lergData.data[0]?.last_updated
+            ? new Date(lergData.data[0].last_updated)
+            : new Date();
+
+          console.log('Last updated from server:', lastUpdated);
+
+          // Set each record's last_updated field
+          const recordsWithTimestamp = lergData.data.map((record: LERGRecord) => ({
+            ...record,
+            last_updated: lastUpdated,
+          }));
+
+          await lergService.initializeLergTable(recordsWithTimestamp);
           await updateStoreData();
         }
         return lergData;
@@ -207,7 +229,21 @@ export function useLergData() {
       if (lergData?.data?.length) {
         console.log(`📊 Received ${lergData.data.length} LERG records`);
         console.log('💾 Initializing local database...');
-        await lergService.initializeLergTable(lergData.data);
+
+        // Extract the last_updated timestamp from the first record or use current date
+        const lastUpdated = lergData.data[0]?.last_updated
+          ? new Date(lergData.data[0].last_updated)
+          : new Date();
+
+        console.log('Last updated from server:', lastUpdated);
+
+        // Set each record's last_updated field
+        const recordsWithTimestamp = lergData.data.map((record: LERGRecord) => ({
+          ...record,
+          last_updated: lastUpdated,
+        }));
+
+        await lergService.initializeLergTable(recordsWithTimestamp);
         await updateStoreData();
         console.log('✅ Local database updated successfully');
       }
@@ -256,16 +292,13 @@ export function useLergData() {
       isLoading.value = true;
       error.value = null;
 
-      const isAvailable = await checkEdgeFunctionStatus();
-      if (!isAvailable) {
-        throw new Error('Edge functions are not available');
-      }
-
-      const { error: clearError } = await supabase.functions.invoke('clear-lerg-data');
-      if (clearError) throw new Error(clearError.message);
-
-      await lergService.clearLergData();
+      // Clear the store
       lergStore.clearLergData();
+
+      // Clear IndexedDB
+      await lergService.clearLergData();
+
+      return { success: true };
     } catch (err) {
       console.error('LERG clear error:', err);
       error.value = err instanceof Error ? err.message : 'Failed to clear LERG data';
@@ -324,10 +357,47 @@ export function useLergData() {
       const { stateMapping, countryData, count } = await lergService.getProcessedData();
       const { lastUpdated } = await lergService.getLastUpdatedTimestamp();
 
-      lergStore.setStateNPAs(stateMapping);
-      lergStore.setCountryData(countryData);
-      lergStore.setLergStats(count, lastUpdated);
-      lergStore.setLergLocallyStored(true);
+      console.log('Last updated timestamp from service:', lastUpdated);
+
+      // Convert stateMapping to USStateNPAMap for US states
+      const usStates = new Map<string, NPAEntry[]>();
+      const canadaProvinces = new Map<string, NPAEntry[]>();
+      const otherCountries = new Map<string, NPAEntry[]>();
+
+      // Process state mappings for US and Canadian provinces
+      Object.entries(stateMapping).forEach(([stateCode, npas]) => {
+        if (stateCode.length === 2) {
+          const npasWithMeta: NPAEntry[] = npas.map((npa) => ({ npa }));
+
+          if (lergService.isUSState(stateCode)) {
+            usStates.set(stateCode, npasWithMeta);
+          } else if (lergService.isCanadianProvince(stateCode)) {
+            canadaProvinces.set(stateCode, npasWithMeta);
+          }
+        }
+      });
+
+      // Process country data for other countries
+      countryData
+        .filter((country) => country.country !== 'US' && country.country !== 'CA')
+        .forEach((country) => {
+          otherCountries.set(
+            country.country,
+            country.npas.map((npa) => ({ npa }))
+          );
+        });
+
+      // Set data in the store using new methods
+      lergStore.setUSStates(usStates);
+      lergStore.setCanadaProvinces(canadaProvinces);
+      lergStore.setOtherCountries(otherCountries);
+
+      // Update timestamp (now in stats) and status
+      lergStore.setLastUpdated(lastUpdated ? new Date(lastUpdated) : null);
+      lergStore.setProcessing(false);
+      lergStore.setLoaded(true);
+      lergStore.updateStats();
+
       isInitialized.value = true;
     } catch (err) {
       console.error('Store update error:', err);
