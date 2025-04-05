@@ -658,13 +658,6 @@ export class LergService {
     try {
       const db = await this.getConnection();
 
-      // Check for meta table first (newer versions)
-      const metaTable = db.table('meta');
-      if (metaTable) {
-        const meta = await metaTable.get('lastUpdated');
-        return { lastUpdated: meta?.value || null };
-      }
-
       // Fall back to getting the timestamp from the first record
       const lergTable = db.table('lerg');
       const firstRecord = await lergTable.limit(1).first();

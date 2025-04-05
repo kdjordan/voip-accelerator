@@ -1,0 +1,186 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# LERG Upload via Supabase Edge Function (.mdc)
+
+## Overview
+This document outlines the **refactored approach** to uploading and processing LERG files using **Supabase Edge Functions** and **Supabase Postgres** in place of the legacy Express API + custom database layer.
+
+The new architecture eliminates server-side Express routing in favor of **Supabase Edge Functions** that parse and insert LERG data into the hosted Supabase Postgres database. Users will upload a CSV file to the Edge Function, which will:
+
+1. Parse the CSV according to user-defined column mappings.
+2. Validate and transform each row.
+3. Insert clean records into the `lerg_codes` table.
+4. Return status and record count.
+
+On the **client-side**, the user initiates the upload via `fetch()` and afterward pulls the inserted data down into **IndexedDB** for local use.
+
+---
+
+## Supabase Table Schema: `lerg_codes`
+
+```sql
+CREATE TABLE lerg_codes (
+  npa TEXT PRIMARY KEY,
+  state TEXT NOT NULL,
+  country TEXT NOT NULL,
+  last_updated TIMESTAMP DEFAULT now()
+);
+```
+
+---
+
+## Edge Function Approach
+
+### Endpoint
+`/functions/v1/upload-lerg`
+
+### Upload Flow
+1. **Client-side** uses `FormData` to send:
+   - File (`.csv`)
+   - Mappings JSON (column index -> key)
+   - Optional `startLine` (to skip headers)
+
+2. **Edge Function**:
+   - Accepts the upload.
+   - Reads and parses the content.
+   - Transforms lines using `mappings`.
+   - Validates NPAs, states, and countries.
+   - Batches and inserts rows via Supabase JS Client.
+
+3. **Returns** JSON summary:
+   - `processedRecords`
+   - `totalRecords`
+   - `skippedRecords`
+   - Any parsing or insertion errors
+
+---
+
+## Example Edge Function (Deno + Supabase JS)
+
+```ts
+// /supabase/functions/upload-lerg/index.ts
+import { serve } from 'std/server';
+import { createClient } from '@supabase/supabase-js';
+
+interface LERGRecord {
+  npa: string;
+  state: string;
+  country: string;
+  last_updated: string;
+}
+
+function parseLine(line: string, mappings: Record<string, string>): LERGRecord | null {
+  const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+
+  const npa = parts[parseInt(getKey(mappings, 'npa'))];
+  const state = parts[parseInt(getKey(mappings, 'state'))];
+  const country = parts[parseInt(getKey(mappings, 'country'))];
+
+  if (!/^[0-9]{3}$/.test(npa)) return null;
+  if (!state || state.length !== 2) return null;
+  if (!country || country.length !== 2) return null;
+
+  return {
+    npa,
+    state,
+    country,
+    last_updated: new Date().toISOString(),
+  };
+}
+
+function getKey(mappings: Record<string, string>, field: string): string {
+  const entry = Object.entries(mappings).find(([_, v]) => v.toLowerCase() === field);
+  return entry ? entry[0] : '-1';
+}
+
+serve(async (req) => {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
+
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    const mappings = JSON.parse(formData.get('mappings') as string);
+    const startLine = parseInt(formData.get('startLine') as string || '0');
+
+    const text = await file.text();
+    const lines = text.split(/\r?\n/);
+
+    let valid: LERGRecord[] = [];
+    let total = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      if (i + 1 < startLine) continue;
+      total++;
+      const record = parseLine(lines[i], mappings);
+      if (record) valid.push(record);
+      else skipped++;
+    }
+
+    const BATCH_SIZE = 1000;
+    for (let i = 0; i < valid.length; i += BATCH_SIZE) {
+      const batch = valid.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from('lerg_codes').upsert(batch, { onConflict: 'npa' });
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    }
+
+    return new Response(
+      JSON.stringify({ processedRecords: valid.length, totalRecords: total, skipped }),
+      { status: 200 }
+    );
+  } catch (e) {
+    console.error('[upload-lerg] Error:', e);
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+  }
+});
+```
+
+---
+
+## Client-Side Example Upload
+
+```ts
+async function uploadLergFile(file: File, mappings: Record<string, string>, startLine = 1) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mappings', JSON.stringify(mappings));
+  formData.append('startLine', String(startLine));
+
+  const res = await fetch('/functions/v1/upload-lerg', {
+    method: 'POST',
+    body: formData,
+  });
+
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || 'LERG upload failed');
+  return result;
+}
+```
+
+---
+
+## Next Steps
+
+- ✅ Replace Express endpoint `/admin/lerg/upload` with Supabase Edge Function
+- ✅ Store parsed records in `lerg_codes` Postgres table
+- ✅ Keep LERG parsing logic server-side
+- ✅ Fetch down to IndexedDB for client access after upload
+
+---
+
+## Optional Enhancements
+
+- [ ] Store the raw uploaded file in Supabase Storage
+- [ ] Record logs or error rows into a separate audit table
+- [ ] Use `Supabase Functions Auth Middleware` to restrict to `superadmin` roles only
+- [ ] Expose a read-only endpoint `/lerg-data` with cache headers for fast fetch by users
+
+---
+
+Let me know when you're ready to implement or test this!

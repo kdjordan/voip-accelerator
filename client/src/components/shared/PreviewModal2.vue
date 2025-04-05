@@ -200,19 +200,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { USColumnRole } from '@/types/domains/us-types';
-import { PREVIEW_MODAL_MESSAGES, type PreviewModalSource } from '@/types/constants/messages';
+import { PREVIEW_MODAL_MESSAGES } from '@/types/constants/messages';
+import { PreviewModalProps, PreviewModalEmits } from '@/types/components/preview-modal-types';
 
-interface Props {
-  showModal: boolean;
-  columns: string[];
-  startLine: number;
-  previewData: string[][];
-  columnOptions: Array<{ value: string; label: string; required?: boolean }>;
-  validateRequired?: boolean;
-  source?: PreviewModalSource;
-}
-
-const props = defineProps<Props>();
+const props = defineProps<PreviewModalProps>();
 const startLine = ref(props.startLine);
 const indeterminateRateDefinition = ref('column');
 const showValidationErrors = ref(false);
@@ -257,14 +248,7 @@ watch(startLine, (newValue) => {
   emit('update:start-line', newValue);
 });
 
-const emit = defineEmits<{
-  'update:mappings': [mappings: Record<string, string>];
-  'update:valid': [isValid: boolean];
-  'update:start-line': [startLine: number];
-  'update:indeterminate-definition': [definition: string];
-  confirm: [mappings: Record<string, string>, indeterminateDefinition?: string];
-  cancel: [];
-}>();
+const emit = defineEmits<PreviewModalEmits>();
 
 const mappings = ref<Record<string, string>>({});
 
