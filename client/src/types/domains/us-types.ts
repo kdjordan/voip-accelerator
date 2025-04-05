@@ -170,6 +170,7 @@ export interface USCountryBreakdown {
   countryName: string;
   npaCoverage: number;
   totalNPAs: number;
+  npas: string[];
   states?: USStateBreakdown[]; // For US and Canada
 }
 

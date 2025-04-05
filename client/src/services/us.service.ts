@@ -3,7 +3,6 @@ import { DBName } from '@/types/app-types';
 import { useUsStore } from '@/stores/us-store';
 import Papa from 'papaparse';
 import { StorageService, useStorage } from '@/services/storage/storage.service';
-import { storageConfig } from '@/config/storage-config';
 import { useLergStore } from '@/stores/lerg-store';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
 
@@ -55,7 +54,7 @@ export class USService {
    * Check if we're using in-memory storage
    */
   private isUsingMemoryStorage(): boolean {
-    return storageConfig.storageType === 'memory';
+    return true;
   }
 
   async processFile(
@@ -384,36 +383,20 @@ export class USService {
    * This will migrate all data between strategies
    */
   async switchStorageStrategy(newStrategy: 'memory' | 'indexeddb'): Promise<void> {
-    if (newStrategy === storageConfig.storageType) {
+    if (newStrategy === 'memory') {
       return;
     }
 
     try {
-      if (newStrategy === 'memory') {
-        // Switching from IndexedDB to memory
-        // First, get all data from IndexedDB
-        await this.initializeStorage();
-        const tables = await this.storageService.listTables();
+      // Switching from memory to IndexedDB
+      // First, get all in-memory tables
+      const tables = this.store.getInMemoryTables;
 
-        // For each table, get the data and store it in memory
-        for (const tableName of Object.keys(tables)) {
-          const data = await this.storageService.getData(tableName);
-          this.store.storeInMemoryData(tableName, data);
-        }
-      } else {
-        // Switching from memory to IndexedDB
-        // First, get all in-memory tables
-        const tables = this.store.getInMemoryTables;
-
-        // For each table, get the data and store it in IndexedDB
-        for (const tableName of Object.keys(tables)) {
-          const data = this.store.getInMemoryData(tableName);
-          await this.storageService.storeData(tableName, data);
-        }
+      // For each table, get the data and store it in IndexedDB
+      for (const tableName of Object.keys(tables)) {
+        const data = this.store.getInMemoryData(tableName);
+        await this.storageService.storeData(tableName, data);
       }
-
-      // Update the storage config
-      storageConfig.storageType = newStrategy;
     } catch (error) {
       console.error(`Failed to switch storage strategy to ${newStrategy}:`, error);
       throw error;

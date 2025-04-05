@@ -916,7 +916,15 @@ onMounted(() => {
   console.log('today', new Date().toISOString().split('T')[0]);
   const savedSettings = store.getEffectiveDateSettings;
   if (savedSettings) {
-    effectiveDateSettings.value = { ...savedSettings };
+    // Cast the saved settings to ensure correct types
+    effectiveDateSettings.value = {
+      same: savedSettings.same as 'today' | 'tomorrow' | 'custom',
+      increase: savedSettings.increase as 'today' | 'tomorrow' | 'week' | 'custom',
+      decrease: savedSettings.decrease as 'today' | 'tomorrow' | 'custom',
+      sameCustomDate: savedSettings.sameCustomDate,
+      increaseCustomDate: savedSettings.increaseCustomDate,
+      decreaseCustomDate: savedSettings.decreaseCustomDate,
+    };
   }
   initWorker();
 

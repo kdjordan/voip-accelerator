@@ -202,6 +202,7 @@ function createCountryBreakdown(
     countryName,
     npaCoverage,
     totalNPAs: countryLergData.npaCount,
+    npas: Array.from(countryNPAs),
     states: stateBreakdowns.length > 0 ? stateBreakdowns : undefined,
   };
 }

@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 ---
 description: Migration plan and feature parity checklist for replacing Express backend with Supabase and edge functions

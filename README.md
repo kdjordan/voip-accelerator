@@ -20,21 +20,36 @@ A modern web application for managing and analyzing VoIP (Voice over Internet Pr
 
 
 
+
 ```
 voip-accelerator
+├─ .cursor
+│  └─ rules
+│     ├─ api-design.mdc
+│     ├─ auth.mdc
+│     ├─ backend-rafactor.mdc
+│     ├─ coding-rules.mdc
+│     ├─ lerg-data-process.mdc
+│     ├─ lerg-edge-approach.mdc.mdc
+│     ├─ overview.mdc
+│     ├─ refactor-lerg-facade.mdc
+│     ├─ roadmap.mdc
+│     └─ supabase.mdc
 ├─ .cursorrules
-├─ CURRENT.md
-├─ FEATURES.md
 ├─ LERG_PROCESS.md
 ├─ README.md
 ├─ client
 │  ├─ .cursor
 │  │  └─ rules
+│  │     ├─ data-sync-strategy.mdc
+│  │     ├─ lerg-management.mdc
+│  │     ├─ performance-optimization.mdc
 │  │     └─ rule-claude-sonnet-37.mdc
+│  ├─ .prettierrc
 │  ├─ components.json
 │  ├─ env.d.ts
+│  ├─ eslint.config.js
 │  ├─ index.html
-│  ├─ package-lock 2.json
 │  ├─ package-lock.json
 │  ├─ package.json
 │  ├─ postcss.config.js
@@ -58,15 +73,12 @@ voip-accelerator
 │  │  │  │  ├─ AZFileUploads.vue
 │  │  │  │  ├─ AZPricingReport.vue
 │  │  │  │  └─ AzCodeSummary.vue
-│  │  │  ├─ common
-│  │  │  │  ├─ MemoryMonitor.vue
-│  │  │  │  └─ StorageNotification.vue
 │  │  │  ├─ home
 │  │  │  │  └─ FeatureCards.vue
 │  │  │  ├─ rate-sheet
 │  │  │  │  └─ RateSheetTable.vue
 │  │  │  ├─ shared
-│  │  │  │  ├─ PreviewModal2.vue
+│  │  │  │  ├─ PreviewModal.vue
 │  │  │  │  ├─ ReportTable.vue
 │  │  │  │  ├─ SideNav.vue
 │  │  │  │  ├─ TheFooter.vue
@@ -76,12 +88,18 @@ voip-accelerator
 │  │  │  │     └─ UploadIcon.vue
 │  │  │  └─ us
 │  │  │     ├─ USCodeReport.vue
+│  │  │     ├─ USCodeSummary.vue
 │  │  │     ├─ USContentHeader.vue
+│  │  │     ├─ USEnhancedCodeReport.vue
 │  │  │     ├─ USFileUploads.vue
 │  │  │     └─ USPricingReport.vue
 │  │  ├─ composables
-│  │  │  └─ useDexieDB.ts
+│  │  │  ├─ useDexieDB.ts
+│  │  │  ├─ useDragDrop.ts
+│  │  │  ├─ useLergData.ts
+│  │  │  └─ usePingStatus.ts
 │  │  ├─ config
+│  │  │  ├─ sample-data-config.ts
 │  │  │  └─ storage-config.ts
 │  │  ├─ data
 │  │  │  ├─ lerg.csv
@@ -103,18 +121,16 @@ voip-accelerator
 │  │  │  └─ index.ts
 │  │  ├─ services
 │  │  │  ├─ az.service.ts
-│  │  │  ├─ lerg-api.service.ts
-│  │  │  ├─ lerg-facade.service.ts
 │  │  │  ├─ lerg.service.ts
 │  │  │  ├─ rate-sheet.service.ts
 │  │  │  ├─ storage
 │  │  │  │  ├─ dexie-strategy.ts
 │  │  │  │  ├─ storage-factory.ts
 │  │  │  │  ├─ storage-strategy.ts
-│  │  │  │  ├─ storage-test-utils.ts
 │  │  │  │  ├─ storage.service.ts
 │  │  │  │  └─ store-strategy.ts
 │  │  │  └─ us.service.ts
+│  │  ├─ shims-vue.d.ts
 │  │  ├─ stores
 │  │  │  ├─ az-store.ts
 │  │  │  ├─ db-store.ts
@@ -124,6 +140,7 @@ voip-accelerator
 │  │  │  └─ us-store.ts
 │  │  ├─ types
 │  │  │  ├─ app-types.ts
+│  │  │  ├─ components
 │  │  │  ├─ constants
 │  │  │  │  ├─ country-codes.ts
 │  │  │  │  ├─ index.ts
@@ -138,16 +155,21 @@ voip-accelerator
 │  │  │  │  ├─ rate-sheet-types.ts
 │  │  │  │  └─ us-types.ts
 │  │  │  ├─ index.ts
+│  │  │  ├─ supabase-types.ts
 │  │  │  └─ user-types.ts
 │  │  ├─ utils
 │  │  │  ├─ cleanup.ts
 │  │  │  ├─ load-sample-data.ts
+│  │  │  ├─ prepare-worker-data.ts
+│  │  │  ├─ supabase.ts
 │  │  │  └─ utils.ts
 │  │  └─ workers
 │  │     ├─ az-code-report.worker.ts
 │  │     ├─ az-comparison.worker.ts
 │  │     ├─ effective-date-updater.worker.ts
-│  │     └─ generate-reports.ts
+│  │     ├─ generate-reports.ts
+│  │     ├─ us-code-report.worker.ts
+│  │     └─ us-comparison.worker.ts
 │  ├─ tailwind.config.js
 │  ├─ tests
 │  │  ├─ az-comparison.worker.edge.test.ts
@@ -159,38 +181,28 @@ voip-accelerator
 │  ├─ vite
 │  ├─ vite.config.ts
 │  └─ vitest.config.ts
-├─ docs
-│  └─ STORAGE_STRATEGY.md
+├─ lerg-data-process.mdc
 ├─ prompts.txt
-├─ screenshots
-│  └─ shot-1.png
-├─ server
-│  ├─ .npmrc
-│  ├─ data
-│  ├─ logs
-│  ├─ migrations
-│  │  ├─ 001_create_lerg_table.sql
-│  │  └─ index.ts
-│  ├─ package-lock 2.json
-│  ├─ package-lock.json
-│  ├─ package.json
-│  ├─ src
-│  │  ├─ db
-│  │  │  └─ migrations
-│  │  ├─ index.ts
-│  │  ├─ middleware
-│  │  │  └─ admin-auth.middleware.ts
-│  │  ├─ routes
-│  │  │  ├─ admin.routes.ts
-│  │  │  ├─ auth.routes.ts
-│  │  │  └─ lerg.routes.ts
-│  │  ├─ services
-│  │  │  ├─ database.service.ts
-│  │  │  ├─ lerg-file.processor.ts
-│  │  │  └─ lerg.service.ts
-│  │  └─ types
-│  │     └─ lerg.types.ts
-│  └─ tsconfig.json
+├─ supabase
+│  ├─ .branches
+│  │  └─ _current_branch
+│  ├─ .temp
+│  │  ├─ cli-latest
+│  │  ├─ gotrue-version
+│  │  ├─ pooler-url
+│  │  ├─ postgres-version
+│  │  └─ rest-version
+│  ├─ config.toml
+│  └─ functions
+│     ├─ README.md
+│     ├─ get-lerg-data
+│     │  └─ index.ts
+│     ├─ import_map.json
+│     ├─ ping-status
+│     │  └─ index.ts
+│     └─ upload-lerg
+│        └─ index.ts
+├─ test-ping-status.sh
 └─ tests
    ├─ az-comparison.test.ts
    ├─ integration

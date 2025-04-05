@@ -7,6 +7,9 @@ import type {
   LERGStateInterface,
   StateWithNPAs,
   CountryLergData,
+  NpaMap,
+  CountryNpaMap,
+  CountryStateNpaMap,
 } from '@/types/domains/lerg-types';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
 import { STATE_CODES } from '@/types/constants/state-codes';
@@ -32,6 +35,13 @@ export const useLergStore = defineStore('lerg', {
       canadaTotalNPAs: 0,
       lastUpdated: null,
     },
+
+    // Legacy compatibility properties
+    npaRecords: new Map(),
+    countriesMap: new Map(),
+    countryStateMap: new Map(),
+    stateNPAs: {},
+    countryData: [],
   }),
 
   actions: {
@@ -407,6 +417,119 @@ export const useLergStore = defineStore('lerg', {
       }
 
       return countries.sort((a, b) => b.npaCount - a.npaCount);
+    },
+
+    /**
+     * Get total number of US NPAs
+     */
+    getTotalUSNPAs: (state): number => {
+      return state.stats.usTotalNPAs;
+    },
+
+    /**
+     * Get state information by NPA
+     */
+    getStateByNpa: (state) => (npa: string) => {
+      // Check US states first
+      for (const [stateCode, npas] of state.usStates.entries()) {
+        if (npas.some((entry) => entry.npa === npa)) {
+          return { country: 'US', state: stateCode };
+        }
+      }
+
+      // Check Canadian provinces next
+      for (const [provinceCode, npas] of state.canadaProvinces.entries()) {
+        if (npas.some((entry) => entry.npa === npa)) {
+          return { country: 'CA', state: provinceCode };
+        }
+      }
+
+      // Check other countries
+      for (const [countryCode, npas] of state.otherCountries.entries()) {
+        if (npas.some((entry) => entry.npa === npa)) {
+          return { country: countryCode, state: '' };
+        }
+      }
+
+      return null;
+    },
+
+    /**
+     * Get country by NPA
+     */
+    getCountryByNpa: (state) => (npa: string) => {
+      // Check US states first
+      for (const npas of state.usStates.values()) {
+        if (npas.some((entry) => entry.npa === npa)) {
+          return 'US';
+        }
+      }
+
+      // Check Canadian provinces next
+      for (const npas of state.canadaProvinces.values()) {
+        if (npas.some((entry) => entry.npa === npa)) {
+          return 'CA';
+        }
+      }
+
+      // Check other countries
+      for (const [countryCode, npas] of state.otherCountries.entries()) {
+        if (npas.some((entry) => entry.npa === npa)) {
+          return countryCode;
+        }
+      }
+
+      return null;
+    },
+
+    /**
+     * Get NPAs by state/province
+     */
+    getNpasByState: (state) => (country: string, stateCode: string) => {
+      const npas = new Set<string>();
+
+      if (country === 'US') {
+        // Get NPAs for US state
+        const stateNpas = state.usStates.get(stateCode);
+        if (stateNpas) {
+          stateNpas.forEach((entry) => npas.add(entry.npa));
+        }
+      } else if (country === 'CA') {
+        // Get NPAs for Canadian province
+        const provinceNpas = state.canadaProvinces.get(stateCode);
+        if (provinceNpas) {
+          provinceNpas.forEach((entry) => npas.add(entry.npa));
+        }
+      }
+
+      return npas;
+    },
+
+    /**
+     * Get NPAs by country
+     */
+    getNpasByCountry: (state) => (countryCode: string) => {
+      const npas = new Set<string>();
+
+      if (countryCode === 'US') {
+        // Get all NPAs for US
+        for (const stateNpas of state.usStates.values()) {
+          stateNpas.forEach((entry) => npas.add(entry.npa));
+        }
+      } else if (countryCode === 'CA') {
+        // Get all NPAs for Canada
+        for (const provinceNpas of state.canadaProvinces.values()) {
+          provinceNpas.forEach((entry) => npas.add(entry.npa));
+        }
+      } else {
+        // Get NPAs for other country
+        const countryNpas = state.otherCountries.get(countryCode);
+        if (countryNpas) {
+          countryNpas.forEach((entry) => npas.add(entry.npa));
+        }
+      }
+
+      return npas;
     },
   },
 });

@@ -199,24 +199,12 @@
         </div>
       </div>
     </div>
-
-    <!-- Storage Strategy Notifications -->
-    <StorageNotification
-      v-if="storageStrategyChanged"
-      :title="strategyNotification.title"
-      :message="strategyNotification.message"
-      :type="strategyNotification.type"
-      @dismissed="storageStrategyChanged = false"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { storageConfig } from '@/config/storage-config';
 import { DBName } from '@/types/app-types';
-import StorageNotification from '@/components/common/StorageNotification.vue';
-import { StorageType } from '@/config/storage-config';
 import { AZService } from '@/services/az.service';
 import { USService } from '@/services/us.service';
 import { useSharedStore } from '@/stores/shared-store';
@@ -300,14 +288,6 @@ const totalIndexedDbRecords = computed(() => {
 
 const totalRecords = computed(() => {
   return totalMemoryRecords.value + totalIndexedDbRecords.value;
-});
-
-// Storage strategy notification state
-const storageStrategyChanged = ref(false);
-const strategyNotification = ref({
-  title: '',
-  message: '',
-  type: 'info' as 'info' | 'warning' | 'success' | 'error',
 });
 
 // Determine module type based on table name
