@@ -8,7 +8,6 @@ import type {
   CountryNpaMap,
   CountryStateNpaMap,
   NpaRecord,
-  LergDataProvider,
 } from '@/types/domains/lerg-types';
 import { computed } from 'vue';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
@@ -26,6 +25,9 @@ export const useLergStore = defineStore('lerg', {
       totalRecords: 0,
       lastUpdated: null,
     },
+    npaRecords: undefined,
+    countriesMap: undefined,
+    countryStateMap: undefined,
   }),
 
   actions: {
@@ -50,7 +52,6 @@ export const useLergStore = defineStore('lerg', {
       this.error = error;
     },
 
-    // New actions for NPA-focused implementation
     setNpaRecords(npaRecords: NpaMap) {
       this.npaRecords = npaRecords;
     },
@@ -63,7 +64,6 @@ export const useLergStore = defineStore('lerg', {
       this.countryStateMap = countryStateMap;
     },
 
-    // Clear all data
     clearLergData() {
       this.stateNPAs = {};
       this.countryData = [];
@@ -73,6 +73,7 @@ export const useLergStore = defineStore('lerg', {
       this.npaRecords = undefined;
       this.countriesMap = undefined;
       this.countryStateMap = undefined;
+      this.error = null;
     },
   },
 
@@ -80,8 +81,6 @@ export const useLergStore = defineStore('lerg', {
     sortedStatesWithNPAs: (state): StateWithNPAs[] => {
       return Object.entries(state.stateNPAs)
         .filter(([code]) => {
-          // Only include US state codes by checking if the code exists in STATE_CODES
-          // This correctly filters out Canadian provinces like ON and QC
           return code in STATE_CODES;
         })
         .map(([code, npas]) => ({
@@ -101,13 +100,10 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getTotalUSNPAs: (state): number => {
-      // Create a Set to ensure we count each NPA only once
       const usNPAs = new Set<string>();
 
-      // Add NPAs only from US states (filtering out country codes except US)
       Object.entries(state.stateNPAs)
         .filter(([code]) => {
-          // Only include US state codes by checking if they exist in STATE_CODES
           return code in STATE_CODES;
         })
         .forEach(([_, npas]) => {
@@ -118,7 +114,6 @@ export const useLergStore = defineStore('lerg', {
     },
 
     getCountryData: (state): CountryLergData[] => {
-      // Get all country codes from stateNPAs (includes countries but not provinces)
       const territoryData = Object.entries(state.stateNPAs)
         .filter(([code]) => COUNTRY_CODES[code])
         .map(([code, npas]) => ({
@@ -127,8 +122,6 @@ export const useLergStore = defineStore('lerg', {
           npas: [...npas].sort(),
         }));
 
-      // Simply combine all country data and let the UI filter as needed
-      // This ensures all countries are available including Canada with provinces
       return [...territoryData, ...state.countryData].sort((a, b) => b.npaCount - a.npaCount);
     },
 
@@ -140,7 +133,6 @@ export const useLergStore = defineStore('lerg', {
 
     getCountryCount: (state): number => state.countryData.length,
 
-    // New getters for NPA-focused implementation
     getNpaRecordByNpa:
       (state) =>
       (npa: string): NpaRecord | undefined => {
@@ -152,7 +144,6 @@ export const useLergStore = defineStore('lerg', {
       (npa: string): { country: string; state: string } | null => {
         if (!state.countryStateMap) return null;
 
-        // Check each country and state for the NPA
         for (const [country, stateMap] of state.countryStateMap.entries()) {
           for (const [stateCode, npas] of stateMap.entries()) {
             if (npas.has(npa)) {
@@ -194,21 +185,14 @@ export const useLergStore = defineStore('lerg', {
         return state.npaRecords?.has(npa) ?? false;
       },
 
-    // NEW GETTERS FOR BETTER US/CA HANDLING
-
-    // Get all distinct US states with their NPAs
     getUSStates: (state): StateWithNPAs[] => {
-      // Check if we have US data in the countryStateMap
       if (!state.countryStateMap?.has('US')) return [];
 
       const usStateMap = state.countryStateMap.get('US');
       if (!usStateMap) return [];
 
-      // Explicitly check each state code against US STATE_CODES
       return Array.from(usStateMap.entries())
         .filter(([stateCode]) => {
-          // Strict check to ensure the code is a valid US state code by checking it exists in STATE_CODES
-          // This will filter out Canadian provinces like MB that might be incorrectly mapped
           return STATE_CODES.hasOwnProperty(stateCode);
         })
         .map(([stateCode, npas]) => ({
@@ -219,18 +203,14 @@ export const useLergStore = defineStore('lerg', {
         .sort((a, b) => b.npas.length - a.npas.length);
     },
 
-    // Get all distinct Canadian provinces with their NPAs
     getCanadianProvinces: (state): StateWithNPAs[] => {
-      // First check if we have Canadian data
       if (!state.countryStateMap?.has('CA')) return [];
 
       const caProvinceMap = state.countryStateMap.get('CA');
       if (!caProvinceMap) return [];
 
-      // Explicitly check each province code against PROVINCE_CODES
       return Array.from(caProvinceMap.entries())
         .filter(([provinceCode]) => {
-          // Strict check to ensure the code is a valid Canadian province by checking PROVINCE_CODES
           return PROVINCE_CODES.hasOwnProperty(provinceCode);
         })
         .map(([provinceCode, npas]) => ({
@@ -241,7 +221,6 @@ export const useLergStore = defineStore('lerg', {
         .sort((a, b) => b.npas.length - a.npas.length);
     },
 
-    // Get all countries (excluding US and CA which are handled separately)
     getDistinctCountries: (state): CountryLergData[] => {
       if (!state.countriesMap) return [];
 
@@ -253,80 +232,6 @@ export const useLergStore = defineStore('lerg', {
           npas: Array.from(npas).sort(),
         }))
         .sort((a, b) => b.npaCount - a.npaCount);
-    },
-
-    // Data provider implementation
-    lergDataProvider: (state): LergDataProvider => {
-      return {
-        getNpaRecord: (npa: string) => state.npaRecords?.get(npa),
-
-        getStateByNpa: (npa: string) => {
-          if (!state.countryStateMap) return null;
-
-          for (const [country, stateMap] of state.countryStateMap.entries()) {
-            for (const [stateCode, npas] of stateMap.entries()) {
-              if (npas.has(npa)) {
-                return { country, state: stateCode };
-              }
-            }
-          }
-          return null;
-        },
-
-        getCountryByNpa: (npa: string) => {
-          if (!state.countriesMap) return null;
-
-          for (const [country, npas] of state.countriesMap.entries()) {
-            if (npas.has(npa)) {
-              return country;
-            }
-          }
-          return null;
-        },
-
-        getNpasByCountry: (country: string) => {
-          return state.countriesMap?.get(country) || new Set<string>();
-        },
-
-        getNpasByState: (country: string, stateCode: string) => {
-          return state.countryStateMap?.get(country)?.get(stateCode) || new Set<string>();
-        },
-
-        isValidNpa: (npa: string) => {
-          return state.npaRecords?.has(npa) ?? false;
-        },
-      };
-    },
-
-    // Method to prepare worker-friendly data
-    getWorkerData: (state) => {
-      if (!state.npaRecords || !state.countriesMap) {
-        return null;
-      }
-
-      // Create serializable data for worker
-      const validNpas = Array.from(state.npaRecords.keys());
-      const npaMappings: Record<string, { country: string; state: string }> = {};
-      const countryGroups: Record<string, string[]> = {};
-
-      // Populate NPA mappings
-      for (const [npa, record] of state.npaRecords.entries()) {
-        npaMappings[npa] = {
-          country: record.country,
-          state: record.state,
-        };
-      }
-
-      // Populate country groups
-      for (const [country, npas] of state.countriesMap.entries()) {
-        countryGroups[country] = Array.from(npas);
-      }
-
-      return {
-        validNpas,
-        npaMappings,
-        countryGroups,
-      };
     },
   },
 });

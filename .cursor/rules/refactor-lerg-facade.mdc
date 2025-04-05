@@ -1,0 +1,92 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Remove LERG facade + api service, migrate to composable-based data flow
+globs:
+  - "src/**/*.ts"
+  - "src/**/*.vue"
+alwaysApply: false
+---
+
+# 🧼 LERG Refactor: Remove Facade Pattern
+
+## 🎯 Goal
+
+Simplify LERG architecture by:
+
+- Removing the `lerg-facade.service.ts` and `lerg-api.service.ts`
+- Replacing all logic with a Dexie-first approach using `LergService` and a new composable `useLergData.ts`
+- Refactoring the `useLergStore` Pinia store to act as a cache of processed Dexie data (not the primary source of truth)
+
+---
+
+## ✅ Step 1: Delete Deprecated Files
+
+- [ ] ❌ Delete `lerg-facade.service.ts`
+- [ ] ❌ Delete `lerg-api.service.ts`
+
+---
+
+## ✅ Step 2: Create `composables/useLergData.ts`
+
+- [ ] Create a new composable with this structure:
+
+```ts
+export function useLergData() {
+  const lergService = LergService.getInstance()
+
+  const uploadLerg = async (file: File, options?: { mappings?: Record<string, string>, startLine?: number }) => {
+    const { data, error } = await supabase.functions.invoke('upload-lerg', {
+      body: {
+        file,
+        mappings: options?.mappings ?? {},
+        startLine: options?.startLine ?? 0,
+      }
+    })
+    if (error) throw new Error(error.message)
+
+    const result = await supabase.functions.invoke('get-lerg-data')
+    if (result.error) throw new Error(result.error.message)
+
+    await lergService.initializeLergTable(result.data.records)
+    return result.data
+  }
+
+  const downloadLerg = async () => {
+    const { data, error } = await supabase.functions.invoke('get-lerg-data')
+    if (error) throw new Error(error.message)
+    await lergService.initializeLergTable(data.records)
+    return data
+  }
+
+  const clearLerg = async () => {
+    await supabase.rpc('truncate_lerg_codes')
+    await lergService.clearLergData()
+  }
+
+  const getProcessed = async () => {e
+    return await lergService.getProcessedData()
+  }
+
+  const getAll = async () => {
+    return await lergService.getAllRecords()
+  }
+
+  const ping = async () => {
+    const { data, error } = await supabase.functions.invoke('ping-status')
+    if (error) return false
+    return data?.status === 'ok'
+  }
+
+  return {
+    uploadLerg,
+    downloadLerg,
+    clearLerg,
+    getProcessed,
+    getAll,
+    ping
+  }
+}

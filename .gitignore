@@ -10,7 +10,20 @@ build
 # Environment
 .env
 .env.local
-.env.*.local
+.env.development
+.env.production
+!.env.example
+client/.env
+client/.env.local
+client/.env.development
+client/.env.production
+!client/.env.example
+
+# Supabase
+/supabase/.env
+/supabase/.env.*
+!/supabase/.env.example
+
 server/logs/*
 
 # Logs

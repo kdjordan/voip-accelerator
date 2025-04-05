@@ -1,11 +1,12 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 ---
 description: Migration plan and feature parity checklist for replacing Express backend with Supabase and edge functions
 globs:
+  - "**/*.ts"
 alwaysApply: false
 ---
 
@@ -13,83 +14,82 @@ alwaysApply: false
 
 ## 🎯 Goal
 
-Replace the legacy Express.js backend with Supabase-hosted services, including:
-
-- **Database**: Supabase Postgres
-- **Auth**: Supabase Auth
-- **APIs**: Supabase Edge Functions
-- **Storage**: Supabase Storage
-- **Admin Controls**: Role-based access (e.g., superadmin-only routes)
+Migrate core backend functionality from Express to Supabase, focusing first on Supabase Edge Functions for LERG data flow and health checks. Authentication and access control will follow in a later phase.
 
 ---
 
-## ✅ Existing Functionality (Express)
+## ✅ Phase 1: Supabase Function Deployment (No Auth Yet)
 
-| Feature                  | Status | Notes                                                  |
-|--------------------------|--------|--------------------------------------------------------|
-| CSV Upload & Parsing     | ✅     | Dexie handles client-side processing                    |
-| LERG Upload & Filtering  | ✅     | Move upload endpoint to Supabase Edge                  |
-| Rate Deck Comparison API| ✅     | Replace with Dexie-driven logic                        |
-| User Auth (Custom)       | ⚠️     | Replace with Supabase Auth                             |
-| Admin Routes             | ✅     | Role check logic in Express → move to Supabase claims  |
-
----
-
-## 🔄 Migration Tasks
-
-### Phase 1: Supabase Setup
-
-- [x] Create Supabase project
-- [x] Configure Supabase Auth (email/password)
-- [x] Migrate `lerg_codes` table to Supabase
-- [x] Create roles: `user`, `superadmin`
-
-### Phase 2: Replace Express Routes
-
-- [ ] Audit existing Express routes
-- [ ] For each route:
-  - [ ] Determine if still needed
-  - [ ] Convert to Supabase Edge Function or move logic to client
-
-**Example Routes to Migrate**:
-
-| Express Route         | Target Destination            | Notes                             |
-|-----------------------|-------------------------------|-----------------------------------|
-| `/upload/lerg`        | `uploadLerg` Edge Function     | `superadmin` only                 |
-| `/compare/az`         | Dexie + client logic           | Local-only comparison             |
-| `/compare/us`         | Dexie + client logic           | Uses LERG sync data               |
-
-### Phase 3: Dexie + Supabase Sync
-
-- [ ] Write client sync logic (Supabase → IndexedDB)
-- [ ] Use `last_updated` to determine changes
-- [ ] Future: Dexie → Supabase sync for uploads
-
-### Phase 4: Deprecate Express
-
-- [ ] Remove `/server` folder from monorepo
-- [ ] Delete unused middleware and utilities
-- [ ] Update dev scripts and README.mdc
+- [x] ⬆️ Deploy `upload-lerg` edge function
+- [x] ⬆️ Deploy `get-lerg-data` edge function
+- [x] ✅ `ping-status` already deployed
+- [x] 🗑️ Delete `hello-world` edge function from Supabase dashboard
+- [x] 🧹 Remove `hello-world` folder locally (`/supabase/functions/hello-world`)
+- [x] 🔍 Add `console.log` statements for debugging in `upload-lerg`
+- [x] 🔍 Add `console.log` statements for debugging in `get-lerg-data`
+- [x] ✅ Verify local function testing with `supabase functions serve`
+- [x] ✅ Run `supabase functions deploy upload-lerg`
+- [x] ✅ Run `supabase functions deploy get-lerg-data`
 
 ---
 
-## 🧩 Edge Function Design
+## 🔗 Phase 2: Client Integration
 
-| Function Name   | Purpose                            |
-|------------------|-------------------------------------|
-| `uploadLerg`     | Admin-only handler for LERG CSV     |
-| `getLergMeta`    | Returns LERG version + metadata     |
-| `pingStatus`     | Simple health check for MCP         |
+- [ ] 🔁 Replace old `/upload/lerg` client call with `upload-lerg` function
+- [ ] 🔁 Replace LERG meta fetch (if any) with `get-lerg-data`
+- [ ] 💾 Use Dexie to store downloaded LERG data from `get-lerg-data`
+- [ ] ⚠️ Add error handling and response checks for `{ data, error }` pattern
+- [ ] ✅ Validate LERG CSV format in frontend before uploading
 
 ---
 
-## 🧠 Agent Notes
+## 🌐 Phase 3: Ping Status Integration
 
-When working on this migration:
+- [ ] 🔄 Use `ping-status` in components that need backend health status
+- [ ] 🔄 Add retry/fallback logic in client if ping fails
+- [ ] ✅ Confirm ping function returns `{ data: { status: 'ok' } }`
 
-- Supabase Edge Functions are `export async function` endpoints
-- Role checks should use Supabase Auth claims (`superadmin`)
-- Replace Express-style routing with individual endpoint files
-- Use Zod or types on the client for validation (no more middleware)
-- Use Supabase Storage or Edge DB access instead of local file uploads
+---
 
+## 🗂️ Phase 4: Supabase Schema & RLS Prep
+
+- [ ] 📦 Create `lerg_codes` table in Supabase
+- [ ] 🔍 Add indexes on `npa`, `nxx`, and `ocn` (or equivalent fields)
+- [ ] 🚧 Add row-level security policy (read-only for now)
+- [ ] 🧪 Verify manual insert via Supabase Studio
+- [ ] ✅ Add `last_updated` column for syncing logic later
+
+---
+
+## 🧠 Phase 5: Deferred (Auth + Roles)
+
+_(To be tackled after LERG + Edge pipeline is working well)_
+
+- [ ] 🔒 Set up Supabase Auth (email/password)
+- [ ] 🎭 Create `superadmin` role and assign to your account
+- [ ] 🛡️ Add role check to `upload-lerg` edge function
+- [ ] 🔐 Lock `get-lerg-data` behind authenticated users
+- [ ] 🔄 Update frontend to support login/session/token
+
+---
+
+## 🧼 Phase 6: Cleanup & Docs
+
+- [ ] 🧹 Remove `/server` folder and all Express code
+- [ ] 🧹 Delete unused middleware/utilities from project
+- [ ] 🧼 Update README.mdc to reflect Supabase-only setup
+- [ ] 🧪 Smoke test all flows:
+  - [ ] Upload CSV via `upload-lerg`
+  - [ ] Download and parse via `get-lerg-data`
+  - [ ] Use Dexie to store and read
+  - [ ] `ping-status` integrated in client
+- [ ] 🏁 Remove Express from `dev` and `build` scripts
+
+---
+
+## 📝 Notes
+
+- Dexie remains the primary client-side DB
+- All edge functions follow `{ data, error }` format
+- Auth will be minimal or disabled for now to allow dev freedom
+- Add console logs in Supabase Edge Functions during early testing
