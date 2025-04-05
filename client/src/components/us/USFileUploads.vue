@@ -344,7 +344,7 @@ import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDragDrop } from '@/composables/useDragDrop';
 import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
-import { ComponentId } from '@/types/components/file-upload-types';
+import { ComponentId } from '@/types/app-types';
 
 const usStore = useUsStore();
 const service = new USService();

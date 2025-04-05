@@ -9,9 +9,9 @@ export interface RateSheetRecord {
 }
 
 export interface EffectiveDateSettings {
-  same: string;
-  increase: string;
-  decrease: string;
+  same: 'today' | 'tomorrow' | 'custom';
+  increase: 'today' | 'tomorrow' | 'week' | 'custom';
+  decrease: 'today' | 'tomorrow' | 'custom';
   sameCustomDate: string;
   increaseCustomDate: string;
   decreaseCustomDate: string;
@@ -123,3 +123,57 @@ export const RF_COLUMN_ROLE_OPTIONS_NEW = {
   minDuration: { label: 'Min Duration', required: false },
   increments: { label: 'Increments', required: false },
 } as const;
+
+/**
+ * Types for the rate sheet table component
+ */
+export interface CustomRateModal {
+  isOpen: boolean;
+  destinationName: string;
+  value: string;
+}
+
+export type ProcessingPhase = 'idle' | 'preparing' | 'processing' | 'updating' | 'finalizing';
+
+export type FilterStatus =
+  | 'all'
+  | 'conflicts'
+  | 'no-conflicts'
+  | 'change-same'
+  | 'change-increase'
+  | 'change-decrease';
+
+export interface PendingUIUpdates {
+  progress?: any;
+  error?: any;
+  result?: any;
+  scheduled?: boolean;
+}
+
+/**
+ * Rate sheet report state types
+ */
+export interface ReportSectionState {
+  expandedRows: Set<string>;
+  expandedSections: {
+    buy: boolean;
+    sell: boolean;
+    same: boolean;
+    unmatched: boolean;
+  };
+  expandedDestinations: {
+    buy: Set<string>;
+    sell: Set<string>;
+    same: Set<string>;
+    unmatched: Set<string>;
+  };
+  searchQuery: string;
+  sortBy: string;
+}
+
+export interface InvalidRowsState {
+  expandedInvalidSections: Record<string, boolean>;
+  expandedDestinations: Record<string, Set<string>>;
+}
+
+export type FileKey = 'file1' | 'file2';

@@ -133,3 +133,38 @@ export interface LergWorkerData {
   npaMappings: Record<string, { country: string; state: string }>;
   countryGroups: Record<string, string[]>;
 }
+
+// LERG Data Processing Implementation Types
+export interface NPAEntry {
+  npa: string;
+  meta?: {
+    lastUpdated?: Date;
+    source?: string;
+  };
+}
+
+// Use Maps instead of plain objects for better performance and type safety
+export type USStateNPAMap = Map<string, NPAEntry[]>;
+export type CanadaProvinceNPAMap = Map<string, NPAEntry[]>;
+export type CountryNPAMap = Map<string, NPAEntry[]>;
+
+export interface LERGStateInterface {
+  // Core data maps
+  usStates: USStateNPAMap;
+  canadaProvinces: CanadaProvinceNPAMap;
+  otherCountries: CountryNPAMap;
+
+  // Status tracking
+  isLoaded: boolean;
+  isProcessing: boolean;
+  error: string | null;
+
+  // Statistics
+  stats: {
+    totalNPAs: number;
+    countriesCount: number;
+    usTotalNPAs: number;
+    canadaTotalNPAs: number;
+    lastUpdated: Date | null;
+  };
+}

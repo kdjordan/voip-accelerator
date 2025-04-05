@@ -10,6 +10,7 @@ import type {
   USCodeReport,
   InvalidUsRow,
 } from '@/types/domains/us-types';
+import type { Component } from 'vue';
 
 // Define a FileStats interface that can be used for both AZ and US
 export interface FileStats {
@@ -21,6 +22,73 @@ export interface FileStats {
   avgInterRate?: number;
   avgIntraRate?: number;
   avgIndetermRate?: number;
+}
+
+// Component identifiers for file upload components
+export type ComponentId = 'az1' | 'az2' | 'us1' | 'us2';
+
+// Shared notification types used across components
+export interface NotificationAction {
+  label: string;
+  handler: () => void;
+}
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+
+/**
+ * Used for feature card layout in the home page
+ */
+export interface FeatureCard {
+  id: number;
+  icon: Component;
+  title: string;
+  description: string;
+  rotate: string;
+  yOffset: string;
+}
+
+/**
+ * Preview state for file uploads
+ */
+export interface PreviewState {
+  data: string[][];
+  columns: string[];
+  startLine: number;
+  indeterminateRateDefinition?: string;
+}
+
+// After the PreviewState interface definition
+/**
+ * Generic PreviewModal props and emits that can be extended by domain-specific ones
+ */
+export interface BasePreviewModalProps {
+  showModal: boolean;
+  columns: string[];
+  startLine: number;
+  previewData: string[][];
+  columnOptions: Array<{ value: string; label: string; required?: boolean }>;
+  validateRequired?: boolean;
+}
+
+export interface BasePreviewModalEmits {
+  'update:mappings': [mappings: Record<string, string>];
+  'update:valid': [isValid: boolean];
+  'update:start-line': [startLine: number];
+  confirm: [mappings: Record<string, string>, ...any[]];
+  cancel: [];
+}
+
+// Generic file upload state type
+export interface BaseFileUploadState {
+  isGeneratingReports: boolean;
+  showPreviewModal: boolean;
+  previewData: string[][];
+  columns: string[];
+  startLine: number;
+  activeComponent: ComponentId;
+  isModalValid: boolean;
+  columnMappings: Record<string, string>;
+  uploadError: Record<ComponentId, string | null>;
 }
 
 // Add this type definition

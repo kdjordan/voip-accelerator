@@ -201,9 +201,12 @@
 import { ref, computed, watch } from 'vue';
 import { USColumnRole } from '@/types/domains/us-types';
 import { PREVIEW_MODAL_MESSAGES } from '@/types/constants/messages';
-import { PreviewModalProps, PreviewModalEmits } from '@/types/components/preview-modal-types';
+import { BasePreviewModalProps, BasePreviewModalEmits } from '@/types/app-types';
 
-const props = defineProps<PreviewModalProps>();
+// Use the base types from app-types.ts
+const props = defineProps<BasePreviewModalProps & { source?: string }>();
+const emit = defineEmits<BasePreviewModalEmits>();
+
 const startLine = ref(props.startLine);
 const indeterminateRateDefinition = ref('column');
 const showValidationErrors = ref(false);
@@ -247,8 +250,6 @@ const filteredPreviewData = computed(() => {
 watch(startLine, (newValue) => {
   emit('update:start-line', newValue);
 });
-
-const emit = defineEmits<PreviewModalEmits>();
 
 const mappings = ref<Record<string, string>>({});
 

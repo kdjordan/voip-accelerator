@@ -4,12 +4,14 @@ interface PingStatus {
   isOnline: boolean;
   error?: string;
   lastChecked: Date;
+  hasLergTable: boolean;
 }
 
 export function usePingStatus() {
   const status = ref<PingStatus>({
     isOnline: false,
     lastChecked: new Date(),
+    hasLergTable: false,
   });
 
   const checkPingStatus = async () => {
@@ -36,12 +38,14 @@ export function usePingStatus() {
       const data = await response.json();
       status.value = {
         isOnline: data.status === 'ok',
+        hasLergTable: data.hasLergTable || false,
         lastChecked: new Date(),
       };
     } catch (error) {
       console.error('Ping status check failed:', error);
       status.value = {
         isOnline: false,
+        hasLergTable: false,
         error: error instanceof Error ? error.message : 'Failed to check ping status',
         lastChecked: new Date(),
       };

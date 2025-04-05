@@ -3,6 +3,8 @@ import type { LERGRecord, StateNPAMapping, CountryLergData } from '@/types/domai
 import { useLergStore } from '@/stores/lerg-store';
 import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';
+import { STATE_CODES } from '@/types/constants/state-codes';
+import { PROVINCE_CODES } from '@/types/constants/province-codes';
 
 /**
  * Custom error types for LERG service operations
@@ -447,23 +449,13 @@ export class LergService {
         console.log('No LERG table found in IndexedDB to clear');
       }
 
-      // Clear store
+      // Clear store using the new clearLergData method
       const store = useLergStore();
-      store.$patch({
-        isProcessing: false,
-        isLocallyStored: false,
-        stateNPAs: {},
-        countryData: [],
-        stats: {
-          totalRecords: 0,
-          lastUpdated: null,
-        },
-      });
+      store.clearLergData();
+      console.log('LERG store cleared');
 
       // Invalidate cache
       this.invalidateCache();
-
-      console.log('LERG store cleared');
     } catch (error) {
       const dataError = error instanceof Error ? error : new Error(String(error));
       throw new LergDataError('Failed to clear LERG data', dataError);
@@ -658,20 +650,24 @@ export class LergService {
     try {
       const db = await this.getConnection();
 
-      // Fall back to getting the timestamp from the first record
+      // Get the timestamp from the first record
       const lergTable = db.table('lerg');
       const firstRecord = await lergTable.limit(1).first();
 
+      const timestamp = firstRecord?.last_updated
+        ? new Date(firstRecord.last_updated).toISOString()
+        : null;
+
+      console.log('Last updated timestamp from database:', timestamp);
+
       return {
-        lastUpdated: firstRecord?.last_updated
-          ? new Date(firstRecord.last_updated).toISOString()
-          : null,
+        lastUpdated: timestamp,
       };
     } catch (error) {
       console.error('Error getting last updated timestamp:', error);
       return { lastUpdated: null };
     } finally {
-      this.releaseConnection();
+      await this.releaseConnection();
     }
   }
 
@@ -699,5 +695,23 @@ export class LergService {
     } finally {
       this.releaseConnection();
     }
+  }
+
+  /**
+   * Check if a state code belongs to the United States
+   * @param stateCode The state code to check
+   * @returns True if the state code belongs to the US
+   */
+  public isUSState(stateCode: string): boolean {
+    return stateCode in STATE_CODES;
+  }
+
+  /**
+   * Check if a province code belongs to Canada
+   * @param provinceCode The province code to check
+   * @returns True if the province code belongs to Canada
+   */
+  public isCanadianProvince(provinceCode: string): boolean {
+    return provinceCode in PROVINCE_CODES;
   }
 }

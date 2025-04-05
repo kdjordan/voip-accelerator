@@ -35,7 +35,7 @@
             <div>
               <div class="flex justify-between items-center">
                 <h3 class="text-gray-400">Total NPA Records</h3>
-                <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalRecords) }}</div>
+                <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalNPAs) }}</div>
               </div>
             </div>
             <!-- Total Countries -->
@@ -48,7 +48,7 @@
             <!-- Database Connection Status -->
             <div>
               <div class="flex justify-between items-center">
-                <h3 class="text-gray-400">Database Status</h3>
+                <h3 class="text-gray-400">LERG DB</h3>
                 <div class="flex items-center space-x-2">
                   <div
                     class="w-3 h-3 rounded-full"
@@ -80,7 +80,7 @@
             <!-- Storage Status -->
             <div>
               <div class="flex justify-between items-center">
-                <h3 class="text-gray-400">Storage Status</h3>
+                <h3 class="text-gray-400">Stored Locally</h3>
                 <div class="flex items-center space-x-2">
                   <div
                     class="w-3 h-3 rounded-full"
@@ -105,10 +105,15 @@
               >
                 <div class="flex justify-between items-center">
                   <span class="font-medium text-lg">US States</span>
-                  <ChevronDownIcon
-                    :class="{ 'transform rotate-180': showStateDetails }"
-                    class="w-5 h-5 transition-transform text-gray-400"
-                  />
+                  <div class="flex items-center space-x-3">
+                    <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                      {{ getUSTotalNPAs }} NPAs
+                    </span>
+                    <ChevronDownIcon
+                      :class="{ 'transform rotate-180': showStateDetails }"
+                      class="w-5 h-5 transition-transform text-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -166,105 +171,111 @@
               </div>
             </div>
 
+            <!-- Canadian Provinces Section -->
+            <div class="bg-gray-900/50">
+              <div
+                @click="toggleCanadianDetails"
+                class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
+              >
+                <div class="flex justify-between items-center">
+                  <span class="font-medium text-lg">Canada</span>
+                  <div class="flex items-center space-x-3">
+                    <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                      {{ getCanadaTotalNPAs }} NPAs
+                    </span>
+                    <ChevronDownIcon
+                      :class="{ 'transform rotate-180': showCanadianDetails }"
+                      class="w-5 h-5 transition-transform text-gray-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="showCanadianDetails" class="border-t border-gray-700/50 p-6 space-y-4">
+                <!-- Show this if no provinces have NPAs -->
+                <div
+                  v-if="store.getCanadianProvinces.length === 0"
+                  class="text-gray-400 text-center p-4"
+                >
+                  No Canadian provinces with NPAs found in LERG data
+                </div>
+
+                <!-- Multi-NPA provinces -->
+                <div
+                  v-for="province in store.getCanadianProvinces.filter((p) => p.npas.length > 1)"
+                  :key="province.code"
+                  class="bg-gray-900/80 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors mb-3"
+                  @click.stop="toggleExpandProvince(province.code)"
+                >
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium text-lg">{{ getStateName(province.code, 'CA') }}</span>
+                    <div class="flex items-center space-x-3">
+                      <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                        {{ province.npas.length }} NPAs
+                      </span>
+                      <ChevronDownIcon
+                        :class="{
+                          'transform rotate-180': expandedProvinces.includes(province.code),
+                        }"
+                        class="w-5 h-5 transition-transform"
+                      />
+                    </div>
+                  </div>
+                  <!-- Expanded NPAs list for provinces -->
+                  <div v-if="expandedProvinces.includes(province.code)" class="mt-3">
+                    <div class="flex flex-wrap gap-2">
+                      <div
+                        v-for="npa in province.npas"
+                        :key="npa"
+                        class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
+                      >
+                        {{ npa }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Single-NPA provinces grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                    v-for="province in store.getCanadianProvinces.filter(
+                      (p) => p.npas.length === 1
+                    )"
+                    :key="province.code"
+                    class="bg-gray-800/50 p-4 rounded-lg"
+                  >
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium text-lg">{{
+                        getStateName(province.code, 'CA')
+                      }}</span>
+                      <span class="text-gray-300">{{ province.npas[0] }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Non-US States Section -->
-            <div class="bg-gray-900/30 rounded-lg overflow-hidden">
+            <div class="bg-gray-900/50">
               <div
                 @click="toggleCountryDetails"
-                class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
+                class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
               >
                 <div class="flex justify-between items-center">
                   <span class="font-medium text-lg">Non-US States</span>
-                  <ChevronDownIcon
-                    :class="{ 'transform rotate-180': showCountryDetails }"
-                    class="w-5 h-5 transition-transform"
-                  />
+                  <div class="flex items-center space-x-3">
+                    <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
+                      {{ getNonUSTotalNPAs }} NPAs
+                    </span>
+                    <ChevronDownIcon
+                      :class="{ 'transform rotate-180': showCountryDetails }"
+                      class="w-5 h-5 transition-transform text-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
               <!-- Non-US States Content -->
-              <div v-if="showCountryDetails" class="p-4 space-y-4">
-                <!-- Canadian Provinces Section -->
-                <div
-                  v-if="store.getCanadianProvinces.length > 0"
-                  class="bg-gray-900/30 rounded-lg overflow-hidden mb-4"
-                >
-                  <div
-                    @click="toggleCanadianDetails"
-                    class="p-4 w-full hover:bg-gray-600/40 transition-colors cursor-pointer"
-                  >
-                    <div class="flex justify-between items-center">
-                      <span class="font-medium text-lg">Canada</span>
-                      <div class="flex items-center space-x-3">
-                        <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-                          {{ getCanadaTotalNPAs }} NPAs
-                        </span>
-                        <ChevronDownIcon
-                          :class="{ 'transform rotate-180': showCanadianDetails }"
-                          class="w-5 h-5 transition-transform"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-if="showCanadianDetails" class="p-4 border-t border-gray-700/50">
-                    <!-- Multi-NPA provinces -->
-                    <div
-                      v-for="province in store.getCanadianProvinces.filter(
-                        (p) => p.npas.length > 1
-                      )"
-                      :key="province.code"
-                      class="bg-gray-800/50 p-4 rounded-lg cursor-pointer hover:bg-gray-600/40 transition-colors mb-3"
-                      @click.stop="toggleExpandProvince(province.code)"
-                    >
-                      <div class="flex justify-between items-center">
-                        <span class="font-medium text-lg">{{
-                          getStateName(province.code, 'CA')
-                        }}</span>
-                        <div class="flex items-center space-x-3">
-                          <span class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
-                            {{ province.npas.length }} NPAs
-                          </span>
-                          <ChevronDownIcon
-                            :class="{
-                              'transform rotate-180': expandedProvinces.includes(province.code),
-                            }"
-                            class="w-5 h-5 transition-transform"
-                          />
-                        </div>
-                      </div>
-                      <!-- Expanded NPAs list for provinces -->
-                      <div v-if="expandedProvinces.includes(province.code)" class="mt-3">
-                        <div class="flex flex-wrap gap-2">
-                          <div
-                            v-for="npa in province.npas"
-                            :key="npa"
-                            class="text-gray-300 bg-gray-700/50 px-3 py-1 rounded"
-                          >
-                            {{ npa }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Single-NPA provinces grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div
-                        v-for="province in store.getCanadianProvinces.filter(
-                          (p) => p.npas.length === 1
-                        )"
-                        :key="province.code"
-                        class="bg-gray-800/50 p-4 rounded-lg"
-                      >
-                        <div class="flex justify-between items-center">
-                          <span class="font-medium text-lg">{{
-                            getStateName(province.code, 'CA')
-                          }}</span>
-                          <span class="text-gray-300">{{ province.npas[0] }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
+              <div v-if="showCountryDetails" class="border-t border-gray-700/50 p-6 space-y-4">
                 <!-- Other Countries Section -->
                 <!-- Full width rows for multi-NPA countries -->
                 <div class="space-y-2">
@@ -507,7 +518,7 @@ const showLergSection = ref(false);
 const showLergDetails = ref(true);
 
 const isLergLocallyStored = computed(() => {
-  return store.$state.isLocallyStored;
+  return store.$state.isLoaded;
 });
 
 // Define interfaces for status objects
@@ -520,9 +531,7 @@ interface UploadStatus {
 
 interface DbStatus {
   connected: boolean;
-  error: string;
-  details: string;
-  lastChecked: Date;
+  error: string | null;
 }
 
 const isDragging = ref(false);
@@ -532,7 +541,7 @@ const dbStatus = computed<{
   connected: boolean;
   error: string | null;
 }>(() => ({
-  connected: isEdgeFunctionAvailable.value && !error.value,
+  connected: pingStatus.value?.hasLergTable === true,
   error: error.value,
 }));
 
@@ -558,7 +567,7 @@ onMounted(async () => {
 
   try {
     // First check if we already have LERG data in the store
-    if (store.stats?.totalRecords > 0) {
+    if (store.stats?.totalNPAs > 0) {
       console.log('LERG data already loaded in store, skipping initialization');
     } else {
       // Check edge function availability first
@@ -581,6 +590,11 @@ onMounted(async () => {
       countryData.map((c) => `${c.country} (${c.npaCount} NPAs)`)
     );
 
+    // Debug info for Canada provinces
+    console.log('Canadian provinces:', store.getCanadianProvinces);
+    console.log('Canadian provinces length:', store.getCanadianProvinces.length);
+    console.log('getCanadaTotalNPAs:', getCanadaTotalNPAs.value);
+
     // Log the filtered data that should appear
     const nonUSMultiNPACountries = countryData.filter(
       (c) => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount > 1
@@ -600,10 +614,12 @@ onMounted(async () => {
 
   // Initial ping check
   await checkPingStatus();
+  console.log('Ping status after check:', pingStatus.value);
 
   // Setup periodic ping checks every 30 seconds
   pingInterval.value = window.setInterval(async () => {
     await checkPingStatus();
+    console.log('Periodic ping status check:', pingStatus.value);
   }, 30000);
 });
 
@@ -703,7 +719,7 @@ async function handleModalConfirm(mappings: Record<string, string>) {
     lergUploadStatus.value = {
       type: 'success',
       message: 'LERG file uploaded successfully',
-      details: `Processed ${store.stats?.totalRecords || 0} records`,
+      details: `Processed ${store.stats?.totalNPAs || 0} records`,
     };
 
     selectedFile.value = null;
@@ -840,6 +856,20 @@ function toggleCanadianDetails() {
 const getCanadaTotalNPAs = computed(() => {
   return store.getCanadianProvinces.reduce((total, province) => {
     return total + province.npas.length;
+  }, 0);
+});
+
+// Computed property to get total US NPAs
+const getUSTotalNPAs = computed(() => {
+  return store.getUSStates.reduce((total, state) => {
+    return total + state.npas.length;
+  }, 0);
+});
+
+// Computed property to get total Non-US NPAs
+const getNonUSTotalNPAs = computed(() => {
+  return store.getDistinctCountries.reduce((total, country) => {
+    return total + country.npaCount;
   }, 0);
 });
 </script>
