@@ -116,34 +116,45 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       console.log('Loading US sample data');
       const usService = new USService();
 
+      // First, clean up any existing data
+      try {
+        await usService.clearData();
+        console.log('Cleared existing US data');
+      } catch (error) {
+        console.error('Error clearing US data:', error);
+      }
+
       // Load first US test file - UStest.csv
       const usTestFile = 'UStest.csv';
       const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
       const usTestBlob = new File([await usTestResponse.blob()], usTestFile);
 
       // Column mapping for UStest.csv based on actual file structure:
-      // prefix, rate (inter), intrastate, intrastate, effective
       const columnMapping1 = {
         npanxx: 0, // prefix is in column 1 (0-based index)
         interstate: 1, // rate (inter) is in column 2
         intrastate: 2, // intrastate is in column 3
         indeterminate: 2, // Using the same intrastate column for indeterminate
+        npa: -1, // Not used if we have npanxx directly
+        nxx: -1, // Not used if we have npanxx directly
       };
 
       console.log('Processing first US test file with column mapping:', columnMapping1);
 
       try {
-        // Clear any existing data for this file
-        const tableName1 = usTestFile.toLowerCase().replace('.csv', '');
-        await usService.removeTable(tableName1);
+        // Clear any existing registration
+        usStore.removeFile('us1');
 
+        // Process the file with the service
         const result1 = await usService.processFile(usTestBlob, columnMapping1, 1);
-        console.log('Result from processing UStest.csv:', result1);
-        await usStore.addFileUploaded('us1', result1.fileName);
-        console.log('First US file loaded successfully:', result1.fileName);
+        console.log(
+          `Sample data for ${usTestFile} loaded successfully: ${result1.records.length} records`
+        );
+
+        // Explicitly register as us1
+        usStore.addFileUploaded('us1', usTestFile);
       } catch (error) {
         console.error('Error processing first US file:', error);
-        throw error;
       }
 
       // Load second US test file - UStest1.csv
@@ -157,20 +168,27 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
         interstate: 1, // rate (inter) is in column 2
         intrastate: 2, // intrastate is in column 3
         indeterminate: 2, // Using the same intrastate column for indeterminate
+        npa: -1, // Not used if we have npanxx directly
+        nxx: -1, // Not used if we have npanxx directly
       };
 
       try {
-        // Clear any existing data for this file
-        const tableName2 = usTest2File.toLowerCase().replace('.csv', '');
-        await usService.removeTable(tableName2);
+        // Clear any existing registration
+        usStore.removeFile('us2');
 
+        // Process the file with the service
         const result2 = await usService.processFile(usTest2Blob, columnMapping2, 1);
-        console.log('Result from processing UStest1.csv:', result2);
-        await usStore.addFileUploaded('us2', result2.fileName);
-        console.log('Second US file loaded successfully:', result2.fileName);
+        console.log(
+          `Sample data for ${usTest2File} loaded successfully: ${result2.records.length} records`
+        );
+
+        // Explicitly register as us2
+        usStore.addFileUploaded('us2', usTest2File);
+
+        // Don't set reportsGenerated = true, let the user click the Get Reports button
+        console.log('Both US files loaded - files are ready for report generation');
       } catch (error) {
         console.error('Error processing second US file:', error);
-        throw error;
       }
     }
 

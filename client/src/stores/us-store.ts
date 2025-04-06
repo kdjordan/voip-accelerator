@@ -17,7 +17,8 @@ export const useUsStore = defineStore('usStore', {
     activeReportType: 'files' as ReportType,
     pricingReport: null as USPricingReport | null,
     codeReport: null as USCodeReport | null,
-    enhancedCodeReport: null as USEnhancedCodeReport | null,
+    // Store enhanced code reports by filename
+    enhancedCodeReports: new Map<string, USEnhancedCodeReport>(),
     uploadingComponents: {} as Record<string, boolean>,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidUsRow[]>(),
@@ -54,7 +55,20 @@ export const useUsStore = defineStore('usStore', {
 
     getCodeReport: (state): USCodeReport | null => state.codeReport,
 
-    getEnhancedCodeReport: (state): USEnhancedCodeReport | null => state.enhancedCodeReport,
+    getEnhancedCodeReport: (state): USEnhancedCodeReport | null => {
+      // If we have reports in the Map, return the first one
+      if (state.enhancedCodeReports.size > 0) {
+        // Get the iterator for the values and extract the first value
+        const iterator = state.enhancedCodeReports.values();
+        const firstValue = iterator.next();
+
+        // Make sure we have a defined value before returning
+        if (!firstValue.done && firstValue.value) {
+          return firstValue.value;
+        }
+      }
+      return null;
+    },
 
     getNumberOfFilesUploaded: (state) => state.filesUploaded.size,
 
@@ -137,11 +151,28 @@ export const useUsStore = defineStore('usStore', {
       const tableName = fileName.toLowerCase().replace('.csv', '');
       return state.inMemoryData.get(tableName) || [];
     },
+
+    // Add a getter to retrieve an enhanced report by filename
+    getEnhancedReportByFile:
+      (state) =>
+      (fileName: string): USEnhancedCodeReport | null => {
+        return state.enhancedCodeReports.get(fileName) || null;
+      },
+
+    // Add a getter to check if we have any enhanced reports
+    hasEnhancedReports: (state): boolean => {
+      return state.enhancedCodeReports.size > 0;
+    },
+
+    // Get all enhanced reports
+    getAllEnhancedReports: (state): USEnhancedCodeReport[] => {
+      return Array.from(state.enhancedCodeReports.values());
+    },
   },
 
   actions: {
-    setActiveReportType(type: ReportType) {
-      this.activeReportType = type;
+    setActiveReportType(reportType: ReportType) {
+      this.activeReportType = reportType;
     },
 
     addFileUploaded(componentName: string, fileName: string) {
@@ -153,7 +184,7 @@ export const useUsStore = defineStore('usStore', {
       this.reportsGenerated = false;
       this.pricingReport = null;
       this.codeReport = null;
-      this.enhancedCodeReport = null;
+      this.enhancedCodeReports.clear();
       this.showUploadComponents = true;
       this.invalidRows.clear();
       this.inMemoryData.clear();
@@ -168,7 +199,36 @@ export const useUsStore = defineStore('usStore', {
     },
 
     setEnhancedCodeReport(report: USEnhancedCodeReport) {
-      this.enhancedCodeReport = report;
+      // Store in the map by filename
+      if (report.file1 && report.file1.fileName) {
+        console.log(`[US Store] Setting enhanced report for file: ${report.file1.fileName}`);
+
+        // Test the Map functionality with a simple value
+        const testKey = `test-${Date.now()}`;
+        console.log(`[US Store] Testing Map with simple value - key: ${testKey}`);
+        this.enhancedCodeReports.set(testKey, report);
+        const testResult = this.enhancedCodeReports.get(testKey);
+        console.log(`[US Store] Test Map result:`, {
+          success: !!testResult,
+          size: this.enhancedCodeReports.size,
+          keys: Array.from(this.enhancedCodeReports.keys()),
+        });
+
+        // Now try with the actual file name
+        this.enhancedCodeReports.set(report.file1.fileName, report);
+        console.log(`[US Store] Total enhanced reports: ${this.enhancedCodeReports.size}`);
+        console.log(`[US Store] Report keys: ${Array.from(this.enhancedCodeReports.keys())}`);
+
+        // Verify we can access the stored report
+        const storedReport = this.enhancedCodeReports.get(report.file1.fileName);
+        console.log(`[US Store] Verification - retrieved: ${!!storedReport}`);
+      } else {
+        console.error('[US Store] Cannot save report - missing filename', report);
+      }
+    },
+
+    setReportsGenerated(value: boolean) {
+      this.reportsGenerated = value;
     },
 
     removeFile(componentName: string) {
@@ -181,6 +241,11 @@ export const useUsStore = defineStore('usStore', {
         if (this.isUsingMemoryStorage) {
           this.inMemoryData.delete(tableName);
         }
+
+        // Remove from enhanced reports
+        console.log(`[US Store] Removing enhanced report for: ${fileName}`);
+        this.enhancedCodeReports.delete(fileName);
+        console.log(`[US Store] Reports after removal: ${this.enhancedCodeReports.size}`);
       }
 
       this.filesUploaded.delete(componentName);
@@ -198,7 +263,7 @@ export const useUsStore = defineStore('usStore', {
         this.reportsGenerated = false;
         this.pricingReport = null;
         this.codeReport = null;
-        this.enhancedCodeReport = null;
+        this.enhancedCodeReports.clear();
         this.showUploadComponents = true;
         this.activeReportType = 'files';
       }
@@ -271,6 +336,45 @@ export const useUsStore = defineStore('usStore', {
 
     clearAllFileStats() {
       this.fileStats.clear();
+    },
+
+    // Add a clear method for enhanced reports
+    clearEnhancedCodeReports() {
+      this.enhancedCodeReports.clear();
+    },
+
+    // Add a debug test function that can be called from anywhere
+    testEnhancedReportStorage() {
+      console.log('[US Store] Running enhanced report storage test');
+
+      // Create a simple test report
+      const testReport = {
+        file1: {
+          fileName: `test-file-${Date.now()}.csv`,
+          totalCodes: 100,
+          countries: [
+            {
+              countryCode: 'US',
+              countryName: 'United States',
+              npaCoverage: 50,
+              totalNPAs: 200,
+              npas: ['123', '456'],
+            },
+          ],
+        },
+      } as USEnhancedCodeReport;
+
+      // Store it and check
+      this.enhancedCodeReports.set(testReport.file1.fileName, testReport);
+      console.log('[US Store] Test report storage results:', {
+        size: this.enhancedCodeReports.size,
+        keys: Array.from(this.enhancedCodeReports.keys()),
+        hasReport: this.hasEnhancedReports,
+        retrieval: !!this.getEnhancedReportByFile(testReport.file1.fileName),
+      });
+
+      // Also try the function
+      this.setEnhancedCodeReport(testReport);
     },
   },
 }) as unknown as () => DomainStore<USPricingReport, USCodeReport, InvalidUsRow>;

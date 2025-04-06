@@ -28,7 +28,7 @@
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">LERG Count</div>
               <div class="text-lg text-white">
-                {{ lergStore.getTotalUSNPAs }}
+                {{ totalLergCodes }}
               </div>
             </div>
             <div class="bg-gray-900 p-2 rounded-lg">
@@ -352,6 +352,9 @@ const isFiltering = ref(false);
 const expandedStates = ref<Set<string>>(new Set());
 const expandedProvinces = ref<Set<string>>(new Set());
 const expandedCountries = ref<Set<string>>(new Set());
+const totalLergCodes = ref(0);
+
+totalLergCodes.value = lergStore.getTotalLergCodes;
 
 // Computed values using file-specific data instead of LERG data
 const fileData = computed(() => {

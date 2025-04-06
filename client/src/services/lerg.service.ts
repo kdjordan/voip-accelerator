@@ -600,6 +600,12 @@ export class LergService {
     // Second pass - identify true Canadian records
     const canadianRecords = records.filter((record) => record.country === 'CA');
 
+    // DEBUG: Log Canadian records
+    console.log(`[LERG Debug] Found ${canadianRecords.length} Canadian records`);
+    if (canadianRecords.length > 0) {
+      console.log('[LERG Debug] Canadian records sample:', canadianRecords.slice(0, 5));
+    }
+
     // Third pass - other countries
     const otherRecords = records.filter(
       (record) => record.country !== 'US' && record.country !== 'CA'
@@ -622,11 +628,43 @@ export class LergService {
 
     // Process Canadian records
     for (const record of canadianRecords) {
-      if (!canadaProvinces[record.state]) {
-        canadaProvinces[record.state] = new Set();
-      }
-      canadaProvinces[record.state].add(record.npa);
+      // Check if state code is a valid Canadian province code
+      // Use the record's state code or map to a valid province if needed
+      let provinceCode = record.state;
 
+      // DEBUG: Log province validation
+      const isValidProvince = this.isCanadianProvince(provinceCode);
+      console.log(
+        `[LERG Debug] Canadian record - NPA: ${record.npa}, Province: ${provinceCode}, Valid: ${isValidProvince}`
+      );
+
+      // If not a valid province code, see if we can infer it (some datasets use numeric codes)
+      if (!isValidProvince) {
+        // Check if it's a CA record with a non-standard province code
+        console.log(
+          `[LERG Debug] Non-standard province code: ${provinceCode} for NPA ${record.npa}`
+        );
+
+        // For now, associate all unrecognized Canadian NPAs with a special "UNKNOWN" code
+        // This ensures they at least show up in the UI
+        provinceCode = 'XX'; // Special code for unknown provinces
+
+        // Add this mapping to the stateMapping for consistency
+        if (!stateMapping[provinceCode]) {
+          stateMapping[provinceCode] = [];
+        }
+        if (!stateMapping[provinceCode].includes(record.npa)) {
+          stateMapping[provinceCode].push(record.npa);
+        }
+      }
+
+      // Add to the canadaProvinces map for this province
+      if (!canadaProvinces[provinceCode]) {
+        canadaProvinces[provinceCode] = new Set();
+      }
+      canadaProvinces[provinceCode].add(record.npa);
+
+      // Also add to the country map for CA
       if (!countryMap.has('CA')) {
         countryMap.set('CA', new Set());
       }
@@ -713,5 +751,20 @@ export class LergService {
    */
   public isCanadianProvince(provinceCode: string): boolean {
     return provinceCode in PROVINCE_CODES;
+  }
+
+  async processFile(
+    file: File,
+    columnMapping: Record<string, number>,
+    startLine: number
+  ): Promise<{ fileName: string; records: any[] }> {
+    // Use a consistent table name
+    const tableName = 'lerg';
+    const { storeInDexieDB } = useDexieDB();
+
+    // Implementation of processFile method
+    // This is a placeholder and should be replaced with the actual implementation
+    // based on the file processing logic
+    return { fileName: '', records: [] };
   }
 }

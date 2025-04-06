@@ -1,7 +1,7 @@
 import { ref } from 'vue';
-import { LergService } from '@/services/lerg.service';
 import { supabase } from '@/utils/supabase';
 import { useLergStore } from '@/stores/lerg-store';
+import { getLergService } from '@/services/dexie/db';
 import type {
   LERGRecord,
   StateNPAMapping,
@@ -21,7 +21,8 @@ interface CSVRow {
 }
 
 export function useLergData() {
-  const lergService = LergService.getInstance();
+  // Get the LERG Dexie service
+  const lergService = getLergService();
   const lergStore = useLergStore();
   const isLoading = ref(false);
   const error = ref<string | null>(null);
@@ -104,7 +105,8 @@ export function useLergData() {
             last_updated: lastUpdated,
           }));
 
-          await lergService.initializeLergTable(recordsWithTimestamp);
+          // Use the Dexie service to initialize the table
+          await lergService.initializeTable(recordsWithTimestamp);
           await updateStoreData();
         }
         return lergData;
@@ -243,7 +245,8 @@ export function useLergData() {
           last_updated: lastUpdated,
         }));
 
-        await lergService.initializeLergTable(recordsWithTimestamp);
+        // Use the Dexie service to initialize the table
+        await lergService.initializeTable(recordsWithTimestamp);
         await updateStoreData();
         console.log('✅ Local database updated successfully');
       }
@@ -273,7 +276,8 @@ export function useLergData() {
       if (downloadError) throw new Error(downloadError.message);
 
       if (data?.data?.length) {
-        await lergService.initializeLergTable(data.data);
+        // Use the Dexie service to initialize the table
+        await lergService.initializeTable(data.data);
         await updateStoreData();
       }
 
@@ -292,11 +296,26 @@ export function useLergData() {
       isLoading.value = true;
       error.value = null;
 
+      // First check if edge function is available
+      const isAvailable = await checkEdgeFunctionStatus();
+      if (!isAvailable) {
+        throw new Error('Edge functions are not available');
+      }
+
+      // Call edge function to clear data from Supabase
+      console.log('Calling clear-lerg edge function to clear Supabase data');
+      const { data: clearData, error: clearError } = await supabase.functions.invoke('clear-lerg');
+
+      if (clearError) {
+        console.error('Error clearing LERG data from Supabase:', clearError);
+        throw clearError;
+      }
+
       // Clear the store
       lergStore.clearLergData();
 
-      // Clear IndexedDB
-      await lergService.clearLergData();
+      // Clear IndexedDB using our Dexie service
+      await lergService.clear();
 
       return { success: true };
     } catch (err) {
@@ -313,8 +332,87 @@ export function useLergData() {
       isLoading.value = true;
       error.value = null;
 
-      const data = await lergService.getProcessedData();
-      return data;
+      // Retrieve data directly from the database using our services
+      const stateMapping: StateNPAMapping = {};
+      const countryData: CountryLergData[] = [];
+
+      // Get all LERG records from the database
+      const allRecords = await lergService.getAll();
+      const count = allRecords.length;
+
+      // Process US records
+      const usRecords = await lergService.getByCountry('US');
+
+      // Group by state
+      for (const record of usRecords) {
+        if (!stateMapping[record.state]) {
+          stateMapping[record.state] = [];
+        }
+        stateMapping[record.state].push(record.npa);
+      }
+
+      // Process Canadian records
+      const caRecords = await lergService.getByCountry('CA');
+
+      // Group by province
+      const caProvinceMap: Record<string, string[]> = {};
+      for (const record of caRecords) {
+        if (!caProvinceMap[record.state]) {
+          caProvinceMap[record.state] = [];
+        }
+        caProvinceMap[record.state].push(record.npa);
+
+        // Also add to state mapping
+        if (!stateMapping[record.state]) {
+          stateMapping[record.state] = [];
+        }
+        stateMapping[record.state].push(record.npa);
+      }
+
+      // Add US data to countryData
+      if (usRecords.length > 0) {
+        countryData.push({
+          country: 'US',
+          npaCount: usRecords.length,
+          npas: usRecords.map((r) => r.npa).sort(),
+        });
+      }
+
+      // Add CA data to countryData
+      if (caRecords.length > 0) {
+        countryData.push({
+          country: 'CA',
+          npaCount: caRecords.length,
+          npas: caRecords.map((r) => r.npa).sort(),
+          provinces: Object.entries(caProvinceMap).map(([code, npas]) => ({
+            code,
+            npas: npas.sort(),
+          })),
+        });
+      }
+
+      // Process other countries
+      const countries = [
+        ...new Set(
+          allRecords.filter((r) => r.country !== 'US' && r.country !== 'CA').map((r) => r.country)
+        ),
+      ];
+
+      // Add each country's data
+      for (const country of countries) {
+        const records = await lergService.getByCountry(country);
+        countryData.push({
+          country,
+          npaCount: records.length,
+          npas: records.map((r) => r.npa).sort(),
+        });
+      }
+
+      return {
+        stateMapping,
+        countryData,
+        count,
+      };
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unknown error occurred';
       throw err;
@@ -328,7 +426,8 @@ export function useLergData() {
       isLoading.value = true;
       error.value = null;
 
-      const data = await lergService.getAllRecords();
+      // Use our Dexie service to get all records
+      const data = await lergService.getAll();
       return data;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -354,7 +453,10 @@ export function useLergData() {
 
   const updateStoreData = async () => {
     try {
-      const { stateMapping, countryData, count } = await lergService.getProcessedData();
+      // Get processed data from the LERG database using our service
+      const { stateMapping, countryData, count } = await getProcessed();
+
+      // Get the last updated timestamp
       const { lastUpdated } = await lergService.getLastUpdatedTimestamp();
 
       console.log('Last updated timestamp from service:', lastUpdated);
@@ -364,6 +466,16 @@ export function useLergData() {
       const canadaProvinces = new Map<string, NPAEntry[]>();
       const otherCountries = new Map<string, NPAEntry[]>();
 
+      // DEBUG: Log the stateMapping to see Canadian provinces
+      console.log('[LERG Debug] stateMapping keys:', Object.keys(stateMapping));
+
+      // Filter and log just Canadian provinces from stateMapping
+      const potentialCanadianProvinces = Object.entries(stateMapping).filter(([stateCode]) =>
+        lergService.isCanadianProvince(stateCode)
+      );
+
+      console.log('[LERG Debug] Potential Canadian provinces:', potentialCanadianProvinces);
+
       // Process state mappings for US and Canadian provinces
       Object.entries(stateMapping).forEach(([stateCode, npas]) => {
         if (stateCode.length === 2) {
@@ -372,10 +484,19 @@ export function useLergData() {
           if (lergService.isUSState(stateCode)) {
             usStates.set(stateCode, npasWithMeta);
           } else if (lergService.isCanadianProvince(stateCode)) {
+            console.log(
+              `[LERG Debug] Setting Canadian province ${stateCode} with ${npas.length} NPAs`
+            );
             canadaProvinces.set(stateCode, npasWithMeta);
           }
         }
       });
+
+      // DEBUG: Log counts after processing
+      console.log(
+        `[LERG Debug] US States: ${usStates.size}, Canadian Provinces: ${canadaProvinces.size}`
+      );
+      console.log('[LERG Debug] Canadian Provinces Map:', Array.from(canadaProvinces.entries()));
 
       // Process country data for other countries
       countryData

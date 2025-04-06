@@ -454,19 +454,99 @@ const {
 });
 
 async function handleFileUploaded(componentName: ComponentId, fileName: string) {
+  console.error(`[Main] File uploaded: ${fileName} for component ${componentName}`);
   usStore.addFileUploaded(componentName, fileName);
+
+  // Generate enhanced report immediately after file upload
+  try {
+    console.error(`[Main] Starting enhanced report generation for ${fileName}`);
+    const tableName = fileName.toLowerCase().replace('.csv', '');
+    const data = await service.getData(tableName);
+
+    if (data && data.length > 0) {
+      console.error(`[Main] Retrieved ${data.length} records for ${fileName}`);
+
+      // Prepare data for worker
+      const cleanData = data.map((item) => ({
+        npanxx: item.npanxx,
+        npa: item.npa,
+        nxx: item.nxx,
+        interRate: item.interRate,
+        intraRate: item.intraRate,
+        indetermRate: item.indetermRate,
+      }));
+
+      // Sample data if needed
+      const MAX_RECORDS = 200000;
+      const sampleData =
+        cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
+      console.error(`[Main] Prepared ${sampleData.length} records for enhanced report`);
+
+      // Generate the enhanced report
+      const report = await generateEnhancedCodeReport(fileName, sampleData);
+      console.error(`[Main] Report generation result: ${!!report}`);
+
+      // Update UI if needed
+      if (report) {
+        console.error(`[Main] Setting active report type to code`);
+        usStore.setActiveReportType('code');
+      }
+    }
+  } catch (error) {
+    console.error(`[Main] Error generating enhanced report:`, error);
+  }
 }
 
 async function handleReportsAction() {
   if (usStore.reportsGenerated) {
     usStore.showUploadComponents = false;
-  } else {
-    try {
+    return;
+  }
+
+  try {
+    isGeneratingReports.value = true;
+    console.log('[Reports] Starting report generation');
+
+    // Check if we have two files and need to generate the comparison reports
+    const fileNames = usStore.getFileNames;
+    if (fileNames.length === 2) {
       await generateReports();
-    } catch (error) {
-      console.error('Failed to generate reports:', error);
-      alert('Failed to generate reports. Please try again later.');
+    } else if (fileNames.length === 1 && !usStore.enhancedCodeReport) {
+      // If we have a single file but no enhanced report yet, generate it
+      const fileName = fileNames[0];
+      const tableName = fileName.toLowerCase().replace('.csv', '');
+      const data = await service.getData(tableName);
+
+      if (data && data.length > 0) {
+        const cleanData = data.map((item) => ({
+          npanxx: item.npanxx,
+          npa: item.npa,
+          nxx: item.nxx,
+          interRate: item.interRate,
+          intraRate: item.intraRate,
+          indetermRate: item.indetermRate,
+        }));
+
+        const MAX_RECORDS = 200000;
+        const sampleData =
+          cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
+
+        await generateEnhancedCodeReport(fileName, sampleData);
+      }
     }
+
+    // Switch to the Code Report view after generation
+    console.log('[Reports] Setting active report type to CODE');
+    usStore.setActiveReportType('code');
+    usStore.showUploadComponents = false;
+
+    // Notify user
+    console.log('[Reports] Reports generated successfully');
+  } catch (error) {
+    console.error('Failed to generate reports:', error);
+    alert('Failed to generate reports. Please try again later.');
+  } finally {
+    isGeneratingReports.value = false;
   }
 }
 
@@ -601,58 +681,119 @@ async function generateReports() {
   }
 }
 
-// New function to generate enhanced code report
+// Updated enhanced code report generation function
 async function generateEnhancedCodeReport(fileName: string, data: USStandardizedData[]) {
-  try {
-    // Create code report worker
-    const codeReportWorker = new USCodeReportWorker();
+  console.error(`[Main] Creating worker for ${fileName}`);
+  const codeReportWorker = new USCodeReportWorker();
 
+  try {
     // Create a serializable version of the LERG data
-    // This avoids DataCloneError by only sending simple serializable data
     const stateNPAs: Record<string, string[]> = {};
-    Object.keys(lergStore.$state.stateNPAs).forEach((key) => {
-      stateNPAs[key] = [...lergStore.$state.stateNPAs[key]]; // Create a new array with primitive values
+
+    // Get US states NPAs from LERG store
+    const usStates = lergStore.getUSStates;
+    console.error(`[Main] Using ${usStates.length} US states from LERG`);
+    usStates.forEach((state) => {
+      stateNPAs[state.code] = state.npas;
     });
 
-    const countryData = lergStore.$state.countryData.map((country) => ({
+    // Get Canadian provinces NPAs
+    const canadaProvinces = lergStore.getCanadianProvinces;
+    console.error(`[Main] Using ${canadaProvinces.length} Canadian provinces from LERG`);
+    canadaProvinces.forEach((province) => {
+      stateNPAs[province.code] = province.npas;
+    });
+
+    // Get country data in the right format
+    const countryData = lergStore.getCountryData.map((country) => ({
       country: country.country,
       npaCount: country.npaCount,
       npas: [...country.npas], // Create a new array with primitive values
-      // Omit provinces or other complex properties that might cause issues
     }));
+    console.error(`[Main] Using ${countryData.length} countries from LERG`);
 
+    // Prepare LERG data
     const lergData = {
       stateNPAs,
       countryData,
     };
 
     // Create a promise to handle the worker
-    const report = await new Promise<USEnhancedCodeReport>((resolve, reject) => {
+    return await new Promise<USEnhancedCodeReport>((resolve, reject) => {
+      // Set up a timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        console.error(`[Main] Worker timeout for ${fileName} after 10 seconds`);
+        codeReportWorker.terminate();
+        reject(new Error('Worker timeout after 10 seconds'));
+      }, 10000);
+
       codeReportWorker.onmessage = (event) => {
-        resolve(event.data);
+        clearTimeout(timeout);
+        console.error(`[Main] Worker message received for ${fileName}`);
+
+        // Check if the event data contains an error
+        if (event.data && event.data.error) {
+          console.error(`[Main] Worker error: ${event.data.error}`);
+          codeReportWorker.terminate();
+          reject(new Error(event.data.error));
+          return;
+        }
+
+        // Validate the report structure
+        if (!event.data || !event.data.file1) {
+          console.error(`[Main] Invalid report format from worker`);
+          codeReportWorker.terminate();
+          reject(new Error('Invalid report format received from worker'));
+          return;
+        }
+
+        const report = event.data;
+        console.error(
+          `[Main] Valid report received with ${report.file1.countries?.length || 0} countries`
+        );
+
+        // Make sure the filename is set
+        if (!report.file1.fileName) {
+          report.file1.fileName = fileName;
+        }
+
+        // Store the report in the store
+        console.error(`[Main] Storing report for ${fileName}`);
+        usStore.setEnhancedCodeReport(report);
+
+        // Verify storage
+        const storedReport = usStore.getEnhancedReportByFile(fileName);
+        if (storedReport) {
+          console.error(`[Main] Report successfully stored`);
+        } else {
+          console.error(`[Main] Failed to store report`);
+        }
+
+        codeReportWorker.terminate();
+        resolve(report);
       };
 
       codeReportWorker.onerror = (error) => {
-        console.error('Code report worker error:', error);
+        clearTimeout(timeout);
+        console.error(`[Main] Worker error event for ${fileName}:`, error);
+        codeReportWorker.terminate();
         reject(error);
       };
 
+      // Send data to the worker
       const input = {
         fileName,
         fileData: data,
         lergData,
       };
 
+      console.error(`[Main] Sending data to worker for ${fileName}`);
       codeReportWorker.postMessage(input);
     });
-
-    // Store the report
-    usStore.setEnhancedCodeReport(report);
-
-    // Clean up worker
-    codeReportWorker.terminate();
   } catch (error) {
-    console.error('Error generating enhanced code report:', error);
+    console.error(`[Main] Error in generateEnhancedCodeReport:`, error);
+    codeReportWorker.terminate();
+    return null;
   }
 }
 
@@ -692,6 +833,8 @@ async function handleModalConfirm(
   usStore.setComponentUploading(activeComponent.value, true);
 
   try {
+    console.log(`[DEBUG] Starting file processing for ${file.name}`);
+
     // Convert mappings to column indices
     const columnMapping = {
       npanxx: Number(
@@ -715,6 +858,8 @@ async function handleModalConfirm(
       ),
     };
 
+    console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
+
     // Process file with mappings
     const result = await service.processFile(
       file,
@@ -723,8 +868,94 @@ async function handleModalConfirm(
       indeterminateDefinition
     );
 
+    console.log(`[DEBUG] File processed successfully: ${result.fileName}`);
+
     // Call handleFileUploaded with the component ID, not the file.name
     await handleFileUploaded(activeComponent.value, result.fileName);
+    console.log(`[DEBUG] File registered in store for component: ${activeComponent.value}`);
+
+    // After file upload is successful, automatically generate the enhanced code report
+    console.log(`[DEBUG] Starting enhanced code report generation for: ${result.fileName}`);
+
+    // Get the data from the service
+    const tableName = result.fileName.toLowerCase().replace('.csv', '');
+    console.log(`[DEBUG] Getting data from table: ${tableName}`);
+    const data = await service.getData(tableName);
+    console.log(`[DEBUG] Retrieved ${data?.length || 0} records for enhanced report`);
+
+    if (data && data.length > 0) {
+      console.log(`[DEBUG] Preparing data for enhanced report worker`);
+      // For very large datasets, sample the data
+      const MAX_RECORDS = 200000;
+      const cleanData = data.map((item) => ({
+        npanxx: item.npanxx,
+        npa: item.npa,
+        nxx: item.nxx,
+        interRate: item.interRate,
+        intraRate: item.intraRate,
+        indetermRate: item.indetermRate,
+      }));
+
+      const sampleData =
+        cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
+      console.log(`[DEBUG] Prepared ${sampleData.length} records for enhanced report`);
+
+      try {
+        // Generate the enhanced code report for this file
+        console.log(`[DEBUG] Calling generateEnhancedCodeReport with ${sampleData.length} records`);
+        const report = await generateEnhancedCodeReport(result.fileName, sampleData);
+        console.log(`[DEBUG] Enhanced code report generation completed:`, !!report);
+
+        // Double-check if report was stored
+        setTimeout(() => {
+          const storedReport = usStore.getEnhancedReportByFile(result.fileName);
+          console.log(`[DEBUG] Report in store after delay:`, !!storedReport);
+          console.log(`[DEBUG] Total reports in store:`, usStore.enhancedCodeReports.size);
+          console.log(`[DEBUG] Store has any enhanced reports:`, usStore.hasEnhancedReports);
+          console.log(
+            `[DEBUG] Available report keys:`,
+            Array.from(usStore.enhancedCodeReports.keys())
+          );
+        }, 500);
+
+        // Set the active report type to 'code' to show the enhanced report
+        if (!usStore.reportsGenerated) {
+          console.log(`[DEBUG] Setting up basic reports for single file`);
+          // Create empty pricing report and basic code report since we only have one file
+          const emptyPricingReport = {
+            comparisons: [],
+            file1: { fileName: result.fileName, totalCodes: data.length },
+            file2: null,
+          };
+
+          const basicCodeReport = {
+            file1: {
+              fileName: result.fileName,
+              totalCodes: data.length,
+              averageRates: {
+                interstate:
+                  data.reduce((acc, item) => acc + (item.interRate || 0), 0) / data.length,
+                intrastate:
+                  data.reduce((acc, item) => acc + (item.intraRate || 0), 0) / data.length,
+                indeterminate:
+                  data.reduce((acc, item) => acc + (item.indetermRate || 0), 0) / data.length,
+              },
+            },
+            file2: null,
+            comparison: null,
+          };
+
+          // Set the reports in the store
+          usStore.setReports(emptyPricingReport, basicCodeReport);
+          console.log(`[DEBUG] Setting active report type to 'code'`);
+          usStore.setActiveReportType('code');
+        }
+      } catch (enhancedReportError) {
+        console.error(`[DEBUG] Error generating enhanced report:`, enhancedReportError);
+      }
+    } else {
+      console.warn(`[DEBUG] No data available for enhanced report generation`);
+    }
   } catch (error) {
     console.error('Error processing file:', error);
     uploadError[activeComponent.value] = `Error processing file: ${

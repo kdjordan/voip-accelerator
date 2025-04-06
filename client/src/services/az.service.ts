@@ -18,10 +18,11 @@ export class AZService {
   // Process file and store directly in Dexie
   async processFile(
     file: File,
-    columnMapping: Record<string, number>,
+    columnMapping: { destName: number; code: number; rate: number },
     startLine: number
   ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
-    const tableName = file.name.toLowerCase().replace('.csv', '');
+    // Use a consistent table name instead of creating a new table for each file
+    const tableName = 'az_codes';
     const { storeInDexieDB } = useDexieDB();
 
     // Clear any existing invalid rows for this file
@@ -38,8 +39,8 @@ export class AZService {
             const validRecords: AZStandardizedData[] = [];
 
             dataRows.forEach((row, index) => {
-              const destName = row[columnMapping.destination]?.trim() || '';
-              const dialCode = row[columnMapping.dialcode]?.trim() || '';
+              const destName = row[columnMapping.destName]?.trim() || '';
+              const dialCode = row[columnMapping.code]?.trim() || '';
               const rateStr = row[columnMapping.rate];
               const rate = parseFloat(rateStr);
 

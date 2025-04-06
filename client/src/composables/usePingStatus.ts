@@ -19,7 +19,7 @@ export function usePingStatus() {
       status.value.lastChecked = new Date();
 
       const response = await fetch(
-        'https://odnwqnmgftgjrdkotlro.supabase.co/functions/v1/ping-status',
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ping-status`,
         {
           method: 'GET',
           mode: 'cors',

@@ -13,7 +13,7 @@ export class DexieDBBase extends Dexie {
     super(dbName);
     this.dbName = dbName;
     this.schema = schema;
-    this.stores = new Set(this.tables.map(table => table.name));
+    this.stores = new Set(this.tables.map((table) => table.name));
     console.log(`Initializing ${this.dbName} with schema:`, this.schema);
     if (this.verno === 0) {
       this.version(1).stores({});
@@ -26,18 +26,23 @@ export class DexieDBBase extends Dexie {
       console.log('Current version:', this.verno);
       console.log(
         'Current tables:',
-        this.tables.map(t => t.name)
+        this.tables.map((t) => t.name)
       );
       console.log('Current stores set:', Array.from(this.stores));
 
-      console.log(`[${this.name}] Adding store:`, storeName, 'Current stores:', Array.from(this.stores));
+      console.log(
+        `[${this.name}] Adding store:`,
+        storeName,
+        'Current stores:',
+        Array.from(this.stores)
+      );
       if (this.stores.has(storeName)) {
         console.log(`[${this.name}] Store already exists:`, storeName);
         return;
       }
 
       this.stores.add(storeName);
-      const existingStores = await this.tables.map(table => table.name);
+      const existingStores = await this.tables.map((table) => table.name);
       console.log(`[${this.name}] Existing stores:`, existingStores);
       const schema = Array.from(this.stores).reduce(
         (acc, store) => ({
@@ -53,7 +58,7 @@ export class DexieDBBase extends Dexie {
       console.log('Is open:', this.isOpen());
       console.log(
         'Tables after close:',
-        this.tables.map(t => t.name)
+        this.tables.map((t) => t.name)
       );
 
       const newVersion = this.verno + 1;
@@ -68,7 +73,7 @@ export class DexieDBBase extends Dexie {
       console.log('Is open:', this.isOpen());
       console.log(
         'Final tables:',
-        this.tables.map(t => t.name)
+        this.tables.map((t) => t.name)
       );
       console.log('=== Store Creation End ===');
     } catch (error) {
@@ -78,14 +83,14 @@ export class DexieDBBase extends Dexie {
   }
 
   hasStore(storeName: string): boolean {
-    const hasStore = this.tables.some(table => table.name === storeName);
+    const hasStore = this.tables.some((table) => table.name === storeName);
     console.log(
       'Checking for store:',
       storeName,
       'Result:',
       hasStore,
       'Available tables:',
-      this.tables.map(t => t.name)
+      this.tables.map((t) => t.name)
     );
     return hasStore;
   }
@@ -111,6 +116,10 @@ export class DexieDBBase extends Dexie {
       throw error;
     }
   }
+
+  async getAllStoreNames(): Promise<string[]> {
+    return this.tables.map((table) => table.name);
+  }
 }
 
 export default function useDexieDB() {
@@ -131,13 +140,30 @@ export default function useDexieDB() {
     return db;
   }
 
-  async function storeInDexieDB<T>(data: T[], dbName: DBNameType, storeName: string) {
+  async function storeInDexieDB<T>(
+    data: T[],
+    dbName: DBNameType,
+    storeName: string,
+    options?: { sourceFile?: string; replaceExisting?: boolean }
+  ) {
     const db = await getDB(dbName);
 
     try {
       console.log('Adding store:', storeName);
       await db.addStore(storeName);
-      await db.table(storeName).bulkPut(data);
+
+      // Add sourceFile property to each record if provided
+      const enrichedData = options?.sourceFile
+        ? data.map((item) => ({ ...item, sourceFile: options.sourceFile }))
+        : data;
+
+      // Replace existing data if requested
+      if (options?.replaceExisting) {
+        await db.table(storeName).clear();
+        console.log(`Cleared existing data in ${dbName}/${storeName}`);
+      }
+
+      await db.table(storeName).bulkPut(enrichedData);
       console.log(`Data stored successfully in ${dbName}/${storeName}`);
     } catch (error) {
       console.error(`Error storing data in ${dbName}/${storeName}:`, error);
@@ -151,7 +177,7 @@ export default function useDexieDB() {
     console.log('Got db:', { db });
 
     try {
-      const stores = db.tables.map(table => table.name);
+      const stores = db.tables.map((table) => table.name);
       console.log('Available stores:', stores);
       if (!db.hasStore(storeName)) {
         throw new Error(`Store ${storeName} not found in database ${dbName}`);
@@ -189,11 +215,123 @@ export default function useDexieDB() {
     }
   }
 
+  /**
+   * Consolidates data from multiple tables into a single table
+   * @param dbName The database name
+   * @param targetTableName The table to consolidate data into
+   * @param sourceTables Optional array of tables to consolidate from (if not provided, all tables except the target will be used)
+   * @param keyField Field to use for deduplication (if null, no deduplication is performed)
+   */
+  async function consolidateData(
+    dbName: DBNameType,
+    targetTableName: string,
+    sourceTables?: string[],
+    keyField?: string | null
+  ): Promise<{ total: number; deduplicated: number }> {
+    const db = await getDB(dbName);
+    let stats = { total: 0, deduplicated: 0 };
+
+    try {
+      // Ensure target table exists
+      if (!db.hasStore(targetTableName)) {
+        await db.addStore(targetTableName);
+      }
+
+      // If no source tables provided, use all tables except target
+      const allTables = await db.getAllStoreNames();
+      const tablesToConsolidate =
+        sourceTables || allTables.filter((name) => name !== targetTableName);
+
+      console.log(
+        `Consolidating data from [${tablesToConsolidate.join(', ')}] into ${targetTableName}`
+      );
+
+      // Process each source table
+      for (const sourceTable of tablesToConsolidate) {
+        if (sourceTable === targetTableName || !db.hasStore(sourceTable)) continue;
+
+        // Load data from source table
+        const sourceData = await db.table(sourceTable).toArray();
+        stats.total += sourceData.length;
+
+        // Add metadata to track source
+        const enrichedData = sourceData.map((item) => ({
+          ...item,
+          sourceTable: sourceTable,
+          consolidatedAt: new Date().toISOString(),
+        }));
+
+        // Deduplicate if needed
+        if (keyField) {
+          // Get existing data in target table
+          const existingData = await db.table(targetTableName).toArray();
+          const existingKeys = new Set(existingData.map((item) => item[keyField]));
+
+          // Filter out duplicates
+          const uniqueData = enrichedData.filter((item) => {
+            const isDuplicate = existingKeys.has(item[keyField]);
+            if (isDuplicate) stats.deduplicated++;
+            return !isDuplicate;
+          });
+
+          // Add unique data to target table
+          if (uniqueData.length > 0) {
+            await db.table(targetTableName).bulkAdd(uniqueData);
+          }
+        } else {
+          // Add all data to target table without deduplication
+          await db.table(targetTableName).bulkAdd(enrichedData);
+        }
+      }
+
+      console.log(
+        `Consolidated ${stats.total} records (${stats.deduplicated} duplicates removed) into ${targetTableName}`
+      );
+      return stats;
+    } catch (error) {
+      console.error(`Error consolidating data into ${targetTableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up duplicate tables after consolidation
+   * @param dbName The database name
+   * @param tablesToKeep Array of table names to preserve
+   */
+  async function cleanupDuplicateTables(
+    dbName: DBNameType,
+    tablesToKeep: string[]
+  ): Promise<string[]> {
+    const db = await getDB(dbName);
+    const deletedTables: string[] = [];
+
+    try {
+      const allTables = await db.getAllStoreNames();
+      const tablesToDelete = allTables.filter((name) => !tablesToKeep.includes(name));
+
+      console.log(`Will delete these tables: [${tablesToDelete.join(', ')}]`);
+      console.log(`Will preserve these tables: [${tablesToKeep.join(', ')}]`);
+
+      for (const tableName of tablesToDelete) {
+        await db.deleteStore(tableName);
+        deletedTables.push(tableName);
+      }
+
+      return deletedTables;
+    } catch (error) {
+      console.error(`Error cleaning up duplicate tables in ${dbName}:`, error);
+      throw error;
+    }
+  }
+
   return {
     getDB,
     storeInDexieDB,
     loadFromDexieDB,
     deleteDatabase,
     closeAllConnections,
+    consolidateData,
+    cleanupDuplicateTables,
   };
 }
