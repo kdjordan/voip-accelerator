@@ -458,7 +458,7 @@
           </div>
         </div>
       </div>
-    </div>    
+    </div>
 
     <!-- New Preview Modal -->
     <PreviewModal
@@ -591,10 +591,19 @@ onMounted(async () => {
       countryData.map((c) => `${c.country} (${c.npaCount} NPAs)`)
     );
 
-    // Debug info for Canada provinces
-    console.log('Canadian provinces:', store.getCanadianProvinces);
+    // Enhanced debug info for Canada provinces
+    console.log('Canadian provinces raw:', store.getCanadianProvinces);
     console.log('Canadian provinces length:', store.getCanadianProvinces.length);
     console.log('getCanadaTotalNPAs:', getCanadaTotalNPAs.value);
+
+    // Log information about each province in a table format
+    const canadianProvinceDebug = store.getCanadianProvinces.map((province) => ({
+      code: province.code,
+      name: getStateName(province.code, 'CA'),
+      npas: province.npas,
+      npaCount: province.npas.length,
+    }));
+    console.table(canadianProvinceDebug);
 
     // Log the filtered data that should appear
     const nonUSMultiNPACountries = countryData.filter(
@@ -762,25 +771,28 @@ async function confirmClearLergData() {
       details: 'This may take a moment',
     };
 
-    // Use the facade service to clear all data
+    // Check edge function availability first
+    await checkEdgeFunctionStatus();
+
+    if (!isEdgeFunctionAvailable.value) {
+      throw new Error(
+        'Edge functions are not available. Cannot clear LERG data from the database.'
+      );
+    }
+
+    // Use the composable to clear all data (local and remote)
     await clearLerg();
 
     isLergUploading.value = false;
+    lergUploadStatus.value = {
+      type: 'success',
+      message: 'LERG data cleared successfully',
+      details: 'Data has been removed from both the local store and the database',
+    };
 
-    if (lergUploadStatus.value) {
-      lergUploadStatus.value = {
-        type: 'success',
-        message: 'LERG data cleared successfully',
-      };
-
-      // Refresh connection status
-      await checkConnection();
-    } else {
-      const error = new Error('Failed to clear LERG data');
-      const formattedError = formatErrorMessage(error);
-
-      throw new Error(formattedError);
-    }
+    // Refresh connection status
+    await checkConnection();
+    await checkPingStatus();
   } catch (error) {
     console.error('Failed to clear LERG data:', error);
 
@@ -788,6 +800,7 @@ async function confirmClearLergData() {
     lergUploadStatus.value = {
       type: 'error',
       message: error instanceof Error ? error.message : 'Failed to clear data',
+      details: 'There was an issue clearing the LERG data. Please try again or contact support.',
     };
   }
 }
@@ -855,6 +868,9 @@ function toggleCanadianDetails() {
 
 // Computed property to get total Canadian NPAs
 const getCanadaTotalNPAs = computed(() => {
+  // Log for debugging
+  console.log('Computing Canadian total NPAs with provinces:', store.getCanadianProvinces);
+
   return store.getCanadianProvinces.reduce((total, province) => {
     return total + province.npas.length;
   }, 0);

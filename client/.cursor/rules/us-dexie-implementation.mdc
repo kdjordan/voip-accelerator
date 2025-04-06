@@ -1,3 +1,28 @@
+---
+description: Comprehensive implementation plan for refactoring US rate deck uploads to use Dexie storage
+globs: 
+alwaysApply: false
+---
+
+# Simplified US Rate Deck Dexie Implementation
+
+## Overview
+This document outlines a simplified approach to refactor the US rate deck uploads to use Dexie.js directly for local storage, eliminating the complex storage service abstraction layers.
+
+## Current Issues
+
+1. Over-engineered storage abstraction with multiple strategy patterns
+2. Unnecessary complexity with conditional logic for different storage types
+3. Indirect access to Dexie through multiple layers
+4. No session cleanup for IndexedDB on page unload
+
+## Simplified Implementation
+
+### 1. Direct Dexie Integration in USService
+
+**File**: `client/src/services/us.service.ts`
+
+```typescript
 import { type USStandardizedData, type InvalidUsRow } from '@/types/domains/us-types';
 import { DBName } from '@/types/app-types';
 import { useUsStore } from '@/stores/us-store';
@@ -6,40 +31,10 @@ import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie com
 import { useLergStore } from '@/stores/lerg-store';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
 
-// Define the store type to avoid type mismatch
-interface UsStore {
-  addInvalidRow: (fileName: string, row: InvalidUsRow) => void;
-  clearInvalidRowsForFile: (fileName: string) => void;
-  resetFiles: () => void;
-  addFileUploaded: (componentName: string, fileName: string) => void;
-  // In-memory storage methods
-  storeInMemoryData: (tableName: string, data: USStandardizedData[]) => void;
-  getInMemoryData: (tableName: string) => USStandardizedData[];
-  getInMemoryDataCount: (tableName: string) => number;
-  removeInMemoryData: (tableName: string) => void;
-  clearAllInMemoryData: () => void;
-  getInMemoryTables: Record<string, number>;
-  setFileStats: (
-    componentName: string,
-    stats: {
-      totalCodes: number;
-      totalDestinations: number;
-      uniqueDestinationsPercentage: number;
-      usNPACoveragePercentage: number;
-      avgInterRate: number;
-      avgIntraRate: number;
-      avgIndetermRate: number;
-    }
-  ) => void;
-  getFileNameByComponent: (componentName: string) => string;
-  clearFileStats: (componentName: string) => void;
-}
-
 export class USService {
-  private store: UsStore;
+  private store = useUsStore();
 
   constructor() {
-    this.store = useUsStore() as unknown as UsStore;
     console.log('Initializing simplified US service');
   }
 
@@ -50,10 +45,9 @@ export class USService {
     startLine: number,
     indeterminateDefinition?: string
   ): Promise<{ fileName: string; records: USStandardizedData[] }> {
-    // Use a consistent table name instead of creating a new table for each file
-    const tableName = 'us_codes';
+    const tableName = file.name.toLowerCase().replace('.csv', '');
     const { storeInDexieDB } = useDexieDB();
-
+    
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
 
@@ -165,37 +159,23 @@ export class USService {
               }
             });
 
-            // Store directly in Dexie with file source metadata and without replacing existing data
+            // Store directly in Dexie - no storage strategy conditional logic
             if (validRecords.length > 0) {
-              await storeInDexieDB(validRecords, DBName.US, tableName, {
-                sourceFile: file.name,
-                replaceExisting: false, // Append to existing data
-              });
-              console.log(
-                `[USService] Stored ${validRecords.length} records in Dexie for table: ${tableName}`
-              );
+              await storeInDexieDB(validRecords, DBName.US, tableName);
+              console.log(`[USService] Stored ${validRecords.length} records in Dexie for table: ${tableName}`);
             }
 
-            // Determine component ID for file registration
+            this.store.addFileUploaded(file.name, tableName);
+
+            // Determine component ID for file stats
             let componentId = '';
-
-            // Check if the file is already registered
-            const currentUs1File = this.store.getFileNameByComponent('us1');
-            const currentUs2File = this.store.getFileNameByComponent('us2');
-
-            if (currentUs1File === file.name) {
+            if (this.store.getFileNameByComponent('us1') === file.name) {
               componentId = 'us1';
-            } else if (currentUs2File === file.name) {
+            } else if (this.store.getFileNameByComponent('us2') === file.name) {
               componentId = 'us2';
             } else {
-              // If not registered yet, assign to an available slot
-              componentId = !currentUs1File ? 'us1' : 'us2';
+              componentId = this.store.getFileNameByComponent('us1') ? 'us2' : 'us1';
             }
-
-            console.log(`[USService] Registering file ${file.name} with component ${componentId}`);
-
-            // Register file with component
-            this.store.addFileUploaded(componentId, file.name);
 
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
@@ -314,7 +294,7 @@ export class USService {
       // Use DexieDB directly
       const { getDB } = useDexieDB();
       const db = await getDB(DBName.US);
-
+      
       if (db.hasStore(tableName)) {
         await db.deleteStore(tableName);
         console.log(`Table ${tableName} removed successfully from Dexie`);
@@ -331,7 +311,7 @@ export class USService {
       const { deleteDatabase } = useDexieDB();
       await deleteDatabase(DBName.US);
       console.log('[USService] Cleared all Dexie data for US');
-
+      
       // Reset the file tracking in the store
       this.store.resetFiles();
     } catch (error) {
@@ -345,7 +325,7 @@ export class USService {
     try {
       const { getDB } = useDexieDB();
       const db = await getDB(DBName.US);
-
+      
       if (db.hasStore(tableName)) {
         const count = await db.table(tableName).count();
         console.log(`[USService] Count for Dexie table ${tableName}: ${count}`);
@@ -379,3 +359,131 @@ export class USService {
     }
   }
 }
+```
+
+### 2. Simplify Sample Data Loading for US
+
+**File**: `client/src/utils/load-sample-data.ts`
+
+```typescript
+export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
+  try {
+    console.log('Starting sample deck loading for:', dbNames);
+    
+    // ... other code ...
+
+    if (dbNames.includes(DBName.US)) {
+      const usService = new USService();
+      
+      // Load US-Test1.csv data
+      const usTestFile = 'US-Test1.csv';
+      const usTestResponse = await fetch(`/src/data/sample/${usTestFile}`);
+      const usTestBlob = new File([await usTestResponse.blob()], usTestFile);
+
+      // Column mapping structure for USService
+      const columnMapping = {
+        npanxx: 0,          // Index of NPANXX column
+        interstate: 1,      // Index of interstate rate column
+        intrastate: 2,      // Index of intrastate rate column
+        indeterminate: 3,   // Index of indeterminate rate column
+        npa: -1,            // Not used if we have npanxx directly
+        nxx: -1,            // Not used if we have npanxx directly
+      };
+
+      await usService.processFile(usTestBlob, columnMapping, 1);
+      console.log('US sample data loaded successfully');
+    }
+    
+    // ... other code ...
+    
+  } catch (error) {
+    console.error('Error loading sample data:', error);
+  }
+}
+```
+
+### 3. Update Dashboard to List US Tables Directly
+
+**File**: `client/src/pages/DashBoard.vue`
+
+Update the `getIndexedDbTables` function to use the Dexie API directly:
+
+```typescript
+/**
+ * Get IndexedDB tables using services - correctly check if databases exist
+ */
+async function getIndexedDbTables(): Promise<DatabaseTable[]> {
+  console.log('Starting getIndexedDbTables');
+  const tables: DatabaseTable[] = [];
+
+  try {
+    // For AZ: Use the Dexie API directly
+    try {
+      const { getDB } = useDexieDB();
+      const azDb = await getDB(DBName.AZ);
+      let totalAzRecords = 0;
+      
+      for (const table of azDb.tables) {
+        const count = await table.count();
+        totalAzRecords += count;
+      }
+
+      if (totalAzRecords > 0) {
+        tables.push({
+          name: DBName.AZ,
+          count: totalAzRecords,
+          storage: 'indexeddb' as const,
+        });
+      }
+    } catch (error) {
+      console.warn('Error checking AZ IndexedDB:', error);
+    }
+
+    // For US: Same direct approach
+    try {
+      const { getDB } = useDexieDB();
+      const usDb = await getDB(DBName.US);
+      let totalUsRecords = 0;
+      
+      for (const table of usDb.tables) {
+        const count = await table.count();
+        totalUsRecords += count;
+      }
+
+      if (totalUsRecords > 0) {
+        tables.push({
+          name: DBName.US,
+          count: totalUsRecords,
+          storage: 'indexeddb' as const,
+        });
+      }
+    } catch (error) {
+      console.warn('Error checking US IndexedDB:', error);
+    }
+    
+    // ... other databases ...
+
+  } catch (error) {
+    console.error('Error in getIndexedDbTables:', error);
+  }
+
+  return tables;
+}
+```
+
+## Implementation Steps
+
+1. Update the `us.service.ts` file to use Dexie directly
+2. Remove the storage service abstraction for US data
+3. Update all references to the US service to use the new API
+4. Update the US store to remove in-memory storage methods that are no longer needed
+5. Update sample data loading to use the new API
+6. Test the implementation with both sample and real data
+
+## Benefits
+
+1. Simplified architecture with direct database access
+2. Improved performance by removing unnecessary abstraction layers
+3. Better developer experience with clearer code paths
+4. Consistent implementation between AZ and US services
+5. Reduced code duplication and maintenance burden 

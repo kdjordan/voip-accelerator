@@ -144,6 +144,10 @@ export const useLergStore = defineStore('lerg', {
       return total;
     },
 
+    calculateTotalLergCodes(): number {
+      return this.calculateUSTotalNPAs() + this.calculateCanadaTotalNPAs() + this.calculateOtherCountriesTotalNPAs();
+    },
+
     /**
      * Update all statistics
      */
@@ -179,6 +183,13 @@ export const useLergStore = defineStore('lerg', {
      */
     getUSStatesWithNPAs: (state): USStateNPAMap => {
       return state.usStates;
+    },
+
+    /**
+     * Get total count of LERG codes
+     */
+    getTotalLergCodes: (state): number => {
+      return state.stats.totalNPAs;
     },
 
     /**

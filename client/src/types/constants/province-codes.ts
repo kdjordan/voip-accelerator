@@ -16,7 +16,9 @@ export const PROVINCE_CODES: Record<string, ProvinceMapping> = {
   PE: { name: 'Prince Edward Island', region: 'Atlantic' },
   QC: { name: 'Quebec', region: 'Central' },
   SK: { name: 'Saskatchewan', region: 'Prairie' },
-  YT: { name: 'Yukon', region: 'Northern' }
+  YT: { name: 'Yukon', region: 'Northern' },
+  // Special code for unknown/unmapped Canadian provinces
+  XX: { name: 'Other Canadian Areas', region: 'Unmapped' },
 } as const;
 
 export function getProvinceName(code: string): string {
@@ -25,4 +27,4 @@ export function getProvinceName(code: string): string {
 
 export function getProvinceRegion(code: string): string {
   return PROVINCE_CODES[code]?.region ?? 'Unknown';
-} 
+}
