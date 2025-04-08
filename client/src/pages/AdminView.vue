@@ -507,6 +507,7 @@ const {
   error,
   isInitialized,
   isEdgeFunctionAvailable,
+  initializeLergData,
 } = useLergData();
 const lergFileInput = ref<HTMLInputElement>();
 const lergStats = computed(() => store.stats);
@@ -564,59 +565,9 @@ const { status: pingStatus, checkPingStatus } = usePingStatus();
 const pingInterval = ref<number | null>(null);
 
 onMounted(async () => {
-  console.log('Checking LERG service status...');
-
   try {
-    // First check if we already have LERG data in the store
-    if (store.stats?.totalNPAs > 0) {
-      console.log('LERG data already loaded in store, skipping initialization');
-    } else {
-      // Check edge function availability first
-      await checkEdgeFunctionStatus();
-
-      if (isEdgeFunctionAvailable.value) {
-        console.log('Edge functions available, checking for existing LERG data');
-        await uploadLerg(null);
-      } else {
-        console.log('Edge functions not available');
-        throw new Error('Edge functions are not available');
-      }
-    }
-
-    // Debug log for country data
-    console.log('Country data:');
-    const countryData = store.getCountryData;
-    console.log(
-      'All countries:',
-      countryData.map((c) => `${c.country} (${c.npaCount} NPAs)`)
-    );
-
-    // Enhanced debug info for Canada provinces
-    console.log('Canadian provinces raw:', store.getCanadianProvinces);
-    console.log('Canadian provinces length:', store.getCanadianProvinces.length);
-    console.log('getCanadaTotalNPAs:', getCanadaTotalNPAs.value);
-
-    // Log information about each province in a table format
-    const canadianProvinceDebug = store.getCanadianProvinces.map((province) => ({
-      code: province.code,
-      name: getStateName(province.code, 'CA'),
-      npas: province.npas,
-      npaCount: province.npas.length,
-    }));
-    console.table(canadianProvinceDebug);
-
-    // Log the filtered data that should appear
-    const nonUSMultiNPACountries = countryData.filter(
-      (c) => c.country !== 'US' && !(c.country === 'CA' && !c.provinces) && c.npaCount > 1
-    );
-    console.log(
-      'Non-US multi-NPA countries:',
-      nonUSMultiNPACountries.map((c) => `${c.country} (${c.npaCount} NPAs)`)
-    );
-
-    // Check for Canada specifically
-    const canadaData = countryData.find((c) => c.country === 'CA');
-    console.log('Canada data:', canadaData);
+    // Initialize LERG data
+    await initializeLergData();
   } catch (err) {
     console.error('Failed to initialize LERG service:', err);
     error.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
@@ -624,12 +575,10 @@ onMounted(async () => {
 
   // Initial ping check
   await checkPingStatus();
-  console.log('Ping status after check:', pingStatus.value);
 
   // Setup periodic ping checks every 30 seconds
   pingInterval.value = window.setInterval(async () => {
     await checkPingStatus();
-    console.log('Periodic ping status check:', pingStatus.value);
   }, 30000);
 });
 
@@ -697,7 +646,6 @@ async function handleLergFileChange(event: Event) {
 }
 
 async function handleModalConfirm(mappings: Record<string, string>) {
-  console.log('Modal confirmed with mappings:', mappings);
   showPreviewModal.value = false;
   columnMappings.value = mappings;
 
@@ -868,9 +816,6 @@ function toggleCanadianDetails() {
 
 // Computed property to get total Canadian NPAs
 const getCanadaTotalNPAs = computed(() => {
-  // Log for debugging
-  console.log('Computing Canadian total NPAs with provinces:', store.getCanadianProvinces);
-
   return store.getCanadianProvinces.reduce((total, province) => {
     return total + province.npas.length;
   }, 0);

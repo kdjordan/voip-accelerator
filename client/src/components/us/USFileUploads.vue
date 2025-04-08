@@ -315,7 +315,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive } from 'vue';
 import {
   ArrowUpTrayIcon,
   DocumentIcon,
@@ -325,6 +325,7 @@ import {
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { useUsStore } from '@/stores/us-store';
 import { USService } from '@/services/us.service';
+import { USNPAAnalyzerService } from '@/services/us-npa-analyzer.service';
 import {
   USReportsInput,
   type USPricingReport,
@@ -401,34 +402,7 @@ async function handleFileSelected(file: File, componentId: ComponentId) {
   }
 }
 
-// Update the useDragDrop implementation with custom validator
-const validateUsFile = (
-  file: File,
-  componentId: ComponentId
-): { valid: boolean; errorMessage?: string } => {
-  // Check file extension
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    return { valid: false, errorMessage: 'Only CSV files are accepted' };
-  }
-
-  // Check if OTHER component is uploading (not this one)
-  const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
-  if (usStore.isComponentUploading(otherComponent)) {
-    return { valid: false, errorMessage: 'Please wait for the other file to finish uploading' };
-  }
-
-  // Check for duplicate filename
-  if (usStore.hasExistingFile(file.name)) {
-    return {
-      valid: false,
-      errorMessage: `A file with name "${file.name}" has already been uploaded`,
-    };
-  }
-
-  return { valid: true };
-};
-
-// Replace the previous useDragDrop calls with updated ones that use our custom validator
+// Replace the existing useDragDrop implementation with updated ones that use our custom validator
 const {
   isDragging: isDraggingUs1,
   handleDragEnter: handleDragEnterUs1,
@@ -436,7 +410,24 @@ const {
   handleDragOver: handleDragOverUs1,
   handleDrop: handleDropUs1,
 } = useDragDrop({
-  fileValidator: (file) => validateUsFile(file, 'us1'),
+  acceptedExtensions: ['.csv'],
+  fileValidator: (file) => {
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = 'us2';
+    if (usStore.isComponentUploading(otherComponent)) {
+      return { valid: false, errorMessage: 'Please wait for the other file to finish uploading' };
+    }
+
+    // Check for duplicate filename
+    if (usStore.hasExistingFile(file.name)) {
+      return {
+        valid: false,
+        errorMessage: `A file with name "${file.name}" has already been uploaded`,
+      };
+    }
+
+    return { valid: true };
+  },
   onDropCallback: (file) => handleFileSelected(file, 'us1'),
   onError: (message) => (uploadError['us1'] = message),
 });
@@ -448,7 +439,24 @@ const {
   handleDragOver: handleDragOverUs2,
   handleDrop: handleDropUs2,
 } = useDragDrop({
-  fileValidator: (file) => validateUsFile(file, 'us2'),
+  acceptedExtensions: ['.csv'],
+  fileValidator: (file) => {
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = 'us1';
+    if (usStore.isComponentUploading(otherComponent)) {
+      return { valid: false, errorMessage: 'Please wait for the other file to finish uploading' };
+    }
+
+    // Check for duplicate filename
+    if (usStore.hasExistingFile(file.name)) {
+      return {
+        valid: false,
+        errorMessage: `A file with name "${file.name}" has already been uploaded`,
+      };
+    }
+
+    return { valid: true };
+  },
   onDropCallback: (file) => handleFileSelected(file, 'us2'),
   onError: (message) => (uploadError['us2'] = message),
 });
@@ -457,43 +465,30 @@ async function handleFileUploaded(componentName: ComponentId, fileName: string) 
   console.error(`[Main] File uploaded: ${fileName} for component ${componentName}`);
   usStore.addFileUploaded(componentName, fileName);
 
-  // Generate enhanced report immediately after file upload
   try {
-    console.error(`[Main] Starting enhanced report generation for ${fileName}`);
+    console.error(`[Main] Starting NPA analysis for ${fileName}`);
     const tableName = fileName.toLowerCase().replace('.csv', '');
+
+    // Get the data from the service
     const data = await service.getData(tableName);
-
-    if (data && data.length > 0) {
-      console.error(`[Main] Retrieved ${data.length} records for ${fileName}`);
-
-      // Prepare data for worker
-      const cleanData = data.map((item) => ({
-        npanxx: item.npanxx,
-        npa: item.npa,
-        nxx: item.nxx,
-        interRate: item.interRate,
-        intraRate: item.intraRate,
-        indetermRate: item.indetermRate,
-      }));
-
-      // Sample data if needed
-      const MAX_RECORDS = 200000;
-      const sampleData =
-        cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
-      console.error(`[Main] Prepared ${sampleData.length} records for enhanced report`);
-
-      // Generate the enhanced report
-      const report = await generateEnhancedCodeReport(fileName, sampleData);
-      console.error(`[Main] Report generation result: ${!!report}`);
-
-      // Update UI if needed
-      if (report) {
-        console.error(`[Main] Setting active report type to code`);
-        usStore.setActiveReportType('code');
-      }
+    if (!data || data.length === 0) {
+      throw new Error(`No data found for file ${fileName}`);
     }
+
+    // Create analyzer instance
+    const analyzer = new USNPAAnalyzerService();
+
+    // Analyze the table and get the enhanced report
+    const enhancedReport = await analyzer.analyzeTableNPAs(tableName, fileName);
+    console.error(`[Main] NPA analysis completed:`, enhancedReport);
+
+    // Store the enhanced report
+    usStore.setEnhancedCodeReport(enhancedReport);
+
+    // Remove the creation of empty reports for single file
+    // We'll only generate reports when explicitly requested or when we have two files
   } catch (error) {
-    console.error(`[Main] Error generating enhanced report:`, error);
+    console.error(`[Main] Error in NPA analysis:`, error);
   }
 }
 
@@ -507,41 +502,52 @@ async function handleReportsAction() {
     isGeneratingReports.value = true;
     console.log('[Reports] Starting report generation');
 
-    // Check if we have two files and need to generate the comparison reports
+    // Get file names from store
     const fileNames = usStore.getFileNames;
     if (fileNames.length === 2) {
-      await generateReports();
-    } else if (fileNames.length === 1 && !usStore.enhancedCodeReport) {
-      // If we have a single file but no enhanced report yet, generate it
-      const fileName = fileNames[0];
-      const tableName = fileName.toLowerCase().replace('.csv', '');
-      const data = await service.getData(tableName);
+      // Generate code report
+      const codeReport = await service.makeUsCodeReport(fileNames[0], fileNames[1]);
 
-      if (data && data.length > 0) {
-        const cleanData = data.map((item) => ({
-          npanxx: item.npanxx,
-          npa: item.npa,
-          nxx: item.nxx,
-          interRate: item.interRate,
-          intraRate: item.intraRate,
-          indetermRate: item.indetermRate,
-        }));
+      // Create an empty pricing report since we're not handling that yet
+      const pricingReport: USPricingReport = {
+        file1: {
+          fileName: fileNames[0],
+          averageInterRate: 0,
+          averageIntraRate: 0,
+          averageIJRate: 0,
+          medianInterRate: 0,
+          medianIntraRate: 0,
+          medianIJRate: 0,
+        },
+        file2: {
+          fileName: fileNames[1],
+          averageInterRate: 0,
+          averageIntraRate: 0,
+          averageIJRate: 0,
+          medianInterRate: 0,
+          medianIntraRate: 0,
+          medianIJRate: 0,
+        },
+        comparison: {
+          interRateDifference: 0,
+          intraRateDifference: 0,
+          ijRateDifference: 0,
+          totalHigher: 0,
+          totalLower: 0,
+          totalEqual: 0,
+        },
+      };
 
-        const MAX_RECORDS = 200000;
-        const sampleData =
-          cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
+      // Store both reports in Pinia
+      usStore.setReports(pricingReport, codeReport);
 
-        await generateEnhancedCodeReport(fileName, sampleData);
-      }
+      // Update UI state
+      usStore.setReportsGenerated(true);
+      usStore.setActiveReportType('code');
+      usStore.showUploadComponents = false;
     }
 
-    // Switch to the Code Report view after generation
-    console.log('[Reports] Setting active report type to CODE');
-    usStore.setActiveReportType('code');
-    usStore.showUploadComponents = false;
-
-    // Notify user
-    console.log('[Reports] Reports generated successfully');
+    console.log('[Reports] Process completed successfully');
   } catch (error) {
     console.error('Failed to generate reports:', error);
     alert('Failed to generate reports. Please try again later.');
@@ -550,177 +556,20 @@ async function handleReportsAction() {
   }
 }
 
-async function generateReports() {
-  isGeneratingReports.value = true;
-  try {
-    // Load data using the USService which handles both storage strategies
-    const fileNames = usStore.getFileNames;
 
-    const fileData = await Promise.all(
-      fileNames.map(async (fileName) => {
-        // Remove .csv extension for table name
-        const tableName = fileName.toLowerCase().replace('.csv', '');
-        const data = await service.getData(tableName);
-        if (!data || data.length === 0) {
-          throw new Error(`No data found for file ${fileName}`);
-        }
-        return data;
-      })
-    );
-
-    if (fileData.length === 2) {
-      // Ensure data is cloneable by creating a clean copy
-      // This avoids issues with DataCloneError when using in-memory storage
-      const cleanData1 = fileData[0].map((item) => ({
-        npanxx: item.npanxx,
-        npa: item.npa,
-        nxx: item.nxx,
-        interRate: item.interRate,
-        intraRate: item.intraRate,
-        indetermRate: item.indetermRate,
-      }));
-
-      const cleanData2 = fileData[1].map((item) => ({
-        npanxx: item.npanxx,
-        npa: item.npa,
-        nxx: item.nxx,
-        interRate: item.interRate,
-        intraRate: item.intraRate,
-        indetermRate: item.indetermRate,
-      }));
-
-      // For very large datasets, we might need to sample the data to avoid browser issues
-      // Only process the first 200,000 records to avoid memory issues
-      const MAX_RECORDS = 200000;
-      const sampleData1 =
-        cleanData1.length > MAX_RECORDS ? cleanData1.slice(0, MAX_RECORDS) : cleanData1;
-      const sampleData2 =
-        cleanData2.length > MAX_RECORDS ? cleanData2.slice(0, MAX_RECORDS) : cleanData2;
-
-      // Create worker and process data for comparison
-      const comparisonWorker = new USComparisonWorker();
-      const reports = await new Promise<{
-        pricingReport: USPricingReport;
-        codeReport: USCodeReport;
-      }>((resolve, reject) => {
-        comparisonWorker.onmessage = (event) => {
-          const { pricingReport, codeReport, status } = event.data;
-
-          // Handle the worker's status response
-          if (status === 'lergDataReceived') {
-            return;
-          }
-
-          resolve({ pricingReport, codeReport });
-        };
-
-        comparisonWorker.onerror = (error) => {
-          console.error('Worker error:', error);
-          reject(error);
-        };
-
-        // First, send LERG data to the worker
-        const lergData = prepareLergWorkerData();
-        if (lergData) {
-          comparisonWorker.postMessage({ lergData });
-        }
-
-        // Then, send the file data for comparison
-        const input: USReportsInput = {
-          fileName1: fileNames[0],
-          fileName2: fileNames[1],
-          file1Data: sampleData1,
-          file2Data: sampleData2,
-        };
-
-        comparisonWorker.postMessage(input);
-      });
-
-      if (reports.pricingReport && reports.codeReport) {
-        usStore.setReports(reports.pricingReport, reports.codeReport);
-      }
-
-      // Clean up worker
-      comparisonWorker.terminate();
-
-      // After comparison is done, generate enhanced code report for each file
-      // Process a sample of the data for the enhanced code report as well
-      await generateEnhancedCodeReport(fileNames[0], sampleData1);
-      if (fileNames.length > 1) {
-        await generateEnhancedCodeReport(fileNames[1], sampleData2);
-      }
-    } else if (fileData.length === 1) {
-      // Only one file, just generate enhanced code report
-      const cleanData = fileData[0].map((item) => ({
-        npanxx: item.npanxx,
-        npa: item.npa,
-        nxx: item.nxx,
-        interRate: item.interRate,
-        intraRate: item.intraRate,
-        indetermRate: item.indetermRate,
-      }));
-
-      // For very large datasets, we might need to sample the data
-      const MAX_RECORDS = 200000;
-      const sampleData =
-        cleanData.length > MAX_RECORDS ? cleanData.slice(0, MAX_RECORDS) : cleanData;
-
-      await generateEnhancedCodeReport(fileNames[0], sampleData);
-    }
-  } catch (error: unknown) {
-    console.error('Error generating reports:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      });
-    }
-  } finally {
-    isGeneratingReports.value = false;
-  }
-}
-
-// Updated enhanced code report generation function
+// Optimize the enhanced code report generation
 async function generateEnhancedCodeReport(fileName: string, data: USStandardizedData[]) {
   console.error(`[Main] Creating worker for ${fileName}`);
   const codeReportWorker = new USCodeReportWorker();
 
   try {
-    // Create a serializable version of the LERG data
-    const stateNPAs: Record<string, string[]> = {};
+    // Get LERG data efficiently using the optimized preparation
+    const lergData = prepareLergWorkerData();
+    console.error(
+      `[Main] LERG data prepared with ${Object.keys(lergData.stateNPAs).length} regions`
+    );
 
-    // Get US states NPAs from LERG store
-    const usStates = lergStore.getUSStates;
-    console.error(`[Main] Using ${usStates.length} US states from LERG`);
-    usStates.forEach((state) => {
-      stateNPAs[state.code] = state.npas;
-    });
-
-    // Get Canadian provinces NPAs
-    const canadaProvinces = lergStore.getCanadianProvinces;
-    console.error(`[Main] Using ${canadaProvinces.length} Canadian provinces from LERG`);
-    canadaProvinces.forEach((province) => {
-      stateNPAs[province.code] = province.npas;
-    });
-
-    // Get country data in the right format
-    const countryData = lergStore.getCountryData.map((country) => ({
-      country: country.country,
-      npaCount: country.npaCount,
-      npas: [...country.npas], // Create a new array with primitive values
-    }));
-    console.error(`[Main] Using ${countryData.length} countries from LERG`);
-
-    // Prepare LERG data
-    const lergData = {
-      stateNPAs,
-      countryData,
-    };
-
-    // Create a promise to handle the worker
     return await new Promise<USEnhancedCodeReport>((resolve, reject) => {
-      // Set up a timeout to prevent hanging
       const timeout = setTimeout(() => {
         console.error(`[Main] Worker timeout for ${fileName} after 10 seconds`);
         codeReportWorker.terminate();
@@ -731,16 +580,14 @@ async function generateEnhancedCodeReport(fileName: string, data: USStandardized
         clearTimeout(timeout);
         console.error(`[Main] Worker message received for ${fileName}`);
 
-        // Check if the event data contains an error
-        if (event.data && event.data.error) {
+        if (event.data?.error) {
           console.error(`[Main] Worker error: ${event.data.error}`);
           codeReportWorker.terminate();
           reject(new Error(event.data.error));
           return;
         }
 
-        // Validate the report structure
-        if (!event.data || !event.data.file1) {
+        if (!event.data?.file1) {
           console.error(`[Main] Invalid report format from worker`);
           codeReportWorker.terminate();
           reject(new Error('Invalid report format received from worker'));
@@ -748,27 +595,11 @@ async function generateEnhancedCodeReport(fileName: string, data: USStandardized
         }
 
         const report = event.data;
-        console.error(
-          `[Main] Valid report received with ${report.file1.countries?.length || 0} countries`
-        );
-
-        // Make sure the filename is set
         if (!report.file1.fileName) {
           report.file1.fileName = fileName;
         }
 
-        // Store the report in the store
-        console.error(`[Main] Storing report for ${fileName}`);
         usStore.setEnhancedCodeReport(report);
-
-        // Verify storage
-        const storedReport = usStore.getEnhancedReportByFile(fileName);
-        if (storedReport) {
-          console.error(`[Main] Report successfully stored`);
-        } else {
-          console.error(`[Main] Failed to store report`);
-        }
-
         codeReportWorker.terminate();
         resolve(report);
       };
@@ -780,7 +611,7 @@ async function generateEnhancedCodeReport(fileName: string, data: USStandardized
         reject(error);
       };
 
-      // Send data to the worker
+      // Send data to worker
       const input = {
         fileName,
         fileData: data,
@@ -1014,10 +845,22 @@ async function handleFileInput(
   // Clear any previous errors
   uploadError[componentId] = null;
 
-  // Validate the file
-  const validationResult = validateUsFile(file, componentId);
-  if (!validationResult.valid) {
-    uploadError[componentId] = validationResult.errorMessage || 'Invalid file';
+  // Validate file extension
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    uploadError[componentId] = 'Only CSV files are accepted';
+    return;
+  }
+
+  // Check if OTHER component is uploading
+  const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
+  if (usStore.isComponentUploading(otherComponent)) {
+    uploadError[componentId] = 'Please wait for the other file to finish uploading';
+    return;
+  }
+
+  // Check for duplicate filename
+  if (usStore.hasExistingFile(file.name)) {
+    uploadError[componentId] = `A file with name "${file.name}" has already been uploaded`;
     return;
   }
 

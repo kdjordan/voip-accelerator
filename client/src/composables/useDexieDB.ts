@@ -178,9 +178,12 @@ export default function useDexieDB() {
 
     try {
       const stores = db.tables.map((table) => table.name);
-      console.log('Available stores:', stores);
+      console.log('Available tables:', stores);
+
+      // Check if the store exists and return empty array if not
       if (!db.hasStore(storeName)) {
-        throw new Error(`Store ${storeName} not found in database ${dbName}`);
+        console.warn(`Store ${storeName} not found in database ${dbName}. Returning empty array.`);
+        return [];
       }
 
       const data = await db.table(storeName).toArray();

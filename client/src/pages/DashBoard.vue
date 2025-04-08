@@ -204,16 +204,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { DBName } from '@/types/app-types';
-import { AZService } from '@/services/az.service';
-import { USService } from '@/services/us.service';
 import { useSharedStore } from '@/stores/shared-store';
-import { PlanTier } from '@/types/user-types';
 import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import { useLergStore } from '@/stores/lerg-store';
-import { useRateSheetStore } from '@/stores/rate-sheet-store';
-import useDexieDB from '@/composables/useDexieDB';
+import { useLergData } from '@/composables/useLergData';
 
 // Shared store for user info
 const sharedStore = useSharedStore();
@@ -253,17 +248,68 @@ const formattedCreatedAt = computed(() => {
   });
 });
 
+// Database tables information
+const isLoadingDatabaseInfo = ref(false);
+const allDatabaseTables = ref<
+  Array<{
+    name: string;
+    storage: 'memory' | 'indexeddb';
+    count: number;
+  }>
+>([]);
 
+// Calculate totals for records
+const totalMemoryRecords = computed(() => {
+  return allDatabaseTables.value
+    .filter((table) => table.storage === 'memory')
+    .reduce((sum, table) => sum + table.count, 0);
+});
 
+const totalIndexedDbRecords = computed(() => {
+  return allDatabaseTables.value
+    .filter((table) => table.storage === 'indexeddb')
+    .reduce((sum, table) => sum + table.count, 0);
+});
 
+const totalRecords = computed(() => {
+  return totalMemoryRecords.value + totalIndexedDbRecords.value;
+});
 
+// Function to determine module based on table name
+function getModuleForTable(tableName: string): string {
+  if (tableName.startsWith('az') || tableName.includes('az_')) {
+    return 'AZ';
+  } else if (tableName.startsWith('us') || tableName.includes('us_')) {
+    return 'US';
+  } else if (tableName === 'lerg' || tableName.includes('lerg')) {
+    return 'LERG';
+  } else if (tableName.includes('rate_sheet')) {
+    return 'Rate Sheet';
+  } else {
+    return 'Other';
+  }
+}
 
 // Stores for accessing memory (Pinia) data
 const azStore = useAzStore();
 const usStore = useUsStore();
 const lergStore = useLergStore();
-const rateSheetStore = useRateSheetStore();
 
 
+// LERG initialization
+const { initializeLergData, error: lergError } = useLergData();
 
+// Function to load database information
+
+
+// Initialize LERG data on component mount
+onMounted(async () => {
+  try {
+    // Initialize LERG data
+    await initializeLergData();
+
+  } catch (err) {
+    console.error('Failed to initialize services:', err);
+  }
+});
 </script>

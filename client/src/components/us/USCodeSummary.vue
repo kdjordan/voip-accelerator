@@ -13,12 +13,13 @@
       </div>
     </div>
 
-    <!-- Code Report Content - Dark bento box style -->
+    <!-- Code Report Content -->
     <div class="bg-gray-900 rounded-lg p-4">
       <div class="space-y-4">
+        <!-- Basic Stats -->
         <div class="bg-gray-800 p-3 rounded-lg">
           <div class="text-gray-400 mb-1">Total Codes:</div>
-          <div class="text-xl text-white">{{ usStore.getFileStats(componentId).totalCodes }}</div>
+          <div class="text-xl text-white">{{ enhancedReport?.file1?.totalCodes || 0 }}</div>
         </div>
 
         <!-- NPAs Section with Coverage -->
@@ -27,22 +28,15 @@
           <div class="grid grid-cols-3 gap-2">
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">LERG Count</div>
-              <div class="text-lg text-white">
-                {{ totalLergCodes }}
-              </div>
+              <div class="text-lg text-white">{{ totalLergCodes }}</div>
             </div>
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">File Count</div>
-              <div class="text-lg text-white">
-                {{ usStore.getFileStats(componentId).totalDestinations }}
-              </div>
+              <div class="text-lg text-white">{{ totalFileNPAs }}</div>
             </div>
-
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">Coverage</div>
-              <div class="text-lg text-white">
-                {{ usStore.getFileStats(componentId).usNPACoveragePercentage }}%
-              </div>
+              <div class="text-lg text-white">{{ overallCoveragePercentage }}%</div>
             </div>
           </div>
         </div>
@@ -53,21 +47,15 @@
           <div class="grid grid-cols-3 gap-2">
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">Interstate</div>
-              <div class="text-lg text-white">
-                ${{ usStore.getFileStats(componentId).avgInterRate }}
-              </div>
+              <div class="text-lg text-white">${{ averageRates.interstate }}</div>
             </div>
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">Intrastate</div>
-              <div class="text-lg text-white">
-                ${{ usStore.getFileStats(componentId).avgIntraRate }}
-              </div>
+              <div class="text-lg text-white">${{ averageRates.intrastate }}</div>
             </div>
             <div class="bg-gray-900 p-2 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">Indeterminate</div>
-              <div class="text-lg text-white">
-                ${{ usStore.getFileStats(componentId).avgIndetermRate }}
-              </div>
+              <div class="text-lg text-white">${{ averageRates.indeterminate }}</div>
             </div>
           </div>
         </div>
@@ -115,31 +103,22 @@
               <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-accent"></div>
             </div>
 
-            <!-- US States Section -->
-            <div v-else-if="filteredUsStates.length > 0" class="bg-gray-900 p-3 rounded-lg">
-              <div class="text-sm text-gray-400 mb-2">
-                US States ({{ filteredUsStates.length }}):
-              </div>
-              <div class="space-y-2 max-h-80 overflow-y-auto">
-                <div
-                  v-for="state in filteredUsStates"
-                  :key="state.code"
-                  class="bg-gray-800/60 rounded overflow-hidden"
-                >
-                  <!-- State header -->
+            <!-- Countries Section -->
+            <div v-else class="space-y-4">
+              <template v-for="country in filteredCountries" :key="country.countryCode">
+                <div class="bg-gray-900 p-3 rounded-lg">
                   <div
-                    @click="toggleStateExpanded(state.code)"
-                    class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
+                    @click="toggleCountryExpanded(country.countryCode)"
+                    class="flex justify-between items-center cursor-pointer"
                   >
-                    <span class="text-gray-300">{{ getStateName(state.code, 'US') }}</span>
+                    <span class="text-gray-300">{{ country.countryName }}</span>
                     <div class="flex items-center space-x-2">
                       <span class="text-accent">
-                        {{ state.npas.length }} <span class="text-gray-400">of</span>
-                        {{ stateToLergNpasMap.get(state.code) || 0 }}
+                        {{ formatCoverage(country.npaCoverage) }}% Coverage
                       </span>
                       <span
                         class="transform transition-transform"
-                        :class="{ 'rotate-180': expandedStates.has(state.code) }"
+                        :class="{ 'rotate-180': expandedCountries.has(country.countryCode) }"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -159,163 +138,91 @@
                     </div>
                   </div>
 
-                  <!-- Expanded NPAs section -->
-                  <div
-                    v-if="expandedStates.has(state.code)"
-                    class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
-                  >
-                    <div class="text-xs text-gray-400 mb-2">NPAs:</div>
-                    <div class="flex flex-wrap gap-2">
-                      <div
-                        v-for="npa in state.npas"
-                        :key="npa"
-                        class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
-                      >
-                        {{ npa }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Canadian Provinces Section -->
-            <div v-if="filteredCanadianProvinces.length > 0" class="bg-gray-900 p-3 rounded-lg">
-              <div class="text-sm text-gray-400 mb-2">
-                Canadian Provinces ({{ filteredCanadianProvinces.length }}):
-              </div>
-              <div class="space-y-2 max-h-60 overflow-y-auto">
-                <div
-                  v-for="province in filteredCanadianProvinces"
-                  :key="province.code"
-                  class="bg-gray-800/60 rounded overflow-hidden"
-                >
-                  <!-- Province header -->
-                  <div
-                    @click="toggleProvinceExpanded(province.code)"
-                    class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
-                  >
-                    <span class="text-gray-300">{{ getStateName(province.code, 'CA') }}</span>
-                    <div class="flex items-center space-x-2">
-                      <span class="text-accent">
-                        {{ province.npas.length }} <span class="text-gray-400">of</span>
-                        {{ provinceToLergNpasMap.get(province.code) || 0 }}
-                      </span>
-                      <span
-                        class="transform transition-transform"
-                        :class="{ 'rotate-180': expandedProvinces.has(province.code) }"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                  <!-- States/Provinces Section -->
+                  <div v-if="expandedCountries.has(country.countryCode)" class="mt-3 space-y-2">
+                    <template v-for="state in country.states" :key="state.code">
+                      <div class="bg-gray-800/60 rounded overflow-hidden">
+                        <div
+                          @click="toggleStateExpanded(state.code)"
+                          class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
+                          <span class="text-gray-300">{{
+                            getStateName(state.code, country.countryCode)
+                          }}</span>
+                          <div class="flex items-center space-x-2">
+                            <span class="text-accent">
+                              {{ formatCoverage(state.npaCoverage) }}% Coverage
+                            </span>
+                            <span
+                              class="transform transition-transform"
+                              :class="{ 'rotate-180': expandedStates.has(state.code) }"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </span>
+                          </div>
+                        </div>
 
-                  <!-- Expanded NPAs section -->
-                  <div
-                    v-if="expandedProvinces.has(province.code)"
-                    class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
-                  >
-                    <div class="text-xs text-gray-400 mb-2">NPAs:</div>
-                    <div class="flex flex-wrap gap-2">
-                      <div
-                        v-for="npa in province.npas"
-                        :key="npa"
-                        class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
-                      >
-                        {{ npa }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Other Countries Section -->
-            <div v-if="filteredOtherCountries.length > 0" class="bg-gray-900 p-3 rounded-lg">
-              <div class="text-sm text-gray-400 mb-2">
-                Other Countries ({{ filteredOtherCountries.length }}):
-              </div>
-              <div class="space-y-2 max-h-60 overflow-y-auto">
-                <div
-                  v-for="country in filteredOtherCountries"
-                  :key="country.country"
-                  class="bg-gray-800/60 rounded overflow-hidden"
-                >
-                  <!-- Country header -->
-                  <div
-                    @click="toggleCountryExpanded(country.country)"
-                    class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
-                  >
-                    <span class="text-gray-300">{{ getCountryName(country.country) }}</span>
-                    <div class="flex items-center space-x-2">
-                      <span class="text-accent">
-                        {{ country.npaCount }} <span class="text-gray-400">of</span>
-                        {{ countryToLergNpasMap.get(country.country) || 0 }}
-                      </span>
-                      <span
-                        class="transform transition-transform"
-                        :class="{ 'rotate-180': expandedCountries.has(country.country) }"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                        <!-- NPAs List -->
+                        <div
+                          v-if="expandedStates.has(state.code)"
+                          class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
+                          <!-- Rate Stats -->
+                          <div class="mb-3 grid grid-cols-3 gap-2">
+                            <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                              <div class="text-xs text-gray-400 mb-1">IE Rate</div>
+                              <div class="text-sm text-white">
+                                ${{ formatRate(state.rateStats?.interstate?.average) }}
+                              </div>
+                            </div>
+                            <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                              <div class="text-xs text-gray-400 mb-1">IA Rate</div>
+                              <div class="text-sm text-white">
+                                ${{ formatRate(state.rateStats?.intrastate?.average) }}
+                              </div>
+                            </div>
+                            <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                              <div class="text-xs text-gray-400 mb-1">IJ Rate</div>
+                              <div class="text-sm text-white">
+                                ${{ formatRate(state.rateStats?.indeterminate?.average) }}
+                              </div>
+                            </div>
+                          </div>
 
-                  <!-- Expanded NPAs section -->
-                  <div
-                    v-if="expandedCountries.has(country.country)"
-                    class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
-                  >
-                    <div class="text-xs text-gray-400 mb-2">NPAs:</div>
-                    <div class="flex flex-wrap gap-2">
-                      <div
-                        v-for="npa in country.npas"
-                        :key="npa"
-                        class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
-                      >
-                        {{ npa }}
+                          <div class="text-xs text-gray-400 mb-2">NPAs:</div>
+                          <div class="flex flex-wrap gap-2">
+                            <div
+                              v-for="npa in state.npas"
+                              :key="npa"
+                              class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
+                            >
+                              {{ npa }}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </template>
                   </div>
                 </div>
-              </div>
+              </template>
             </div>
 
             <!-- No Results Message -->
             <div
-              v-if="
-                searchQuery &&
-                !isFiltering &&
-                filteredUsStates.length === 0 &&
-                filteredCanadianProvinces.length === 0 &&
-                filteredOtherCountries.length === 0
-              "
+              v-if="searchQuery && !isFiltering && filteredCountries.length === 0"
               class="text-center py-4 text-gray-400"
             >
               No results found for "{{ searchQuery }}"
@@ -333,9 +240,6 @@ import { useUsStore } from '@/stores/us-store';
 import { useLergStore } from '@/stores/lerg-store';
 import { getStateName } from '@/types/constants/state-codes';
 import { getCountryName } from '@/types/constants/country-codes';
-import { STATE_CODES } from '@/types/constants/state-codes';
-import { PROVINCE_CODES } from '@/types/constants/province-codes';
-import { COUNTRY_CODES } from '@/types/constants/country-codes';
 
 // Define props
 const props = defineProps<{
@@ -345,200 +249,112 @@ const props = defineProps<{
 const usStore = useUsStore();
 const lergStore = useLergStore();
 
-// State for expanding sections and expanded items
-const showDistribution = ref(false);
+// UI state
+const showDistribution = ref(true);
 const searchQuery = ref('');
 const isFiltering = ref(false);
 const expandedStates = ref<Set<string>>(new Set());
-const expandedProvinces = ref<Set<string>>(new Set());
 const expandedCountries = ref<Set<string>>(new Set());
-const totalLergCodes = ref(0);
 
-totalLergCodes.value = lergStore.getTotalLergCodes;
-
-// Computed values using file-specific data instead of LERG data
-const fileData = computed(() => {
-  return usStore.getFileDataByComponent(props.componentId) || [];
+// Get the enhanced report for this component
+const enhancedReport = computed(() => {
+  const fileName = usStore.getFileNameByComponent(props.componentId);
+  return usStore.getEnhancedReportByFile(fileName);
 });
 
-// Extract NPAs from file data
-const fileNPAs = computed(() => {
-  const npas = new Set<string>();
-  fileData.value.forEach((entry: any) => {
-    if (entry.npa) {
-      npas.add(entry.npa);
-    }
-  });
-  return Array.from(npas);
+// Basic stats
+const totalLergCodes = computed(() => lergStore.calculateTotalLergCodes() || 0);
+const totalFileNPAs = computed(() => {
+  const countries = enhancedReport.value?.file1?.countries;
+  if (!countries) return 0;
+  return countries.reduce((total, country) => total + (country.npas?.length || 0), 0);
 });
 
-// Group NPAs by US states
-const usStates = computed(() => {
-  const stateMap = new Map<string, string[]>();
-
-  // Get all US state codes
-  Object.keys(STATE_CODES).forEach((stateCode) => {
-    stateMap.set(stateCode, []);
-  });
-
-  // Go through file NPAs and assign to states
-  fileNPAs.value.forEach((npa) => {
-    const stateData = lergStore.getStateByNpa?.(npa);
-    if (stateData && stateData.country === 'US' && stateData.state in STATE_CODES) {
-      const npasForState = stateMap.get(stateData.state) || [];
-      npasForState.push(npa);
-      stateMap.set(stateData.state, npasForState);
-    }
-  });
-
-  // Convert map to array and sort by NPA count
-  return Array.from(stateMap.entries())
-    .filter(([_, npas]) => npas.length > 0)
-    .map(([code, npas]) => ({
-      code,
-      country: 'US',
-      npas: [...npas].sort(),
-    }))
-    .sort((a, b) => b.npas.length - a.npas.length);
+const overallCoveragePercentage = computed(() => {
+  if (!enhancedReport.value?.file1?.countries?.[0]) return 0;
+  return formatCoverage(enhancedReport.value.file1.countries[0].npaCoverage);
 });
 
-// Group NPAs by Canadian provinces
-const canadianProvinces = computed(() => {
-  const provinceMap = new Map<string, string[]>();
-
-  // Get all Canadian province codes
-  Object.keys(PROVINCE_CODES).forEach((provinceCode) => {
-    provinceMap.set(provinceCode, []);
-  });
-
-  // Go through file NPAs and assign to provinces
-  fileNPAs.value.forEach((npa) => {
-    const stateData = lergStore.getStateByNpa?.(npa);
-    if (stateData && stateData.country === 'CA' && stateData.state in PROVINCE_CODES) {
-      const npasForProvince = provinceMap.get(stateData.state) || [];
-      npasForProvince.push(npa);
-      provinceMap.set(stateData.state, npasForProvince);
-    }
-  });
-
-  // Convert map to array and sort by NPA count
-  return Array.from(provinceMap.entries())
-    .filter(([_, npas]) => npas.length > 0)
-    .map(([code, npas]) => ({
-      code,
-      country: 'CA',
-      npas: [...npas].sort(),
-    }))
-    .sort((a, b) => b.npas.length - a.npas.length);
+// Average rates
+const averageRates = computed(() => {
+  const rates = enhancedReport.value?.file1?.rateStats || {};
+  return {
+    interstate: Number(rates.interstate?.average || 0).toFixed(4),
+    intrastate: Number(rates.intrastate?.average || 0).toFixed(4),
+    indeterminate: Number(rates.indeterminate?.average || 0).toFixed(4),
+  };
 });
 
-// Group NPAs by other countries
-const otherCountries = computed(() => {
-  const countryMap = new Map<string, string[]>();
+// Format coverage to 2 decimal places
+function formatCoverage(value: number | undefined): number {
+  if (value === undefined) return 0;
+  return Number(value.toFixed(2));
+}
 
-  // Go through file NPAs and assign to countries
-  fileNPAs.value.forEach((npa) => {
-    const country = lergStore.getCountryByNpa?.(npa);
-    if (country && country !== 'US' && country !== 'CA') {
-      if (!countryMap.has(country)) {
-        countryMap.set(country, []);
+// Format rate to 4 decimal places
+function formatRate(value: number | undefined): string {
+  if (value === undefined) return '0.0000';
+  return value.toFixed(4);
+}
+
+// Countries data with filtering
+const countries = computed(() => {
+  if (!enhancedReport.value?.file1?.countries) return [];
+
+  return enhancedReport.value.file1.countries.map((country) => ({
+    countryCode: country.countryCode,
+    countryName: getCountryName(country.countryCode || ''),
+    npaCoverage: country.npaCoverage,
+    states: (country.states || []).map((state) => ({
+      code: state.stateCode || '',
+      npaCoverage: state.coverage,
+      npas: state.npas || [],
+      rateStats: state.rateStats || {},
+    })),
+  }));
+});
+
+const filteredCountries = computed(() => {
+  if (!searchQuery.value) return countries.value;
+
+  const query = searchQuery.value.toLowerCase();
+
+  return countries.value
+    .map((country) => {
+      // Filter states based on search query
+      const filteredStates = country.states.filter((state) => {
+        const stateName = getStateName(state.code, country.countryCode).toLowerCase();
+        const hasMatchingNPA = state.npas.some((npa) => npa.toString().includes(query));
+        return stateName.includes(query) || hasMatchingNPA;
+      });
+
+      // If country name matches, return country with all its states
+      if (country.countryName.toLowerCase().includes(query)) {
+        return { ...country };
       }
-      const npasForCountry = countryMap.get(country) || [];
-      npasForCountry.push(npa);
-      countryMap.set(country, npasForCountry);
-    }
-  });
 
-  // Convert map to array and sort by NPA count
-  return Array.from(countryMap.entries())
-    .map(([country, npas]) => ({
-      country,
-      npaCount: npas.length,
-      npas: [...npas].sort(),
-    }))
-    .sort((a, b) => b.npaCount - a.npaCount);
+      // If any states match, return country with only matching states
+      if (filteredStates.length > 0) {
+        return { ...country, states: filteredStates };
+      }
+
+      // If no matches, return null
+      return null;
+    })
+    .filter((country): country is NonNullable<typeof country> => {
+      return (
+        country !== null &&
+        (country.countryName.toLowerCase().includes(query) || country.states.length > 0)
+      );
+    });
 });
 
-// Filtered results with debounce for better performance
-const filteredUsStates = computed(() => {
-  if (!searchQuery.value) return usStates.value;
-  const query = searchQuery.value.toLowerCase();
-
-  return usStates.value.filter((state) => {
-    // Match on state code
-    if (state.code.toLowerCase().includes(query)) return true;
-
-    // Match on state name
-    if (getStateName(state.code, 'US').toLowerCase().includes(query)) return true;
-
-    // Match on any NPA
-    if (state.npas.some((npa) => npa.includes(query))) return true;
-
-    return false;
-  });
-});
-
-const filteredCanadianProvinces = computed(() => {
-  if (!searchQuery.value) return canadianProvinces.value;
-  const query = searchQuery.value.toLowerCase();
-
-  return canadianProvinces.value.filter((province) => {
-    // Match on province code
-    if (province.code.toLowerCase().includes(query)) return true;
-
-    // Match on province name
-    if (getStateName(province.code, 'CA').toLowerCase().includes(query)) return true;
-
-    // Match on any NPA
-    if (province.npas.some((npa) => npa.includes(query))) return true;
-
-    // Match on country
-    if ('canada'.includes(query)) return true;
-
-    return false;
-  });
-});
-
-const filteredOtherCountries = computed(() => {
-  if (!searchQuery.value) return otherCountries.value;
-  const query = searchQuery.value.toLowerCase();
-
-  return otherCountries.value.filter((country) => {
-    // Match on country code
-    if (country.country.toLowerCase().includes(query)) return true;
-
-    // Match on country name
-    if (getCountryName(country.country).toLowerCase().includes(query)) return true;
-
-    // Match on any NPA
-    if (country.npas.some((npa) => npa.includes(query))) return true;
-
-    return false;
-  });
-});
-
-// Add debouncing for search
-watch(searchQuery, () => {
-  isFiltering.value = true;
-  setTimeout(() => {
-    isFiltering.value = false;
-  }, 300);
-});
-
-// Functions to toggle expanded state
+// Toggle functions
 function toggleStateExpanded(code: string) {
   if (expandedStates.value.has(code)) {
     expandedStates.value.delete(code);
   } else {
     expandedStates.value.add(code);
-  }
-}
-
-function toggleProvinceExpanded(code: string) {
-  if (expandedProvinces.value.has(code)) {
-    expandedProvinces.value.delete(code);
-  } else {
-    expandedProvinces.value.add(code);
   }
 }
 
@@ -550,45 +366,32 @@ function toggleCountryExpanded(code: string) {
   }
 }
 
-// Add computed properties to get total NPAs per region from LERG data
-const stateToLergNpasMap = computed(() => {
-  const map = new Map<string, number>();
+// Add watcher to auto-expand matching items
+watch(searchQuery, (newQuery) => {
+  if (!newQuery) {
+    // Clear all expansions when search is cleared
+    expandedStates.value.clear();
+    expandedCountries.value.clear();
+    return;
+  }
 
-  // For US states
-  Object.entries(STATE_CODES).forEach(([stateCode]) => {
-    // Get NPAs for this state from LERG
-    const npas = lergStore.getNpasByState?.('US', stateCode) || new Set<string>();
-    map.set(stateCode, npas.size);
-  });
+  const query = newQuery.toLowerCase();
 
-  return map;
-});
-
-const provinceToLergNpasMap = computed(() => {
-  const map = new Map<string, number>();
-
-  // For Canadian provinces
-  Object.entries(PROVINCE_CODES).forEach(([provinceCode]) => {
-    // Get NPAs for this province from LERG
-    const npas = lergStore.getNpasByState?.('CA', provinceCode) || new Set<string>();
-    map.set(provinceCode, npas.size);
-  });
-
-  return map;
-});
-
-const countryToLergNpasMap = computed(() => {
-  const map = new Map<string, number>();
-
-  // For countries (excluding US and CA which are handled separately)
-  Object.entries(COUNTRY_CODES).forEach(([countryCode]) => {
-    if (countryCode !== 'US' && countryCode !== 'CA') {
-      // Get NPAs for this country from LERG
-      const npas = lergStore.getNpasByCountry?.(countryCode) || new Set<string>();
-      map.set(countryCode, npas.size);
+  // Expand countries and states that match the search
+  filteredCountries.value.forEach((country) => {
+    if (country.countryName.toLowerCase().includes(query)) {
+      expandedCountries.value.add(country.countryCode);
     }
-  });
 
-  return map;
+    country.states.forEach((state) => {
+      const stateName = getStateName(state.code, country.countryCode).toLowerCase();
+      const hasMatchingNPA = state.npas.some((npa) => npa.toString().includes(query));
+
+      if (stateName.includes(query) || hasMatchingNPA) {
+        expandedCountries.value.add(country.countryCode);
+        expandedStates.value.add(state.code);
+      }
+    });
+  });
 });
 </script>

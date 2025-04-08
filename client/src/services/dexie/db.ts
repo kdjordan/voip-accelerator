@@ -2,41 +2,70 @@ import Dexie from 'dexie';
 import { DBName, DBSchemas, isSchemaSupported } from '@/types/app-types';
 import { DexieServiceFactory } from './index';
 
-/**
- * Main Dexie database instance for the application
- */
-class AppDatabase extends Dexie {
-  // Define tables as properties
+// Each database is separate according to the DBName constants
+export class LergDatabase extends Dexie {
   lerg!: Dexie.Table<any, string>;
-  us_codes!: Dexie.Table<any, string>;
-  az_codes!: Dexie.Table<any, string>;
 
   constructor() {
-    super('voip_accelerator');
-
-    // Initialize DB with schema versions
+    super(DBName.LERG);
     this.version(1).stores({
       lerg: DBSchemas[DBName.LERG],
-      us_codes: DBSchemas[DBName.US],
-      az_codes: DBSchemas[DBName.AZ],
     });
-
-    console.log('AppDatabase initialized with schemas');
+    console.log(`${DBName.LERG} initialized with schema`);
   }
 }
 
-// Create singleton instance
-const db = new AppDatabase();
+export class USDatabase extends Dexie {
+  us_codes!: Dexie.Table<any, string>;
 
-// Initialize factory with database instance
-DexieServiceFactory.setDatabase(db);
+  constructor() {
+    super(DBName.US);
+    this.version(1).stores({
+      us_codes: DBSchemas[DBName.US],
+    });
+    console.log(`${DBName.US} initialized with schema`);
+  }
+}
+
+export class AZDatabase extends Dexie {
+  az_codes!: Dexie.Table<any, string>;
+
+  constructor() {
+    super(DBName.AZ);
+    this.version(1).stores({
+      az_codes: DBSchemas[DBName.AZ],
+    });
+    console.log(`${DBName.AZ} initialized with schema`);
+  }
+}
+
+// Create singleton instances
+const lergDB = new LergDatabase();
+const usDB = new USDatabase();
+const azDB = new AZDatabase();
+
+// Initialize factory with database instances
+DexieServiceFactory.setDatabases(lergDB, usDB, azDB);
 
 /**
- * Get the initialized database instance
- * @returns AppDatabase instance
+ * Get the initialized LERG database instance
  */
-export function getDatabase(): AppDatabase {
-  return db;
+export function getLergDatabase(): LergDatabase {
+  return lergDB;
+}
+
+/**
+ * Get the initialized US database instance
+ */
+export function getUSDatabase(): USDatabase {
+  return usDB;
+}
+
+/**
+ * Get the initialized AZ database instance
+ */
+export function getAZDatabase(): AZDatabase {
+  return azDB;
 }
 
 /**
@@ -63,5 +92,5 @@ export function getAZService() {
   return DexieServiceFactory.getAZService();
 }
 
-// Export the database and factory
-export { db, DexieServiceFactory };
+// Export the databases and factory
+export { lergDB, usDB, azDB, DexieServiceFactory };

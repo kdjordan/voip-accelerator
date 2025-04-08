@@ -17,18 +17,20 @@ import { AZDexieService } from './az-dexie.service';
 
 /**
  * DexieServiceFactory class for getting service instances
- * This ensures we're using the same Dexie database instance across services
+ * This ensures we're using the correct Dexie database instances across services
  */
 export class DexieServiceFactory {
-  private static db: Dexie | null = null;
+  private static lergDB: Dexie | null = null;
+  private static usDB: Dexie | null = null;
+  private static azDB: Dexie | null = null;
 
   /**
-   * Set the Dexie database instance for the factory
-   *
-   * @param dexieDB Dexie database instance
+   * Set the Dexie database instances for the factory
    */
-  static setDatabase(dexieDB: Dexie): void {
-    DexieServiceFactory.db = dexieDB;
+  static setDatabases(lergDB: Dexie, usDB: Dexie, azDB: Dexie): void {
+    DexieServiceFactory.lergDB = lergDB;
+    DexieServiceFactory.usDB = usDB;
+    DexieServiceFactory.azDB = azDB;
   }
 
   /**
@@ -37,10 +39,10 @@ export class DexieServiceFactory {
    * @returns LergDexieService instance
    */
   static getLergService(): LergDexieService {
-    if (!DexieServiceFactory.db) {
-      throw new Error('Database not initialized. Call setDatabase first.');
+    if (!DexieServiceFactory.lergDB) {
+      throw new Error('LERG database not initialized. Call setDatabases first.');
     }
-    return LergDexieService.getInstance(DexieServiceFactory.db);
+    return LergDexieService.getInstance(DexieServiceFactory.lergDB);
   }
 
   /**
@@ -49,10 +51,10 @@ export class DexieServiceFactory {
    * @returns USDexieService instance
    */
   static getUSService(): USDexieService {
-    if (!DexieServiceFactory.db) {
-      throw new Error('Database not initialized. Call setDatabase first.');
+    if (!DexieServiceFactory.usDB) {
+      throw new Error('US database not initialized. Call setDatabases first.');
     }
-    return USDexieService.getInstance(DexieServiceFactory.db);
+    return USDexieService.getInstance(DexieServiceFactory.usDB);
   }
 
   /**
@@ -61,10 +63,10 @@ export class DexieServiceFactory {
    * @returns AZDexieService instance
    */
   static getAZService(): AZDexieService {
-    if (!DexieServiceFactory.db) {
-      throw new Error('Database not initialized. Call setDatabase first.');
+    if (!DexieServiceFactory.azDB) {
+      throw new Error('AZ database not initialized. Call setDatabases first.');
     }
-    return AZDexieService.getInstance(DexieServiceFactory.db);
+    return AZDexieService.getInstance(DexieServiceFactory.azDB);
   }
 }
 
