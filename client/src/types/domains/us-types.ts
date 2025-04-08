@@ -163,6 +163,11 @@ export interface USEnhancedFileReport {
   fileName: string;
   totalCodes: number;
   countries: USCountryBreakdown[];
+  rateStats?: {
+    interstate: USRateStats;
+    intrastate: USRateStats;
+    indeterminate: USRateStats;
+  };
 }
 
 export interface USCountryBreakdown {

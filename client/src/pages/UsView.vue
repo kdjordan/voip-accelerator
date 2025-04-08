@@ -46,6 +46,8 @@ const usStore = useUsStore();
 const { ping, error } = useLergData();
 const lergStore = useLergStore();
 
+const { initializeLergData, error: lergError } = useLergData();
+
 // Add watchers to debug state changes
 watch(
   () => usStore.activeReportType,
@@ -68,6 +70,7 @@ watch(
 onMounted(async () => {
   // Ensure LERG data is loaded first, before anything else happens
   try {
+    await initializeLergData();
     console.log('[UsView] Mounting component, checking LERG data');
 
     // Ping LERG data to ensure it's available for US operations
@@ -79,8 +82,6 @@ onMounted(async () => {
     const canadaProvinces = lergStore.getCanadianProvinces;
     const countryData = lergStore.getCountryData;
 
-    // Update the statistics in the LERG store
-    lergStore.updateStats();
 
     console.log('[UsView] LERG data loaded:', {
       usStatesCount: usStates.length,
@@ -92,15 +93,24 @@ onMounted(async () => {
       lergTotalNPAs: lergStore.stats.totalNPAs,
     });
 
-    // Only then load sample decks
-    const sampleDecks = setTimeout(async () => {
-      await loadSampleDecks([DBName.US]);
-    }, 1000);
+    // Check if files are already loaded before loading sample data
+    const filesAlreadyUploaded = usStore.getNumberOfFilesUploaded === 2;
 
-    // Clear timeout on component unmount
-    return () => clearTimeout(sampleDecks);
-  } catch (e) {
-    console.error('[UsView] Error loading LERG data:', e);
+    if (filesAlreadyUploaded) {
+      console.log('[UsView] Files already uploaded, skipping sample data loading');
+    } else {
+      // Only load sample decks if no files are already uploaded
+      console.log('[UsView] No files uploaded, loading sample data');
+      const sampleDecks = setTimeout(async () => {
+        await loadSampleDecks([DBName.US]);
+      }, 1000);
+
+      // Clear timeout on component unmount
+      return () => clearTimeout(sampleDecks);
+    }
+  } catch (err) {
+    console.error('[UsView] Error loading LERG data:', err);
+    lergInitError.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
   }
 });
 

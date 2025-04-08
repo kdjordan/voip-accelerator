@@ -15,12 +15,12 @@ export async function cleanupDatabases(): Promise<void> {
     console.log('Known databases:', knownDatabases);
 
     // Filter for our application databases only
-    const ourDbs = dbNames.filter(name => knownDatabases.includes(name as DBNameType));
+    const ourDbs = dbNames.filter((name) => knownDatabases.includes(name as DBNameType));
     console.log('Databases to clean:', ourDbs);
 
     // Delete each database
     const results = await Promise.allSettled(
-      ourDbs.map(async dbName => {
+      ourDbs.map(async (dbName) => {
         try {
           // Force close any open connections
           const db = new Dexie(dbName);
