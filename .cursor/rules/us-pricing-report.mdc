@@ -1,0 +1,105 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Refactor US Pricing Report & Implement Detailed Comparison
+
+**Goal:** Rework the US Pricing Report to provide detailed, interactive NPANXX-level rate comparisons between two uploaded files, leveraging Dexie for data storage and LERG for contextual information.
+
+---
+
+## Phase 1: Data Model & Storage
+
+1.  **Define Dexie Schema (`us_pricing_comparison` table):**
+    *   **Primary Key:** `npanxx` (string, 6 digits)
+    *   **Indexed Fields:**
+        *   `npa` (string, 3 digits) - For joining/filtering with LERG
+        *   `nxx` (string, 3 digits) - Added
+        *   `stateCode` (string) - From LERG lookup, for filtering by state/province
+        *   `countryCode` (string) - Added
+        *   `diff_inter_pct` (number) - Percentage difference, for sorting/filtering
+        *   `diff_intra_pct` (number) - Percentage difference, for sorting/filtering
+        *   `diff_indeterm_pct` (number) - Percentage difference, for sorting/filtering
+        *   `diff_inter_abs` (number) - Absolute difference, for sorting/filtering
+        *   `diff_intra_abs` (number) - Absolute difference, for sorting/filtering
+        *   `diff_indeterm_abs` (number) - Absolute difference, for sorting/filtering
+    *   **Data Fields:**
+        *   `file1_inter` (number)
+        *   `file1_intra` (number)
+        *   `file1_indeterm` (number)
+        *   `file2_inter` (number)
+        *   `file2_intra` (number)
+        *   `file2_indeterm` (number)
+        *   `cheaper_file` ('file1' | 'file2' | 'same') - Indicator for easy filtering
+
+2.  **Update Dexie Setup (`useDexieDB.ts`):**
+    *   Add the `us_pricing_comparison` store definition to the `db.version().stores()` call for the `DBName.US` database. Include the necessary indexes defined above.
+
+---
+
+## Phase 2: Comparison Service Logic
+
+1.  **Create/Update Service Function (`us.service.ts` or new service):**
+    *   Define `generatePricingComparison(table1Name: string, table2Name: string): Promise<void>`.
+2.  **Implement Comparison Logic:**
+    *   Clear any existing data in the `us_pricing_comparison` table before starting.
+    *   Load necessary LERG data (NPA to State mapping) from `lergStore` into memory for efficient lookups.
+    *   Load all NPANXX and rate data from `table2` into a Map (`Map<string, { rates: object, npa: string }>`) for fast lookups.
+    *   Iterate through each record in `table1` (potentially in chunks if memory becomes an issue).
+    *   For each `record1` from `table1`:
+        *   Look up its `npanxx` in the `table2Data` Map.
+        *   **If match found (`record2` exists):**
+            *   Retrieve `record1.rates` and `record2.rates`.
+            *   Calculate absolute differences (`record2.rate - record1.rate`) for Inter/Intra/Indeterm.
+            *   Calculate percentage differences (`(record2.rate - record1.rate) / record1.rate * 100`) for Inter/Intra/Indeterm (handle division by zero if `record1.rate` is 0).
+            *   Determine `cheaper_file`.
+            *   Lookup `stateCode` from LERG data using `record1.npa`.
+            *   Lookup `countryCode` using `record1.npa` via LERG.
+            *   Extract `nxx` from `npanxx`.
+            *   Construct the result object for the `us_pricing_comparison` table.
+            *   Add the result object to a temporary array.
+    *   After iterating through `table1`, perform a bulk put/add operation to write the results array to the `us_pricing_comparison` Dexie table.
+3.  **Trigger Comparison:**
+    *   Modify `handleReportsAction` in `USFileUploads.vue` (or wherever the main report generation is triggered).
+    *   Call `generatePricingComparison` *after* both files have been processed and potentially after `makeUsCodeReport` is done.
+    *   Add loading indicators/state management (`isGeneratingPricingReport`) in the store/component.
+4.  **Performance Consideration:**
+    *   Implement the logic on the main thread first, using async iteration and bulk Dexie operations.
+    *   If performance is insufficient for large files, investigate moving the core calculation loop (steps 2.d-i) to a Web Worker, passing data chunks and LERG mappings, and receiving results to be bulk-inserted by the main thread.
+
+---
+
+## Phase 3: Update `USPricingReport.vue`
+
+1.  **Display Overall Averages:**
+    *   Keep the top section showing per-file averages.
+    *   Fetch data from `usStore.getEnhancedReportByFile(fileName)` for each file, accessing the `rateStats` within `file1`.
+    *   Display the `average` from the `USRateStats` for Inter/Intra/Indeterm.
+2.  **Implement Detailed View:**
+    *   Remove the "Coming Soon" placeholder.
+    *   Add UI controls:
+        *   Search input (for NPANXX).
+        *   Filtering dropdowns/controls (by State/Province, by Cheaper File, potentially by difference magnitude).
+        *   Sorting controls (by NPANXX, by difference amount/percentage).
+    *   Data Table/List:
+        *   Fetch data dynamically from the `us_pricing_comparison` Dexie table based on current filters, sorting, and pagination/scroll position using `useDexieDB`.
+        *   Use pagination controls or preferably a virtual scrolling component (`vue-virtual-scroller` or similar) to display the potentially large dataset efficiently.
+        *   Display columns: NPANXX, State/Province Name (lookup via LERG `stateCode`), File 1 Rates (Inter/Intra/Indeterm), File 2 Rates (Inter/Intra/Indeterm), Differences (Abs $ and Rel %).
+        *   Visually indicate which file is cheaper for each row/rate type.
+
+---
+
+## Phase 4: Store & Type Cleanup
+
+1.  **Refactor `us-store.ts`:**
+    *   Remove the `pricingReport: USPricingReport | null` state property.
+    *   Remove the `getPricingReport` getter.
+    *   Modify the `setReports` action to only accept/set the `codeReport` (or remove `setReports` entirely if reports are generated and stored differently).
+    *   Add state for loading status of the pricing comparison (`isGeneratingPricingReport`).
+2.  **Refactor `us-types.ts`:**
+    *   Remove or significantly refactor the `USPricingReport` interface, as its data is now derived differently or stored in Dexie.
+3.  **Update Trigger Logic (`USFileUploads.vue`):**
+    *   Ensure `handleReportsAction` now calls the new `generatePricingComparison` service function and updates the relevant loading state, instead of setting the old `pricingReport`.
+
+---

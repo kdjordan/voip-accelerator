@@ -12,6 +12,7 @@ import type {
   USComparisonData as USComparison,
   USFileReport,
   RateStats,
+  USPricingComparisonRecord,
 } from '@/types/domains/us-types';
 
 // Define the store type to avoid type mismatch
@@ -286,7 +287,9 @@ export class USService {
 
       // Calculate US NPA coverage using LERG data
       const lergStore = useLergStore();
-      const totalUSNPAs = lergStore.getTotalUSNPAs;
+      if (!lergStore.isLoaded) {
+        console.warn('[USService] LERG data might not be loaded. Proceeding anyway.');
+      }
 
       // Create a set of all NPAs from the file
       const allFileNPAs = new Set(data.map((item) => item.npa));
@@ -309,6 +312,7 @@ export class USService {
         });
 
       // Calculate coverage based on valid US NPAs found in the file against total US NPAs
+      const totalUSNPAs = lergStore.getTotalUSNPAs;
       const usNPACoveragePercentage =
         totalUSNPAs > 0 ? ((validUSNPAsInFile / totalUSNPAs) * 100).toFixed(2) : '0.00';
 
@@ -437,224 +441,146 @@ export class USService {
 
   async processComparisons(file1Name: string, file2Name: string): Promise<void> {
     try {
-      console.log('[USService] Starting comparison process with files:', file1Name, file2Name);
+      console.log(
+        '[USService] Starting detailed comparison process with files:',
+        file1Name,
+        file2Name
+      );
 
       // Get table names by removing .csv extension
-      const table1 = file1Name.toLowerCase().replace('.csv', '');
-      const table2 = file2Name.toLowerCase().replace('.csv', '');
+      const table1Name = file1Name.toLowerCase().replace('.csv', '');
+      const table2Name = file2Name.toLowerCase().replace('.csv', '');
 
-      console.log(`[USService] Comparing tables: ${table1} and ${table2}`);
+      console.log(`[USService] Comparing tables: ${table1Name} and ${table2Name}`);
 
       const { getDB } = useDexieDB();
       const db = await getDB(DBName.US);
+      const comparisonTable = db.table<USPricingComparisonRecord, string>('us_pricing_comparison');
 
-      const stats = {
-        processedCount: 0,
-        matchCount: 0,
-        uniqueNPAs: new Set<string>(),
-        matchedNPAs: new Set<string>(),
-        totalInter: 0,
-        totalIntra: 0,
-        totalIndeterm: 0,
-        interCount: 0,
-        intraCount: 0,
-        indetermCount: 0,
-      };
+      // Clear existing comparison data
+      console.log('[USService] Clearing existing comparison data...');
+      await comparisonTable.clear();
+      console.log('[USService] Existing comparison data cleared.');
 
-      // Initialize reports with proper structure
-      const pricingReport: USPricingReport = {
-        file1: {
-          fileName: file1Name,
-          averageInterRate: 0,
-          averageIntraRate: 0,
-          averageIJRate: 0,
-          medianInterRate: 0,
-          medianIntraRate: 0,
-          medianIJRate: 0,
-        },
-        file2: {
-          fileName: file2Name,
-          averageInterRate: 0,
-          averageIntraRate: 0,
-          averageIJRate: 0,
-          medianInterRate: 0,
-          medianIntraRate: 0,
-          medianIJRate: 0,
-        },
-        comparison: {
-          interRateDifference: 0,
-          intraRateDifference: 0,
-          ijRateDifference: 0,
-          totalHigher: 0,
-          totalLower: 0,
-          totalEqual: 0,
-        },
-      };
-
-      const codeReport: USCodeReport = {
-        file1: {
-          fileName: file1Name,
-          totalNPANXX: 0,
-          uniqueNPA: 0,
-          uniqueNXX: 0,
-          coveragePercentage: 0,
-          rateStats: {
-            interstate: { average: 0, median: 0, min: 0, max: 0, count: 0 },
-            intrastate: { average: 0, median: 0, min: 0, max: 0, count: 0 },
-            indeterminate: { average: 0, median: 0, min: 0, max: 0, count: 0 },
-          },
-        },
-        file2: {
-          fileName: file2Name,
-          totalNPANXX: 0,
-          uniqueNPA: 0,
-          uniqueNXX: 0,
-          coveragePercentage: 0,
-          rateStats: {
-            interstate: { average: 0, median: 0, min: 0, max: 0, count: 0 },
-            intrastate: { average: 0, median: 0, min: 0, max: 0, count: 0 },
-            indeterminate: { average: 0, median: 0, min: 0, max: 0, count: 0 },
-          },
-        },
-        matchedCodes: 0,
-        nonMatchedCodes: 0,
-        matchedCodesPercentage: 0,
-        nonMatchedCodesPercentage: 0,
-        matchedNPAs: 0,
-        totalUniqueNPAs: 0,
-      };
-
-      // Track unique NPAs and NXXs for each file
-      const file1NPAs = new Set<string>();
-      const file1NXXs = new Set<string>();
-      const file2NPAs = new Set<string>();
-      const file2NXXs = new Set<string>();
-
-      // Arrays to store rates for calculations
-      const file1Rates = {
-        inter: [] as number[],
-        intra: [] as number[],
-        indeterm: [] as number[],
-      };
-      const file2Rates = {
-        inter: [] as number[],
-        intra: [] as number[],
-        indeterm: [] as number[],
-      };
-
-      // Get total records for both files
-      const file1Count = await db.table(table1).count();
-      const file2Count = await db.table(table2).count();
-
-      console.log(`[USService] File counts - ${table1}: ${file1Count}, ${table2}: ${file2Count}`);
-
-      // Use a regular for...of loop instead of each() to handle async properly
-      const records = await db.table(table1).toArray();
-      console.log(`[USService] Processing ${records.length} records from ${table1}`);
-
-      for (const record1 of records) {
-        // Add rates from file1
-        file1Rates.inter.push(record1.interRate);
-        file1Rates.intra.push(record1.intraRate);
-        file1Rates.indeterm.push(record1.indetermRate);
-
-        // Look up matching record in table2
-        const record2 = await db.table(table2).get(record1.npanxx);
-
-        if (record2) {
-          // Add rates from file2 when we find a match
-          file2Rates.inter.push(record2.interRate);
-          file2Rates.intra.push(record2.intraRate);
-          file2Rates.indeterm.push(record2.indetermRate);
-
-          // Compare rates
-          if (
-            record2.interRate > record1.interRate ||
-            record2.intraRate > record1.intraRate ||
-            record2.indetermRate > record1.indetermRate
-          ) {
-            pricingReport.comparison.totalHigher++;
-          } else if (
-            record2.interRate < record1.interRate ||
-            record2.intraRate < record1.intraRate ||
-            record2.indetermRate < record1.indetermRate
-          ) {
-            pricingReport.comparison.totalLower++;
-          } else {
-            pricingReport.comparison.totalEqual++;
-          }
-
-          stats.matchCount++;
-        }
+      // Load LERG data (NPA -> State mapping, etc.)
+      const lergStore = useLergStore();
+      if (!lergStore.isLoaded) {
+        console.warn('[USService] LERG data might not be loaded. Proceeding anyway.');
       }
 
-      // Calculate averages and medians for file1
-      const file1InterTotal = file1Rates.inter.reduce((sum, rate) => sum + rate, 0);
-      const file1IntraTotal = file1Rates.intra.reduce((sum, rate) => sum + rate, 0);
-      const file1IndetermTotal = file1Rates.indeterm.reduce((sum, rate) => sum + rate, 0);
+      // Load all data from table2 into a Map for efficient lookup
+      console.log(`[USService] Loading data from table: ${table2Name}...`);
+      const table2Data = await db.table<USStandardizedData>(table2Name).toArray();
+      const table2Map = new Map<string, USStandardizedData>();
+      table2Data.forEach((record) => table2Map.set(record.npanxx, record));
+      console.log(`[USService] Loaded ${table2Map.size} records from ${table2Name} into map.`);
 
-      pricingReport.file1.averageInterRate = file1InterTotal / file1Rates.inter.length;
-      pricingReport.file1.averageIntraRate = file1IntraTotal / file1Rates.intra.length;
-      pricingReport.file1.averageIJRate = file1IndetermTotal / file1Rates.indeterm.length;
+      // Prepare array for bulk insertion
+      const resultsToInsert: USPricingComparisonRecord[] = [];
+      let processedCount = 0;
 
-      // Sort arrays for median calculation
-      file1Rates.inter.sort((a, b) => a - b);
-      file1Rates.intra.sort((a, b) => a - b);
-      file1Rates.indeterm.sort((a, b) => a - b);
+      // Iterate through table1
+      console.log(`[USService] Iterating through table: ${table1Name} and comparing...`);
+      await db.table<USStandardizedData>(table1Name).each((record1) => {
+        processedCount++;
+        const npanxx = record1.npanxx;
+        const record2 = table2Map.get(npanxx);
 
-      pricingReport.file1.medianInterRate = this.calculateMedian(file1Rates.inter);
-      pricingReport.file1.medianIntraRate = this.calculateMedian(file1Rates.intra);
-      pricingReport.file1.medianIJRate = this.calculateMedian(file1Rates.indeterm);
+        if (record2) {
+          // Match found, perform comparison
+          const diff_inter_abs = record2.interRate - record1.interRate;
+          const diff_intra_abs = record2.intraRate - record1.intraRate;
+          const diff_indeterm_abs = record2.indetermRate - record1.indetermRate;
 
-      // Calculate averages and medians for file2
-      const file2InterTotal = file2Rates.inter.reduce((sum, rate) => sum + rate, 0);
-      const file2IntraTotal = file2Rates.intra.reduce((sum, rate) => sum + rate, 0);
-      const file2IndetermTotal = file2Rates.indeterm.reduce((sum, rate) => sum + rate, 0);
+          // Calculate percentage differences (handle division by zero)
+          const diff_inter_pct =
+            record1.interRate === 0
+              ? diff_inter_abs === 0
+                ? 0
+                : Infinity * Math.sign(diff_inter_abs)
+              : (diff_inter_abs / record1.interRate) * 100;
+          const diff_intra_pct =
+            record1.intraRate === 0
+              ? diff_intra_abs === 0
+                ? 0
+                : Infinity * Math.sign(diff_intra_abs)
+              : (diff_intra_abs / record1.intraRate) * 100;
+          const diff_indeterm_pct =
+            record1.indetermRate === 0
+              ? diff_indeterm_abs === 0
+                ? 0
+                : Infinity * Math.sign(diff_indeterm_abs)
+              : (diff_indeterm_abs / record1.indetermRate) * 100;
 
-      pricingReport.file2.averageInterRate = file2InterTotal / file2Rates.inter.length;
-      pricingReport.file2.averageIntraRate = file2IntraTotal / file2Rates.intra.length;
-      pricingReport.file2.averageIJRate = file2IndetermTotal / file2Rates.indeterm.length;
+          // Determine cheaper file (simplified - could be more granular per rate type)
+          // For now, let's base it on the sum of rates or a primary rate like interRate
+          let cheaper_file: 'file1' | 'file2' | 'same' = 'same';
+          if (diff_inter_abs > 0) cheaper_file = 'file1';
+          else if (diff_inter_abs < 0) cheaper_file = 'file2';
+          // Add more complex logic if needed based on intra/indeterm rates
 
-      // Sort arrays for median calculation
-      file2Rates.inter.sort((a, b) => a - b);
-      file2Rates.intra.sort((a, b) => a - b);
-      file2Rates.indeterm.sort((a, b) => a - b);
+          // Lookup LERG data
+          const npa = record1.npa;
+          const locationInfo = lergStore.getStateByNpa(npa);
+          const stateCode = locationInfo?.state ?? 'N/A';
+          const countryCode = locationInfo?.country ?? 'N/A';
+          const nxx = record1.nxx;
 
-      pricingReport.file2.medianInterRate = this.calculateMedian(file2Rates.inter);
-      pricingReport.file2.medianIntraRate = this.calculateMedian(file2Rates.intra);
-      pricingReport.file2.medianIJRate = this.calculateMedian(file2Rates.indeterm);
+          // Construct result object
+          const comparisonRecord: USPricingComparisonRecord = {
+            npanxx,
+            npa,
+            nxx,
+            stateCode,
+            countryCode,
+            diff_inter_pct: parseFloat(diff_inter_pct.toFixed(4)), // Store as number
+            diff_intra_pct: parseFloat(diff_intra_pct.toFixed(4)),
+            diff_indeterm_pct: parseFloat(diff_indeterm_pct.toFixed(4)),
+            diff_inter_abs: parseFloat(diff_inter_abs.toFixed(6)), // Store with precision
+            diff_intra_abs: parseFloat(diff_intra_abs.toFixed(6)),
+            diff_indeterm_abs: parseFloat(diff_indeterm_abs.toFixed(6)),
+            file1_inter: record1.interRate,
+            file1_intra: record1.intraRate,
+            file1_indeterm: record1.indetermRate,
+            file2_inter: record2.interRate,
+            file2_intra: record2.intraRate,
+            file2_indeterm: record2.indetermRate,
+            cheaper_file,
+          };
 
-      // Calculate rate differences
-      pricingReport.comparison.interRateDifference =
-        pricingReport.file2.averageInterRate - pricingReport.file1.averageInterRate;
-      pricingReport.comparison.intraRateDifference =
-        pricingReport.file2.averageIntraRate - pricingReport.file1.averageIntraRate;
-      pricingReport.comparison.ijRateDifference =
-        pricingReport.file2.averageIJRate - pricingReport.file1.averageIJRate;
+          resultsToInsert.push(comparisonRecord);
+        }
+        // If no match in table2, record1.npanxx is unique to file1. Decide if/how to handle this.
+        // Current plan focuses on matched NPANXX.
 
-      // Calculate code report statistics
-      codeReport.file1.totalNPANXX = records.length;
-      codeReport.file2.totalNPANXX = await db.table(table2).count();
-      codeReport.matchedCodes = stats.matchCount;
-      codeReport.nonMatchedCodes = records.length - stats.matchCount;
-      codeReport.matchedCodesPercentage = (stats.matchCount / records.length) * 100;
-      codeReport.nonMatchedCodesPercentage =
-        ((records.length - stats.matchCount) / records.length) * 100;
+        // Optional: Log progress periodically
+        if (processedCount % 10000 === 0) {
+          console.log(`[USService] Processed ${processedCount} records from ${table1Name}...`);
+        }
+      });
 
-      console.log('==================== FINAL REPORTS ====================');
-      console.log('PRICING REPORT:', JSON.stringify(pricingReport, null, 2));
-      console.log('CODE REPORT:', JSON.stringify(codeReport, null, 2));
-      console.log('=====================================================');
-
-      // Update store with both reports
-      this.store.setReports(pricingReport, codeReport);
+      // Bulk insert results
+      if (resultsToInsert.length > 0) {
+        console.log(
+          `[USService] Inserting ${resultsToInsert.length} comparison records into us_pricing_comparison table...`
+        );
+        await comparisonTable.bulkPut(resultsToInsert);
+        console.log('[USService] Comparison records inserted successfully.');
+      } else {
+        console.log('[USService] No matching NPANXX found between the two files to compare.');
+      }
 
       console.log(
-        `[USService] Comparison completed. Processed ${stats.processedCount} records with ${stats.matchCount} matches`
+        `[USService] Comparison process completed. Processed ${processedCount} records from ${table1Name}. Found ${resultsToInsert.length} matches.`
       );
+
+      // TODO: Update overall summary stats in the Pinia store if needed,
+      // based on the generated comparison data or separate calculations.
+      // The old calculation logic below is now replaced.
     } catch (error) {
-      console.error('[USService] Error during comparison:', error);
-      throw error;
+      console.error('[USService] Error during detailed comparison process:', error);
+      // Consider updating Pinia store with error state
+      throw error; // Re-throw error for handling upstream
     }
   }
 
