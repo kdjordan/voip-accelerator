@@ -14,8 +14,7 @@
           <USCodeReport
             v-if="
               usStore.activeReportType === ReportTypes.CODE &&
-              (usStore.hasSingleFileReport || usStore.reportsGenerated) &&
-              !usStore.hasEnhancedReports
+              (usStore.hasSingleFileReport || usStore.reportsGenerated)
             "
             :report="usStore.getCodeReport"
           />
@@ -81,7 +80,6 @@ onMounted(async () => {
     const usStates = lergStore.getUSStates;
     const canadaProvinces = lergStore.getCanadianProvinces;
     const countryData = lergStore.getCountryData;
-
 
     console.log('[UsView] LERG data loaded:', {
       usStatesCount: usStates.length,

@@ -3,56 +3,7 @@
     <div v-if="report" class="space-y-8">
       <h2 class="text-xl text-white font-semibold">Code Report</h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div
-          v-for="file in ['file1', 'file2']"
-          :key="file"
-          v-show="isValidFileReport(report[file as keyof typeof report])"
-          class="rounded-lg overflow-hidden bg-gray-900/50"
-        >
-          <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-            <span class="text-accent">{{
-              (report[file as keyof typeof report] as USFileReport)?.fileName
-            }}</span>
-          </h2>
-          <div class="p-6">
-            <table class="w-full">
-              <tbody>
-                <tr class="border-b border-gray-700">
-                  <td class="py-2 text-gray-400">Total NPANXX:</td>
-                  <td class="py-2 text-right">
-                    {{ (report[file as keyof typeof report] as USFileReport)?.totalNPANXX }}
-                  </td>
-                </tr>
-                <tr class="border-b border-gray-700">
-                  <td class="py-2 text-gray-400">Unique NPAs:</td>
-                  <td class="py-2 text-right">
-                    {{ (report[file as keyof typeof report] as USFileReport)?.uniqueNPA }}
-                  </td>
-                </tr>
-                <tr class="border-b border-gray-700">
-                  <td class="py-2 text-gray-400">Unique NXXs:</td>
-                  <td class="py-2 text-right">
-                    {{ (report[file as keyof typeof report] as USFileReport)?.uniqueNXX }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 font-medium text-gray-400">Coverage Percentage:</td>
-                  <td class="py-2 text-right">
-                    {{
-                      (
-                        report[file as keyof typeof report] as USFileReport
-                      )?.coveragePercentage.toFixed(2)
-                    }}%
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comparison Section - Only show when two files are available -->
+      <!-- Comparison Section - Moved to the top -->
       <div v-if="isValidFileReport(report.file2)" class="rounded-lg overflow-hidden bg-gray-900/50">
         <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
           <span class="text-accent">Comparison</span>
@@ -95,7 +46,7 @@
                 <td class="py-2 font-medium text-gray-400">Area Code Match Percentage:</td>
                 <td class="py-2 text-right text-foreground">
                   {{
-                    report.totalUniqueNPAs
+                    report.totalUniqueNPAs && report.totalUniqueNPAs > 0
                       ? ((report.matchedNPAs / report.totalUniqueNPAs) * 100).toFixed(2)
                       : '0.00'
                   }}%
@@ -104,6 +55,21 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Grid for Individual File Summaries -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Display USCodeSummary for file1 if available -->
+        <USCodeSummary
+          v-if="report.file1 && report.file1.fileName"
+          :componentId="getComponentIdForFile(report.file1.fileName)"
+        />
+
+        <!-- Display USCodeSummary for file2 if available -->
+        <USCodeSummary
+          v-if="report.file2 && report.file2.fileName"
+          :componentId="getComponentIdForFile(report.file2.fileName)"
+        />
       </div>
     </div>
 
@@ -115,6 +81,10 @@
 
 <script setup lang="ts">
 import { type USCodeReport, type USFileReport } from '@/types/domains/us-types';
+import USCodeSummary from '@/components/us/USCodeSummary.vue';
+import { useUsStore } from '@/stores/us-store';
+
+const usStore = useUsStore();
 
 defineProps<{
   report: USCodeReport | null;
@@ -123,5 +93,16 @@ defineProps<{
 // Helper function to check if a file report is valid
 function isValidFileReport(fileReport: any): fileReport is USFileReport {
   return fileReport && typeof fileReport === 'object' && 'fileName' in fileReport;
+}
+
+// Helper function to find the componentId ('us1' or 'us2') associated with a filename
+function getComponentIdForFile(fileName: string): 'us1' | 'us2' {
+  for (const [componentId, fileInfo] of usStore.filesUploaded.entries()) {
+    if (fileInfo.fileName === fileName) {
+      return componentId as 'us1' | 'us2';
+    }
+  }
+  console.warn(`ComponentId not found for filename: ${fileName}`);
+  return 'us1';
 }
 </script>

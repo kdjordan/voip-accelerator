@@ -706,14 +706,12 @@ export class USService {
     try {
       console.log('[USService] Starting code report generation');
 
-      // Get table names by removing .csv extension
       const table1 = file1Name.toLowerCase().replace('.csv', '');
       const table2 = file2Name.toLowerCase().replace('.csv', '');
 
       const { getDB } = useDexieDB();
       const db = await getDB(DBName.US);
 
-      // Get total counts for both tables
       const table1Count = await db.table(table1).count();
       const table2Count = await db.table(table2).count();
 
@@ -721,7 +719,6 @@ export class USService {
         `[USService] Table counts - ${table1}: ${table1Count}, ${table2}: ${table2Count}`
       );
 
-      // Initialize report structure
       const report: USCodeReport = {
         file1: {
           fileName: file1Name,
@@ -755,38 +752,60 @@ export class USService {
         totalUniqueNPAs: 0,
       };
 
-      // Get all NPANXXs from table2 for efficient lookup
-      const table2NPANXXs = new Set();
+      // Sets to track NPAs
+      const file1NPAs = new Set<string>();
+      const file2NPAs = new Set<string>();
+      const matchedNPAsSet = new Set<string>();
+      const allUniqueNPAsSet = new Set<string>();
+
+      // Get all records from table2 for efficient lookup (NPANXX and NPA)
+      const table2Data = new Map<string, { npa: string }>();
       await db.table(table2).each((record) => {
-        table2NPANXXs.add(record.npanxx);
+        table2Data.set(record.npanxx, { npa: record.npa });
+        file2NPAs.add(record.npa); // Track unique NPAs from file 2
+        allUniqueNPAsSet.add(record.npa); // Add to overall unique NPAs
       });
 
-      console.log(`[USService] Loaded ${table2NPANXXs.size} NPANXXs from ${table2} for comparison`);
+      console.log(
+        `[USService] Loaded ${table2Data.size} NPANXXs and ${file2NPAs.size} unique NPAs from ${table2}`
+      );
 
-      // Process table1 and check against table2's NPANXXs
+      // Process table1, track NPAs, and check against table2's data
       let matchCount = 0;
       await db.table(table1).each((record) => {
-        if (table2NPANXXs.has(record.npanxx)) {
+        file1NPAs.add(record.npa); // Track unique NPAs from file 1
+        allUniqueNPAsSet.add(record.npa); // Add to overall unique NPAs
+
+        const matchInFile2 = table2Data.get(record.npanxx);
+        if (matchInFile2) {
           matchCount++;
+          // If NPANXX matches, check if NPA also matches (it should, but good practice)
+          // And add the NPA to the matched set
+          if (record.npa === matchInFile2.npa) {
+            matchedNPAsSet.add(record.npa);
+          }
         }
       });
 
-      console.log(`[USService] Found ${matchCount} matches between tables`);
+      console.log(`[USService] Found ${matchCount} NPANXX matches between tables`);
+      console.log(`[USService] Found ${matchedNPAsSet.size} matched unique NPAs`);
+      console.log(`[USService] Found ${allUniqueNPAsSet.size} total unique NPAs across both files`);
 
-      // Calculate statistics
+      // Calculate and populate statistics
       report.matchedCodes = matchCount;
-      report.nonMatchedCodes = table1Count - matchCount;
-      report.matchedCodesPercentage = (matchCount / table1Count) * 100;
-      report.nonMatchedCodesPercentage = ((table1Count - matchCount) / table1Count) * 100;
+      report.nonMatchedCodes = table1Count - matchCount; // Based on file1's perspective
+      report.matchedCodesPercentage = table1Count > 0 ? (matchCount / table1Count) * 100 : 0;
+      report.nonMatchedCodesPercentage =
+        table1Count > 0 ? ((table1Count - matchCount) / table1Count) * 100 : 0;
 
-      console.log('[USService] Code Report Generated:', {
-        totalRecords: {
-          file1: table1Count,
-          file2: table2Count,
-        },
-        matches: matchCount,
-        matchPercentage: report.matchedCodesPercentage.toFixed(2) + '%',
-      });
+      report.matchedNPAs = matchedNPAsSet.size;
+      report.totalUniqueNPAs = allUniqueNPAsSet.size;
+
+      report.file1.uniqueNPA = file1NPAs.size;
+      report.file2.uniqueNPA = file2NPAs.size;
+      // Note: uniqueNXX calculation would require similar tracking if needed
+
+      console.log('[USService] Code Report Generated:', report);
 
       return report;
     } catch (error) {
