@@ -175,6 +175,7 @@ export const DBName = {
   US: 'us_rate_deck_db',
   LERG: 'lerg_db',
   RATE_SHEET: 'rate_sheet_db',
+  US_PRICING_COMPARISON: 'us_pricing_comparison_db',
 } as const;
 
 export type DBNameType = (typeof DBName)[keyof typeof DBName];
@@ -192,14 +193,35 @@ export type ReportType = (typeof ReportTypes)[keyof typeof ReportTypes];
 export type SchemaDBType =
   | typeof DBName.AZ
   | typeof DBName.US
+  | typeof DBName.LERG
   | typeof DBName.RATE_SHEET
-  | typeof DBName.LERG;
+  | typeof DBName.US_PRICING_COMPARISON;
 
 export const DBSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
-  [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx',
+  [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
   [DBName.RATE_SHEET]: '++id, destinationName, code, rate, effectiveDate, minDuration, increments',
   [DBName.LERG]: 'npa, *state, *country',
+  [DBName.US_PRICING_COMPARISON]: `
+    npanxx,
+    npa,
+    nxx,
+    stateCode,
+    countryCode,
+    diff_inter_pct,
+    diff_intra_pct,
+    diff_indeterm_pct,
+    diff_inter_abs,
+    diff_intra_abs,
+    diff_indeterm_abs,
+    file1_inter,
+    file1_intra,
+    file1_indeterm,
+    file2_inter,
+    file2_intra,
+    file2_indeterm,
+    cheaper_file
+  `,
 } as const;
 
 // Type guard to check if a DBNameType is supported for schemas
@@ -208,6 +230,7 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
     dbName === DBName.AZ ||
     dbName === DBName.US ||
     dbName === DBName.RATE_SHEET ||
-    dbName === DBName.LERG
+    dbName === DBName.LERG ||
+    dbName === DBName.US_PRICING_COMPARISON
   );
 }

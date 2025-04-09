@@ -277,3 +277,30 @@ export interface USPreviewModalEmits {
   confirm: [mappings: Record<string, string>, indeterminateDefinition?: string];
   cancel: [];
 }
+
+// Interface for the US Pricing Comparison Dexie table
+export interface USPricingComparisonRecord {
+  npanxx: string; // Primary Key
+  npa: string;
+  nxx: string;
+  stateCode: string;
+  countryCode: string;
+  diff_inter_pct: number;
+  diff_intra_pct: number;
+  diff_indeterm_pct: number;
+  diff_inter_abs: number;
+  diff_intra_abs: number;
+  diff_indeterm_abs: number;
+  file1_inter: number;
+  file1_intra: number;
+  file1_indeterm: number;
+  file2_inter: number;
+  file2_intra: number;
+  file2_indeterm: number;
+  cheaper_file: 'file1' | 'file2' | 'same';
+}
+
+/*
+export interface NPAAverageCost {
+// ... existing code ...
+*/
