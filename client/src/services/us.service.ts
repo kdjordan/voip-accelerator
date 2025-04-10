@@ -10,7 +10,6 @@ import type {
   USPricingReport,
   USCodeReport,
   USComparisonData as USComparison,
-  USFileReport,
   RateStats,
   USPricingComparisonRecord,
 } from '@/types/domains/us-types';
@@ -47,16 +46,6 @@ interface UsStore {
   setPricingReportProcessing: (processing: boolean) => void;
 }
 
-interface ComparisonProgress {
-  processedCount: number;
-  matchCount: number;
-}
-
-declare global {
-  interface Window {
-    db: any;
-  }
-}
 
 export class USService {
   private store: UsStore;
