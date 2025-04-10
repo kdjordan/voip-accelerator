@@ -3,15 +3,9 @@
     <!-- Journey Message Section -->
     <div class="bg-gray-800 rounded-t-lg p-6">
       <div class="pb-4">
-        <Transition
-          name="fade"
-          mode="out-in"
-        >
+        <Transition name="fade" mode="out-in">
           <!-- User Journey Section -->
-          <div
-            :key="currentJourneyState"
-            class="min-h-24 "
-          >
+          <div :key="currentJourneyState" class="min-h-24">
             <!-- Title -->
             <h3 class="text-sizeLg tracking-wide text-white mb-2">{{ journeyMessage.title }}</h3>
             <!-- Message -->
@@ -26,9 +20,7 @@
     </div>
 
     <!-- Report Type Tabs -->
-    <div
-      class="bg-gray-800 px-6 pb-6"
-    >
+    <div class="bg-gray-800 px-6 pb-6">
       <div class="flex items-center border-b border-gray-700">
         <button
           v-for="type in availableReportTypes"
@@ -43,8 +35,9 @@
             },
           ]"
         >
-          <span v-if="type === 'code' && usStore.reportsGenerated">Code Compare</span>
-          <span v-else-if="type !== 'files'">{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span>
+          <!-- Adjust tab labels if needed -->
+          <span v-if="type === 'code'">Code Compare</span>
+          <span v-else-if="type === 'pricing'">Pricing Report</span>
           <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
           <!-- Active Tab Indicator -->
           <div
@@ -52,7 +45,8 @@
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
           ></div>
         </button>
-        <button v-if="usStore.filesUploaded.size > 0"
+        <button
+          v-if="usStore.filesUploaded.size > 0"
           @click="handleReset"
           class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors ml-auto text-red-400"
         >
@@ -64,88 +58,137 @@
 </template>
 
 <script setup lang="ts">
-  import { useUsStore } from '@/stores/us-store';
-  import { ReportTypes, type ReportType } from '@/types/app-types';
-  import useDexieDB from '@/composables/useDexieDB';
-  import { DBName } from '@/types';
-  import { US_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
-  import { computed } from 'vue';
+import { useUsStore } from '@/stores/us-store';
+import { ReportTypes, type ReportType } from '@/types/app-types';
+import useDexieDB from '@/composables/useDexieDB';
+import { DBName } from '@/types';
+import { US_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
+import { computed, watch } from 'vue';
 
-  const usStore = useUsStore();
-  const { deleteDatabase } = useDexieDB();
+const usStore = useUsStore();
+const { deleteDatabase } = useDexieDB();
 
-  // Compute available report types based on the current state
-  const availableReportTypes = computed(() => {
-    if (usStore.reportsGenerated) {
-      return [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
-    }
-    return [ReportTypes.FILES];
-  });
+// Compute available report types based on the new readiness flags
+const availableReportTypes = computed(() => {
+  const types: ReportType[] = [ReportTypes.FILES]; // Files always available
+  if (usStore.isCodeReportReady) {
+    types.push(ReportTypes.CODE);
+    // Show Pricing tab as soon as Code report is ready
+    types.push(ReportTypes.PRICING);
+  }
+  return types;
+});
 
-  const showReportTabs = computed(() => {
-    // Only show tabs when reports are generated (two files compared)
-    return usStore.reportsGenerated;
-  });
-
-  const currentJourneyState = computed<JourneyState>(() => {
-    if (usStore.reportsGenerated) {
-      return JOURNEY_STATE.REPORTS_READY;
-    }
-    
-    if (usStore.hasSingleFileReport) {
-      return JOURNEY_STATE.ONE_FILE_REPORT;
-    }
-
-    const uploadedCount = usStore.getNumberOfFilesUploaded;
-
-    switch (uploadedCount) {
-      case 0:
-        return JOURNEY_STATE.INITIAL;
-      case 1:
-        return JOURNEY_STATE.ONE_FILE;
-      case 2:
-        return JOURNEY_STATE.TWO_FILES;
-      default:
-        return JOURNEY_STATE.INITIAL;
-    }
-  });
-
-  const journeyMessage = computed(() => {
-    return US_JOURNEY_MESSAGES[currentJourneyState.value];
-  });
-
-  async function handleReset() {
-    try {
-      console.log('Resetting the US report');
-
-      // Get current file names before resetting store
-      const fileNames = usStore.getFileNames;
-      console.log('Cleaning up stores:', fileNames);
-
-      // Reset store state
-      usStore.resetFiles();
-      usStore.setActiveReportType(ReportTypes.FILES);
-
-      // Clean up Dexie stores using actual file names
-      if (fileNames.length > 0) {
-        await Promise.all(fileNames.map(fileName => deleteDatabase(DBName.US)));
-      }
-
-      console.log('Reset completed successfully');
-    } catch (error) {
-      console.error('Error during reset:', error);
+// Watch for code report readiness and switch tab
+watch(
+  () => usStore.isCodeReportReady,
+  (isReady) => {
+    if (isReady && usStore.activeReportType !== ReportTypes.CODE) {
+      console.log('[USContentHeader] Code report ready, switching to Code tab.');
+      usStore.setActiveReportType(ReportTypes.CODE);
     }
   }
+);
+
+// Update journey state logic based on new flags
+const currentJourneyState = computed<JourneyState>(() => {
+  // Use readiness flags for reports_ready state
+  if (usStore.isCodeReportReady && usStore.isPricingReportReady) {
+    return JOURNEY_STATE.REPORTS_READY;
+  }
+  // Maybe add a state for code ready, pricing pending?
+  else if (usStore.isCodeReportReady) {
+    // If code is ready but pricing isn't yet (and we have 2 files)
+    if (usStore.filesUploaded.size === 2) {
+      return JOURNEY_STATE.CODE_REPORT_READY; // Add this state to constants
+    }
+  }
+
+  // Keep single file logic
+  if (usStore.filesUploaded.size === 1) {
+    // Check if file stats exist for the single file to determine ONE_FILE_REPORT
+    const fileId = Array.from(usStore.filesUploaded.keys())[0];
+    if (usStore.fileStats.has(fileId)) {
+      return JOURNEY_STATE.ONE_FILE_REPORT;
+    }
+    return JOURNEY_STATE.ONE_FILE;
+  }
+
+  const uploadedCount = usStore.getNumberOfFilesUploaded;
+
+  switch (uploadedCount) {
+    case 0:
+      return JOURNEY_STATE.INITIAL;
+    case 2:
+      // If code report isn't ready yet, we are in the TWO_FILES state (before processing)
+      if (!usStore.isCodeReportReady) {
+        return JOURNEY_STATE.TWO_FILES;
+      }
+      // Fallback if other states aren't met (shouldn't happen often)
+      return JOURNEY_STATE.INITIAL;
+    default:
+      return JOURNEY_STATE.INITIAL;
+  }
+});
+
+const journeyMessage = computed(() => {
+  // Ensure the new state exists in messages or provide a fallback
+  return (
+    US_JOURNEY_MESSAGES[currentJourneyState.value] || US_JOURNEY_MESSAGES[JOURNEY_STATE.INITIAL]
+  );
+});
+
+async function handleReset() {
+  try {
+    console.log('Resetting the US report');
+
+    // Get current file names before resetting store
+    const fileNames = usStore.getFileNames;
+    console.log('Cleaning up stores:', fileNames);
+
+    // Reset store state (resetFiles now handles the flags)
+    usStore.resetFiles();
+    // usStore.setActiveReportType(ReportTypes.FILES); // resetFiles should handle this
+
+    // Clean up Dexie stores using actual file names
+    if (fileNames.length > 0) {
+      // Assuming DBName.US is the correct DB for the main file data
+      const db = await useDexieDB().getDB(DBName.US);
+      await Promise.all(
+        fileNames.map((fileName) => {
+          const tableName = fileName.toLowerCase().replace('.csv', '');
+          console.log(`Attempting to delete Dexie table: ${tableName} in DB ${DBName.US}`);
+          return db
+            .deleteStore(tableName)
+            .catch((err) => console.error(`Failed to delete ${tableName}:`, err));
+        })
+      );
+
+      // Also delete the comparison DB table
+      try {
+        const comparisonDb = await useDexieDB().getDB(DBName.US_PRICING_COMPARISON);
+        await comparisonDb.deleteStore('comparison_results');
+        console.log('Deleted comparison_results table.');
+      } catch (err) {
+        console.error('Failed to delete comparison_results table:', err);
+      }
+    }
+
+    console.log('Reset completed successfully');
+  } catch (error) {
+    console.error('Error during reset:', error);
+  }
+}
 </script>
 
 <style>
-  .fade-enter-active,
-  .fade-leave-active {
-    transition: opacity 0.3s ease;
-  }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
 
-  .fade-enter-from,
-  .fade-leave-to {
-    opacity: 0;
-  }
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

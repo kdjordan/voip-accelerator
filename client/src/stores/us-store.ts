@@ -13,16 +13,16 @@ export const useUsStore = defineStore('usStore', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
     showUploadComponents: true,
-    reportsGenerated: false,
+    isCodeReportReady: false,
+    isPricingReportReady: false,
+    isPricingReportProcessing: false,
     activeReportType: 'files' as ReportType,
     pricingReport: null as USPricingReport | null,
     codeReport: null as USCodeReport | null,
-    // Store enhanced code reports by filename
     enhancedCodeReports: new Map<string, USEnhancedCodeReport>(),
     uploadingComponents: {} as Record<string, boolean>,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidUsRow[]>(),
-    // Add in-memory storage
     inMemoryData: new Map<string, USStandardizedData[]>(),
     fileStats: new Map<
       string,
@@ -55,14 +55,13 @@ export const useUsStore = defineStore('usStore', {
 
     getCodeReport: (state): USCodeReport | null => state.codeReport,
 
+    areReportsReady: (state): boolean => state.isCodeReportReady && state.isPricingReportReady,
+
     getEnhancedCodeReport: (state): USEnhancedCodeReport | null => {
-      // If we have reports in the Map, return the first one
       if (state.enhancedCodeReports.size > 0) {
-        // Get the iterator for the values and extract the first value
         const iterator = state.enhancedCodeReports.values();
         const firstValue = iterator.next();
 
-        // Make sure we have a defined value before returning
         if (!firstValue.done && firstValue.value) {
           return firstValue.value;
         }
@@ -105,7 +104,7 @@ export const useUsStore = defineStore('usStore', {
       },
 
     isUsingMemoryStorage: () => {
-      return true; // Always use memory storage since config was removed
+      return true;
     },
 
     getFileStats: (state) => (componentId: string) => {
@@ -122,7 +121,6 @@ export const useUsStore = defineStore('usStore', {
       );
     },
 
-    // In-memory storage getters
     getInMemoryData: (state) => (tableName: string) => {
       return state.inMemoryData.get(tableName) || [];
     },
@@ -143,7 +141,6 @@ export const useUsStore = defineStore('usStore', {
       return state.fileStats.size > 0 && state.fileStats.size < 2;
     },
 
-    // Add this getter to retrieve file data by component ID
     getFileDataByComponent: (state) => (componentId: string) => {
       const fileName = state.filesUploaded.get(componentId)?.fileName;
       if (!fileName) return [];
@@ -152,19 +149,16 @@ export const useUsStore = defineStore('usStore', {
       return state.inMemoryData.get(tableName) || [];
     },
 
-    // Add a getter to retrieve an enhanced report by filename
     getEnhancedReportByFile:
       (state) =>
       (fileName: string): USEnhancedCodeReport | null => {
         return state.enhancedCodeReports.get(fileName) || null;
       },
 
-    // Add a getter to check if we have any enhanced reports
     hasEnhancedReports: (state): boolean => {
       return state.enhancedCodeReports.size > 0;
     },
 
-    // Get all enhanced reports
     getAllEnhancedReports: (state): USEnhancedCodeReport[] => {
       return Array.from(state.enhancedCodeReports.values());
     },
@@ -181,7 +175,9 @@ export const useUsStore = defineStore('usStore', {
 
     resetFiles() {
       this.filesUploaded.clear();
-      this.reportsGenerated = false;
+      this.isCodeReportReady = false;
+      this.isPricingReportReady = false;
+      this.isPricingReportProcessing = false;
       this.pricingReport = null;
       this.codeReport = null;
       this.enhancedCodeReports.clear();
@@ -189,13 +185,29 @@ export const useUsStore = defineStore('usStore', {
       this.invalidRows.clear();
       this.inMemoryData.clear();
       this.fileStats.clear();
+      this.activeReportType = 'files';
     },
 
-    setReports(pricing: USPricingReport, code: USCodeReport) {
-      this.pricingReport = pricing;
+    setCodeReport(code: USCodeReport) {
+      console.log('[US Store] Setting Code Report:', code);
       this.codeReport = code;
-      this.reportsGenerated = true;
-      this.showUploadComponents = false;
+      this.isCodeReportReady = true;
+      if (this.filesUploaded.size > 0) {
+        this.showUploadComponents = false;
+      }
+    },
+
+    setPricingReport(pricing: USPricingReport) {
+      console.log('[US Store] Setting Pricing Report:', pricing);
+      this.pricingReport = pricing;
+      this.isPricingReportReady = true;
+      if (this.filesUploaded.size > 0) {
+        this.showUploadComponents = false;
+      }
+    },
+
+    setPricingReportProcessing(processing: boolean) {
+      this.isPricingReportProcessing = processing;
     },
 
     setEnhancedCodeReport(report: USEnhancedCodeReport) {
@@ -208,22 +220,15 @@ export const useUsStore = defineStore('usStore', {
       }
     },
 
-    setReportsGenerated(value: boolean) {
-      this.reportsGenerated = value;
-    },
-
     removeFile(componentName: string) {
       const fileName = this.getFileNameByComponent(componentName);
       if (fileName) {
-        // Get the tableName from the filename
         const tableName = fileName.toLowerCase().replace('.csv', '');
 
-        // Remove from in-memory data if using memory storage
         if (this.isUsingMemoryStorage) {
           this.inMemoryData.delete(tableName);
         }
 
-        // Remove from enhanced reports
         console.log(`[US Store] Removing enhanced report for: ${fileName}`);
         this.enhancedCodeReports.delete(fileName);
         console.log(`[US Store] Reports after removal: ${this.enhancedCodeReports.size}`);
@@ -231,21 +236,20 @@ export const useUsStore = defineStore('usStore', {
 
       this.filesUploaded.delete(componentName);
 
-      // Clear file stats for this component
       this.clearFileStats(componentName);
 
-      // Clear any invalid rows for this file
       if (fileName) {
         this.invalidRows.delete(fileName);
       }
 
-      // Reset reports if no files left
       if (this.filesUploaded.size === 0) {
-        this.reportsGenerated = false;
+        this.resetFiles();
+      } else if (this.filesUploaded.size === 1) {
         this.pricingReport = null;
+        this.isPricingReportReady = false;
+        this.isPricingReportProcessing = false;
         this.codeReport = null;
-        this.enhancedCodeReports.clear();
-        this.showUploadComponents = true;
+        this.isCodeReportReady = false;
         this.activeReportType = 'files';
       }
     },
@@ -254,7 +258,6 @@ export const useUsStore = defineStore('usStore', {
       this.uploadingComponents[componentName] = isUploading;
     },
 
-    // Temp file handling for preview
     setTempFile(componentName: string, file: File) {
       this.tempFiles.set(componentName, file);
     },
@@ -267,7 +270,6 @@ export const useUsStore = defineStore('usStore', {
       this.tempFiles.delete(componentName);
     },
 
-    // Invalid rows handling
     addInvalidRow(fileName: string, row: InvalidUsRow) {
       if (!this.invalidRows.has(fileName)) {
         this.invalidRows.set(fileName, []);
@@ -283,7 +285,6 @@ export const useUsStore = defineStore('usStore', {
       this.invalidRows.clear();
     },
 
-    // In-memory storage actions
     storeInMemoryData(tableName: string, data: USStandardizedData[]) {
       this.inMemoryData.set(tableName, data);
     },
@@ -319,7 +320,6 @@ export const useUsStore = defineStore('usStore', {
       this.fileStats.clear();
     },
 
-    // Add a clear method for enhanced reports
     clearEnhancedCodeReports() {
       this.enhancedCodeReports.clear();
     },
