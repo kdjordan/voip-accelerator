@@ -20,7 +20,6 @@
           />
           <USPricingReport
             v-if="usStore.activeReportType === ReportTypes.PRICING && usStore.reportsGenerated"
-            :report="usStore.getPricingReport"
           />
         </div>
       </transition>
