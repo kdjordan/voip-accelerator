@@ -344,7 +344,7 @@ import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDragDrop } from '@/composables/useDragDrop';
 import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
-import { ComponentId } from '@/types/app-types';
+import { ComponentId, DBName } from '@/types/app-types';
 
 const usStore = useUsStore();
 const service = new USService();
@@ -498,64 +498,80 @@ async function handleReportsAction() {
     return;
   }
 
+  if (!usStore.isFull) {
+    console.warn('[USFileUploads] Cannot generate reports: Two files are required.');
+    return;
+  }
+
+  const fileNames = usStore.getFileNames;
+  if (fileNames.length !== 2) {
+    console.error('[USFileUploads] Expected 2 file names, but got:', fileNames);
+    return;
+  }
+
+  // Derive table names before starting the process
+  const table1Name = fileNames[0].toLowerCase().replace('.csv', '');
+  const table2Name = fileNames[1].toLowerCase().replace('.csv', '');
+
+  isGeneratingReports.value = true;
+  usStore.setComponentUploading('us1', true); // Indicate processing state
+  usStore.setComponentUploading('us2', true);
+
   try {
-    isGeneratingReports.value = true;
-    console.log('[Reports] Starting report generation');
+    console.log('[USFileUploads] Generating reports...');
 
-    // Get file names from store
-    const fileNames = usStore.getFileNames;
-    if (fileNames.length === 2) {
-      // Generate code report
-      const codeReport = await service.makeUsCodeReport(fileNames[0], fileNames[1]);
+    // --- Generate Code Report FIRST ---
+    console.log(`[USFileUploads] Triggering code report for ${fileNames[0]} and ${fileNames[1]}`);
+    const codeReportResult = await service.makeUsCodeReport(fileNames[0], fileNames[1]);
+    console.log('[USFileUploads] Code report generated successfully.');
 
-      // Create an empty pricing report since we're not handling that yet
-      const pricingReport: USPricingReport = {
-        file1: {
-          fileName: fileNames[0],
-          averageInterRate: 0,
-          averageIntraRate: 0,
-          averageIJRate: 0,
-          medianInterRate: 0,
-          medianIntraRate: 0,
-          medianIJRate: 0,
-        },
-        file2: {
-          fileName: fileNames[1],
-          averageInterRate: 0,
-          averageIntraRate: 0,
-          averageIJRate: 0,
-          medianInterRate: 0,
-          medianIntraRate: 0,
-          medianIJRate: 0,
-        },
-        comparison: {
-          interRateDifference: 0,
-          intraRateDifference: 0,
-          ijRateDifference: 0,
-          totalHigher: 0,
-          totalLower: 0,
-          totalEqual: 0,
-        },
-      };
+    // --- Set Code Report in Store IMMEDIATELY ---
+    usStore.setCodeReport(codeReportResult);
+    console.log('[USFileUploads] Code report set in store.');
 
-      // Store both reports in Pinia
-      usStore.setReports(pricingReport, codeReport);
+    // --- Generate Detailed Pricing Comparison ---
+    usStore.setPricingReportProcessing(true); // Set processing state TRUE
+    console.log(
+      `[USFileUploads] Triggering and awaiting detailed pricing comparison for ${table1Name} and ${table2Name}`
+    );
 
-      // Update UI state
-      usStore.setReportsGenerated(true);
-      usStore.setActiveReportType('code');
-      usStore.showUploadComponents = false;
+    try {
+      await service.generatePricingComparison(table1Name, table2Name);
+      console.log('[USFileUploads] Detailed pricing comparison completed successfully.');
+    } catch (comparisonError) {
+      console.error('[USFileUploads] Detailed pricing comparison failed:', comparisonError);
+      // Handle comparison-specific error if needed, e.g., show a specific message
+      // Re-throw to be caught by the outer catch block for general error handling
+      throw comparisonError;
+    } finally {
+      usStore.setPricingReportProcessing(false); // Set processing state FALSE
+      console.log('[USFileUploads] Pricing comparison processing finished.');
     }
 
-    console.log('[Reports] Process completed successfully');
+    // --- Fetch and Set Pricing Report Summary (only after comparison is done) ---
+    console.log('[USFileUploads] Fetching final pricing report summary...');
+    const pricingReportSummary = await service.fetchPricingReportSummary(
+      fileNames[0],
+      fileNames[1]
+    );
+    console.log('[USFileUploads] Pricing report summary fetched.');
+    usStore.setPricingReport(pricingReportSummary);
+    console.log('[USFileUploads] Pricing report set in store.');
+
+    // Reports are generated, potentially hide upload components
+    usStore.showUploadComponents = false;
   } catch (error) {
-    console.error('Failed to generate reports:', error);
-    alert('Failed to generate reports. Please try again later.');
+    console.error('[USFileUploads] Error during report generation process:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    uploadError.us1 = `Report Generation Failed: ${errorMessage}`;
+    uploadError.us2 = `Report Generation Failed: ${errorMessage}`;
   } finally {
     isGeneratingReports.value = false;
+    usStore.setComponentUploading('us1', false); // Clear processing state
+    usStore.setComponentUploading('us2', false);
+    console.log('[USFileUploads] Report generation process finished.');
   }
 }
-
 
 // Optimize the enhanced code report generation
 async function generateEnhancedCodeReport(fileName: string, data: USStandardizedData[]) {

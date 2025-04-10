@@ -16,7 +16,32 @@ export class DexieDBBase extends Dexie {
     this.stores = new Set(this.tables.map((table) => table.name));
     console.log(`Initializing ${this.dbName} with schema:`, this.schema);
     if (this.verno === 0) {
-      this.version(1).stores({});
+      // If it's a new DB, define version 1 using the provided schema
+      try {
+        const schemaParts = this.schema.split(':');
+        if (schemaParts.length >= 2) {
+          const tableName = schemaParts[0].trim();
+          const tableDefinition = schemaParts.slice(1).join(':').trim();
+          const version1Schema = { [tableName]: tableDefinition };
+          console.log(
+            `[useDexieDB] Defining Version 1 for ${this.dbName} with schema:`,
+            version1Schema
+          );
+          this.version(1).stores(version1Schema);
+        } else {
+          console.error(
+            `[useDexieDB] Invalid schema format for ${this.dbName}: ${this.schema}. Expected 'tableName: fields...'. Defining empty version 1.`
+          );
+          this.version(1).stores({}); // Fallback to empty schema if format is wrong
+        }
+      } catch (e) {
+        console.error(
+          `[useDexieDB] Error parsing schema for ${this.dbName}:`,
+          e,
+          `Schema: ${this.schema}`
+        );
+        this.version(1).stores({}); // Fallback on error
+      }
     }
   }
 
@@ -129,12 +154,34 @@ export default function useDexieDB() {
     let db = dbStore.activeConnections[dbName] as DexieDBBase;
 
     if (!db) {
-      db = new DexieDBBase(dbName, DBSchemas[dbName]);
-      dbStore.registerConnection(dbName, db);
-      console.log(`Creating new ${dbName} database instance`);
-      await db.open();
+      // Ensure schema exists before proceeding
+      if (!DBSchemas[dbName]) {
+        throw new Error(`[useDexieDB] No schema defined for database: ${dbName}`);
+      }
+      const schema = DBSchemas[dbName];
+
+      console.log(`[useDexieDB] Creating new DexieDBBase instance for ${dbName}`);
+      db = new DexieDBBase(dbName, schema); // Constructor should define v1 schema if verno is 0
+
+      console.log(`[useDexieDB] Attempting to open ${dbName} (Version: ${db.verno})...`);
+      try {
+        await db.open(); // Explicitly await open to ensure schema/version is applied
+        console.log(
+          `[useDexieDB] Successfully opened ${dbName}. Tables:`,
+          db.tables.map((t) => t.name)
+        );
+        dbStore.registerConnection(dbName, db); // Register connection only after successful open
+      } catch (error) {
+        console.error(`[useDexieDB] Failed to open database ${dbName}:`, error);
+        throw error; // Rethrow critical error - prevents using an unopened DB
+      }
     } else {
       console.log(`Using existing ${dbName} database instance`);
+      // Ensure existing connection is open
+      if (!db.isOpen()) {
+        console.log(`[useDexieDB] Re-opening existing connection for ${dbName}`);
+        await db.open();
+      }
     }
 
     return db;

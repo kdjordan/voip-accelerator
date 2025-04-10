@@ -285,19 +285,19 @@ export interface USPricingComparisonRecord {
   nxx: string;
   stateCode: string;
   countryCode: string;
-  diff_inter_pct: number;
-  diff_intra_pct: number;
-  diff_indeterm_pct: number;
-  diff_inter_abs: number;
-  diff_intra_abs: number;
-  diff_indeterm_abs: number;
-  file1_inter: number;
-  file1_intra: number;
-  file1_indeterm: number;
-  file2_inter: number;
-  file2_intra: number;
-  file2_indeterm: number;
-  cheaper_file: 'file1' | 'file2' | 'same';
+  diff_inter_pct: number | null; // Allow null
+  diff_intra_pct: number | null; // Allow null
+  diff_indeterm_pct: number | null; // Allow null
+  diff_inter_abs: number | null; // Allow null
+  diff_intra_abs: number | null; // Allow null
+  diff_indeterm_abs: number | null; // Allow null
+  file1_inter: number | null; // Allow null
+  file1_intra: number | null; // Allow null
+  file1_indeterm: number | null; // Allow null
+  file2_inter: number | null; // Allow null
+  file2_intra: number | null; // Allow null
+  file2_indeterm: number | null; // Allow null
+  cheaper_file: 'file1' | 'file2' | 'same' | 'file1_only' | 'file2_only'; // Add new statuses
 }
 
 /*

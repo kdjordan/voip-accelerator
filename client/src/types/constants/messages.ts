@@ -5,10 +5,11 @@ export const JOURNEY_STATE = {
   ONE_FILE: 'ONE_FILE',
   ONE_FILE_REPORT: 'ONE_FILE_REPORT',
   TWO_FILES: 'TWO_FILES',
+  CODE_REPORT_READY: 'CODE_REPORT_READY',
   REPORTS_READY: 'REPORTS_READY',
 } as const;
 
-export type JourneyState = keyof typeof JOURNEY_STATE;
+export type JourneyState = (typeof JOURNEY_STATE)[keyof typeof JOURNEY_STATE];
 
 // Define product types
 export type ProductType = 'AZ' | 'US';
@@ -98,7 +99,38 @@ export function createJourneyMessages(
 
 // Generate the specific message sets
 export const AZ_JOURNEY_MESSAGES = createJourneyMessages('AZ');
-export const US_JOURNEY_MESSAGES = createJourneyMessages('US');
+export const US_JOURNEY_MESSAGES = {
+  [JOURNEY_STATE.INITIAL]: {
+    title: 'Start Your US Rate Deck Analysis',
+    message:
+      "Upload your current rate deck and optionally a prospect's rate deck to begin comparing rates and codes.",
+  },
+  [JOURNEY_STATE.ONE_FILE]: {
+    title: 'First Rate Deck Uploaded',
+    message:
+      "Good start! Now, upload a second rate deck (e.g., a prospect's) to enable detailed NPANXX-level comparison and identify pricing opportunities.",
+  },
+  [JOURNEY_STATE.ONE_FILE_REPORT]: {
+    title: 'Single File Summary Ready',
+    message:
+      "We've analyzed your uploaded file. Upload a second rate deck to unlock the full comparison features and see how the rates stack up side-by-side.",
+  },
+  [JOURNEY_STATE.TWO_FILES]: {
+    title: 'Ready for Comparison',
+    message:
+      "Both rate decks are uploaded! Click 'Get Reports' below to generate the detailed comparison and code analysis.",
+  },
+  [JOURNEY_STATE.CODE_REPORT_READY]: {
+    title: 'Code Report Ready - Pricing Processing...',
+    message:
+      "The code comparison is complete! You can view it now in the 'Code Compare' tab. The detailed pricing report is still processing and will be available shortly in the 'Pricing Report' tab.",
+  },
+  [JOURNEY_STATE.REPORTS_READY]: {
+    title: 'Reports Ready!',
+    message:
+      "Analysis complete! Explore the 'Code Compare' and 'Pricing Report' tabs to see the detailed results and rate differences.",
+  },
+};
 
 // Define a type for the different parent components that use PreviewModal
 export type PreviewModalSource = 'AZ' | 'US' | 'AZ_RATE_DECK' | 'US_RATE_DECK' | 'LERG';

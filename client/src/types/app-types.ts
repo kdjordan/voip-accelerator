@@ -203,7 +203,7 @@ export const DBSchemas = {
   [DBName.RATE_SHEET]: '++id, destinationName, code, rate, effectiveDate, minDuration, increments',
   [DBName.LERG]: 'npa, *state, *country',
   [DBName.US_PRICING_COMPARISON]: `
-    npanxx,
+    comparison_results: npanxx,
     npa,
     nxx,
     stateCode,

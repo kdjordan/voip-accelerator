@@ -12,15 +12,21 @@
         <div :key="usStore.getActiveReportType">
           <USFileUploads v-if="usStore.activeReportType === ReportTypes.FILES" />
           <USCodeReport
-            v-if="
-              usStore.activeReportType === ReportTypes.CODE &&
-              (usStore.hasSingleFileReport || usStore.reportsGenerated)
-            "
+            v-if="usStore.activeReportType === ReportTypes.CODE && usStore.isCodeReportReady"
             :report="usStore.getCodeReport"
           />
           <USPricingReport
-            v-if="usStore.activeReportType === ReportTypes.PRICING && usStore.reportsGenerated"
+            v-if="usStore.activeReportType === ReportTypes.PRICING && usStore.isCodeReportReady"
+            :report="usStore.getPricingReport"
           />
+          <div
+            v-else-if="
+              usStore.activeReportType === ReportTypes.PRICING && !usStore.isCodeReportReady
+            "
+            class="text-center p-10 text-gray-400"
+          >
+            <p>Waiting for initial report generation...</p>
+          </div>
         </div>
       </transition>
     </div>
