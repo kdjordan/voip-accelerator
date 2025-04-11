@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When storing our user provided data in IndexDeb, we use the composable [useDexieDB.ts](mdc:client/src/composables/useDexieDB.ts)
+We have names for the individaul file upload zones that recieve these files :
+- for AZ CSVs we use az1 and az2
+- for US CSVs we use us1 and us2
+
+Actual object store names (tables) are derived from the name of the file uploaded.
+We remove the .csv extension however.
+Example : if we upload a file named UStest.csv, we store it in the us_rate_deck_db in the object store 'ustest'
+These values are mapped in @us-store and [az-store.ts](mdc:client/src/stores/az-store.ts) respectively using the filesUploaded state Map.
+
+So the names of our dbs that will be present in the app are :
+az_rate_deck_db : for user uploaded AZ rate decks
+us_rate_deck_db : for user uploadedc US rate CSVs
+lerg_db : for data copied down from Supabase that has the latest LERG data
+rate_sheet_db : for user uploaded rate sheets 
+us_pricing_comparison_db : for app generated comparisons for us_rate_deck_db tables that were uploaded by the user
+
+these are defined in [app-types.ts](mdc:client/src/types/app-types.ts)
+```
+export const DBName = {
+  AZ: 'az_rate_deck_db',
+  US: 'us_rate_deck_db',
+  LERG: 'lerg_db',
+  RATE_SHEET: 'rate_sheet_db',
+  US_PRICING_COMPARISON: 'us_pricing_comparison_db',
+} as const;
+```

@@ -536,7 +536,8 @@ async function handleReportsAction() {
     );
 
     try {
-      await service.generatePricingComparison(table1Name, table2Name);
+      // Call the correct function to generate comparison data
+      await service.processComparisons(table1Name, table2Name);
       console.log('[USFileUploads] Detailed pricing comparison completed successfully.');
     } catch (comparisonError) {
       console.error('[USFileUploads] Detailed pricing comparison failed:', comparisonError);

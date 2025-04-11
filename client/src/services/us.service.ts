@@ -46,7 +46,6 @@ interface UsStore {
   setPricingReportProcessing: (processing: boolean) => void;
 }
 
-
 export class USService {
   private store: UsStore;
   private lergStore = useLergStore(); // Add instance of lergStore
@@ -427,7 +426,17 @@ export class USService {
   }
 
   async getTableCount(tableName: string): Promise<number> {
-    return await window.db.table(tableName).count();
+    try {
+      const { getDB } = useDexieDB();
+      const db = await getDB(DBName.US);
+      if (db.hasStore(tableName)) {
+        return await db.table(tableName).count();
+      }
+      return 0;
+    } catch (error) {
+      console.error(`Failed to get count for table ${tableName}:`, error);
+      return 0;
+    }
   }
 
   async processComparisons(file1Name: string, file2Name: string): Promise<void> {
@@ -441,107 +450,198 @@ export class USService {
       // Get table names by removing .csv extension
       const table1Name = file1Name.toLowerCase().replace('.csv', '');
       const table2Name = file2Name.toLowerCase().replace('.csv', '');
+      // Use the confirmed static table name for results
+      const comparisonResultsTableName = 'comparison_results';
 
       console.log(`[USService] Comparing tables: ${table1Name} and ${table2Name}`);
+      console.log(`[USService] Results will be stored in: ${comparisonResultsTableName}`);
 
       const { getDB } = useDexieDB();
-      const db = await getDB(DBName.US);
-      const comparisonTable = db.table<USPricingComparisonRecord, string>('us_pricing_comparison');
+      const inputDb = await getDB(DBName.US);
+      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
 
-      // Clear existing comparison data
-      console.log('[USService] Clearing existing comparison data...');
-      await comparisonTable.clear();
-      console.log('[USService] Existing comparison data cleared.');
+      // Get the comparison table using the correct name
+      const comparisonTable = comparisonDb.table<USPricingComparisonRecord, string>(
+        comparisonResultsTableName
+      );
 
       // Load LERG data (NPA -> State mapping, etc.)
       if (!this.lergStore.isLoaded) {
         console.warn('[USService] LERG data might not be loaded. Proceeding anyway.');
       }
 
-      // Load all data from table2 into a Map for efficient lookup
-      console.log(`[USService] Loading data from table: ${table2Name}...`);
-      const table2Data = await db.table<USStandardizedData>(table2Name).toArray();
-      const table2Map = new Map<string, USStandardizedData>();
-      table2Data.forEach((record) => table2Map.set(record.npanxx, record));
-      console.log(`[USService] Loaded ${table2Map.size} records from ${table2Name} into map.`);
-
-      // Prepare array for bulk insertion
-      const resultsToInsert: USPricingComparisonRecord[] = [];
+      // Prepare array for bulk insertion and set for tracking matches
+      const comparisonResults: USPricingComparisonRecord[] = [];
+      const matchedFile2Npanxx = new Set<string>();
       let processedCount = 0;
 
-      // Iterate through table1
+      // Iterate through table1 (using the input DB)
       console.log(`[USService] Iterating through table: ${table1Name} and comparing...`);
-      await db.table<USStandardizedData>(table1Name).each((record1) => {
+      await inputDb.table<USStandardizedData>(table1Name).each(async (record1) => {
         processedCount++;
         const npanxx = record1.npanxx;
-        const record2 = table2Map.get(npanxx);
+        // Query table2 using the npanxx index instead of primary key
+        const record2 = await inputDb
+          .table<USStandardizedData>(table2Name)
+          .where('npanxx')
+          .equals(npanxx)
+          .first(); // Use first() as npanxx should be unique in source tables
+
+        // --- Determine State/Country for record1 ---
+        const location1 = this.lergStore.getLocationByNPA(record1.npa);
+        const stateCode = // Define stateCode based on record1
+          location1?.country === 'US' || location1?.country === 'CA' ? location1.region : '';
+        const countryCode = location1?.country || ''; // Define countryCode based on record1
+        // --- End State/Country Determination ---
 
         if (record2) {
-          // Match found, perform comparison
-          const diff_inter_abs = record2.interRate - record1.interRate;
-          const diff_intra_abs = record2.intraRate - record1.intraRate;
-          const diff_indeterm_abs = record2.indetermRate - record1.indetermRate;
+          // 4a. Match found
+          matchedFile2Npanxx.add(npanxx); // Track matched NPANXX from file 2
 
-          // Calculate percentage differences (handle division by zero)
-          const diff_inter_pct =
-            record1.interRate === 0
-              ? diff_inter_abs === 0
-                ? 0
-                : Infinity * Math.sign(diff_inter_abs)
-              : (diff_inter_abs / record1.interRate) * 100;
-          const diff_intra_pct =
-            record1.intraRate === 0
-              ? diff_intra_abs === 0
-                ? 0
-                : Infinity * Math.sign(diff_intra_abs)
-              : (diff_intra_abs / record1.intraRate) * 100;
-          const diff_indeterm_pct =
-            record1.indetermRate === 0
-              ? diff_indeterm_abs === 0
-                ? 0
-                : Infinity * Math.sign(diff_indeterm_abs)
-              : (diff_indeterm_abs / record1.indetermRate) * 100;
+          console.log(
+            `[DEBUG ${npanxx}] Code execution reached point before TRY block for match...`
+          );
 
-          // Determine cheaper file (simplified - could be more granular per rate type)
-          // For now, let's base it on the sum of rates or a primary rate like interRate
-          let cheaper_file: 'file1' | 'file2' | 'same' = 'same';
-          if (diff_inter_abs > 0) cheaper_file = 'file1';
-          else if (diff_inter_abs < 0) cheaper_file = 'file2';
-          // Add more complex logic if needed based on intra/indeterm rates
+          try {
+            // --- START DETAILED LOGGING for first 5 matches ---
+            if (comparisonResults.length < 5) {
+              console.log(`[DEBUG ${npanxx}] Match Found. Record1:`, JSON.stringify(record1));
+              console.log(`[DEBUG ${npanxx}] Match Found. Record2:`, JSON.stringify(record2));
+              console.log(`[DEBUG ${npanxx}] -- Rates --`);
+              console.log(
+                `[DEBUG ${npanxx}]   File1: inter=${record1.interRate}, intra=${record1.intraRate}, indeterm=${record1.indetermRate}`
+              );
+              console.log(
+                `[DEBUG ${npanxx}]   File2: inter=${record2.interRate}, intra=${record2.intraRate}, indeterm=${record2.indetermRate}`
+              );
+            }
+            // --- END DETAILED LOGGING ---
 
-          // Lookup LERG data
-          const npa = record1.npa;
-          const locationInfo = this.lergStore.getStateByNpa(npa);
-          const stateCode = locationInfo?.state ?? 'N/A';
-          const countryCode = locationInfo?.country ?? 'N/A';
-          const nxx = record1.nxx;
+            // Calculate differences (handle division by zero)
+            const diff_inter_abs = record2.interRate - record1.interRate;
+            const diff_intra_abs = record2.intraRate - record1.intraRate;
+            const diff_indeterm_abs = record2.indetermRate - record1.indetermRate;
 
-          // Construct result object
-          const comparisonRecord: USPricingComparisonRecord = {
+            // --- START DETAILED LOGGING for first 5 matches ---
+            if (comparisonResults.length < 5) {
+              console.log(`[DEBUG ${npanxx}] -- Absolute Diffs --`);
+              console.log(
+                `[DEBUG ${npanxx}]   Inter: ${diff_inter_abs} (Type: ${typeof diff_inter_abs})`
+              );
+              console.log(
+                `[DEBUG ${npanxx}]   Intra: ${diff_intra_abs} (Type: ${typeof diff_intra_abs})`
+              );
+              console.log(
+                `[DEBUG ${npanxx}]   Indeterm: ${diff_indeterm_abs} (Type: ${typeof diff_indeterm_abs})`
+              );
+            }
+            // --- END DETAILED LOGGING ---
+
+            const diff_inter_pct =
+              record1.interRate !== 0
+                ? (diff_inter_abs / record1.interRate) * 100
+                : diff_inter_abs > 0
+                ? Infinity
+                : diff_inter_abs < 0
+                ? -Infinity
+                : 0;
+            const diff_intra_pct =
+              record1.intraRate !== 0
+                ? (diff_intra_abs / record1.intraRate) * 100
+                : diff_intra_abs > 0
+                ? Infinity
+                : diff_intra_abs < 0
+                ? -Infinity
+                : 0;
+            const diff_indeterm_pct =
+              record1.indetermRate !== 0
+                ? (diff_indeterm_abs / record1.indetermRate) * 100
+                : diff_indeterm_abs > 0
+                ? Infinity
+                : diff_indeterm_abs < 0
+                ? -Infinity
+                : 0;
+
+            // Determine cheaper file (simple comparison for now)
+            let cheaper_file: 'file1' | 'file2' | 'same' | 'file1_only' | 'file2_only' = 'same';
+            if (diff_inter_abs < 0) cheaper_file = 'file1';
+            else if (diff_inter_abs > 0) cheaper_file = 'file2';
+
+            // --- START DETAILED LOGGING for first 5 matches ---
+            if (comparisonResults.length < 5) {
+              console.log(`[DEBUG ${npanxx}] -- Percentage Diffs --`);
+              console.log(
+                `[DEBUG ${npanxx}]   Inter: ${diff_inter_pct} (Type: ${typeof diff_inter_pct})`
+              );
+              console.log(
+                `[DEBUG ${npanxx}]   Intra: ${diff_intra_pct} (Type: ${typeof diff_intra_pct})`
+              );
+              console.log(
+                `[DEBUG ${npanxx}]   Indeterm: ${diff_indeterm_pct} (Type: ${typeof diff_indeterm_pct})`
+              );
+              console.log(`[DEBUG ${npanxx}] -- Cheaper File --`);
+              console.log(`[DEBUG ${npanxx}]   Result: ${cheaper_file}`);
+            }
+            // --- END DETAILED LOGGING ---
+
+            comparisonResults.push({
+              // Use renamed variable
+              npanxx,
+              npa: record1.npa,
+              nxx: record1.nxx,
+              stateCode, // Now defined for record1 scope
+              countryCode, // Now defined for record1 scope
+              file1_inter: record1.interRate,
+              file1_intra: record1.intraRate,
+              file1_indeterm: record1.indetermRate,
+              file2_inter: record2.interRate,
+              file2_intra: record2.intraRate,
+              file2_indeterm: record2.indetermRate,
+              diff_inter_abs,
+              diff_intra_abs,
+              diff_indeterm_abs,
+              diff_inter_pct,
+              diff_intra_pct,
+              diff_indeterm_pct,
+              cheaper_file,
+            });
+          } catch (error) {
+            console.error(
+              `[USService] Error processing matched NPANXX ${npanxx}. Record1:`,
+              JSON.stringify(record1)
+            );
+            console.error(
+              `[USService] Error processing matched NPANXX ${npanxx}. Record2:`,
+              JSON.stringify(record2)
+            );
+            console.error(`[USService] Error details:`, error);
+            // Decide if you want to skip this record or push partial data
+            // Pushing partial/error data might require adjusting USPricingComparisonRecord type
+          }
+        } else {
+          // 4b. No match found (unique to file 1)
+          comparisonResults.push({
+            // Use renamed variable
             npanxx,
-            npa,
-            nxx,
-            stateCode,
-            countryCode,
-            diff_inter_pct: parseFloat(diff_inter_pct.toFixed(4)), // Store as number
-            diff_intra_pct: parseFloat(diff_intra_pct.toFixed(4)),
-            diff_indeterm_pct: parseFloat(diff_indeterm_pct.toFixed(4)),
-            diff_inter_abs: parseFloat(diff_inter_abs.toFixed(6)), // Store with precision
-            diff_intra_abs: parseFloat(diff_intra_abs.toFixed(6)),
-            diff_indeterm_abs: parseFloat(diff_indeterm_abs.toFixed(6)),
+            npa: record1.npa,
+            nxx: record1.nxx,
+            stateCode, // Now defined for record1 scope
+            countryCode, // Now defined for record1 scope
             file1_inter: record1.interRate,
             file1_intra: record1.intraRate,
             file1_indeterm: record1.indetermRate,
-            file2_inter: record2.interRate,
-            file2_intra: record2.intraRate,
-            file2_indeterm: record2.indetermRate,
-            cheaper_file,
-          };
-
-          resultsToInsert.push(comparisonRecord);
+            file2_inter: null,
+            file2_intra: null,
+            file2_indeterm: null,
+            diff_inter_abs: null,
+            diff_intra_abs: null,
+            diff_indeterm_abs: null,
+            diff_inter_pct: null,
+            diff_intra_pct: null,
+            diff_indeterm_pct: null,
+            cheaper_file: 'file1_only',
+          });
         }
-        // If no match in table2, record1.npanxx is unique to file1. Decide if/how to handle this.
-        // Current plan focuses on matched NPANXX.
 
         // Optional: Log progress periodically
         if (processedCount % 10000 === 0) {
@@ -549,24 +649,48 @@ export class USService {
         }
       });
 
-      // Bulk insert results
-      if (resultsToInsert.length > 0) {
-        console.log(
-          `[USService] Inserting ${resultsToInsert.length} comparison records into us_pricing_comparison table...`
-        );
-        await comparisonTable.bulkPut(resultsToInsert);
-        console.log('[USService] Comparison records inserted successfully.');
-      } else {
-        console.log('[USService] No matching NPANXX found between the two files to compare.');
-      }
+      // 5. Iterate through file 2 (table2Name) for unmatched records (using the input DB)
+      console.log(`[USService] Checking ${table2Name} for unique records...`);
+      await inputDb
+        .table<USStandardizedData>(table2Name)
+        .each(async (record2: USStandardizedData) => {
+          if (!matchedFile2Npanxx.has(record2.npanxx)) {
+            // 5a. Unique to File 2
+            const location = this.lergStore.getLocationByNPA(record2.npa);
+            const stateCode =
+              location?.country === 'US' || location?.country === 'CA' ? location.region : '';
+            const countryCode = location?.country || '';
 
+            comparisonResults.push({
+              // Use renamed variable
+              npanxx: record2.npanxx,
+              npa: record2.npa,
+              nxx: record2.nxx,
+              stateCode,
+              countryCode,
+              file1_inter: null,
+              file1_intra: null,
+              file1_indeterm: null,
+              file2_inter: record2.interRate,
+              file2_intra: record2.intraRate,
+              file2_indeterm: record2.indetermRate,
+              diff_inter_abs: null,
+              diff_intra_abs: null,
+              diff_indeterm_abs: null,
+              diff_inter_pct: null,
+              diff_intra_pct: null,
+              diff_indeterm_pct: null,
+              cheaper_file: 'file2_only',
+            });
+          }
+        });
+
+      // 6. Bulk insert results into the correct comparison table
       console.log(
-        `[USService] Comparison process completed. Processed ${processedCount} records from ${table1Name}. Found ${resultsToInsert.length} matches.`
+        `[USService] Bulk inserting ${comparisonResults.length} records into ${comparisonResultsTableName}...` // Use defined name
       );
-
-      // TODO: Update overall summary stats in the Pinia store if needed,
-      // based on the generated comparison data or separate calculations.
-      // The old calculation logic below is now replaced.
+      await comparisonTable.bulkPut(comparisonResults); // Use renamed variable & correct table instance
+      console.log(`[USService] Pricing comparison completed successfully.`);
     } catch (error) {
       console.error('[USService] Error during detailed comparison process:', error);
       // Consider updating Pinia store with error state
@@ -734,266 +858,129 @@ export class USService {
   }
 
   /**
-   * Generates a detailed NPANXX-level pricing comparison between two rate decks.
-   *
-   * @param table1Name The Dexie table name for the first file.
-   * @param table2Name The Dexie table name for the second file.
-   */
-  async generatePricingComparison(table1Name: string, table2Name: string): Promise<void> {
-    console.log(`[USService] Starting pricing comparison between ${table1Name} and ${table2Name}`);
-    const comparisonTableName = DBName.US_PRICING_COMPARISON; // This is the DB name
-    const comparisonResultsTableName = 'comparison_results'; // This is the TABLE name
-    const comparisonResults: USPricingComparisonRecord[] = [];
-    const matchedFile2Npanxx = new Set<string>();
-
-    try {
-      // 0. Get DB instances
-      const usDb = await this.dexieDB.getDB(DBName.US);
-      const comparisonDb = await this.dexieDB.getDB(comparisonTableName); // Get DB using DB name
-
-      // 1. Clear previous comparison results
-      console.log(`[USService] Clearing old data from ${comparisonResultsTableName}...`);
-      await comparisonDb.table(comparisonResultsTableName).clear(); // Use TABLE name here
-
-      // 2. Iterate through file 1 (table1Name)
-      console.log(`[USService] Iterating through ${table1Name}...`);
-      await usDb.table(table1Name).each(async (record1: USStandardizedData) => {
-        const npanxx = record1.npanxx;
-
-        // 3. Query file 2 (table2Name) for a match
-        const record2 = await usDb.table(table2Name).get(npanxx);
-
-        // 4. LERG Lookup (needed for both matched and unmatched)
-        const location = this.lergStore.getLocationByNPA(record1.npa);
-        const stateCode =
-          location?.country === 'US' || location?.country === 'CA' ? location.region : '';
-        const countryCode = location?.country || '';
-
-        if (record2) {
-          // 4a. Match found
-          matchedFile2Npanxx.add(npanxx); // Track matched NPANXX from file 2
-
-          // *** START DEBUG LOGS ***
-          // Log details for the first few matches found
-          if (comparisonResults.length < 5) {
-            console.log(`[DEBUG ${npanxx}] Match found. Record1:`, record1);
-            console.log(`[DEBUG ${npanxx}] Match found. Record2:`, record2);
-            console.log(
-              `[DEBUG ${npanxx}] Rates: file1_inter=${record1.interRate}, file2_inter=${record2.interRate}`
-            );
-          }
-          // *** END DEBUG LOGS ***
-
-          // Calculate differences (handle division by zero)
-          const diff_inter_abs = record2.interRate - record1.interRate;
-          const diff_intra_abs = record2.intraRate - record1.intraRate;
-          const diff_indeterm_abs = record2.indetermRate - record1.indetermRate;
-
-          // *** START DEBUG LOGS ***
-          // Log details for the first few matches found
-          if (comparisonResults.length < 5) {
-            console.log(`[DEBUG ${npanxx}] Calculated diff_inter_abs:`, diff_inter_abs);
-          }
-          // *** END DEBUG LOGS ***
-
-          const diff_inter_pct =
-            record1.interRate !== 0
-              ? (diff_inter_abs / record1.interRate) * 100
-              : diff_inter_abs > 0
-              ? Infinity
-              : diff_inter_abs < 0
-              ? -Infinity
-              : 0;
-          const diff_intra_pct =
-            record1.intraRate !== 0
-              ? (diff_intra_abs / record1.intraRate) * 100
-              : diff_intra_abs > 0
-              ? Infinity
-              : diff_intra_abs < 0
-              ? -Infinity
-              : 0;
-          const diff_indeterm_pct =
-            record1.indetermRate !== 0
-              ? (diff_indeterm_abs / record1.indetermRate) * 100
-              : diff_indeterm_abs > 0
-              ? Infinity
-              : diff_indeterm_abs < 0
-              ? -Infinity
-              : 0;
-
-          // Determine cheaper file (simple comparison for now)
-          let cheaper_file: 'file1' | 'file2' | 'same' = 'same';
-          // Add logic to compare rates if needed, e.g., based on average or specific rate types
-          // For now, just marking as 'same' or based on a primary rate like interstate
-          if (diff_inter_abs < 0) cheaper_file = 'file1';
-          else if (diff_inter_abs > 0) cheaper_file = 'file2';
-
-          comparisonResults.push({
-            npanxx,
-            npa: record1.npa,
-            nxx: record1.nxx,
-            stateCode,
-            countryCode,
-            file1_inter: record1.interRate,
-            file1_intra: record1.intraRate,
-            file1_indeterm: record1.indetermRate,
-            file2_inter: record2.interRate,
-            file2_intra: record2.intraRate,
-            file2_indeterm: record2.indetermRate,
-            diff_inter_abs,
-            diff_intra_abs,
-            diff_indeterm_abs,
-            diff_inter_pct,
-            diff_intra_pct,
-            diff_indeterm_pct,
-            cheaper_file,
-          });
-
-          // *** START DEBUG LOGS ***
-          // Log details for the first few matches found
-          if (comparisonResults.length < 5) {
-            console.log(
-              `[DEBUG ${npanxx}] Pushed record:`,
-              comparisonResults[comparisonResults.length - 1]
-            );
-          }
-          // *** END DEBUG LOGS ***
-        } else {
-          // 4b. No match found (unique to file 1)
-          comparisonResults.push({
-            npanxx,
-            npa: record1.npa,
-            nxx: record1.nxx,
-            stateCode,
-            countryCode,
-            file1_inter: record1.interRate,
-            file1_intra: record1.intraRate,
-            file1_indeterm: record1.indetermRate,
-            file2_inter: null,
-            file2_intra: null,
-            file2_indeterm: null,
-            diff_inter_abs: null,
-            diff_intra_abs: null,
-            diff_indeterm_abs: null,
-            diff_inter_pct: null,
-            diff_intra_pct: null,
-            diff_indeterm_pct: null,
-            cheaper_file: 'file1_only',
-          });
-        }
-      });
-
-      // 5. Iterate through file 2 (table2Name) for unmatched records
-      console.log(`[USService] Checking ${table2Name} for unique records...`);
-      await usDb.table(table2Name).each(async (record2: USStandardizedData) => {
-        if (!matchedFile2Npanxx.has(record2.npanxx)) {
-          // 5a. Unique to File 2
-          const location = this.lergStore.getLocationByNPA(record2.npa);
-          const stateCode =
-            location?.country === 'US' || location?.country === 'CA' ? location.region : '';
-          const countryCode = location?.country || '';
-
-          comparisonResults.push({
-            npanxx: record2.npanxx,
-            npa: record2.npa,
-            nxx: record2.nxx,
-            stateCode,
-            countryCode,
-            file1_inter: null,
-            file1_intra: null,
-            file1_indeterm: null,
-            file2_inter: record2.interRate,
-            file2_intra: record2.intraRate,
-            file2_indeterm: record2.indetermRate,
-            diff_inter_abs: null,
-            diff_intra_abs: null,
-            diff_indeterm_abs: null,
-            diff_inter_pct: null,
-            diff_intra_pct: null,
-            diff_indeterm_pct: null,
-            cheaper_file: 'file2_only',
-          });
-        }
-      });
-
-      // 6. Bulk insert results
-      console.log(
-        `[USService] Bulk inserting ${comparisonResults.length} records into ${comparisonResultsTableName}...`
-      );
-      await comparisonDb.table(comparisonResultsTableName).bulkPut(comparisonResults); // Use TABLE name here
-      console.log(`[USService] Pricing comparison completed successfully.`);
-    } catch (error) {
-      console.error('[USService] Error generating pricing comparison:', error);
-      // Optionally, set an error state in the store
-      // this.store.setError('Failed to generate pricing comparison');
-      throw error; // Re-throw the error to be caught by the caller
-    }
-  }
-
-  /**
    * Fetches the detailed comparison results from Dexie and calculates summary statistics.
    *
-   * @param file1Name The filename of the first uploaded file.
-   * @param file2Name The filename of the second uploaded file.
-   * @returns A promise that resolves with the USPricingReport summary.
+   * @param file1Name Name of the first file.
+   * @param file2Name Name of the second file.
+   * @returns Promise<USPricingReport>
    */
   async fetchPricingReportSummary(file1Name: string, file2Name: string): Promise<USPricingReport> {
     console.log('[USService] Fetching pricing report summary...');
-    this.store.setPricingReportProcessing(true); // Set loading state to true
-    const comparisonTableName = DBName.US_PRICING_COMPARISON;
+    this.store.setPricingReportProcessing(true);
+    const comparisonDbName = DBName.US_PRICING_COMPARISON;
+    // Use the confirmed static table name for results
     const comparisonResultsTableName = 'comparison_results';
 
     try {
-      const comparisonDb = await this.dexieDB.getDB(comparisonTableName);
+      const comparisonDb = await this.dexieDB.getDB(comparisonDbName);
+      // Read from the correct table name
       const comparisonData = await comparisonDb
         .table<USPricingComparisonRecord>(comparisonResultsTableName)
         .toArray();
 
-      console.log(`[USService] Fetched ${comparisonData.length} comparison records.`);
+      console.log(
+        `[USService] Fetched ${comparisonData.length} comparison records from ${comparisonResultsTableName}.`
+      );
 
-      // Placeholder for actual calculation logic
-      // TODO: Implement detailed calculations based on comparisonData
-      //       - Calculate averages/medians for file1 rates where file1_inter is not null
-      //       - Calculate averages/medians for file2 rates where file2_inter is not null
-      //       - Calculate differences based on matched records ('same', 'file1', 'file2')
-      //       - Count higher/lower/equal based on 'cheaper_file' or rate diffs
+      // --- Calculate Summary Stats ---
+      const file1InterRates: number[] = [];
+      const file1IntraRates: number[] = [];
+      const file1IndetermRates: number[] = [];
+      const file2InterRates: number[] = [];
+      const file2IntraRates: number[] = [];
+      const file2IndetermRates: number[] = [];
 
-      const placeholderReport: USPricingReport = {
+      let totalHigher = 0; // File 1 is cheaper
+      let totalLower = 0; // File 2 is cheaper
+      let totalEqual = 0; // Rates are the same
+
+      const matchedInterDiffs: number[] = [];
+      const matchedIntraDiffs: number[] = [];
+      const matchedIndetermDiffs: number[] = [];
+
+      comparisonData.forEach((record) => {
+        // Collect rates for File 1 (present in file 1)
+        if (record.file1_inter !== null) file1InterRates.push(record.file1_inter);
+        if (record.file1_intra !== null) file1IntraRates.push(record.file1_intra);
+        if (record.file1_indeterm !== null) file1IndetermRates.push(record.file1_indeterm);
+
+        // Collect rates for File 2 (present in file 2)
+        if (record.file2_inter !== null) file2InterRates.push(record.file2_inter);
+        if (record.file2_intra !== null) file2IntraRates.push(record.file2_intra);
+        if (record.file2_indeterm !== null) file2IndetermRates.push(record.file2_indeterm);
+
+        // Analyze matched records for differences and cheaper file
+        if (record.cheaper_file !== 'file1_only' && record.cheaper_file !== 'file2_only') {
+          if (record.cheaper_file === 'file1') totalHigher++;
+          else if (record.cheaper_file === 'file2') totalLower++;
+          else if (record.cheaper_file === 'same') totalEqual++;
+
+          // Collect absolute differences for matched records
+          if (record.diff_inter_abs !== null) matchedInterDiffs.push(record.diff_inter_abs);
+          if (record.diff_intra_abs !== null) matchedIntraDiffs.push(record.diff_intra_abs);
+          if (record.diff_indeterm_abs !== null)
+            matchedIndetermDiffs.push(record.diff_indeterm_abs);
+        }
+      });
+
+      // Calculate stats for File 1
+      const file1InterStats = this.calculateRateStats(file1InterRates);
+      const file1IntraStats = this.calculateRateStats(file1IntraRates);
+      const file1IndetermStats = this.calculateRateStats(file1IndetermRates);
+
+      // Calculate stats for File 2
+      const file2InterStats = this.calculateRateStats(file2InterRates);
+      const file2IntraStats = this.calculateRateStats(file2IntraRates);
+      const file2IndetermStats = this.calculateRateStats(file2IndetermRates);
+
+      // Calculate average differences (absolute)
+      const avgInterDiff =
+        matchedInterDiffs.reduce((s, v) => s + v, 0) / (matchedInterDiffs.length || 1);
+      const avgIntraDiff =
+        matchedIntraDiffs.reduce((s, v) => s + v, 0) / (matchedIntraDiffs.length || 1);
+      const avgIndetermDiff =
+        matchedIndetermDiffs.reduce((s, v) => s + v, 0) / (matchedIndetermDiffs.length || 1);
+
+      // --- Construct the final report ---=
+      const report: USPricingReport = {
         file1: {
           fileName: file1Name,
-          averageInterRate: 0,
-          averageIntraRate: 0,
-          averageIJRate: 0, // Use IJRate to match type
-          medianInterRate: 0,
-          medianIntraRate: 0,
-          medianIJRate: 0, // Use IJRate to match type
+          averageInterRate: file1InterStats.average,
+          averageIntraRate: file1IntraStats.average,
+          averageIJRate: file1IndetermStats.average, // Using Indeterminate as IJRate
+          medianInterRate: file1InterStats.median,
+          medianIntraRate: file1IntraStats.median,
+          medianIJRate: file1IndetermStats.median, // Using Indeterminate as IJRate
         },
         file2: {
           fileName: file2Name,
-          averageInterRate: 0,
-          averageIntraRate: 0,
-          averageIJRate: 0, // Use IJRate to match type
-          medianInterRate: 0,
-          medianIntraRate: 0,
-          medianIJRate: 0, // Use IJRate to match type
+          averageInterRate: file2InterStats.average,
+          averageIntraRate: file2IntraStats.average,
+          averageIJRate: file2IndetermStats.average, // Using Indeterminate as IJRate
+          medianInterRate: file2InterStats.median,
+          medianIntraRate: file2IntraStats.median,
+          medianIJRate: file2IndetermStats.median, // Using Indeterminate as IJRate
         },
         comparison: {
-          interRateDifference: 0,
-          intraRateDifference: 0,
-          ijRateDifference: 0, // Use IJRate to match type
-          totalHigher: 0, // Count where cheaper_file is 'file1'
-          totalLower: 0, // Count where cheaper_file is 'file2'
-          totalEqual: 0, // Count where cheaper_file is 'same'
+          // Average difference (File2 - File1)
+          interRateDifference: avgInterDiff,
+          intraRateDifference: avgIntraDiff,
+          ijRateDifference: avgIndetermDiff, // Using Indeterminate as IJRate
+          totalHigher, // Count where file1 is cheaper
+          totalLower, // Count where file2 is cheaper
+          totalEqual, // Count where rates are the same
         },
       };
 
-      console.log('[USService] Returning placeholder pricing summary.');
-      return placeholderReport;
+      console.log('[USService] Calculated final pricing summary:', report);
+      return report;
     } catch (error) {
       console.error('[USService] Error fetching pricing report summary:', error);
-      throw error;
+      this.store.setPricingReportProcessing(false); // Ensure loading state is reset on error
+      // Consider returning a specific error object or re-throwing
+      throw new Error(`Failed to fetch or process pricing summary: ${error}`);
     } finally {
-      this.store.setPricingReportProcessing(false); // Set loading state to false
+      this.store.setPricingReportProcessing(false); // Ensure loading state is always reset
     }
   }
 }
