@@ -137,6 +137,17 @@ export class USService {
                 indetermRate = indeterminateDefinition === 'interstate' ? interRate : intraRate;
               }
 
+              // --- DEBUGGING STEP 1 START ---
+              // Log parsed rates for the first 5 rows
+              if (index < 5) {
+                console.log(
+                  `[DEBUG][us.service] Row ${
+                    startLine + index
+                  }: Parsed Rates -> inter: ${interRate}, intra: ${intraRate}, indeterm: ${indetermRate}`
+                );
+              }
+              // --- DEBUGGING STEP 1 END ---
+
               // Validate the data
               if (
                 !npanxx ||
@@ -265,6 +276,20 @@ export class USService {
       // Pass fileName to getData to filter records by source file
       const data = await this.getData(tableName, fileName);
 
+      // --- DEBUGGING START ---
+      console.log(
+        `[DEBUG][USService][calculateFileStats] Retrieved ${
+          data?.length || 0
+        } records for ${fileName}`
+      );
+      if (data && data.length > 0) {
+        console.log(
+          `[DEBUG][USService][calculateFileStats] First 5 records: `,
+          JSON.stringify(data.slice(0, 5))
+        );
+      }
+      // --- DEBUGGING END ---
+
       if (!data || data.length === 0) return;
 
       // Calculate stats
@@ -315,6 +340,12 @@ export class USService {
       const formattedAvgInterRate = parseFloat(avgInterRate.toFixed(4));
       const formattedAvgIntraRate = parseFloat(avgIntraRate.toFixed(4));
       const formattedAvgIndetermRate = parseFloat(avgIndetermRate.toFixed(4));
+
+      // --- DEBUGGING START ---
+      console.log(
+        `[DEBUG][USService][calculateFileStats] Calculated Averages -> inter: ${formattedAvgInterRate}, intra: ${formattedAvgIntraRate}, indeterm: ${formattedAvgIndetermRate}`
+      );
+      // --- DEBUGGING END ---
 
       // Update store
       this.store.setFileStats(componentId, {
@@ -395,7 +426,6 @@ export class USService {
       if (db.hasStore(tableName)) {
         const count = await db.table(tableName).count();
         console.log(`[USService] Count for Dexie table ${tableName}: ${count}`);
-        return count;
       }
       return 0;
     } catch (error) {
