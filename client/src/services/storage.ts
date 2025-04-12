@@ -357,7 +357,7 @@ export class StorageService<T = any> {
       await this.ensureInitialized();
 
       const tables: Record<string, number> = {};
-      for (const tableName of this.store!.tableNames.value) {
+      for (const tableName of this.store!.tableNames) {
         const count = (this.store!.getTableData(tableName) || []).length;
         tables[tableName] = count;
       }

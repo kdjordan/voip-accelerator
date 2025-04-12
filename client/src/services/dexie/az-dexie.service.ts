@@ -1,11 +1,11 @@
 import Dexie from 'dexie';
+import type { AZStandardizedData } from '@/types/domains/az-types';
 import { BaseDexieService } from './base-dexie.service';
-import type { AZCodeRecord } from '@/types/domains/az-code-types';
 
 /**
  * AZ-specific Dexie service for operations on AZ code data
  */
-export class AZDexieService extends BaseDexieService<AZCodeRecord, string> {
+export class AZDexieService extends BaseDexieService<AZStandardizedData, string> {
   private static instance: AZDexieService | null = null;
 
   /**
@@ -31,7 +31,7 @@ export class AZDexieService extends BaseDexieService<AZCodeRecord, string> {
    *
    * @param records Array of AZ code records to add
    */
-  async initializeTable(records: AZCodeRecord[]): Promise<void> {
+  async initializeTable(records: AZStandardizedData[]): Promise<void> {
     try {
       await this.transaction('rw', async () => {
         // Clear existing data
@@ -51,112 +51,48 @@ export class AZDexieService extends BaseDexieService<AZCodeRecord, string> {
   }
 
   /**
-   * Get records by AZ code
-   *
-   * @param azCode The AZ code
+   * Get AZ code records by dial code
+   * @param azCode The dial code to search for
    * @returns Promise resolving to AZ code record if found
    */
-  async getByCode(azCode: string): Promise<AZCodeRecord | undefined> {
+  async getByDialCode(dialCode: string): Promise<AZStandardizedData | undefined> {
     try {
-      const results = await this.where('code', azCode);
-      return results.length > 0 ? results[0] : undefined;
+      // Use the correct property 'dialCode'
+      return await this.table().where('dialCode').equals(dialCode).first();
     } catch (error) {
-      console.error(`Error getting AZ record for code ${azCode}:`, error);
-      throw error;
+      console.error(`Error getting AZ record by dial code ${dialCode}:`, error);
+      return undefined;
     }
   }
 
   /**
-   * Get records by state
-   *
-   * @param stateCode Two-letter state code
-   * @returns Promise resolving to array of AZ code records
-   */
-  async getByState(stateCode: string): Promise<AZCodeRecord[]> {
-    return this.where('state', stateCode);
-  }
-
-  /**
-   * Get records by country
-   *
-   * @param countryCode Two-letter country code
-   * @returns Promise resolving to array of AZ code records
-   */
-  async getByCountry(countryCode: string): Promise<AZCodeRecord[]> {
-    return this.where('country', countryCode);
-  }
-
-  /**
-   * Get records by city name
-   *
-   * @param cityName City name
-   * @returns Promise resolving to array of AZ code records
-   */
-  async getByCity(cityName: string): Promise<AZCodeRecord[]> {
-    try {
-      // Case-insensitive city search
-      return await this.table()
-        .filter((record) => record.city?.toLowerCase().includes(cityName.toLowerCase()) ?? false)
-        .toArray();
-    } catch (error) {
-      console.error(`Error getting AZ codes by city ${cityName}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Search records by multiple criteria
-   *
-   * @param criteria Search criteria object
+   * Search AZ code records based on criteria
+   * @param criteria Partial record with search criteria
    * @returns Promise resolving to array of matching AZ code records
    */
-  async search(criteria: Partial<AZCodeRecord>): Promise<AZCodeRecord[]> {
+  async search(criteria: Partial<AZStandardizedData>): Promise<AZStandardizedData[]> {
     try {
       let collection = this.table().toCollection();
 
-      // Apply filters for each provided criteria
-      if (criteria.code) {
-        collection = collection.filter((rec) => rec.code === criteria.code);
+      // Filter by dialCode if provided
+      if (criteria.dialCode) {
+        collection = collection.filter((rec) => rec.dialCode === criteria.dialCode);
       }
 
-      if (criteria.state) {
-        collection = collection.filter((rec) => rec.state === criteria.state);
-      }
-
-      if (criteria.country) {
-        collection = collection.filter((rec) => rec.country === criteria.country);
-      }
-
-      if (criteria.city) {
+      // Filter by destName (case-insensitive) if provided
+      if (criteria.destName) {
+        const lowerDestName = criteria.destName.toLowerCase();
         collection = collection.filter(
-          (rec) => rec.city?.toLowerCase().includes(criteria.city!.toLowerCase()) ?? false
+          (rec) => rec.destName?.toLowerCase().includes(lowerDestName) ?? false
         );
       }
 
+      // Add other relevant filters if needed based on AZStandardizedData fields
+
       return await collection.toArray();
     } catch (error) {
-      console.error('Error searching AZ codes:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get the last updated timestamp from the records
-   *
-   * @returns Promise resolving to the last updated timestamp or null
-   */
-  async getLastUpdatedTimestamp(): Promise<{ lastUpdated: string | null }> {
-    try {
-      const firstRecord = await this.table().limit(1).first();
-
-      const timestamp = firstRecord?.lastUpdated
-        ? new Date(firstRecord.lastUpdated).toISOString()
-        : null;
-
-      return { lastUpdated: timestamp };
-    } catch (error) {
-      console.error('Error getting last updated timestamp:', error);
-      return { lastUpdated: null };
+      console.error('Error searching AZ records:', error);
+      return [];
     }
   }
 }

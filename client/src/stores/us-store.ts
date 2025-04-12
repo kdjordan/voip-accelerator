@@ -324,4 +324,4 @@ export const useUsStore = defineStore('usStore', {
       this.enhancedCodeReports.clear();
     },
   },
-}) as unknown as () => DomainStore<USPricingReport, USCodeReport, InvalidUsRow>;
+});

@@ -576,18 +576,20 @@ async function handleModalConfirm(mappings: Record<string, string>) {
   azStore.setComponentUploading(activeComponent.value, true);
 
   try {
-    // Convert the new mappings format to the expected columnMapping format
+    // Convert mappings to column indices (correct property names)
     const columnMapping = {
-      destination: Number(
+      destName: Number(
         Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DESTINATION)?.[0] ?? -1
       ),
-      dialcode: Number(
+      code: Number(
         Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DIALCODE)?.[0] ?? -1
       ),
       rate: Number(
         Object.entries(mappings).find(([_, value]) => value === AZColumnRole.RATE)?.[0] ?? -1
       ),
     };
+
+    console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
 
     const result = await azService.processFile(file, columnMapping, startLine.value);
     await handleFileUploaded(activeComponent.value, result.fileName);

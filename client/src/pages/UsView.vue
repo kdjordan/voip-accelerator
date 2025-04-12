@@ -113,7 +113,7 @@ onMounted(async () => {
     }
   } catch (err) {
     console.error('[UsView] Error loading LERG data:', err);
-    lergInitError.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
+    lergError.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
   }
 });
 

@@ -59,7 +59,7 @@ export class LergDexieService extends BaseDexieService<LERGRecord, string> {
    * @returns Promise resolving to array of LERG records
    */
   async getByCountry(countryCode: string): Promise<LERGRecord[]> {
-    return this.where('country', countryCode);
+    return this.where('country').equals(countryCode).toArray();
   }
 
   /**
@@ -69,7 +69,7 @@ export class LergDexieService extends BaseDexieService<LERGRecord, string> {
    * @returns Promise resolving to array of LERG records
    */
   async getByState(stateCode: string): Promise<LERGRecord[]> {
-    return this.where('state', stateCode);
+    return this.where('state').equals(stateCode).toArray();
   }
 
   /**
@@ -80,11 +80,11 @@ export class LergDexieService extends BaseDexieService<LERGRecord, string> {
    */
   async getByNPA(npa: string): Promise<LERGRecord | undefined> {
     try {
-      const results = await this.where('npa', npa);
-      return results.length > 0 ? results[0] : undefined;
+      const results = await this.where('npa').equals(npa).first();
+      return results;
     } catch (error) {
       console.error(`Error getting LERG record for NPA ${npa}:`, error);
-      throw error;
+      return undefined;
     }
   }
 

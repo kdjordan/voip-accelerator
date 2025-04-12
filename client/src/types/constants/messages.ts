@@ -53,9 +53,8 @@ const BASE_JOURNEY_MESSAGES: Record<
     },
   },
   TWO_FILES: {
-    title: 'Ready for comparison',
-    message:
-      'Both files are uploaded.<br>Click "Get Reports" to generate pricing and code comparison reports.',
+    title: 'Ready to Generate Reports',
+    message: "Two files have been uploaded. Click 'Get Reports' to start the comparison.",
     titleVariants: {
       US: 'Ready for analysis',
     },
@@ -68,6 +67,14 @@ const BASE_JOURNEY_MESSAGES: Record<
     message: 'Use the report tabs to explore your opportunities.',
     messageVariants: {
       US: 'Use the report tabs above to explore your opportunities.',
+    },
+  },
+  CODE_REPORT_READY: {
+    title: 'Code Report Ready',
+    message:
+      'The code comparison report is ready. Upload a second file to generate the pricing report.',
+    messageVariants: {
+      US: 'The code comparison report is ready. Upload a second file to generate the pricing report.',
     },
   },
 };
