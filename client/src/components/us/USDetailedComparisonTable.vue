@@ -93,7 +93,7 @@
           <tbody class="divide-y divide-gray-800">
             <tr
               v-for="record in filteredComparisonData"
-              :key="record.id || record.npanxx"
+              :key="record.npanxx"
               class="hover:bg-gray-700/50"
             >
               <!-- Populate table cells -->
@@ -234,7 +234,7 @@ async function loadMoreData() {
     let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
     // Apply filters
-    const currentFilters = [];
+    const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
     if (searchTerm.value) {
       const lowerSearch = searchTerm.value.toLowerCase();
       currentFilters.push((record: USPricingComparisonRecord) =>
@@ -252,13 +252,21 @@ async function loadMoreData() {
       );
     }
 
-    // Apply Dexie filter if any filters are active
+    // Explicitly type as Collection or apply chain differently
+    let finalQueryChain;
     if (currentFilters.length > 0) {
-      query = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      // Start with the filtered collection
+      finalQueryChain = query
+        .filter((record) => currentFilters.every((fn) => fn(record)))
+        .offset(offset.value)
+        .limit(pageSize);
+    } else {
+      // Start with the original table
+      finalQueryChain = query.offset(offset.value).limit(pageSize);
     }
 
     // Apply pagination and fetch data
-    const newData = await query.offset(offset.value).limit(pageSize).toArray();
+    const newData = await finalQueryChain.toArray();
 
     console.log(
       `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`

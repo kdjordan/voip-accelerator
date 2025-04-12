@@ -140,22 +140,22 @@
 
                   <!-- States/Provinces Section -->
                   <div v-if="expandedCountries.has(country.countryCode)" class="mt-3 space-y-2">
-                    <template v-for="state in country.states" :key="state.code">
+                    <template v-for="state in country.states" :key="state.stateCode">
                       <div class="bg-gray-800/60 rounded overflow-hidden">
                         <div
-                          @click="toggleStateExpanded(state.code)"
+                          @click="toggleStateExpanded(state.stateCode)"
                           class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
                         >
                           <span class="text-gray-300">{{
-                            getStateName(state.code, country.countryCode)
+                            getStateName(state.stateCode, country.countryCode)
                           }}</span>
                           <div class="flex items-center space-x-2">
                             <span class="text-accent">
-                              {{ formatCoverage(state.npaCoverage) }}% Coverage
+                              {{ formatCoverage(state.coverage) }}% Coverage
                             </span>
                             <span
                               class="transform transition-transform"
-                              :class="{ 'rotate-180': expandedStates.has(state.code) }"
+                              :class="{ 'rotate-180': expandedStates.has(state.stateCode) }"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -177,7 +177,7 @@
 
                         <!-- NPAs List -->
                         <div
-                          v-if="expandedStates.has(state.code)"
+                          v-if="expandedStates.has(state.stateCode)"
                           class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
                         >
                           <!-- Rate Stats -->
@@ -240,6 +240,11 @@ import { useUsStore } from '@/stores/us-store';
 import { useLergStore } from '@/stores/lerg-store';
 import { getStateName } from '@/types/constants/state-codes';
 import { getCountryName } from '@/types/constants/country-codes';
+import type {
+  USEnhancedCodeReport,
+  USCountryBreakdown,
+  USStateBreakdown,
+} from '@/types/domains/us-types';
 
 // Define props
 const props = defineProps<{
@@ -267,7 +272,10 @@ const totalLergCodes = computed(() => lergStore.calculateTotalLergCodes() || 0);
 const totalFileNPAs = computed(() => {
   const countries = enhancedReport.value?.file1?.countries;
   if (!countries) return 0;
-  return countries.reduce((total, country) => total + (country.npas?.length || 0), 0);
+  return countries.reduce(
+    (total: number, country: USCountryBreakdown) => total + (country.npas?.length || 0),
+    0
+  );
 });
 
 const overallCoveragePercentage = computed(() => {
@@ -277,11 +285,11 @@ const overallCoveragePercentage = computed(() => {
 
 // Average rates
 const averageRates = computed(() => {
-  const rates = enhancedReport.value?.file1?.rateStats || {};
+  const rates = enhancedReport.value?.file1?.rateStats;
   return {
-    interstate: Number(rates.interstate?.average || 0).toFixed(4),
-    intrastate: Number(rates.intrastate?.average || 0).toFixed(4),
-    indeterminate: Number(rates.indeterminate?.average || 0).toFixed(4),
+    interstate: Number(rates?.interstate?.average || 0).toFixed(4),
+    intrastate: Number(rates?.intrastate?.average || 0).toFixed(4),
+    indeterminate: Number(rates?.indeterminate?.average || 0).toFixed(4),
   };
 });
 
@@ -301,17 +309,8 @@ function formatRate(value: number | undefined): string {
 const countries = computed(() => {
   if (!enhancedReport.value?.file1?.countries) return [];
 
-  return enhancedReport.value.file1.countries.map((country) => ({
-    countryCode: country.countryCode,
-    countryName: getCountryName(country.countryCode || ''),
-    npaCoverage: country.npaCoverage,
-    states: (country.states || []).map((state) => ({
-      code: state.stateCode || '',
-      npaCoverage: state.coverage,
-      npas: state.npas || [],
-      rateStats: state.rateStats || {},
-    })),
-  }));
+  // Return USCountryBreakdown array directly
+  return enhancedReport.value.file1.countries;
 });
 
 const filteredCountries = computed(() => {
@@ -319,32 +318,38 @@ const filteredCountries = computed(() => {
 
   const query = searchQuery.value.toLowerCase();
 
+  // Filter based on the original countries array
   return countries.value
-    .map((country) => {
+    .map((country: USCountryBreakdown) => {
       // Filter states based on search query
-      const filteredStates = country.states.filter((state) => {
-        const stateName = getStateName(state.code, country.countryCode).toLowerCase();
-        const hasMatchingNPA = state.npas.some((npa) => npa.toString().includes(query));
+      // Ensure country.states exists before filtering
+      const filteredStates = (country.states || []).filter((state: USStateBreakdown) => {
+        const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase(); // Use stateCode
+        const hasMatchingNPA = state.npas.some((npa: string | number) =>
+          npa.toString().includes(query)
+        );
         return stateName.includes(query) || hasMatchingNPA;
       });
 
       // If country name matches, return country with all its states
       if (country.countryName.toLowerCase().includes(query)) {
-        return { ...country };
+        return { ...country }; // Return the original country shape
       }
 
       // If any states match, return country with only matching states
       if (filteredStates.length > 0) {
-        return { ...country, states: filteredStates };
+        return { ...country, states: filteredStates }; // Return original shape but with filtered states
       }
 
       // If no matches, return null
       return null;
     })
-    .filter((country): country is NonNullable<typeof country> => {
+    .filter((country): country is USCountryBreakdown => {
+      // Check country.states exists and ensure boolean return
+      const statesExistAndMatch = country?.states ? country.states.length > 0 : false;
       return (
         country !== null &&
-        (country.countryName.toLowerCase().includes(query) || country.states.length > 0)
+        (country.countryName.toLowerCase().includes(query) || statesExistAndMatch)
       );
     });
 });
@@ -383,13 +388,16 @@ watch(searchQuery, (newQuery) => {
       expandedCountries.value.add(country.countryCode);
     }
 
-    country.states.forEach((state) => {
-      const stateName = getStateName(state.code, country.countryCode).toLowerCase();
-      const hasMatchingNPA = state.npas.some((npa) => npa.toString().includes(query));
+    // Ensure country.states exists before iterating
+    (country.states || []).forEach((state: USStateBreakdown) => {
+      const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase(); // Use stateCode
+      const hasMatchingNPA = state.npas.some((npa: string | number) =>
+        npa.toString().includes(query)
+      );
 
       if (stateName.includes(query) || hasMatchingNPA) {
         expandedCountries.value.add(country.countryCode);
-        expandedStates.value.add(state.code);
+        expandedStates.value.add(state.stateCode); // Use stateCode
       }
     });
   });

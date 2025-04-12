@@ -1,4 +1,5 @@
-import Dexie from 'dexie';
+import Dexie, { Table, WhereClause, IndexableType } from 'dexie';
+import type { PromiseExtended } from 'dexie';
 
 /**
  * Base Dexie Service providing generic CRUD operations for Dexie tables
@@ -84,12 +85,13 @@ export class BaseDexieService<T, K extends string | number = string> {
    * Update a record
    *
    * @param id The record ID
-   * @param changes Partial record with changes
-   * @returns Promise resolving to number of updated records
+   * @param changes Object containing properties to update
+   * @returns Promise resolving to the number of affected records
    */
-  async update(id: K, changes: Partial<T>): Promise<number> {
+  async update<P extends K | IndexableType>(id: P, changes: Partial<T>): Promise<number> {
     try {
-      return await this.db.table<T>(this.tableName).update(id, changes);
+      // Cast changes to any to bypass strict Dexie update typing
+      return await this.db.table<T>(this.tableName).update(id, changes as any);
     } catch (error) {
       console.error(`Error updating record ${id} in ${this.tableName}:`, error);
       throw error;
@@ -138,18 +140,19 @@ export class BaseDexieService<T, K extends string | number = string> {
    * Filter records by a field value
    *
    * @param field The field to filter on
-   * @param value The value to match
-   * @returns Promise resolving to array of matching records
+   * @param value Value to match
+   * @returns Dexie WhereClause for further chaining
    */
-  async where<F extends keyof T>(field: F, value: T[F]): Promise<T[]> {
+  where<F extends keyof T>(field: F, value: T[F] & IndexableType): WhereClause<T, IndexableType>;
+  where<F extends keyof T>(field: F): WhereClause<T, T[F] & IndexableType>;
+  where<F extends keyof T>(field: F): WhereClause<T, IndexableType> {
     try {
-      return await this.db
-        .table<T>(this.tableName)
-        .where(field as string)
-        .equals(value)
-        .toArray();
+      return this.table().where(field as string);
     } catch (error) {
-      console.error(`Error querying ${this.tableName} where ${String(field)} = ${value}:`, error);
+      console.error(
+        `Error creating WhereClause for ${this.tableName} on field ${String(field)}:`,
+        error
+      );
       throw error;
     }
   }

@@ -1,11 +1,11 @@
 import Dexie from 'dexie';
+import type { USStandardizedData } from '@/types/domains/us-types';
 import { BaseDexieService } from './base-dexie.service';
-import type { USCodeRecord } from '@/types/domains/us-code-types';
 
 /**
  * US-specific Dexie service for operations on US code data
  */
-export class USDexieService extends BaseDexieService<USCodeRecord, string> {
+export class USDexieService extends BaseDexieService<USStandardizedData, string> {
   private static instance: USDexieService | null = null;
 
   /**
@@ -31,7 +31,7 @@ export class USDexieService extends BaseDexieService<USCodeRecord, string> {
    *
    * @param records Array of US code records to add
    */
-  async initializeTable(records: USCodeRecord[]): Promise<void> {
+  async initializeTable(records: USStandardizedData[]): Promise<void> {
     try {
       await this.transaction('rw', async () => {
         // Clear existing data
@@ -51,83 +51,32 @@ export class USDexieService extends BaseDexieService<USCodeRecord, string> {
   }
 
   /**
-   * Get all records for a specific state
-   *
-   * @param stateCode Two-letter state code
+   * Get US records by NPA (area code)
+   * @param npa The NPA (area code)
    * @returns Promise resolving to array of US code records
    */
-  async getByState(stateCode: string): Promise<USCodeRecord[]> {
-    return this.where('state', stateCode);
-  }
-
-  /**
-   * Get records by area code
-   *
-   * @param areaCode Area code
-   * @returns Promise resolving to array of US code records
-   */
-  async getByAreaCode(areaCode: string): Promise<USCodeRecord[]> {
+  async getByNpa(npa: string): Promise<USStandardizedData[]> {
     try {
-      return await this.table().where('areaCode').equals(areaCode).toArray();
+      // Use 'npa' index
+      return await this.table().where('npa').equals(npa).toArray();
     } catch (error) {
-      console.error(`Error getting US codes by area code ${areaCode}:`, error);
-      throw error;
+      console.error(`Error getting US records by NPA ${npa}:`, error);
+      return [];
     }
   }
 
   /**
-   * Get records by zip code prefix
-   *
-   * @param zipPrefix Zip code prefix
+   * Get US records by NPANXX
+   * @param npanxx The NPANXX
    * @returns Promise resolving to array of US code records
    */
-  async getByZipPrefix(zipPrefix: string): Promise<USCodeRecord[]> {
+  async getByNpanxx(npanxx: string): Promise<USStandardizedData[]> {
     try {
-      // Use startsWith to match zip code prefixes
-      return await this.table()
-        .filter((record) => record.zipCode?.startsWith(zipPrefix) ?? false)
-        .toArray();
+      // Use 'npanxx' index
+      return await this.table().where('npanxx').equals(npanxx).toArray();
     } catch (error) {
-      console.error(`Error getting US codes by zip prefix ${zipPrefix}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get records by city name
-   *
-   * @param cityName City name
-   * @returns Promise resolving to array of US code records
-   */
-  async getByCity(cityName: string): Promise<USCodeRecord[]> {
-    try {
-      // Case-insensitive city search
-      return await this.table()
-        .filter((record) => record.city?.toLowerCase().includes(cityName.toLowerCase()) ?? false)
-        .toArray();
-    } catch (error) {
-      console.error(`Error getting US codes by city ${cityName}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get the last updated timestamp from the records
-   *
-   * @returns Promise resolving to the last updated timestamp or null
-   */
-  async getLastUpdatedTimestamp(): Promise<{ lastUpdated: string | null }> {
-    try {
-      const firstRecord = await this.table().limit(1).first();
-
-      const timestamp = firstRecord?.lastUpdated
-        ? new Date(firstRecord.lastUpdated).toISOString()
-        : null;
-
-      return { lastUpdated: timestamp };
-    } catch (error) {
-      console.error('Error getting last updated timestamp:', error);
-      return { lastUpdated: null };
+      console.error(`Error getting US records by NPANXX ${npanxx}:`, error);
+      return [];
     }
   }
 }
