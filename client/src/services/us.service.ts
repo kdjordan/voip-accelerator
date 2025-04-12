@@ -517,6 +517,7 @@ export class USService {
       const comparisonResults: USPricingComparisonRecord[] = [];
       let matchCount = 0;
       let processedCount = 0;
+      const processedNpanxx = new Set<string>(); // Add a Set to track processed NPANXX
 
       // 6. Iterate through file1, find matches in file2, calculate results
       console.log(
@@ -524,11 +525,18 @@ export class USService {
       );
       for (const record1 of data1) {
         processedCount++;
+
+        // Skip if this NPANXX has already been processed
+        if (processedNpanxx.has(record1.npanxx)) {
+          continue; // Go to the next record1
+        }
+
         const record2 = table2Map.get(record1.npanxx);
 
         // --- Process only if a match is found in file2 ---
         if (record2) {
           matchCount++;
+          processedNpanxx.add(record1.npanxx); // Mark NPANXX as processed
           try {
             // LERG Lookup
             const location = lergStore.getLocationByNPA(record1.npa);

@@ -242,6 +242,50 @@ export default function useDexieDB() {
     }
   }
 
+  /**
+   * Loads data from a specific Dexie store in pages.
+   * @param dbName The name of the database.
+   * @param storeName The name of the store (table).
+   * @param limit The maximum number of records to return.
+   * @param offset The number of records to skip.
+   * @returns Promise<T[]> A promise that resolves with an array of records for the requested page.
+   */
+  async function loadPagedFromDexieDB<T>(
+    dbName: DBNameType,
+    storeName: string,
+    limit: number,
+    offset: number
+  ): Promise<T[]> {
+    console.log(`Loading paged data from DexieDB:`, { dbName, storeName, limit, offset });
+    const db = await getDB(dbName);
+    console.log('Got db:', { db });
+
+    try {
+      const stores = db.tables.map((table) => table.name);
+      console.log('Available tables:', stores);
+
+      // Check if the store exists and return empty array if not
+      if (!db.hasStore(storeName)) {
+        console.warn(`Store ${storeName} not found in database ${dbName}. Returning empty array.`);
+        return [];
+      }
+
+      // Apply pagination
+      const data = await db.table<T>(storeName).offset(offset).limit(limit).toArray();
+
+      console.log(
+        `Successfully loaded ${data.length} records from ${dbName}/${storeName} (limit: ${limit}, offset: ${offset})`
+      );
+      return data;
+    } catch (error) {
+      console.error(
+        `Error loading paged data from ${dbName}/${storeName} (limit: ${limit}, offset: ${offset}):`,
+        error
+      );
+      throw error;
+    }
+  }
+
   async function deleteDatabase(dbName: DBNameType): Promise<void> {
     try {
       await dbStore.closeConnection(dbName);
@@ -379,6 +423,7 @@ export default function useDexieDB() {
     getDB,
     storeInDexieDB,
     loadFromDexieDB,
+    loadPagedFromDexieDB,
     deleteDatabase,
     closeAllConnections,
     consolidateData,
