@@ -1,5 +1,5 @@
 import { useLergStore } from '@/stores/lerg-store';
-import type { LergWorkerData } from '@/types/domains/lerg-types';
+import type { LergWorkerData, CountryLergData, LergNpaMapping } from '@/types/domains/lerg-types';
 
 /**
  * Prepare LERG data for use in a Web Worker
@@ -19,8 +19,10 @@ export function prepareLergWorkerData(): LergWorkerData | null {
 
   // Extract serializable data
   const validNpas: string[] = [];
-  const npaMappings: Record<string, { country: string; state: string }> = {};
+  const npaMappings: Record<string, LergNpaMapping> = {};
   const countryGroups: Record<string, string[]> = {};
+  const countryData: CountryLergData[] = [];
+  const stateNPAs: Record<string, string[]> = {};
 
   // Convert NPA records to mappings
   for (const [npa, record] of lergStore.npaRecords) {
@@ -31,15 +33,30 @@ export function prepareLergWorkerData(): LergWorkerData | null {
     };
   }
 
-  // Convert country maps
-  for (const [country, npas] of lergStore.countriesMap) {
-    countryGroups[country] = Array.from(npas);
+  // Convert country maps to countryData and countryGroups
+  for (const [country, npasSet] of lergStore.countriesMap) {
+    const npasArray = Array.from(npasSet);
+    countryGroups[country] = npasArray;
+    countryData.push({
+      country: country,
+      npaCount: npasArray.length,
+      npas: npasArray,
+    });
+  }
+
+  // Convert countryStateMap to stateNPAs
+  for (const [_country, stateMap] of lergStore.countryStateMap) {
+    for (const [state, npasSet] of stateMap) {
+      stateNPAs[state] = Array.from(npasSet);
+    }
   }
 
   return {
     validNpas,
     npaMappings,
     countryGroups,
+    countryData,
+    stateNPAs,
   };
 }
 

@@ -53,7 +53,7 @@ export class USService {
 
   constructor() {
     this.store = useUsStore() as unknown as UsStore;
-    console.log('Initializing simplified US service');
+    console.log('[USService] Initializing US service');
   }
 
   // Process file and store directly in Dexie

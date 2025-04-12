@@ -7,7 +7,6 @@ import type {
   USEnhancedCodeReport,
 } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
-import type { DomainStore } from '@/types';
 
 export const useUsStore = defineStore('usStore', {
   state: () => ({
