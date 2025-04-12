@@ -74,27 +74,18 @@ watch(
 onMounted(async () => {
   // Ensure LERG data is loaded first, before anything else happens
   try {
-    await initializeLergData();
-    console.log('[UsView] Mounting component, checking LERG data');
-
     // Ping LERG data to ensure it's available for US operations
     const pingResult = await ping();
-    console.log('[UsView] LERG data ping successful:', pingResult);
+    
+    await initializeLergData();
+    console.log('[UsView] Mounting component, checking LERG data');
 
     // Check actual LERG data counts
     const usStates = lergStore.getUSStates;
     const canadaProvinces = lergStore.getCanadianProvinces;
     const countryData = lergStore.getCountryData;
 
-    console.log('[UsView] LERG data loaded:', {
-      usStatesCount: usStates.length,
-      totalStateNPAs: usStates.reduce((sum, state) => sum + state.npas.length, 0),
-      canadaProvincesCount: canadaProvinces.length,
-      totalProvinceNPAs: canadaProvinces.reduce((sum, province) => sum + province.npas.length, 0),
-      countriesCount: countryData.length,
-      totalCountryNPAs: countryData.reduce((sum, country) => sum + country.npas.length, 0),
-      lergTotalNPAs: lergStore.stats.totalNPAs,
-    });
+    console.log('[UsView] LERG loaded');
 
     // Check if files are already loaded before loading sample data
     const filesAlreadyUploaded = usStore.getNumberOfFilesUploaded === 2;
@@ -103,9 +94,9 @@ onMounted(async () => {
       console.log('[UsView] Files already uploaded, skipping sample data loading');
     } else {
       // Only load sample decks if no files are already uploaded
-      console.log('[UsView] No files uploaded, loading sample data');
+      // console.log('[UsView] No files uploaded, loading sample data');
       const sampleDecks = setTimeout(async () => {
-        // await loadSampleDecks([DBName.US]);
+        await loadSampleDecks([DBName.US]);
       }, 1000);
 
       // Clear timeout on component unmount

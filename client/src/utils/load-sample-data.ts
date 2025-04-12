@@ -10,62 +10,6 @@ function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
 }
 
-/**
- * Process US CSV data to convert the NPA/NXX columns into a standard 6-digit NPANXX format
- * This handles the case where a leading "1" (country code) might be present in the NPA
- * NOTE: This is only used for sample data loading and doesn't affect the production code path
- */
-// function processUSCsvData(csvText: string): string {
-//   const lines = csvText.split('\n');
-//   const processedLines = lines.map((line) => {
-//     if (!line.trim()) return line; // Skip empty lines
-
-//     const cols = line.split(',');
-//     if (cols.length < 6) return line; // Skip malformed lines
-
-//     // Extract the relevant parts
-//     const destinationName = cols[0]; // "USA - AK"
-//     let npa = cols[1]; // "1907"
-//     const nxx = cols[2]; // "200"
-
-//     // Remove country code "1" if present at the beginning of NPA
-//     if (npa.startsWith('1') && npa.length === 4) {
-//       npa = npa.substring(1); // Remove the leading "1"
-//       console.log(`Removed leading "1" from NPA: ${cols[1]} -> ${npa}`);
-//     }
-
-//     // Ensure NPA is 3 digits and NXX is 3 digits
-//     if (npa.length !== 3) {
-//       console.warn(
-//         `NPA "${npa}" is not 3 digits after processing. This may cause validation issues.`
-//       );
-//     }
-
-//     // Combine to form a 6-digit NPANXX
-//     const npanxx = npa + nxx;
-
-//     // Check if the resulting NPANXX is 6 digits
-//     if (npanxx.length !== 6) {
-//       console.warn(
-//         `Generated NPANXX "${npanxx}" is not 6 digits (${npanxx.length}). This may cause validation issues.`
-//       );
-//     }
-
-//     // FOR SAMPLE DATA: Keep the destination name in the output to maintain the original structure
-//     const newLine = [
-//       destinationName,
-//       npa,
-//       nxx,
-//       cols[3], // interstate
-//       cols[4], // intrastate
-//       cols[5], // indeterminate
-//     ].join(',');
-
-//     return newLine;
-//   });
-
-//   return processedLines.join('\n');
-// }
 
 export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const azStore = useAzStore();
@@ -150,9 +94,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 
         // Process the file with the service
         const result1 = await usService.processFile(usTestBlob, columnMapping1, 1);
-        console.log(
-          `Sample data for ${usTestFile} loaded successfully: ${result1.records.length} records`
-        );
+      
 
         // Explicitly register as us1
         usStore.addFileUploaded('us1', usTestFile);
@@ -188,9 +130,7 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 
         // Process the file with the service
         const result2 = await usService.processFile(usTest2Blob, columnMapping2, 1);
-        console.log(
-          `Sample data for ${usTest2File} loaded successfully: ${result2.records.length} records`
-        );
+       
 
         // Explicitly register as us2
         usStore.addFileUploaded('us2', usTest2File);
@@ -214,63 +154,3 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   }
 }
 
-/**
- * Helper function to load US data directly into the database as a fallback
- * This is only used for sample data loading when the normal processFile method fails
- */
-// async function loadUSFileDirect(
-//   usService: USService,
-//   usStore: any,
-//   componentId: string,
-//   fileName: string,
-//   processedCSV: string
-// ): Promise<void> {
-//   // Create tables directly in the database
-//   const db = await usService.initializeDB();
-
-//   // Make sure the table exists
-//   const tableName = fileName.toLowerCase().replace('.csv', '');
-//   if (!db.tables.some(t => t.name === tableName)) {
-//     await db.close();
-//     console.log('Creating table for', fileName);
-//     db.version(db.verno! + 1).stores({
-//       [tableName]: '++id, npanxx, npa, nxx, interRate, intraRate, indetermRate',
-//     });
-//     await db.open();
-//   }
-
-//   // Parse the CSV data manually to control exactly how it's processed
-//   const parsedData = processedCSV.split('\n')
-//     .filter(line => line.trim())
-//     .map(line => {
-//       const parts = line.split(',');
-//       // Skip the destination name and get the relevant fields
-//       const npa = parts[1];
-//       const nxx = parts[2];
-//       const npanxx = npa + nxx;
-
-//       // Parse rates as floats
-//       const interRate = parseFloat(parts[3]);
-//       const intraRate = parseFloat(parts[4]);
-//       const indetermRate = parseFloat(parts[5]);
-
-//       return {
-//         npanxx,
-//         npa,
-//         nxx,
-//         interRate,
-//         intraRate,
-//         indetermRate
-//       };
-//     });
-
-//   console.log('Parsed data from', fileName, ':', parsedData.slice(0, 2));
-
-//   // Store data directly in the database
-//   console.log('Storing data in', tableName);
-//   await db.table(tableName).bulkPut(parsedData);
-
-//   // Register file in store
-//   usStore.addFileUploaded(componentId, fileName);
-//   console.log('File loaded successfully via direct method:', fileName);
-// }

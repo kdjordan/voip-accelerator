@@ -127,11 +127,21 @@ export interface LergDataProvider {
   isValidNpa(npa: string): boolean;
 }
 
+// Interface for the individual NPA mapping object
+export interface LergNpaMapping {
+  country: string;
+  state: string;
+}
+
 // Worker-compatible data structure for efficient transfer
 export interface LergWorkerData {
   validNpas: string[];
-  npaMappings: Record<string, { country: string; state: string }>;
+  // Use the defined LergNpaMapping interface here
+  npaMappings: Record<string, LergNpaMapping>;
   countryGroups: Record<string, string[]>;
+  // Add the missing properties expected by the worker
+  countryData: CountryLergData[];
+  stateNPAs: Record<string, string[]>;
 }
 
 // LERG Data Processing Implementation Types

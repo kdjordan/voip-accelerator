@@ -463,11 +463,11 @@ const {
 });
 
 async function handleFileUploaded(componentName: ComponentId, fileName: string) {
-  console.error(`[Main] File uploaded: ${fileName} for component ${componentName}`);
+  console.log(`[Main] File uploaded: ${fileName} for component ${componentName}`);
   usStore.addFileUploaded(componentName, fileName);
 
   try {
-    console.error(`[Main] Starting NPA analysis for ${fileName}`);
+    console.log(`[USFileUploads] Starting NPA analysis for ${fileName}`);
     const tableName = fileName.toLowerCase().replace('.csv', '');
 
     // Get the data from the service
@@ -481,7 +481,7 @@ async function handleFileUploaded(componentName: ComponentId, fileName: string) 
 
     // Analyze the table and get the enhanced report
     const enhancedReport = await analyzer.analyzeTableNPAs(tableName, fileName);
-    console.error(`[Main] NPA analysis completed:`, enhancedReport);
+    console.log(`[USFileUploads] NPA analysis completed:`, enhancedReport);
 
     // Store the enhanced report
     usStore.setEnhancedCodeReport(enhancedReport);
@@ -576,7 +576,10 @@ async function handleReportsAction() {
 }
 
 // Optimize the enhanced code report generation
-async function generateEnhancedCodeReport(fileName: string, data: USStandardizedData[]) {
+async function generateEnhancedCodeReport(
+  fileName: string,
+  data: USStandardizedData[]
+): Promise<USEnhancedCodeReport> {
   console.error(`[Main] Creating worker for ${fileName}`);
   const codeReportWorker = new USCodeReportWorker();
 
@@ -631,7 +634,6 @@ async function generateEnhancedCodeReport(fileName: string, data: USStandardized
           report.file1.fileName = fileName;
         }
 
-        usStore.setEnhancedCodeReport(report);
         codeReportWorker.terminate();
         resolve(report);
       };
@@ -654,9 +656,9 @@ async function generateEnhancedCodeReport(fileName: string, data: USStandardized
       codeReportWorker.postMessage(input);
     });
   } catch (error) {
-    console.error(`[Main] Error in generateEnhancedCodeReport:`, error);
+    console.error(`[Main] Error in generateEnhancedCodeReport for ${fileName}:`, error);
     codeReportWorker.terminate();
-    return null;
+    throw error;
   }
 }
 
@@ -669,14 +671,6 @@ async function handleFileChange(event: Event, componentId: ComponentId) {
 
   // Clear file input so same file can be uploaded again after removal
   target.value = '';
-
-  // TODO: Implement or find the validateUsFile function
-  // Commenting out for now to fix build
-  // const validationResult = validateUsFile(file, componentId);
-  // if (!validationResult.valid) {
-  //   uploadError[componentId] = validationResult.errorMessage || 'Invalid file';
-  //   return;
-  // }
 
   await handleFileSelected(file, componentId);
 }
@@ -750,7 +744,7 @@ async function handleModalConfirm(
     if (data && data.length > 0) {
       console.log(`[DEBUG] Preparing data for enhanced report worker`);
       // For very large datasets, sample the data
-      const MAX_RECORDS = 200000;
+      const MAX_RECORDS = 300000;
       const cleanData = data.map((item) => ({
         npanxx: item.npanxx,
         npa: item.npa,
@@ -768,115 +762,42 @@ async function handleModalConfirm(
         // Generate the enhanced code report for this file
         console.log(`[DEBUG] Calling generateEnhancedCodeReport with ${sampleData.length} records`);
         const report = await generateEnhancedCodeReport(result.fileName, sampleData);
-        console.log(`[DEBUG] Enhanced code report generation completed:`, !!report);
+        console.log(
+          `[DEBUG] Enhanced code report generation completed successfully for: ${result.fileName}`
+        );
 
-        // Double-check if report was stored
-        setTimeout(() => {
-          const storedReport = usStore.getEnhancedReportByFile(result.fileName);
-          console.log(`[DEBUG] Report in store after delay:`, !!storedReport);
+        // Store the report in the store only if it was successfully generated
+        if (report) {
+          usStore.setEnhancedCodeReport(report);
+          console.log(`[DEBUG] Enhanced report stored successfully for: ${result.fileName}`);
           console.log(`[DEBUG] Total reports in store:`, usStore.enhancedCodeReports.size);
-          console.log(`[DEBUG] Store has any enhanced reports:`, usStore.hasEnhancedReports);
           console.log(
             `[DEBUG] Available report keys:`,
             Array.from(usStore.enhancedCodeReports.keys())
           );
-        }, 500);
+        }
 
         // Set the active report type to 'code' to show the enhanced report
-        if (!usStore.isCodeReportReady && !usStore.isPricingReportReady) {
-          console.log(`[DEBUG] Setting up basic reports for single file`);
-          // Construct a valid basic CodeReport for the single file
-          const defaultRateStats: RateStats = {
-            average: 0,
-            median: 0,
-            min: 0,
-            max: 0,
-            count: 0,
-          };
-          const file1RateStats = report?.file1?.rateStats;
-
-          const basicCodeReport: USCodeReport = {
-            file1: {
-              fileName: result.fileName,
-              totalNPANXX: data.length,
-              uniqueNPA:
-                report?.file1?.countries.reduce((sum, c) => sum + (c.npas?.length || 0), 0) || 0,
-              uniqueNXX: 0,
-              coveragePercentage: report?.file1?.countries[0]?.npaCoverage || 0,
-              rateStats: {
-                interstate: file1RateStats?.interstate
-                  ? { ...defaultRateStats, ...file1RateStats.interstate }
-                  : defaultRateStats,
-                intrastate: file1RateStats?.intrastate
-                  ? { ...defaultRateStats, ...file1RateStats.intrastate }
-                  : defaultRateStats,
-                indeterminate: file1RateStats?.indeterminate
-                  ? { ...defaultRateStats, ...file1RateStats.indeterminate }
-                  : defaultRateStats,
-              },
-            },
-            file2: {
-              fileName: '',
-              totalNPANXX: 0,
-              uniqueNPA: 0,
-              uniqueNXX: 0,
-              coveragePercentage: 0,
-              rateStats: {
-                interstate: defaultRateStats,
-                intrastate: defaultRateStats,
-                indeterminate: defaultRateStats,
-              },
-            },
-            matchedCodes: 0,
-            nonMatchedCodes: data.length,
-            matchedCodesPercentage: 0,
-            nonMatchedCodesPercentage: 100,
-          };
-
-          // Define emptyPricingReport here as well, if needed in this scope
-          const emptyPricingReport: USPricingReport = {
-            file1: {
-              fileName: result.fileName,
-              averageInterRate: 0,
-              averageIntraRate: 0,
-              averageIJRate: 0,
-              medianInterRate: 0,
-              medianIntraRate: 0,
-              medianIJRate: 0,
-            },
-            file2: {
-              fileName: '',
-              averageInterRate: 0,
-              averageIntraRate: 0,
-              averageIJRate: 0,
-              medianInterRate: 0,
-              medianIntraRate: 0,
-              medianIJRate: 0,
-            },
-            comparison: {
-              interRateDifference: 0,
-              intraRateDifference: 0,
-              ijRateDifference: 0,
-              totalHigher: 0,
-              totalLower: 0,
-              totalEqual: 0,
-            },
-          };
-
-          // Replace setReports with individual calls
-          usStore.setPricingReport(emptyPricingReport);
-          usStore.setCodeReport(basicCodeReport);
-
-          console.log(`[DEBUG] Updated reports for single file: ${result.fileName}`);
-        }
+        // REMOVED: Premature report generation logic
       } catch (enhancedReportError) {
-        console.error(`[DEBUG] Error generating enhanced report:`, enhancedReportError);
+        console.error(
+          `[DEBUG] Error generating or storing enhanced report for ${result.fileName}:`,
+          enhancedReportError
+        );
+        // Optionally set an error state or notify the user
+        uploadError[activeComponent.value] = `Failed to generate code analysis report: ${
+          enhancedReportError instanceof Error
+            ? enhancedReportError.message
+            : String(enhancedReportError)
+        }`;
       }
     } else {
-      console.warn(`[DEBUG] No data available for enhanced report generation`);
+      console.warn(
+        `[DEBUG] No data available for enhanced report generation for ${result.fileName}`
+      );
     }
   } catch (error) {
-    console.error('Error processing file:', error);
+    console.error(`Error during file processing or report generation for ${file?.name}:`, error);
     uploadError[activeComponent.value] = `Error processing file: ${
       error instanceof Error ? error.message : String(error)
     }`;
@@ -953,9 +874,9 @@ async function handleFileInput(
   }
 
   usStore.setTempFile(componentId, file);
-
+  console.log('[USFileUploads] is launching preview modal');
   Papa.parse(file, {
-    preview: 5,
+    preview: 20,
     complete: (results) => {
       previewData.value = results.data.slice(1) as string[][];
       columns.value = results.data[0] as string[];
