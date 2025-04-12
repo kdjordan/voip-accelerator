@@ -285,11 +285,12 @@ const overallCoveragePercentage = computed(() => {
 
 // Average rates
 const averageRates = computed(() => {
-  const rates = enhancedReport.value?.file1?.rateStats;
+  // Get stats directly from fileStats using the componentId
+  const stats = usStore.fileStats.get(props.componentId);
   return {
-    interstate: Number(rates?.interstate?.average || 0).toFixed(4),
-    intrastate: Number(rates?.intrastate?.average || 0).toFixed(4),
-    indeterminate: Number(rates?.indeterminate?.average || 0).toFixed(4),
+    interstate: Number(stats?.avgInterRate || 0).toFixed(4),
+    intrastate: Number(stats?.avgIntraRate || 0).toFixed(4),
+    indeterminate: Number(stats?.avgIndetermRate || 0).toFixed(4),
   };
 });
 

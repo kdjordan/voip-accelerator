@@ -13,7 +13,7 @@ import { PROVINCE_CODES } from '@/types/constants/province-codes';
 
 self.addEventListener('message', (event) => {
   try {
-    console.error('[Worker] Received message in worker');
+    console.log('[Worker] Received message event:', event);
 
     if (!event.data) {
       console.error('[Worker] No data received in worker');
@@ -21,76 +21,81 @@ self.addEventListener('message', (event) => {
       return;
     }
 
+    // Destructure the data from the event
     const { fileName, fileData, lergData } = event.data;
 
+    // Log the received data for debugging
+    console.log(`[Worker] Received fileName: ${fileName}`);
+    console.log(
+      `[Worker] Received fileData: ${
+        Array.isArray(fileData) ? `${fileData.length} records` : typeof fileData
+      }`
+    );
+    // Log LERG data structure details
+    if (lergData) {
+      console.log('[Worker] Received lergData:');
+      console.log(
+        `  - validNpas: ${Array.isArray(lergData.validNpas) ? lergData.validNpas.length : 'N/A'}`
+      );
+      console.log(
+        `  - npaMappings keys: ${
+          lergData.npaMappings ? Object.keys(lergData.npaMappings).length : 'N/A'
+        }`
+      );
+      console.log(
+        `  - countryGroups keys: ${
+          lergData.countryGroups ? Object.keys(lergData.countryGroups).length : 'N/A'
+        }`
+      );
+      console.log(
+        `  - countryData length: ${
+          Array.isArray(lergData.countryData) ? lergData.countryData.length : 'N/A'
+        }`
+      );
+      console.log(
+        `  - stateNPAs keys: ${lergData.stateNPAs ? Object.keys(lergData.stateNPAs).length : 'N/A'}`
+      );
+    } else {
+      console.log('[Worker] Received lergData: null or undefined');
+    }
+
+    // Validate required inputs
     if (!fileName || !fileData) {
       console.error('[Worker] Missing required input: fileName or fileData');
       self.postMessage({ error: 'Missing required input: fileName or fileData' });
       return;
     }
 
-    console.error(`[Worker] Processing file ${fileName} with ${fileData.length} records`);
-    console.error(`[Worker] LERG data available: ${!!lergData}`);
-
+    // Check if LERG data is present (necessary for full report)
     if (!lergData) {
-      console.error('[Worker] Missing LERG data - creating simple report instead');
-
-      // Create a simple report as fallback
-      const simpleReport: USEnhancedCodeReport = {
-        file1: {
-          fileName: fileName,
-          totalCodes: fileData.length,
-          countries: [
-            {
-              countryCode: 'US',
-              countryName: 'United States',
-              npaCoverage: 95,
-              totalNPAs: 300,
-              npas: ['212', '213', '214'],
-            },
-          ],
-        },
-      };
-
-      console.error('[Worker] Sending simple report back');
-      self.postMessage(simpleReport);
+      console.warn('[Worker] Missing LERG data - cannot generate full enhanced report.');
+      // Post an error or a minimal report indicating missing LERG data
+      // For now, just posting error, adjust if a specific minimal report is needed
+      self.postMessage({ error: 'LERG data was not provided to the worker.' });
       return;
     }
 
-    // Regular processing with the full LERG data
+    console.log(
+      `[Worker] Processing file ${fileName} with ${fileData.length} records and LERG data.`
+    );
+
+    // Proceed with generating the full report
     try {
       const report = generateEnhancedCodeReport(event.data);
-      console.error(
-        `[Worker] Report generated successfully with ${
-          report.file1.countries?.length || 0
-        } countries`
-      );
+      console.log(`[Worker] Report generated successfully for ${fileName}.`);
       self.postMessage(report);
     } catch (error) {
-      console.error('[Worker] Error generating report:', error);
-
-      // Create a simple report as fallback
-      const fallbackReport: USEnhancedCodeReport = {
-        file1: {
-          fileName: fileName,
-          totalCodes: fileData.length,
-          countries: [
-            {
-              countryCode: 'US',
-              countryName: 'United States',
-              npaCoverage: 95,
-              totalNPAs: 300,
-              npas: ['212', '213', '214'],
-            },
-          ],
-        },
-      };
-
-      console.error('[Worker] Sending fallback report after error');
-      self.postMessage(fallbackReport);
+      console.error(`[Worker] Error during generateEnhancedCodeReport for ${fileName}:`, error);
+      // Send back a detailed error message
+      self.postMessage({
+        error: `Error generating report for ${fileName}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      });
     }
   } catch (error) {
-    console.error('[Worker] Top-level error in worker:', error);
+    // Catch any top-level errors in the message handler
+    console.error('[Worker] Top-level error in worker message handler:', error);
     self.postMessage({ error: error instanceof Error ? error.message : 'Unknown error in worker' });
   }
 });
@@ -327,7 +332,16 @@ function calculateRateStats(entries: USStandardizedData[]): {
     const chunk = entries.slice(i, end);
 
     // Calculate interstate stats for this chunk
-    chunk.forEach((entry) => {
+    chunk.forEach((entry, entryIndex) => {
+      // --- DEBUGGING STEP 3 START ---
+      // Log the rates of the first 5 entries in the first chunk
+      if (i === 0 && entryIndex < 5) {
+        console.log(
+          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Rates -> inter: ${entry.interRate}, intra: ${entry.intraRate}, indeterm: ${entry.indetermRate}`
+        );
+      }
+      // --- DEBUGGING STEP 3 END ---
+
       if (entry.interRate !== null && entry.interRate !== undefined) {
         interSum += entry.interRate;
         interCount++;
@@ -342,13 +356,46 @@ function calculateRateStats(entries: USStandardizedData[]): {
         indetermSum += entry.indetermRate;
         indetermCount++;
       }
+
+      // --- DEBUGGING STEP 3 START ---
+      // Log accumulating sums/counts for the first 5 entries in the first chunk
+      if (i === 0 && entryIndex < 5) {
+        console.log(
+          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Sums -> inter: ${interSum.toFixed(
+            6
+          )}, intra: ${intraSum.toFixed(6)}, indeterm: ${indetermSum.toFixed(6)}`
+        );
+        console.log(
+          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Counts -> inter: ${interCount}, intra: ${intraCount}, indeterm: ${indetermCount}`
+        );
+      }
+      // --- DEBUGGING STEP 3 END ---
     });
   }
+
+  // --- DEBUGGING STEP 3 START ---
+  console.log(
+    `[DEBUG][Worker][Stats] Final Sums -> inter: ${interSum.toFixed(6)}, intra: ${intraSum.toFixed(
+      6
+    )}, indeterm: ${indetermSum.toFixed(6)}`
+  );
+  console.log(
+    `[DEBUG][Worker][Stats] Final Counts -> inter: ${interCount}, intra: ${intraCount}, indeterm: ${indetermCount}`
+  );
+  // --- DEBUGGING STEP 3 END ---
 
   // Calculate averages
   const interAvg = interCount > 0 ? interSum / interCount : 0;
   const intraAvg = intraCount > 0 ? intraSum / intraCount : 0;
   const indetermAvg = indetermCount > 0 ? indetermSum / indetermCount : 0;
+
+  // --- DEBUGGING STEP 3 START ---
+  console.log(
+    `[DEBUG][Worker][Stats] Calculated Averages -> inter: ${interAvg.toFixed(
+      6
+    )}, intra: ${intraAvg.toFixed(6)}, indeterm: ${indetermAvg.toFixed(6)}`
+  );
+  // --- DEBUGGING STEP 3 END ---
 
   return {
     interstate: {
