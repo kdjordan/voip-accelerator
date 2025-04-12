@@ -725,10 +725,10 @@ async function handleModalConfirm(
   uploadError[activeComponent.value] = null;
 
   const tableName = file.name.toLowerCase().replace('.csv', '');
-  console.log(`[DEBUG] handleModalConfirm started for ${file.name}, target table: ${tableName}`);
+  // console.log(`[DEBUG] handleModalConfirm started for ${file.name}, target table: ${tableName}`);
 
   try {
-    console.log(`[DEBUG] Defining column mappings for ${file.name}`);
+    // console.log(`[DEBUG] Defining column mappings for ${file.name}`);
     const columnMapping = {
       npanxx: Number(
         Object.entries(mappings).find(([_, value]) => value === USColumnRole.NPANXX)?.[0] ?? -1
@@ -750,9 +750,9 @@ async function handleModalConfirm(
           -1
       ),
     };
-    console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
+    // console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
 
-    console.log(`[DEBUG] Calling service.processFile for ${file.name} (writes to Dexie)`);
+    // console.log(`[DEBUG] Calling service.processFile for ${file.name} (writes to Dexie)`);
     // Call processFile - this still writes to Dexie but resolves when PapaParse is complete
     const processResult = await service.processFile(
       file,
@@ -760,40 +760,40 @@ async function handleModalConfirm(
       startLine.value,
       indeterminateDefinition
     );
-    console.log(`[DEBUG] service.processFile finished for ${processResult.fileName}.`);
+    // console.log(`[DEBUG] service.processFile finished for ${processResult.fileName}.`);
 
     // --- Polling for Dexie Data --- //
-    console.log(`[DEBUG] Starting polling for Dexie table: ${tableName}`);
+    // console.log(`[DEBUG] Starting polling for Dexie table: ${tableName}`);
     const checkTableCount = async () => {
       const count = await service.getTableCount(tableName);
-      console.log(`[Polling Check] Table ${tableName} count: ${count}`);
+      // console.log(`[Polling Check] Table ${tableName} count: ${count}`);
       // Consider resolving if count > 0, or maybe add a check against expected count if available
       return count > 0;
     };
 
     try {
       await pollUntilDataReady(checkTableCount, 20000, 1000); // Poll for up to 20s
-      console.log(`[DEBUG] Polling successful. Proceeding to get data for ${tableName}.`);
+      // console.log(`[DEBUG] Polling successful. Proceeding to get data for ${tableName}.`);
     } catch (pollingError) {
-      console.error(`[DEBUG] Polling failed for ${tableName}:`, pollingError);
+      // console.error(`[DEBUG] Polling failed for ${tableName}:`, pollingError);
       throw new Error('Data did not become available in the database within the time limit.');
     }
     // --- End Polling --- //
 
     // Now that polling confirmed data exists, get it from Dexie
-    console.log(`[DEBUG] Calling service.getData for table: ${tableName}`);
+    // console.log(`[DEBUG] Calling service.getData for table: ${tableName}`);
     const data = await service.getData(tableName);
-    console.log(`[DEBUG] Retrieved ${data?.length || 0} records from Dexie for ${tableName}.`);
+    // console.log(`[DEBUG] Retrieved ${data?.length || 0} records from Dexie for ${tableName}.`);
 
     // Register file in the store (associates componentId with fileName)
     await handleFileUploaded(activeComponent.value, processResult.fileName);
-    console.log(`[DEBUG] File registered in store for component: ${activeComponent.value}`);
+    // console.log(`[DEBUG] File registered in store for component: ${activeComponent.value}`);
 
     // Generate enhanced report if data was retrieved successfully
     if (data && data.length > 0) {
-      console.log(
-        `[DEBUG] Proceeding with enhanced report generation for ${processResult.fileName} using ${data.length} records from Dexie.`
-      );
+      // console.log(
+      //   `[DEBUG] Proceeding with enhanced report generation for ${processResult.fileName} using ${data.length} records from Dexie.`
+      // );
 
       // Data Cleaning & Sampling (Keep sampling for large datasets)
       const MAX_RECORDS_FOR_WORKER = 300000; // Limit data sent to worker
@@ -810,33 +810,33 @@ async function handleModalConfirm(
         cleanData.length > MAX_RECORDS_FOR_WORKER
           ? cleanData.slice(0, MAX_RECORDS_FOR_WORKER)
           : cleanData;
-      console.log(`[DEBUG] Prepared ${dataForWorker.length} records for worker.`);
+      // console.log(`[DEBUG] Prepared ${dataForWorker.length} records for worker.`);
 
       // --- DEBUGGING STEP 2 START ---
-      if (dataForWorker.length > 0) {
-        console.log(
-          `[DEBUG][USFileUploads] First 5 records for worker:`,
-          JSON.stringify(dataForWorker.slice(0, 5))
-        );
-      }
+      // if (dataForWorker.length > 0) {
+      //   console.log(
+      //     `[DEBUG][USFileUploads] First 5 records for worker:`,
+      //     JSON.stringify(dataForWorker.slice(0, 5))
+      //   );
+      // }
       // --- DEBUGGING STEP 2 END ---
 
       try {
-        console.log(`[DEBUG] Calling generateEnhancedCodeReport for ${processResult.fileName}.`);
+        // console.log(`[DEBUG] Calling generateEnhancedCodeReport for ${processResult.fileName}.`);
         const report = await generateEnhancedCodeReport(processResult.fileName, dataForWorker);
-        console.log(`[DEBUG] Worker finished report generation for: ${processResult.fileName}`);
+        // console.log(`[DEBUG] Worker finished report generation for: ${processResult.fileName}`);
 
         if (report) {
           usStore.setEnhancedCodeReport(report);
-          console.log(`[DEBUG] Enhanced report stored successfully for: ${processResult.fileName}`);
+          // console.log(`[DEBUG] Enhanced report stored successfully for: ${processResult.fileName}`);
         } else {
-          console.warn(`[DEBUG] generateEnhancedCodeReport returned null/undefined.`);
+          // console.warn(`[DEBUG] generateEnhancedCodeReport returned null/undefined.`);
         }
       } catch (enhancedReportError) {
-        console.error(
-          `[DEBUG] Error during generateEnhancedCodeReport for ${processResult.fileName}:`,
-          enhancedReportError
-        );
+        // console.error(
+        //   `[DEBUG] Error during generateEnhancedCodeReport for ${processResult.fileName}:`,
+        //   enhancedReportError
+        // );
         uploadError[activeComponent.value] = `Failed to generate code analysis report: ${
           enhancedReportError instanceof Error
             ? enhancedReportError.message
@@ -844,9 +844,9 @@ async function handleModalConfirm(
         }`;
       }
     } else {
-      console.warn(
-        `[DEBUG] No data retrieved from Dexie table ${tableName}. Skipping enhanced report generation.`
-      );
+      // console.warn(
+      //   `[DEBUG] No data retrieved from Dexie table ${tableName}. Skipping enhanced report generation.`
+      // );
       // Set error if data retrieval failed after polling succeeded (should be rare)
       if (!uploadError[activeComponent.value]) {
         // Avoid overwriting polling timeout error
@@ -854,7 +854,7 @@ async function handleModalConfirm(
       }
     }
   } catch (error) {
-    console.error(`[DEBUG] Error in handleModalConfirm for ${file?.name}:`, error);
+    // console.error(`[DEBUG] Error in handleModalConfirm for ${file?.name}:`, error);
     // Ensure error message reflects the actual error source (processing, polling, etc.)
     uploadError[activeComponent.value] = `Error processing file or generating report: ${
       error instanceof Error ? error.message : String(error)
@@ -862,7 +862,7 @@ async function handleModalConfirm(
   } finally {
     usStore.setComponentUploading(activeComponent.value, false);
     usStore.clearTempFile(activeComponent.value);
-    console.log(`[DEBUG] Finished handleModalConfirm for component ${activeComponent.value}`);
+    // console.log(`[DEBUG] Finished handleModalConfirm for component ${activeComponent.value}`);
   }
 }
 

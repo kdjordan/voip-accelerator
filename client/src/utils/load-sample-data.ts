@@ -10,7 +10,6 @@ function getStoreNameFromFile(fileName: string): string {
   return fileName.replace('.csv', '');
 }
 
-
 export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
   const azStore = useAzStore();
   const usStore = useUsStore();
@@ -93,17 +92,14 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
         await usService.removeTable(usTestFile.toLowerCase().replace('.csv', ''));
 
         // Process the file with the service
-        const result1 = await usService.processFile(usTestBlob, columnMapping1, 1);
-      
+        await usService.processFile(usTestBlob, columnMapping1, 1);
 
-        // Explicitly register as us1
-        usStore.addFileUploaded('us1', usTestFile);
-
-        // Analyze the NPAs for the first file
+        // Re-introduce NPA analysis call after processing
         console.log(`[Sample] Starting NPA analysis for ${usTestFile}`);
-        const tableName = usTestFile.toLowerCase().replace('.csv', '');
-        const enhancedReport = await analyzer.analyzeTableNPAs(tableName, usTestFile);
-        console.log(`[Sample] NPA analysis completed for ${usTestFile}:`, enhancedReport);
+        const tableName1 = usTestFile.toLowerCase().replace('.csv', '');
+        // Ensure data is ready before analyzing (processFile awaits Dexie write)
+        const enhancedReport1 = await analyzer.analyzeTableNPAs(tableName1, usTestFile);
+        console.log(`[Sample] NPA analysis completed for ${usTestFile}:`, enhancedReport1);
       } catch (error) {
         console.error('Error processing first US file:', error);
       }
@@ -113,12 +109,12 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       const usTest2Response = await fetch(`/src/data/sample/${usTest2File}`);
       const usTest2Blob = new File([await usTest2Response.blob()], usTest2File);
 
-      // Column mapping for UStest1.csv (same structure)
+      // Column mapping for UStest1.csv (assuming same structure: NPANXX, Inter, Intra, Indeterm)
       const columnMapping2 = {
         npanxx: 0,
         interstate: 1,
         intrastate: 2,
-        indeterminate: 2,
+        indeterminate: 3,
         npa: -1,
         nxx: -1,
       };
@@ -129,15 +125,12 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
         await usService.removeTable(usTest2File.toLowerCase().replace('.csv', ''));
 
         // Process the file with the service
-        const result2 = await usService.processFile(usTest2Blob, columnMapping2, 1);
-       
+        await usService.processFile(usTest2Blob, columnMapping2, 1);
 
-        // Explicitly register as us2
-        usStore.addFileUploaded('us2', usTest2File);
-
-        // Analyze the NPAs for the second file
+        // Re-introduce NPA analysis call after processing
         console.log(`[Sample] Starting NPA analysis for ${usTest2File}`);
         const tableName2 = usTest2File.toLowerCase().replace('.csv', '');
+        // Ensure data is ready before analyzing (processFile awaits Dexie write)
         const enhancedReport2 = await analyzer.analyzeTableNPAs(tableName2, usTest2File);
         console.log(`[Sample] NPA analysis completed for ${usTest2File}:`, enhancedReport2);
 
@@ -153,4 +146,3 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
     throw error;
   }
 }
-
