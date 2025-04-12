@@ -80,72 +80,11 @@
       </div>
     </div>
 
-    <!-- Comparison Section - Render only when 2 files are present conceptually -->
-    <div v-if="enhancedReport1 && enhancedReport2" class="bg-gray-800 p-6 rounded-lg">
-      <div class="bg-gray-900/50 p-4 rounded-lg min-h-[250px]">
-        <h3 class="text-lg text-accent mb-3">Comparison Summary</h3>
-
-        <!-- Show loading indicator while pricing comparison runs -->
-        <div v-if="usStore.isPricingReportProcessing" class="text-center pt-10 text-gray-400">
-          <p>Calculating detailed comparison summary...</p>
-          <!-- Add spinner animation here if desired -->
-        </div>
-
-        <!-- Show comparison table only when processing is done and report is ready -->
-        <table v-else-if="usStore.isPricingReportReady && props.report" class="w-full text-sm">
-          <tbody>
-            <tr class="border-b border-gray-700">
-              <td class="py-2 text-gray-400">Interstate Rate Diff (%):</td>
-              <td class="py-2 text-right text-white">
-                {{ props.report.comparison.interRateDifference?.toFixed(2) ?? 'N/A' }}%
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="py-2 text-gray-400">Intrastate Rate Diff (%):</td>
-              <td class="py-2 text-right text-white">
-                {{ props.report.comparison.intraRateDifference?.toFixed(2) ?? 'N/A' }}%
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="py-2 text-gray-400">Indeterminate Rate Diff (%):</td>
-              <td class="py-2 text-right text-white">
-                {{ props.report.comparison.ijRateDifference?.toFixed(2) ?? 'N/A' }}%
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="py-2 text-gray-400">Rates Higher in File 1:</td>
-              <td class="py-2 text-right text-white">
-                {{ props.report.comparison.totalHigher ?? 0 }}
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="py-2 text-gray-400">Rates Higher in File 2 (Lower in File 1):</td>
-              <td class="py-2 text-right text-white">
-                {{ props.report.comparison.totalLower ?? 0 }}
-              </td>
-            </tr>
-            <tr>
-              <td class="py-2 text-gray-400">Rates Equal:</td>
-              <td class="py-2 text-right text-white">
-                {{ props.report.comparison.totalEqual ?? 0 }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <!-- Message if processing done but report still not ready (error?) -->
-        <div v-else class="text-center pt-10 text-warning">
-          <p>Comparison summary data is not available.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Placeholder for Detailed NPANXX Comparison -->
-    <div class="bg-gray-800 p-6 rounded-lg text-center">
-      <p class="text-lg text-accent">Coming Soon: Detailed NPA-NXX Level Rate Comparison</p>
-      <p class="text-gray-300 mt-2">
-        This section will allow you to explore, filter, and sort individual rate differences.
-      </p>
+    <!-- Placeholder for the NEW Detailed NPANXX Comparison Table -->
+    <div class="bg-gray-800 p-6 rounded-lg">
+      <h3 class="text-lg text-accent mb-3">Detailed NPA-NXX Comparison</h3>
+      <!-- Replace placeholder with the actual component -->
+      <USDetailedComparisonTable />
     </div>
   </div>
 
@@ -160,6 +99,7 @@ import { computed } from 'vue'; // Import computed
 import type { USPricingReport } from '@/types/domains/us-types'; // Import the correct type
 import { useUsStore } from '@/stores/us-store'; // Import store
 import type { USEnhancedCodeReport } from '@/types/domains/us-types'; // Import USEnhancedCodeReport
+import USDetailedComparisonTable from './USDetailedComparisonTable.vue'; // Import the new component
 // import { ReportTypes } from '@/types/app-types'; // No longer needed
 // import type { USEnhancedCodeReport } from '@/types/domains/us-types'; // No longer needed
 
