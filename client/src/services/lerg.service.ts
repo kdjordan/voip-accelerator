@@ -601,10 +601,10 @@ export class LergService {
     const canadianRecords = records.filter((record) => record.country === 'CA');
 
     // DEBUG: Log Canadian records
-    console.log(`[LERG Debug] Found ${canadianRecords.length} Canadian records`);
-    if (canadianRecords.length > 0) {
-      console.log('[LERG Debug] Canadian records sample:', canadianRecords.slice(0, 5));
-    }
+    // console.log(`[LERG Debug] Found ${canadianRecords.length} Canadian records`);
+    // if (canadianRecords.length > 0) {
+    //   console.log('[LERG Debug] Canadian records sample:', canadianRecords.slice(0, 5));
+    // }
 
     // Third pass - other countries
     const otherRecords = records.filter(
@@ -634,16 +634,16 @@ export class LergService {
 
       // DEBUG: Log province validation
       const isValidProvince = this.isCanadianProvince(provinceCode);
-      console.log(
-        `[LERG Debug] Canadian record - NPA: ${record.npa}, Province: ${provinceCode}, Valid: ${isValidProvince}`
-      );
+      // console.log(
+      //   `[LERG Debug] Canadian record - NPA: ${record.npa}, Province: ${provinceCode}, Valid: ${isValidProvince}`
+      // );
 
       // If not a valid province code, see if we can infer it (some datasets use numeric codes)
       if (!isValidProvince) {
         // Check if it's a CA record with a non-standard province code
-        console.log(
-          `[LERG Debug] Non-standard province code: ${provinceCode} for NPA ${record.npa}`
-        );
+        // console.log(
+        //   `[LERG Debug] Non-standard province code: ${provinceCode} for NPA ${record.npa}`
+        // );
 
         // For now, associate all unrecognized Canadian NPAs with a special "UNKNOWN" code
         // This ensures they at least show up in the UI
@@ -673,10 +673,18 @@ export class LergService {
 
     // Process other countries
     for (const record of otherRecords) {
-      if (!countryMap.has(record.country)) {
-        countryMap.set(record.country, new Set());
+      // Ensure the country code is valid before processing
+      if (record.country && record.country.trim() !== '') {
+        if (!countryMap.has(record.country)) {
+          countryMap.set(record.country, new Set());
+        }
+        countryMap.get(record.country)!.add(record.npa);
+      } else {
+        // Optionally log skipped records with invalid country codes
+        // console.warn(
+        //   `[LERG Debug] Skipping record with invalid/empty country code: ${JSON.stringify(record)}`
+        // );
       }
-      countryMap.get(record.country)!.add(record.npa);
     }
   }
 

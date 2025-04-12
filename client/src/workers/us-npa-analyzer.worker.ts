@@ -26,7 +26,7 @@ interface NPAAnalyzerInput {
 
 self.addEventListener('message', async (event) => {
   try {
-    console.error('[Worker] Received message in NPA Analyzer worker');
+    // console.error('[Worker] Received message in NPA Analyzer worker');
 
     if (!event.data) {
       console.error('[Worker] No data received in worker');
@@ -56,16 +56,16 @@ self.addEventListener('message', async (event) => {
       return;
     }
 
-    console.error(`[Worker] Analyzing NPAs for table ${tableName} with ${fileData.length} records`);
+    // console.error(`[Worker] Analyzing NPAs for table ${tableName} with ${fileData.length} records`);
 
     try {
       // Process the data from the object store
       const report = generateReport(tableName, fileName, fileData, lergData);
-      console.error(
-        `[Worker] Report generated successfully with ${
-          report.file1.countries?.length || 0
-        } countries`
-      );
+      // console.error(
+      //   `[Worker] Report generated successfully with ${
+      //     report.file1.countries?.length || 0
+      //   } countries`
+      // );
       self.postMessage(report);
     } catch (error) {
       console.error('[Worker] Error generating report:', error);
@@ -87,7 +87,7 @@ self.addEventListener('message', async (event) => {
         },
       };
 
-      console.error('[Worker] Sending fallback report after error');
+      // console.error('[Worker] Sending fallback report after error');
       self.postMessage(fallbackReport);
     }
   } catch (error) {
@@ -102,7 +102,7 @@ function generateReport(
   fileData: USStandardizedData[],
   lergData: NPAAnalyzerInput['lergData']
 ): USEnhancedCodeReport {
-  console.error('[Worker] Starting report generation');
+  // console.error('[Worker] Starting report generation');
 
   // Group data by NPA
   const npaGroups = new Map<string, USStandardizedData[]>();
@@ -113,7 +113,7 @@ function generateReport(
     npaGroups.get(entry.npa)?.push(entry);
   });
 
-  console.error(`[Worker] Found ${npaGroups.size} unique NPAs in the data`);
+  // console.error(`[Worker] Found ${npaGroups.size} unique NPAs in the data`);
 
   // Create country breakdown
   const countries: USCountryBreakdown[] = [];

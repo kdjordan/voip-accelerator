@@ -76,7 +76,7 @@ onMounted(async () => {
   try {
     // Ping LERG data to ensure it's available for US operations
     const pingResult = await ping();
-    
+
     await initializeLergData();
     console.log('[UsView] Mounting component, checking LERG data');
 

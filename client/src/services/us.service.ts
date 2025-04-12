@@ -277,17 +277,17 @@ export class USService {
       const data = await this.getData(tableName, fileName);
 
       // --- DEBUGGING START ---
-      console.log(
-        `[DEBUG][USService][calculateFileStats] Retrieved ${
-          data?.length || 0
-        } records for ${fileName}`
-      );
-      if (data && data.length > 0) {
-        console.log(
-          `[DEBUG][USService][calculateFileStats] First 5 records: `,
-          JSON.stringify(data.slice(0, 5))
-        );
-      }
+      // console.log(
+      //   `[DEBUG][USService][calculateFileStats] Retrieved ${
+      //     data?.length || 0
+      //   } records for ${fileName}`
+      // );
+      // if (data && data.length > 0) {
+      //   console.log(
+      //     `[DEBUG][USService][calculateFileStats] First 5 records: `,
+      //     JSON.stringify(data.slice(0, 5))
+      //   );
+      // }
       // --- DEBUGGING END ---
 
       if (!data || data.length === 0) return;
@@ -342,9 +342,9 @@ export class USService {
       const formattedAvgIndetermRate = parseFloat(avgIndetermRate.toFixed(4));
 
       // --- DEBUGGING START ---
-      console.log(
-        `[DEBUG][USService][calculateFileStats] Calculated Averages -> inter: ${formattedAvgInterRate}, intra: ${formattedAvgIntraRate}, indeterm: ${formattedAvgIndetermRate}`
-      );
+      // console.log(
+      //   `[DEBUG][USService][calculateFileStats] Calculated Averages -> inter: ${formattedAvgInterRate}, intra: ${formattedAvgIntraRate}, indeterm: ${formattedAvgIndetermRate}`
+      // );
       // --- DEBUGGING END ---
 
       // Update store
