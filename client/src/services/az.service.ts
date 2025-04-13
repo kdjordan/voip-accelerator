@@ -2,6 +2,7 @@ import {
   type AZStandardizedData,
   type InvalidAzRow,
   type AzCodeReport,
+  type AZDetailedComparisonEntry,
 } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
@@ -12,18 +13,20 @@ export class AZService {
   private store = useAzStore();
 
   constructor() {
-    console.log('Initializing simplified AZ service');
+    console.log('[AZService] Initializing AZ service');
   }
 
   // Process file and store directly in Dexie
   async processFile(
     file: File,
     columnMapping: { destName: number; code: number; rate: number },
-    startLine: number
+    startLine: number,
+    componentId: string
   ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
     // Use a consistent table name instead of creating a new table for each file
-    const tableName = 'az_codes';
+    // const tableName = 'az_codes'; // Revert to original incorrect table name for now
     const { storeInDexieDB } = useDexieDB();
+    const derivedTableName = file.name.toLowerCase().replace('.csv', '');
 
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
@@ -67,34 +70,22 @@ export class AZService {
               }
             });
 
-            // Store directly in Dexie - no storage strategy conditional logic
+            // Store directly in Dexie - this uses the incorrect schema via addStore
             if (validRecords.length > 0) {
-              await storeInDexieDB(validRecords, DBName.AZ, tableName);
+              await storeInDexieDB(validRecords, DBName.AZ, derivedTableName, {
+                replaceExisting: true,
+              });
               console.log(
-                `[AZService] Stored ${validRecords.length} records in Dexie for table: ${tableName}`
+                `[AZService] Stored ${validRecords.length} records in Dexie for table: ${derivedTableName}`
               );
             }
 
-            this.store.addFileUploaded(file.name, tableName);
+            // Update the store with the component ID and the original filename
+            this.store.addFileUploaded(componentId, file.name);
 
-            // Get the correct component ID based on which upload zone is being used
-            // We need to check the filesUploaded map to determine the correct component ID
-            let componentId = '';
-
-            // Check if this file was just added to az1 or az2
-            if (this.store.getFileNameByComponent('az1') === file.name) {
-              componentId = 'az1';
-            } else if (this.store.getFileNameByComponent('az2') === file.name) {
-              componentId = 'az2';
-            } else {
-              // If we can't determine the component ID, default to az1 if it's empty
-              componentId = this.store.getFileNameByComponent('az1') ? 'az2' : 'az1';
-            }
-
-            console.log(`[AZService] Determined component ID for ${file.name}: ${componentId}`);
-
-            // Calculate and store file stats
-            await this.calculateFileStats(componentId, file.name);
+            console.log(
+              `[AZService] Processing file ${file.name} for component ID: ${componentId}`
+            );
 
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
@@ -140,46 +131,110 @@ export class AZService {
 
   async clearData(): Promise<void> {
     try {
-      // Use Dexie directly to delete the database
-      const { deleteDatabase } = useDexieDB();
-      await deleteDatabase(DBName.AZ);
-      console.log('[AZService] Cleared all Dexie data for AZ');
+      const { getDB } = useDexieDB();
 
-      // Reset the file tracking in the store
-      this.store.resetFiles();
+      // Clear all tables from az_rate_deck_db ONLY
+      const azDb = await getDB(DBName.AZ);
+      const azTableNames = await azDb.getAllStoreNames();
+      if (azTableNames.length > 0) {
+        for (const tableName of azTableNames) {
+          await azDb.deleteStore(tableName);
+          console.log(`[AZService] Deleted table ${tableName} from ${DBName.AZ}`);
+        }
+        console.log(`[AZService] Cleared all tables from ${DBName.AZ}`);
+      } else {
+        console.log(`[AZService] No tables found to clear in ${DBName.AZ}`);
+      }
+
+      // --- Removed clearing of AZ_PRICING_COMPARISON DB from here ---
     } catch (error) {
-      console.error('Failed to clear AZ data:', error);
+      console.error('[AZService] Failed to clear AZ rate deck data:', error);
+      throw error;
+    }
+  }
+
+  // New function specifically for clearing comparison data
+  async clearComparisonData(): Promise<void> {
+    try {
+      const { getDB } = useDexieDB();
+      // Clear all tables from az_pricing_comparison_db
+      const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
+      const comparisonTableNames = await comparisonDb.getAllStoreNames();
+      if (comparisonTableNames.length > 0) {
+        for (const tableName of comparisonTableNames) {
+          await comparisonDb.deleteStore(tableName);
+          console.log(
+            `[AZService] Deleted table ${tableName} from ${DBName.AZ_PRICING_COMPARISON}`
+          );
+        }
+        console.log(`[AZService] Cleared all tables from ${DBName.AZ_PRICING_COMPARISON}`);
+      } else {
+        console.log(`[AZService] No tables found to clear in ${DBName.AZ_PRICING_COMPARISON}`);
+      }
+    } catch (error) {
+      console.error('[AZService] Failed to clear AZ comparison data:', error);
       throw error;
     }
   }
 
   async removeTable(tableName: string): Promise<void> {
     try {
-      // Find the component ID associated with this table
+      // tableName is the derived name (e.g., 'azfile1')
       const fileName = tableName + '.csv';
       let componentId = '';
+      const fileEntries = Array.from(this.store.filesUploaded.entries());
 
-      if (this.store.getFileNameByComponent('az1') === fileName) {
-        componentId = 'az1';
-      } else if (this.store.getFileNameByComponent('az2') === fileName) {
-        componentId = 'az2';
-      }
-
-      if (componentId) {
+      // Find the component ID of the file being removed
+      const removedFileEntry = fileEntries.find(([_, value]) => value.fileName === fileName);
+      if (removedFileEntry) {
+        componentId = removedFileEntry[0];
         // Clear file stats for this component
         this.store.clearFileStats(componentId);
       }
 
-      // Use DexieDB directly
+      // Use DexieDB directly to remove the main rate deck table
       const { getDB } = useDexieDB();
-      const db = await getDB(DBName.AZ);
-
-      if (db.hasStore(tableName)) {
-        await db.deleteStore(tableName);
-        console.log(`Table ${tableName} removed successfully from Dexie`);
+      const azDb = await getDB(DBName.AZ);
+      if (azDb.hasStore(tableName)) {
+        await azDb.deleteStore(tableName);
+        console.log(`[AZService] Table ${tableName} removed successfully from ${DBName.AZ}`);
       }
+
+      // --- Delete corresponding comparison table ---
+
+      // Check if there was another file uploaded
+      const otherFileEntry = fileEntries.find(([key, _]) => key !== componentId);
+
+      if (otherFileEntry) {
+        const otherFileName = otherFileEntry[1].fileName;
+        const otherTableName = otherFileName.toLowerCase().replace('.csv', '');
+
+        // Construct possible comparison table names
+        const comparisonTableName1 = `${tableName}_vs_${otherTableName}`;
+        const comparisonTableName2 = `${otherTableName}_vs_${tableName}`;
+
+        // Get the comparison DB instance
+        const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
+
+        // Attempt to delete the first possible name
+        if (comparisonDb.hasStore(comparisonTableName1)) {
+          await comparisonDb.deleteStore(comparisonTableName1);
+          console.log(
+            `[AZService] Table ${comparisonTableName1} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
+          );
+        }
+
+        // Attempt to delete the second possible name
+        if (comparisonDb.hasStore(comparisonTableName2)) {
+          await comparisonDb.deleteStore(comparisonTableName2);
+          console.log(
+            `[AZService] Table ${comparisonTableName2} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
+          );
+        }
+      }
+      // Note: Resetting reports and detailedComparisonTableName is handled by the store's removeFile action
     } catch (error) {
-      console.error(`Failed to remove table ${tableName}:`, error);
+      console.error(`[AZService] Failed to remove table ${tableName}:`, error);
       throw error;
     }
   }
@@ -232,6 +287,134 @@ export class AZService {
     } catch (error) {
       console.error('Failed to list tables:', error);
       return {};
+    }
+  }
+
+  /**
+   * Generates combined pricing and code reports for two AZ files.
+   */
+  async makeAzCombinedReport(fileName1: string, fileName2: string): Promise<void> {
+    console.log(`[AZService] Generating combined report for ${fileName1} and ${fileName2}`);
+
+    try {
+      // 1. Load data for both files
+      const tableName1 = fileName1.toLowerCase().replace('.csv', '');
+      const tableName2 = fileName2.toLowerCase().replace('.csv', '');
+
+      const [file1Data, file2Data] = await Promise.all([
+        this.getData(tableName1),
+        this.getData(tableName2),
+      ]);
+
+      if (!file1Data || file1Data.length === 0 || !file2Data || file2Data.length === 0) {
+        throw new Error('Could not load data for one or both files.');
+      }
+
+      // 2. Instantiate and run the worker
+      const worker = new AzComparisonWorker();
+      const workerInput: AZReportsInput = {
+        fileName1,
+        fileName2,
+        // Pass data directly as it should be cloneable from Dexie
+        file1Data: file1Data,
+        file2Data: file2Data,
+      };
+
+      const reports = await new Promise<{
+        pricingReport: AzPricingReport;
+        codeReport: AzCodeReport;
+        detailedComparisonData: AZDetailedComparisonEntry[];
+      }>((resolve, reject) => {
+        worker.onmessage = (event) => {
+          const { pricingReport, codeReport, detailedComparisonData } = event.data;
+          console.log('[AZService] Received reports from worker');
+          resolve({ pricingReport, codeReport, detailedComparisonData });
+        };
+        worker.onerror = (error) => {
+          console.error('[AZService] Worker error:', error);
+          reject(error);
+        };
+
+        worker.postMessage(workerInput);
+      });
+
+      // 3. Update store with summary reports
+      if (reports.pricingReport && reports.codeReport) {
+        this.store.setReports(reports.pricingReport, reports.codeReport);
+      }
+
+      // 4. Handle storage of detailedComparisonData (Section 5 logic goes here)
+      const detailedData = reports.detailedComparisonData;
+      console.log(`[AZService] Received ${detailedData.length} detailed comparison entries.`);
+      // TODO: Store detailedData in az_pricing_comparison_db
+      // TODO: Update azStore.setDetailedComparisonTableName
+
+      if (detailedData && detailedData.length > 0) {
+        const { storeInDexieDB } = useDexieDB();
+        const derivedTableName = `${tableName1}_vs_${tableName2}`;
+
+        try {
+          await storeInDexieDB(detailedData, DBName.AZ_PRICING_COMPARISON, derivedTableName, {
+            replaceExisting: true,
+          });
+          console.log(
+            `[AZService] Stored ${detailedData.length} detailed comparison records in Dexie table: ${derivedTableName}`
+          );
+
+          // Update the store with the name of the table containing detailed results
+          this.store.setDetailedComparisonTableName(derivedTableName);
+        } catch (dbError) {
+          console.error(
+            `[AZService] Failed to store detailed comparison data in table ${derivedTableName}:`,
+            dbError
+          );
+          // Optionally clear the table name in the store if saving failed
+          this.store.setDetailedComparisonTableName(null);
+        }
+      } else {
+        // If no detailed data, ensure the table name is cleared in the store
+        this.store.setDetailedComparisonTableName(null);
+      }
+
+      // Clean up worker
+      worker.terminate();
+    } catch (error) {
+      console.error('[AZService] Error generating combined AZ report:', error);
+      // Potentially update store with error state
+      throw error; // Re-throw for the caller to handle
+    }
+  }
+
+  /**
+   * Retrieves detailed comparison data from a specific table in the comparison DB.
+   */
+  async getDetailedComparisonData(
+    detailedComparisonTableName: string
+  ): Promise<AZDetailedComparisonEntry[]> {
+    if (!detailedComparisonTableName) {
+      console.warn('[AZService] getDetailedComparisonData called with no table name.');
+      return [];
+    }
+
+    console.log(
+      `[AZService] Getting detailed comparison data from table: ${detailedComparisonTableName}`
+    );
+    try {
+      const { loadFromDexieDB } = useDexieDB();
+      const data = await loadFromDexieDB<AZDetailedComparisonEntry>(
+        DBName.AZ_PRICING_COMPARISON,
+        detailedComparisonTableName
+      );
+      console.log(
+        `[AZService] Retrieved ${data.length} detailed records from ${detailedComparisonTableName}`
+      );
+      return data;
+    } catch (error) {
+      console.error(
+        `[AZService] Failed to get detailed comparison data from table ${detailedComparisonTableName}:`,
+        error
+      );
+      throw error; // Re-throw for the caller to handle
     }
   }
 }

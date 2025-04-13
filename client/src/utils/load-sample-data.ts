@@ -20,6 +20,15 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
     if (dbNames.includes(DBName.AZ)) {
       const azService = new AZService();
 
+      // Clear existing AZ data first
+      try {
+        console.log('[Sample] Clearing existing AZ data...');
+        await azService.clearData();
+        console.log('[Sample] Existing AZ data cleared.');
+      } catch (error) {
+        console.error('[Sample] Error clearing AZ data:', error);
+      }
+
       // Load AZ-Test1.csv data
       const azTestFile = 'AZ-Test1.csv';
       const azTestResponse = await fetch(`/src/data/sample/${azTestFile}`);
@@ -33,12 +42,26 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
       };
 
       try {
-        console.log(`Processing ${azTestFile}...`);
-        const result = await azService.processFile(azTestBlob, columnMapping, 1);
-        console.log(`Sample data loaded for ${azTestFile}: ${result.records.length} records`);
-        await azStore.addFileUploaded('az1', result.fileName);
+        console.log(`[Sample][az-test1] Processing ${azTestFile}...`);
+        const result = await azService.processFile(azTestBlob, columnMapping, 1, 'az1');
+        // Log the number of records processed BEFORE attempting to store
+        console.log(
+          `[Sample][az-test1] Parsed ${result.records.length} valid records from ${azTestFile}.`
+        );
+        console.log(
+          `[Sample][az-test1] processFile promise resolved successfully for ${azTestFile}. Table should contain data.`
+        );
+        // Add a small delay AFTER processFile (which might have done a schema upgrade)
+        // and BEFORE calculateFileStats (which reads)
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms
+        // Explicitly call calculateFileStats AFTER processFile completes
+        await azService.calculateFileStats('az1', azTestFile);
+        console.log(`[Sample][az-test1] calculateFileStats completed for ${azTestFile}.`);
       } catch (error) {
-        console.error(`Error loading sample data for ${azTestFile}:`, error);
+        console.error(
+          `[Sample][az-test1] Error loading or processing sample data for ${azTestFile}:`,
+          error
+        );
       }
 
       // Load AZ-Test2.csv data
@@ -48,11 +71,16 @@ export async function loadSampleDecks(dbNames: DBNameType[]): Promise<void> {
 
       try {
         console.log(`Processing ${azTest2File}...`);
-        const result2 = await azService.processFile(azTest2Blob, columnMapping, 1);
+        const result2 = await azService.processFile(azTest2Blob, columnMapping, 1, 'az2');
         console.log(`Sample data loaded for ${azTest2File}: ${result2.records.length} records`);
-        await azStore.addFileUploaded('az2', result2.fileName);
+        // Add a small delay AFTER processFile (which might have done a schema upgrade)
+        // and BEFORE calculateFileStats (which reads)
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms
+        // Explicitly call calculateFileStats AFTER processFile completes
+        await azService.calculateFileStats('az2', azTest2File);
+        console.log(`[Sample][az-test2] calculateFileStats completed for ${azTest2File}.`);
       } catch (error) {
-        console.error(`Error loading sample data for ${azTest2File}:`, error);
+        console.error(`Error loading or processing sample data for ${azTest2File}:`, error);
       }
     }
 

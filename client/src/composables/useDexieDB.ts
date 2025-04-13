@@ -1,7 +1,7 @@
 import Dexie, { Table } from 'dexie';
 import { type DBNameType } from '@/types';
 import { useDBStore } from '@/stores/db-store';
-import { DBSchemas } from '@/types/app-types';
+import { DBSchemas, DynamicTableSchemas } from '@/types/app-types';
 
 export class DexieDBBase extends Dexie {
   [key: string]: Table<any> | any;
@@ -40,18 +40,49 @@ export class DexieDBBase extends Dexie {
     }
   }
 
-  async addStore(storeName: string) {
+  async addStore(storeName: string): Promise<void> {
     if (this.stores.has(storeName)) return;
-    this.stores.add(storeName);
+
+    // Determine the correct schema for the dynamic table
+    let dynamicSchemaDefinition = '++id'; // Default minimal schema
+    if (this.dbName in DynamicTableSchemas) {
+      dynamicSchemaDefinition =
+        DynamicTableSchemas[this.dbName as keyof typeof DynamicTableSchemas];
+    } else {
+      console.warn(
+        `[useDexieDB] addStore called for DB (${this.dbName}) without a defined dynamic schema in DynamicTableSchemas. Falling back to default.`
+      );
+      // Fallback or specific handling if needed, currently using default
+    }
 
     const schema = {
-      [storeName]:
-        '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
+      [storeName]: dynamicSchemaDefinition,
     };
 
-    await this.close();
-    this.version(this.verno + 1).stores(schema);
-    await this.open();
+    console.log(`[useDexieDB] Adding store '${storeName}' to ${this.dbName} with schema:`, schema);
+
+    // IMPORTANT: Ensure database is closed *before* defining the new version.
+    // Dexie handles reopening internally when accessing the database after a version change.
+    this.close();
+
+    // Define the new version and immediately try to open.
+    // The 'await' ensures we wait for the version change and reopening attempt to complete.
+    try {
+      this.version(this.verno + 1).stores(schema);
+      await this.open(); // Dexie automatically opens the database on access if closed, but explicitly opening ensures readiness.
+      this.stores.add(storeName); // Add to internal tracking only after successful open
+      console.log(
+        `[useDexieDB] Successfully added/updated store '${storeName}' in ${this.dbName} and reopened DB.`
+      );
+    } catch (e) {
+      console.error(
+        `[useDexieDB] Error during schema upgrade or reopening for ${this.dbName} adding store ${storeName}:`,
+        e
+      );
+      // Attempt to revert or handle the error state if necessary
+      // For now, just rethrowing might be appropriate, or specific recovery logic.
+      throw e; // Rethrow the error so the caller (storeInDexieDB) knows it failed.
+    }
   }
 
   hasStore(storeName: string): boolean {
@@ -113,17 +144,38 @@ export default function useDexieDB() {
     options?: { sourceFile?: string; replaceExisting?: boolean }
   ) {
     const db = await getDB(dbName);
-    await db.addStore(storeName);
+
+    // Ensure addStore completes fully (including schema update and DB reopen) before proceeding
+    try {
+      await db.addStore(storeName); // Await the addStore operation
+    } catch (error) {
+      console.error(
+        `[useDexieDB] Failed to add store ${storeName} to ${dbName}. Aborting data storage.`,
+        error
+      );
+      return; // Stop execution if adding the store failed
+    }
+
+    // Introduce a small delay AFTER addStore finishes and BEFORE bulkPut.
+    // This might help stabilize the DB connection after schema changes.
+    await new Promise((resolve) => setTimeout(resolve, 50)); // Wait 50ms
 
     const enriched = options?.sourceFile
       ? data.map((d) => ({ ...d, sourceFile: options.sourceFile }))
       : data;
 
-    if (options?.replaceExisting) {
-      await db.table(storeName).clear();
+    try {
+      if (options?.replaceExisting) {
+        await db.table(storeName).clear();
+      }
+      await db.table(storeName).bulkPut(enriched);
+      console.log(
+        `[useDexieDB] Successfully stored ${enriched.length} records in ${dbName}/${storeName}.`
+      );
+    } catch (error) {
+      console.error(`[useDexieDB] Error storing data in ${dbName}/${storeName}:`, error);
+      // Consider if specific error handling or retry logic is needed here
     }
-
-    await db.table(storeName).bulkPut(enriched);
   }
 
   async function loadFromDexieDB<T>(dbName: DBNameType, storeName: string): Promise<T[]> {
