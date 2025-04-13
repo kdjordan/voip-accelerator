@@ -437,98 +437,17 @@ async function handleReportsAction() {
 
   isGeneratingReports.value = true;
   try {
-    console.log('Starting report generation with files:', azStore.getFileNames);
-
-    // Load data using the AZService which handles both storage strategies
-    const fileData = await Promise.all(
-      azStore.getFileNames.map(async (fileName) => {
-        console.log('Loading data for file:', fileName);
-        // Remove .csv extension for table name
-        const tableName = fileName.toLowerCase().replace('.csv', '');
-        const data = await azService.getData(tableName);
-        if (!data || data.length === 0) {
-          throw new Error(`No data found for file ${fileName}`);
-        }
-        return data;
-      })
-    );
-
-    if (fileData.length === 2) {
-      console.log('Making comparison with data lengths:', {
-        file1Length: fileData[0].length,
-        file2Length: fileData[1].length,
-        storageType: true,
-      });
-
-      // Ensure data is cloneable by creating a clean copy
-      // This avoids issues with DataCloneError when using in-memory storage
-      const cleanData1 = fileData[0].map((item) => ({
-        destName: item.destName,
-        dialCode: item.dialCode,
-        rate: item.rate,
-      }));
-
-      const cleanData2 = fileData[1].map((item) => ({
-        destName: item.destName,
-        dialCode: item.dialCode,
-        rate: item.rate,
-      }));
-
-      // Create worker and process data
-      const worker = new AzComparisonWorker();
-      const reports = await new Promise<{
-        pricingReport: AzPricingReport;
-        codeReport: AzCodeReport;
-      }>((resolve, reject) => {
-        worker.onmessage = (event) => {
-          const { pricingReport, codeReport } = event.data;
-          resolve({ pricingReport, codeReport });
-        };
-
-        worker.onerror = (error) => {
-          console.error('Worker error:', error);
-          reject(error);
-        };
-
-        const input: AZReportsInput = {
-          fileName1: azStore.getFileNames[0],
-          fileName2: azStore.getFileNames[1],
-          file1Data: cleanData1,
-          file2Data: cleanData2,
-        };
-
-        // Log the size of data being sent to worker
-        console.log(
-          'Sending data to worker:',
-          `Clean data sizes: ${JSON.stringify(cleanData1).length}, ${
-            JSON.stringify(cleanData2).length
-          } bytes`
-        );
-
-        worker.postMessage(input);
-      });
-
-      console.log('Reports generated:', {
-        hasPricingReport: !!reports.pricingReport,
-        hasCodeReport: !!reports.codeReport,
-      });
-
-      if (reports.pricingReport && reports.codeReport) {
-        azStore.setReports(reports.pricingReport, reports.codeReport);
-      }
-
-      // Clean up worker
-      worker.terminate();
+    const [fileName1, fileName2] = azStore.getFileNames;
+    if (!fileName1 || !fileName2) {
+      throw new Error('Two filenames are required to generate reports.');
     }
+
+    console.log(`[AZFileUploads] Calling makeAzCombinedReport for ${fileName1} and ${fileName2}`);
+    await azService.makeAzCombinedReport(fileName1, fileName2);
+    console.log(`[AZFileUploads] Combined report generation complete (or started).`);
   } catch (error: unknown) {
-    console.error('Error generating reports:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      });
-    }
+    console.error('[AZFileUploads] Error generating reports:', error);
+    // TODO: Maybe show a user-facing error notification
   } finally {
     isGeneratingReports.value = false;
   }
@@ -591,7 +510,12 @@ async function handleModalConfirm(mappings: Record<string, string>) {
 
     console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
 
-    const result = await azService.processFile(file, columnMapping, startLine.value);
+    const result = await azService.processFile(
+      file,
+      columnMapping,
+      startLine.value,
+      activeComponent.value
+    );
     await handleFileUploaded(activeComponent.value, result.fileName);
   } catch (error) {
     console.error('Error processing file:', error);

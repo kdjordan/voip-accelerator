@@ -4,19 +4,24 @@ import type {
   AzCodeReport,
   ConsolidatedData,
   NonMatchingCode,
+  AZDetailedComparisonEntry,
 } from '@/types/domains/az-types';
 // type DialCodeMap = Map<number, { destName: string; rate: number }>;
 
 // Respond to messages from main thread
-self.addEventListener('message', event => {
+self.addEventListener('message', (event) => {
   // Process comparison and generate reports
-  const { pricingReport, codeReport } = generateReports(event.data);
+  const { pricingReport, codeReport, detailedComparisonData } = generateReports(event.data);
 
   // Send the generated reports back to the main thread
-  self.postMessage({ pricingReport, codeReport });
+  self.postMessage({ pricingReport, codeReport, detailedComparisonData });
 });
 
-function generateReports(input: AZReportsInput): { pricingReport: AzPricingReport; codeReport: AzCodeReport } {
+function generateReports(input: AZReportsInput): {
+  pricingReport: AzPricingReport;
+  codeReport: AzCodeReport;
+  detailedComparisonData: AZDetailedComparisonEntry[];
+} {
   const { fileName1, fileName2, file1Data, file2Data } = input;
 
   if (!fileName1 || !fileName2 || !file1Data || !file2Data) {
@@ -36,13 +41,13 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
     file1: {
       fileName: fileName1,
       totalCodes: file1Data.length,
-      totalDestinations: new Set(file1Data.map(d => d.destName)).size,
+      totalDestinations: new Set(file1Data.map((d) => d.destName)).size,
       uniqueDestinationsPercentage: 0,
     },
     file2: {
       fileName: fileName2,
       totalCodes: file2Data.length,
-      totalDestinations: new Set(file2Data.map(d => d.destName)).size,
+      totalDestinations: new Set(file2Data.map((d) => d.destName)).size,
       uniqueDestinationsPercentage: 0,
     },
     matchedCodes: 0,
@@ -51,20 +56,23 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
     nonMatchedCodesPercentage: 0,
   };
 
+  // Initialize detailed comparison data array
+  const detailedComparisonData: AZDetailedComparisonEntry[] = [];
+
   const dialCodeMapFile1 = new Map<string, { destName: string; rate: number }>();
   const dialCodeMapFile2 = new Map<string, { destName: string; rate: number }>();
 
-  file1Data.forEach(entry => {
+  file1Data.forEach((entry) => {
     dialCodeMapFile1.set(entry.dialCode, { destName: entry.destName, rate: Number(entry.rate) });
   });
 
-  file2Data.forEach(entry => {
+  file2Data.forEach((entry) => {
     dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: Number(entry.rate) });
   });
 
   // Calculate matched and non-matched codes
-  const file1Codes = new Set(file1Data.map(entry => entry.dialCode));
-  const file2Codes = new Set(file2Data.map(entry => entry.dialCode));
+  const file1Codes = new Set(file1Data.map((entry) => entry.dialCode));
+  const file2Codes = new Set(file2Data.map((entry) => entry.dialCode));
 
   for (const code of file1Codes) {
     if (file2Codes.has(code)) {
@@ -85,6 +93,17 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
     if (dialCodeMapFile2.has(key1)) {
       const value2 = dialCodeMapFile2.get(key1)!;
       const percentageDifference = calculatePercentageDifference(value1.rate, value2.rate);
+
+      // --- Add entry to detailedComparisonData ---
+      detailedComparisonData.push({
+        dialCode: key1,
+        rate1: value1.rate,
+        rate2: value2.rate,
+        diff: value1.rate - value2.rate,
+        destName1: value1.destName,
+        destName2: value2.destName,
+      });
+      // --- End detailed data entry ---
 
       if (value1.rate > value2.rate) {
         pricingReport.higherRatesForFile1.push({
@@ -157,18 +176,18 @@ function generateReports(input: AZReportsInput): { pricingReport: AzPricingRepor
   pricingReport.higherRatesForFile1.sort((a, b) => b.percentageDifference - a.percentageDifference);
   pricingReport.higherRatesForFile2.sort((a, b) => b.percentageDifference - a.percentageDifference);
 
-  return { pricingReport, codeReport };
+  return { pricingReport, codeReport, detailedComparisonData };
 }
 
 function consolidateDialCodesForNonMatching(group: NonMatchingCode[]): NonMatchingCode {
-  const consolidatedDialCode = group.map(entry => entry.dialCode).join(', ');
+  const consolidatedDialCode = group.map((entry) => entry.dialCode).join(', ');
   const { destName, rate, file } = group[0]; // Assuming all entries in the group have the same destName, rate, and file.
   return { dialCode: consolidatedDialCode, destName, rate, file };
 }
 
 function consolidateNonMatchingEntries(entries: NonMatchingCode[]): NonMatchingCode[] {
   const groups = new Map<string, NonMatchingCode[]>();
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     const key = `${entry.destName}:${entry.rate}:${entry.file}`;
     if (!groups.has(key)) {
       groups.set(key, []);
@@ -177,7 +196,7 @@ function consolidateNonMatchingEntries(entries: NonMatchingCode[]): NonMatchingC
   });
 
   const consolidatedEntries: NonMatchingCode[] = [];
-  groups.forEach(group => {
+  groups.forEach((group) => {
     consolidatedEntries.push(consolidateDialCodesForNonMatching(group));
   });
 
@@ -186,7 +205,7 @@ function consolidateNonMatchingEntries(entries: NonMatchingCode[]): NonMatchingC
 
 function consolidateDialCodes(group: ConsolidatedData[]): ConsolidatedData {
   const { destName, rateFile1, rateFile2, percentageDifference } = group[0];
-  const dialCodes = new Set(group.map(row => row.dialCode));
+  const dialCodes = new Set(group.map((row) => row.dialCode));
   return {
     destName,
     rateFile1,
@@ -206,7 +225,7 @@ function calculatePercentageDifference(rate1: number, rate2: number): number {
 
 function consolidateEntries(entries: ConsolidatedData[]): ConsolidatedData[] {
   const groups = new Map<string, ConsolidatedData[]>();
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     const key = `${entry.destName}:${entry.rateFile1}:${entry.rateFile2}`;
     if (!groups.has(key)) {
       groups.set(key, []);
@@ -215,7 +234,7 @@ function consolidateEntries(entries: ConsolidatedData[]): ConsolidatedData[] {
   });
 
   const consolidatedEntries: ConsolidatedData[] = [];
-  groups.forEach(group => {
+  groups.forEach((group) => {
     consolidatedEntries.push(consolidateDialCodes(group));
   });
 

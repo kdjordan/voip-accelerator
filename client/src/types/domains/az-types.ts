@@ -187,3 +187,16 @@ export interface AZPreviewModalEmits {
   confirm: [mappings: Record<string, string>];
   cancel: [];
 }
+
+/**
+ * Represents a single entry in the detailed A-Z comparison table
+ * stored in the az_pricing_comparison_db.
+ */
+export interface AZDetailedComparisonEntry {
+  dialCode: string; // The common dial code
+  rate1: number; // Rate from the first file
+  rate2: number; // Rate from the second file
+  diff: number; // Difference (rate2 - rate1)
+  destName1: string; // Destination name from the first file
+  destName2: string; // Destination name from the second file
+}

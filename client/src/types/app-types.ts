@@ -176,6 +176,7 @@ export const DBName = {
   LERG: 'lerg_db',
   RATE_SHEET: 'rate_sheet_db',
   US_PRICING_COMPARISON: 'us_pricing_comparison_db',
+  AZ_PRICING_COMPARISON: 'az_pricing_comparison_db',
 } as const;
 
 export type DBNameType = (typeof DBName)[keyof typeof DBName];
@@ -195,7 +196,8 @@ export type SchemaDBType =
   | typeof DBName.US
   | typeof DBName.LERG
   | typeof DBName.RATE_SHEET
-  | typeof DBName.US_PRICING_COMPARISON;
+  | typeof DBName.US_PRICING_COMPARISON
+  | typeof DBName.AZ_PRICING_COMPARISON;
 
 export const DBSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
@@ -222,6 +224,23 @@ export const DBSchemas = {
     file2_indeterm,
     cheaper_file
   `,
+  // Add schema for AZ Pricing Comparison DB
+  [DBName.AZ_PRICING_COMPARISON]: `
+    az_comparison_results: ++id, &dialCode,
+    rate1,
+    rate2,
+    diff,
+    destName1,
+    destName2
+  `,
+} as const;
+
+// Define schemas for dynamically created tables (e.g., filename-based)
+export const DynamicTableSchemas = {
+  [DBName.AZ]: '++id, destName, dialCode, rate',
+  [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
+  // Note: LERG, RATE_SHEET, and COMPARISON DBs might not need dynamic table schemas
+  // If they do, define them here.
 } as const;
 
 // Type guard to check if a DBNameType is supported for schemas
@@ -231,6 +250,7 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
     dbName === DBName.US ||
     dbName === DBName.RATE_SHEET ||
     dbName === DBName.LERG ||
-    dbName === DBName.US_PRICING_COMPARISON
+    dbName === DBName.US_PRICING_COMPARISON ||
+    dbName === DBName.AZ_PRICING_COMPARISON
   );
 }

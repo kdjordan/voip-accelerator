@@ -6,6 +6,14 @@ import type {
   AZStandardizedData,
 } from '@/types/domains/az-types';
 import type { DomainStore, ReportType } from '@/types';
+import { ReportTypes } from '@/types';
+import { AZService } from '@/services/az.service';
+
+interface FileStats {
+  totalCodes: number;
+  totalDestinations: number;
+  uniqueDestinationsPercentage: number;
+}
 
 export const useAzStore = defineStore('az', {
   state: () => ({
@@ -18,7 +26,6 @@ export const useAzStore = defineStore('az', {
     codeReport: null as AzCodeReport | null,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidAzRow[]>(),
-    inMemoryData: new Map<string, AZStandardizedData[]>(),
     fileStats: new Map<
       string,
       {
@@ -27,6 +34,8 @@ export const useAzStore = defineStore('az', {
         uniqueDestinationsPercentage: number;
       }
     >(),
+    detailedComparisonTableName: null as string | null,
+    isLoadingDetailedComparison: false,
   }),
 
   getters: {
@@ -60,6 +69,10 @@ export const useAzStore = defineStore('az', {
       return file ? file.fileName : '';
     },
 
+    getDetailedComparisonTableName: (state) => state.detailedComparisonTableName,
+
+    getIsLoadingDetailedComparison: (state) => state.isLoadingDetailedComparison,
+
     getNumberOfFilesUploaded: (state) => state.filesUploaded.size,
 
     hasExistingFile: (state) => (fileName: string) => {
@@ -82,25 +95,9 @@ export const useAzStore = defineStore('az', {
       return result;
     },
 
-    isUsingMemoryStorage: () => {
-      return true; // Always use memory storage since config was removed
-    },
-
-    getInMemoryData: (state) => (tableName: string) => {
-      return state.inMemoryData.get(tableName) || [];
-    },
-
-    getInMemoryTables: (state) => {
-      const result: Record<string, number> = {};
-      state.inMemoryData.forEach((data, tableName) => {
-        result[tableName] = data.length;
-      });
-      return result;
-    },
-
-    shouldShowPricingReport: (state) => {
-      return state.reportsGenerated;
-    },
+    // isUsingMemoryStorage: () => {
+    //   return true; // Always use memory storage since config was removed
+    // },
 
     getFileStats: (state) => (componentId: string) => {
       return (
@@ -125,16 +122,25 @@ export const useAzStore = defineStore('az', {
     },
 
     resetFiles() {
+      const azService = new AZService();
+      // Call service to clear Dexie data for AZ
+      azService
+        .clearData()
+        .then(() => {
+          console.log('[az-store] Dexie data cleared successfully for AZ.');
+        })
+        .catch((error) => {
+          console.error('[az-store] Error clearing Dexie data for AZ:', error);
+        });
+
       this.filesUploaded.clear();
-      this.reportsGenerated = false;
-      // this.singleFileReportReady = false;
+      this.fileStats.clear();
+      this.invalidRows.clear();
       this.pricingReport = null;
       this.codeReport = null;
-      // this.singleFileReport = null;
-      this.showUploadComponents = true;
-      this.invalidRows.clear();
-      this.inMemoryData.clear();
-      this.fileStats.clear();
+      this.detailedComparisonTableName = null;
+      this.reportsGenerated = false;
+      this.activeReportType = 'files';
     },
 
     setReports(pricing: AzPricingReport, code: AzCodeReport) {
@@ -151,6 +157,21 @@ export const useAzStore = defineStore('az', {
 
     removeFile(fileName: string) {
       const tableName = fileName.toLowerCase().replace('.csv', '');
+
+      // --- Call AZService to remove table from DexieDB ---
+      const azService = new AZService();
+      azService
+        .removeTable(tableName)
+        .then(() => {
+          console.log(
+            `[az-store] Dexie table ${tableName} and related comparison tables removed successfully.`
+          );
+        })
+        .catch((error) => {
+          console.error(`[az-store] Error removing Dexie table ${tableName}:`, error);
+          // Optionally notify the user or handle the error further
+        });
+      // --- End DexieDB call ---
 
       // Find the component ID associated with this file
       let componentId = '';
@@ -176,17 +197,12 @@ export const useAzStore = defineStore('az', {
       // Clear any invalid rows for this file
       this.invalidRows.delete(fileName);
 
-      // Clear in-memory data if using memory storage
-      if (this.isUsingMemoryStorage) {
-        this.inMemoryData.delete(tableName);
-        console.log(`[AzStore] Cleared in-memory data for ${tableName}`);
-      }
-
       // Reset reports if we now have fewer than 2 files
       if (this.filesUploaded.size < 2) {
         this.reportsGenerated = false;
         this.pricingReport = null;
         this.codeReport = null;
+        this.detailedComparisonTableName = null;
         this.activeReportType = 'files';
       }
 
@@ -237,22 +253,6 @@ export const useAzStore = defineStore('az', {
       this.invalidRows.clear();
     },
 
-    storeInMemoryData(tableName: string, data: AZStandardizedData[]) {
-      this.inMemoryData.set(tableName, data);
-    },
-
-    getInMemoryDataCount(tableName: string): number {
-      return this.inMemoryData.get(tableName)?.length || 0;
-    },
-
-    removeInMemoryData(tableName: string) {
-      this.inMemoryData.delete(tableName);
-    },
-
-    clearAllInMemoryData() {
-      this.inMemoryData.clear();
-    },
-
     setFileStats(
       componentId: string,
       stats: {
@@ -270,6 +270,14 @@ export const useAzStore = defineStore('az', {
 
     clearAllFileStats() {
       this.fileStats.clear();
+    },
+
+    setDetailedComparisonTableName(tableName: string | null) {
+      this.detailedComparisonTableName = tableName;
+    },
+
+    setLoadingDetailedComparison(isLoading: boolean) {
+      this.isLoadingDetailedComparison = isLoading;
     },
   },
 }) as unknown as () => DomainStore<AzPricingReport, AzCodeReport, InvalidAzRow>;
