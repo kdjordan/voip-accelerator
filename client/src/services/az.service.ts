@@ -8,6 +8,7 @@ import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
+import Dexie from 'dexie'; // Import Dexie static methods
 
 export class AZService {
   private store = useAzStore();
@@ -196,40 +197,46 @@ export class AZService {
       const { getDB } = useDexieDB();
       const azDb = await getDB(DBName.AZ);
       if (azDb.hasStore(tableName)) {
-        await azDb.deleteStore(tableName);
-        console.log(`[AZService] Table ${tableName} removed successfully from ${DBName.AZ}`);
+        await azDb.table(tableName).clear();
+        console.log(`[AZService] Table ${tableName} cleared successfully in ${DBName.AZ}`);
       }
 
       // --- Delete corresponding comparison table ---
 
-      // Check if there was another file uploaded
-      const otherFileEntry = fileEntries.find(([key, _]) => key !== componentId);
+      // Check if the comparison database exists before attempting to interact with it
+      const dbExists = await Dexie.exists(DBName.AZ_PRICING_COMPARISON);
 
-      if (otherFileEntry) {
-        const otherFileName = otherFileEntry[1].fileName;
-        const otherTableName = otherFileName.toLowerCase().replace('.csv', '');
+      if (dbExists) {
+        // Check if there was another file uploaded
+        const otherFileEntry = fileEntries.find(([key, _]) => key !== componentId);
 
-        // Construct possible comparison table names
-        const comparisonTableName1 = `${tableName}_vs_${otherTableName}`;
-        const comparisonTableName2 = `${otherTableName}_vs_${tableName}`;
+        if (otherFileEntry) {
+          const otherFileName = otherFileEntry[1].fileName;
+          const otherTableName = otherFileName.toLowerCase().replace('.csv', '');
 
-        // Get the comparison DB instance
-        const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
+          // Construct possible comparison table names
+          const comparisonTableName1 = `${tableName}_vs_${otherTableName}`;
+          const comparisonTableName2 = `${otherTableName}_vs_${tableName}`;
 
-        // Attempt to delete the first possible name
-        if (comparisonDb.hasStore(comparisonTableName1)) {
-          await comparisonDb.deleteStore(comparisonTableName1);
-          console.log(
-            `[AZService] Table ${comparisonTableName1} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
-          );
-        }
+          // Get the comparison DB instance ONLY if the DB exists
+          const { getDB } = useDexieDB();
+          const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
 
-        // Attempt to delete the second possible name
-        if (comparisonDb.hasStore(comparisonTableName2)) {
-          await comparisonDb.deleteStore(comparisonTableName2);
-          console.log(
-            `[AZService] Table ${comparisonTableName2} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
-          );
+          // Attempt to delete the first possible name
+          if (comparisonDb.hasStore(comparisonTableName1)) {
+            await comparisonDb.deleteStore(comparisonTableName1);
+            console.log(
+              `[AZService] Table ${comparisonTableName1} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
+            );
+          }
+
+          // Attempt to delete the second possible name
+          if (comparisonDb.hasStore(comparisonTableName2)) {
+            await comparisonDb.deleteStore(comparisonTableName2);
+            console.log(
+              `[AZService] Table ${comparisonTableName2} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
+            );
+          }
         }
       }
       // Note: Resetting reports and detailedComparisonTableName is handled by the store's removeFile action

@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { supabase } from '@/utils/supabase';
 import { useLergStore } from '@/stores/lerg-store';
-import { getLergService } from '@/services/dexie/db';
+import { LergService } from '@/services/lerg.service';
 import type {
   LERGRecord,
   StateNPAMapping,
@@ -11,8 +11,8 @@ import type {
 import Papa from 'papaparse';
 
 export function useLergData() {
-  // Get the LERG Dexie service
-  const lergService = getLergService();
+  // Get the LERG service using the singleton instance
+  const lergService = LergService.getInstance();
   const lergStore = useLergStore();
   const isLoading = ref(false);
   const error = ref<string | null>(null);
@@ -102,7 +102,7 @@ export function useLergData() {
           }));
 
           // Use the Dexie service to initialize the table
-          await lergService.initializeTable(recordsWithTimestamp);
+          await lergService.initializeLergTable(recordsWithTimestamp);
           await updateStoreData();
         }
         return lergData;
@@ -201,7 +201,7 @@ export function useLergData() {
         }));
 
         // Use the Dexie service to initialize the table
-        await lergService.initializeTable(recordsWithTimestamp);
+        await lergService.initializeLergTable(recordsWithTimestamp);
         await updateStoreData();
       }
 
@@ -228,7 +228,7 @@ export function useLergData() {
       if (downloadError) throw new Error(downloadError.message);
 
       if (data?.data?.length) {
-        await lergService.initializeTable(data.data);
+        await lergService.initializeLergTable(data.data);
         await updateStoreData();
       }
 
@@ -258,7 +258,7 @@ export function useLergData() {
       lergStore.clearLergData();
 
       // Clear IndexedDB using our Dexie service
-      await lergService.clear();
+      await lergService.clearLergData();
 
       return { success: true };
     } catch (err) {
@@ -269,108 +269,47 @@ export function useLergData() {
     }
   };
 
-  const getProcessed = async () => {
+  const getProcessed = async (): Promise<{
+    stateMapping: StateNPAMapping;
+    countryData: CountryLergData[];
+    count: number;
+  }> => {
     try {
       isLoading.value = true;
       error.value = null;
 
-      const stateMapping: StateNPAMapping = {};
-      const countryData: CountryLergData[] = [];
+      // Call the LERG service to get processed data
+      const processedData = await lergService.getProcessedData();
 
-      // Get all LERG records from the database
-      const allRecords = await lergService.getAll();
-      const count = allRecords.length;
-
-      // Process US records
-      const usRecords = await lergService.getByCountry('US');
-
-      // Group by state
-      for (const record of usRecords) {
-        if (!stateMapping[record.state]) {
-          stateMapping[record.state] = [];
-        }
-        stateMapping[record.state].push(record.npa);
+      // Check if data is valid and not null
+      if (!processedData?.stateMapping || !processedData?.countryData) {
+        error.value = 'Failed to process LERG data: received invalid data';
+        throw new Error('Failed to process LERG data: received invalid data');
       }
 
-      // Process Canadian records
-      const caRecords = await lergService.getByCountry('CA');
-
-      // Group by province
-      const caProvinceMap: Record<string, string[]> = {};
-      for (const record of caRecords) {
-        if (!caProvinceMap[record.state]) {
-          caProvinceMap[record.state] = [];
-        }
-        caProvinceMap[record.state].push(record.npa);
-
-        // Also add to state mapping
-        if (!stateMapping[record.state]) {
-          stateMapping[record.state] = [];
-        }
-        stateMapping[record.state].push(record.npa);
-      }
-
-      // Add US data to countryData
-      if (usRecords.length > 0) {
-        countryData.push({
-          country: 'US',
-          npaCount: usRecords.length,
-          npas: usRecords.map((r) => r.npa).sort(),
-        });
-      }
-
-      // Add CA data to countryData
-      if (caRecords.length > 0) {
-        countryData.push({
-          country: 'CA',
-          npaCount: caRecords.length,
-          npas: caRecords.map((r) => r.npa).sort(),
-          provinces: Object.entries(caProvinceMap).map(([code, npas]) => ({
-            code,
-            npas: npas.sort(),
-          })),
-        });
-      }
-
-      // Process other countries
-      const countries = [
-        ...new Set(
-          allRecords.filter((r) => r.country !== 'US' && r.country !== 'CA').map((r) => r.country)
-        ),
-      ];
-
-      // Add each country's data
-      for (const country of countries) {
-        const records = await lergService.getByCountry(country);
-        countryData.push({
-          country,
-          npaCount: records.length,
-          npas: records.map((r) => r.npa).sort(),
-        });
-      }
-
+      // Return the structured data
       return {
-        stateMapping,
-        countryData,
-        count,
+        stateMapping: processedData.stateMapping,
+        countryData: processedData.countryData,
+        count: processedData.count,
       };
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error occurred';
+      error.value = err instanceof Error ? err.message : 'Failed to process LERG data';
       throw err;
     } finally {
       isLoading.value = false;
     }
   };
 
-  const getAll = async () => {
+  const getAll = async (): Promise<LERGRecord[]> => {
     try {
       isLoading.value = true;
       error.value = null;
-
-      const data = await lergService.getAll();
-      return data;
+      // Call the LERG service to get all records
+      const records = await lergService.getAllRecords();
+      return records || [];
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error occurred';
+      error.value = err instanceof Error ? err.message : 'Failed to fetch all LERG records';
       throw err;
     } finally {
       isLoading.value = false;
