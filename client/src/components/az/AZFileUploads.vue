@@ -516,6 +516,10 @@ async function handleModalConfirm(mappings: Record<string, string>) {
       startLine.value,
       activeComponent.value
     );
+
+    // Calculate stats AFTER processing is complete
+    await azService.calculateFileStats(activeComponent.value, result.fileName);
+
     await handleFileUploaded(activeComponent.value, result.fileName);
   } catch (error) {
     console.error('Error processing file:', error);

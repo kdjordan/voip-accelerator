@@ -7,7 +7,7 @@ import App from './App.vue';
 import router from './router';
 
 // Import Dexie services
-import './services/dexie/db';
+// import './services/dexie/db';
 
 // Initialize the application
 const app = createApp(App);

@@ -92,11 +92,31 @@ export class DexieDBBase extends Dexie {
   async deleteStore(storeName: string): Promise<void> {
     if (!this.hasStore(storeName)) return;
 
-    await this.close();
-    const freshDb = new DexieDBBase(this.dbName, '');
-    freshDb.version(this.verno + 1).stores({ [storeName]: null });
-    await freshDb.open();
-    this.stores.delete(storeName);
+    console.log(`[useDexieDB] Deleting store '${storeName}' from ${this.dbName}...`);
+    const currentVersion = this.verno;
+
+    // Close the connection before changing the schema
+    this.close();
+
+    try {
+      // Define the schema change on the *current* instance
+      this.version(currentVersion + 1).stores({ [storeName]: null });
+
+      // Explicitly reopen the database to apply the schema change and ensure readiness
+      await this.open();
+
+      // Update internal tracking *after* successful reopen
+      this.stores.delete(storeName);
+      console.log(
+        `[useDexieDB] Successfully deleted store '${storeName}' and reopened ${this.dbName}.`
+      );
+    } catch (error) {
+      console.error(`[useDexieDB] Error deleting store '${storeName}' from ${this.dbName}:`, error);
+      // Attempt to revert or simply rethrow
+      // Reopening the *previous* version might be complex/risky.
+      // For now, rethrowing seems safest.
+      throw error;
+    }
   }
 
   async getAllStoreNames(): Promise<string[]> {
@@ -131,7 +151,17 @@ export default function useDexieDB() {
         throw error;
       }
     } else if (!db.isOpen()) {
-      await db.open();
+      // If the connection exists but is closed (e.g., after deleteStore),
+      // attempt to reopen it before returning.
+      console.warn(`[useDexieDB] Connection for ${dbName} was closed. Attempting to reopen...`);
+      try {
+        await db.open();
+        console.log(`[useDexieDB] Successfully reopened ${dbName}.`);
+      } catch (reopenError) {
+        console.error(`[useDexieDB] Failed to reopen database ${dbName}:`, reopenError);
+        // If reopen fails, just rethrow the error
+        throw reopenError; // Rethrow the error so the caller knows reopening failed
+      }
     }
 
     return db;
