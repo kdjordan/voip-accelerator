@@ -3,6 +3,12 @@ export const AZ_DB_CONFIG = {
   schema: '++id, destName, dialCode, rate',
 } as const;
 
+export interface IntCountryInfo {
+  countryName: string;
+  isoCode: string; // 2-letter ISO 3166-1 alpha-2 code
+  dialCodes: string[]; // Array of international dial codes
+}
+
 export interface AZStandardizedData {
   id?: number;
   destName: string;
