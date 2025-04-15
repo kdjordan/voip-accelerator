@@ -3,7 +3,7 @@
   <div v-if="enhancedReport" class="mt-8 pt-8 border-t border-gray-700/50">
     <!-- Code Report heading with file name pill from enhancedReport -->
     <div class="mb-4 flex items-center justify-between">
-      <span class="text-xl text-fbWhite font-secondary">Enhanced Code Report</span>
+      <span class="text-xl text-fbWhite font-secondary">Code Report</span>
       <div
         class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50"
       >

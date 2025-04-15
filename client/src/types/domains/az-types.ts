@@ -221,7 +221,6 @@ export interface AZFileInfo {
 export interface AZCodeStats {
   systemCodeCount: number; // Total unique dial codes in INT_COUNTRY_CODES
   fileCodeCount: number; // Total unique dial codes in the uploaded file
-  coveragePercent: number; // (fileCodeCount / systemCodeCount) * 100
 }
 
 /**
