@@ -3,12 +3,18 @@ import {
   type InvalidAzRow,
   type AzCodeReport,
   type AZDetailedComparisonEntry,
+  type AZEnhancedCodeReport,
+  type AZReportsInput,
+  type AzPricingReport,
 } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
 import Dexie from 'dexie'; // Import Dexie static methods
+import { INT_COUNTRY_CODES } from '@/types/constants/int-country-codes';
+import AzAnalyzerWorker from '@/workers/az-analyzer.worker.ts?worker';
+import AzComparisonWorker from '@/workers/az-comparison.worker.ts?worker';
 
 export class AZService {
   private store = useAzStore();
@@ -79,6 +85,44 @@ export class AZService {
               console.log(
                 `[AZService] Stored ${validRecords.length} records in Dexie for table: ${derivedTableName}`
               );
+
+              // --- Trigger Enhanced Code Report Generation --- Start ---
+              try {
+                const analyzerWorker = new AzAnalyzerWorker();
+
+                analyzerWorker.onmessage = (event) => {
+                  if (event.data.error) {
+                    console.error('[AZService] Error from AZ Analyzer Worker:', event.data.error);
+                  } else {
+                    const report = event.data as AZEnhancedCodeReport;
+                    console.log('[AZService] Received Enhanced Code Report from worker:', report);
+                    this.store.setEnhancedCodeReport(file.name, report);
+                  }
+                  analyzerWorker.terminate(); // Clean up worker
+                };
+
+                analyzerWorker.onerror = (error) => {
+                  console.error('[AZService] Unhandled error in AZ Analyzer Worker:', error);
+                  analyzerWorker.terminate(); // Clean up worker
+                };
+
+                // Prepare data for the worker
+                const workerInput = {
+                  fileName: file.name,
+                  fileData: validRecords, // Send the processed valid records
+                  intCountryData: INT_COUNTRY_CODES, // Send the constant
+                };
+
+                analyzerWorker.postMessage(workerInput);
+                console.log('[AZService] Posted data to AZ Analyzer Worker');
+              } catch (workerError) {
+                console.error(
+                  '[AZService] Failed to initialize or post to AZ Analyzer Worker:',
+                  workerError
+                );
+                // Decide if this should reject the main promise or just log
+              }
+              // --- Trigger Enhanced Code Report Generation --- End -----
             }
 
             // Update the store with the component ID and the original filename
@@ -332,12 +376,12 @@ export class AZService {
         codeReport: AzCodeReport;
         detailedComparisonData: AZDetailedComparisonEntry[];
       }>((resolve, reject) => {
-        worker.onmessage = (event) => {
+        worker.onmessage = (event: MessageEvent) => {
           const { pricingReport, codeReport, detailedComparisonData } = event.data;
           console.log('[AZService] Received reports from worker');
           resolve({ pricingReport, codeReport, detailedComparisonData });
         };
-        worker.onerror = (error) => {
+        worker.onerror = (error: ErrorEvent) => {
           console.error('[AZService] Worker error:', error);
           reject(error);
         };

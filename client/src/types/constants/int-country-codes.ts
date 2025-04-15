@@ -1464,3 +1464,42 @@ const rawData = [
     population: '11,651,858',
   },
 ];
+
+// Process the raw data into the desired format
+export const INT_COUNTRY_CODES: Record<string, IntCountryInfo> = rawData.reduce(
+  (acc, item) => {
+    // Extract country name, ensure it's a non-empty string
+    const countryName = item.country?.trim();
+    if (!countryName) {
+      console.warn('[int-country-codes] Skipping entry with missing country name:', item);
+      return acc; // Skip entries with missing country names
+    }
+
+    // Parse ISO code and dial codes
+    const isoCode = parseIsoCode(item['ISO CODE']);
+    const dialCodes = parseDialCodes(item.cc);
+
+    // Add to accumulator, keyed by country name
+    acc[countryName] = {
+      countryName: countryName,
+      isoCode: isoCode,
+      dialCodes: dialCodes,
+    };
+
+    return acc;
+  },
+  {} as Record<string, IntCountryInfo> // Initial value for the accumulator
+);
+
+// Optional: Add helper functions if needed
+export function getCountryInfoByName(name: string): IntCountryInfo | undefined {
+  return INT_COUNTRY_CODES[name];
+}
+
+export function getCountryInfoByIsoCode(iso: string): IntCountryInfo | undefined {
+  return Object.values(INT_COUNTRY_CODES).find((info) => info.isoCode === iso);
+}
+
+export function getCountryInfoByDialCode(dialCode: string): IntCountryInfo | undefined {
+  return Object.values(INT_COUNTRY_CODES).find((info) => info.dialCodes.includes(dialCode));
+}
