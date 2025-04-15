@@ -4,6 +4,7 @@ import type {
   AzCodeReport,
   InvalidAzRow,
   AZStandardizedData,
+  AZEnhancedCodeReport,
 } from '@/types/domains/az-types';
 import type { DomainStore, ReportType } from '@/types';
 import { ReportTypes } from '@/types';
@@ -36,6 +37,7 @@ export const useAzStore = defineStore('az', {
     >(),
     detailedComparisonTableName: null as string | null,
     isLoadingDetailedComparison: false,
+    enhancedCodeReports: new Map<string, AZEnhancedCodeReport>(),
   }),
 
   getters: {
@@ -112,6 +114,13 @@ export const useAzStore = defineStore('az', {
     hasSingleFileReport: (state) => {
       return state.fileStats.size > 0 && state.fileStats.size < 2;
     },
+
+    // Getter for enhanced code reports
+    getEnhancedReportByFile:
+      (state) =>
+      (fileName: string): AZEnhancedCodeReport | null => {
+        return state.enhancedCodeReports.get(fileName) || null;
+      },
   },
 
   actions: {
@@ -141,6 +150,7 @@ export const useAzStore = defineStore('az', {
       this.detailedComparisonTableName = null;
       this.reportsGenerated = false;
       this.activeReportType = 'files';
+      this.enhancedCodeReports.clear();
     },
 
     setReports(pricing: AzPricingReport, code: AzCodeReport) {
@@ -188,6 +198,9 @@ export const useAzStore = defineStore('az', {
 
         // Clear file stats for this component
         this.clearFileStats(componentId);
+
+        // Clear enhanced code report for this file
+        this.enhancedCodeReports.delete(fileName);
 
         console.log(`[AzStore] Removed file ${fileName} from component ${componentId}`);
       } else {
@@ -279,5 +292,11 @@ export const useAzStore = defineStore('az', {
     setLoadingDetailedComparison(isLoading: boolean) {
       this.isLoadingDetailedComparison = isLoading;
     },
+
+    // Action to set enhanced code report
+    setEnhancedCodeReport(fileName: string, report: AZEnhancedCodeReport) {
+      this.enhancedCodeReports.set(fileName, report);
+      console.log(`[az-store] Enhanced code report set for ${fileName}`);
+    },
   },
-}) as unknown as () => DomainStore<AzPricingReport, AzCodeReport, InvalidAzRow>;
+});
