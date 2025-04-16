@@ -1,13 +1,25 @@
 <template>
   <!-- Use enhancedReport for conditional rendering and data display -->
-  <div v-if="enhancedReport" class="mt-8 pt-8 border-t border-gray-700/50">
-    <!-- Code Report heading with file name pill from enhancedReport -->
+  <div v-if="enhancedReport" class="">
+    <!-- Code Report heading with file name pill and remove button -->
     <div class="mb-4 flex items-center justify-between">
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
-      <div
-        class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50"
-      >
-        <span class="text-sm text-accent">{{ enhancedReport.fileInfo.fileName }}</span>
+      <div class="flex items-center space-x-2">
+        <div
+          class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50"
+        >
+          <span class="text-sm text-accent">{{ enhancedReport.fileInfo.fileName }}</span>
+        </div>
+        <button
+          v-if="onRemove"
+          @click="onRemove"
+          class="px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
+        >
+          <div class="flex items-center justify-center space-x-1.5">
+            <TrashIcon class="w-3 h-3 text-red-400" />
+            <span class="text-xs text-red-400">Remove</span>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -51,9 +63,7 @@
 
       <!-- Country Coverage Section (Now in its own bento box) -->
       <div class="bg-gray-800 p-3 rounded-lg">
-        <h4 class="text-gray-400 mb-2">
-          Country Breakdown ({{ filteredCountries.length }} found)
-        </h4>
+        <h4 class="text-gray-400 mb-2">Country Breakdown ({{ filteredCountries.length }} found)</h4>
 
         <!-- Search Input -->
         <div class="mb-3 relative">
@@ -86,15 +96,22 @@
                 class="p-2 cursor-pointer list-none flex justify-between items-center group-open:bg-gray-700/50 transition-colors duration-150 hover:bg-gray-700/30"
               >
                 <div class="flex-1 min-w-0 mr-2">
-                  <span class="font-medium text-white text-sm truncate" :title="country.countryName">
+                  <span
+                    class="font-medium text-white text-sm truncate"
+                    :title="country.countryName"
+                  >
                     {{ country.countryName || 'Unknown' }}
                   </span>
                   <span class="text-xs text-gray-400 ml-1.5">({{ country.isoCode || 'N/A' }})</span>
                 </div>
                 <div class="text-right text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
-                  {{ country.uniqueBreakoutCount }} breakout{{ country.uniqueBreakoutCount !== 1 ? 's' : '' }}
+                  {{ country.uniqueBreakoutCount }} breakout{{
+                    country.uniqueBreakoutCount !== 1 ? 's' : ''
+                  }}
                   <!-- Chevron icon for visual cue -->
-                  <span class="inline-block transform transition-transform duration-150 group-open:rotate-90 ml-1">
+                  <span
+                    class="inline-block transform transition-transform duration-150 group-open:rotate-90 ml-1"
+                  >
                     ▶
                   </span>
                 </div>
@@ -103,7 +120,11 @@
               <!-- Expanded Content: Breakout Details -->
               <div class="p-3 bg-gray-900/30 border-t border-gray-700/50 text-xs space-y-2">
                 <div v-if="country.breakouts && country.breakouts.length > 0">
-                  <div v-for="breakout in country.breakouts" :key="breakout.breakoutName" class="ml-2">
+                  <div
+                    v-for="breakout in country.breakouts"
+                    :key="breakout.breakoutName"
+                    class="ml-2"
+                  >
                     <div class="font-medium text-gray-300 truncate" :title="breakout.breakoutName">
                       {{ breakout.breakoutName }}
                     </div>
@@ -120,7 +141,9 @@
           </div>
           <div v-else class="text-gray-500 text-center py-4">
             {{
-              searchQuery ? 'No matching countries or breakouts found.' : 'No country breakdown data available.'
+              searchQuery
+                ? 'No matching countries or breakouts found.'
+                : 'No country breakdown data available.'
             }}
           </div>
         </div>
@@ -136,10 +159,12 @@
 import { computed, ref } from 'vue';
 import { useAzStore } from '@/stores/az-store';
 import type { AZEnhancedCodeReport, AZCountryBreakdown } from '@/types/domains/az-types';
+import { TrashIcon } from '@heroicons/vue/24/outline';
 
 // Define props
 const props = defineProps<{
   componentId: string; // e.g., 'az1' or 'az2'
+  onRemove?: () => void; // Optional remove handler prop
 }>();
 
 const azStore = useAzStore();
@@ -209,10 +234,11 @@ const filteredCountries = computed<AZCountryBreakdown[]>(() => {
     // 2. Filter out countries that have no breakouts left after filtering by dial code
     const results = potentiallyRelevantCountries
       .map((country) => {
-        const matchingBreakouts = country.breakouts?.filter((b) =>
-          // Match only if the dial code STARTS WITH the query
-          b.dialCodes.some((c) => c.startsWith(query))
-        ) || [];
+        const matchingBreakouts =
+          country.breakouts?.filter((b) =>
+            // Match only if the dial code STARTS WITH the query
+            b.dialCodes.some((c) => c.startsWith(query))
+          ) || [];
         return {
           ...country,
           breakouts: matchingBreakouts,

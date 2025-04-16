@@ -45,6 +45,14 @@ export class DexieDBBase extends Dexie {
 
     // Determine the correct schema for the dynamic table
     let dynamicSchemaDefinition = '++id'; // Default minimal schema
+
+    // --- Debugging ---
+    console.log(
+      `[Debug] addStore: Checking dbName: "${this.dbName}" (Type: ${typeof this.dbName})`
+    );
+    console.log('[Debug] addStore: Current DynamicTableSchemas:', DynamicTableSchemas);
+    // --- End Debugging ---
+
     if (this.dbName in DynamicTableSchemas) {
       dynamicSchemaDefinition =
         DynamicTableSchemas[this.dbName as keyof typeof DynamicTableSchemas];

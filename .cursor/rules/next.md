@@ -163,3 +163,47 @@ Based on user feedback, we need to refine the `AZCountryBreakdown` interface in 
 3.  **Update UI:** Adapt `AzCodeSummary.vue` to display the expandable list using the new data structure.
 
 **(Old Prompts Removed)**
+
+---
+
+## UI Refinement & Data Corrections (Completed)
+
+- **Completed:**
+  - Refactored `AZFileUploads.vue` and `AzCodeSummary.vue`:
+    - The `AzCodeSummary` now replaces the drop zone view after a file is successfully processed.
+    - Removed redundant spacing/borders from `AzCodeSummary` as layout is handled by the parent.
+  - Aligned the "Remove" button horizontally with the filename pill inside the `AzCodeSummary` header for better UX.
+  - Updated `int-country-codes.ts`: Added entries for "Norfolk Island", "Abkhazia", and specific A.E.T. Antarctica bases (Casey, Davis, Macquarie, Mawson) to ensure correct identification and grouping by the `az-analyzer.worker.ts`.
+
+---
+
+## Dexie Versioning & Comparison Storage Fix (Completed)
+
+- **Completed:**
+  - Resolved Dexie schema/versioning conflicts for `az_pricing_comparison_db`.
+  - Refactored `az.service.ts::makeAzCombinedReport` to directly manage the fixed `az_comparison_results` table (clearing and bulk-putting data) instead of using the `storeInDexieDB` composable for this specific table.
+  - This mirrors the successful pattern used in `us.service.ts` and eliminates the `Dexie SchemaDiff` warnings.
+
+---
+
+## Next Focus: AZ Pricing Report UI & Data Integration
+
+- **Current Focus:** Refactor `AZPricingReport.vue` & `AZDetailedComparisonTable.vue`.
+- **Completed:**
+  - **Created `AZDetailedComparisonTable.vue`:** Modeled after the US version, responsible for fetching and displaying detailed AZ comparison data.
+  - **Integrated into `AZPricingReport.vue`:** Added the new component and removed redundant data fetching logic from the parent.
+  - **Added `AZService::getPagedDetailedComparisonData`:** Implemented the necessary service method for pagination and filtering.
+  - **Dynamic Headers:** Updated table headers in `AZDetailedComparisonTable.vue` to display actual filenames retrieved from `azStore`.
+  - **Styled Headers:** Removed `.csv` extensions and applied theme colors (green/blue), padding, borders, and rounding to filenames in headers for a clearer, button-like appearance.
+- **Next Objective:** Consolidate summary insights (Sell, Buy, Same, Unmatched) into the `AZDetailedComparisonTable`.
+  - Remove the four expandable summary sections from `AZPricingReport.vue`.
+  - Enhance the filtering/sorting capabilities of `AZDetailedComparisonTable.vue` to allow users to view the equivalent information directly within the table.
+- **Goals:**
+  - **Data Source:** Ensure the component correctly fetches and displays data from the fixed `az_comparison_results` table stored in `az_pricing_comparison_db` (using `azStore.getDetailedComparisonTableName`).
+  - **UI Structure:** Review and potentially update the UI layout, including the summary sections (Sell, Buy, Same, Unmatched) and the "Detailed Comparison" table. **-> Update: Plan to remove summary sections.**
+  - **Functionality:** Verify or implement loading states, search, sorting, and pagination (if needed) for the detailed comparison table. **-> Update: Focus on filtering/sorting to replace summary sections.**
+  - **Summary Sections:** Confirm the logic generating the summary sections (Sell, Buy, etc.) correctly uses the data from the `az_comparison_results` table or the summary `AzPricingReport` object in the store. **-> Update: Plan to remove summary sections; ensure table filters provide equivalent insights.**
+
+---
+
+**(Old Prompts/Plans Removed)**
