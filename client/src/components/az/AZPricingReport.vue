@@ -533,165 +533,9 @@
     </div>
 
     <!-- New Detailed Comparison Section -->
-    <div v-if="azStore.getDetailedComparisonTableName" class="bg-gray-900/50">
-      <div
-        @click="toggleSection('detailed')"
-        class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
-      >
-        <div class="flex justify-between items-center">
-          <span class="font-medium text-lg">Detailed Comparison</span>
-          <div class="flex items-center space-x-3">
-            <span v-if="!isLoadingDetailed" class="text-accent">
-              {{ filteredDetailedData.length }} entries
-            </span>
-            <span v-else class="text-gray-400">Loading...</span>
-            <ChevronDownIcon
-              :class="{ 'transform rotate-180': expandedSections.detailed }"
-              class="w-5 h-5 transition-transform text-gray-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Detailed Content -->
-      <div v-if="expandedSections.detailed" class="border-t border-gray-700/50 p-6">
-        <!-- Loading Indicator -->
-        <div v-if="isLoadingDetailed" class="text-center py-10">
-          <p class="text-gray-400">Loading detailed comparison data...</p>
-          <!-- Optional: Add a spinner -->
-        </div>
-
-        <!-- Data Table (Show when not loading) -->
-        <div v-else>
-          <!-- Search/Sort Controls -->
-          <div class="mb-4 bg-accent/5 p-4 rounded-lg border border-gray-700 shadow-inner">
-            <div class="flex items-center gap-8">
-              <div class="w-1/3">
-                <label class="block text-sm text-gray-300 mb-1">Search</label>
-                <input
-                  v-model="detailedSearchQuery"
-                  type="text"
-                  placeholder="Search dial code or destination..."
-                  class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
-                />
-              </div>
-              <div class="w-1/3">
-                <label class="block text-sm text-gray-300 mb-1">Sort By</label>
-                <div class="relative">
-                  <select
-                    v-model="detailedSortBy"
-                    class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2 appearance-none cursor-pointer pr-10"
-                  >
-                    <option value="code-asc">Dial Code (Asc)</option>
-                    <option value="code-desc">Dial Code (Desc)</option>
-                    <option value="dest1-asc">Dest 1 (A-Z)</option>
-                    <option value="dest1-desc">Dest 1 (Z-A)</option>
-                    <option value="dest2-asc">Dest 2 (A-Z)</option>
-                    <option value="dest2-desc">Dest 2 (Z-A)</option>
-                    <option value="rate1-asc">Rate 1 (Low-High)</option>
-                    <option value="rate1-desc">Rate 1 (High-Low)</option>
-                    <option value="rate2-asc">Rate 2 (Low-High)</option>
-                    <option value="rate2-desc">Rate 2 (High-Low)</option>
-                    <option value="diff-asc">Difference (Low-High)</option>
-                    <option value="diff-desc">Difference (High-Low)</option>
-                  </select>
-                  <div
-                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400"
-                  >
-                    <ChevronDownIcon class="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Table -->
-          <div class="overflow-x-auto bg-gray-900/80 rounded-lg">
-            <table class="min-w-full divide-y divide-gray-700">
-              <thead class="bg-gray-800/50">
-                <tr>
-                  <th
-                    scope="col"
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                  >
-                    Dial Code
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                  >
-                    Destination 1
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                  >
-                    Rate 1
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                  >
-                    Destination 2
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                  >
-                    Rate 2
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                  >
-                    Difference
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-gray-900 divide-y divide-gray-800">
-                <tr v-if="filteredDetailedData.length === 0">
-                  <td colspan="6" class="px-4 py-4 text-center text-sm text-gray-400">
-                    No matching detailed data found.
-                  </td>
-                </tr>
-                <tr
-                  v-for="item in filteredDetailedData"
-                  :key="item.dialCode"
-                  class="hover:bg-gray-800/50"
-                >
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300 font-mono">
-                    {{ item.dialCode }}
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                    {{ item.destName1 }}
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300 font-mono">
-                    {{ formatRate(item.rate1) }}
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                    {{ item.destName2 }}
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300 font-mono">
-                    {{ formatRate(item.rate2) }}
-                  </td>
-                  <td
-                    :class="[
-                      'px-4 py-3 whitespace-nowrap text-sm font-mono',
-                      item.diff > 0
-                        ? 'text-red-500'
-                        : item.diff < 0
-                        ? 'text-green-500'
-                        : 'text-gray-400',
-                    ]"
-                  >
-                    {{ formatRate(item.diff) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+    <div class="bg-gray-800 p-6 rounded-lg">
+      <h3 class="text-lg text-accent mb-3 font-medium">Detailed Comparison</h3>
+      <AZDetailedComparisonTable />
     </div>
   </div>
 
@@ -703,25 +547,16 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
-import type { AzPricingReport, AZDetailedComparisonEntry } from '@/types/domains/az-types';
+import type { AzPricingReport } from '@/types/domains/az-types';
 import { useAzStore } from '@/stores/az-store';
 import { ReportTypes } from '@/types';
-import { AZService } from '@/services/az.service';
+import AZDetailedComparisonTable from './AZDetailedComparisonTable.vue';
 
 const props = defineProps<{
   report: AzPricingReport | null;
 }>();
 
 const azStore = useAzStore();
-const azService = new AZService();
-
-// State for detailed comparison data
-const detailedComparisonData = ref<AZDetailedComparisonEntry[]>([]);
-const isLoadingDetailed = ref(false);
-
-// State for detailed table filtering/sorting
-const detailedSearchQuery = ref('');
-const detailedSortBy = ref('code-asc'); // Default sort
 
 const expandedRows = ref<Set<string>>(new Set());
 const expandedSections = reactive({
@@ -890,81 +725,6 @@ const filteredUnmatchedCodes = computed(() => {
     }
   });
 });
-
-// Computed property for filtered DETAILED data
-const filteredDetailedData = computed(() => {
-  let filtered = detailedComparisonData.value;
-
-  // Filter by search query
-  if (detailedSearchQuery.value) {
-    const query = detailedSearchQuery.value.toLowerCase();
-    filtered = filtered.filter(
-      (item) =>
-        item.dialCode.toLowerCase().includes(query) ||
-        item.destName1.toLowerCase().includes(query) ||
-        item.destName2.toLowerCase().includes(query)
-    );
-  }
-
-  // Sort based on selected option
-  return [...filtered].sort((a, b) => {
-    switch (detailedSortBy.value) {
-      case 'code-asc':
-        return a.dialCode.localeCompare(b.dialCode);
-      case 'code-desc':
-        return b.dialCode.localeCompare(a.dialCode);
-      case 'dest1-asc':
-        return a.destName1.localeCompare(b.destName1);
-      case 'dest1-desc':
-        return b.destName1.localeCompare(a.destName1);
-      case 'dest2-asc':
-        return a.destName2.localeCompare(b.destName2);
-      case 'dest2-desc':
-        return b.destName2.localeCompare(a.destName2);
-      case 'rate1-asc':
-        return a.rate1 - b.rate1;
-      case 'rate1-desc':
-        return b.rate1 - a.rate1;
-      case 'rate2-asc':
-        return a.rate2 - b.rate2;
-      case 'rate2-desc':
-        return b.rate2 - a.rate2;
-      case 'diff-asc':
-        return a.diff - b.diff;
-      case 'diff-desc':
-        return b.diff - a.diff;
-      default:
-        return 0;
-    }
-  });
-});
-
-// Function to fetch detailed data
-async function fetchDetailedData(tableName: string | null) {
-  if (!tableName) {
-    detailedComparisonData.value = [];
-    return;
-  }
-  isLoadingDetailed.value = true;
-  try {
-    detailedComparisonData.value = await azService.getDetailedComparisonData(tableName);
-  } catch (error) {
-    console.error('Error fetching detailed comparison data:', error);
-    detailedComparisonData.value = []; // Clear data on error
-    // Optionally show an error message to the user
-  } finally {
-    isLoadingDetailed.value = false;
-  }
-}
-
-// Watch for changes in the detailed comparison table name from the store
-watch(
-  () => azStore.getDetailedComparisonTableName,
-  (newTableName) => {
-    fetchDetailedData(newTableName);
-  },
-  { immediate: true }
-); // immediate: true to run on component mount
 
 function toggleSection(section: keyof typeof expandedSections) {
   if (expandedSections[section]) {

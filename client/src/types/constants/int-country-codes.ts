@@ -30,6 +30,12 @@ const rawData = [
     population: '29,121,286',
   },
   {
+    country: 'Abkhazia',
+    cc: '7840, 7940',
+    'ISO CODE': 'GE-AB / ABK',
+    population: '245,000',
+  },
+  {
     country: 'Albania',
     cc: 355,
     'ISO CODE': 'AL / ALB',
@@ -68,6 +74,30 @@ const rawData = [
   {
     country: 'Antarctica',
     cc: 672,
+    'ISO CODE': 'AQ / ATA',
+    population: 0,
+  },
+  {
+    country: 'A.E.T. ANTARCTICA CASEY BASE',
+    cc: 67212,
+    'ISO CODE': 'AQ / ATA',
+    population: 0,
+  },
+  {
+    country: 'A.E.T. ANTARCTICA DAVIS BASE',
+    cc: 67210,
+    'ISO CODE': 'AQ / ATA',
+    population: 0,
+  },
+  {
+    country: 'A.E.T. ANTARCTICA MACQUARIE BASE',
+    cc: 67213,
+    'ISO CODE': 'AQ / ATA',
+    population: 0,
+  },
+  {
+    country: 'A.E.T. ANTARCTICA MAWSON BASE',
+    cc: 67211,
     'ISO CODE': 'AQ / ATA',
     population: 0,
   },
@@ -1462,6 +1492,12 @@ const rawData = [
     cc: 263,
     'ISO CODE': 'ZW / ZWE',
     population: '11,651,858',
+  },
+  {
+    country: 'Norfolk Island',
+    cc: 6723,
+    'ISO CODE': 'NF / NFK',
+    population: '1,748',
   },
 ];
 

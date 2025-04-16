@@ -3,6 +3,7 @@ import {
   type InvalidAzRow,
   type AzCodeReport,
   type AZDetailedComparisonEntry,
+  type AZDetailedComparisonFilters,
   type AZEnhancedCodeReport,
   type AZReportsInput,
   type AzPricingReport,
@@ -394,29 +395,72 @@ export class AZService {
         this.store.setReports(reports.pricingReport, reports.codeReport);
       }
 
-      // 4. Handle storage of detailedComparisonData (Section 5 logic goes here)
+      // 4. Handle storage of detailedComparisonData
       const detailedData = reports.detailedComparisonData;
       console.log(`[AZService] Received ${detailedData.length} detailed comparison entries.`);
-      // TODO: Store detailedData in az_pricing_comparison_db
-      // TODO: Update azStore.setDetailedComparisonTableName
+
+      // --- Store detailed data directly into the FIXED table ---
+      const fixedTableName = 'az_comparison_results';
 
       if (detailedData && detailedData.length > 0) {
-        const { storeInDexieDB } = useDexieDB();
-        const derivedTableName = `${tableName1}_vs_${tableName2}`;
+        // Get the specific DB instance directly
+        const { getDB } = useDexieDB();
 
         try {
-          await storeInDexieDB(detailedData, DBName.AZ_PRICING_COMPARISON, derivedTableName, {
-            replaceExisting: true,
-          });
-          console.log(
-            `[AZService] Stored ${detailedData.length} detailed comparison records in Dexie table: ${derivedTableName}`
-          );
+          const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
 
-          // Update the store with the name of the table containing detailed results
-          this.store.setDetailedComparisonTableName(derivedTableName);
+          // Ensure DB is open
+          if (!comparisonDb.isOpen()) {
+            console.warn(`[AZService] Comparison DB ${comparisonDb.name} was closed. Reopening...`);
+            await comparisonDb.open();
+          }
+
+          // Define expected schema (matching DBSchemas)
+          const schemaDefinition = {
+            [fixedTableName]: '++id, &dialCode, rate1, rate2, diff, destName1, destName2',
+          };
+
+          // Check if table exists and upgrade schema if necessary (mirroring us.service)
+          // This shouldn't be strictly necessary if DBSchemas worked perfectly on init, but safer
+          if (!comparisonDb.tables.some((t) => t.name === fixedTableName)) {
+            console.warn(
+              `[AZService] Table ${fixedTableName} not found in ${comparisonDb.name}. Attempting schema upgrade.`
+            );
+            const currentVersion = comparisonDb.verno;
+            comparisonDb.close();
+            const newVersion = currentVersion + 1;
+            console.log(
+              `[AZService] Upgrading ${comparisonDb.name} DB to v${newVersion} for table ${fixedTableName}`
+            );
+            comparisonDb.version(newVersion).stores(schemaDefinition);
+            await comparisonDb.open(); // Re-open DB with new schema
+            console.log(`[AZService] DB ${comparisonDb.name} opened with new schema.`);
+          } else {
+            console.log(
+              `[AZService] Table ${fixedTableName} already exists in ${comparisonDb.name}.`
+            );
+          }
+
+          // Get table reference and perform operations
+          const comparisonTable = comparisonDb.table<AZDetailedComparisonEntry>(fixedTableName);
+
+          console.log(
+            `[AZService] Clearing existing data in ${comparisonDb.name}/${fixedTableName}...`
+          );
+          await comparisonTable.clear(); // Clear existing data first
+
+          console.log(
+            `[AZService] Storing ${detailedData.length} detailed comparison records in ${comparisonDb.name}/${fixedTableName}...`
+          );
+          await comparisonTable.bulkPut(detailedData); // Store new data
+
+          console.log(`[AZService] Successfully stored ${detailedData.length} comparison records.`);
+
+          // Update the store with the FIXED table name
+          this.store.setDetailedComparisonTableName(fixedTableName);
         } catch (dbError) {
           console.error(
-            `[AZService] Failed to store detailed comparison data in table ${derivedTableName}:`,
+            `[AZService] Failed to store detailed comparison data directly in table ${fixedTableName}:`,
             dbError
           );
           // Optionally clear the table name in the store if saving failed
@@ -463,6 +507,74 @@ export class AZService {
     } catch (error) {
       console.error(
         `[AZService] Failed to get detailed comparison data from table ${detailedComparisonTableName}:`,
+        error
+      );
+      throw error; // Re-throw for the caller to handle
+    }
+  }
+
+  /**
+   * Retrieves paged and filtered detailed comparison data from the comparison DB.
+   */
+  async getPagedDetailedComparisonData(
+    tableName: string,
+    limit: number,
+    offset: number,
+    filters?: AZDetailedComparisonFilters
+  ): Promise<AZDetailedComparisonEntry[]> {
+    if (!tableName) {
+      console.warn('[AZService] getPagedDetailedComparisonData called with no table name.');
+      return [];
+    }
+    console.log(
+      `[AZService] Getting paged data (limit: ${limit}, offset: ${offset}) from ${tableName} with filters:`,
+      filters
+    );
+
+    try {
+      const { getDB } = useDexieDB();
+      const db = await getDB(DBName.AZ_PRICING_COMPARISON);
+
+      if (!db.hasStore(tableName)) {
+        console.warn(`[AZService] Table ${tableName} not found in ${DBName.AZ_PRICING_COMPARISON}`);
+        return [];
+      }
+
+      let query = db.table<AZDetailedComparisonEntry>(tableName);
+
+      // Apply filters using Dexie's .filter() for more complex logic
+      // Note: Dexie's .where() is faster but less flexible for combined filters.
+      const filterFunctions: Array<(record: AZDetailedComparisonEntry) => boolean> = [];
+
+      if (filters?.search) {
+        const lowerSearch = filters.search.toLowerCase();
+        filterFunctions.push(
+          (record) =>
+            record.dialCode.toLowerCase().includes(lowerSearch) ||
+            (record.destName1 && record.destName1.toLowerCase().includes(lowerSearch)) ||
+            (record.destName2 && record.destName2.toLowerCase().includes(lowerSearch))
+        );
+      }
+
+      if (filters?.cheaper && filters.cheaper !== '') {
+        filterFunctions.push((record) => record.cheaperFile === filters.cheaper);
+      }
+
+      // Chain filter, offset, and limit
+      let collection;
+      if (filterFunctions.length > 0) {
+        collection = query.filter((record) => filterFunctions.every((fn) => fn(record)));
+      } else {
+        collection = query; // No filters, apply pagination to the whole table
+      }
+
+      const data = await collection.offset(offset).limit(limit).toArray();
+
+      console.log(`[AZService] Retrieved ${data.length} paged records from ${tableName}`);
+      return data;
+    } catch (error) {
+      console.error(
+        `[AZService] Failed to get paged detailed comparison data from table ${tableName}:`,
         error
       );
       throw error; // Re-throw for the caller to handle
