@@ -16,20 +16,35 @@
         />
       </div>
 
-      <!-- Example Cheaper Rate Filter -->
+      <!-- Cheaper Rate Filter -->
       <div>
         <label for="cheaper-filter" class="block text-sm font-medium text-gray-400 mb-1"
-          >Cheaper Rate</label
+          >Rate Comparison</label
         >
         <select
           id="cheaper-filter"
           v-model="selectedCheaper"
           class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
         >
-          <option value="">All</option>
-          <option value="file1">File 1 Cheaper</option>
-          <option value="file2">File 2 Cheaper</option>
-          <option value="same">Same Rate</option>
+          <option v-for="option in rateComparisonOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Match Status Filter -->
+      <div>
+        <label for="match-status-filter" class="block text-sm font-medium text-gray-400 mb-1"
+          >Match Status</label
+        >
+        <select
+          id="match-status-filter"
+          v-model="selectedMatchStatus"
+          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+        >
+          <option v-for="option in matchStatusOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
         </select>
       </div>
     </div>
@@ -53,6 +68,7 @@
             <tr>
               <!-- Headers based on AZDetailedComparisonEntry -->
               <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Dial Code</th>
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Match Status</th>
               <th class="px-4 py-2 text-left text-gray-300 min-w-[250px]">
                 Dest Name&nbsp;
                 <span
@@ -75,7 +91,7 @@
                 >
               </th>
               <th class="px-4 py-2 text-left text-gray-300 min-w-[200px]">
-                Rate&nbsp;  
+                Rate&nbsp;
                 <span
                   class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md"
                   >{{ fileName2 }}</span
@@ -89,23 +105,48 @@
           <tbody class="divide-y divide-gray-800">
             <tr
               v-for="record in comparisonData"
-              :key="record.dialCode"
+              :key="record.id || record.dialCode"
               class="hover:bg-gray-700/50"
             >
               <!-- Populate table cells -->
               <td class="px-4 py-2 text-gray-400">{{ record.dialCode }}</td>
-              <td class="px-4 py-2 text-gray-400">{{ record.destName1 }}</td>
-              <td class="px-4 py-2 text-gray-400">{{ record.destName2 }}</td>
-              <td class="px-4 py-2 text-white">{{ record.rate1?.toFixed(6) }}</td>
-              <td class="px-4 py-2 text-white">{{ record.rate2?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-gray-300">
+                <span
+                  v-if="record.matchStatus === 'file1_only'"
+                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                >
+                  {{ formatMatchStatus(record.matchStatus) }}
+                </span>
+                <span
+                  v-else-if="record.matchStatus === 'file2_only'"
+                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                >
+                  {{ formatMatchStatus(record.matchStatus) }}
+                </span>
+                <span
+                  v-else-if="record.matchStatus === 'both'"
+                  class="text-orange-300 bg-orange-900/50 border border-orange-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                >
+                  {{ formatMatchStatus(record.matchStatus) }}
+                </span>
+                <span v-else class="text-gray-500">
+                  {{ formatMatchStatus(record.matchStatus) }}
+                </span>
+              </td>
+              <td class="px-4 py-2 text-gray-400">{{ record.destName1 ?? 'N/A' }}</td>
+              <td class="px-4 py-2 text-gray-400">{{ record.destName2 ?? 'N/A' }}</td>
+              <td class="px-4 py-2 text-white">{{ record.rate1?.toFixed(6) ?? 'N/A' }}</td>
+              <td class="px-4 py-2 text-white">{{ record.rate2?.toFixed(6) ?? 'N/A' }}</td>
               <td class="px-4 py-2" :class="getDiffClass(record.diff)">
-                {{ record.diff?.toFixed(6) }}
+                {{ record.diff?.toFixed(6) ?? 'N/A' }}
               </td>
               <td class="px-4 py-2" :class="getDiffPercentClass(record.diffPercent)">
-                {{ record.diffPercent?.toFixed(2) }}%
+                {{ record.diffPercent ? record.diffPercent.toFixed(2) + '%' : 'N/A' }}
               </td>
-              <td class="px-4 py-2" :class="getCheaperClass(record.cheaperFile)">
-                {{ record.cheaperFile }}
+              <td class="px-4 py-2">
+                <span :class="getCheaperClass(record.cheaperFile)">
+                  {{ formatCheaperFile(record.cheaperFile) }}
+                </span>
               </td>
             </tr>
           </tbody>
@@ -146,6 +187,7 @@ const error = ref<string | null>(null);
 // Filter State
 const searchTerm = ref<string>('');
 const selectedCheaper = ref<'' | 'file1' | 'file2' | 'same'>('');
+const selectedMatchStatus = ref<'' | 'both' | 'file1_only' | 'file2_only'>('');
 
 // Pagination State
 const offset = ref<number>(0);
@@ -167,7 +209,48 @@ const fileName2 = computed(() => {
   const names = azStore.getFileNames;
   return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
 });
-// --- End Filenames ---
+
+// --- Dynamic Filter Options ---
+const rateComparisonOptions = computed(() => [
+  { value: '', label: 'All Comparisons' },
+  { value: 'file1', label: `${fileName1.value} Cheaper` },
+  { value: 'file2', label: `${fileName2.value} Cheaper` },
+  { value: 'same', label: 'Same Rate' },
+]);
+
+const matchStatusOptions = computed(() => [
+  { value: '', label: 'All Statuses' },
+  { value: 'both', label: 'Matched in Both' },
+  { value: 'file1_only', label: `${fileName1.value} Only` },
+  { value: 'file2_only', label: `${fileName2.value} Only` },
+]);
+
+// --- Helper function to format match status (Updated Again) ---
+function formatMatchStatus(status: 'both' | 'file1_only' | 'file2_only'): string {
+  switch (status) {
+    case 'both':
+      return 'BOTH';
+    case 'file1_only':
+      return fileName1.value;
+    case 'file2_only':
+      return fileName2.value;
+    default:
+      return 'Unknown';
+  }
+}
+
+// --- Helper function to format Cheaper File (New) ---
+function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
+  if (cheaper === 'file1') {
+    return fileName1.value;
+  } else if (cheaper === 'file2') {
+    return fileName2.value;
+  } else if (cheaper === 'same') {
+    return 'Same Rate';
+  } else {
+    return 'N/A'; // Handle undefined/null case
+  }
+}
 
 async function fetchData(tableName: string | null, reset = false) {
   if (!tableName || isLoadingMore.value || (!hasMoreData.value && !reset)) {
@@ -185,6 +268,7 @@ async function fetchData(tableName: string | null, reset = false) {
     const filters: AZDetailedComparisonFilters = {};
     if (searchTerm.value) filters.search = searchTerm.value;
     if (selectedCheaper.value) filters.cheaper = selectedCheaper.value;
+    if (selectedMatchStatus.value) filters.matchStatus = selectedMatchStatus.value;
 
     const newData = await azService.getPagedDetailedComparisonData(
       tableName,
@@ -240,7 +324,7 @@ watch(
   { immediate: true }
 );
 
-watch([searchTerm, selectedCheaper], () => {
+watch([searchTerm, selectedCheaper, selectedMatchStatus], () => {
   resetAndFetchData();
 });
 
@@ -276,9 +360,21 @@ function getDiffPercentClass(value: number | null | undefined): string {
   return value > 0 ? 'text-red-400' : 'text-green-400';
 }
 
-function getCheaperClass(cheaper: 'file1' | 'file2' | 'same' | null | undefined): string {
-  if (cheaper === null || cheaper === undefined || cheaper === 'same') return 'text-gray-400';
-  return cheaper === 'file1' ? 'text-green-400' : 'text-red-400';
+function getCheaperClass(cheaper?: 'file1' | 'file2' | 'same'): string {
+  const baseStyle = 'font-medium px-2 py-0.5 rounded-md text-xs'; // Base button style
+  if (cheaper === 'file1') {
+    // File 1 is cheaper - Green style
+    return `${baseStyle} text-green-300 bg-green-900/50 border border-green-700`;
+  } else if (cheaper === 'file2') {
+    // File 2 is cheaper - Blue style (matching header)
+    return `${baseStyle} text-blue-300 bg-blue-900/50 border border-blue-700`;
+  } else if (cheaper === 'same') {
+    // Same Rate - Neutral/Gray style (similar to orange but gray)
+    return `${baseStyle} text-gray-300 bg-gray-700/50 border border-gray-600`;
+  } else {
+    // N/A or undefined - Plain text style
+    return 'text-gray-500';
+  }
 }
 </script>
 
