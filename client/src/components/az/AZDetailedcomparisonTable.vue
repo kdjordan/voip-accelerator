@@ -54,28 +54,28 @@
               <!-- Headers based on AZDetailedComparisonEntry -->
               <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Dial Code</th>
               <th class="px-4 py-2 text-left text-gray-300 min-w-[250px]">
-                Dest Name
+                Dest Name&nbsp;
                 <span
                   class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md"
                   >{{ fileName1 }}</span
                 >
               </th>
               <th class="px-4 py-2 text-left text-gray-300 min-w-[250px]">
-                Dest Name
+                Dest Name&nbsp;
                 <span
                   class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md"
                   >{{ fileName2 }}</span
                 >
               </th>
               <th class="px-4 py-2 text-left text-gray-300 min-w-[200px]">
-                Rate
+                Rate&nbsp;
                 <span
                   class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md"
                   >{{ fileName1 }}</span
                 >
               </th>
               <th class="px-4 py-2 text-left text-gray-300 min-w-[200px]">
-                Rate
+                Rate&nbsp;  
                 <span
                   class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md"
                   >{{ fileName2 }}</span
