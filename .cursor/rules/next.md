@@ -195,14 +195,48 @@ Based on user feedback, we need to refine the `AZCountryBreakdown` interface in 
   - **Added `AZService::getPagedDetailedComparisonData`:** Implemented the necessary service method for pagination and filtering.
   - **Dynamic Headers:** Updated table headers in `AZDetailedComparisonTable.vue` to display actual filenames retrieved from `azStore`.
   - **Styled Headers:** Removed `.csv` extensions and applied theme colors (green/blue), padding, borders, and rounding to filenames in headers for a clearer, button-like appearance.
-- **Next Objective:** Consolidate summary insights (Sell, Buy, Same, Unmatched) into the `AZDetailedComparisonTable`.
-  - Remove the four expandable summary sections from `AZPricingReport.vue`.
-  - Enhance the filtering/sorting capabilities of `AZDetailedComparisonTable.vue` to allow users to view the equivalent information directly within the table.
-- **Goals:**
-  - **Data Source:** Ensure the component correctly fetches and displays data from the fixed `az_comparison_results` table stored in `az_pricing_comparison_db` (using `azStore.getDetailedComparisonTableName`).
-  - **UI Structure:** Review and potentially update the UI layout, including the summary sections (Sell, Buy, Same, Unmatched) and the "Detailed Comparison" table. **-> Update: Plan to remove summary sections.**
-  - **Functionality:** Verify or implement loading states, search, sorting, and pagination (if needed) for the detailed comparison table. **-> Update: Focus on filtering/sorting to replace summary sections.**
-  - **Summary Sections:** Confirm the logic generating the summary sections (Sell, Buy, etc.) correctly uses the data from the `az_comparison_results` table or the summary `AzPricingReport` object in the store. **-> Update: Plan to remove summary sections; ensure table filters provide equivalent insights.**
+- **Next Objective: Consolidate Summary Insights & Integrate Unmatched Codes**
+
+**Goal:** Remove the separate expandable summary sections (Sell, Buy, Same, Unmatched) from `AZPricingReport.vue` and modify the `AZDetailedComparisonTable.vue` and its underlying data generation process to display all relevant information (including codes present in only one file) within a single, filterable table.
+
+**Implementation Steps:**
+
+**Phase 1: Data Structure & Generation**
+
+1.  **Update Type `AZDetailedComparisonEntry` (`az-types.ts`):**
+    - Make `destName1`, `rate1`, `destName2`, `rate2` optional (`?`) to accommodate entries present in only one file.
+    - Consider adding a new field, e.g., `matchStatus: 'both' | 'file1_only' | 'file2_only'`, to explicitly track if the code was matched in both files or only one.
+2.  **Refactor Worker (`az-comparison.worker.ts`):**
+    - Modify the core comparison logic to identify codes present in only File 1 or only File 2.
+    - Generate `AZDetailedComparisonEntry` objects for these unmatched codes, populating the relevant file's data and leaving the other file's fields empty (or setting them to `null`/`undefined`).
+    - Populate the new `matchStatus` field accordingly.
+    - Ensure the worker correctly posts back the combined list containing matched and unmatched entries.
+3.  **Update DB Schema (`DBSchemas` in `app-types.ts` & Service):**
+    - Adjust the Dexie schema definition for the `az_comparison_results` table in `DBSchemas` to reflect the optional fields (if Dexie syntax requires it, though usually `++id` suffices) and potentially add an index for the new `matchStatus` field if filtering by it will be common.
+    - Review `AZService::makeAzCombinedReport` to ensure it handles storing the updated `AZDetailedComparisonEntry` structure correctly (it should likely work as is with `bulkPut`, but worth a check).
+
+**Phase 2: UI Adaptation**
+
+4.  **Enhance Table Filters (`AZDetailedComparisonTable.vue`):**
+    - Modify or add filters to allow users to view specific scenarios:
+      - **Sell:** `cheaperFile === 'file2'` (already exists).
+      - **Buy:** `cheaperFile === 'file1'` (already exists).
+      - **Same:** `cheaperFile === 'same'` (already exists).
+      - **Unmatched (File 1 only):** New filter option, possibly using the `matchStatus` field (`matchStatus === 'file1_only'`).
+      - **Unmatched (File 2 only):** New filter option, possibly using the `matchStatus` field (`matchStatus === 'file2_only'`).
+    - Decide on the best UI for these filters (e.g., modify the existing 'Cheaper Rate' dropdown, add a new 'Match Status' dropdown).
+5.  **Update Table Display (`AZDetailedComparisonTable.vue`):**
+    - Ensure the table correctly displays rows where one file's data is missing (e.g., showing 'N/A' or an empty cell instead of `undefined`).
+    - Consider adding a visual indicator (maybe a new column or styling) for the `matchStatus`.
+6.  **Remove Summary Sections (`AZPricingReport.vue`):**
+    - Delete the four `<div>` elements corresponding to the Sell, Buy, Same, and Unmatched expandable sections.
+    - Remove any associated computed properties or logic used solely by these sections.
+
+**Phase 3: Testing**
+
+7.  **Verify Data:** Ensure the comparison worker generates the correct combined data, including unmatched codes with appropriate null/undefined fields and the correct `matchStatus`.
+8.  **Test Filters:** Thoroughly test all filter combinations in the UI to confirm they show the expected subsets of data (Sell, Buy, Same, Unmatched File 1, Unmatched File 2, All).
+9.  **Test Display:** Check the table rendering for rows with missing data.
 
 ---
 

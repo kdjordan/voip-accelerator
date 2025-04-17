@@ -546,23 +546,32 @@ export class AZService {
       // Note: Dexie's .where() is faster but less flexible for combined filters.
       const filterFunctions: Array<(record: AZDetailedComparisonEntry) => boolean> = [];
 
+      // Search filter (checks dialCode, destName1, destName2)
       if (filters?.search) {
         const lowerSearch = filters.search.toLowerCase();
         filterFunctions.push(
           (record) =>
             record.dialCode.toLowerCase().includes(lowerSearch) ||
-            (record.destName1 && record.destName1.toLowerCase().includes(lowerSearch)) ||
-            (record.destName2 && record.destName2.toLowerCase().includes(lowerSearch))
+            record.destName1?.toLowerCase().includes(lowerSearch) || // Add null check
+            record.destName2?.toLowerCase().includes(lowerSearch) // Add null check
         );
       }
 
+      // Cheaper file filter
       if (filters?.cheaper && filters.cheaper !== '') {
+        // Ensure cheaperFile exists for comparison if needed
         filterFunctions.push((record) => record.cheaperFile === filters.cheaper);
+      }
+
+      // Match Status filter
+      if (filters?.matchStatus && filters.matchStatus !== '') {
+        filterFunctions.push((record) => record.matchStatus === filters.matchStatus);
       }
 
       // Chain filter, offset, and limit
       let collection;
       if (filterFunctions.length > 0) {
+        // Apply all collected filter functions
         collection = query.filter((record) => filterFunctions.every((fn) => fn(record)));
       } else {
         collection = query; // No filters, apply pagination to the whole table

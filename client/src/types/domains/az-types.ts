@@ -199,12 +199,16 @@ export interface AZPreviewModalEmits {
  * stored in the az_pricing_comparison_db.
  */
 export interface AZDetailedComparisonEntry {
+  id?: number; // Optional ID, usually added by Dexie
   dialCode: string; // The common dial code
-  rate1: number; // Rate from the first file
-  rate2: number; // Rate from the second file
-  diff: number; // Difference (rate2 - rate1)
-  destName1: string; // Destination name from the first file
-  destName2: string; // Destination name from the second file
+  rate1?: number; // Rate from the first file (optional)
+  rate2?: number; // Rate from the second file (optional)
+  diff?: number; // Difference (rate2 - rate1), optional if rates aren't comparable
+  destName1?: string; // Destination name from the first file (optional)
+  destName2?: string; // Destination name from the second file (optional)
+  matchStatus: 'both' | 'file1_only' | 'file2_only'; // Indicates if the code was in both files or only one
+  cheaperFile?: 'file1' | 'file2' | 'same'; // Which file has the lower rate (only when status is 'both')
+  diffPercent?: number; // Percentage difference (only when status is 'both')
 }
 
 /**

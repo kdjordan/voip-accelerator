@@ -14,6 +14,8 @@ self.addEventListener('message', (event) => {
   const { pricingReport, codeReport, detailedComparisonData } = generateReports(event.data);
 
   // Send the generated reports back to the main thread
+  // NOTE: We might not need pricingReport anymore if all data is in detailedComparisonData + codeReport
+  // For now, keep sending it but its nonMatchingCodes will be empty.
   self.postMessage({ pricingReport, codeReport, detailedComparisonData });
 });
 
@@ -34,173 +36,152 @@ function generateReports(input: AZReportsInput): {
     higherRatesForFile1: [],
     higherRatesForFile2: [],
     sameRates: [],
-    nonMatchingCodes: [],
-  };
-
-  const codeReport: AzCodeReport = {
-    file1: {
-      fileName: fileName1,
-      totalCodes: file1Data.length,
-      totalDestinations: new Set(file1Data.map((d) => d.destName)).size,
-      uniqueDestinationsPercentage: 0,
-    },
-    file2: {
-      fileName: fileName2,
-      totalCodes: file2Data.length,
-      totalDestinations: new Set(file2Data.map((d) => d.destName)).size,
-      uniqueDestinationsPercentage: 0,
-    },
-    matchedCodes: 0,
-    nonMatchedCodes: 0,
-    matchedCodesPercentage: 0,
-    nonMatchedCodesPercentage: 0,
+    nonMatchingCodes: [], // This will remain empty now
   };
 
   // Initialize detailed comparison data array
   const detailedComparisonData: AZDetailedComparisonEntry[] = [];
 
-  const dialCodeMapFile1 = new Map<string, { destName: string; rate: number }>();
-  const dialCodeMapFile2 = new Map<string, { destName: string; rate: number }>();
+  // --- Refactored Logic Start ---
 
+  // Create maps for quick lookup
+  const dialCodeMapFile1 = new Map<string, { destName: string; rate: number }>();
   file1Data.forEach((entry) => {
     dialCodeMapFile1.set(entry.dialCode, { destName: entry.destName, rate: Number(entry.rate) });
   });
 
+  const dialCodeMapFile2 = new Map<string, { destName: string; rate: number }>();
   file2Data.forEach((entry) => {
     dialCodeMapFile2.set(entry.dialCode, { destName: entry.destName, rate: Number(entry.rate) });
   });
 
-  // Calculate matched and non-matched codes
-  const file1Codes = new Set(file1Data.map((entry) => entry.dialCode));
-  const file2Codes = new Set(file2Data.map((entry) => entry.dialCode));
+  // Get all unique dial codes from both files
+  const allDialCodes = new Set([...dialCodeMapFile1.keys(), ...dialCodeMapFile2.keys()]);
 
-  for (const code of file1Codes) {
-    if (file2Codes.has(code)) {
-      codeReport.matchedCodes++;
-    } else {
-      codeReport.nonMatchedCodes++;
-    }
-  }
+  let matchedCodesCount = 0;
+  let nonMatchedCodesCount = 0; // Count of codes present in only one file
 
-  // Check for codes in file2 that are not in file1
-  for (const code of file2Codes) {
-    if (!file1Codes.has(code)) {
-      codeReport.nonMatchedCodes++;
-    }
-  }
+  for (const dialCode of allDialCodes) {
+    const entry1 = dialCodeMapFile1.get(dialCode);
+    const entry2 = dialCodeMapFile2.get(dialCode);
 
-  dialCodeMapFile1.forEach((value1, key1) => {
-    if (dialCodeMapFile2.has(key1)) {
-      const value2 = dialCodeMapFile2.get(key1)!;
-      const percentageDifference = calculatePercentageDifference(value1.rate, value2.rate);
-
-      // --- Add entry to detailedComparisonData ---
-      detailedComparisonData.push({
-        dialCode: key1,
-        rate1: value1.rate,
-        rate2: value2.rate,
-        diff: value1.rate - value2.rate,
-        destName1: value1.destName,
-        destName2: value2.destName,
-      });
-      // --- End detailed data entry ---
-
-      if (value1.rate > value2.rate) {
-        pricingReport.higherRatesForFile1.push({
-          dialCode: `${key1}`,
-          destName: value1.destName,
-          rateFile1: value1.rate,
-          rateFile2: value2.rate,
-          percentageDifference: percentageDifference,
-        });
-      } else if (value1.rate < value2.rate) {
-        pricingReport.higherRatesForFile2.push({
-          dialCode: `${key1}`,
-          destName: value1.destName,
-          rateFile1: value1.rate,
-          rateFile2: value2.rate,
-          percentageDifference: percentageDifference,
-        });
-      } else if (value1.rate === value2.rate) {
-        pricingReport.sameRates.push({
-          dialCode: `${key1}`,
-          destName: value1.destName,
-          rateFile1: value1.rate,
-          rateFile2: value2.rate,
-          percentageDifference: 0,
-        });
+    if (entry1 && entry2) {
+      // Code exists in both files
+      matchedCodesCount++;
+      const diff = entry2.rate - entry1.rate; // rate2 - rate1
+      const diffPercent = calculatePercentageDifference(entry1.rate, entry2.rate);
+      let cheaperFile: 'file1' | 'file2' | 'same';
+      if (entry1.rate < entry2.rate) {
+        cheaperFile = 'file1';
+      } else if (entry2.rate < entry1.rate) {
+        cheaperFile = 'file2';
+      } else {
+        cheaperFile = 'same';
       }
-    } else {
-      pricingReport.nonMatchingCodes.push({
-        dialCode: `${key1}`,
-        destName: value1.destName,
-        rate: value1.rate,
-        file: fileName1,
+
+      detailedComparisonData.push({
+        dialCode,
+        rate1: entry1.rate,
+        rate2: entry2.rate,
+        diff,
+        destName1: entry1.destName,
+        destName2: entry2.destName,
+        matchStatus: 'both',
+        cheaperFile, // Add calculated value
+        diffPercent, // Add calculated value
+      });
+
+      // Populate summary report (optional, could be derived later)
+      const consolidatedEntry: ConsolidatedData = {
+        dialCode,
+        destName: entry1.destName,
+        rateFile1: entry1.rate,
+        rateFile2: entry2.rate,
+        percentageDifference: diffPercent, // Use calculated diffPercent here too
+      };
+      if (cheaperFile === 'file1') {
+        // Use cheaperFile for summary logic
+        pricingReport.higherRatesForFile2.push(consolidatedEntry); // file1 is cheaper -> sell opportunity (higher rate in file2)
+      } else if (cheaperFile === 'file2') {
+        pricingReport.higherRatesForFile1.push(consolidatedEntry); // file2 is cheaper -> buy opportunity (higher rate in file1)
+      } else {
+        pricingReport.sameRates.push(consolidatedEntry);
+      }
+    } else if (entry1) {
+      // Code exists only in file 1
+      nonMatchedCodesCount++;
+      detailedComparisonData.push({
+        dialCode,
+        rate1: entry1.rate,
+        destName1: entry1.destName,
+        matchStatus: 'file1_only',
+        // cheaperFile, diff, diffPercent are implicitly undefined
+      });
+    } else if (entry2) {
+      // Code exists only in file 2
+      nonMatchedCodesCount++;
+      detailedComparisonData.push({
+        dialCode,
+        rate2: entry2.rate,
+        destName2: entry2.destName,
+        matchStatus: 'file2_only',
+        // cheaperFile, diff, diffPercent are implicitly undefined
       });
     }
-  });
-
-  dialCodeMapFile2.forEach((value, key) => {
-    if (!dialCodeMapFile1.has(key)) {
-      pricingReport.nonMatchingCodes.push({
-        dialCode: `${key}`,
-        destName: value.destName,
-        rate: value.rate,
-        file: fileName2,
-      });
-    }
-  });
-
-  // Update the calculation of matched and non-matched codes percentages
-  const totalCodes = codeReport.matchedCodes + codeReport.nonMatchedCodes;
-  if (totalCodes > 0) {
-    codeReport.matchedCodesPercentage = (codeReport.matchedCodes / totalCodes) * 100;
-    codeReport.nonMatchedCodesPercentage = (codeReport.nonMatchedCodes / totalCodes) * 100;
   }
 
-  // Calculate percentages
+  // --- Refactored Logic End ---
+
+  // --- Update Code Report ---
+  const codeReport: AzCodeReport = {
+    file1: {
+      fileName: fileName1,
+      totalCodes: file1Data.length, // Total rows
+      totalDestinations: new Set(file1Data.map((d) => d.destName)).size,
+      uniqueDestinationsPercentage: 0, // Calculate below
+    },
+    file2: {
+      fileName: fileName2,
+      totalCodes: file2Data.length, // Total rows
+      totalDestinations: new Set(file2Data.map((d) => d.destName)).size,
+      uniqueDestinationsPercentage: 0, // Calculate below
+    },
+    matchedCodes: matchedCodesCount,
+    nonMatchedCodes: nonMatchedCodesCount, // Codes unique to one file
+    matchedCodesPercentage: 0, // Calculate below
+    nonMatchedCodesPercentage: 0, // Calculate below
+  };
+
+  // Calculate percentages for Code Report
   codeReport.file1.uniqueDestinationsPercentage =
-    (codeReport.file1.totalDestinations / codeReport.file1.totalCodes) * 100;
+    codeReport.file1.totalCodes > 0
+      ? (codeReport.file1.totalDestinations / codeReport.file1.totalCodes) * 100
+      : 0;
   codeReport.file2.uniqueDestinationsPercentage =
-    (codeReport.file2.totalDestinations / codeReport.file2.totalCodes) * 100;
+    codeReport.file2.totalCodes > 0
+      ? (codeReport.file2.totalDestinations / codeReport.file2.totalCodes) * 100
+      : 0;
 
-  const totalUniqueCodes = Math.max(file1Codes.size, file2Codes.size);
-  codeReport.matchedCodesPercentage = (codeReport.matchedCodes / totalUniqueCodes) * 100;
-  codeReport.nonMatchedCodesPercentage = (codeReport.nonMatchedCodes / totalUniqueCodes) * 100;
+  const totalUniqueDialCodes = allDialCodes.size;
+  if (totalUniqueDialCodes > 0) {
+    codeReport.matchedCodesPercentage = (matchedCodesCount / totalUniqueDialCodes) * 100;
+    // Non-matched percentage based on total unique codes might be confusing.
+    // Let's stick to counts or calculate based on potential matches?
+    // Sticking to counts for now.
+    codeReport.nonMatchedCodesPercentage = (nonMatchedCodesCount / totalUniqueDialCodes) * 100;
+  }
+  // --- End Code Report Update ---
 
+  // Consolidate and sort summary reports (still needed if we keep the summary view)
   pricingReport.higherRatesForFile1 = consolidateEntries(pricingReport.higherRatesForFile1);
   pricingReport.higherRatesForFile2 = consolidateEntries(pricingReport.higherRatesForFile2);
   pricingReport.sameRates = consolidateEntries(pricingReport.sameRates);
-  pricingReport.nonMatchingCodes = consolidateNonMatchingEntries(pricingReport.nonMatchingCodes);
-  //sort report descending
+  // pricingReport.nonMatchingCodes = []; // Already initialized as empty
+
   pricingReport.higherRatesForFile1.sort((a, b) => b.percentageDifference - a.percentageDifference);
   pricingReport.higherRatesForFile2.sort((a, b) => b.percentageDifference - a.percentageDifference);
 
   return { pricingReport, codeReport, detailedComparisonData };
-}
-
-function consolidateDialCodesForNonMatching(group: NonMatchingCode[]): NonMatchingCode {
-  const consolidatedDialCode = group.map((entry) => entry.dialCode).join(', ');
-  const { destName, rate, file } = group[0]; // Assuming all entries in the group have the same destName, rate, and file.
-  return { dialCode: consolidatedDialCode, destName, rate, file };
-}
-
-function consolidateNonMatchingEntries(entries: NonMatchingCode[]): NonMatchingCode[] {
-  const groups = new Map<string, NonMatchingCode[]>();
-  entries.forEach((entry) => {
-    const key = `${entry.destName}:${entry.rate}:${entry.file}`;
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)!.push(entry);
-  });
-
-  const consolidatedEntries: NonMatchingCode[] = [];
-  groups.forEach((group) => {
-    consolidatedEntries.push(consolidateDialCodesForNonMatching(group));
-  });
-
-  return consolidatedEntries;
 }
 
 function consolidateDialCodes(group: ConsolidatedData[]): ConsolidatedData {

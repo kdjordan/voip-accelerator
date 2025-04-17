@@ -226,12 +226,14 @@ export const DBSchemas = {
   `,
   // Add schema for AZ Pricing Comparison DB
   [DBName.AZ_PRICING_COMPARISON]: `
-    az_comparison_results: ++id, &dialCode,
+    az_comparison_results: ++id, &dialCode, matchStatus,
     rate1,
     rate2,
     diff,
     destName1,
-    destName2
+    destName2,
+    cheaperFile,
+    diffPercent
   `,
 } as const;
 
