@@ -186,58 +186,93 @@ Based on user feedback, we need to refine the `AZCountryBreakdown` interface in 
 
 ---
 
-## Next Focus: AZ Pricing Report UI & Data Integration
-
-- **Current Focus:** Refactor `AZPricingReport.vue` & `AZDetailedComparisonTable.vue`.
-- **Completed:**
-  - **Created `AZDetailedComparisonTable.vue`:** Modeled after the US version, responsible for fetching and displaying detailed AZ comparison data.
-  - **Integrated into `AZPricingReport.vue`:** Added the new component and removed redundant data fetching logic from the parent.
-  - **Added `AZService::getPagedDetailedComparisonData`:** Implemented the necessary service method for pagination and filtering.
-  - **Dynamic Headers:** Updated table headers in `AZDetailedComparisonTable.vue` to display actual filenames retrieved from `azStore`.
-  - **Styled Headers:** Removed `.csv` extensions and applied theme colors (green/blue), padding, borders, and rounding to filenames in headers for a clearer, button-like appearance.
-- **Next Objective: Consolidate Summary Insights & Integrate Unmatched Codes**
+## Consolidate AZ Pricing Report (Completed)
 
 **Goal:** Remove the separate expandable summary sections (Sell, Buy, Same, Unmatched) from `AZPricingReport.vue` and modify the `AZDetailedComparisonTable.vue` and its underlying data generation process to display all relevant information (including codes present in only one file) within a single, filterable table.
 
-**Implementation Steps:**
+**Summary of Changes:**
 
-**Phase 1: Data Structure & Generation**
+- **Phase 1: Data Structure & Generation (Completed)**
 
-1.  **Update Type `AZDetailedComparisonEntry` (`az-types.ts`):**
-    - Make `destName1`, `rate1`, `destName2`, `rate2` optional (`?`) to accommodate entries present in only one file.
-    - Consider adding a new field, e.g., `matchStatus: 'both' | 'file1_only' | 'file2_only'`, to explicitly track if the code was matched in both files or only one.
-2.  **Refactor Worker (`az-comparison.worker.ts`):**
-    - Modify the core comparison logic to identify codes present in only File 1 or only File 2.
-    - Generate `AZDetailedComparisonEntry` objects for these unmatched codes, populating the relevant file's data and leaving the other file's fields empty (or setting them to `null`/`undefined`).
-    - Populate the new `matchStatus` field accordingly.
-    - Ensure the worker correctly posts back the combined list containing matched and unmatched entries.
-3.  **Update DB Schema (`DBSchemas` in `app-types.ts` & Service):**
-    - Adjust the Dexie schema definition for the `az_comparison_results` table in `DBSchemas` to reflect the optional fields (if Dexie syntax requires it, though usually `++id` suffices) and potentially add an index for the new `matchStatus` field if filtering by it will be common.
-    - Review `AZService::makeAzCombinedReport` to ensure it handles storing the updated `AZDetailedComparisonEntry` structure correctly (it should likely work as is with `bulkPut`, but worth a check).
+  - Updated `AZDetailedComparisonEntry` interface (`az-types.ts`) to make file-specific fields optional (`rate1?`, `destName1?`, etc.) and added `matchStatus`, `cheaperFile`, `diffPercent`.
+  - Refactored `az-comparison.worker.ts` to generate a single list of `AZDetailedComparisonEntry`, populating `matchStatus`, `cheaperFile`, and `diffPercent` correctly for both matched and unmatched codes.
+  - Updated `DBSchemas` in `app-types.ts` to include `matchStatus`, `cheaperFile`, and `diffPercent` in the `az_comparison_results` table schema.
 
-**Phase 2: UI Adaptation**
+- **Phase 2: UI Adaptation (Completed)**
 
-4.  **Enhance Table Filters (`AZDetailedComparisonTable.vue`):**
-    - Modify or add filters to allow users to view specific scenarios:
-      - **Sell:** `cheaperFile === 'file2'` (already exists).
-      - **Buy:** `cheaperFile === 'file1'` (already exists).
-      - **Same:** `cheaperFile === 'same'` (already exists).
-      - **Unmatched (File 1 only):** New filter option, possibly using the `matchStatus` field (`matchStatus === 'file1_only'`).
-      - **Unmatched (File 2 only):** New filter option, possibly using the `matchStatus` field (`matchStatus === 'file2_only'`).
-    - Decide on the best UI for these filters (e.g., modify the existing 'Cheaper Rate' dropdown, add a new 'Match Status' dropdown).
-5.  **Update Table Display (`AZDetailedComparisonTable.vue`):**
-    - Ensure the table correctly displays rows where one file's data is missing (e.g., showing 'N/A' or an empty cell instead of `undefined`).
-    - Consider adding a visual indicator (maybe a new column or styling) for the `matchStatus`.
-6.  **Remove Summary Sections (`AZPricingReport.vue`):**
-    - Delete the four `<div>` elements corresponding to the Sell, Buy, Same, and Unmatched expandable sections.
-    - Remove any associated computed properties or logic used solely by these sections.
+  - Removed the four legacy expandable summary sections from `AZPricingReport.vue` and associated script logic.
+  - Enhanced `AZDetailedComparisonTable.vue`:
+    - Added a 'Match Status' filter dropdown.
+    - Updated table cell rendering (`<td>`) to display 'N/A' for missing optional data.
+    - Made 'Rate Comparison' and 'Match Status' filter options dynamic, using actual filenames.
+    - Updated 'Match Status' and 'Cheaper File' table columns to display actual filenames (or 'BOTH'/'Same Rate') styled consistently as colored buttons (green/blue/orange/gray).
+  - Updated `az.service.ts::getPagedDetailedComparisonData` to include client-side filtering logic for the new `matchStatus` filter.
+  - Fixed an import issue in `AZPricingReport.vue` (used `azStore` instead of `appStore`).
 
-**Phase 3: Testing**
+- **Phase 3: Testing (User)**
+  - Manual testing confirmed filter functionality and display.
 
-7.  **Verify Data:** Ensure the comparison worker generates the correct combined data, including unmatched codes with appropriate null/undefined fields and the correct `matchStatus`.
-8.  **Test Filters:** Thoroughly test all filter combinations in the UI to confirm they show the expected subsets of data (Sell, Buy, Same, Unmatched File 1, Unmatched File 2, All).
-9.  **Test Display:** Check the table rendering for rows with missing data.
+**Learnings:**
+
+- The comparison worker needed explicit calculation and population of `cheaperFile` and `diffPercent` fields for the detailed comparison entries.
+- UI consistency requires careful mapping of data values (like `matchStatus` or `cheaperFile`) to both filter option text and table cell display text/styling, ensuring filenames are used dynamically where appropriate.
+
+**Current Status:**
+
+- AZ Pricing Report now uses a single, filterable detailed table (`AZDetailedComparisonTable.vue`) for all comparison results (matched and unmatched).
+- UI elements (filters, table columns) display dynamic filenames and consistent styling.
+
+**Next Steps:**
+
+- Proceed with remaining tasks from the checklist (e.g., final worker verification, cleanup, international data integration) or address new priorities.
 
 ---
 
-**(Old Prompts/Plans Removed)**
+## Implement CSV Download for AZ Detailed Comparison
+
+**Goal:** Add functionality to `AZDetailedComparisonTable.vue` allowing users to download the currently displayed (filtered) comparison data as a CSV file.
+
+**Context:** Users need a way to export the detailed comparison results, respecting the filters they've applied in the UI (Search, Rate Comparison, Match Status).
+
+### Implementation Phases & Checklist
+
+**Phase 1: Service Layer Enhancement**
+
+- [ ] **Create New Service Method:** Add a new method to `AZService.ts` (e.g., `getFilteredDetailedComparisonDataForExport`) that retrieves _all_ matching comparison entries from DexieDB based on the provided filters, without pagination.
+  - _**(Prompt):** Should this new service method fetch all data at once, or perhaps iterate through pages in the background to build the full dataset before returning? Fetching all at once might be simpler but could strain memory for very large comparisons. What's the preferred approach?_
+  No we only want to export the data that is currently being displyaed in AZDetailedComparisonTable. This will change based on the filters that the user has applied
+  - _**(Prompt):** Should the existing `getPagedDetailedComparisonData` be refactored to share filtering logic with the new export method to avoid duplication?_
+  see the previous answer, we are only going to export the data that is currently being displayed in the UI
+
+**Phase 2: CSV Generation Logic**
+
+- [ ] **Choose CSV Library/Utility:** Decide on a method for generating the CSV string in the browser.
+  - _Option A: A lightweight library like `papaparse` (if not already used)._ we are already using papaparse for uploading, let's stick to that
+  - _Option B: Manual CSV string construction (simpler for basic cases, but needs careful escaping)._
+  - _**(Prompt):** Do we have a preferred CSV generation library or pattern already established in the project?_
+- [ ] **Create Utility Function:** Implement a utility function (e.g., in `client/src/utils/`) that takes the array of `AZDetailedComparisonEntry` objects and converts it into a CSV-formatted string.
+  - This function should handle headers (dynamically using `fileName1` and `fileName2` from `azStore`).
+  - It needs to format data correctly (e.g., `rate.toFixed(6)`, handling `N/A` or `null` values, formatting `matchStatus` and `cheaperFile` similar to the table display).
+  - _**(Prompt):** What should the exact column headers be in the CSV file? Should they match the table headers exactly, including the file names?_ we should match the UI exactly
+  - _**(Prompt):** How should `null` or `undefined` values (like `rate1` for `file2_only` entries) be represented in the CSV? Empty string? "N/A"?_ n/a
+
+**Phase 3: UI Integration**
+
+- [ ] **Add Download Button:** Add a "Download Current View as CSV" button to `AZDetailedComparisonTable.vue`, likely near the filter controls.
+- [ ] **Implement Click Handler:** Create a function in the component's script that:
+  - Gets the current filter values (searchTerm, selectedCheaper, selectedMatchStatus) and the `currentTableName`.
+  - Calls the new `AZService` method to fetch all filtered data.
+  - Displays a loading indicator while fetching/processing.
+  - Calls the CSV utility function to generate the CSV string.
+  - Triggers a browser download of the generated CSV string using a dynamically created link.
+  - Handles potential errors during fetching or generation.
+  - _**(Prompt):** What should the downloaded CSV filename be? e.g., `az-comparison-{tableName}-{timestamp}.csv`?_ just 'az-compare-{timestamp}.csv
+
+**Phase 4: Testing**
+
+- [ ] **Test Download:** Verify that clicking the button downloads a CSV file.
+- [ ] **Test Filtering:** Apply various combinations of filters and confirm the downloaded CSV contains only the matching rows.
+- [ ] **Test Data Formatting:** Open the CSV and check that headers and data formatting (numbers, statuses, N/A values) are correct.
+- [ ] **Test Edge Cases:** Test with empty filter results, large datasets (if possible), and different table names.
+
+---
