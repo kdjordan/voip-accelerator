@@ -531,62 +531,48 @@ export class AZService {
       filters
     );
 
+    const { getDB } = useDexieDB();
     try {
-      const { getDB } = useDexieDB();
       const db = await getDB(DBName.AZ_PRICING_COMPARISON);
+      const table = db.table<AZDetailedComparisonEntry>(tableName);
 
-      if (!db.hasStore(tableName)) {
-        console.warn(`[AZService] Table ${tableName} not found in ${DBName.AZ_PRICING_COMPARISON}`);
-        return [];
+      // Start with the full collection
+      let collection = table.offset(offset);
+
+      // Apply filters
+      if (filters) {
+        // Apply specific filters first if they exist
+        if (filters.matchStatus) {
+          collection = collection.filter((item) => item.matchStatus === filters.matchStatus);
+        }
+        if (filters.cheaper) {
+          collection = collection.filter((item) => item.cheaperFile === filters.cheaper);
+        }
+
+        // Apply the generic search filter LAST
+        if (filters.search) {
+          const searchTermLower = filters.search.toLowerCase();
+          collection = collection.filter((item) => {
+            const codeMatch = item.dialCode.startsWith(searchTermLower);
+            const dest1Match =
+              item.destName1 && item.destName1.toLowerCase().includes(searchTermLower);
+            const dest2Match =
+              item.destName2 && item.destName2.toLowerCase().includes(searchTermLower);
+            return codeMatch || dest1Match || dest2Match;
+          });
+        }
       }
 
-      let query = db.table<AZDetailedComparisonEntry>(tableName);
-
-      // Apply filters using Dexie's .filter() for more complex logic
-      // Note: Dexie's .where() is faster but less flexible for combined filters.
-      const filterFunctions: Array<(record: AZDetailedComparisonEntry) => boolean> = [];
-
-      // Search filter (checks dialCode, destName1, destName2)
-      if (filters?.search) {
-        const lowerSearch = filters.search.toLowerCase();
-        filterFunctions.push(
-          (record) =>
-            record.dialCode.toLowerCase().includes(lowerSearch) ||
-            record.destName1?.toLowerCase().includes(lowerSearch) || // Add null check
-            record.destName2?.toLowerCase().includes(lowerSearch) // Add null check
-        );
-      }
-
-      // Cheaper file filter
-      if (filters?.cheaper && filters.cheaper !== '') {
-        // Ensure cheaperFile exists for comparison if needed
-        filterFunctions.push((record) => record.cheaperFile === filters.cheaper);
-      }
-
-      // Match Status filter
-      if (filters?.matchStatus && filters.matchStatus !== '') {
-        filterFunctions.push((record) => record.matchStatus === filters.matchStatus);
-      }
-
-      // Chain filter, offset, and limit
-      let collection;
-      if (filterFunctions.length > 0) {
-        // Apply all collected filter functions
-        collection = query.filter((record) => filterFunctions.every((fn) => fn(record)));
-      } else {
-        collection = query; // No filters, apply pagination to the whole table
-      }
-
-      const data = await collection.offset(offset).limit(limit).toArray();
-
-      console.log(`[AZService] Retrieved ${data.length} paged records from ${tableName}`);
-      return data;
-    } catch (error) {
-      console.error(
-        `[AZService] Failed to get paged detailed comparison data from table ${tableName}:`,
-        error
+      // Apply limit after filtering
+      const results = await collection.limit(limit).toArray();
+      console.log(
+        `[AZService] Fetched ${results.length} comparison records for ${tableName} with offset ${offset}, limit ${limit}, filters:`,
+        filters
       );
-      throw error; // Re-throw for the caller to handle
+      return results;
+    } catch (error) {
+      console.error(`[AZService] Error getting paged comparison data for ${tableName}:`, error);
+      throw error;
     }
   }
 }
