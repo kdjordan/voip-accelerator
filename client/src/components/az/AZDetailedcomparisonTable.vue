@@ -47,6 +47,19 @@
           </option>
         </select>
       </div>
+
+      <!-- Download CSV Button -->
+      <div class="ml-auto self-end">
+        <button
+          @click="downloadCsv"
+          :disabled="isLoading || isLoadingMore || comparisonData.length === 0"
+          title="Download Current View"
+          class="inline-flex items-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
+          Export Current View
+        </button>
+      </div>
     </div>
 
     <div v-if="isLoading && comparisonData.length === 0" class="text-center text-gray-500 py-10">
@@ -171,6 +184,8 @@ import { ref, watch, computed } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useAzStore } from '@/stores/az-store';
 import { AZService } from '@/services/az.service';
+import Papa from 'papaparse';
+import { ArrowDownTrayIcon } from '@heroicons/vue/20/solid';
 import type {
   AZDetailedComparisonEntry,
   AZDetailedComparisonFilters,
@@ -374,6 +389,72 @@ function getCheaperClass(cheaper?: 'file1' | 'file2' | 'same'): string {
   } else {
     // N/A or undefined - Plain text style
     return 'text-gray-500';
+  }
+}
+
+// --- CSV Download Function ---
+function downloadCsv(): void {
+  // Use comparisonData.value which reflects the current UI view (filtered + paginated)
+  if (!comparisonData.value || comparisonData.value.length === 0) {
+    console.warn('No data currently displayed to download.');
+    // Optionally show a user notification
+    return;
+  }
+
+  try {
+    const headers = [
+      'Dial Code',
+      'Match Status',
+      `Dest Name ${fileName1.value}`,
+      `Dest Name ${fileName2.value}`,
+      `Rate ${fileName1.value}`,
+      `Rate ${fileName2.value}`,
+      'Diff',
+      'Diff %',
+      'Cheaper File',
+    ];
+
+    // Map the currently displayed data (comparisonData) for export
+    const dataToExport = comparisonData.value.map((record) => ({
+      'Dial Code': record.dialCode,
+      'Match Status': formatMatchStatus(record.matchStatus),
+      [`Dest Name ${fileName1.value}`]: record.destName1 ?? 'n/a',
+      [`Dest Name ${fileName2.value}`]: record.destName2 ?? 'n/a',
+      [`Rate ${fileName1.value}`]: record.rate1?.toFixed(6) ?? 'n/a',
+      [`Rate ${fileName2.value}`]: record.rate2?.toFixed(6) ?? 'n/a',
+      Diff: record.diff?.toFixed(6) ?? 'n/a',
+      'Diff %': record.diffPercent ? `${record.diffPercent.toFixed(2)}%` : 'n/a',
+      'Cheaper File': formatCheaperFile(record.cheaperFile),
+    }));
+
+    const csv = Papa.unparse(
+      {
+        fields: headers,
+        data: dataToExport.map((row) => headers.map((header) => row[header])),
+      },
+      {
+        header: true,
+        quotes: true, // Ensure fields with commas or quotes are properly quoted
+      }
+    );
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `az-compare-${timestamp}.csv`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (csvError) {
+    console.error('Error generating or downloading CSV:', csvError);
+    // Optionally show a user notification about the error
+    error.value = 'Failed to generate CSV file.';
   }
 }
 </script>
