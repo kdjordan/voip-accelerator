@@ -1,15 +1,23 @@
 <template>
-  <div
-    v-if="usStore.getFileNameByComponent(componentId) !== ''"
-    class="mt-8 pt-8 border-t border-gray-700/50"
-  >
-    <!-- Code Report heading with file name pill -->
+  <div v-if="usStore.getFileNameByComponent(componentId) !== ''" class="">
+    <!-- Code Report heading with file name pill and remove button -->
     <div class="mb-4 flex items-center justify-between">
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
-      <div
-        class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50"
-      >
-        <span class="text-sm text-accent">{{ usStore.getFileNameByComponent(componentId) }}</span>
+      <div class="flex items-center space-x-2">
+        <div
+          class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50"
+        >
+          <span class="text-sm text-accent">{{ usStore.getFileNameByComponent(componentId) }}</span>
+        </div>
+        <button
+          @click="$emit('remove-file', componentId)"
+          class="px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
+        >
+          <div class="flex items-center justify-center space-x-1.5">
+            <TrashIcon class="w-3 h-3 text-red-400" />
+            <span class="text-xs text-red-400">Remove</span>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -46,15 +54,15 @@
           <div class="text-gray-400 mb-2">Average Rates:</div>
           <div class="grid grid-cols-3 gap-2">
             <div class="bg-gray-900 p-2 rounded-lg">
-              <div class="text-gray-400 text-sm mb-1">Interstate</div>
+              <div class="text-gray-400 text-sm mb-1">Inter</div>
               <div class="text-lg text-white">${{ averageRates.interstate }}</div>
             </div>
             <div class="bg-gray-900 p-2 rounded-lg">
-              <div class="text-gray-400 text-sm mb-1">Intrastate</div>
+              <div class="text-gray-400 text-sm mb-1">Intra</div>
               <div class="text-lg text-white">${{ averageRates.intrastate }}</div>
             </div>
             <div class="bg-gray-900 p-2 rounded-lg">
-              <div class="text-gray-400 text-sm mb-1">Indeterminate</div>
+              <div class="text-gray-400 text-sm mb-1">Indeterm</div>
               <div class="text-lg text-white">${{ averageRates.indeterminate }}</div>
             </div>
           </div>
@@ -235,11 +243,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, nextTick } from 'vue';
 import { useUsStore } from '@/stores/us-store';
 import { useLergStore } from '@/stores/lerg-store';
 import { getStateName } from '@/types/constants/state-codes';
 import { getCountryName } from '@/types/constants/country-codes';
+import { TrashIcon } from '@heroicons/vue/24/outline';
+import type { ComponentId } from '@/types/app-types';
 import type {
   USEnhancedCodeReport,
   USCountryBreakdown,
@@ -248,8 +258,11 @@ import type {
 
 // Define props
 const props = defineProps<{
-  componentId: string;
+  componentId: ComponentId;
 }>();
+
+// Define emits
+const emit = defineEmits<{ (e: 'remove-file', componentId: ComponentId): void }>();
 
 const usStore = useUsStore();
 const lergStore = useLergStore();

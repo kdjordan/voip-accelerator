@@ -33,7 +33,7 @@
         </select>
       </div>
 
-      <!-- Cheaper File Filter (based on Interstate) -->
+      <!-- Cheaper File Filter (based on Inter) -->
       <div>
         <label for="cheaper-filter" class="block text-sm font-medium text-gray-400 mb-1"
           >Cheaper Inter Rate</label
@@ -44,8 +44,8 @@
           class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
         >
           <option value="">All</option>
-          <option value="file1">File 1 Cheaper</option>
-          <option value="file2">File 2 Cheaper</option>
+          <option value="file1">{{ fileName1 }} Cheaper</option>
+          <option value="file2">{{ fileName2 }} Cheaper</option>
           <option value="same">Same Rate</option>
         </select>
       </div>
@@ -73,12 +73,51 @@
               <th class="px-4 py-2 text-left text-gray-300">NXX</th>
               <th class="px-4 py-2 text-left text-gray-300">State</th>
               <th class="px-4 py-2 text-left text-gray-300">Country</th>
-              <th class="px-4 py-2 text-left text-gray-300">File1 Inter</th>
-              <th class="px-4 py-2 text-left text-gray-300">File1 Intra</th>
-              <th class="px-4 py-2 text-left text-gray-300">File1 Indeterm</th>
-              <th class="px-4 py-2 text-left text-gray-300">File2 Inter</th>
-              <th class="px-4 py-2 text-left text-gray-300">File2 Intra</th>
-              <th class="px-4 py-2 text-left text-gray-300">File2 Indeterm</th>
+              <!-- File 1 Headers with Badge -->
+              <th class="px-4 py-2 text-left text-gray-300">
+                Inter&nbsp;
+                <span
+                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName1 }}</span
+                >
+              </th>
+              <th class="px-4 py-2 text-left text-gray-300">
+                Intra&nbsp;
+                <span
+                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName1 }}</span
+                >
+              </th>
+              <th class="px-4 py-2 text-left text-gray-300">
+                Indeterm&nbsp;
+                <span
+                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName1 }}</span
+                >
+              </th>
+              <!-- File 2 Headers with Badge -->
+              <th class="px-4 py-2 text-left text-gray-300">
+                Inter&nbsp;
+                <span
+                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName2 }}</span
+                >
+              </th>
+              <th class="px-4 py-2 text-left text-gray-300">
+                Intra&nbsp;
+                <span
+                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName2 }}</span
+                >
+              </th>
+              <th class="px-4 py-2 text-left text-gray-300">
+                Indeterm&nbsp;
+                <span
+                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName2 }}</span
+                >
+              </th>
+              <!-- Difference Headers -->
               <th class="px-4 py-2 text-left text-gray-300">Diff Inter Abs</th>
               <th class="px-4 py-2 text-left text-gray-300">Diff Intra Abs</th>
               <th class="px-4 py-2 text-left text-gray-300">Diff Indeterm Abs</th>
@@ -120,14 +159,20 @@
               <td class="px-4 py-2 text-white">{{ record.diff_inter_pct?.toFixed(2) }}%</td>
               <td class="px-4 py-2 text-white">{{ record.diff_intra_pct?.toFixed(2) }}%</td>
               <td class="px-4 py-2 text-white">{{ record.diff_indeterm_pct?.toFixed(2) }}%</td>
-              <td class="px-4 py-2" :class="getCheaperClass(record.cheaper_inter)">
-                {{ record.cheaper_inter }}
+              <td class="px-4 py-2">
+                <span :class="getCheaperClass(record.cheaper_inter)">
+                  {{ formatCheaperFile(record.cheaper_inter) }}
+                </span>
               </td>
-              <td class="px-4 py-2" :class="getCheaperClass(record.cheaper_intra)">
-                {{ record.cheaper_intra }}
+              <td class="px-4 py-2">
+                <span :class="getCheaperClass(record.cheaper_intra)">
+                  {{ formatCheaperFile(record.cheaper_intra) }}
+                </span>
               </td>
-              <td class="px-4 py-2" :class="getCheaperClass(record.cheaper_indeterm)">
-                {{ record.cheaper_indeterm }}
+              <td class="px-4 py-2">
+                <span :class="getCheaperClass(record.cheaper_indeterm)">
+                  {{ formatCheaperFile(record.cheaper_indeterm) }}
+                </span>
               </td>
             </tr>
           </tbody>
@@ -148,13 +193,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
+import { useUsStore } from '@/stores/us-store';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { USPricingComparisonRecord } from '@/types/domains/us-types';
 import type { DexieDBBase } from '@/composables/useDexieDB'; // Import the class type
 
+const usStore = useUsStore(); // Instantiate usStore
 const { getDB } = useDexieDB(); // Only need getDB now
 const filteredComparisonData = ref<USPricingComparisonRecord[]>([]);
 const isLoading = ref<boolean>(false); // Initial loading state
@@ -180,6 +227,17 @@ const scrollContainerRef = ref<HTMLElement | null>(null); // Ref for the scrolla
 const COMPARISON_TABLE_NAME = 'comparison_results';
 
 let dbInstance: DexieDBBase | null = null; // Cache DB instance
+
+// --- Get Filenames for Headers ---
+const fileName1 = computed(() => {
+  const names = usStore.getFileNames;
+  return names.length > 0 ? names[0].replace(/\.csv$/i, '') : 'File 1';
+});
+
+const fileName2 = computed(() => {
+  const names = usStore.getFileNames;
+  return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
+});
 
 // --- Core Data Loading Logic ---
 
@@ -341,10 +399,34 @@ function getDiffClass(diff: number | null | undefined): string {
 }
 
 function getCheaperClass(cheaper: 'file1' | 'file2' | 'same' | null | undefined): string {
+  const baseStyle = 'font-medium px-2 py-0.5 rounded-md text-xs'; // Base badge style
   if (cheaper === null || cheaper === undefined) return 'text-gray-500'; // Handle potential nulls
-  if (cheaper === 'file1') return 'text-green-400';
-  if (cheaper === 'file2') return 'text-red-400';
-  return 'text-gray-400';
+  if (cheaper === 'file1') {
+    // File 1 is cheaper - Green style
+    return `${baseStyle} text-green-300 bg-green-900/50 border border-green-700`;
+  }
+  if (cheaper === 'file2') {
+    // File 2 is cheaper - Red style (consistent with diffs)
+    return `${baseStyle} text-red-300 bg-red-900/50 border border-red-700`;
+  }
+  if (cheaper === 'same') {
+    // Same Rate - Neutral/Gray style
+    return `${baseStyle} text-gray-300 bg-gray-700/50 border border-gray-600`;
+  }
+  return 'text-gray-500'; // Fallback for unexpected values
+}
+
+// Helper function to format Cheaper File text (similar to AZ)
+function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
+  if (cheaper === 'file1') {
+    return fileName1.value; // Use computed property
+  } else if (cheaper === 'file2') {
+    return fileName2.value; // Use computed property
+  } else if (cheaper === 'same') {
+    return 'Same Rate';
+  } else {
+    return 'N/A'; // Handle undefined/null case
+  }
 }
 </script>
 
