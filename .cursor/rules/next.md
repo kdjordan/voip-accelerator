@@ -228,51 +228,61 @@ Based on user feedback, we need to refine the `AZCountryBreakdown` interface in 
 
 ---
 
-## Implement CSV Download for AZ Detailed Comparison
+## Implement CSV Download & Filter Fix (Completed)
 
-**Goal:** Add functionality to `AZDetailedComparisonTable.vue` allowing users to download the currently displayed (filtered) comparison data as a CSV file.
+**Goal:** Add functionality to `AZDetailedComparisonTable.vue` allowing users to download the currently displayed (filtered) comparison data as a CSV file. Also, fix the search filter to only match dial codes that _start with_ the input.
 
-**Context:** Users need a way to export the detailed comparison results, respecting the filters they've applied in the UI (Search, Rate Comparison, Match Status).
+**Summary of Changes:**
 
-### Implementation Phases & Checklist
+- **Phase 1: CSV Generation & UI Integration:**
+  - [x] Added a "Export Current View" button to `AZDetailedComparisonTable.vue`.
+  - [x] Implemented `downloadCsv` click handler using `papaparse` to generate the CSV string from the `comparisonData` ref (which holds the filtered data currently displayed).
+  - [x] Ensured CSV headers and data formatting (N/A values, status strings, number precision) match the UI table display.
+  - [x] Dynamically generated the filename as `az-compare-{timestamp}.csv`.
+  - [x] Refined button styling iteratively to match the desired green accent look (consistent with File 1 badges) and include the correct text/icon.
+  - [x] Replaced manual SVG with `ArrowDownTrayIcon` from Heroicons.
+- **Phase 2: Filter Logic Correction:**
+  - [x] Modified `AZService::getPagedDetailedComparisonData` to use `startsWith` for `dialCode` filtering, while retaining `includes` (case-insensitive) for `destName1` and `destName2`.
+- **Phase 3: Testing (User):**
+  - [x] User confirmed CSV download works correctly and exports the filtered view.
+  - [x] User confirmed search filter now behaves as expected for dial codes.
 
-**Phase 1: Service Layer Enhancement**
+**Learnings:**
 
-- [ ] **Create New Service Method:** Add a new method to `AZService.ts` (e.g., `getFilteredDetailedComparisonDataForExport`) that retrieves _all_ matching comparison entries from DexieDB based on the provided filters, without pagination.
-  - _**(Prompt):** Should this new service method fetch all data at once, or perhaps iterate through pages in the background to build the full dataset before returning? Fetching all at once might be simpler but could strain memory for very large comparisons. What's the preferred approach?_
-  No we only want to export the data that is currently being displyaed in AZDetailedComparisonTable. This will change based on the filters that the user has applied
-  - _**(Prompt):** Should the existing `getPagedDetailedComparisonData` be refactored to share filtering logic with the new export method to avoid duplication?_
-  see the previous answer, we are only going to export the data that is currently being displayed in the UI
+- The `comparisonData` ref in `AZDetailedComparisonTable.vue` already holds the filtered data fetched by the service, so it was the correct source for the CSV export (no separate service call needed).
+- Clear visual examples are crucial for UI styling; iterative refinement was needed to match the exact accent button appearance.
+- Dexie's `.filter()` method provides flexibility for combining different types of field matching (e.g., `startsWith` and `includes`) within a single query.
 
-**Phase 2: CSV Generation Logic**
+---
 
-- [ ] **Choose CSV Library/Utility:** Decide on a method for generating the CSV string in the browser.
-  - _Option A: A lightweight library like `papaparse` (if not already used)._ we are already using papaparse for uploading, let's stick to that
-  - _Option B: Manual CSV string construction (simpler for basic cases, but needs careful escaping)._
-  - _**(Prompt):** Do we have a preferred CSV generation library or pattern already established in the project?_
-- [ ] **Create Utility Function:** Implement a utility function (e.g., in `client/src/utils/`) that takes the array of `AZDetailedComparisonEntry` objects and converts it into a CSV-formatted string.
-  - This function should handle headers (dynamically using `fileName1` and `fileName2` from `azStore`).
-  - It needs to format data correctly (e.g., `rate.toFixed(6)`, handling `N/A` or `null` values, formatting `matchStatus` and `cheaperFile` similar to the table display).
-  - _**(Prompt):** What should the exact column headers be in the CSV file? Should they match the table headers exactly, including the file names?_ we should match the UI exactly
-  - _**(Prompt):** How should `null` or `undefined` values (like `rate1` for `file2_only` entries) be represented in the CSV? Empty string? "N/A"?_ n/a
+## US UI/UX Refinement & Alignment with AZ
 
-**Phase 3: UI Integration**
+**Goal:** Update the U.S. rate deck upload and comparison views to match the improved UI/UX patterns established in the A-Z section, ensuring consistency and better usability.
 
-- [ ] **Add Download Button:** Add a "Download Current View as CSV" button to `AZDetailedComparisonTable.vue`, likely near the filter controls.
-- [ ] **Implement Click Handler:** Create a function in the component's script that:
-  - Gets the current filter values (searchTerm, selectedCheaper, selectedMatchStatus) and the `currentTableName`.
-  - Calls the new `AZService` method to fetch all filtered data.
-  - Displays a loading indicator while fetching/processing.
-  - Calls the CSV utility function to generate the CSV string.
-  - Triggers a browser download of the generated CSV string using a dynamically created link.
-  - Handles potential errors during fetching or generation.
-  - _**(Prompt):** What should the downloaded CSV filename be? e.g., `az-comparison-{tableName}-{timestamp}.csv`?_ just 'az-compare-{timestamp}.csv
+**Key Areas:**
 
-**Phase 4: Testing**
+1.  **US File Upload View (`USFileUploads.vue`):**
 
-- [ ] **Test Download:** Verify that clicking the button downloads a CSV file.
-- [ ] **Test Filtering:** Apply various combinations of filters and confirm the downloaded CSV contains only the matching rows.
-- [ ] **Test Data Formatting:** Open the CSV and check that headers and data formatting (numbers, statuses, N/A values) are correct.
-- [ ] **Test Edge Cases:** Test with empty filter results, large datasets (if possible), and different table names.
+    - [ ] **Conditional Rendering:** Hide the file upload drop zone (`USFileDropZone`) for a specific slot (`us1` or `us2`) once a file has been successfully uploaded and processed for that slot.
+    - [ ] **Display Uploaded File Info:** Instead of the drop zone, display the uploaded filename (similar to `AzCodeSummary.vue`) within the `USFileUploads.vue` component.
+    - [ ] **Relocate 'Remove' Button:** Move the 'Remove' button to be inline with the displayed filename (like in `AzCodeSummary.vue`) for a cleaner layout.
+    - [ ] **Refactor for `USCodeSummary`:** Replace the drop zone/file info display with the existing `USCodeSummary.vue` component once a file is processed, mirroring the AZ flow where `AzCodeSummary` replaces the drop zone.
+
+2.  **US Detailed Comparison Table Header (`USDetailedComparisonTable.vue`):**
+
+    - [ ] **Filename Badges:** Replace the static "File1" and "File2" text in the table headers (`<th>`) with dynamic, styled badges that display the actual filenames (e.g., `UStest.csv`, `UStest1.csv`), matching the appearance of the badges in `AZDetailedComparisonTable.vue`.
+    - [ ] **Consistent Styling:** Ensure the badge styling (colors, borders, background) is consistent with the AZ table header badges.
+
+3.  **US Comparison Filters (`USDetailedComparisonTable.vue`):**
+
+    - [ ] **Dynamic Filter Options:** Update the "Cheaper Inter Rate" filter dropdown options to dynamically use the actual filenames (e.g., "UStest.csv Cheaper", "UStest1.csv Cheaper") instead of the static "File 1 Cheaper", "File 2 Cheaper".
+
+4.  **CSV Export (`USDetailedComparisonTable.vue`):**
+    - [ ] **Add Export Button:** Implement a "Export Current View" button similar to the one in `AZDetailedComparisonTable.vue`.
+    - [ ] **Implement `downloadCsv`:** Create the necessary logic to export the currently filtered and displayed data in `USDetailedComparisonTable.vue` to a CSV file using `papaparse`.
+    - [ ] **Dynamic Filename:** Generate a dynamic filename for the exported CSV (e.g., `us-compare-{timestamp}.csv`).
+    - [ ] **Button Styling:** Style the button to match the AZ export button (green accent, icon).
+
+**Current Focus:** Start with Task 1 (US File Upload View Refinement) and Task 2 (Table Header Badges).
 
 ---
