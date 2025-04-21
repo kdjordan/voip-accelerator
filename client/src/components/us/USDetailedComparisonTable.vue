@@ -73,7 +73,7 @@
               <th class="px-4 py-2 text-left text-gray-300">NXX</th>
               <th class="px-4 py-2 text-left text-gray-300">State</th>
               <th class="px-4 py-2 text-left text-gray-300">Country</th>
-              <!-- File 1 Headers with Badge -->
+              <!-- File 1 Inter -->
               <th class="px-4 py-2 text-left text-gray-300">
                 Inter&nbsp;
                 <span
@@ -81,21 +81,7 @@
                   >{{ fileName1 }}</span
                 >
               </th>
-              <th class="px-4 py-2 text-left text-gray-300">
-                Intra&nbsp;
-                <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
-                  >{{ fileName1 }}</span
-                >
-              </th>
-              <th class="px-4 py-2 text-left text-gray-300">
-                Indeterm&nbsp;
-                <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
-                  >{{ fileName1 }}</span
-                >
-              </th>
-              <!-- File 2 Headers with Badge -->
+              <!-- File 2 Inter -->
               <th class="px-4 py-2 text-left text-gray-300">
                 Inter&nbsp;
                 <span
@@ -103,6 +89,17 @@
                   >{{ fileName2 }}</span
                 >
               </th>
+              <!-- Diff Inter % Header -->
+              <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
+              <!-- File 1 Intra -->
+              <th class="px-4 py-2 text-left text-gray-300">
+                Intra&nbsp;
+                <span
+                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName1 }}</span
+                >
+              </th>
+              <!-- File 2 Intra -->
               <th class="px-4 py-2 text-left text-gray-300">
                 Intra&nbsp;
                 <span
@@ -110,6 +107,17 @@
                   >{{ fileName2 }}</span
                 >
               </th>
+              <!-- Diff Intra % Header -->
+              <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
+              <!-- File 1 Indeterm -->
+              <th class="px-4 py-2 text-left text-gray-300">
+                Indeterm&nbsp;
+                <span
+                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  >{{ fileName1 }}</span
+                >
+              </th>
+              <!-- File 2 Indeterm -->
               <th class="px-4 py-2 text-left text-gray-300">
                 Indeterm&nbsp;
                 <span
@@ -117,13 +125,9 @@
                   >{{ fileName2 }}</span
                 >
               </th>
+              <!-- Diff Indeterm % Header -->
+              <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
               <!-- Difference Headers -->
-              <th class="px-4 py-2 text-left text-gray-300">Diff Inter Abs</th>
-              <th class="px-4 py-2 text-left text-gray-300">Diff Intra Abs</th>
-              <th class="px-4 py-2 text-left text-gray-300">Diff Indeterm Abs</th>
-              <th class="px-4 py-2 text-left text-gray-300">Diff Inter %</th>
-              <th class="px-4 py-2 text-left text-gray-300">Diff Intra %</th>
-              <th class="px-4 py-2 text-left text-gray-300">Diff Indeterm %</th>
               <th class="px-4 py-2 text-left text-gray-300">Cheaper Inter</th>
               <th class="px-4 py-2 text-left text-gray-300">Cheaper Intra</th>
               <th class="px-4 py-2 text-left text-gray-300">Cheaper Indeterm</th>
@@ -141,34 +145,37 @@
               <td class="px-4 py-2 text-gray-400">{{ record.nxx }}</td>
               <td class="px-4 py-2 text-gray-400">{{ record.stateCode }}</td>
               <td class="px-4 py-2 text-gray-400">{{ record.countryCode }}</td>
+              <!-- File 1 Inter Rate -->
               <td class="px-4 py-2 text-white">{{ record.file1_inter?.toFixed(6) }}</td>
-              <td class="px-4 py-2 text-white">{{ record.file1_intra?.toFixed(6) }}</td>
-              <td class="px-4 py-2 text-white">{{ record.file1_indeterm?.toFixed(6) }}</td>
+              <!-- File 2 Inter Rate -->
               <td class="px-4 py-2 text-white">{{ record.file2_inter?.toFixed(6) }}</td>
-              <td class="px-4 py-2 text-white">{{ record.file2_intra?.toFixed(6) }}</td>
-              <td class="px-4 py-2 text-white">{{ record.file2_indeterm?.toFixed(6) }}</td>
-              <td class="px-4 py-2" :class="getDiffClass(record.diff_inter_abs)">
-                {{ record.diff_inter_abs?.toFixed(6) }}
-              </td>
-              <td class="px-4 py-2" :class="getDiffClass(record.diff_intra_abs)">
-                {{ record.diff_intra_abs?.toFixed(6) }}
-              </td>
-              <td class="px-4 py-2" :class="getDiffClass(record.diff_indeterm_abs)">
-                {{ record.diff_indeterm_abs?.toFixed(6) }}
-              </td>
+              <!-- Diff Inter % Cell -->
               <td class="px-4 py-2 text-white">{{ record.diff_inter_pct?.toFixed(2) }}%</td>
+              <!-- File 1 Intra Rate -->
+              <td class="px-4 py-2 text-white">{{ record.file1_intra?.toFixed(6) }}</td>
+              <!-- File 2 Intra Rate -->
+              <td class="px-4 py-2 text-white">{{ record.file2_intra?.toFixed(6) }}</td>
+              <!-- Diff Intra % Cell -->
               <td class="px-4 py-2 text-white">{{ record.diff_intra_pct?.toFixed(2) }}%</td>
+              <!-- File 1 Indeterm Rate -->
+              <td class="px-4 py-2 text-white">{{ record.file1_indeterm?.toFixed(6) }}</td>
+              <!-- File 2 Indeterm Rate -->
+              <td class="px-4 py-2 text-white">{{ record.file2_indeterm?.toFixed(6) }}</td>
+              <!-- Diff Indeterm % Cell -->
               <td class="px-4 py-2 text-white">{{ record.diff_indeterm_pct?.toFixed(2) }}%</td>
+              <!-- Cheaper Inter -->
               <td class="px-4 py-2">
                 <span :class="getCheaperClass(record.cheaper_inter)">
                   {{ formatCheaperFile(record.cheaper_inter) }}
                 </span>
               </td>
+              <!-- Cheaper Intra -->
               <td class="px-4 py-2">
                 <span :class="getCheaperClass(record.cheaper_intra)">
                   {{ formatCheaperFile(record.cheaper_intra) }}
                 </span>
               </td>
+              <!-- Cheaper Indeterm -->
               <td class="px-4 py-2">
                 <span :class="getCheaperClass(record.cheaper_indeterm)">
                   {{ formatCheaperFile(record.cheaper_indeterm) }}
