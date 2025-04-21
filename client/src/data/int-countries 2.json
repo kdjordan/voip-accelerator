@@ -1,0 +1,1442 @@
+[
+  {
+    "country": "Afghanistan",
+    "cc": 93,
+    "ISO CODE": "AF / AFG",
+    "population": "29,121,286"
+  },
+  {
+    "country": "Albania",
+    "cc": 355,
+    "ISO CODE": "AL / ALB",
+    "population": "2,986,952"
+  },
+  {
+    "country": "Algeria",
+    "cc": 213,
+    "ISO CODE": "DZ / DZA",
+    "population": "34,586,184"
+  },
+  {
+    "country": "American Samoa",
+    "cc": 1684,
+    "ISO CODE": "AS / ASM",
+    "population": "57,881"
+  },
+  {
+    "country": "Andorra",
+    "cc": 376,
+    "ISO CODE": "AD / AND",
+    "population": "84,000"
+  },
+  {
+    "country": "Angola",
+    "cc": 244,
+    "ISO CODE": "AO / AGO",
+    "population": "13,068,161"
+  },
+  {
+    "country": "Anguilla",
+    "cc": 1264,
+    "ISO CODE": "AI / AIA",
+    "population": "13,254"
+  },
+  {
+    "country": "Antarctica",
+    "cc": 672,
+    "ISO CODE": "AQ / ATA",
+    "population": 0
+  },
+  {
+    "country": "Antigua and Barbuda",
+    "cc": 1268,
+    "ISO CODE": "AG / ATG",
+    "population": "86,754"
+  },
+  {
+    "country": "Argentina",
+    "cc": 54,
+    "ISO CODE": "AR / ARG",
+    "population": "41,343,201"
+  },
+  {
+    "country": "Armenia",
+    "cc": 374,
+    "ISO CODE": "AM / ARM",
+    "population": "2,968,000"
+  },
+  {
+    "country": "Aruba",
+    "cc": 297,
+    "ISO CODE": "AW / ABW",
+    "population": "71,566"
+  },
+  {
+    "country": "Australia",
+    "cc": 61,
+    "ISO CODE": "AU / AUS",
+    "population": "21,515,754"
+  },
+  {
+    "country": "Austria",
+    "cc": 43,
+    "ISO CODE": "AT / AUT",
+    "population": "8,205,000"
+  },
+  {
+    "country": "Azerbaijan",
+    "cc": 994,
+    "ISO CODE": "AZ / AZE",
+    "population": "8,303,512"
+  },
+  {
+    "country": "Bahamas",
+    "cc": 1242,
+    "ISO CODE": "BS / BHS",
+    "population": "301,790"
+  },
+  {
+    "country": "Bahrain",
+    "cc": 973,
+    "ISO CODE": "BH / BHR",
+    "population": "738,004"
+  },
+  {
+    "country": "Bangladesh",
+    "cc": 880,
+    "ISO CODE": "BD / BGD",
+    "population": "156,118,464"
+  },
+  {
+    "country": "Barbados",
+    "cc": 1246,
+    "ISO CODE": "BB / BRB",
+    "population": "285,653"
+  },
+  {
+    "country": "Belarus",
+    "cc": 375,
+    "ISO CODE": "BY / BLR",
+    "population": "9,685,000"
+  },
+  {
+    "country": "Belgium",
+    "cc": 32,
+    "ISO CODE": "BE / BEL",
+    "population": "10,403,000"
+  },
+  {
+    "country": "Belize",
+    "cc": 501,
+    "ISO CODE": "BZ / BLZ",
+    "population": "314,522"
+  },
+  {
+    "country": "Benin",
+    "cc": 229,
+    "ISO CODE": "BJ / BEN",
+    "population": "9,056,010"
+  },
+  {
+    "country": "Bermuda",
+    "cc": 1441,
+    "ISO CODE": "BM / BMU",
+    "population": "65,365"
+  },
+  {
+    "country": "Bhutan",
+    "cc": 975,
+    "ISO CODE": "BT / BTN",
+    "population": "699,847"
+  },
+  {
+    "country": "Bolivia",
+    "cc": 591,
+    "ISO CODE": "BO / BOL",
+    "population": "9,947,418"
+  },
+  {
+    "country": "Bosnia and Herzegovina",
+    "cc": 387,
+    "ISO CODE": "BA / BIH",
+    "population": "4,590,000"
+  },
+  {
+    "country": "Botswana",
+    "cc": 267,
+    "ISO CODE": "BW / BWA",
+    "population": "2,029,307"
+  },
+  {
+    "country": "Brazil",
+    "cc": 55,
+    "ISO CODE": "BR / BRA",
+    "population": "201,103,330"
+  },
+  {
+    "country": "British Indian Ocean Territory",
+    "cc": 246,
+    "ISO CODE": "IO / IOT",
+    "population": "4,000"
+  },
+  {
+    "country": "British Virgin Islands",
+    "cc": 1284,
+    "ISO CODE": "VG / VGB",
+    "population": "21,730"
+  },
+  {
+    "country": "Brunei",
+    "cc": 673,
+    "ISO CODE": "BN / BRN",
+    "population": "395,027"
+  },
+  {
+    "country": "Bulgaria",
+    "cc": 359,
+    "ISO CODE": "BG / BGR",
+    "population": "7,148,785"
+  },
+  {
+    "country": "Burkina Faso",
+    "cc": 226,
+    "ISO CODE": "BF / BFA",
+    "population": "16,241,811"
+  },
+  {
+    "country": "Burundi",
+    "cc": 257,
+    "ISO CODE": "BI / BDI",
+    "population": "9,863,117"
+  },
+  {
+    "country": "Cambodia",
+    "cc": 855,
+    "ISO CODE": "KH / KHM",
+    "population": "14,453,680"
+  },
+  {
+    "country": "Cameroon",
+    "cc": 237,
+    "ISO CODE": "CM / CMR",
+    "population": "19,294,149"
+  },
+  {
+    "country": "Canada",
+    "cc": 1,
+    "ISO CODE": "CA / CAN",
+    "population": "33,679,000"
+  },
+  {
+    "country": "Cape Verde",
+    "cc": 238,
+    "ISO CODE": "CV / CPV",
+    "population": "508,659"
+  },
+  {
+    "country": "Cayman Islands",
+    "cc": 1345,
+    "ISO CODE": "KY / CYM",
+    "population": "44,270"
+  },
+  {
+    "country": "Central African Republic",
+    "cc": 236,
+    "ISO CODE": "CF / CAF",
+    "population": "4,844,927"
+  },
+  {
+    "country": "Chad",
+    "cc": 235,
+    "ISO CODE": "TD / TCD",
+    "population": "10,543,464"
+  },
+  {
+    "country": "Chile",
+    "cc": 56,
+    "ISO CODE": "CL / CHL",
+    "population": "16,746,491"
+  },
+  {
+    "country": "China",
+    "cc": 86,
+    "ISO CODE": "CN / CHN",
+    "population": "1,330,044,000"
+  },
+  {
+    "country": "Christmas Island",
+    "cc": 61,
+    "ISO CODE": "CX / CXR",
+    "population": "1,500"
+  },
+  {
+    "country": "Cocos Islands",
+    "cc": 61,
+    "ISO CODE": "CC / CCK",
+    "population": 628
+  },
+  {
+    "country": "Colombia",
+    "cc": 57,
+    "ISO CODE": "CO / COL",
+    "population": "47,790,000"
+  },
+  {
+    "country": "Comoros",
+    "cc": 269,
+    "ISO CODE": "KM / COM",
+    "population": "773,407"
+  },
+  {
+    "country": "Cook Islands",
+    "cc": 682,
+    "ISO CODE": "CK / COK",
+    "population": "21,388"
+  },
+  {
+    "country": "Costa Rica",
+    "cc": 506,
+    "ISO CODE": "CR / CRI",
+    "population": "4,516,220"
+  },
+  {
+    "country": "Croatia",
+    "cc": 385,
+    "ISO CODE": "HR / HRV",
+    "population": "4,491,000"
+  },
+  {
+    "country": "Cuba",
+    "cc": 53,
+    "ISO CODE": "CU / CUB",
+    "population": "11,423,000"
+  },
+  {
+    "country": "Curacao",
+    "cc": 599,
+    "ISO CODE": "CW / CUW",
+    "population": "141,766"
+  },
+  {
+    "country": "Cyprus",
+    "cc": 357,
+    "ISO CODE": "CY / CYP",
+    "population": "1,102,677"
+  },
+  {
+    "country": "Czech Republic",
+    "cc": 420,
+    "ISO CODE": "CZ / CZE",
+    "population": "10,476,000"
+  },
+  {
+    "country": "Democratic Republic of the Congo",
+    "cc": 243,
+    "ISO CODE": "CD / COD",
+    "population": "70,916,439"
+  },
+  {
+    "country": "Denmark",
+    "cc": 45,
+    "ISO CODE": "DK / DNK",
+    "population": "5,484,000"
+  },
+  {
+    "country": "Djibouti",
+    "cc": 253,
+    "ISO CODE": "DJ / DJI",
+    "population": "740,528"
+  },
+  {
+    "country": "Dominica",
+    "cc": 1767,
+    "ISO CODE": "DM / DMA",
+    "population": "72,813"
+  },
+  {
+    "country": "Dominican Republic",
+    "cc": "1809, 1829, 1849",
+    "ISO CODE": "DO / DOM",
+    "population": "9,823,821"
+  },
+  {
+    "country": "East Timor",
+    "cc": 670,
+    "ISO CODE": "TL / TLS",
+    "population": "1,154,625"
+  },
+  {
+    "country": "Ecuador",
+    "cc": 593,
+    "ISO CODE": "EC / ECU",
+    "population": "14,790,608"
+  },
+  {
+    "country": "Egypt",
+    "cc": 20,
+    "ISO CODE": "EG / EGY",
+    "population": "80,471,869"
+  },
+  {
+    "country": "El Salvador",
+    "cc": 503,
+    "ISO CODE": "SV / SLV",
+    "population": "6,052,064"
+  },
+  {
+    "country": "Equatorial Guinea",
+    "cc": 240,
+    "ISO CODE": "GQ / GNQ",
+    "population": "1,014,999"
+  },
+  {
+    "country": "Eritrea",
+    "cc": 291,
+    "ISO CODE": "ER / ERI",
+    "population": "5,792,984"
+  },
+  {
+    "country": "Estonia",
+    "cc": 372,
+    "ISO CODE": "EE / EST",
+    "population": "1,291,170"
+  },
+  {
+    "country": "Ethiopia",
+    "cc": 251,
+    "ISO CODE": "ET / ETH",
+    "population": "88,013,491"
+  },
+  {
+    "country": "Falkland Islands",
+    "cc": 500,
+    "ISO CODE": "FK / FLK",
+    "population": "2,638"
+  },
+  {
+    "country": "Faroe Islands",
+    "cc": 298,
+    "ISO CODE": "FO / FRO",
+    "population": "48,228"
+  },
+  {
+    "country": "Fiji",
+    "cc": 679,
+    "ISO CODE": "FJ / FJI",
+    "population": "875,983"
+  },
+  {
+    "country": "Finland",
+    "cc": 358,
+    "ISO CODE": "FI / FIN",
+    "population": "5,244,000"
+  },
+  {
+    "country": "France",
+    "cc": 33,
+    "ISO CODE": "FR / FRA",
+    "population": "64,768,389"
+  },
+  {
+    "country": "French Polynesia",
+    "cc": 689,
+    "ISO CODE": "PF / PYF",
+    "population": "270,485"
+  },
+  {
+    "country": "Gabon",
+    "cc": 241,
+    "ISO CODE": "GA / GAB",
+    "population": "1,545,255"
+  },
+  {
+    "country": "Gambia",
+    "cc": 220,
+    "ISO CODE": "GM / GMB",
+    "population": "1,593,256"
+  },
+  {
+    "country": "Georgia",
+    "cc": 995,
+    "ISO CODE": "GE / GEO",
+    "population": "4,630,000"
+  },
+  {
+    "country": "Germany",
+    "cc": 49,
+    "ISO CODE": "DE / DEU",
+    "population": "81,802,257"
+  },
+  {
+    "country": "Ghana",
+    "cc": 233,
+    "ISO CODE": "GH / GHA",
+    "population": "24,339,838"
+  },
+  {
+    "country": "Gibraltar",
+    "cc": 350,
+    "ISO CODE": "GI / GIB",
+    "population": "27,884"
+  },
+  {
+    "country": "Greece",
+    "cc": 30,
+    "ISO CODE": "GR / GRC",
+    "population": "11,000,000"
+  },
+  {
+    "country": "Greenland",
+    "cc": 299,
+    "ISO CODE": "GL / GRL",
+    "population": "56,375"
+  },
+  {
+    "country": "Grenada",
+    "cc": 1473,
+    "ISO CODE": "GD / GRD",
+    "population": "107,818"
+  },
+  {
+    "country": "Guam",
+    "cc": 1671,
+    "ISO CODE": "GU / GUM",
+    "population": "159,358"
+  },
+  {
+    "country": "Guatemala",
+    "cc": 502,
+    "ISO CODE": "GT / GTM",
+    "population": "13,550,440"
+  },
+  {
+    "country": "Guernsey",
+    "cc": 441481,
+    "ISO CODE": "GG / GGY",
+    "population": "65,228"
+  },
+  {
+    "country": "Guinea",
+    "cc": 224,
+    "ISO CODE": "GN / GIN",
+    "population": "10,324,025"
+  },
+  {
+    "country": "Guinea-Bissau",
+    "cc": 245,
+    "ISO CODE": "GW / GNB",
+    "population": "1,565,126"
+  },
+  {
+    "country": "Guyana",
+    "cc": 592,
+    "ISO CODE": "GY / GUY",
+    "population": "748,486"
+  },
+  {
+    "country": "Haiti",
+    "cc": 509,
+    "ISO CODE": "HT / HTI",
+    "population": "9,648,924"
+  },
+  {
+    "country": "Honduras",
+    "cc": 504,
+    "ISO CODE": "HN / HND",
+    "population": "7,989,415"
+  },
+  {
+    "country": "Hong Kong",
+    "cc": 852,
+    "ISO CODE": "HK / HKG",
+    "population": "6,898,686"
+  },
+  {
+    "country": "Hungary",
+    "cc": 36,
+    "ISO CODE": "HU / HUN",
+    "population": "9,982,000"
+  },
+  {
+    "country": "Iceland",
+    "cc": 354,
+    "ISO CODE": "IS / ISL",
+    "population": "308,910"
+  },
+  {
+    "country": "India",
+    "cc": 91,
+    "ISO CODE": "IN / IND",
+    "population": "1,173,108,018"
+  },
+  {
+    "country": "Indonesia",
+    "cc": 62,
+    "ISO CODE": "ID / IDN",
+    "population": "242,968,342"
+  },
+  {
+    "country": "Iran",
+    "cc": 98,
+    "ISO CODE": "IR / IRN",
+    "population": "76,923,300"
+  },
+  {
+    "country": "Iraq",
+    "cc": 964,
+    "ISO CODE": "IQ / IRQ",
+    "population": "29,671,605"
+  },
+  {
+    "country": "Ireland",
+    "cc": 353,
+    "ISO CODE": "IE / IRL",
+    "population": "4,622,917"
+  },
+  {
+    "country": "Isle of Man",
+    "cc": 441624,
+    "ISO CODE": "IM / IMN",
+    "population": "75,049"
+  },
+  {
+    "country": "Israel",
+    "cc": 972,
+    "ISO CODE": "IL / ISR",
+    "population": "7,353,985"
+  },
+  {
+    "country": "Italy",
+    "cc": 39,
+    "ISO CODE": "IT / ITA",
+    "population": "60,340,328"
+  },
+  {
+    "country": "Ivory Coast",
+    "cc": 225,
+    "ISO CODE": "CI / CIV",
+    "population": "21,058,798"
+  },
+  {
+    "country": "Jamaica",
+    "cc": 1876,
+    "ISO CODE": "JM / JAM",
+    "population": "2,847,232"
+  },
+  {
+    "country": "Japan",
+    "cc": 81,
+    "ISO CODE": "JP / JPN",
+    "population": "127,288,000"
+  },
+  {
+    "country": "Jersey",
+    "cc": 441534,
+    "ISO CODE": "JE / JEY",
+    "population": "90,812"
+  },
+  {
+    "country": "Jordan",
+    "cc": 962,
+    "ISO CODE": "JO / JOR",
+    "population": "6,407,085"
+  },
+  {
+    "country": "Kazakhstan",
+    "cc": 7,
+    "ISO CODE": "KZ / KAZ",
+    "population": "15,340,000"
+  },
+  {
+    "country": "Kenya",
+    "cc": 254,
+    "ISO CODE": "KE / KEN",
+    "population": "40,046,566"
+  },
+  {
+    "country": "Kiribati",
+    "cc": 686,
+    "ISO CODE": "KI / KIR",
+    "population": "92,533"
+  },
+  {
+    "country": "Kosovo",
+    "cc": 383,
+    "ISO CODE": "XK / XKX",
+    "population": "1,800,000"
+  },
+  {
+    "country": "Kuwait",
+    "cc": 965,
+    "ISO CODE": "KW / KWT",
+    "population": "2,789,132"
+  },
+  {
+    "country": "Kyrgyzstan",
+    "cc": 996,
+    "ISO CODE": "KG / KGZ",
+    "population": "5,508,626"
+  },
+  {
+    "country": "Laos",
+    "cc": 856,
+    "ISO CODE": "LA / LAO",
+    "population": "6,368,162"
+  },
+  {
+    "country": "Latvia",
+    "cc": 371,
+    "ISO CODE": "LV / LVA",
+    "population": "2,217,969"
+  },
+  {
+    "country": "Lebanon",
+    "cc": 961,
+    "ISO CODE": "LB / LBN",
+    "population": "4,125,247"
+  },
+  {
+    "country": "Lesotho",
+    "cc": 266,
+    "ISO CODE": "LS / LSO",
+    "population": "1,919,552"
+  },
+  {
+    "country": "Liberia",
+    "cc": 231,
+    "ISO CODE": "LR / LBR",
+    "population": "3,685,076"
+  },
+  {
+    "country": "Libya",
+    "cc": 218,
+    "ISO CODE": "LY / LBY",
+    "population": "6,461,454"
+  },
+  {
+    "country": "Liechtenstein",
+    "cc": 423,
+    "ISO CODE": "LI / LIE",
+    "population": "35,000"
+  },
+  {
+    "country": "Lithuania",
+    "cc": 370,
+    "ISO CODE": "LT / LTU",
+    "population": "2,944,459"
+  },
+  {
+    "country": "Luxembourg",
+    "cc": 352,
+    "ISO CODE": "LU / LUX",
+    "population": "497,538"
+  },
+  {
+    "country": "Macau",
+    "cc": 853,
+    "ISO CODE": "MO / MAC",
+    "population": "449,198"
+  },
+  {
+    "country": "Macedonia",
+    "cc": 389,
+    "ISO CODE": "MK / MKD",
+    "population": "2,062,294"
+  },
+  {
+    "country": "Madagascar",
+    "cc": 261,
+    "ISO CODE": "MG / MDG",
+    "population": "21,281,844"
+  },
+  {
+    "country": "Malawi",
+    "cc": 265,
+    "ISO CODE": "MW / MWI",
+    "population": "15,447,500"
+  },
+  {
+    "country": "Malaysia",
+    "cc": 60,
+    "ISO CODE": "MY / MYS",
+    "population": "28,274,729"
+  },
+  {
+    "country": "Maldives",
+    "cc": 960,
+    "ISO CODE": "MV / MDV",
+    "population": "395,650"
+  },
+  {
+    "country": "Mali",
+    "cc": 223,
+    "ISO CODE": "ML / MLI",
+    "population": "13,796,354"
+  },
+  {
+    "country": "Malta",
+    "cc": 356,
+    "ISO CODE": "MT / MLT",
+    "population": "403,000"
+  },
+  {
+    "country": "Marshall Islands",
+    "cc": 692,
+    "ISO CODE": "MH / MHL",
+    "population": "65,859"
+  },
+  {
+    "country": "Mauritania",
+    "cc": 222,
+    "ISO CODE": "MR / MRT",
+    "population": "3,205,060"
+  },
+  {
+    "country": "Mauritius",
+    "cc": 230,
+    "ISO CODE": "MU / MUS",
+    "population": "1,294,104"
+  },
+  {
+    "country": "Mayotte",
+    "cc": 262,
+    "ISO CODE": "YT / MYT",
+    "population": "159,042"
+  },
+  {
+    "country": "Mexico",
+    "cc": 52,
+    "ISO CODE": "MX / MEX",
+    "population": "112,468,855"
+  },
+  {
+    "country": "Micronesia",
+    "cc": 691,
+    "ISO CODE": "FM / FSM",
+    "population": "107,708"
+  },
+  {
+    "country": "Moldova",
+    "cc": 373,
+    "ISO CODE": "MD / MDA",
+    "population": "4,324,000"
+  },
+  {
+    "country": "Monaco",
+    "cc": 377,
+    "ISO CODE": "MC / MCO",
+    "population": "32,965"
+  },
+  {
+    "country": "Mongolia",
+    "cc": 976,
+    "ISO CODE": "MN / MNG",
+    "population": "3,086,918"
+  },
+  {
+    "country": "Montenegro",
+    "cc": 382,
+    "ISO CODE": "ME / MNE",
+    "population": "666,730"
+  },
+  {
+    "country": "Montserrat",
+    "cc": 1664,
+    "ISO CODE": "MS / MSR",
+    "population": "9,341"
+  },
+  {
+    "country": "Morocco",
+    "cc": 212,
+    "ISO CODE": "MA / MAR",
+    "population": "31,627,428"
+  },
+  {
+    "country": "Mozambique",
+    "cc": 258,
+    "ISO CODE": "MZ / MOZ",
+    "population": "22,061,451"
+  },
+  {
+    "country": "Myanmar",
+    "cc": 95,
+    "ISO CODE": "MM / MMR",
+    "population": "53,414,374"
+  },
+  {
+    "country": "Namibia",
+    "cc": 264,
+    "ISO CODE": "NA / NAM",
+    "population": "2,128,471"
+  },
+  {
+    "country": "Nauru",
+    "cc": 674,
+    "ISO CODE": "NR / NRU",
+    "population": "10,065"
+  },
+  {
+    "country": "Nepal",
+    "cc": 977,
+    "ISO CODE": "NP / NPL",
+    "population": "28,951,852"
+  },
+  {
+    "country": "Netherlands",
+    "cc": 31,
+    "ISO CODE": "NL / NLD",
+    "population": "16,645,000"
+  },
+  {
+    "country": "Netherlands Antilles",
+    "cc": 599,
+    "ISO CODE": "AN / ANT",
+    "population": "136,197"
+  },
+  {
+    "country": "New Caledonia",
+    "cc": 687,
+    "ISO CODE": "NC / NCL",
+    "population": "216,494"
+  },
+  {
+    "country": "New Zealand",
+    "cc": 64,
+    "ISO CODE": "NZ / NZL",
+    "population": "4,252,277"
+  },
+  {
+    "country": "Nicaragua",
+    "cc": 505,
+    "ISO CODE": "NI / NIC",
+    "population": "5,995,928"
+  },
+  {
+    "country": "Niger",
+    "cc": 227,
+    "ISO CODE": "NE / NER",
+    "population": "15,878,271"
+  },
+  {
+    "country": "Nigeria",
+    "cc": 234,
+    "ISO CODE": "NG / NGA",
+    "population": "154,000,000"
+  },
+  {
+    "country": "Niue",
+    "cc": 683,
+    "ISO CODE": "NU / NIU",
+    "population": "2,166"
+  },
+  {
+    "country": "North Korea",
+    "cc": 850,
+    "ISO CODE": "KP / PRK",
+    "population": "22,912,177"
+  },
+  {
+    "country": "Northern Mariana Islands",
+    "cc": 1670,
+    "ISO CODE": "MP / MNP",
+    "population": "53,883"
+  },
+  {
+    "country": "Norway",
+    "cc": 47,
+    "ISO CODE": "NO / NOR",
+    "population": "5,009,150"
+  },
+  {
+    "country": "Oman",
+    "cc": 968,
+    "ISO CODE": "OM / OMN",
+    "population": "2,967,717"
+  },
+  {
+    "country": "Pakistan",
+    "cc": 92,
+    "ISO CODE": "PK / PAK",
+    "population": "184,404,791"
+  },
+  {
+    "country": "Palau",
+    "cc": 680,
+    "ISO CODE": "PW / PLW",
+    "population": "19,907"
+  },
+  {
+    "country": "Palestine",
+    "cc": 970,
+    "ISO CODE": "PS / PSE",
+    "population": "3,800,000"
+  },
+  {
+    "country": "Panama",
+    "cc": 507,
+    "ISO CODE": "PA / PAN",
+    "population": "3,410,676"
+  },
+  {
+    "country": "Papua New Guinea",
+    "cc": 675,
+    "ISO CODE": "PG / PNG",
+    "population": "6,064,515"
+  },
+  {
+    "country": "Paraguay",
+    "cc": 595,
+    "ISO CODE": "PY / PRY",
+    "population": "6,375,830"
+  },
+  {
+    "country": "Peru",
+    "cc": 51,
+    "ISO CODE": "PE / PER",
+    "population": "29,907,003"
+  },
+  {
+    "country": "Philippines",
+    "cc": 63,
+    "ISO CODE": "PH / PHL",
+    "population": "99,900,177"
+  },
+  {
+    "country": "Pitcairn",
+    "cc": 64,
+    "ISO CODE": "PN / PCN",
+    "population": 46
+  },
+  {
+    "country": "Poland",
+    "cc": 48,
+    "ISO CODE": "PL / POL",
+    "population": "38,500,000"
+  },
+  {
+    "country": "Portugal",
+    "cc": 351,
+    "ISO CODE": "PT / PRT",
+    "population": "10,676,000"
+  },
+  {
+    "country": "Puerto Rico",
+    "cc": "1787, 1939",
+    "ISO CODE": "PR / PRI",
+    "population": "3,916,632"
+  },
+  {
+    "country": "Qatar",
+    "cc": 974,
+    "ISO CODE": "QA / QAT",
+    "population": "840,926"
+  },
+  {
+    "country": "Republic of the Congo",
+    "cc": 242,
+    "ISO CODE": "CG / COG",
+    "population": "3,039,126"
+  },
+  {
+    "country": "Reunion",
+    "cc": 262,
+    "ISO CODE": "RE / REU",
+    "population": "776,948"
+  },
+  {
+    "country": "Romania",
+    "cc": 40,
+    "ISO CODE": "RO / ROU",
+    "population": "21,959,278"
+  },
+  {
+    "country": "Russia",
+    "cc": 7,
+    "ISO CODE": "RU / RUS",
+    "population": "140,702,000"
+  },
+  {
+    "country": "Rwanda",
+    "cc": 250,
+    "ISO CODE": "RW / RWA",
+    "population": "11,055,976"
+  },
+  {
+    "country": "Saint Barthelemy",
+    "cc": 590,
+    "ISO CODE": "BL / BLM",
+    "population": "8,450"
+  },
+  {
+    "country": "Saint Helena",
+    "cc": 290,
+    "ISO CODE": "SH / SHN",
+    "population": "7,460"
+  },
+  {
+    "country": "Saint Kitts and Nevis",
+    "cc": 1869,
+    "ISO CODE": "KN / KNA",
+    "population": "51,134"
+  },
+  {
+    "country": "Saint Lucia",
+    "cc": 1758,
+    "ISO CODE": "LC / LCA",
+    "population": "160,922"
+  },
+  {
+    "country": "Saint Martin",
+    "cc": 590,
+    "ISO CODE": "MF / MAF",
+    "population": "35,925"
+  },
+  {
+    "country": "Saint Pierre and Miquelon",
+    "cc": 508,
+    "ISO CODE": "PM / SPM",
+    "population": "7,012"
+  },
+  {
+    "country": "Saint Vincent and the Grenadines",
+    "cc": 1784,
+    "ISO CODE": "VC / VCT",
+    "population": "104,217"
+  },
+  {
+    "country": "Samoa",
+    "cc": 685,
+    "ISO CODE": "WS / WSM",
+    "population": "192,001"
+  },
+  {
+    "country": "San Marino",
+    "cc": 378,
+    "ISO CODE": "SM / SMR",
+    "population": "31,477"
+  },
+  {
+    "country": "Sao Tome and Principe",
+    "cc": 239,
+    "ISO CODE": "ST / STP",
+    "population": "175,808"
+  },
+  {
+    "country": "Saudi Arabia",
+    "cc": 966,
+    "ISO CODE": "SA / SAU",
+    "population": "25,731,776"
+  },
+  {
+    "country": "Senegal",
+    "cc": 221,
+    "ISO CODE": "SN / SEN",
+    "population": "12,323,252"
+  },
+  {
+    "country": "Serbia",
+    "cc": 381,
+    "ISO CODE": "RS / SRB",
+    "population": "7,344,847"
+  },
+  {
+    "country": "Seychelles",
+    "cc": 248,
+    "ISO CODE": "SC / SYC",
+    "population": "88,340"
+  },
+  {
+    "country": "Sierra Leone",
+    "cc": 232,
+    "ISO CODE": "SL / SLE",
+    "population": "5,245,695"
+  },
+  {
+    "country": "Singapore",
+    "cc": 65,
+    "ISO CODE": "SG / SGP",
+    "population": "4,701,069"
+  },
+  {
+    "country": "Sint Maarten",
+    "cc": 1721,
+    "ISO CODE": "SX / SXM",
+    "population": "37,429"
+  },
+  {
+    "country": "Slovakia",
+    "cc": 421,
+    "ISO CODE": "SK / SVK",
+    "population": "5,455,000"
+  },
+  {
+    "country": "Slovenia",
+    "cc": 386,
+    "ISO CODE": "SI / SVN",
+    "population": "2,007,000"
+  },
+  {
+    "country": "Solomon Islands",
+    "cc": 677,
+    "ISO CODE": "SB / SLB",
+    "population": "559,198"
+  },
+  {
+    "country": "Somalia",
+    "cc": 252,
+    "ISO CODE": "SO / SOM",
+    "population": "10,112,453"
+  },
+  {
+    "country": "South Africa",
+    "cc": 27,
+    "ISO CODE": "ZA / ZAF",
+    "population": "49,000,000"
+  },
+  {
+    "country": "South Korea",
+    "cc": 82,
+    "ISO CODE": "KR / KOR",
+    "population": "48,422,644"
+  },
+  {
+    "country": "South Sudan",
+    "cc": 211,
+    "ISO CODE": "SS / SSD",
+    "population": "8,260,490"
+  },
+  {
+    "country": "Spain",
+    "cc": 34,
+    "ISO CODE": "ES / ESP",
+    "population": "46,505,963"
+  },
+  {
+    "country": "Sri Lanka",
+    "cc": 94,
+    "ISO CODE": "LK / LKA",
+    "population": "21,513,990"
+  },
+  {
+    "country": "Sudan",
+    "cc": 249,
+    "ISO CODE": "SD / SDN",
+    "population": "35,000,000"
+  },
+  {
+    "country": "Suriname",
+    "cc": 597,
+    "ISO CODE": "SR / SUR",
+    "population": "492,829"
+  },
+  {
+    "country": "Svalbard and Jan Mayen",
+    "cc": 47,
+    "ISO CODE": "SJ / SJM",
+    "population": "2,550"
+  },
+  {
+    "country": "Swaziland",
+    "cc": 268,
+    "ISO CODE": "SZ / SWZ",
+    "population": "1,354,051"
+  },
+  {
+    "country": "Sweden",
+    "cc": 46,
+    "ISO CODE": "SE / SWE",
+    "population": "9,555,893"
+  },
+  {
+    "country": "Switzerland",
+    "cc": 41,
+    "ISO CODE": "CH / CHE",
+    "population": "7,581,000"
+  },
+  {
+    "country": "Syria",
+    "cc": 963,
+    "ISO CODE": "SY / SYR",
+    "population": "22,198,110"
+  },
+  {
+    "country": "Taiwan",
+    "cc": 886,
+    "ISO CODE": "TW / TWN",
+    "population": "22,894,384"
+  },
+  {
+    "country": "Tajikistan",
+    "cc": 992,
+    "ISO CODE": "TJ / TJK",
+    "population": "7,487,489"
+  },
+  {
+    "country": "Tanzania",
+    "cc": 255,
+    "ISO CODE": "TZ / TZA",
+    "population": "41,892,895"
+  },
+  {
+    "country": "Thailand",
+    "cc": 66,
+    "ISO CODE": "TH / THA",
+    "population": "67,089,500"
+  },
+  {
+    "country": "Togo",
+    "cc": 228,
+    "ISO CODE": "TG / TGO",
+    "population": "6,587,239"
+  },
+  {
+    "country": "Tokelau",
+    "cc": 690,
+    "ISO CODE": "TK / TKL",
+    "population": "1,466"
+  },
+  {
+    "country": "Tonga",
+    "cc": 676,
+    "ISO CODE": "TO / TON",
+    "population": "122,580"
+  },
+  {
+    "country": "Trinidad and Tobago",
+    "cc": 1868,
+    "ISO CODE": "TT / TTO",
+    "population": "1,228,691"
+  },
+  {
+    "country": "Tunisia",
+    "cc": 216,
+    "ISO CODE": "TN / TUN",
+    "population": "10,589,025"
+  },
+  {
+    "country": "Turkey",
+    "cc": 90,
+    "ISO CODE": "TR / TUR",
+    "population": "77,804,122"
+  },
+  {
+    "country": "Turkmenistan",
+    "cc": 993,
+    "ISO CODE": "TM / TKM",
+    "population": "4,940,916"
+  },
+  {
+    "country": "Turks and Caicos Islands",
+    "cc": 1649,
+    "ISO CODE": "TC / TCA",
+    "population": "20,556"
+  },
+  {
+    "country": "Tuvalu",
+    "cc": 688,
+    "ISO CODE": "TV / TUV",
+    "population": "10,472"
+  },
+  {
+    "country": "U.S. Virgin Islands",
+    "cc": 1340,
+    "ISO CODE": "VI / VIR",
+    "population": "108,708"
+  },
+  {
+    "country": "Uganda",
+    "cc": 256,
+    "ISO CODE": "UG / UGA",
+    "population": "33,398,682"
+  },
+  {
+    "country": "Ukraine",
+    "cc": 380,
+    "ISO CODE": "UA / UKR",
+    "population": "45,415,596"
+  },
+  {
+    "country": "United Arab Emirates",
+    "cc": 971,
+    "ISO CODE": "AE / ARE",
+    "population": "4,975,593"
+  },
+  {
+    "country": "United Kingdom",
+    "cc": 44,
+    "ISO CODE": "GB / GBR",
+    "population": "62,348,447"
+  },
+  {
+    "country": "United States",
+    "cc": 1,
+    "ISO CODE": "US / USA",
+    "population": "310,232,863"
+  },
+  {
+    "country": "Uruguay",
+    "cc": 598,
+    "ISO CODE": "UY / URY",
+    "population": "3,477,000"
+  },
+  {
+    "country": "Uzbekistan",
+    "cc": 998,
+    "ISO CODE": "UZ / UZB",
+    "population": "27,865,738"
+  },
+  {
+    "country": "Vanuatu",
+    "cc": 678,
+    "ISO CODE": "VU / VUT",
+    "population": "221,552"
+  },
+  {
+    "country": "Vatican",
+    "cc": 379,
+    "ISO CODE": "VA / VAT",
+    "population": 921
+  },
+  {
+    "country": "Venezuela",
+    "cc": 58,
+    "ISO CODE": "VE / VEN",
+    "population": "27,223,228"
+  },
+  {
+    "country": "Vietnam",
+    "cc": 84,
+    "ISO CODE": "VN / VNM",
+    "population": "89,571,130"
+  },
+  {
+    "country": "Wallis and Futuna",
+    "cc": 681,
+    "ISO CODE": "WF / WLF",
+    "population": "16,025"
+  },
+  {
+    "country": "Western Sahara",
+    "cc": 212,
+    "ISO CODE": "EH / ESH",
+    "population": "273,008"
+  },
+  {
+    "country": "Yemen",
+    "cc": 967,
+    "ISO CODE": "YE / YEM",
+    "population": "23,495,361"
+  },
+  {
+    "country": "Zambia",
+    "cc": 260,
+    "ISO CODE": "ZM / ZMB",
+    "population": "13,460,305"
+  },
+  {
+    "country": "Zimbabwe",
+    "cc": 263,
+    "ISO CODE": "ZW / ZWE",
+    "population": "11,651,858"
+  }
+]

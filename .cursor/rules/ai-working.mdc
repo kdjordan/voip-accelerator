@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-When you complete a task, put a summary of what you have learned about the current task invoved into [next.md](mdc:.cursor/rules/next.md) in the AI CONTEXT section. Keep a running log of your uderstanding of the task and where we at in the process. Append you learning after each accepted code change.
