@@ -18,7 +18,7 @@ client/.env.local
 client/.env.development
 client/.env.production
 !client/.env.example
-
+client/src/data/
 # Supabase
 /supabase/.env
 /supabase/.env.*
