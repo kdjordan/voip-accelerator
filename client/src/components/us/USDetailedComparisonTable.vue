@@ -49,15 +49,116 @@
           <option value="same">Same Rate</option>
         </select>
       </div>
+
+      <!-- Download CSV Button -->
+      <div class="ml-auto self-end">
+        <button
+          @click="downloadCsv"
+          :disabled="
+            isLoading || isLoadingMore || filteredComparisonData.length === 0 || isExporting
+          "
+          title="Download Current View"
+          class="inline-flex items-center justify-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
+        >
+          <span v-if="isExporting" class="flex items-center">
+            <ArrowPathIcon class="animate-spin w-5 h-5 mr-2" />
+            Exporting...
+          </span>
+          <span v-else class="flex items-center">
+            <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
+            Export Filtered Data
+          </span>
+        </button>
+      </div>
     </div>
 
-    <div v-if="isLoading && filteredComparisonData.length === 0" class="text-center text-gray-500">
-      Loading comparison data...
+    <!-- Filtered Data Average Rates Summary - Grouped by File with Badge Left -->
+    <div v-if="filteredComparisonData.length > 0" class="mb-4 space-y-3">
+      <!-- File 1 Averages -->
+      <div class="flex items-center space-x-4">
+        <!-- File 1 Badge -->
+        <div class="flex-shrink-0">
+          <span
+            class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+            >{{ fileName1 }}</span
+          >
+        </div>
+        <!-- File 1 Bento Boxes -->
+        <div class="flex-grow grid grid-cols-3 gap-2">
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Inter Avg</div>
+            <div class="text-base text-white">
+              ${{ filteredAverageRates.file1_inter_avg.toFixed(6) }}
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Intra Avg</div>
+            <div class="text-base text-white">
+              ${{ filteredAverageRates.file1_intra_avg.toFixed(6) }}
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Indeterm Avg</div>
+            <div class="text-base text-white">
+              ${{ filteredAverageRates.file1_indeterm_avg.toFixed(6) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File 2 Averages -->
+      <div class="flex items-center space-x-4">
+        <!-- File 2 Badge -->
+        <div class="flex-shrink-0">
+          <span
+            class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+            >{{ fileName2 }}</span
+          >
+        </div>
+        <!-- File 2 Bento Boxes -->
+        <div class="flex-grow grid grid-cols-3 gap-2">
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Inter Avg</div>
+            <div class="text-base text-white">
+              ${{ filteredAverageRates.file2_inter_avg.toFixed(6) }}
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Intra Avg</div>
+            <div class="text-base text-white">
+              ${{ filteredAverageRates.file2_intra_avg.toFixed(6) }}
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Indeterm Avg</div>
+            <div class="text-base text-white">
+              ${{ filteredAverageRates.file2_indeterm_avg.toFixed(6) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <p class="text-xs text-gray-500 text-center mt-2">
+        * Averages calculated based on currently displayed rows.
+      </p>
     </div>
-    <div v-else-if="error" class="text-center text-red-500">Error loading data: {{ error }}</div>
+
+    <div
+      v-if="isLoading && filteredComparisonData.length === 0"
+      class="text-center text-gray-500 py-10"
+    >
+      <div class="flex items-center justify-center space-x-2">
+        <ArrowPathIcon class="animate-spin w-6 h-6" />
+        <span>Loading comparison data...</span>
+      </div>
+    </div>
+    <div v-else-if="error" class="text-center text-red-500 py-10">
+      Error loading data: {{ error }}
+    </div>
     <div
       v-else-if="filteredComparisonData.length === 0 && !isLoading"
-      class="text-center text-gray-500"
+      class="text-center text-gray-500 py-10"
     >
       No matching comparison data found. Ensure reports have been generated or adjust filters.
     </div>
@@ -128,8 +229,8 @@
               <!-- Diff Indeterm % Header -->
               <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
               <!-- Difference Headers -->
-              <th class="px-4 py-2 text-left text-gray-300">Cheaper Inter</th>
-              <th class="px-4 py-2 text-left text-gray-300">Cheaper Intra</th>
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Cheaper Inter</th>
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Cheaper Intra</th>
               <th class="px-4 py-2 text-left text-gray-300">Cheaper Indeterm</th>
             </tr>
           </thead>
@@ -207,12 +308,15 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { USPricingComparisonRecord } from '@/types/domains/us-types';
 import type { DexieDBBase } from '@/composables/useDexieDB'; // Import the class type
+import Papa from 'papaparse'; // Import PapaParse
+import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Icons
 
 const usStore = useUsStore(); // Instantiate usStore
 const { getDB } = useDexieDB(); // Only need getDB now
 const filteredComparisonData = ref<USPricingComparisonRecord[]>([]);
 const isLoading = ref<boolean>(false); // Initial loading state
 const isLoadingMore = ref<boolean>(false); // Loading state for subsequent pages
+const isExporting = ref<boolean>(false); // Export loading state
 const error = ref<string | null>(null);
 const availableStates = ref<string[]>([]); // For state filter dropdown
 
@@ -245,6 +349,181 @@ const fileName2 = computed(() => {
   const names = usStore.getFileNames;
   return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
 });
+
+// --- Computed property for average rates of filtered data ---
+const filteredAverageRates = computed(() => {
+  const totals = {
+    file1_inter: { sum: 0, count: 0 },
+    file1_intra: { sum: 0, count: 0 },
+    file1_indeterm: { sum: 0, count: 0 },
+    file2_inter: { sum: 0, count: 0 },
+    file2_intra: { sum: 0, count: 0 },
+    file2_indeterm: { sum: 0, count: 0 },
+  };
+
+  for (const record of filteredComparisonData.value) {
+    // Helper to safely add to sum and count
+    const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
+      if (value !== null && value !== undefined && !isNaN(value)) {
+        totals[key].sum += value;
+        totals[key].count++;
+      }
+    };
+
+    addToTotals('file1_inter', record.file1_inter);
+    addToTotals('file1_intra', record.file1_intra);
+    addToTotals('file1_indeterm', record.file1_indeterm);
+    addToTotals('file2_inter', record.file2_inter);
+    addToTotals('file2_intra', record.file2_intra);
+    addToTotals('file2_indeterm', record.file2_indeterm);
+  }
+
+  // Helper to calculate average
+  const calculateAvg = (sum: number, count: number): number => {
+    return count > 0 ? sum / count : 0;
+  };
+
+  return {
+    file1_inter_avg: calculateAvg(totals.file1_inter.sum, totals.file1_inter.count),
+    file1_intra_avg: calculateAvg(totals.file1_intra.sum, totals.file1_intra.count),
+    file1_indeterm_avg: calculateAvg(totals.file1_indeterm.sum, totals.file1_indeterm.count),
+    file2_inter_avg: calculateAvg(totals.file2_inter.sum, totals.file2_inter.count),
+    file2_intra_avg: calculateAvg(totals.file2_intra.sum, totals.file2_intra.count),
+    file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
+  };
+});
+
+// --- CSV Download Function (Updated) ---
+async function downloadCsv(): Promise<void> {
+  // Make async
+  if (isExporting.value) return; // Prevent multiple exports
+
+  isExporting.value = true;
+  error.value = null; // Clear previous errors
+
+  try {
+    // Ensure DB is initialized
+    if (!(await initializeDB()) || !dbInstance) {
+      throw new Error('Database not available for export.');
+    }
+
+    // 1. Build the query dynamically to get ALL filtered data
+    let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+    const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
+    if (searchTerm.value) {
+      const lowerSearch = searchTerm.value.toLowerCase();
+      currentFilters.push((record: USPricingComparisonRecord) =>
+        record.npanxx.toLowerCase().startsWith(lowerSearch)
+      );
+    }
+    if (selectedState.value) {
+      currentFilters.push(
+        (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
+      );
+    }
+    if (selectedCheaperInter.value) {
+      currentFilters.push(
+        (record: USPricingComparisonRecord) => record.cheaper_inter === selectedCheaperInter.value
+      );
+    }
+
+    // Apply filters without pagination
+    let filteredQuery = query;
+    if (currentFilters.length > 0) {
+      filteredQuery = query.filter((record) => currentFilters.every((fn) => fn(record)));
+    }
+
+    // Fetch ALL matching data
+    const allFilteredData = await filteredQuery.toArray();
+
+    console.log(
+      `[USDetailedComparisonTable] Fetched ${allFilteredData.length} records for CSV export.`
+    );
+
+    if (allFilteredData.length === 0) {
+      console.warn('[USDetailedComparisonTable] No data matching filters found for export.');
+      // Optionally show a user message
+      alert('No data matches the current filters to export.');
+      return; // Exit if no data
+    }
+
+    // 2. Define headers (using dynamic filenames)
+    const headers = [
+      'NPANXX',
+      'NPA',
+      'NXX',
+      'State',
+      'Country',
+      `Inter (${fileName1.value})`,
+      `Inter (${fileName2.value})`,
+      'Diff Inter %',
+      `Intra (${fileName1.value})`,
+      `Intra (${fileName2.value})`,
+      'Diff Intra %',
+      `Indeterm (${fileName1.value})`,
+      `Indeterm (${fileName2.value})`,
+      'Diff Indeterm %',
+      'Cheaper Inter',
+      'Cheaper Intra',
+      'Cheaper Indeterm',
+    ];
+
+    // 3. Map the ALL filtered data for export
+    const dataToExport = allFilteredData.map((record) => ({
+      NPANXX: record.npanxx,
+      NPA: record.npa,
+      NXX: record.nxx,
+      State: record.stateCode,
+      Country: record.countryCode,
+      [`Inter (${fileName1.value})`]: record.file1_inter?.toFixed(6) ?? 'n/a',
+      [`Inter (${fileName2.value})`]: record.file2_inter?.toFixed(6) ?? 'n/a',
+      'Diff Inter %': record.diff_inter_pct ? `${record.diff_inter_pct.toFixed(2)}%` : 'n/a',
+      [`Intra (${fileName1.value})`]: record.file1_intra?.toFixed(6) ?? 'n/a',
+      [`Intra (${fileName2.value})`]: record.file2_intra?.toFixed(6) ?? 'n/a',
+      'Diff Intra %': record.diff_intra_pct ? `${record.diff_intra_pct.toFixed(2)}%` : 'n/a',
+      [`Indeterm (${fileName1.value})`]: record.file1_indeterm?.toFixed(6) ?? 'n/a',
+      [`Indeterm (${fileName2.value})`]: record.file2_indeterm?.toFixed(6) ?? 'n/a',
+      'Diff Indeterm %': record.diff_indeterm_pct
+        ? `${record.diff_indeterm_pct.toFixed(2)}%`
+        : 'n/a',
+      'Cheaper Inter': formatCheaperFile(record.cheaper_inter),
+      'Cheaper Intra': formatCheaperFile(record.cheaper_intra),
+      'Cheaper Indeterm': formatCheaperFile(record.cheaper_indeterm),
+    }));
+
+    // 4. Generate CSV string
+    const csv = Papa.unparse(
+      {
+        fields: headers,
+        data: dataToExport.map((row) => headers.map((header) => row[header as keyof typeof row])),
+      },
+      {
+        header: true,
+        quotes: true,
+      }
+    );
+
+    // 5. Trigger Download
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `us-compare-${timestamp}.csv`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (csvError: any) {
+    console.error('[USDetailedComparisonTable] Error generating or downloading CSV:', csvError);
+    error.value = csvError.message || 'Failed to generate CSV file.'; // Display error to user
+  } finally {
+    isExporting.value = false; // Reset loading state
+  }
+}
 
 // --- Core Data Loading Logic ---
 
