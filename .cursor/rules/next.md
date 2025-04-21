@@ -263,26 +263,38 @@ Based on user feedback, we need to refine the `AZCountryBreakdown` interface in 
 
 1.  **US File Upload View (`USFileUploads.vue`):**
 
-    - [ ] **Conditional Rendering:** Hide the file upload drop zone (`USFileDropZone`) for a specific slot (`us1` or `us2`) once a file has been successfully uploaded and processed for that slot.
-    - [ ] **Display Uploaded File Info:** Instead of the drop zone, display the uploaded filename (similar to `AzCodeSummary.vue`) within the `USFileUploads.vue` component.
-    - [ ] **Relocate 'Remove' Button:** Move the 'Remove' button to be inline with the displayed filename (like in `AzCodeSummary.vue`) for a cleaner layout.
-    - [ ] **Refactor for `USCodeSummary`:** Replace the drop zone/file info display with the existing `USCodeSummary.vue` component once a file is processed, mirroring the AZ flow where `AzCodeSummary` replaces the drop zone.
+    - [x] **Conditional Rendering:** Hide the file upload drop zone (`USFileDropZone`) for a specific slot (`us1` or `us2`) once a file has been successfully uploaded and processed for that slot.
+    - [x] **Display Uploaded File Info:** Instead of the drop zone, display the uploaded filename (similar to `AzCodeSummary.vue`) within the `USFileUploads.vue` component.
+    - [x] **Relocate 'Remove' Button:** Move the 'Remove' button to be inline with the displayed filename (like in `AzCodeSummary.vue`) for a cleaner layout.
+    - [x] **Refactor for `USCodeSummary`:** Replace the drop zone/file info display with the existing `USCodeSummary.vue` component once a file is processed, mirroring the AZ flow where `AzCodeSummary` replaces the drop zone.
 
 2.  **US Detailed Comparison Table Header (`USDetailedComparisonTable.vue`):**
 
-    - [ ] **Filename Badges:** Replace the static "File1" and "File2" text in the table headers (`<th>`) with dynamic, styled badges that display the actual filenames (e.g., `UStest.csv`, `UStest1.csv`), matching the appearance of the badges in `AZDetailedComparisonTable.vue`.
-    - [ ] **Consistent Styling:** Ensure the badge styling (colors, borders, background) is consistent with the AZ table header badges.
+    - [x] **Filename Badges:** Replace the static "File1" and "File2" text in the table headers (`<th>`) with dynamic, styled badges that display the actual filenames (e.g., `UStest.csv`, `UStest1.csv`), matching the appearance of the badges in `AZDetailedComparisonTable.vue`.
+    - [x] **Consistent Styling:** Ensure the badge styling (colors, borders, background) is consistent with the AZ table header badges.
 
 3.  **US Comparison Filters (`USDetailedComparisonTable.vue`):**
 
-    - [ ] **Dynamic Filter Options:** Update the "Cheaper Inter Rate" filter dropdown options to dynamically use the actual filenames (e.g., "UStest.csv Cheaper", "UStest1.csv Cheaper") instead of the static "File 1 Cheaper", "File 2 Cheaper".
+    - [x] **Dynamic Filter Options:** Update the "Cheaper Inter Rate" filter dropdown options to dynamically use the actual filenames (e.g., "UStest.csv Cheaper", "UStest1.csv Cheaper") instead of the static "File 1 Cheaper", "File 2 Cheaper".
 
 4.  **CSV Export (`USDetailedComparisonTable.vue`):**
-    - [ ] **Add Export Button:** Implement a "Export Current View" button similar to the one in `AZDetailedComparisonTable.vue`.
-    - [ ] **Implement `downloadCsv`:** Create the necessary logic to export the currently filtered and displayed data in `USDetailedComparisonTable.vue` to a CSV file using `papaparse`.
-    - [ ] **Dynamic Filename:** Generate a dynamic filename for the exported CSV (e.g., `us-compare-{timestamp}.csv`).
-    - [ ] **Button Styling:** Style the button to match the AZ export button (green accent, icon).
+    - [x] **Add Export Button:** Implement a "Export Current View" button similar to the one in `AZDetailedComparisonTable.vue`.
+    - [x] **Implement `downloadCsv`:** Create the necessary logic to export the currently filtered and displayed data in `USDetailedComparisonTable.vue` to a CSV file using `papaparse`.
+    - [x] **Dynamic Filename:** Generate a dynamic filename for the exported CSV (e.g., `us-compare-{timestamp}.csv`).
+    - [x] **Button Styling:** Style the button to match the AZ export button (green accent, icon).
+    - [x] **Export All Filtered Data:** Refactored `downloadCsv` to query and export _all_ data matching the current filters, not just the loaded rows, and added a loading state to the button.
 
-**Current Focus:** Start with Task 1 (US File Upload View Refinement) and Task 2 (Table Header Badges).
+**Additional Refinements:**
+
+- [x] **Shortened Labels:** Shortened "Interstate"/"Intrastate"/"Indeterminate" to "Inter"/"Intra"/"Indeterm" across `USCodeSummary`, `USDetailedComparisonTable`, and `USPricingReport`.
+- [x] **Table Column Layout:** Rearranged columns in `USDetailedComparisonTable` to group rates (File1/File2) and percentage difference side-by-side, removing absolute difference columns.
+- [x] **Average Rate Summary:** Added and refined a dynamic summary section in `USDetailedComparisonTable` showing average rates for the currently loaded filtered data, grouped by file.
+- [x] **Loading Indicator:** Improved the initial loading indicator in `USDetailedComparisonTable` to use a spinner animation.
+- [x] **Git Branch Fix:** Resolved `warning: ignoring ref with broken name` by manually deleting the corrupted ref file.
+- [x] **Build Process:** Confirmed the `npm run build` process completes successfully, despite a slight delay in the terminal prompt returning due to parallel type-checking.
+
+**Status:** All planned US UI/UX refinement tasks are complete. The US views now align more closely with the AZ section's functionality and appearance.
+
+**Current Focus:** Ready for next set of tasks.
 
 ---
