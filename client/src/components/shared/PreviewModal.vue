@@ -163,7 +163,7 @@
 
           <!-- Footer -->
           <div
-            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-4 bg-fbHover/30 border-t border-fbWhite/10"
+            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-fbHover/30 border-t border-fbWhite/10"
           >
             <slot
               name="footer"
@@ -190,6 +190,21 @@
                 &times;
               </button>
             </slot>
+
+            <!-- Conditional Effective Date Input for US Rate Sheet -->
+            <div v-if="props.source === 'US_RATE_SHEET'" class="flex items-center gap-2 mr-auto">
+              <label
+                for="effective-date"
+                class="block text-sm font-medium text-fbWhite/70 whitespace-nowrap"
+                >Effective Date:</label
+              >
+              <input
+                type="date"
+                id="effective-date"
+                v-model="effectiveDate"
+                class="input-custom bg-fbHover border border-fbWhite/20 rounded-md px-3 py-1.5 text-sm focus:ring-accent focus:border-accent"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -198,7 +213,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { USColumnRole } from '@/types/domains/us-types';
 import {
   PREVIEW_MODAL_MESSAGES,
@@ -209,11 +224,32 @@ import { BasePreviewModalProps, BasePreviewModalEmits } from '@/types/app-types'
 
 // Use the base types from app-types.ts
 const props = defineProps<BasePreviewModalProps & { source?: PreviewModalSource }>();
-const emit = defineEmits<BasePreviewModalEmits>();
+
+// Update emits definition
+const emit = defineEmits<{
+  'update:mappings': [mappings: Record<string, string>];
+  'update:valid': [isValid: boolean];
+  'update:start-line': [startLine: number];
+  'update:indeterminate-definition': [definition: string];
+  // Add optional effectiveDate to confirm payload
+  confirm: [
+    mappings: Record<string, string>,
+    indeterminateDefinition?: string,
+    effectiveDate?: string
+  ];
+  cancel: [];
+}>();
 
 const startLine = ref(props.startLine);
 const indeterminateRateDefinition = ref('column');
 const showValidationErrors = ref(false);
+const effectiveDate = ref(''); // Add ref for effective date
+
+// Add onMounted hook to set default date
+onMounted(() => {
+  const today = new Date();
+  effectiveDate.value = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
+});
 
 // Get the appropriate message based on the source prop
 const modalMessage = computed(() => {
@@ -409,13 +445,28 @@ function handleConfirm() {
 
     // Only pass the indeterminate definition if we're not using a column
     if (indeterminateRateDefinition.value !== 'column') {
-      emit('confirm', mappings.value, indeterminateRateDefinition.value);
+      // Emit effective date for US Rate Sheet source
+      if (props.source === 'US_RATE_SHEET') {
+        emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value);
+      } else {
+        emit('confirm', mappings.value, indeterminateRateDefinition.value);
+      }
     } else {
       // When using a column, don't pass a definition
-      emit('confirm', mappings.value);
+      // Emit effective date for US Rate Sheet source
+      if (props.source === 'US_RATE_SHEET') {
+        emit('confirm', mappings.value, undefined, effectiveDate.value);
+      } else {
+        emit('confirm', mappings.value);
+      }
     }
   } else {
-    emit('confirm', mappings.value);
+    // Emit effective date for US Rate Sheet source (though unlikely to be AZ)
+    if (props.source === 'US_RATE_SHEET') {
+      emit('confirm', mappings.value, undefined, effectiveDate.value);
+    } else {
+      emit('confirm', mappings.value);
+    }
   }
 }
 

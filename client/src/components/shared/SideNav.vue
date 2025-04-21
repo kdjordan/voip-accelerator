@@ -132,8 +132,13 @@ const items = ref([
     icon: GlobeAmericasIcon,
   },
   {
+    name: 'US Rate Wizard',
+    to: '/us-rate-sheet',
+    icon: AdjustmentsVerticalIcon,
+  },
+  {
     name: 'AZ Rate Wizard',
-    to: '/rate-sheet',
+    to: '/az-rate-sheet',
     icon: AdjustmentsVerticalIcon,
   },
   {

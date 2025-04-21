@@ -1,4 +1,6 @@
 import type { CountryLergData } from '@/types/domains/lerg-types';
+import type { InvalidUsRow, USStandardizedData } from './us-types';
+import type { ChangeCode } from './rate-sheet-types'; // Import ChangeCode
 
 export interface USStandardizedData {
   npanxx: string;
@@ -310,6 +312,22 @@ export interface USPricingComparisonRecord {
   cheaper_inter: 'file1' | 'file2' | 'same';
   cheaper_intra: 'file1' | 'file2' | 'same';
   cheaper_indeterm: 'file1' | 'file2' | 'same';
+}
+
+// Standardized data format for processed US rate sheet entries
+export interface USRateSheetEntry {
+  id?: number; // Primary key for Dexie
+  npa: string;
+  nxx: string;
+  npanxx: string; // Derived from npa + nxx
+  interRate: number;
+  intraRate: number;
+  ijRate: number; // Can be derived from inter/intra based on user selection
+  // Optional metadata/comparison fields
+  effectiveDate?: string;
+  changeCode?: ChangeCode;
+  // TBD: selectedRate and conflict might need rework for multiple rate types
+  conflict?: boolean;
 }
 
 /*

@@ -14,7 +14,7 @@ const STORAGE_KEY = 'voip-accelerator-rate-sheet-data';
 const STORAGE_KEY_SETTINGS = 'voip-accelerator-rate-sheet-settings';
 const STORAGE_KEY_INVALID = 'voip-accelerator-rate-sheet-invalid';
 
-export const useRateSheetStore = defineStore('rateSheet', {
+export const useAzRateSheetStore = defineStore('azRateSheet', {
   state: (): RateSheetState => ({
     error: null,
     isProcessing: false,

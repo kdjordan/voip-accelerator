@@ -815,9 +815,9 @@ import {
   ChevronDownIcon,
 } from '@heroicons/vue/24/outline';
 import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
-import { useRateSheetStore } from '@/stores/rate-sheet-store';
+import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
 import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
-import { RateSheetService } from '@/services/rate-sheet.service';
+import { RateSheetService } from '@/services/az-rate-sheet.service';
 import type {
   EffectiveDateSettings,
   EffectiveDateStoreSettings,
@@ -828,7 +828,7 @@ import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?
 const emit = defineEmits(['update:discrepancy-count']);
 
 // Initialize store and service
-const store = useRateSheetStore();
+const store = useAzRateSheetStore();
 const rateSheetService = new RateSheetService();
 const groupedData = computed(() => store.getGroupedData);
 const expandedRows = ref<string[]>([]);

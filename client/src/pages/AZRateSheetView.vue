@@ -267,21 +267,21 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
 
-import { useRateSheetStore } from '@/stores/rate-sheet-store';
+import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
 import {
   ArrowUpTrayIcon,
   TrashIcon,
   ChevronDownIcon,
   ChevronUpIcon,
 } from '@heroicons/vue/24/outline';
-import RateSheetTable from '@/components/rate-sheet/RateSheetTable.vue';
+import RateSheetTable from '@/components/rate-sheet/az/AZRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { RF_COLUMN_ROLE_OPTIONS, ChangeCode } from '@/types/domains/rate-sheet-types';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
-import { RateSheetService } from '@/services/rate-sheet.service';
+import { RateSheetService } from '@/services/az-rate-sheet.service';
 
-const store = useRateSheetStore();
+const store = useAzRateSheetStore();
 const rateSheetService = new RateSheetService();
 const isLocallyStored = computed(() => store.hasStoredData);
 const isDragging = ref(false);

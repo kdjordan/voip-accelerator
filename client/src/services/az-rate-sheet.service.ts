@@ -1,10 +1,16 @@
 import { ChangeCode } from '@/types/domains/rate-sheet-types';
-import type { RateSheetRecord, GroupedRateData, RateStatistics, InvalidRow, ChangeCodeType } from '@/types/domains/rate-sheet-types';
-import { useRateSheetStore } from '@/stores/rate-sheet-store';
+import type {
+  RateSheetRecord,
+  GroupedRateData,
+  RateStatistics,
+  InvalidRow,
+  ChangeCodeType,
+} from '@/types/domains/rate-sheet-types';
+import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
 import Papa from 'papaparse';
 
 export class RateSheetService {
-  private store = useRateSheetStore();
+  private store = useAzRateSheetStore();
 
   constructor() {
     console.log('Initializing Rate Sheet service');
@@ -36,41 +42,43 @@ export class RateSheetService {
 
   async updateEffectiveDates(groupedData: GroupedRateData[]): Promise<void> {
     try {
-      console.log("Starting updateEffectiveDates with", groupedData.length, "groups");
-      
+      console.log('Starting updateEffectiveDates with', groupedData.length, 'groups');
+
       // Get all records from the store
       const records = this.store.originalData;
-      
+
       // Create a map for efficient lookup
       const recordsMap = new Map<string, RateSheetRecord[]>();
-      
+
       // Group records by destination name
-      records.forEach(record => {
+      records.forEach((record) => {
         const existing = recordsMap.get(record.name) || [];
         existing.push(record);
         recordsMap.set(record.name, existing);
       });
-      
+
       // Prepare updates
-      const updatedRecords: {name: string, prefix: string, effective: string}[] = [];
-      
+      const updatedRecords: { name: string; prefix: string; effective: string }[] = [];
+
       // Update effective dates based on grouped data
       for (const group of groupedData) {
         const recordsForDestination = recordsMap.get(group.destinationName) || [];
-        console.log(`Processing ${recordsForDestination.length} records for ${group.destinationName} with effective date ${group.effectiveDate}`);
-        
+        console.log(
+          `Processing ${recordsForDestination.length} records for ${group.destinationName} with effective date ${group.effectiveDate}`
+        );
+
         // Apply new effective date to all records for this destination
-        recordsForDestination.forEach(record => {
+        recordsForDestination.forEach((record) => {
           if (record.effective !== group.effectiveDate) {
             updatedRecords.push({
               name: record.name,
               prefix: record.prefix,
-              effective: group.effectiveDate
+              effective: group.effectiveDate,
             });
           }
         });
       }
-      
+
       if (updatedRecords.length > 0) {
         // Use the store method to update records
         this.store.updateEffectiveDatesWithRecords(updatedRecords);
@@ -95,7 +103,7 @@ export class RateSheetService {
         console.log('No records to update');
         return;
       }
-      
+
       console.log(`Updating ${updatedRecords.length} records in store`);
       // Use the store's method to handle updates
       this.store.updateEffectiveDatesWithRecords(updatedRecords);
@@ -122,9 +130,12 @@ export class RateSheetService {
             try {
               // Skip to user-specified start line
               const dataRows = results.data.slice(startLine - 1);
-              
+
               // Process the data using the store's method
-              const { records: validRecords, invalidRows } = this.store.processFileData(dataRows, columnMapping);
+              const { records: validRecords, invalidRows } = this.store.processFileData(
+                dataRows,
+                columnMapping
+              );
 
               if (validRecords.length > 0) {
                 // Store the data directly in the store
@@ -135,17 +146,17 @@ export class RateSheetService {
               }
 
               // Add any invalid rows to the store
-              invalidRows.forEach(row => {
+              invalidRows.forEach((row) => {
                 this.store.addInvalidRow(row);
               });
-              
+
               resolve({ fileName: file.name, records: validRecords });
             } catch (error) {
               console.error('Error processing file data:', error);
               reject(error);
             }
           },
-          error: error => reject(new Error(`Failed to parse CSV: ${error.message}`)),
+          error: (error) => reject(new Error(`Failed to parse CSV: ${error.message}`)),
         });
       });
     } catch (error) {

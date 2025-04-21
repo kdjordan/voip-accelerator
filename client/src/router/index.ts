@@ -19,9 +19,14 @@ const router = createRouter({
       component: () => import('@/pages/DashBoard.vue'),
     },
     {
-      path: '/rate-sheet',
-      name: 'rateSheet',
-      component: () => import('@/pages/RateSheetView.vue'),
+      path: '/az-rate-sheet',
+      name: 'AZRateSheet',
+      component: () => import('@/pages/AZRateSheetView.vue'),
+    },
+    {
+      path: '/us-rate-sheet',
+      name: 'USRateSheet',
+      component: () => import('@/pages/USRateSheetView.vue'),
     },
     {
       path: '/azview',
