@@ -30,43 +30,43 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
 
 ### Phase 3: Implement US Rate Sheet Logic (DexieJS Integration)
 
-- [x] **Define US `USRateSheetEntry` Interface:**
-  - Defined `USRateSheetEntry` in `client/src/types/domains/us-types.ts` based on required US columns (NPA/NXX/NPANXX, Interstate/Intrastate/Indeterminate Rates).
-  - Included `id` (for Dexie).
-  - **Excluded** `changeCode` and `conflict` fields.
-- [x] **Define US DexieJS Storage:**
-  - Added `DBName.US_RATE_SHEET` ('us_rate_sheet_db') to `app-types.ts`.
-  - Added schema for `us_rate_sheet_db` to `DBSchemas` in `app-types.ts` (e.g., `'++id, npa, nxx, npanxx, interRate, intraRate, ijRate'`). This DB will contain one fixed table (named `entries` in the service).
-  - **Note:** This deviates from the initial plan of using a table within `us_rate_deck_db` to avoid schema conflicts with dynamic tables.
-- [x] **Define US Column Mappings:**
-  - Uses existing `US_COLUMN_ROLE_OPTIONS` from `us-types.ts` for the `PreviewModal`.
+- [x] **Define US `USRateSheetEntry` Interface:** Defined in `us-types.ts`.
+- [x] **Define US DexieJS Storage:** Added `DBName.US_RATE_SHEET` and schema. Using fixed table `'entries'`.
+- [x] **Define US Column Mappings:** Uses `US_COLUMN_ROLE_OPTIONS`.
 - [x] **Adapt Upload/Processing (`USRateSheetView.vue`):**
-  - [x] Ensure `PreviewModal` props use `US_COLUMN_ROLE_OPTIONS`.
-  - [x] **Pass `source` prop:** Updated to pass `:source="'US_RATE_SHEET'"` to `PreviewModal`.
-  - [x] **Modify `handleModalConfirm` Logic:** Updated signature to receive `indeterminateDefinition` and `effectiveDate` from `PreviewModal` emit. Confirmed it calls the service correctly.
-- [x] **Create/Adapt Service (`usRateSheetService`):** Created `USRateSheetService`:
-  - [x] `processFile` method handles parsing, validation, standardization, and Dexie storage (using `useDexieDB`).
-  - [x] Uses `DBName.US_RATE_SHEET` and table name `'entries'` internally.
-  - [x] **Added 7-digit NPANXX / 4-digit NPA handling:** Incorporated logic from `us.service.ts` to strip leading '1' before validation.
-  - [x] `getData` method added to load data from Dexie.
-  - [x] `clearData` method added to clear the Dexie table (with `InvalidTableError` handling).
+  - [x] Use `PreviewModal` with `US_COLUMN_ROLE_OPTIONS`.
+  - [x] **Pass `source` prop:** Updated to pass `:source="'US'"` to `PreviewModal` (maintains compatibility with `USFileUploads`).
+  - [x] **Modify `handleModalConfirm` Logic:**
+    - Confirmed it calls the service correctly.
+    - Made `effectiveDate` optional in the initial check.
+    - **Added logic to correctly interpret `undefined` `indeterminateDefinition` from modal as `'column'` before passing to service.**
+  - [x] Refactored to use `useDragDrop` composable.
+  - [x] Corrected `Papa.parse` logic to use `preview` option for modal display.
+  - [x] Added/refined logging for troubleshooting.
+- [x] **Create/Adapt Service (`usRateSheetService`):**
+  - [x] `processFile` method handles parsing, validation, standardization.
+  - [x] Uses `DBName.US_RATE_SHEET` and table name `'entries'`.
+  - [x] Added 7-digit NPANXX / 4-digit NPA handling.
+  - [x] `getData`, `getTableCount`, `clearData` methods added.
+  - [x] `processFile` confirmed to handle optional `effectiveDate`.
 - [x] **Create & Update `us-rate-sheet-store.ts`:**
-  - [x] **Create Store:** Created `client/src/stores/us-rate-sheet-store.ts`.
-  - [x] **Add State:** Added `hasUsRateSheetData: boolean`, `usRateSheetEffectiveDate: string | null`, `isLoading`, `error`.
-  - [x] **Refactor Actions/Getters:** Actions `loadRateSheetData`, `handleUploadSuccess`, `clearUsRateSheetData` correctly call service methods without needing DB/table names. `handleUploadSuccess` stores effective date.
+  - [x] Created store.
+  - [x] Added state: `hasUsRateSheetData`, `usRateSheetEffectiveDate`, `isLoading`, `error`.
+  - [x] Refactored Actions/Getters to call service methods.
+  - [x] `handleUploadSuccess` stores effective date.
 - [x] **Integrate `us-rate-sheet-store.ts` into `USRateSheetView.vue`:**
-  - [x] Import and use `useUsRateSheetStore`.
+  - [x] Import and use store.
   - [x] Call `store.loadRateSheetData()` in `onMounted`.
   - [x] Updated `handleModalConfirm` to call `store.handleUploadSuccess`.
   - [x] Updated `handleClearData` to call `store.clearUsRateSheetData`.
-  - [x] Use store state/getters (`getHasUsRateSheetData`, `getUsRateSheetEffectiveDate`, `isLoading`, `getError`) to control UI elements.
+  - [x] Use store state/getters for UI.
 - [ ] **Adapt Table Logic (`USRateSheetTable.vue` - DexieJS Focus):**
-  - **Data Fetching:** Fetch data via the store (`us-rate-sheet-store.ts`) which should now hold the data loaded by the service/`loadRateSheetData` action. _(May need to add state/getter in store to hold loaded data if not already present)_. Alternatively, the table could use the service directly for fetching/filtering if state management isn't needed for the raw data.
-  - **Filtering/Searching:** Implement filters and search logic. If using store state, filter the array. If fetching directly, use DexieJS `.where()`/`.filter()` via the service.
-  - **Display Effective Date:** Display the single, file-level effective date (fetched from `us-rate-sheet-store.ts` getter).
-  - **Remove Discrepancy/Conflict UI:** Remove UI/logic for rate discrepancies/conflicts.
-  - **Export Data:** Modify `handleExport` to get the current data (either from store state or via a filtered DexieJS query via service) before generating the CSV.
-  - **Clear Data Interaction:** Button is in `USRateSheetView.vue`, logic is handled there.
+  - Data Fetching: Fetch data via the store (`us-rate-sheet-store.ts`).
+  - Filtering/Searching: Implement using DexieJS via service or filter store state.
+  - Display Effective Date: Display single effective date from store.
+  - Remove Discrepancy/Conflict UI.
+  - Export Data: Modify `handleExport` to get current data from DexieJS via service.
+  - Clear Data Interaction: Button handled in view.
 
 ### Phase 4: Refactor AZ Rate Sheet Storage (DexieJS Integration)
 
@@ -97,7 +97,35 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
 
 ---
 
+## ❓ Open Questions & Prompts
+
+To ensure the US Rate Sheet feature aligns perfectly with requirements, please clarify:
+
+1.  **Effective Date Requirement:** We've made the Effective Date _optional_ during the modal confirmation step for `USRateSheetView.vue`. Is this correct? Or should it be _required_ before processing can start? If required, should the `PreviewModal` enforce this?
+///this should be optional
+2.  **Total Records Display:** The "Total Records Processed" stat currently shows `'---'`. Where should this count come from?
+/// the number of rows that end up in the us_rate_sheet_db
+    - Should `usRateSheetService.processFile` return the total valid _and_ invalid records attempted?
+/// yes and we should store that for quick access in the @us-rate-sheet-store.ts
+    - Should the store fetch the count from the DexieJS table (`db.entries.count()`) after a successful upload using a dedicated getter/action?
+/// yes and that should be reactive, so as soon as it's available we shwo it
+3.  **Invalid Rows Display:** `usRateSheetService.processFile` identifies `invalidRows`. How should these be displayed to the user in `USRateSheetView.vue`? Should we add a collapsible section similar to `AZRateSheetView.vue`?
+/// yes exact same functionality and UI/UX
+4.  **Data Clearing Logic:** The `catch` block in `handleModalConfirm` now calls `store.clearUsRateSheetData()`. Is this the desired behavior (i.e., clear any potentially partially saved data if _any_ error occurs during processing)?
+/// I think this is an ok check - the data in DexieJS should persist until the user removes the file - just like in @az-rate-sheet-service.ts
+5.  **Table Component (`USRateSheetTable.vue`):** What are the exact requirements for filtering and searching in the US rate sheet table? By NPA? NXX? Rate range? Should it load all data initially or paginate?
+/// mostly the same functionality for now as with @AZRateSheetView. We won't have any rate confilicts in there so we will have different filters in there. We will be introdocing another set of data that we can use there, a population setting.
+/// the idea is - is that the user can filter NPAS by state population, so the display will show a desending list of NPAs based on the state that is assigned to and the population of that state.
+/// for now we should just leave the View Filter with the option of sorting alphabetically by state ascending and descending so we can get a framework for the additioanl information 
+
+---
+
 ## Open Questions & Prompts
 
 - **AZ Schema:** Confirm the `AZRateSheetEntry` type and the schema defined for `DBName.AZ_RATE_SHEET` in `DBSchemas` are fully aligned.
+/// for now we should not be doing anything with AZ components or functionality - that is all working as expected
+/// we need to make sure that nothing we are doing will effect that functionality
+/// we will address the refactor of AZ Rate sheets after we finish US rate sheet Implementation
 - **Table Component Refactor:** Decide if `USRateSheetTable` / `AZRateSheetTable` will fetch data via the store state or directly via service calls to Dexie.
+/// for get about AZRateSheetTable for now - all focus is on @USRateSheetTable and yes it should fetch from Dexie.
+/// it should also implement infinite scrolling like we are doing for @USPricingReport using the UsdetailedcomparisonTable
