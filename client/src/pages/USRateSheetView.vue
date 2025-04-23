@@ -10,9 +10,7 @@
     <div class="bg-gray-800 rounded-lg overflow-hidden">
       <!-- Header Section -->
       <div class="p-6 border-b border-gray-700/50">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold text-fbWhite">Overview</h2>
-          <!-- Add Clear Button -->
+        <div class="flex justify-end mb-4">
           <button
             v-if="isLocallyStored"
             @click="handleClearData"
@@ -25,37 +23,43 @@
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-3">
           <!-- Storage Status -->
-          <div class="bg-gray-900/50 p-4 rounded-lg">
+          <div>
             <div class="flex justify-between items-center">
-              <h3 class="text-sm text-gray-400">Storage Status</h3>
+              <h3 class="text-gray-400">Storage Status</h3>
               <div class="flex items-center space-x-2">
                 <div
                   class="w-3 h-3 rounded-full"
-                  :class="[isLocallyStored ? 'bg-green-500 animate-pulse' : 'bg-red-500']"
+                  :class="[
+                    isLocallyStored
+                      ? 'bg-green-500 animate-status-pulse-success'
+                      : 'bg-red-500 animate-status-pulse-error',
+                  ]"
                 ></div>
                 <span class="text-sm">{{ isLocallyStored ? 'Data Loaded' : 'No Data' }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Effective Date -->
-          <div class="bg-gray-900/50 p-4 rounded-lg">
+          <!-- Total Records -->
+          <div>
             <div class="flex justify-between items-center">
-              <h3 class="text-sm text-gray-400">Effective Date</h3>
-              <div class="text-sm font-medium">
-                {{ store.getUsRateSheetEffectiveDate || 'N/A' }}
+              <h3 class="text-gray-400">Total Records Processed</h3>
+              <!-- TODO: Get actual record count from Dexie via store or service -->
+              <div class="text-xl font-medium">
+                {{ store.getUsRateSheetEffectiveDate || '0' }}
               </div>
             </div>
           </div>
 
-          <!-- Total Records - Conditionally Rendered -->
-          <div v-if="isLocallyStored" class="bg-gray-900/50 p-4 rounded-lg md:col-span-2">
+          <!-- Effective Date -->
+          <div>
             <div class="flex justify-between items-center">
-              <h3 class="text-sm text-gray-400">Total Records Processed</h3>
-              <!-- TODO: Get actual record count from Dexie via store or service -->
-              <div class="text-base font-semibold">{{ '---' /* store.getTotalRecords */ }}</div>
+              <h3 class="text-gray-400">Effective Date</h3>
+              <div class="text-xl font-medium">
+                {{ store.getUsRateSheetEffectiveDate || 'N/A' }}
+              </div>
             </div>
           </div>
 
@@ -64,55 +68,58 @@
         </div>
 
         <!-- File Upload Section -->
-        <div v-if="!isLocallyStored" class="mt-6 border-t border-gray-700/50 pt-6">
-          <h3 class="text-lg font-medium text-fbWhite mb-4">Upload Rate Sheet</h3>
+        <div v-if="!isLocallyStored" class="mt-6">
           <div
-            @dragenter.prevent="isDragging = true"
-            @dragleave.prevent="isDragging = false"
-            @dragover.prevent
-            @drop.prevent="handleFileDrop"
+            @dragenter.prevent="handleDragEnter"
+            @dragleave.prevent="handleDragLeave"
+            @dragover.prevent="handleDragOver"
+            @drop.prevent="handleDrop"
             class="relative rounded-lg p-6 h-[120px] flex items-center justify-center transition-colors duration-200"
             :class="[
-              isDragging
+              isDragging && !showPreviewModal && !isProcessing
                 ? 'border-2 border-solid border-accent bg-fbWhite/10'
-                : 'border-2 border-dashed border-gray-600 hover:border-accent-hover hover:bg-fbWhite/10',
-              isProcessing ? 'animate-pulse cursor-not-allowed' : 'cursor-pointer',
-              store.getError ? 'border-2 border-solid border-red-500' : '',
+                : 'border-2 border-dashed border-gray-600',
+              !showPreviewModal && !isProcessing
+                ? 'hover:border-accent-hover hover:bg-fbWhite/10'
+                : 'opacity-50',
+              isProcessing
+                ? 'animate-pulse cursor-not-allowed'
+                : !showPreviewModal
+                ? 'cursor-pointer'
+                : 'cursor-default',
+              uploadError ? 'border-2 border-solid border-red-500' : '',
             ]"
           >
             <input
               type="file"
               accept=".csv"
               class="absolute inset-0 opacity-0 w-full h-full"
-              :class="{ 'pointer-events-none': isProcessing }"
-              :disabled="isProcessing"
+              :class="{ 'pointer-events-none': isProcessing || showPreviewModal }"
+              :disabled="isProcessing || showPreviewModal"
               @change="handleFileChange"
             />
             <div class="text-center">
               <ArrowUpTrayIcon
-                class="w-10 h-10 mx-auto border rounded-full p-2 mb-2"
+                class="w-10 h-10 mx-auto border rounded-full p-2"
                 :class="
-                  store.getError
+                  uploadError
                     ? 'text-red-500 border-red-500/50 bg-red-500/10'
                     : 'text-accent border-accent/50 bg-accent/10'
                 "
               />
-              <p
-                class="text-base font-medium"
-                :class="store.getError ? 'text-red-500' : 'text-accent'"
-              >
-                <template v-if="store.getError">
-                  <span>{{ store.getError }}</span>
+              <p class="mt-2 text-base" :class="uploadError ? 'text-red-500' : 'text-accent'">
+                <template v-if="uploadError">
+                  <span>{{ uploadError }}</span>
                 </template>
                 <template v-else-if="isProcessing">
                   <span>Processing your file...</span>
                 </template>
                 <template v-else>
-                  <span>DRAG & DROP or CLICK to upload CSV</span>
+                  <span>DRAG & DROP to upload or CLICK to select file</span>
                 </template>
               </p>
-              <p v-if="store.getError" class="mt-1 text-xs text-red-400">
-                Please check the file and try again.
+              <p v-if="uploadError" class="mt-1 text-xs text-red-400">
+                Please try again with a CSV file
               </p>
             </div>
           </div>
@@ -127,7 +134,7 @@
       </div>
 
       <!-- Data Table -->
-      <div v-if="isLocallyStored" class="p-6">
+      <div v-if="isLocallyStored" class="mt-8">
         <USRateSheetTable />
         <!-- Removed discrepancy count prop -->
       </div>
@@ -169,11 +176,11 @@ import type { ParseResult } from 'papaparse';
 import { USRateSheetService } from '@/services/us-rate-sheet.service.ts';
 import { USColumnRole } from '@/types/domains/us-types';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+import { useDragDrop } from '@/composables/useDragDrop';
 
 const store = useUsRateSheetStore();
 const usRateSheetService = new USRateSheetService();
 const isLocallyStored = computed(() => store.getHasUsRateSheetData);
-const isDragging = ref(false);
 const isRFUploading = ref(false);
 const isRFRemoving = ref(false);
 const uploadError = ref<string | null>(store.getError);
@@ -192,6 +199,23 @@ const selectedFile = ref<File | null>(null);
 // Invalid Rows state
 const showInvalidRowsDetails = ref(false);
 
+// --- Drag and Drop Setup ---
+const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, clearError } =
+  useDragDrop({
+    acceptedExtensions: ['.csv'],
+    onDropCallback: (file: File) => {
+      uploadError.value = null;
+      clearError();
+      processFile(file);
+    },
+    onError: (message: string) => {
+      uploadError.value = message;
+      store.setError(message);
+    },
+  });
+
+// --- End Drag and Drop Setup ---
+
 onMounted(async () => {
   // Load initial data state from Dexie via the store
   await store.loadRateSheetData();
@@ -201,66 +225,88 @@ function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
   if (!input.files || input.files.length === 0) return;
 
-  uploadError.value = '';
+  uploadError.value = null;
+  clearError();
   const file = input.files[0];
   processFile(file);
 }
 
-function handleFileDrop(event: DragEvent) {
-  if (!event.dataTransfer) return;
-
-  const file = event.dataTransfer.files?.[0];
-  if (!file) return;
-
-  uploadError.value = '';
-  processFile(file);
-}
-
 function processFile(file: File) {
-  if (!file.name.endsWith('.csv')) {
-    uploadError.value = 'Invalid file type. Please upload a CSV file.';
-    return;
-  }
-
+  console.log('[processFile] Started processing file:', file.name);
   selectedFile.value = file;
 
   try {
+    console.log('[processFile] Calling Papa.parse...');
     Papa.parse(file, {
-      header: false,
+      preview: 20,
       skipEmptyLines: true,
       complete: (results: ParseResult<string[]>) => {
-        columns.value = results.data[0].map((h) => h.trim());
+        console.log('[processFile] Papa.parse complete callback reached.');
+        if (results.data.length === 0) {
+          console.log('[processFile] Papa.parse complete: No data found.');
+          const emptyErrorMessage = 'CSV file appears to be empty or invalid.';
+          uploadError.value = emptyErrorMessage;
+          store.setError(emptyErrorMessage);
+          showPreviewModal.value = false;
+          return;
+        }
+        console.log('[processFile] Papa.parse complete: Data found, processing for modal.');
+        columns.value = results.data[0].map((h) => h?.trim() || '');
         previewData.value = results.data
-          .slice(0, 10)
+          .slice(1, 11)
           .map((row) => (Array.isArray(row) ? row.map((cell) => cell?.trim() || '') : []));
         startLine.value = 1;
+        console.log('[processFile] Setting showPreviewModal = true');
         showPreviewModal.value = true;
       },
       error: (error) => {
-        console.error('Error parsing CSV:', error);
-        uploadError.value = 'Failed to parse CSV file: ' + error.message;
+        console.error('[processFile] Papa.parse error callback reached:', error);
+        const parseErrorMessage = 'Failed to parse CSV file: ' + error.message;
+        uploadError.value = parseErrorMessage;
+        store.setError(parseErrorMessage);
+        showPreviewModal.value = false;
       },
     });
   } catch (error) {
-    console.error('Error handling file:', error);
-    uploadError.value =
+    console.error('[processFile] Error during Papa.parse try/catch:', error);
+    const processErrorMessage =
       'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
+    uploadError.value = processErrorMessage;
+    store.setError(processErrorMessage);
+    showPreviewModal.value = false;
   }
 }
 
 async function handleModalConfirm(
   mappings: Record<string, string>,
-  indeterminateDefinition?: string,
+  indeterminateDefinitionFromModal?: string,
   effectiveDate?: string
 ) {
+  console.log('[handleModalConfirm] Confirm button clicked. Received:', {
+    mappings,
+    indeterminateDefinitionFromModal,
+    effectiveDate,
+    selectedFile: selectedFile.value,
+  });
+
   showPreviewModal.value = false;
   const file = selectedFile.value;
-  if (!file || !effectiveDate) {
-    store.setError('File or Effective Date missing from modal confirmation.');
+  if (!file) {
+    console.error('[handleModalConfirm] Condition failed: !file');
+    store.setError('File missing from modal confirmation.');
     selectedFile.value = null;
     return;
   }
 
+  // Determine the correct definition string to pass to the service
+  // If modal sent undefined, it means "Column Role" was selected.
+  const indeterminateDefinitionForService =
+    indeterminateDefinitionFromModal === undefined ? 'column' : indeterminateDefinitionFromModal;
+
+  console.log(
+    '[handleModalConfirm] Proceeding with processing... Indeterminate Definition for Service:',
+    indeterminateDefinitionForService
+  );
   store.setLoading(true);
   store.setError(null);
   rfUploadStatus.value = null;
@@ -268,7 +314,7 @@ async function handleModalConfirm(
   try {
     console.log('Starting US Rate Sheet processing...', {
       mappings,
-      indeterminateDefinition,
+      indeterminateDefinitionForService,
       effectiveDate,
     });
 
@@ -300,7 +346,7 @@ async function handleModalConfirm(
       file,
       columnMapping,
       startLine.value,
-      indeterminateDefinition,
+      indeterminateDefinitionForService,
       effectiveDate
     );
 
@@ -316,7 +362,8 @@ async function handleModalConfirm(
     const errorMessage = error instanceof Error ? error.message : 'Failed to process rate sheet';
     store.setError(errorMessage);
     rfUploadStatus.value = { type: 'error', message: errorMessage };
-    store.clearUsRateSheetData();
+    // Ensure data is cleared ONLY on processing failure AFTER confirmation
+    await store.clearUsRateSheetData();
   } finally {
     store.setLoading(false);
     selectedFile.value = null;
