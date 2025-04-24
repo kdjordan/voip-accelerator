@@ -61,209 +61,31 @@
         </div>
 
         <!-- Progress and apply button -->
-        <div class="space-y-2">
-          <!-- Multi-step progress indicator -->
-          <div v-if="isApplyingSettings" class="mb-4 bg-gray-900/30 p-3 rounded-lg">
-            <div class="flex justify-between mb-2">
-              <h4 class="text-sm font-medium text-gray-300">Progress</h4>
-              <span class="text-xs text-gray-400" v-if="processingStartTime > 0">
-                {{ displayedElapsedTime }}s elapsed
-              </span>
-            </div>
-
-            <!-- Processing steps indicators -->
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                  :class="{
-                    'bg-green-500 text-white ring-4 ring-green-500/20':
-                      processingPhase === 'preparing',
-                    'bg-green-900/30 text-green-400':
-                      processingPhase === 'processing' ||
-                      processingPhase === 'updating' ||
-                      processingPhase === 'finalizing',
-                    'bg-gray-800 text-gray-400': processingPhase === 'idle',
-                  }"
-                >
-                  1
-                </div>
-                <div
-                  class="ml-2 text-sm transition-all duration-300 font-medium"
-                  :class="{
-                    'text-green-500': processingPhase === 'preparing',
-                    'text-green-400':
-                      processingPhase === 'processing' ||
-                      processingPhase === 'updating' ||
-                      processingPhase === 'finalizing',
-                    'text-gray-600': processingPhase === 'idle',
-                  }"
-                >
-                  Preparing Data
-                </div>
-              </div>
+        <div class="space-y-4">
+          <!-- Simplified progress indicator -->
+          <div v-if="isApplyingSettings" class="mb-4">
+            <div class="text-sm text-gray-300 mb-2">{{ processingStatus }}</div>
+            <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
               <div
-                class="h-1 flex-1 mx-2 transition-all duration-300"
-                :class="{
-                  'bg-green-500':
-                    processingPhase === 'processing' ||
-                    processingPhase === 'updating' ||
-                    processingPhase === 'finalizing',
-                  'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing',
-                }"
-              ></div>
-              <div class="flex items-center">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                  :class="{
-                    'bg-green-500 text-white ring-4 ring-green-500/20':
-                      processingPhase === 'processing',
-                    'bg-green-900/30 text-green-400':
-                      processingPhase === 'updating' || processingPhase === 'finalizing',
-                    'bg-gray-800 text-gray-400':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  2
-                </div>
-                <div
-                  class="ml-2 text-sm transition-all duration-300 font-medium"
-                  :class="{
-                    'text-green-500': processingPhase === 'processing',
-                    'text-green-400':
-                      processingPhase === 'updating' || processingPhase === 'finalizing',
-                    'text-gray-600':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  Processing Records
-                </div>
-              </div>
-              <div
-                class="h-1 flex-1 mx-2 transition-all duration-300"
-                :class="{
-                  'bg-green-500':
-                    processingPhase === 'updating' || processingPhase === 'finalizing',
-                  'bg-gray-700':
-                    processingPhase === 'idle' ||
-                    processingPhase === 'preparing' ||
-                    processingPhase === 'processing',
-                }"
-              ></div>
-              <div class="flex items-center">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                  :class="{
-                    'bg-green-500 text-white ring-4 ring-green-500/20':
-                      processingPhase === 'updating',
-                    'bg-green-900/30 text-green-400': processingPhase === 'finalizing',
-                    'bg-gray-800 text-gray-400':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  3
-                </div>
-                <div
-                  class="ml-2 text-sm transition-all duration-300 font-medium"
-                  :class="{
-                    'text-green-500': processingPhase === 'updating',
-                    'text-green-400': processingPhase === 'finalizing',
-                    'text-gray-600':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  Updating Database
-                </div>
-              </div>
-            </div>
-
-            <!-- Processing status message -->
-            <div class="text-sm text-gray-300 mb-2 min-h-[1.5rem]">{{ processingStatus }}</div>
-
-            <!-- Detailed status info -->
-            <div
-              class="flex justify-between text-xs text-gray-400 mb-2 min-h-[1.5rem]"
-              v-if="isApplyingSettings && processingPhase === 'processing'"
-            >
-              <div v-if="currentDestination">
-                Processing: <span class="text-green-400">{{ currentDestination }}</span>
-              </div>
-              <div v-if="recordsUpdatedSoFar > 0">
-                {{ recordsUpdatedSoFar }} records updated so far
-              </div>
-              <div v-if="estimatedTimeRemaining !== undefined">
-                Est. time remaining:
-                <span class="text-green-400">{{
-                  estimatedTimeRemaining > 0 ? `${estimatedTimeRemaining}s` : 'calculating...'
-                }}</span>
-              </div>
-            </div>
-
-            <!-- Progress bar -->
-            <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-              <div
-                class="h-3 rounded-full transition-all duration-300 relative"
-                :class="{
-                  'bg-green-500': processingPhase === 'finalizing',
-                  'bg-green-400': processingPhase !== 'finalizing',
-                }"
+                class="h-2 rounded-full bg-accent transition-all duration-300"
                 :style="{ width: `${progressPercentage}%` }"
-              >
-                <div
-                  class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-white/20"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Processing logs (collapsible) -->
-            <div class="mt-3">
-              <div
-                @click="showProcessingLogs = !showProcessingLogs"
-                class="cursor-pointer flex items-center text-xs text-gray-400"
-              >
-                <ChevronRightIcon
-                  class="h-3 w-3 mr-1 transition-transform"
-                  :class="{ 'rotate-90': showProcessingLogs }"
-                />
-                <span>Processing logs ({{ processingLogs.length }})</span>
-              </div>
-
-              <div
-                v-if="showProcessingLogs"
-                class="mt-2 bg-gray-900/70 p-2 rounded text-xs text-gray-500 max-h-40 overflow-y-auto"
-              >
-                <div v-for="(log, index) in processingLogs" :key="index" class="mb-1">
-                  <span class="text-gray-600">{{ new Date(log.time).toLocaleTimeString() }}:</span>
-                  <span>{{ log.message }}</span>
-                </div>
-                <div v-if="processingLogs.length === 0" class="italic">No logs available yet</div>
-              </div>
+              ></div>
             </div>
           </div>
 
-          <div class="flex justify-between items-center">
-            <!-- Apply button -->
-            <div class="flex justify-end w-full">
-              <button
-                @click="applyEffectiveDateSettings"
-                class="px-4 py-2 bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
-                :class="{
-                  'animate-pulse-fast': isApplyingSettings,
-                  'opacity-50 cursor-not-allowed': isApplyingSettings || !hasDateSettingsChanged,
-                }"
-                :disabled="isApplyingSettings || !hasDateSettingsChanged"
-              >
-                {{ isApplyingSettings ? 'APPLYING SETTINGS...' : 'Apply Date Settings' }}
-              </button>
-            </div>
+          <div class="flex justify-end w-full">
+            <button
+              @click="applyEffectiveDateSettings"
+              class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
+              :class="{
+                'animate-pulse-fast': isApplyingSettings,
+                'opacity-50 cursor-not-allowed': isApplyingSettings || !hasDateSettingsChanged,
+              }"
+              :disabled="isApplyingSettings || !hasDateSettingsChanged"
+            >
+              <span>{{ isApplyingSettings ? 'Applying...' : 'Apply' }}</span>
+              <ArrowRightIcon class="ml-1 w-3 h-3" v-if="!isApplyingSettings" />
+            </button>
           </div>
         </div>
       </div>
@@ -686,6 +508,7 @@ import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   ChevronDownIcon,
+  ArrowRightIcon,
 } from '@heroicons/vue/24/outline';
 import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
 import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
@@ -707,37 +530,28 @@ const groupedData = computed(() => store.getGroupedData);
 
 // Computed property to check if date settings have changed from defaults
 const hasDateSettingsChanged = computed(() => {
-  // Get current date to compare with defaults
+  // Get default values to compare with current settings
   const today = new Date().toISOString().split('T')[0];
 
-  // Get tomorrow date to compare with defaults
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  // Get 7 days from now to compare with defaults
+  // Get 7 days from now (default for INCREASE dates)
   const sevenDays = new Date();
   sevenDays.setDate(sevenDays.getDate() + 7);
   const sevenDaysStr = sevenDays.toISOString().split('T')[0];
 
-  // Check if user has modified any date from the default settings
-  const hasCustomSameDate =
-    effectiveDateSettings.value.same === 'custom' &&
-    effectiveDateSettings.value.sameCustomDate !== today &&
-    effectiveDateSettings.value.sameCustomDate !== tomorrowStr;
+  // Get defaults for each type
+  const defaultSameDate = today;
+  const defaultDecreaseDate = today;
+  const defaultIncreaseDate = sevenDaysStr;
 
-  const hasCustomDecreaseDate =
-    effectiveDateSettings.value.decrease === 'custom' &&
-    effectiveDateSettings.value.decreaseCustomDate !== today &&
-    effectiveDateSettings.value.decreaseCustomDate !== tomorrowStr;
+  // Check if any date is different from its default value
+  const sameDateChanged = effectiveDateSettings.value.sameCustomDate !== defaultSameDate;
+  const decreaseDateChanged =
+    effectiveDateSettings.value.decreaseCustomDate !== defaultDecreaseDate;
+  const increaseDateChanged =
+    effectiveDateSettings.value.increaseCustomDate !== defaultIncreaseDate;
 
-  const hasCustomIncreaseDate =
-    effectiveDateSettings.value.increase === 'custom' &&
-    effectiveDateSettings.value.increaseCustomDate !== today &&
-    effectiveDateSettings.value.increaseCustomDate !== tomorrowStr &&
-    effectiveDateSettings.value.increaseCustomDate !== sevenDaysStr;
-
-  return hasCustomSameDate || hasCustomDecreaseDate || hasCustomIncreaseDate;
+  // Return true if any date has changed
+  return sameDateChanged || decreaseDateChanged || increaseDateChanged;
 });
 
 const expandedRows = ref<string[]>([]);
@@ -1546,9 +1360,6 @@ async function handleWorkerResultWithBreathing(
 
       // No alert needed
     }
-
-    // Close the section after applying settings
-    showEffectiveDateSettings.value = false;
   } catch (error) {
     console.error('Failed to finalize updates:', error);
     processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
@@ -1846,6 +1657,23 @@ function getSortedRates(group: GroupedRateData): {
 
   return rates;
 }
+
+// Now, let's add code to open the settings panel by default after file upload
+// This happens in the store's API callback after file processing
+// Let's add a watcher to detect when the file is processed
+
+// Add this after other watchers in the component:
+// Watch for changes in store.hasStoredData to automatically open effective date settings
+watch(
+  () => store.hasStoredData,
+  (newValue, oldValue) => {
+    if (newValue && !oldValue) {
+      // This means the data was just loaded, so open the settings panel
+      showEffectiveDateSettings.value = true;
+      console.log('Auto-opening effective date settings after file upload');
+    }
+  }
+);
 </script>
 
 <style scoped>
