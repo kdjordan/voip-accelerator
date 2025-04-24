@@ -197,7 +197,7 @@
               isDragging
                 ? 'border-2 border-solid border-accent bg-fbWhite/10'
                 : 'border-2 border-dashed border-gray-600 hover:border-accent-hover hover:bg-fbWhite/10',
-              isRFUploading ? 'animate-upload-pulse cursor-not-allowed' : 'cursor-pointer',
+              isRFUploading ? 'cursor-not-allowed' : 'cursor-pointer',
               uploadError ? 'border-2 border-solid border-red-500' : '',
             ]"
           >
@@ -209,29 +209,46 @@
               :disabled="isProcessing"
               @change="handleFileChange"
             />
-            <div class="text-center">
-              <ArrowUpTrayIcon
-                class="w-10 h-10 mx-auto border rounded-full p-2"
-                :class="
-                  uploadError
-                    ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                    : 'text-accent border-accent/50 bg-accent/10'
-                "
-              />
-              <p class="mt-2 text-base" :class="uploadError ? 'text-red-500' : 'text-accent'">
-                <template v-if="uploadError">
-                  <span>{{ uploadError }}</span>
-                </template>
-                <template v-else-if="isRFUploading">
-                  <span>Processing your file...</span>
-                </template>
-                <template v-else>
-                  <span>DRAG & DROP to upload or CLICK to select file</span>
-                </template>
-              </p>
-              <p v-if="uploadError" class="mt-1 text-xs text-red-400">
-                Please try again with a CSV file
-              </p>
+
+            <div class="flex flex-col h-full w-full">
+              <!-- Normal state -->
+              <template v-if="!isRFUploading">
+                <div class="flex items-center justify-center w-full h-full">
+                  <div class="text-center">
+                    <ArrowUpTrayIcon
+                      class="w-10 h-10 mx-auto border rounded-full p-2"
+                      :class="
+                        uploadError
+                          ? 'text-red-500 border-red-500/50 bg-red-500/10'
+                          : 'text-accent border-accent/50 bg-accent/10'
+                      "
+                    />
+                    <p class="mt-2 text-base" :class="uploadError ? 'text-red-500' : 'text-accent'">
+                      <template v-if="uploadError">
+                        <span>{{ uploadError }}</span>
+                      </template>
+                      <template v-else>
+                        <span>DRAG & DROP to upload or CLICK to select file</span>
+                      </template>
+                    </p>
+                    <p v-if="uploadError" class="mt-1 text-xs text-red-400">
+                      Please try again with a CSV file
+                    </p>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Uploading state -->
+              <template v-else>
+                <div
+                  class="flex-1 flex items-center justify-center bg-accent/10 file-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
+                >
+                  <div class="text-center">
+                    <div class="spinner-accent mx-auto mb-2"></div>
+                    <p class="text-base text-accent">Processing your file...</p>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -344,6 +361,7 @@ function processFile(file: File) {
   }
 
   selectedFile.value = file;
+  isRFUploading.value = true;
 
   try {
     Papa.parse(file, {
@@ -360,12 +378,14 @@ function processFile(file: File) {
       error: (error) => {
         console.error('Error parsing CSV:', error);
         uploadError.value = 'Failed to parse CSV file: ' + error.message;
+        isRFUploading.value = false;
       },
     });
   } catch (error) {
     console.error('Error handling file:', error);
     uploadError.value =
       'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
+    isRFUploading.value = false;
   }
 }
 
@@ -440,6 +460,7 @@ async function handleModalConfirm(mappings: Record<string, string>) {
 function handleModalCancel() {
   showPreviewModal.value = false;
   selectedFile.value = null;
+  isRFUploading.value = false;
 }
 
 function handleMappingUpdate(newMappings: Record<string, string>) {
@@ -450,3 +471,34 @@ function toggleInvalidRowsDetails() {
   showInvalidRowsDetails.value = !showInvalidRowsDetails.value;
 }
 </script>
+
+<style scoped>
+.file-upload-pulse {
+  animation: uploadPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes uploadPulse {
+  0%,
+  100% {
+    background-color: rgba(0, 255, 170, 0.1);
+  }
+  50% {
+    background-color: rgba(0, 255, 170, 0.2);
+  }
+}
+
+.spinner-accent {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: hsl(160, 100%, 40%);
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

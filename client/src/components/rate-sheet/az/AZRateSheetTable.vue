@@ -103,7 +103,7 @@
         <div class="flex items-center gap-2">
           <button
             @click="handleClearData"
-            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 transition-colors border border-red-400/30"
+            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md bg-red-900/50 border border-red-500/40 hover:bg-red-900/70 hover:border-red-500/60 text-red-400 transition-colors"
           >
             <TrashIcon class="w-4 h-4" />
             Clear Rate Sheet Data
@@ -603,7 +603,7 @@ const effectiveDateSettings = ref<EffectiveDateSettings>({
 });
 
 // Controls visibility of effective date settings section
-const showEffectiveDateSettings = ref(false);
+const showEffectiveDateSettings = ref(true);
 // Track when settings are being applied
 const isApplyingSettings = ref(false);
 // Track the current processing phase
