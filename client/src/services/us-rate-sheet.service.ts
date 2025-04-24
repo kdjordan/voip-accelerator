@@ -69,304 +69,24 @@ export class USRateSheetService {
   }
 
   /**
-   * Processes the uploaded US Rate Sheet CSV file, parses it,
-   * and stores the standardized data in the Dexie database.
-   */
-  async processFile(
-    file: File,
-    columnMapping: USRateSheetColumnMapping,
-    startLine: number,
-    indeterminateDefinition: string | undefined,
-    effectiveDate: string | undefined
-  ): Promise<{ recordCount: number; invalidRows: InvalidUSRateSheetRow[] }> {
-    console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
-
-    try {
-      // First try to clear the existing data without deleting the database
-      const db = await this.getDB(this.dbName);
-      try {
-        await db.clear(); // This clears all tables without deleting the database
-        console.log(`[USRateSheetService] Cleared existing data`);
-      } catch (clearError) {
-        console.warn(`[USRateSheetService] Error clearing data:`, clearError);
-
-        // Only delete the database if clearing failed
-        console.log(`[USRateSheetService] Attempting to recreate database due to error...`);
-        await this.deleteDatabase(this.dbName);
-        await this.initializeDatabase();
-      }
-    } catch (error) {
-      console.warn('[USRateSheetService] Error preparing database:', error);
-      // Continue despite the error - we'll handle errors during data storage
-    }
-
-    const standardizedData: USRateSheetEntry[] = [];
-    const invalidRows: InvalidUSRateSheetRow[] = [];
-
-    return new Promise((resolve, reject) => {
-      let currentRowIndex = 0; // Track overall row index for error reporting
-
-      Papa.parse(file, {
-        header: false,
-        skipEmptyLines: true,
-        worker: true, // Use worker thread for large files
-        chunk: (results: ParseResult<string[]>, parser) => {
-          console.log(`Processing chunk of ${results.data.length} rows...`);
-          const chunkData = results.data;
-
-          for (let i = 0; i < chunkData.length; i++) {
-            currentRowIndex++; // Increment for each row processed
-            const rowIndexForUser = currentRowIndex; // Row number user sees (1-based)
-
-            // Skip header rows based on user input
-            if (rowIndexForUser < startLine) continue;
-
-            const row = chunkData[i];
-            console.log(`[Debug Row ${rowIndexForUser}] Raw Data:`, JSON.stringify(row));
-
-            let isValidRow = true;
-            let npa = '';
-            let nxx = '';
-            let npanxx = '';
-            let interRate: number | null = null;
-            let intraRate: number | null = null;
-            let ijRate: number | null = null;
-            let errorReason = '';
-
-            try {
-              // --- Extract and Validate NPA/NXX/NPANXX ---
-              if (columnMapping.npanxx !== -1) {
-                npanxx = row[columnMapping.npanxx]?.trim() || '';
-                console.log(
-                  `[Debug Row ${rowIndexForUser}] Extracted NPANXX: '${npanxx}' from index ${columnMapping.npanxx}`
-                );
-
-                // --- Add 7-digit handling from us.service.ts --- START ---
-                if (npanxx.length === 7 && npanxx.startsWith('1')) {
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] Detected 7-digit NPANXX starting with 1. Stripping leading '1'.`
-                  );
-                  npanxx = npanxx.substring(1); // Remove leading "1"
-                  console.log(`[Debug Row ${rowIndexForUser}] Modified NPANXX: '${npanxx}'`);
-                }
-                // --- Add 7-digit handling from us.service.ts --- END ---
-
-                if (npanxx.length === 6 && /^[0-9]+$/.test(npanxx)) {
-                  npa = npanxx.substring(0, 3);
-                  nxx = npanxx.substring(3, 6);
-                  console.log(`[Debug Row ${rowIndexForUser}] NPANXX validated successfully.`);
-                } else {
-                  isValidRow = false;
-                  errorReason = `Invalid NPANXX format (expected 6 digits): ${npanxx}`;
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] Failed NPANXX validation. Reason: ${errorReason}`
-                  );
-                }
-              } else if (columnMapping.npa !== -1 && columnMapping.nxx !== -1) {
-                // --- Handle separate NPA/NXX columns ---
-                npa = row[columnMapping.npa]?.trim() || '';
-                nxx = row[columnMapping.nxx]?.trim() || '';
-                console.log(
-                  `[Debug Row ${rowIndexForUser}] Extracted NPA: '${npa}' from index ${columnMapping.npa}, NXX: '${nxx}' from index ${columnMapping.nxx}`
-                );
-
-                // --- Add NPA startsWith('1') handling --- START ---
-                if (npa.startsWith('1') && npa.length === 4) {
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] Detected 4-digit NPA starting with 1. Stripping leading '1'.`
-                  );
-                  npa = npa.substring(1); // Remove leading "1"
-                  console.log(`[Debug Row ${rowIndexForUser}] Modified NPA: '${npa}'`);
-                }
-                // --- Add NPA startsWith('1') handling --- END ---
-
-                if (
-                  npa.length === 3 &&
-                  /^[0-9]+$/.test(npa) &&
-                  nxx.length === 3 &&
-                  /^[0-9]+$/.test(nxx)
-                ) {
-                  npanxx = npa + nxx;
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] NPA/NXX validated successfully. Combined NPANXX: '${npanxx}'`
-                  );
-                } else {
-                  isValidRow = false;
-                  errorReason = `Invalid NPA/NXX format: NPA=${npa}, NXX=${nxx}`;
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] Failed NPA/NXX validation. Reason: ${errorReason}`
-                  );
-                }
-              } else {
-                isValidRow = false;
-                errorReason = 'Missing required NPA/NXX or NPANXX mapping.';
-                console.log(
-                  `[Debug Row ${rowIndexForUser}] Failed mapping validation. Reason: ${errorReason}`
-                );
-              }
-
-              // --- Extract and Validate Rates (only if NPA/NXX was valid so far) ---
-              if (isValidRow) {
-                const parseRate = (rateStr: string | undefined): number | null => {
-                  console.log(`[Debug Row ${rowIndexForUser}] Parsing Rate: '${rateStr}'`);
-
-                  if (rateStr === undefined || rateStr === null || rateStr.trim() === '') {
-                    errorReason = 'Missing rate value';
-                    console.log(
-                      `[Debug Row ${rowIndexForUser}] Failed rate parsing (missing). Reason: ${errorReason}`
-                    );
-                    return null;
-                  }
-                  const cleanedRate = rateStr.replace(/[^\d.-]/g, '');
-                  const rate = parseFloat(cleanedRate);
-                  if (isNaN(rate) || !isFinite(rate)) {
-                    errorReason = `Invalid rate format: ${rateStr}`;
-                    console.log(
-                      `[Debug Row ${rowIndexForUser}] Failed rate parsing (format). Reason: ${errorReason}, Cleaned: '${cleanedRate}', Parsed: ${rate}`
-                    );
-                    return null;
-                  }
-                  console.log(`[Debug Row ${rowIndexForUser}] Parsed rate successfully: ${rate}`);
-                  return rate;
-                };
-
-                interRate = parseRate(row[columnMapping.interstate]);
-                if (interRate === null && columnMapping.interstate !== -1) isValidRow = false;
-                else if (columnMapping.interstate === -1) {
-                  isValidRow = false;
-                  errorReason = 'Interstate rate column not mapped.';
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] Failed rate validation (Interstate not mapped). Reason: ${errorReason}`
-                  );
-                }
-
-                if (isValidRow && columnMapping.intrastate !== -1) {
-                  intraRate = parseRate(row[columnMapping.intrastate]);
-                  if (intraRate === null) isValidRow = false;
-                } else if (isValidRow) {
-                  // Intrastate is required if column is mapped
-                  isValidRow = false;
-                  errorReason = 'Intrastate rate column not mapped.';
-                  console.log(
-                    `[Debug Row ${rowIndexForUser}] Failed rate validation (Intrastate not mapped). Reason: ${errorReason}`
-                  );
-                }
-
-                // Handle Indeterminate Rate
-                if (isValidRow) {
-                  if (indeterminateDefinition === 'column') {
-                    if (columnMapping.indeterminate !== -1) {
-                      ijRate = parseRate(row[columnMapping.indeterminate]);
-                      if (ijRate === null) isValidRow = false;
-                    } else {
-                      isValidRow = false;
-                      errorReason =
-                        "Indeterminate rate definition set to 'column', but column not mapped.";
-                    }
-                  } else if (indeterminateDefinition === 'intrastate') {
-                    ijRate = intraRate; // Use intrastate rate
-                    if (ijRate === null) isValidRow = false; // Should already be false if intraRate was invalid
-                  } else if (indeterminateDefinition === 'interstate') {
-                    ijRate = interRate; // Use interstate rate
-                    if (ijRate === null) isValidRow = false; // Should already be false if interRate was invalid
-                  } else {
-                    isValidRow = false;
-                    errorReason = 'Invalid indeterminate rate definition specified.';
-                  }
-                }
-              }
-
-              // --- Add to standardized data if valid ---
-              if (isValidRow && interRate !== null && intraRate !== null && ijRate !== null) {
-                standardizedData.push({
-                  npa,
-                  nxx,
-                  npanxx,
-                  interRate,
-                  intraRate,
-                  ijRate,
-                });
-              } else if (!isValidRow) {
-                invalidRows.push({ rowIndex: rowIndexForUser, rowData: row, reason: errorReason });
-                console.log(
-                  `[Debug Row ${rowIndexForUser}] Final validation failed. Reason: ${errorReason}`
-                );
-              }
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              console.error(`Error processing row ${rowIndexForUser}:`, message, row);
-              invalidRows.push({
-                rowIndex: rowIndexForUser,
-                rowData: row,
-                reason: `Processing error: ${message}`,
-              });
-            }
-          }
-        },
-        complete: async (results) => {
-          console.log(
-            `[USRateSheetService] Parsing complete. Processing ${standardizedData.length} standardized entries.`
-          );
-
-          try {
-            // Store the standardized data in the database
-            if (standardizedData.length > 0) {
-              await this.storeInDexieDB(standardizedData, this.dbName, '', {
-                replaceExisting: true,
-              });
-              console.log(
-                `[USRateSheetService] Successfully stored ${standardizedData.length} records in ${this.dbName}`
-              );
-            } else {
-              console.log(`[USRateSheetService] No valid records to store.`);
-            }
-
-            // Resolve the promise
-            resolve({
-              recordCount: standardizedData.length,
-              invalidRows,
-            });
-          } catch (error) {
-            console.error(`[USRateSheetService] Error during data storage:`, error);
-            reject(error);
-          }
-        },
-        error: (error: Error) => {
-          console.error('PapaParse Error:', error);
-          reject(new Error(`Failed to parse CSV file: ${error.message}`));
-        },
-      });
-    });
-  }
-
-  /**
-   * Loads all USRateSheetEntry data from the database.
-   */
-  async getData(): Promise<USRateSheetEntry[]> {
-    console.log(`[USRateSheetService] Attempting to load data from ${this.dbName}`);
-    try {
-      const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, '');
-      console.log(`[USRateSheetService] Loaded ${data.length} records.`);
-      return data;
-    } catch (error) {
-      console.error(`[USRateSheetService] Error loading data from ${this.dbName}:`, error);
-      return []; // Return empty array on error
-    }
-  }
-
-  /**
    * Clears all data from the database.
    */
   async clearData(): Promise<void> {
     console.log(`[USRateSheetService] Clearing US Rate Sheet data`);
     try {
-      // First try to just clear the data without deleting the database
+      // Get the database instance
       const db = await this.getDB(this.dbName);
-      await db.clear();
-      console.log(`[USRateSheetService] Data cleared successfully.`);
+
+      // Check if the 'entries' table exists and clear it if it does
+      if (db.hasStore('entries')) {
+        await db.table('entries').clear();
+        console.log(`[USRateSheetService] Cleared 'entries' table in database ${this.dbName}`);
+      } else {
+        console.log(`[USRateSheetService] 'entries' table not found. No data to clear.`);
+      }
     } catch (error) {
       console.warn(
-        `[USRateSheetService] Error clearing data, attempting to delete database:`,
+        `[USRateSheetService] Error clearing 'entries' table, attempting to recreate database:`,
         error
       );
 
@@ -379,8 +99,328 @@ export class USRateSheetService {
         await this.initializeDatabase();
       } catch (deleteError) {
         console.error(`[USRateSheetService] Error deleting database:`, deleteError);
-        throw deleteError;
+        throw deleteError; // Rethrow critical error
       }
+    }
+  }
+
+  // Optimize the database for bulk operations
+  private async optimizeDBForBulkOperations(): Promise<void> {
+    try {
+      // Simply ensure the database is initialized
+      await this.initializeDatabase();
+      console.log(`[USRateSheetService] Database optimized for bulk operations`);
+    } catch (error) {
+      console.warn(`[USRateSheetService] Error optimizing database:`, error);
+    }
+  }
+
+  // Store the current batch in a transaction for better performance
+  private async storeBatch(): Promise<void> {
+    if (this.processingBatch.length === 0) return;
+
+    const batchToStore = [...this.processingBatch];
+    this.processingBatch = []; // Reset the batch
+
+    try {
+      const db = await this.getDB(this.dbName);
+      // Directly use bulkPut as the store is guaranteed to exist now
+      await db.table('entries').bulkPut(batchToStore);
+      console.log(
+        `[USRateSheetService] Stored batch of ${batchToStore.length} records in 'entries' table.`
+      );
+    } catch (error) {
+      console.error(`[USRateSheetService] Error storing batch directly to table 'entries':`, error);
+      // Continue processing - don't want to lose subsequent data
+      // Future enhancement: Add failed rows to invalidRows list
+    }
+  }
+
+  /**
+   * Processes the uploaded US Rate Sheet CSV file, parses it,
+   * and stores the standardized data in the Dexie database.
+   */
+  async processFile(
+    file: File,
+    columnMapping: USRateSheetColumnMapping,
+    startLine: number,
+    indeterminateDefinition: string | undefined,
+    effectiveDate: string | undefined
+  ): Promise<{ recordCount: number; invalidRows: InvalidUSRateSheetRow[] }> {
+    console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
+
+    // Wrap the entire processing logic in a try/catch to handle promise rejection
+    try {
+      // --- Prepare Database --- START ---
+      try {
+        // Delete existing database for a clean slate
+        await this.deleteDatabase(this.dbName);
+        console.log(`[USRateSheetService] Deleted database ${this.dbName} to start fresh`);
+
+        // Initialize a new database instance
+        await this.initializeDatabase(); // This opens the DB
+        console.log(`[USRateSheetService] Initialized new database ${this.dbName}`);
+
+        // Get DB instance AFTER initialization
+        const db = await this.getDB(this.dbName);
+
+        // Ensure the 'entries' table exists BEFORE starting parsing
+        // This prevents repeated schema upgrades during batch processing
+        await db.addStore('entries');
+        console.log(`[USRateSheetService] Ensured 'entries' store exists in ${this.dbName}.`);
+      } catch (dbPrepError) {
+        console.error('[USRateSheetService] Critical error preparing database:', dbPrepError);
+        // Reject the main promise if DB preparation fails
+        return Promise.reject(new Error('Failed to prepare database table.'));
+      }
+      // --- Prepare Database --- END ---
+
+      // Reset the batch in case there's anything left from a previous operation
+      this.processingBatch = [];
+
+      const invalidRows: InvalidUSRateSheetRow[] = [];
+      let totalRecords = 0;
+      let totalChunks = 0;
+      const BATCH_SIZE = 1000; // Smaller batch size for more reliable processing
+
+      return new Promise((resolve, reject) => {
+        // Show progress indicators
+        let lastProgressUpdate = Date.now();
+        const PROGRESS_UPDATE_INTERVAL = 5000; // Update progress every 5 seconds
+
+        // Use step function for better memory efficiency with large files
+        Papa.parse(file, {
+          header: false,
+          skipEmptyLines: true,
+          worker: true, // Use worker thread for large files
+          step: (results, parser) => {
+            // Process each row individually rather than in chunks
+            const row = results.data as string[];
+            totalChunks++;
+
+            // Update progress periodically
+            const now = Date.now();
+            if (now - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+              console.log(
+                `[USRateSheetService] Processing progress: ${totalChunks} rows, ${totalRecords} valid records`
+              );
+              lastProgressUpdate = now;
+            }
+
+            // Skip header rows based on user input
+            if (totalChunks < startLine) return;
+
+            try {
+              // Process the row and add it to the current batch
+              const processedRow = this.processRow(
+                row,
+                totalChunks,
+                columnMapping,
+                indeterminateDefinition,
+                invalidRows
+              );
+              if (processedRow) {
+                // Add id to each record for better indexing
+                this.processingBatch.push({
+                  ...processedRow,
+                  id: Date.now() + totalRecords, // Using timestamp + counter as ID
+                });
+                totalRecords++;
+              }
+
+              // When we reach the batch size, store the batch and start a new one
+              if (this.processingBatch.length >= BATCH_SIZE) {
+                this.storeBatch();
+              }
+            } catch (error) {
+              // Log but don't let it stop processing
+              console.error(`Error processing row ${totalChunks}:`, error);
+            }
+          },
+          complete: async () => {
+            // Store any remaining rows in the final batch
+            if (this.processingBatch.length > 0) {
+              await this.storeBatch();
+            }
+
+            console.log(
+              `[USRateSheetService] Parsing complete. Processed ${totalRecords} valid records out of ${totalChunks} total rows.`
+            );
+
+            // Resolve the promise with the results
+            resolve({
+              recordCount: totalRecords,
+              invalidRows: invalidRows.slice(0, 50), // Only return first 50 invalid rows to avoid memory issues
+            });
+          },
+          error: (error: Error) => {
+            console.error('PapaParse Error:', error);
+            reject(new Error(`Failed to parse CSV file: ${error.message}`));
+          },
+        });
+      });
+    } catch (error) {
+      console.error('[USRateSheetService] Error processing file:', error);
+      return Promise.reject(new Error('Failed to process file.'));
+    }
+  }
+
+  // Batch of records to be stored
+  private processingBatch: USRateSheetEntry[] = [];
+
+  // Process a single row of data
+  private processRow(
+    row: string[],
+    rowIndex: number,
+    columnMapping: USRateSheetColumnMapping,
+    indeterminateDefinition: string | undefined,
+    invalidRows: InvalidUSRateSheetRow[]
+  ): USRateSheetEntry | null {
+    let isValidRow = true;
+    let npa = '';
+    let nxx = '';
+    let npanxx = '';
+    let interRate: number | null = null;
+    let intraRate: number | null = null;
+    let ijRate: number | null = null;
+    let errorReason = '';
+
+    try {
+      // --- Extract and Validate NPA/NXX/NPANXX ---
+      if (columnMapping.npanxx !== -1) {
+        npanxx = row[columnMapping.npanxx]?.trim() || '';
+
+        // --- Add 7-digit handling from us.service.ts --- START ---
+        if (npanxx.length === 7 && npanxx.startsWith('1')) {
+          npanxx = npanxx.substring(1); // Remove leading "1"
+        }
+        // --- Add 7-digit handling from us.service.ts --- END ---
+
+        if (npanxx.length === 6 && /^[0-9]+$/.test(npanxx)) {
+          npa = npanxx.substring(0, 3);
+          nxx = npanxx.substring(3, 6);
+        } else {
+          isValidRow = false;
+          errorReason = `Invalid NPANXX format (expected 6 digits): ${npanxx}`;
+        }
+      } else if (columnMapping.npa !== -1 && columnMapping.nxx !== -1) {
+        // --- Handle separate NPA/NXX columns ---
+        npa = row[columnMapping.npa]?.trim() || '';
+        nxx = row[columnMapping.nxx]?.trim() || '';
+
+        // --- Add NPA startsWith('1') handling --- START ---
+        if (npa.startsWith('1') && npa.length === 4) {
+          npa = npa.substring(1); // Remove leading "1"
+        }
+        // --- Add NPA startsWith('1') handling --- END ---
+
+        if (npa.length === 3 && /^[0-9]+$/.test(npa) && nxx.length === 3 && /^[0-9]+$/.test(nxx)) {
+          npanxx = npa + nxx;
+        } else {
+          isValidRow = false;
+          errorReason = `Invalid NPA/NXX format: NPA=${npa}, NXX=${nxx}`;
+        }
+      } else {
+        isValidRow = false;
+        errorReason = 'Missing required NPA/NXX or NPANXX mapping.';
+      }
+
+      // --- Extract and Validate Rates (only if NPA/NXX was valid so far) ---
+      if (isValidRow) {
+        const parseRate = (rateStr: string | undefined): number | null => {
+          if (rateStr === undefined || rateStr === null || rateStr.trim() === '') {
+            errorReason = 'Missing rate value';
+            return null;
+          }
+          const cleanedRate = rateStr.replace(/[^\d.-]/g, '');
+          const rate = parseFloat(cleanedRate);
+          if (isNaN(rate) || !isFinite(rate)) {
+            errorReason = `Invalid rate format: ${rateStr}`;
+            return null;
+          }
+          return rate;
+        };
+
+        interRate = parseRate(row[columnMapping.interstate]);
+        if (interRate === null && columnMapping.interstate !== -1) isValidRow = false;
+        else if (columnMapping.interstate === -1) {
+          isValidRow = false;
+          errorReason = 'Interstate rate column not mapped.';
+        }
+
+        if (isValidRow && columnMapping.intrastate !== -1) {
+          intraRate = parseRate(row[columnMapping.intrastate]);
+          if (intraRate === null) isValidRow = false;
+        } else if (isValidRow) {
+          // Intrastate is required if column is mapped
+          isValidRow = false;
+          errorReason = 'Intrastate rate column not mapped.';
+        }
+
+        // Handle Indeterminate Rate
+        if (isValidRow) {
+          if (indeterminateDefinition === 'column') {
+            if (columnMapping.indeterminate !== -1) {
+              ijRate = parseRate(row[columnMapping.indeterminate]);
+              if (ijRate === null) isValidRow = false;
+            } else {
+              isValidRow = false;
+              errorReason = "Indeterminate rate definition set to 'column', but column not mapped.";
+            }
+          } else if (indeterminateDefinition === 'intrastate') {
+            ijRate = intraRate; // Use intrastate rate
+            if (ijRate === null) isValidRow = false; // Should already be false if intraRate was invalid
+          } else if (indeterminateDefinition === 'interstate') {
+            ijRate = interRate; // Use interstate rate
+            if (ijRate === null) isValidRow = false; // Should already be false if interRate was invalid
+          } else {
+            isValidRow = false;
+            errorReason = 'Invalid indeterminate rate definition specified.';
+          }
+        }
+      }
+
+      // Return the data if valid, otherwise add to invalidRows
+      if (isValidRow && interRate !== null && intraRate !== null && ijRate !== null) {
+        return {
+          npa,
+          nxx,
+          npanxx,
+          interRate,
+          intraRate,
+          ijRate,
+        };
+      } else if (!isValidRow) {
+        invalidRows.push({ rowIndex, rowData: row, reason: errorReason });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      invalidRows.push({
+        rowIndex,
+        rowData: row,
+        reason: `Processing error: ${message}`,
+      });
+    }
+
+    return null; // Row wasn't valid
+  }
+
+  /**
+   * Loads all USRateSheetEntry data from the database.
+   */
+  async getData(): Promise<USRateSheetEntry[]> {
+    console.log(`[USRateSheetService] Attempting to load data from ${this.dbName}/'entries'`);
+    try {
+      // Load data from the correct 'entries' table
+      const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, 'entries');
+      console.log(`[USRateSheetService] Loaded ${data.length} records from 'entries' table.`);
+      return data;
+    } catch (error) {
+      console.error(
+        `[USRateSheetService] Error loading data from ${this.dbName}/'entries':`,
+        error
+      );
+      return []; // Return empty array on error
     }
   }
 }
