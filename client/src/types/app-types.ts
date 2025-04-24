@@ -174,6 +174,7 @@ export const DBName = {
   AZ: 'az_rate_deck_db',
   US: 'us_rate_deck_db',
   LERG: 'lerg_db',
+  RATE_SHEET: 'rate_sheet_db',
   AZ_RATE_SHEET: 'az_rate_sheet_db',
   US_RATE_SHEET: 'us_rate_sheet_db',
   US_PRICING_COMPARISON: 'us_pricing_comparison_db',
@@ -196,6 +197,7 @@ export type SchemaDBType =
   | typeof DBName.AZ
   | typeof DBName.US
   | typeof DBName.LERG
+  | typeof DBName.RATE_SHEET
   | typeof DBName.AZ_RATE_SHEET
   | typeof DBName.US_RATE_SHEET
   | typeof DBName.US_PRICING_COMPARISON
@@ -208,7 +210,8 @@ export const DBSchemas = {
   [DBName.AZ_RATE_SHEET]:
     '++id, destinationName, code, rate, effectiveDate, minDuration, increments',
   // Schema for US Rate Sheet (new)
-  [DBName.US_RATE_SHEET]: 'entries: ++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
+  [DBName.US_RATE_SHEET]: '++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
+  [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
   [DBName.LERG]: 'npa, *state, *country',
   [DBName.US_PRICING_COMPARISON]: `
     comparison_results: ++id, &npanxx,
@@ -247,7 +250,9 @@ export const DBSchemas = {
 export const DynamicTableSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
   [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
-  // Note: LERG, AZ_RATE_SHEET, and US_RATE_SHEET DBs might not need dynamic table schemas
+  [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
+  [DBName.US_RATE_SHEET]: '++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
+  // Note: LERG, AZ_RATE_SHEET DBs might not need dynamic table schemas
   // If they do, define them here.
   [DBName.US_PRICING_COMPARISON]:
     '++id, npa, nxx, stateCode, countryCode, file1_rate, file1_inter, file1_intra, file1_indeterm, file2_rate, file2_inter, file2_intra, file2_indeterm, diff_intra_abs, diff_intra_pct, diff_inter_abs, diff_inter_pct, cheaper_file',
@@ -258,6 +263,7 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
   return (
     dbName === DBName.AZ ||
     dbName === DBName.US ||
+    dbName === DBName.RATE_SHEET ||
     dbName === DBName.AZ_RATE_SHEET ||
     dbName === DBName.US_RATE_SHEET ||
     dbName === DBName.LERG ||

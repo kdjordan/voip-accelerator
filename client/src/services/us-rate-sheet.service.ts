@@ -5,6 +5,7 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DBNameType } from '@/types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
+import Dexie from 'dexie';
 
 // Define the structure for column mapping indices
 interface USRateSheetColumnMapping {
@@ -16,7 +17,7 @@ interface USRateSheetColumnMapping {
   indeterminate: number;
 }
 
-// Define structure for invalid rows (example)
+// Define structure for invalid rows
 interface InvalidUSRateSheetRow {
   rowIndex: number;
   rowData: string[];
@@ -26,75 +27,78 @@ interface InvalidUSRateSheetRow {
 export class USRateSheetService {
   private getDB: (dbName: DBNameType) => Promise<DexieDBBase>;
   private loadFromDexieDB: <T>(dbName: DBNameType, storeName: string) => Promise<T[]>;
-  // Use the dedicated DB and a fixed table name within it
   private dbName = DBName.US_RATE_SHEET;
-  private tableName = 'entries'; // Fixed table name within the dedicated DB
   private storeInDexieDB: <T>(
     data: T[],
     dbName: DBNameType,
     storeName: string,
     options?: { sourceFile?: string; replaceExisting?: boolean }
   ) => Promise<void>;
+  private deleteDatabase: (dbName: DBNameType) => Promise<void>;
 
   constructor() {
     // Get required functions from the composable
-    const { getDB, loadFromDexieDB, storeInDexieDB } = useDexieDB();
+    const { getDB, loadFromDexieDB, storeInDexieDB, deleteDatabase } = useDexieDB();
     this.getDB = getDB;
     this.loadFromDexieDB = loadFromDexieDB;
     this.storeInDexieDB = storeInDexieDB;
+    this.deleteDatabase = deleteDatabase;
     console.log('USRateSheetService initialized');
 
-    // Initialize the database
+    // Only initialize the database but don't delete it automatically
     this.initializeDatabase().catch((error) => {
       console.error('Error initializing US Rate Sheet database:', error);
     });
   }
 
   /**
-   * Initializes the database and ensures the 'entries' table exists
+   * Initializes the database
    */
   private async initializeDatabase(): Promise<void> {
     try {
-      // Get a reference to the database - this should create it if it doesn't exist
+      // Get a reference to the database to create it with the proper schema if it doesn't exist
       const db = await this.getDB(this.dbName);
-      console.log(`[USRateSheetService] Database ${this.dbName} initialized`);
-
-      // Check if the table exists - if not, we'll create it with a minimal entry to ensure it's registered
-      if (!db.hasStore(this.tableName)) {
-        console.log(
-          `[USRateSheetService] Table '${this.tableName}' not found, attempting to create it`
-        );
-        // Store a minimal entry to create the table
-        await this.storeInDexieDB([], this.dbName, this.tableName);
-        console.log(`[USRateSheetService] Successfully created table '${this.tableName}'`);
-      } else {
-        console.log(`[USRateSheetService] Table '${this.tableName}' already exists`);
-      }
+      console.log(`[USRateSheetService] Database ${this.dbName} initialized. Ready for data.`);
     } catch (error) {
-      console.error(`[USRateSheetService] Error initializing database:`, error);
-      throw error;
+      // Only log the error but don't throw - this allows the service to continue working
+      console.error(
+        `[USRateSheetService] Error during database initialization (non-fatal):`,
+        error
+      );
     }
   }
 
   /**
    * Processes the uploaded US Rate Sheet CSV file, parses it,
-   * and stores the standardized data in the Dexie table.
-   *
-   * @param file The CSV file object.
-   * @param columnMapping The mapping of column roles to their indices.
-   * @param startLine The 1-based index of the line where data starts.
-   * @param indeterminateDefinition How to handle indeterminate rates ('column', 'intrastate', 'interstate').
-   * @param effectiveDate The single effective date for the entire file (YYYY-MM-DD).
-   * @returns A promise that resolves with the count of valid records processed and invalid rows.
+   * and stores the standardized data in the Dexie database.
    */
   async processFile(
     file: File,
     columnMapping: USRateSheetColumnMapping,
     startLine: number,
     indeterminateDefinition: string | undefined,
-    effectiveDate: string | undefined // TODO: Use this effective date?
+    effectiveDate: string | undefined
   ): Promise<{ recordCount: number; invalidRows: InvalidUSRateSheetRow[] }> {
     console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
+
+    try {
+      // First try to clear the existing data without deleting the database
+      const db = await this.getDB(this.dbName);
+      try {
+        await db.clear(); // This clears all tables without deleting the database
+        console.log(`[USRateSheetService] Cleared existing data`);
+      } catch (clearError) {
+        console.warn(`[USRateSheetService] Error clearing data:`, clearError);
+
+        // Only delete the database if clearing failed
+        console.log(`[USRateSheetService] Attempting to recreate database due to error...`);
+        await this.deleteDatabase(this.dbName);
+        await this.initializeDatabase();
+      }
+    } catch (error) {
+      console.warn('[USRateSheetService] Error preparing database:', error);
+      // Continue despite the error - we'll handle errors during data storage
+    }
 
     const standardizedData: USRateSheetEntry[] = [];
     const invalidRows: InvalidUSRateSheetRow[] = [];
@@ -118,9 +122,8 @@ export class USRateSheetService {
             if (rowIndexForUser < startLine) continue;
 
             const row = chunkData[i];
-            // --- Debugging Start ---
             console.log(`[Debug Row ${rowIndexForUser}] Raw Data:`, JSON.stringify(row));
-            // --- Debugging End ---
+
             let isValidRow = true;
             let npa = '';
             let nxx = '';
@@ -205,32 +208,25 @@ export class USRateSheetService {
               // --- Extract and Validate Rates (only if NPA/NXX was valid so far) ---
               if (isValidRow) {
                 const parseRate = (rateStr: string | undefined): number | null => {
-                  // --- Debugging Start ---
                   console.log(`[Debug Row ${rowIndexForUser}] Parsing Rate: '${rateStr}'`);
-                  // --- Debugging End ---
+
                   if (rateStr === undefined || rateStr === null || rateStr.trim() === '') {
                     errorReason = 'Missing rate value';
-                    // --- Debugging Start ---
                     console.log(
                       `[Debug Row ${rowIndexForUser}] Failed rate parsing (missing). Reason: ${errorReason}`
                     );
-                    // --- Debugging End ---
                     return null;
                   }
                   const cleanedRate = rateStr.replace(/[^\d.-]/g, '');
                   const rate = parseFloat(cleanedRate);
                   if (isNaN(rate) || !isFinite(rate)) {
                     errorReason = `Invalid rate format: ${rateStr}`;
-                    // --- Debugging Start ---
                     console.log(
                       `[Debug Row ${rowIndexForUser}] Failed rate parsing (format). Reason: ${errorReason}, Cleaned: '${cleanedRate}', Parsed: ${rate}`
                     );
-                    // --- Debugging End ---
                     return null;
                   }
-                  // --- Debugging Start ---
                   console.log(`[Debug Row ${rowIndexForUser}] Parsed rate successfully: ${rate}`);
-                  // --- Debugging End ---
                   return rate;
                 };
 
@@ -239,11 +235,9 @@ export class USRateSheetService {
                 else if (columnMapping.interstate === -1) {
                   isValidRow = false;
                   errorReason = 'Interstate rate column not mapped.';
-                  // --- Debugging Start ---
                   console.log(
                     `[Debug Row ${rowIndexForUser}] Failed rate validation (Interstate not mapped). Reason: ${errorReason}`
                   );
-                  // --- Debugging End ---
                 }
 
                 if (isValidRow && columnMapping.intrastate !== -1) {
@@ -253,11 +247,9 @@ export class USRateSheetService {
                   // Intrastate is required if column is mapped
                   isValidRow = false;
                   errorReason = 'Intrastate rate column not mapped.';
-                  // --- Debugging Start ---
                   console.log(
                     `[Debug Row ${rowIndexForUser}] Failed rate validation (Intrastate not mapped). Reason: ${errorReason}`
                   );
-                  // --- Debugging End ---
                 }
 
                 // Handle Indeterminate Rate
@@ -293,16 +285,12 @@ export class USRateSheetService {
                   interRate,
                   intraRate,
                   ijRate,
-                  // TODO: Add effectiveDate? ChangeCode?
                 });
               } else if (!isValidRow) {
                 invalidRows.push({ rowIndex: rowIndexForUser, rowData: row, reason: errorReason });
-                // console.warn(`Invalid row skipped at index ${rowIndexForUser}: ${errorReason}`, row);
-                // --- Debugging Start ---
                 console.log(
                   `[Debug Row ${rowIndexForUser}] Final validation failed. Reason: ${errorReason}`
                 );
-                // --- Debugging End ---
               }
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
@@ -321,23 +309,13 @@ export class USRateSheetService {
           );
 
           try {
-            // Ensure the database and table are initialized
-            await this.initializeDatabase();
-
-            // Clear existing data before adding new data
-            const db = await this.getDB(this.dbName);
-            if (db.hasStore(this.tableName)) {
-              await db.table(this.tableName).clear();
-              console.log(`[USRateSheetService] Cleared existing data from ${this.tableName}`);
-            }
-
-            // Store the standardized data
+            // Store the standardized data in the database
             if (standardizedData.length > 0) {
-              await this.storeInDexieDB(standardizedData, this.dbName, this.tableName, {
-                replaceExisting: false,
+              await this.storeInDexieDB(standardizedData, this.dbName, '', {
+                replaceExisting: true,
               });
               console.log(
-                `[USRateSheetService] Successfully stored ${standardizedData.length} records in ${this.tableName}`
+                `[USRateSheetService] Successfully stored ${standardizedData.length} records in ${this.dbName}`
               );
             } else {
               console.log(`[USRateSheetService] No valid records to store.`);
@@ -347,7 +325,6 @@ export class USRateSheetService {
             resolve({
               recordCount: standardizedData.length,
               invalidRows,
-              fileName: file.name,
             });
           } catch (error) {
             console.error(`[USRateSheetService] Error during data storage:`, error);
@@ -363,56 +340,46 @@ export class USRateSheetService {
   }
 
   /**
-   * Loads all USRateSheetEntry data from the Dexie table.
-   * @returns A promise that resolves with an array of USRateSheetEntry.
+   * Loads all USRateSheetEntry data from the database.
    */
   async getData(): Promise<USRateSheetEntry[]> {
-    // Use the correct DB name and table name
-    console.log(
-      `[USRateSheetService] Attempting to load data from ${this.dbName}/${this.tableName}`
-    );
+    console.log(`[USRateSheetService] Attempting to load data from ${this.dbName}`);
     try {
-      const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, this.tableName);
+      const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, '');
       console.log(`[USRateSheetService] Loaded ${data.length} records.`);
       return data;
     } catch (error) {
-      console.error(
-        `[USRateSheetService] Error loading data from ${this.dbName}/${this.tableName}:`,
-        error
-      );
+      console.error(`[USRateSheetService] Error loading data from ${this.dbName}:`, error);
       return []; // Return empty array on error
     }
   }
 
   /**
-   * Clears all data from the US Rate Sheet Dexie table.
+   * Clears all data from the database.
    */
   async clearData(): Promise<void> {
-    console.log(`[USRateSheetService] Clearing data from table: ${this.tableName}`);
+    console.log(`[USRateSheetService] Clearing US Rate Sheet data`);
     try {
+      // First try to just clear the data without deleting the database
       const db = await this.getDB(this.dbName);
-
-      // Check if table exists before attempting to clear it
-      if (db.hasStore(this.tableName)) {
-        await db.table(this.tableName).clear();
-        console.log(`[USRateSheetService] Data cleared from ${this.tableName} table.`);
-      } else {
-        console.log(
-          `[USRateSheetService] Table ${this.tableName} does not exist. Nothing to clear.`
-        );
-        // Initialize the table here in case it's needed
-        await this.initializeDatabase();
-      }
+      await db.clear();
+      console.log(`[USRateSheetService] Data cleared successfully.`);
     } catch (error) {
-      console.error(`[USRateSheetService] Error clearing data:`, error);
-      // If the table doesn't exist, try to initialize it
-      if (error.name === 'InvalidTableError') {
-        console.log(
-          `[USRateSheetService] Table ${this.tableName} does not exist. Initializing database.`
-        );
+      console.warn(
+        `[USRateSheetService] Error clearing data, attempting to delete database:`,
+        error
+      );
+
+      // Fallback: Delete and recreate the database
+      try {
+        await this.deleteDatabase(this.dbName);
+        console.log(`[USRateSheetService] Database deleted successfully.`);
+
+        // Reinitialize the database so it's ready for new data
         await this.initializeDatabase();
-      } else {
-        throw error;
+      } catch (deleteError) {
+        console.error(`[USRateSheetService] Error deleting database:`, deleteError);
+        throw deleteError;
       }
     }
   }
