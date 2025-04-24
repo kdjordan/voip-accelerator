@@ -5,22 +5,6 @@
       <div @click="toggleEffectiveDateSettings()" class="cursor-pointer bg-gray-900/30">
         <div class="flex items-center gap-2 w-full justify-between">
           <h3 class="text-sm font-medium text-gray-300">Effective Date Settings</h3>
-          <div class="flex items-center gap-2 text-xs">
-            <span class="text-gray-400">Same:</span>
-            <span class="font-medium text-white">{{
-              getEffectiveDateLabel(effectiveDateSettings.same)
-            }}</span>
-            <span class="text-gray-400">|</span>
-            <span class="text-green-400">↑ Increase:</span>
-            <span class="font-medium text-white">{{
-              getEffectiveDateLabel(effectiveDateSettings.increase)
-            }}</span>
-            <span class="text-gray-400">|</span>
-            <span class="text-red-400">↓ Decrease:</span>
-            <span class="font-medium text-white">{{
-              getEffectiveDateLabel(effectiveDateSettings.decrease)
-            }}</span>
-          </div>
           <button class="p-1 text-gray-400 hover:text-white rounded-full transition-colors">
             <ChevronDownIcon
               class="w-5 h-5 transition-transform"
@@ -31,367 +15,31 @@
       </div>
 
       <div v-if="showEffectiveDateSettings" class="mt-4">
-        <!-- Date settings UI -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <!-- SAME Rate Effective Date -->
-          <div class="bg-gray-900/30 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-400">SAME Rate</span>
-              <span class="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">No Change</span>
-            </div>
-            <div class="flex flex-col space-y-2">
-              <div class="flex items-center">
-                <input
-                  id="same-today"
-                  v-model="effectiveDateSettings.same"
-                  type="radio"
-                  value="today"
-                  class="mr-2"
-                />
-                <label for="same-today" class="text-sm">Today</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="same-tomorrow"
-                  v-model="effectiveDateSettings.same"
-                  type="radio"
-                  value="tomorrow"
-                  class="mr-2"
-                />
-                <label for="same-tomorrow" class="text-sm">Tomorrow</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="same-custom"
-                  v-model="effectiveDateSettings.same"
-                  type="radio"
-                  value="custom"
-                  class="mr-2"
-                />
-                <label for="same-custom" class="text-sm">Custom</label>
-              </div>
-              <div v-if="effectiveDateSettings.same === 'custom'" class="pt-2">
-                <input
-                  type="date"
-                  v-model="effectiveDateSettings.sameCustomDate"
-                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- INCREASE Rate Effective Date -->
-          <div class="bg-gray-900/30 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
-              <span class="px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded"
-                >↑ Rate Up</span
-              >
-            </div>
-            <div class="flex flex-col space-y-2">
-              <div class="flex items-center">
-                <input
-                  id="increase-today"
-                  v-model="effectiveDateSettings.increase"
-                  type="radio"
-                  value="today"
-                  class="mr-2"
-                />
-                <label for="increase-today" class="text-sm">Today</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="increase-tomorrow"
-                  v-model="effectiveDateSettings.increase"
-                  type="radio"
-                  value="tomorrow"
-                  class="mr-2"
-                />
-                <label for="increase-tomorrow" class="text-sm">Tomorrow</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="increase-week"
-                  v-model="effectiveDateSettings.increase"
-                  type="radio"
-                  value="week"
-                  class="mr-2"
-                />
-                <label for="increase-week" class="text-sm">7 Days (Default)</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="increase-custom"
-                  v-model="effectiveDateSettings.increase"
-                  type="radio"
-                  value="custom"
-                  class="mr-2"
-                />
-                <label for="increase-custom" class="text-sm">Custom</label>
-              </div>
-              <div v-if="effectiveDateSettings.increase === 'custom'" class="pt-2">
-                <input
-                  type="date"
-                  v-model="effectiveDateSettings.increaseCustomDate"
-                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- DECREASE Rate Effective Date -->
-          <div class="bg-gray-900/30 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
-              <span class="px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">↓ Rate Down</span>
-            </div>
-            <div class="flex flex-col space-y-2">
-              <div class="flex items-center">
-                <input
-                  id="decrease-today"
-                  v-model="effectiveDateSettings.decrease"
-                  type="radio"
-                  value="today"
-                  class="mr-2"
-                />
-                <label for="decrease-today" class="text-sm">Today</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="decrease-tomorrow"
-                  v-model="effectiveDateSettings.decrease"
-                  type="radio"
-                  value="tomorrow"
-                  class="mr-2"
-                />
-                <label for="decrease-tomorrow" class="text-sm">Tomorrow</label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="decrease-custom"
-                  v-model="effectiveDateSettings.decrease"
-                  type="radio"
-                  value="custom"
-                  class="mr-2"
-                />
-                <label for="decrease-custom" class="text-sm">Custom</label>
-              </div>
-              <div v-if="effectiveDateSettings.decrease === 'custom'" class="pt-2">
-                <input
-                  type="date"
-                  v-model="effectiveDateSettings.decreaseCustomDate"
-                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
+        <!-- Single date picker UI -->
+        <div class="bg-gray-900/30 rounded-lg p-4">
+          <div class="mb-3">
+            <input
+              type="date"
+              v-model="customEffectiveDate"
+              class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+            />
           </div>
         </div>
 
-        <!-- Progress and apply button -->
-        <div class="space-y-2">
-          <!-- Multi-step progress indicator -->
-          <div v-if="isApplyingSettings" class="mb-4 bg-gray-900/30 p-3 rounded-lg">
-            <div class="flex justify-between mb-2">
-              <h4 class="text-sm font-medium text-gray-300">Progress</h4>
-              <span class="text-xs text-gray-400" v-if="processingStartTime > 0">
-                {{ displayedElapsedTime }}s elapsed
-              </span>
-            </div>
-
-            <!-- Processing steps indicators -->
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                  :class="{
-                    'bg-green-500 text-white ring-4 ring-green-500/20':
-                      processingPhase === 'preparing',
-                    'bg-green-900/30 text-green-400':
-                      processingPhase === 'processing' ||
-                      processingPhase === 'updating' ||
-                      processingPhase === 'finalizing',
-                    'bg-gray-800 text-gray-400': processingPhase === 'idle',
-                  }"
-                >
-                  1
-                </div>
-                <div
-                  class="ml-2 text-sm transition-all duration-300 font-medium"
-                  :class="{
-                    'text-green-500': processingPhase === 'preparing',
-                    'text-green-400':
-                      processingPhase === 'processing' ||
-                      processingPhase === 'updating' ||
-                      processingPhase === 'finalizing',
-                    'text-gray-600': processingPhase === 'idle',
-                  }"
-                >
-                  Preparing Data
-                </div>
-              </div>
-              <div
-                class="h-1 flex-1 mx-2 transition-all duration-300"
-                :class="{
-                  'bg-green-500':
-                    processingPhase === 'processing' ||
-                    processingPhase === 'updating' ||
-                    processingPhase === 'finalizing',
-                  'bg-gray-700': processingPhase === 'idle' || processingPhase === 'preparing',
-                }"
-              ></div>
-              <div class="flex items-center">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                  :class="{
-                    'bg-green-500 text-white ring-4 ring-green-500/20':
-                      processingPhase === 'processing',
-                    'bg-green-900/30 text-green-400':
-                      processingPhase === 'updating' || processingPhase === 'finalizing',
-                    'bg-gray-800 text-gray-400':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  2
-                </div>
-                <div
-                  class="ml-2 text-sm transition-all duration-300 font-medium"
-                  :class="{
-                    'text-green-500': processingPhase === 'processing',
-                    'text-green-400':
-                      processingPhase === 'updating' || processingPhase === 'finalizing',
-                    'text-gray-600':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  Processing Records
-                </div>
-              </div>
-              <div
-                class="h-1 flex-1 mx-2 transition-all duration-300"
-                :class="{
-                  'bg-green-500':
-                    processingPhase === 'updating' || processingPhase === 'finalizing',
-                  'bg-gray-700':
-                    processingPhase === 'idle' ||
-                    processingPhase === 'preparing' ||
-                    processingPhase === 'processing',
-                }"
-              ></div>
-              <div class="flex items-center">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                  :class="{
-                    'bg-green-500 text-white ring-4 ring-green-500/20':
-                      processingPhase === 'updating',
-                    'bg-green-900/30 text-green-400': processingPhase === 'finalizing',
-                    'bg-gray-800 text-gray-400':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  3
-                </div>
-                <div
-                  class="ml-2 text-sm transition-all duration-300 font-medium"
-                  :class="{
-                    'text-green-500': processingPhase === 'updating',
-                    'text-green-400': processingPhase === 'finalizing',
-                    'text-gray-600':
-                      processingPhase === 'idle' ||
-                      processingPhase === 'preparing' ||
-                      processingPhase === 'processing',
-                  }"
-                >
-                  Updating Database
-                </div>
-              </div>
-            </div>
-
-            <!-- Processing status message -->
-            <div class="text-sm text-gray-300 mb-2 min-h-[1.5rem]">{{ processingStatus }}</div>
-
-            <!-- Detailed status info -->
-            <div
-              class="flex justify-between text-xs text-gray-400 mb-2 min-h-[1.5rem]"
-              v-if="isApplyingSettings && processingPhase === 'processing'"
-            >
-              <div v-if="currentDestination">
-                Processing: <span class="text-green-400">{{ currentDestination }}</span>
-              </div>
-              <div v-if="recordsUpdatedSoFar > 0">
-                {{ recordsUpdatedSoFar }} records updated so far
-              </div>
-              <div v-if="estimatedTimeRemaining !== undefined">
-                Est. time remaining:
-                <span class="text-green-400">{{
-                  estimatedTimeRemaining > 0 ? `${estimatedTimeRemaining}s` : 'calculating...'
-                }}</span>
-              </div>
-            </div>
-
-            <!-- Progress bar -->
-            <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-              <div
-                class="h-3 rounded-full transition-all duration-300 relative"
-                :class="{
-                  'bg-green-500': processingPhase === 'finalizing',
-                  'bg-green-400': processingPhase !== 'finalizing',
-                }"
-                :style="{ width: `${progressPercentage}%` }"
-              >
-                <div
-                  class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-white/20"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Processing logs (collapsible) -->
-            <div class="mt-3">
-              <div
-                @click="showProcessingLogs = !showProcessingLogs"
-                class="cursor-pointer flex items-center text-xs text-gray-400"
-              >
-                <ChevronRightIcon
-                  class="h-3 w-3 mr-1 transition-transform"
-                  :class="{ 'rotate-90': showProcessingLogs }"
-                />
-                <span>Processing logs ({{ processingLogs.length }})</span>
-              </div>
-
-              <div
-                v-if="showProcessingLogs"
-                class="mt-2 bg-gray-900/70 p-2 rounded text-xs text-gray-500 max-h-40 overflow-y-auto"
-              >
-                <div v-for="(log, index) in processingLogs" :key="index" class="mb-1">
-                  <span class="text-gray-600">{{ new Date(log.time).toLocaleTimeString() }}:</span>
-                  <span>{{ log.message }}</span>
-                </div>
-                <div v-if="processingLogs.length === 0" class="italic">No logs available yet</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-between items-center">
-            <!-- Apply button -->
-            <div class="flex justify-end w-full">
-              <button
-                @click="applyEffectiveDateSettings"
-                class="px-4 py-2 bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
-                :class="{
-                  'animate-pulse-fast': isApplyingSettings,
-                  'opacity-50 cursor-not-allowed': isApplyingSettings,
-                }"
-                :disabled="isApplyingSettings"
-              >
-                {{ isApplyingSettings ? 'APPLYING SETTINGS...' : 'Apply Date Settings' }}
-              </button>
-            </div>
-          </div>
+        <!-- Apply button -->
+        <div class="flex justify-end w-full mt-4">
+          <button
+            @click="applyEffectiveDateSettings"
+            class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
+            :class="{
+              'animate-pulse-fast': isApplyingSettings,
+              'opacity-50 cursor-not-allowed': isApplyingSettings,
+            }"
+            :disabled="isApplyingSettings"
+          >
+            Apply
+            <ArrowRightIcon class="ml-1 w-3 h-3" />
+          </button>
         </div>
       </div>
     </div>
@@ -402,13 +50,13 @@
         <div class="flex items-center gap-4">
           <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
           <span class="text-sm text-gray-400">
-            Showing {{ filteredData.length }} destinations
+            Showing {{ filteredData.length }} NPANXX entries
           </span>
         </div>
         <div class="flex items-center gap-2">
           <button
             @click="handleClearData"
-            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 transition-colors border border-red-400/30"
+            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md text-red-400 bg-red-950 hover:bg-red-900 border border-red-500/50 transition-colors"
           >
             <TrashIcon class="w-4 h-4" />
             Clear Rate Sheet Data
@@ -499,16 +147,10 @@
           <tr>
             <th scope="col" class="w-8 px-3 py-3"></th>
             <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Destination
-            </th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Codes
+              NPANXX
             </th>
             <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
               Rate
-            </th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Change
             </th>
             <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
               Effective
@@ -534,7 +176,6 @@
             <!-- Main Row -->
             <tr
               class="hover:bg-gray-700/50 cursor-pointer"
-              :class="{ 'bg-red-900/10': group.hasDiscrepancy }"
               @click="toggleExpand(group.destinationName)"
             >
               <td class="px-3 py-4">
@@ -546,49 +187,14 @@
               <td class="px-3 py-4 text-sm">
                 <div class="flex items-center">
                   <span class="font-medium text-white">{{ group.destinationName }}</span>
-                  <div
-                    v-if="group.hasDiscrepancy"
-                    class="ml-2 inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-400/20"
-                  >
-                    Rate Conflict
-                  </div>
-                </div>
-              </td>
-              <td class="px-3 py-4 text-sm text-gray-300">{{ group.codes.length }} codes</td>
-              <td class="px-3 py-4 text-sm text-gray-300">
-                <template v-if="!group.hasDiscrepancy">
-                  {{ formatRate(group.rates[0].rate) }}
-                </template>
-                <template v-else> Multiple Rates </template>
-              </td>
-              <!-- Change Code column -->
-              <td class="px-3 py-4 text-sm">
-                <div
-                  class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
-                  :class="{
-                    'bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30':
-                      group.changeCode === ChangeCode.SAME,
-                    'bg-red-400/10 text-red-400 ring-1 ring-inset ring-red-400/30':
-                      group.changeCode === ChangeCode.DECREASE,
-                    'bg-orange-400/10 text-orange-400 ring-1 ring-inset ring-orange-400/30':
-                      group.changeCode === ChangeCode.INCREASE,
-                  }"
-                >
-                  {{ group.changeCode }}
                 </div>
               </td>
               <td class="px-3 py-4 text-sm text-gray-300">
-                <div
-                  class="flex items-center"
-                  :class="{
-                    'text-orange-400': group.changeCode === ChangeCode.INCREASE,
-                    'text-red-400': group.changeCode === ChangeCode.DECREASE,
-                  }"
-                >
-                  <CalendarDaysIcon
-                    v-if="group.changeCode !== ChangeCode.SAME"
-                    class="h-4 w-4 mr-1"
-                  />
+                {{ formatRate(group.rates[0].rate) }}
+              </td>
+              <td class="px-3 py-4 text-sm text-gray-300">
+                <div class="flex items-center">
+                  <CalendarDaysIcon class="h-4 w-4 mr-1" />
                   {{ formatDate(group.effectiveDate) }}
                 </div>
               </td>
@@ -767,7 +373,7 @@
           Searching<span class="dots-loading"></span>
         </span>
       </p>
-      <p class="text-gray-400" v-else>No destinations found matching your filters</p>
+      <p class="text-gray-400" v-else>No NPANXX entries found matching your filters</p>
     </div>
 
     <!-- Custom Rate Modal -->
@@ -813,9 +419,10 @@ import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   ChevronDownIcon,
+  ArrowRightIcon,
 } from '@heroicons/vue/24/outline';
 import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
-import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
+import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
 import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
 import { USRateSheetService } from '@/services/us-rate-sheet.service';
 import type {
@@ -823,14 +430,14 @@ import type {
   EffectiveDateStoreSettings,
 } from '@/types/domains/rate-sheet-types';
 import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
+import type { USRateSheetEntry } from '@/types/domains/us-types';
 
 // Define emits
 const emit = defineEmits(['update:discrepancy-count']);
 
 // Initialize store and service
-const store = useAzRateSheetStore();
+const store = useUsRateSheetStore();
 const rateSheetService = new USRateSheetService();
-const groupedData = computed(() => store.getGroupedData);
 const expandedRows = ref<string[]>([]);
 const filterStatus = ref<
   'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'
@@ -850,6 +457,11 @@ const customRateModal = ref({
 });
 const customRateInput = ref<HTMLInputElement | null>(null);
 
+// US Rate Sheet data
+const usRateSheetData = ref<USRateSheetEntry[]>([]);
+const isDataLoading = ref(false);
+const dataError = ref<string | null>(null);
+
 // Add new refs for processing state
 const isBulkProcessing = ref(false);
 const processedCount = ref(0);
@@ -865,15 +477,9 @@ const codesCache = ref<{ [key: string]: { [rate: number]: string[] } }>({});
 // Track which codes match the current search query
 const matchingCodes = ref<{ [destinationName: string]: { [rate: number]: string[] } }>({});
 
-// Effective Date Settings
-const effectiveDateSettings = ref<EffectiveDateSettings>({
-  same: 'today',
-  increase: 'week',
-  decrease: 'today',
-  sameCustomDate: new Date().toISOString().split('T')[0],
-  increaseCustomDate: new Date().toISOString().split('T')[0],
-  decreaseCustomDate: new Date().toISOString().split('T')[0],
-});
+// Simplified effective date handling - just use the date picker value
+const customEffectiveDate = ref(new Date().toISOString().split('T')[0]);
+const effectiveDate = computed(() => customEffectiveDate.value);
 
 // Controls visibility of effective date settings section
 const showEffectiveDateSettings = ref(false);
@@ -912,21 +518,11 @@ let elapsedTimeInterval: number | null = null;
 let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
 // Load saved effective date settings from store if available
-onMounted(() => {
+onMounted(async () => {
+  console.log('USRateSheetTable mounted');
+  await loadUSRateSheetData();
+
   console.log('today', new Date().toISOString().split('T')[0]);
-  const savedSettings = store.getEffectiveDateSettings;
-  if (savedSettings) {
-    // Cast the saved settings to ensure correct types
-    effectiveDateSettings.value = {
-      same: savedSettings.same as 'today' | 'tomorrow' | 'custom',
-      increase: savedSettings.increase as 'today' | 'tomorrow' | 'week' | 'custom',
-      decrease: savedSettings.decrease as 'today' | 'tomorrow' | 'custom',
-      sameCustomDate: savedSettings.sameCustomDate,
-      increaseCustomDate: savedSettings.increaseCustomDate,
-      decreaseCustomDate: savedSettings.decreaseCustomDate,
-    };
-  }
-  initWorker();
 
   // Setup a watcher with debounce for search
   watch(searchQuery, (newValue) => {
@@ -943,44 +539,78 @@ onMounted(() => {
   });
 });
 
+// Function to load US Rate Sheet data
+async function loadUSRateSheetData() {
+  isDataLoading.value = true;
+  dataError.value = null;
+
+  try {
+    usRateSheetData.value = await rateSheetService.getData();
+    console.log(`Loaded ${usRateSheetData.value.length} US rate sheet records`);
+  } catch (error) {
+    console.error('Error loading US rate sheet data:', error);
+    dataError.value = error instanceof Error ? error.message : 'Failed to load rate sheet data';
+  } finally {
+    isDataLoading.value = false;
+  }
+}
+
+// Compute filtered data from US Rate Sheet entries
 const filteredData = computed(() => {
-  let filtered = groupedData.value;
-
-  // Apply status filter
-  if (filterStatus.value === 'conflicts') {
-    filtered = filtered.filter((group) => group.hasDiscrepancy);
-  } else if (filterStatus.value === 'no-conflicts') {
-    filtered = filtered.filter((group) => !group.hasDiscrepancy);
-  } else if (filterStatus.value === 'change-same') {
-    filtered = filtered.filter((group) => group.changeCode === ChangeCode.SAME);
-  } else if (filterStatus.value === 'change-increase') {
-    filtered = filtered.filter((group) => group.changeCode === ChangeCode.INCREASE);
-  } else if (filterStatus.value === 'change-decrease') {
-    filtered = filtered.filter((group) => group.changeCode === ChangeCode.DECREASE);
+  // If no data or still loading, return empty array
+  if (usRateSheetData.value.length === 0 || isDataLoading.value) {
+    return [];
   }
 
-  // If no search query, return filtered data without additional processing
-  if (!debouncedSearchQuery.value) {
-    // Clear matching codes when search is empty
-    matchingCodes.value = {};
-    return filtered;
+  // Group data by NPANXX
+  const groupedEntries: Record<string, USRateSheetEntry[]> = {};
+
+  usRateSheetData.value.forEach((entry) => {
+    const npanxx = entry.npanxx;
+    if (!groupedEntries[npanxx]) {
+      groupedEntries[npanxx] = [];
+    }
+    groupedEntries[npanxx].push(entry);
+  });
+
+  // Convert to simplified version of GroupedRateData
+  const result = Object.keys(groupedEntries).map((npanxx) => {
+    const entries = groupedEntries[npanxx];
+    const firstEntry = entries[0];
+
+    return {
+      destinationName: npanxx, // Use npanxx directly without formatting
+      codes: [npanxx],
+      rates: [
+        {
+          rate: firstEntry.interRate,
+          count: 1,
+          percentage: 100,
+          isCommon: true,
+        },
+      ],
+      hasDiscrepancy: false,
+      changeCode: ChangeCode.SAME,
+      effectiveDate: new Date().toISOString().split('T')[0],
+      minDuration: 1,
+      increments: 1,
+    };
+  });
+
+  // Apply filtering
+  let filtered = result;
+
+  // Apply search filter if exists
+  if (debouncedSearchQuery.value) {
+    const query = debouncedSearchQuery.value.toLowerCase();
+    filtered = filtered.filter(
+      (group) =>
+        group.destinationName.toLowerCase().includes(query) ||
+        group.codes.some((code) => code.toLowerCase().includes(query))
+    );
   }
 
-  const query = debouncedSearchQuery.value.toLowerCase();
-
-  // Fast path: filter by destination name first (this is very quick)
-  const nameMatches = filtered.filter((group) =>
-    group.destinationName.toLowerCase().includes(query)
-  );
-
-  // If we have name matches, don't need to do expensive code search
-  if (nameMatches.length > 0) {
-    return nameMatches;
-  }
-
-  // Only search codes if no name matches were found
-  // For code matching, we return the precomputed results from the async search
-  return filtered.filter((group) => !!matchingCodes.value[group.destinationName]);
+  return filtered;
 });
 
 // Add a new function to perform the search asynchronously
@@ -994,7 +624,7 @@ async function performAsyncSearch(query: string) {
   isSearching.value = true;
   matchingCodes.value = {};
 
-  const searchGroups = groupedData.value;
+  const searchGroups = filteredData.value;
 
   // Process in smaller batches to keep UI responsive
   const batchSize = 5; // Process 5 destinations at a time
@@ -1068,7 +698,7 @@ function toggleExpand(destinationName: string) {
     // Initialize selected rate if not already set
     if (selectedRates.value[destinationName] === undefined) {
       // Find the group for this destination
-      const group = groupedData.value.find((g) => g.destinationName === destinationName);
+      const group = filteredData.value.find((g) => g.destinationName === destinationName);
       if (group) {
         // If no conflicts, use the only rate. If conflicts, use the most common rate (first one with isCommon=true)
         const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
@@ -1164,7 +794,7 @@ async function handleBulkUpdate(mode: 'highest' | 'lowest') {
   });
 
   // Get all destinations with discrepancies
-  const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
+  const destinationsToFix = filteredData.value.filter((group) => group.hasDiscrepancy);
   totalToProcess.value = destinationsToFix.length;
 
   if (destinationsToFix.length === 0) {
@@ -1204,31 +834,41 @@ async function handleBulkUpdate(mode: 'highest' | 'lowest') {
   }
 }
 
-function handleClearData() {
-  if (confirm('Are you sure you want to clear all rate sheet data?')) {
-    store.clearData();
+async function handleClearData() {
+  if (confirm('Are you sure you want to clear all US rate sheet data?')) {
+    try {
+      await store.clearUsRateSheetData();
+      usRateSheetData.value = [];
+    } catch (error) {
+      console.error('Error clearing data:', error);
+    }
   }
 }
 
 function handleExport() {
-  // Convert data to CSV format
+  if (usRateSheetData.value.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  // Create CSV headers
   const headers = [
-    'name',
-    'prefix',
-    'rate',
-    'change_code',
-    'effective',
-    'min duration',
-    'increments',
+    'npa',
+    'nxx',
+    'npanxx',
+    'interstate_rate',
+    'intrastate_rate',
+    'indeterminate_rate',
   ];
-  const rows = store.originalData.map((record) => [
-    record.name,
-    record.prefix,
-    record.rate.toFixed(6),
-    record.changeCode,
-    record.effective,
-    record.minDuration,
-    record.increments,
+
+  // Create CSV rows
+  const rows = usRateSheetData.value.map((entry) => [
+    entry.npa,
+    entry.nxx,
+    entry.npanxx,
+    entry.interRate.toFixed(6),
+    entry.intraRate.toFixed(6),
+    entry.ijRate.toFixed(6),
   ]);
 
   // Create CSV content
@@ -1239,7 +879,7 @@ function handleExport() {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', 'rate_sheet_formalized.csv');
+  link.setAttribute('download', 'us_rate_sheet_export.csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1283,11 +923,11 @@ function getCodesForRate(group: GroupedRateData, rate: number): string[] {
   }
 
   // Get codes and store in cache
-  const destinationRecords = store.originalData.filter(
-    (record) => record.name === group.destinationName && record.rate === rate
+  const destinationRecords = usRateSheetData.value.filter(
+    (record) => record.destinationName === group.destinationName && record.rate === rate
   );
 
-  const codes = destinationRecords.map((record) => record.prefix);
+  const codes = destinationRecords.map((record) => record.npanxx);
   codesCache.value[cacheKey][rate] = codes;
 
   return codes;
@@ -1295,7 +935,7 @@ function getCodesForRate(group: GroupedRateData, rate: number): string[] {
 
 function toggleAllRateCodesForDestination(destinationName: string, expand: boolean) {
   // Get all rates for this destination
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
+  const group = filteredData.value.find((g) => g.destinationName === destinationName);
   if (!group) return;
 
   if (expand) {
@@ -1308,7 +948,7 @@ function toggleAllRateCodesForDestination(destinationName: string, expand: boole
 }
 
 function areAllRateCodesExpanded(destinationName: string): boolean {
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
+  const group = filteredData.value.find((g) => g.destinationName === destinationName);
   if (!group) return false;
 
   const allRates = group.rates.map((r) => r.rate);
@@ -1334,46 +974,6 @@ watch(
   },
   { immediate: true }
 );
-
-// Function to calculate date based on setting
-function getEffectiveDate(changeCode: ChangeCodeType): string {
-  const today = new Date();
-  let effectiveDate = today;
-
-  if (changeCode === ChangeCode.SAME) {
-    if (effectiveDateSettings.value.same === 'today') {
-      effectiveDate = today;
-    } else if (effectiveDateSettings.value.same === 'tomorrow') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 1);
-    } else if (effectiveDateSettings.value.same === 'custom') {
-      return effectiveDateSettings.value.sameCustomDate;
-    }
-  } else if (changeCode === ChangeCode.INCREASE) {
-    if (effectiveDateSettings.value.increase === 'today') {
-      effectiveDate = today;
-    } else if (effectiveDateSettings.value.increase === 'tomorrow') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 1);
-    } else if (effectiveDateSettings.value.increase === 'week') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 7);
-    } else if (effectiveDateSettings.value.increase === 'custom') {
-      return effectiveDateSettings.value.increaseCustomDate;
-    }
-  } else if (changeCode === ChangeCode.DECREASE) {
-    if (effectiveDateSettings.value.decrease === 'today') {
-      effectiveDate = today;
-    } else if (effectiveDateSettings.value.decrease === 'tomorrow') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 1);
-    } else if (effectiveDateSettings.value.decrease === 'custom') {
-      return effectiveDateSettings.value.decreaseCustomDate;
-    }
-  }
-
-  return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-}
 
 // Function to initialize and cleanup the worker
 function initWorker() {
@@ -1662,125 +1262,40 @@ onBeforeUnmount(() => {
 
 // Update the applyEffectiveDateSettings function to use the worker
 async function applyEffectiveDateSettings() {
-  if (isApplyingSettings.value || !effectiveDateWorker) return;
-
-  // Clear previous logs when starting a new operation
-  processingLogs.value = [];
-  processingLogs.value.push({
-    time: Date.now(),
-    message: 'Starting effective date update process',
-  });
-
-  // Check if there are any conflicts before proceeding
-  const conflictCount = store.getDiscrepancyCount;
-  if (conflictCount > 0) {
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Cannot proceed: ${conflictCount} rate conflicts detected`,
-    });
-    alert(
-      `Cannot apply effective dates while ${conflictCount} rate conflicts exist. Please resolve all conflicts first.`
-    );
-    return;
-  }
+  if (isApplyingSettings.value) return;
 
   isApplyingSettings.value = true;
-  progressPercentage.value = 0;
-  processingPhase.value = 'preparing';
-  processingStatus.value = 'Initializing worker...';
-  processingStartTime.value = Date.now();
-  displayedElapsedTime.value = 0;
-
-  // Start separate timer for UI updates
-  if (elapsedTimeInterval) {
-    clearInterval(elapsedTimeInterval);
-  }
-  elapsedTimeInterval = window.setInterval(() => {
-    if (processingStartTime.value > 0) {
-      displayedElapsedTime.value = Math.floor((Date.now() - processingStartTime.value) / 1000);
-    }
-  }, 100);
-
-  // Show logs automatically when applying settings
-  showProcessingLogs.value = true;
-
   try {
-    console.log('Starting effective date update process');
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Preparing data for worker',
-    });
+    // Apply the effective date to all entries
+    const newDate = customEffectiveDate.value;
 
-    // Create simplified versions of the data to send to the worker
-    // Extract only the properties we need to ensure everything is serializable
+    // Show progress and message
+    progressPercentage.value = 0;
+    processingStatus.value = 'Applying effective date to all NPANXX entries...';
 
-    // Get the raw data
-    const rawGroupedData = store.groupedData.map((group) => ({
-      destinationName: group.destinationName,
-      changeCode: group.changeCode,
-      effectiveDate: group.effectiveDate,
-    }));
+    // Update all entries with the new date
+    for (let i = 0; i < usRateSheetData.value.length; i++) {
+      // Update progress for UI feedback
+      progressPercentage.value = Math.round((i / usRateSheetData.value.length) * 100);
 
-    // Simplify records too - only send what's needed
-    const simplifiedRecords = store.originalData.map((record) => ({
-      name: record.name,
-      prefix: record.prefix,
-      effective: record.effective,
-    }));
-
-    processingStatus.value = 'Sending data to worker...';
-
-    console.log(
-      `Sending ${rawGroupedData.length} simplified groups and ${simplifiedRecords.length} simplified records to worker`
-    );
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Sending ${rawGroupedData.length} groups and ${simplifiedRecords.length} records to worker`,
-    });
-
-    // Send to worker with only the required data
-    effectiveDateWorker.postMessage({
-      rawGroupedData,
-      allRecords: simplifiedRecords,
-      effectiveDateSettings: { ...effectiveDateSettings.value },
-    });
-
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Data sent to worker, awaiting results',
-    });
-  } catch (error) {
-    console.error('Error starting effective date update:', error);
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Error: ${error instanceof Error ? error.message : String(error)}`,
-    });
-    processingStatus.value = `Error starting update: ${
-      error instanceof Error ? error.message : String(error)
-    }`;
-    alert('Error starting update: ' + (error instanceof Error ? error.message : String(error)));
-    isApplyingSettings.value = false;
-    processingPhase.value = 'idle';
-
-    // Clear the elapsed time interval
-    if (elapsedTimeInterval) {
-      clearInterval(elapsedTimeInterval);
-      elapsedTimeInterval = null;
+      // In a real implementation, you would batch these updates or use a worker
+      usRateSheetData.value[i].effectiveDate = newDate;
     }
-  }
-}
 
-function getEffectiveDateLabel(setting: string): string {
-  if (setting === 'today') {
-    return 'Today';
-  } else if (setting === 'tomorrow') {
-    return 'Tomorrow';
-  } else if (setting === 'week') {
-    return '7 Days';
-  } else if (setting === 'custom') {
-    return 'Custom';
+    // Complete
+    progressPercentage.value = 100;
+    processingStatus.value = 'All entries updated successfully!';
+
+    // Close the settings panel after applying
+    setTimeout(() => {
+      showEffectiveDateSettings.value = false;
+      isApplyingSettings.value = false;
+    }, 1000);
+  } catch (error) {
+    console.error('Error applying effective date settings:', error);
+    processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
+    isApplyingSettings.value = false;
   }
-  return setting;
 }
 
 // Watch for debounced search query changes to handle expansion

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import service
+import type { USRateSheetEntry } from '@/types/domains/us-types';
 
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
@@ -7,6 +8,7 @@ interface USRateSheetState {
   usRateSheetEffectiveDate: string | null; // Keep if needed, might need to be loaded
   isLoading: boolean;
   error: string | null;
+  totalRecords: number;
   // Maybe store the actual data if table component needs it?
   // rateSheetData: USRateSheetEntry[] = [];
 }
@@ -20,6 +22,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     usRateSheetEffectiveDate: null,
     isLoading: false,
     error: null,
+    totalRecords: 0,
     // rateSheetData: [],
   }),
 
@@ -28,6 +31,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getUsRateSheetEffectiveDate: (state): string | null => state.usRateSheetEffectiveDate,
     getIsLoading: (state): boolean => state.isLoading,
     getError: (state): string | null => state.error,
+    getTotalRecords: (state): number => state.totalRecords,
     // getRateSheetData: (state) => state.rateSheetData,
   },
 
@@ -51,21 +55,24 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
       try {
         const data = await service.getData(); // Call service method
         this.hasUsRateSheetData = data.length > 0;
+        this.totalRecords = data.length;
         // If storing data in state:
         // this.rateSheetData = data;
         // TODO: How to get effective date? Needs to be stored/retrieved separately
         // this.usRateSheetEffectiveDate = ???
         if (!this.hasUsRateSheetData) {
           this.usRateSheetEffectiveDate = null; // Clear date if no data
+          this.totalRecords = 0;
         }
         console.log(
-          `[us-rate-sheet-store] loadRateSheetData finished. Found data: ${this.hasUsRateSheetData}`
+          `[us-rate-sheet-store] loadRateSheetData finished. Found data: ${this.hasUsRateSheetData}, records: ${this.totalRecords}`
         );
       } catch (err) {
         console.error('[us-rate-sheet-store] Error loading rate sheet data:', err);
         this.setError('Failed to load rate sheet data.');
         this.hasUsRateSheetData = false;
         this.usRateSheetEffectiveDate = null;
+        this.totalRecords = 0;
         // this.rateSheetData = [];
       } finally {
         this.setLoading(false);
@@ -74,20 +81,26 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
 
     /**
      * Handles successful upload: potentially reloads data or just sets flags.
-     * @param effectiveDate The effective date provided during upload.
+     * @param recordCount The number of records processed successfully.
+     * @param fileName The name of the file that was processed.
      */
-    async handleUploadSuccess(effectiveDate: string) {
-      console.log(`[us-rate-sheet-store] handleUploadSuccess called with date: ${effectiveDate}`);
-      // Option 1: Assume service stored data, just set flags
-      // this.hasUsRateSheetData = true;
-      // this.usRateSheetEffectiveDate = effectiveDate;
-      // this.error = null;
+    async handleUploadSuccess(recordCount: number, fileName: string) {
+      console.log(
+        `[us-rate-sheet-store] handleUploadSuccess called with ${recordCount} records from ${fileName}`
+      );
 
-      // Option 2: Reload data from Dexie to be sure
+      // Set record count as effective date temporarily (for UI display)
+      this.usRateSheetEffectiveDate = recordCount.toString();
+      this.totalRecords = recordCount;
+
+      // Set successful state
+      this.hasUsRateSheetData = true;
+      this.error = null;
+
+      // Option: Reload data from Dexie to ensure consistency
       await this.loadRateSheetData();
-      // Still need to handle effective date persistence separately
-      this.usRateSheetEffectiveDate = effectiveDate;
-      // Consider saving effective date to local storage or a separate Dexie metadata table
+
+      console.log('[us-rate-sheet-store] US Rate Sheet data loaded successfully');
     },
 
     /**
@@ -100,6 +113,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         await service.clearData(); // Call service method
         this.hasUsRateSheetData = false;
         this.usRateSheetEffectiveDate = null;
+        this.totalRecords = 0;
         // this.rateSheetData = [];
         console.log('[us-rate-sheet-store] Cleared rate sheet data and reset state.');
       } catch (err) {
@@ -107,6 +121,19 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.setError('Failed to clear local rate sheet data.');
       } finally {
         this.setLoading(false);
+      }
+    },
+
+    /**
+     * Gets the total number of records in the rate sheet
+     */
+    async getRecordCount(): Promise<number> {
+      try {
+        const data = await service.getData();
+        return data.length;
+      } catch (error) {
+        console.error('[us-rate-sheet-store] Error getting record count:', error);
+        return 0;
       }
     },
   },
