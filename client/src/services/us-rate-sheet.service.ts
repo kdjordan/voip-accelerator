@@ -347,25 +347,27 @@ export class USRateSheetService {
     );
     try {
       const db = await this.getDB(this.dbName);
-      await db.table(this.tableName).clear();
-      console.log(
-        `[USRateSheetService] Successfully cleared data from ${this.dbName}/${this.tableName}.`
-      );
+      // Check if table actually exists before trying to clear
+      // Dexie doesn't have a direct 'tableExists' check, so we query schema
+      const tableExists = db.tables.some((table) => table.name === this.tableName);
+      if (tableExists) {
+        await db.table(this.tableName).clear();
+        console.log(
+          `[USRateSheetService] Successfully cleared data from ${this.dbName}/${this.tableName}.`
+        );
+      } else {
+        console.warn(
+          `[USRateSheetService] Table ${this.tableName} not found in ${this.dbName}. Already considered clear.`
+        );
+      }
     } catch (error) {
+      // Catch potential errors during getDB or other unexpected issues
       console.error(
-        `[USRateSheetService] Error clearing table ${this.dbName}/${this.tableName}:`,
+        `[USRateSheetService] Error during clearData operation for ${this.dbName}/${this.tableName}:`,
         error
       );
-      // Check if it's an InvalidTableError, which might happen if the table wasn't created yet
-      // (e.g., attempting to clear before any data was ever added)
-      if (error instanceof Error && error.name.includes('InvalidTableError')) {
-        console.warn(
-          `[USRateSheetService] Table ${this.tableName} not found in ${this.dbName}. Assuming already clear.`
-        );
-        // Swallow this specific error, as the desired state (cleared) is achieved.
-      } else {
-        throw error; // Re-throw other errors
-      }
+      // Re-throw unexpected errors
+      throw error;
     }
   }
 }
