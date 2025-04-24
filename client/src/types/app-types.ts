@@ -208,9 +208,9 @@ export const DBSchemas = {
   [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
   // Schema for AZ Rate Sheet (formerly RATE_SHEET)
   [DBName.AZ_RATE_SHEET]:
-    '++id, destinationName, code, rate, effectiveDate, minDuration, increments',
+    'entries: ++id, destinationName, code, rate, effectiveDate, minDuration, increments',
   // Schema for US Rate Sheet (new)
-  [DBName.US_RATE_SHEET]: '++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
+  [DBName.US_RATE_SHEET]: 'entries: ++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
   [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
   [DBName.LERG]: 'npa, *state, *country',
   [DBName.US_PRICING_COMPARISON]: `

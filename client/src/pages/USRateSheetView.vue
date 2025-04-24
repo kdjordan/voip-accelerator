@@ -70,7 +70,7 @@
                 ? 'hover:border-accent-hover hover:bg-fbWhite/10'
                 : 'opacity-50',
               isProcessing
-                ? 'animate-pulse cursor-not-allowed'
+                ? 'cursor-not-allowed'
                 : !showPreviewModal
                 ? 'cursor-pointer'
                 : 'cursor-default',
@@ -85,29 +85,45 @@
               :disabled="isProcessing || showPreviewModal"
               @change="handleFileChange"
             />
-            <div class="text-center">
-              <ArrowUpTrayIcon
-                class="w-10 h-10 mx-auto border rounded-full p-2"
-                :class="
-                  uploadError
-                    ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                    : 'text-accent border-accent/50 bg-accent/10'
-                "
-              />
-              <p class="mt-2 text-base" :class="uploadError ? 'text-red-500' : 'text-accent'">
-                <template v-if="uploadError">
-                  <span>{{ uploadError }}</span>
-                </template>
-                <template v-else-if="isProcessing">
-                  <span>Processing your file...</span>
-                </template>
-                <template v-else>
-                  <span>DRAG & DROP to upload or CLICK to select file</span>
-                </template>
-              </p>
-              <p v-if="uploadError" class="mt-1 text-xs text-red-400">
-                Please try again with a CSV file
-              </p>
+            <div class="flex flex-col h-full w-full">
+              <!-- Normal state -->
+              <template v-if="!isProcessing">
+                <div class="flex items-center justify-center w-full h-full">
+                  <div class="text-center">
+                    <ArrowUpTrayIcon
+                      class="w-10 h-10 mx-auto border rounded-full p-2"
+                      :class="
+                        uploadError
+                          ? 'text-red-500 border-red-500/50 bg-red-500/10'
+                          : 'text-accent border-accent/50 bg-accent/10'
+                      "
+                    />
+                    <p class="mt-2 text-base" :class="uploadError ? 'text-red-500' : 'text-accent'">
+                      <template v-if="uploadError">
+                        <span>{{ uploadError }}</span>
+                      </template>
+                      <template v-else>
+                        <span>DRAG & DROP to upload or CLICK to select file</span>
+                      </template>
+                    </p>
+                    <p v-if="uploadError" class="mt-1 text-xs text-red-400">
+                      Please try again with a CSV file
+                    </p>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Uploading state -->
+              <template v-else>
+                <div
+                  class="flex-1 flex items-center justify-center bg-accent/10 file-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
+                >
+                  <div class="text-center">
+                    <div class="spinner-accent mx-auto mb-2"></div>
+                    <p class="text-base text-accent">Processing your file...</p>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
           <!-- Display success message -->
@@ -118,31 +134,30 @@
             {{ rfUploadStatus.message }}
           </div>
         </div>
+
+        <!-- Data Table Section (MOVED INSIDE p-6 container) -->
+        <div v-if="isLocallyStored" class="mt-6">
+          <USRateSheetTable />
+        </div>
       </div>
 
-      <!-- Data Table -->
-      <div v-if="isLocallyStored" class="mt-8">
-        <USRateSheetTable />
-        <!-- Removed discrepancy count prop -->
-      </div>
+      <!-- Preview Modal -->
+      <PreviewModal
+        v-if="showPreviewModal"
+        :show-modal="showPreviewModal"
+        :columns="columns"
+        :preview-data="previewData"
+        :column-options="US_COLUMN_ROLE_OPTIONS"
+        :start-line="startLine"
+        :validate-required="false"
+        :source="'US'"
+        @update:mappings="handleMappingUpdate"
+        @update:valid="(newValid) => (isValid = newValid)"
+        @update:start-line="(newStartLine) => (startLine = newStartLine)"
+        @confirm="handleModalConfirm"
+        @cancel="handleModalCancel"
+      />
     </div>
-
-    <!-- Preview Modal -->
-    <PreviewModal
-      v-if="showPreviewModal"
-      :show-modal="showPreviewModal"
-      :columns="columns"
-      :preview-data="previewData"
-      :column-options="US_COLUMN_ROLE_OPTIONS"
-      :start-line="startLine"
-      :validate-required="false"
-      :source="'US'"
-      @update:mappings="handleMappingUpdate"
-      @update:valid="(newValid) => (isValid = newValid)"
-      @update:start-line="(newStartLine) => (startLine = newStartLine)"
-      @confirm="handleModalConfirm"
-      @cancel="handleModalCancel"
-    />
   </div>
 </template>
 
@@ -328,6 +343,12 @@ async function handleModalConfirm(
       // Handle successful upload
       store.handleUploadSuccess(result.recordCount, selectedFile.value.name);
 
+      // Set success status
+      rfUploadStatus.value = {
+        type: 'success',
+        message: `Successfully processed ${result.recordCount} records.`,
+      };
+
       // Clear the selected file
       selectedFile.value = null;
     } catch (processError) {
@@ -352,10 +373,24 @@ async function handleModalConfirm(
           );
           console.log('[handleModalConfirm] Retry successful:', retryResult);
           store.handleUploadSuccess(retryResult.recordCount, selectedFile.value.name);
+
+          // Set success status after retry
+          rfUploadStatus.value = {
+            type: 'success',
+            message: `Successfully processed ${retryResult.recordCount} records after recovery.`,
+          };
+
           selectedFile.value = null;
           return; // Exit if retry succeeds
         } catch (retryError) {
           console.error('[handleModalConfirm] Retry failed:', retryError);
+
+          // Set error status
+          rfUploadStatus.value = {
+            type: 'error',
+            message: retryError.message || 'Failed to process file after retry',
+          };
+
           // Continue to the error handling below
         }
       }
@@ -365,6 +400,12 @@ async function handleModalConfirm(
       uploadError.value = errorMessage;
       store.setError(errorMessage);
 
+      // Set error status
+      rfUploadStatus.value = {
+        type: 'error',
+        message: errorMessage,
+      };
+
       // Clear any potentially corrupted data
       store.clearUsRateSheetData();
     }
@@ -372,6 +413,13 @@ async function handleModalConfirm(
     console.error('[handleModalConfirm] Unexpected error:', error);
     uploadError.value = error instanceof Error ? error.message : 'Unexpected error occurred';
     store.setError(uploadError.value);
+
+    // Set error status
+    rfUploadStatus.value = {
+      type: 'error',
+      message: uploadError.value,
+    };
+
     store.clearUsRateSheetData();
   } finally {
     store.setLoading(false);
@@ -399,3 +447,34 @@ async function handleClearData() {
   }
 }
 </script>
+
+<style scoped>
+.file-upload-pulse {
+  animation: uploadPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes uploadPulse {
+  0%,
+  100% {
+    background-color: rgba(0, 255, 170, 0.1);
+  }
+  50% {
+    background-color: rgba(0, 255, 170, 0.2);
+  }
+}
+
+.spinner-accent {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: hsl(160, 100%, 40%);
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
