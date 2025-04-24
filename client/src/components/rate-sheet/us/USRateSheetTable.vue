@@ -33,9 +33,9 @@
             class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
             :class="{
               'animate-pulse-fast': isApplyingSettings,
-              'opacity-50 cursor-not-allowed': isApplyingSettings,
+              'opacity-50 cursor-not-allowed': isApplyingSettings || !hasDateChanged,
             }"
-            :disabled="isApplyingSettings"
+            :disabled="isApplyingSettings || !hasDateChanged"
           >
             Apply
             <ArrowRightIcon class="ml-1 w-3 h-3" />
@@ -477,12 +477,25 @@ const codesCache = ref<{ [key: string]: { [rate: number]: string[] } }>({});
 // Track which codes match the current search query
 const matchingCodes = ref<{ [destinationName: string]: { [rate: number]: string[] } }>({});
 
-// Simplified effective date handling - just use the date picker value
-const customEffectiveDate = ref(new Date().toISOString().split('T')[0]);
+// Initialize date to 7 days from now
+function getDefaultDate() {
+  const sevenDays = new Date();
+  sevenDays.setDate(sevenDays.getDate() + 7);
+  return sevenDays.toISOString().split('T')[0];
+}
+
+// Simplified effective date handling - using a single date picker
+const defaultEffectiveDate = getDefaultDate();
+const customEffectiveDate = ref(defaultEffectiveDate);
 const effectiveDate = computed(() => customEffectiveDate.value);
 
+// Track if date has been changed from default
+const hasDateChanged = computed(() => {
+  return customEffectiveDate.value !== defaultEffectiveDate;
+});
+
 // Controls visibility of effective date settings section
-const showEffectiveDateSettings = ref(false);
+const showEffectiveDateSettings = ref(true);
 // Track when settings are being applied
 const isApplyingSettings = ref(false);
 // Track the current processing phase
@@ -1262,7 +1275,7 @@ onBeforeUnmount(() => {
 
 // Update the applyEffectiveDateSettings function to use the worker
 async function applyEffectiveDateSettings() {
-  if (isApplyingSettings.value) return;
+  if (isApplyingSettings.value || !hasDateChanged.value) return;
 
   isApplyingSettings.value = true;
   try {
@@ -1281,6 +1294,12 @@ async function applyEffectiveDateSettings() {
       // In a real implementation, you would batch these updates or use a worker
       usRateSheetData.value[i].effectiveDate = newDate;
     }
+
+    // Save the new date as the default
+    const newDefaultDate = customEffectiveDate.value;
+
+    // Update the store with the new date for all entries
+    await store.updateEffectiveDateForAll(newDate);
 
     // Complete
     progressPercentage.value = 100;
