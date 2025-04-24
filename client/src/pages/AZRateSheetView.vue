@@ -42,29 +42,27 @@
             </div>
           </div>
           <!-- Invalid Rows Status -->
-          <div v-if="store.hasInvalidRows" class="-mx-6">
+          <div v-if="store.hasInvalidRows" class="-mx-6 px-6">
             <div
               @click="toggleInvalidRowsDetails"
-              class="bg-red-900/50 px-6 py-3 border-y border-red-500/30 cursor-pointer hover:bg-red-900/70 transition-colors"
+              class="w-full bg-red-900/50 px-6 py-3 border border-red-500/40 cursor-pointer hover:bg-red-900/70 hover:border-red-500/60 transition-colors flex items-center justify-between shadow-sm rounded-md"
             >
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                  <span class="text-sm font-medium text-red-400"
-                    >({{ store.getGroupedInvalidRows.length }})</span
-                  >
-                </div>
-                <component
-                  :is="showInvalidRowsDetails ? ChevronUpIcon : ChevronDownIcon"
-                  class="w-4 h-4 text-red-400"
-                />
+              <div class="flex items-center space-x-2">
+                <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
+                <span class="text-sm font-medium text-red-400"
+                  >({{ store.getGroupedInvalidRows.length }})</span
+                >
               </div>
+              <component
+                :is="showInvalidRowsDetails ? ChevronUpIcon : ChevronDownIcon"
+                class="w-4 h-4 text-red-400"
+              />
             </div>
 
             <!-- Invalid Rows Content -->
             <div
               v-if="showInvalidRowsDetails"
-              class="transition-all duration-300 ease-in-out bg-red-900/50"
+              class="transition-all duration-300 ease-in-out bg-red-900/50 rounded-b-md mt-1"
             >
               <div class="px-6 py-4">
                 <table class="w-full min-w-full border-separate border-spacing-0">
@@ -254,7 +252,7 @@
       :column-options="RF_COLUMN_ROLE_OPTIONS"
       :start-line="startLine"
       :validate-required="true"
-      :source="'AZ_RATE_DECK'"
+      :source="'AZ'"
       @update:mappings="handleMappingUpdate"
       @update:valid="(newValid) => (isValid = newValid)"
       @update:start-line="(newStartLine) => (startLine = newStartLine)"
@@ -276,7 +274,7 @@ import {
 } from '@heroicons/vue/24/outline';
 import RateSheetTable from '@/components/rate-sheet/az/AZRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
-import { RF_COLUMN_ROLE_OPTIONS, ChangeCode } from '@/types/domains/rate-sheet-types';
+import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 import { RateSheetService } from '@/services/az-rate-sheet.service';

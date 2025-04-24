@@ -116,14 +116,6 @@ export const RF_COLUMN_ROLE_OPTIONS: RFColumnRoleOption[] = [
   { value: RFColumnRole.INCREMENTS, label: 'Increments' },
 ];
 
-export const RF_COLUMN_ROLE_OPTIONS_NEW = {
-  name: { label: 'Destination Name', required: true },
-  prefix: { label: 'Prefix', required: true },
-  rate: { label: 'Rate', required: true },
-  minDuration: { label: 'Min Duration', required: false },
-  increments: { label: 'Increments', required: false },
-} as const;
-
 /**
  * Types for the rate sheet table component
  */

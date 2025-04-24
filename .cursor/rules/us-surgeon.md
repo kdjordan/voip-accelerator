@@ -6,8 +6,8 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
 
 1.  **Refactoring:** Renaming existing AZ components for clarity (Done).
 2.  **Implementing US View:** Creating new US-specific components (Done).
-3.  **Integrating DexieJS (US):** Using DexieJS for storing and managing US Rate Sheet data with US-specific logic (no discrepancies/change codes, single effective date). Uses `us-rate-sheet-store.ts`.
-4.  **Integrating DexieJS (AZ):** Refactoring the AZ Rate Sheet components to use DexieJS, maintaining its existing logic (discrepancies, change codes, per-row effective dates). Uses `az-rate-sheet-store.ts`.
+3.  **Integrating DexieJS (US):** Using DexieJS for storing and managing US Rate Sheet data with US-specific logic (no discrepancies/change codes, single optional effective date). Uses `us-rate-sheet-store.ts`.
+4.  **Integrating DexieJS (AZ):** DEFERRED - Refactoring the AZ Rate Sheet components to use DexieJS, maintaining its existing logic.
 
 ---
 
@@ -35,40 +35,51 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
 - [x] **Define US Column Mappings:** Uses `US_COLUMN_ROLE_OPTIONS`.
 - [x] **Adapt Upload/Processing (`USRateSheetView.vue`):**
   - [x] Use `PreviewModal` with `US_COLUMN_ROLE_OPTIONS`.
-  - [x] **Pass `source` prop:** Updated to pass `:source="'US'"` to `PreviewModal` (maintains compatibility with `USFileUploads`).
+  - [x] Pass `:source="'US'"` to `PreviewModal`.
   - [x] **Modify `handleModalConfirm` Logic:**
-    - Confirmed it calls the service correctly.
-    - Made `effectiveDate` optional in the initial check.
-    - **Added logic to correctly interpret `undefined` `indeterminateDefinition` from modal as `'column'` before passing to service.**
+    - [x] Confirmed it calls the service correctly.
+    - [x] `effectiveDate` is optional.
+    - [x] Correctly interpret `undefined` `indeterminateDefinition` as `'column'`.
+    - [x] Keep `store.clearUsRateSheetData()` in `catch` block.
   - [x] Refactored to use `useDragDrop` composable.
-  - [x] Corrected `Papa.parse` logic to use `preview` option for modal display.
-  - [x] Added/refined logging for troubleshooting.
-- [x] **Create/Adapt Service (`usRateSheetService`):**
+  - [x] Corrected `Papa.parse` logic for modal preview.
+  - [x] Added/refined logging.
+  - [ ] **Implement Invalid Rows Display:** Add UI (collapsible section) similar to `AZRateSheetView.vue` to show invalid rows from the store.
+  - [ ] **Implement Total Records Display:** Add UI element to display the reactive total records count from the store.
+- [ ] **Create/Adapt Service (`usRateSheetService`):**
   - [x] `processFile` method handles parsing, validation, standardization.
   - [x] Uses `DBName.US_RATE_SHEET` and table name `'entries'`.
   - [x] Added 7-digit NPANXX / 4-digit NPA handling.
   - [x] `getData`, `getTableCount`, `clearData` methods added.
-  - [x] `processFile` confirmed to handle optional `effectiveDate`.
-- [x] **Create & Update `us-rate-sheet-store.ts`:**
+  - [x] `processFile` handles optional `effectiveDate`.
+  - [ ] **Modify `processFile` return value:** Return `{ count: number; invalidRows: InvalidUsRow[] }`.
+  - [ ] **Add Paginated Fetching:** Implement a method like `getPaginatedData(offset: number, limit: number, filters?: any)` for infinite scrolling.
+- [ ] **Create & Update `us-rate-sheet-store.ts`:**
   - [x] Created store.
   - [x] Added state: `hasUsRateSheetData`, `usRateSheetEffectiveDate`, `isLoading`, `error`.
   - [x] Refactored Actions/Getters to call service methods.
   - [x] `handleUploadSuccess` stores effective date.
-- [x] **Integrate `us-rate-sheet-store.ts` into `USRateSheetView.vue`:**
+  - [ ] **Add State:** Add `totalRecordsProcessed: number | null` and `invalidRows: InvalidUsRow[]`.
+  - [ ] **Update `handleUploadSuccess`:** Store `totalRecordsProcessed` and `invalidRows` returned from the service.
+  - [ ] **Add Getters:** Add `getTotalRecordsProcessed`, `getInvalidRows`, `hasInvalidRows`.
+  - [ ] **Add Actions/State for Pagination:** Add state/actions to manage current page/offset and trigger paginated data fetches from the service for `USRateSheetTable.vue`.
+- [ ] **Integrate `us-rate-sheet-store.ts` into `USRateSheetView.vue`:**
   - [x] Import and use store.
-  - [x] Call `store.loadRateSheetData()` in `onMounted`.
+  - [x] Call `store.loadRateSheetData()` (or initial check) in `onMounted`.
   - [x] Updated `handleModalConfirm` to call `store.handleUploadSuccess`.
   - [x] Updated `handleClearData` to call `store.clearUsRateSheetData`.
-  - [x] Use store state/getters for UI.
+  - [x] Use store state/getters for UI (loading, error, has data).
+  - [ ] **Connect UI:** Bind display elements for total records and invalid rows to store getters.
 - [ ] **Adapt Table Logic (`USRateSheetTable.vue` - DexieJS Focus):**
-  - Data Fetching: Fetch data via the store (`us-rate-sheet-store.ts`).
-  - Filtering/Searching: Implement using DexieJS via service or filter store state.
-  - Display Effective Date: Display single effective date from store.
-  - Remove Discrepancy/Conflict UI.
-  - Export Data: Modify `handleExport` to get current data from DexieJS via service.
-  - Clear Data Interaction: Button handled in view.
+  - [ ] **Data Fetching:** Fetch initial data and subsequent pages via the store/service actions for infinite scrolling.
+  - [ ] **Implement Infinite Scrolling:** Use `useInfiniteScroll` (VueUse) to trigger data loading as the user scrolls.
+  - [ ] **Filtering/Searching:** Implement basic state filtering (sort alphabetically asc/desc). Store filter criteria locally or in the store.
+  - [ ] **Display Effective Date:** Display single effective date from store.
+  - [ ] **Remove Discrepancy/Conflict UI.**
+  - [ ] **Export Data:** Modify `handleExport` to get _all_ current data from DexieJS via service (consider potential performance for very large datasets).
+  - [ ] **Clear Data Interaction:** Button handled in view.
 
-### Phase 4: Refactor AZ Rate Sheet Storage (DexieJS Integration)
+### Phase 4: Refactor AZ Rate Sheet Storage (DexieJS Integration) - DEFERRED
 
 - [x] **Rename Store:** Renamed `rate-sheet-store.ts` to `az-rate-sheet-store.ts`. Updated ID to `azRateSheet` and function to `useAzRateSheetStore`.
 - [x] **Define AZ DexieJS Storage:**
@@ -97,35 +108,30 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
 
 ---
 
-## ❓ Open Questions & Prompts
+## ✅ Resolved Questions
 
-To ensure the US Rate Sheet feature aligns perfectly with requirements, please clarify:
-
-1.  **Effective Date Requirement:** We've made the Effective Date _optional_ during the modal confirmation step for `USRateSheetView.vue`. Is this correct? Or should it be _required_ before processing can start? If required, should the `PreviewModal` enforce this?
-///this should be optional
-2.  **Total Records Display:** The "Total Records Processed" stat currently shows `'---'`. Where should this count come from?
-/// the number of rows that end up in the us_rate_sheet_db
-    - Should `usRateSheetService.processFile` return the total valid _and_ invalid records attempted?
-/// yes and we should store that for quick access in the @us-rate-sheet-store.ts
-    - Should the store fetch the count from the DexieJS table (`db.entries.count()`) after a successful upload using a dedicated getter/action?
-/// yes and that should be reactive, so as soon as it's available we shwo it
-3.  **Invalid Rows Display:** `usRateSheetService.processFile` identifies `invalidRows`. How should these be displayed to the user in `USRateSheetView.vue`? Should we add a collapsible section similar to `AZRateSheetView.vue`?
-/// yes exact same functionality and UI/UX
-4.  **Data Clearing Logic:** The `catch` block in `handleModalConfirm` now calls `store.clearUsRateSheetData()`. Is this the desired behavior (i.e., clear any potentially partially saved data if _any_ error occurs during processing)?
-/// I think this is an ok check - the data in DexieJS should persist until the user removes the file - just like in @az-rate-sheet-service.ts
-5.  **Table Component (`USRateSheetTable.vue`):** What are the exact requirements for filtering and searching in the US rate sheet table? By NPA? NXX? Rate range? Should it load all data initially or paginate?
-/// mostly the same functionality for now as with @AZRateSheetView. We won't have any rate confilicts in there so we will have different filters in there. We will be introdocing another set of data that we can use there, a population setting.
-/// the idea is - is that the user can filter NPAS by state population, so the display will show a desending list of NPAs based on the state that is assigned to and the population of that state.
-/// for now we should just leave the View Filter with the option of sorting alphabetically by state ascending and descending so we can get a framework for the additioanl information 
+1.  **Effective Date Requirement:** **Optional** for US Rate Sheets.
+2.  **Total Records Display:** Count comes from service (`processFile` return) -> store (`totalRecordsProcessed`) -> displayed reactively in `USRateSheetView.vue`.
+3.  **Invalid Rows Display:** Yes, implement UI in `USRateSheetView.vue` similar to AZ view, populated from service -> store (`invalidRows`).
+4.  **Data Clearing Logic:** Keep current logic (clear on error in `handleModalConfirm`).
+5.  **Table Component (`USRateSheetTable.vue`):** Fetch from Dexie via store/service. Filter by state (alphabetical sort). Implement infinite scrolling. Defer population filtering.
 
 ---
 
-## Open Questions & Prompts
+## ❓ Open Questions & Prompts (Deferred)
 
-- **AZ Schema:** Confirm the `AZRateSheetEntry` type and the schema defined for `DBName.AZ_RATE_SHEET` in `DBSchemas` are fully aligned.
-/// for now we should not be doing anything with AZ components or functionality - that is all working as expected
-/// we need to make sure that nothing we are doing will effect that functionality
-/// we will address the refactor of AZ Rate sheets after we finish US rate sheet Implementation
-- **Table Component Refactor:** Decide if `USRateSheetTable` / `AZRateSheetTable` will fetch data via the store state or directly via service calls to Dexie.
-/// for get about AZRateSheetTable for now - all focus is on @USRateSheetTable and yes it should fetch from Dexie.
-/// it should also implement infinite scrolling like we are doing for @USPricingReport using the UsdetailedcomparisonTable
+- **AZ Schema:** (DEFERRED) Confirm the `AZRateSheetEntry` type and the schema defined for `DBName.AZ_RATE_SHEET` in `DBSchemas` are fully aligned.
+- **Table Component Refactor:** (RESOLVED for US - Fetch from Dexie) Decide if `AZRateSheetTable` will fetch data via the store state or directly via service calls to Dexie when its refactor is addressed.
+
+---
+
+## ❓ New Diagnostic Questions (Rate Sheet Dexie Initialization - 2024-07-25)
+
+Given the persistent `InvalidTableError: Table entries does not exist` for `us_rate_sheet_db` despite schema correction, let's compare the working (`USFileUploads`/`us.service.ts`/`us_rate_deck_db`) and non-working (`USRateSheetView`/`us-rate-sheet.service.ts`/`us_rate_sheet_db`) flows:
+
+1.  **Dexie Initialization Point:** Where is the `useDexieDB` composable first invoked or the `us_rate_sheet_db` specifically opened in the application lifecycle? Is it guaranteed to have run and successfully opened the DB _before_ `USRateSheetView.vue` mounts or its associated `USRateSheetService` is instantiated/used? How does this compare to when `us_rate_deck_db` is initialized relative to `USFileUploads.vue`?
+2.  **Schema Versioning:** Have we incremented the overall Dexie database version number (likely within `useDexieDB.ts` or wherever `Dexie('VoipDb', version)` is called) since adding/correcting the `us_rate_sheet_db` schema in `DBSchemas`? Dexie requires a version bump to apply schema changes to an _existing_ database instance. If the DB was previously opened without the `entries` table definition, it won't be added without a version increment.
+3.  **`useDexieDB` Implementation Review:** Can we examine the `useDexieDB.ts` composable? Does its `openDatabase` or `getDB` function contain any conditional logic, error handling, or specific checks related to database names that might inadvertently prevent `us_rate_sheet_db` from opening correctly or applying its schema?
+4.  **Service Instantiation Context:** Where exactly is the `new USRateSheetService()` instance created? Is it within the `<script setup>` of `USRateSheetView.vue`? If so, could the service constructor (which calls `useDexieDB`) be executing _before_ the composable has finished the asynchronous process of opening/upgrading the `us_rate_sheet_db`?
+
+---
