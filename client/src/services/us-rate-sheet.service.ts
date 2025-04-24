@@ -29,13 +29,51 @@ export class USRateSheetService {
   // Use the dedicated DB and a fixed table name within it
   private dbName = DBName.US_RATE_SHEET;
   private tableName = 'entries'; // Fixed table name within the dedicated DB
+  private storeInDexieDB: <T>(
+    data: T[],
+    dbName: DBNameType,
+    storeName: string,
+    options?: { sourceFile?: string; replaceExisting?: boolean }
+  ) => Promise<void>;
 
   constructor() {
     // Get required functions from the composable
-    const { getDB, loadFromDexieDB } = useDexieDB();
+    const { getDB, loadFromDexieDB, storeInDexieDB } = useDexieDB();
     this.getDB = getDB;
     this.loadFromDexieDB = loadFromDexieDB;
+    this.storeInDexieDB = storeInDexieDB;
     console.log('USRateSheetService initialized');
+
+    // Initialize the database
+    this.initializeDatabase().catch((error) => {
+      console.error('Error initializing US Rate Sheet database:', error);
+    });
+  }
+
+  /**
+   * Initializes the database and ensures the 'entries' table exists
+   */
+  private async initializeDatabase(): Promise<void> {
+    try {
+      // Get a reference to the database - this should create it if it doesn't exist
+      const db = await this.getDB(this.dbName);
+      console.log(`[USRateSheetService] Database ${this.dbName} initialized`);
+
+      // Check if the table exists - if not, we'll create it with a minimal entry to ensure it's registered
+      if (!db.hasStore(this.tableName)) {
+        console.log(
+          `[USRateSheetService] Table '${this.tableName}' not found, attempting to create it`
+        );
+        // Store a minimal entry to create the table
+        await this.storeInDexieDB([], this.dbName, this.tableName);
+        console.log(`[USRateSheetService] Successfully created table '${this.tableName}'`);
+      } else {
+        console.log(`[USRateSheetService] Table '${this.tableName}' already exists`);
+      }
+    } catch (error) {
+      console.error(`[USRateSheetService] Error initializing database:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -277,34 +315,43 @@ export class USRateSheetService {
             }
           }
         },
-        complete: async () => {
+        complete: async (results) => {
           console.log(
-            `PapaParse complete. Standardized ${standardizedData.length} valid records, found ${invalidRows.length} invalid rows.`
+            `[USRateSheetService] Parsing complete. Processing ${standardizedData.length} standardized entries.`
           );
-          if (standardizedData.length === 0) {
-            reject(new Error('No valid records found in the file after parsing.'));
-            return;
-          }
 
           try {
-            // Use the correct DB name
-            const db = await this.getDB(this.dbName);
-            // Clear existing data before adding new data (make it replaceable)
-            console.log(`Clearing existing data from table: ${this.dbName}/${this.tableName}`);
-            await db.table(this.tableName).clear();
+            // Ensure the database and table are initialized
+            await this.initializeDatabase();
 
-            console.log(
-              `Adding ${standardizedData.length} records to Dexie table: ${this.dbName}/${this.tableName}`
-            );
-            await db.table(this.tableName).bulkAdd(standardizedData);
-            const finalCount = await db.table(this.tableName).count();
-            console.log(
-              `Successfully added records. Final count in ${this.dbName}/${this.tableName}: ${finalCount}`
-            );
-            resolve({ recordCount: finalCount, invalidRows });
-          } catch (dbError) {
-            console.error('Dexie DB Error during bulkAdd/clear:', dbError);
-            reject(new Error('Failed to save data to local database.'));
+            // Clear existing data before adding new data
+            const db = await this.getDB(this.dbName);
+            if (db.hasStore(this.tableName)) {
+              await db.table(this.tableName).clear();
+              console.log(`[USRateSheetService] Cleared existing data from ${this.tableName}`);
+            }
+
+            // Store the standardized data
+            if (standardizedData.length > 0) {
+              await this.storeInDexieDB(standardizedData, this.dbName, this.tableName, {
+                replaceExisting: false,
+              });
+              console.log(
+                `[USRateSheetService] Successfully stored ${standardizedData.length} records in ${this.tableName}`
+              );
+            } else {
+              console.log(`[USRateSheetService] No valid records to store.`);
+            }
+
+            // Resolve the promise
+            resolve({
+              recordCount: standardizedData.length,
+              invalidRows,
+              fileName: file.name,
+            });
+          } catch (error) {
+            console.error(`[USRateSheetService] Error during data storage:`, error);
+            reject(error);
           }
         },
         error: (error: Error) => {
@@ -341,33 +388,32 @@ export class USRateSheetService {
    * Clears all data from the US Rate Sheet Dexie table.
    */
   async clearData(): Promise<void> {
-    // Use the correct DB name and table name
-    console.log(
-      `[USRateSheetService] Attempting to clear data from ${this.dbName}/${this.tableName}`
-    );
+    console.log(`[USRateSheetService] Clearing data from table: ${this.tableName}`);
     try {
       const db = await this.getDB(this.dbName);
-      // Check if table actually exists before trying to clear
-      // Dexie doesn't have a direct 'tableExists' check, so we query schema
-      const tableExists = db.tables.some((table) => table.name === this.tableName);
-      if (tableExists) {
+
+      // Check if table exists before attempting to clear it
+      if (db.hasStore(this.tableName)) {
         await db.table(this.tableName).clear();
-        console.log(
-          `[USRateSheetService] Successfully cleared data from ${this.dbName}/${this.tableName}.`
-        );
+        console.log(`[USRateSheetService] Data cleared from ${this.tableName} table.`);
       } else {
-        console.warn(
-          `[USRateSheetService] Table ${this.tableName} not found in ${this.dbName}. Already considered clear.`
+        console.log(
+          `[USRateSheetService] Table ${this.tableName} does not exist. Nothing to clear.`
         );
+        // Initialize the table here in case it's needed
+        await this.initializeDatabase();
       }
     } catch (error) {
-      // Catch potential errors during getDB or other unexpected issues
-      console.error(
-        `[USRateSheetService] Error during clearData operation for ${this.dbName}/${this.tableName}:`,
-        error
-      );
-      // Re-throw unexpected errors
-      throw error;
+      console.error(`[USRateSheetService] Error clearing data:`, error);
+      // If the table doesn't exist, try to initialize it
+      if (error.name === 'InvalidTableError') {
+        console.log(
+          `[USRateSheetService] Table ${this.tableName} does not exist. Initializing database.`
+        );
+        await this.initializeDatabase();
+      } else {
+        throw error;
+      }
     }
   }
 }

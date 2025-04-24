@@ -10,18 +10,6 @@
     <div class="bg-gray-800 rounded-lg overflow-hidden">
       <!-- Header Section -->
       <div class="p-6 border-b border-gray-700/50">
-        <div class="flex justify-end mb-4">
-          <button
-            v-if="isLocallyStored"
-            @click="handleClearData"
-            :disabled="isProcessing"
-            class="flex items-center px-3 py-1 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <TrashIcon class="w-4 h-4 text-red-400 mr-1.5" />
-            <span class="text-sm text-red-400">Clear Data</span>
-          </button>
-        </div>
-
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 gap-3">
           <!-- Storage Status -->
@@ -46,9 +34,8 @@
           <div>
             <div class="flex justify-between items-center">
               <h3 class="text-gray-400">Total Records Processed</h3>
-              <!-- TODO: Get actual record count from Dexie via store or service -->
               <div class="text-xl font-medium">
-                {{ store.getUsRateSheetEffectiveDate || '0' }}
+                {{ store.getTotalRecords }}
               </div>
             </div>
           </div>
@@ -58,7 +45,7 @@
             <div class="flex justify-between items-center">
               <h3 class="text-gray-400">Effective Date</h3>
               <div class="text-xl font-medium">
-                {{ store.getUsRateSheetEffectiveDate || 'N/A' }}
+                {{ new Date().toLocaleDateString() }}
               </div>
             </div>
           </div>
@@ -279,45 +266,27 @@ function processFile(file: File) {
 
 async function handleModalConfirm(
   mappings: Record<string, string>,
-  indeterminateDefinitionFromModal?: string,
-  effectiveDate?: string
+  indeterminateDefinition?: string
 ) {
-  console.log('[handleModalConfirm] Confirm button clicked. Received:', {
-    mappings,
-    indeterminateDefinitionFromModal,
-    effectiveDate,
-    selectedFile: selectedFile.value,
-  });
-
+  // Hide modal immediately to show processing state in drop zone
   showPreviewModal.value = false;
-  const file = selectedFile.value;
-  if (!file) {
-    console.error('[handleModalConfirm] Condition failed: !file');
-    store.setError('File missing from modal confirmation.');
-    selectedFile.value = null;
+  uploadError.value = null;
+  store.setError(null);
+
+  // Return if no file selected
+  if (!selectedFile.value) {
+    console.error('[handleModalConfirm] No file selected.');
+    uploadError.value = 'No file selected.';
+    store.setError('No file selected.');
     return;
   }
 
-  // Determine the correct definition string to pass to the service
-  // If modal sent undefined, it means "Column Role" was selected.
-  const indeterminateDefinitionForService =
-    indeterminateDefinitionFromModal === undefined ? 'column' : indeterminateDefinitionFromModal;
-
-  console.log(
-    '[handleModalConfirm] Proceeding with processing... Indeterminate Definition for Service:',
-    indeterminateDefinitionForService
-  );
+  // Set loading state
   store.setLoading(true);
-  store.setError(null);
-  rfUploadStatus.value = null;
+  console.log('[handleModalConfirm] Started processing', { file: selectedFile.value.name });
 
   try {
-    console.log('Starting US Rate Sheet processing...', {
-      mappings,
-      indeterminateDefinitionForService,
-      effectiveDate,
-    });
-
+    // Prepare column mapping
     const columnMapping = {
       npanxx: Number(
         Object.entries(mappings).find(([_, value]) => value === USColumnRole.NPANXX)?.[0] ?? -1
@@ -340,33 +309,73 @@ async function handleModalConfirm(
       ),
     };
 
-    console.log('Processing file with column mapping:', columnMapping);
+    console.log('[handleModalConfirm] Calling service.processFile with', {
+      mappings: columnMapping,
+      startLine: startLine.value,
+      indeterminate: indeterminateDefinition || 'column',
+    });
 
-    const result = await usRateSheetService.processFile(
-      file,
-      columnMapping,
-      startLine.value,
-      indeterminateDefinitionForService,
-      effectiveDate
-    );
+    try {
+      const result = await usRateSheetService.processFile(
+        selectedFile.value,
+        columnMapping,
+        startLine.value,
+        indeterminateDefinition || 'column',
+        undefined // effectiveDate is optional
+      );
 
-    console.log('File processed by service:', result);
-    rfUploadStatus.value = {
-      type: 'success',
-      message: `Successfully processed ${result.recordCount} records from ${file.name}. Found ${result.invalidRows.length} invalid rows.`,
-    };
+      console.log('[handleModalConfirm] Service.processFile returned:', result);
+      // Handle successful upload
+      store.handleUploadSuccess(result.recordCount, selectedFile.value.name);
 
-    await store.handleUploadSuccess(effectiveDate);
+      // Clear the selected file
+      selectedFile.value = null;
+    } catch (processError) {
+      console.error('[handleModalConfirm] Error processing file:', processError);
+
+      // If the error is related to Dexie or table not found, attempt to recover
+      if (
+        processError.name === 'InvalidTableError' ||
+        (processError.message && processError.message.includes('Table entries does not exist'))
+      ) {
+        console.log('[handleModalConfirm] Detected InvalidTableError, attempting to recover...');
+        // Clear data to potentially rebuild the table structure
+        try {
+          await usRateSheetService.clearData();
+          // Try processing again - if still fails, it will be caught by the outer catch block
+          const retryResult = await usRateSheetService.processFile(
+            selectedFile.value,
+            columnMapping,
+            startLine.value,
+            indeterminateDefinition || 'column',
+            undefined // effectiveDate is optional
+          );
+          console.log('[handleModalConfirm] Retry successful:', retryResult);
+          store.handleUploadSuccess(retryResult.recordCount, selectedFile.value.name);
+          selectedFile.value = null;
+          return; // Exit if retry succeeds
+        } catch (retryError) {
+          console.error('[handleModalConfirm] Retry failed:', retryError);
+          // Continue to the error handling below
+        }
+      }
+
+      // Set appropriate error message
+      const errorMessage = processError.message || 'Unknown error processing file';
+      uploadError.value = errorMessage;
+      store.setError(errorMessage);
+
+      // Clear any potentially corrupted data
+      store.clearUsRateSheetData();
+    }
   } catch (error) {
-    console.error('Failed to process US rate sheet:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to process rate sheet';
-    store.setError(errorMessage);
-    rfUploadStatus.value = { type: 'error', message: errorMessage };
-    // Ensure data is cleared ONLY on processing failure AFTER confirmation
-    await store.clearUsRateSheetData();
+    console.error('[handleModalConfirm] Unexpected error:', error);
+    uploadError.value = error instanceof Error ? error.message : 'Unexpected error occurred';
+    store.setError(uploadError.value);
+    store.clearUsRateSheetData();
   } finally {
     store.setLoading(false);
-    selectedFile.value = null;
+    console.log('[handleModalConfirm] Processing completed.');
   }
 }
 
