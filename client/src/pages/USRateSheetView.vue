@@ -11,7 +11,7 @@
       <!-- Header Section -->
       <div class="p-6 border-b border-gray-700/50">
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 gap-3">
+        <div class="grid grid-cols-1 gap-4 mb-6">
           <!-- Storage Status -->
           <div>
             <div class="flex justify-between items-center">
@@ -40,18 +40,32 @@
             </div>
           </div>
 
-          <!-- Effective Date -->
+          <!-- Effective Date - Integrated Picker -->
           <div>
             <div class="flex justify-between items-center">
               <h3 class="text-gray-400">Effective Date</h3>
-              <div class="text-xl font-medium">
-                {{ new Date().toLocaleDateString() }}
+              <!-- Right side: Date Picker (modified) -->
+              <div v-if="isLocallyStored" class="flex flex-col items-end gap-1">
+                <input
+                  type="date"
+                  id="effective-date"
+                  v-model="selectedEffectiveDate"
+                  class="bg-gray-800 border border-gray-700 rounded text-sm px-3 py-2 text-white w-full"
+                  :min="minDate"
+                />
+                <button
+                  @click="handleApplyEffectiveDate"
+                  :disabled="!isDateChanged || store.isLoading"
+                  class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors whitespace-nowrap"
+                  :class="{ 'opacity-50 cursor-not-allowed': !isDateChanged || store.isLoading }"
+                >
+                  <span>{{ store.isUpdatingEffectiveDate ? 'Applying...' : 'Apply' }}</span>
+                  <ArrowRightIcon class="ml-1 w-3 h-3" v-if="!store.isUpdatingEffectiveDate" />
+                </button>
               </div>
+              <div v-else class="text-sm text-gray-500 italic">Upload data first</div>
             </div>
           </div>
-
-          <!-- Removed Discrepancy Count -->
-          <!-- Removed Invalid Rows Status/Details -->
         </div>
 
         <!-- File Upload Section -->
@@ -162,13 +176,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 
 import {
   ArrowUpTrayIcon,
   TrashIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ArrowRightIcon,
 } from '@heroicons/vue/24/outline';
 import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
@@ -198,6 +213,39 @@ const columnMappings = ref<Record<string, string>>({});
 const isValid = ref(false);
 const selectedFile = ref<File | null>(null);
 
+// Effective Date State
+const showEffectiveDateSettings = ref(true); // Default to open
+const selectedEffectiveDate = ref<string>('');
+const minDate = computed(() => new Date().toISOString().split('T')[0]); // Minimum date is today
+
+// Computed property to check if the selected date is different from the stored one
+const isDateChanged = computed(() => {
+  // Make sure both values are valid date strings before comparing
+  const currentDate = store.getCurrentEffectiveDate;
+  const selectedDate = selectedEffectiveDate.value;
+  // Check if selectedDate is a valid YYYY-MM-DD string
+  const isValidDateString = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate);
+  return isValidDateString && selectedDate !== currentDate;
+});
+
+// Watch the store's effective date getter to update the local ref
+watch(
+  () => store.getCurrentEffectiveDate,
+  (newDate) => {
+    console.log('[Watch store.getCurrentEffectiveDate] New date from store:', newDate);
+    // Only update if the new date is different from the current input value
+    // to avoid resetting user input during typing/selection
+    if (newDate && newDate !== selectedEffectiveDate.value) {
+      selectedEffectiveDate.value = newDate;
+      console.log(
+        '[Watch store.getCurrentEffectiveDate] selectedEffectiveDate.value updated to:',
+        newDate
+      );
+    }
+  },
+  { immediate: true }
+); // immediate: true to run on component mount
+
 // Invalid Rows state
 const showInvalidRowsDetails = ref(false);
 
@@ -220,6 +268,8 @@ const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop
 
 onMounted(async () => {
   // Load initial data state from Dexie via the store
+  // loadRateSheetData now triggers fetchCurrentEffectiveDate internally
+  // The watcher above will handle setting selectedEffectiveDate.value
   await store.loadRateSheetData();
 });
 
@@ -401,6 +451,21 @@ async function handleClearData() {
   if (confirm('Are you sure you want to clear all US Rate Sheet data?')) {
     await store.clearUsRateSheetData();
   }
+}
+
+async function handleApplyEffectiveDate() {
+  if (!selectedEffectiveDate.value || !isDateChanged.value) {
+    console.warn('No new effective date selected or date has not changed.');
+    return;
+  }
+  console.log(`Applying new effective date: ${selectedEffectiveDate.value}`);
+  await store.updateEffectiveDate(selectedEffectiveDate.value);
+  // Optionally show a success message or handle errors from the store action
+}
+
+// Function to toggle the effective date section
+function toggleEffectiveDateSettings() {
+  showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
 }
 </script>
 

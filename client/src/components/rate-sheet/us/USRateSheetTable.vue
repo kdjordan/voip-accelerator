@@ -1,15 +1,18 @@
 <template>
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
-    <!-- Controls Section (No separate background) -->
+    <!-- Header Row -->
+    <div class="mb-4 flex items-center gap-4">
+      <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
+      <span v-if="!isDataLoading" class="text-sm text-gray-400">
+        Showing {{ displayedData.length }} of {{ totalRecords }} NPANXX entries
+      </span>
+      <span v-else class="text-sm text-gray-400">Loading data...</span>
+    </div>
+
+    <!-- Filters and Actions Row -->
     <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-      <div class="flex items-center gap-4">
-        <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
-        <span v-if="!isDataLoading" class="text-sm text-gray-400">
-          Showing {{ displayedData.length }} of {{ totalRecords }} NPANXX entries
-        </span>
-        <span v-else class="text-sm text-gray-400">Loading data...</span>
-      </div>
-      <div class="flex items-center gap-4">
+      <!-- Left Side: Filters -->
+      <div class="flex items-center gap-4 flex-wrap">
         <!-- Basic Search -->
         <div class="relative">
           <label for="npanxx-search" class="sr-only">Search NPANXX</label>
@@ -21,6 +24,25 @@
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
           />
         </div>
+        <!-- State Filter Dropdown -->
+        <div class="relative">
+          <label for="state-filter" class="sr-only">Filter by State</label>
+          <select
+            id="state-filter"
+            v-model="selectedState"
+            class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 min-w-[150px]"
+            :disabled="availableStates.length === 0"
+          >
+            <option value="">All States</option>
+            <option v-for="state in availableStates" :key="state" :value="state">
+              {{ lergStore.getStateNameByCode(state) }} ({{ state }})
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Right Side: Actions -->
+      <div class="flex items-center gap-4 flex-wrap">
         <button
           @click="handleClearData"
           class="inline-flex items-center justify-center px-4 py-2 border border-red-700 text-sm font-medium rounded-md shadow-sm text-red-300 bg-red-900/50 hover:bg-red-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -31,7 +53,7 @@
         </button>
         <button
           @click="handleExport"
-          :disabled="usRateSheetData.length === 0 || isExporting"
+          :disabled="tableData.length === 0 || isExporting"
           class="inline-flex items-center justify-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Export all loaded data"
         >
@@ -55,7 +77,7 @@
       </div>
     </div>
     <div
-      v-else-if="usRateSheetData.length > 0"
+      v-else-if="tableData.length > 0"
       class="overflow-y-auto max-h-[60vh] relative"
       ref="scrollContainer"
     >
@@ -103,6 +125,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { TrashIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+import { useLergStore } from '@/stores/lerg-store';
+import { useLergData } from '@/composables/useLergData';
 import { USRateSheetService } from '@/services/us-rate-sheet.service';
 import type { USRateSheetEntry } from '@/types/domains/us-types';
 import { useInfiniteScroll, useDebounceFn, useIntersectionObserver } from '@vueuse/core';
@@ -110,21 +134,26 @@ import Papa from 'papaparse';
 
 // Initialize store and service
 const store = useUsRateSheetStore();
+const lergStore = useLergStore();
+const { initializeLergData, isLoading: isLergLoading, error: lergError } = useLergData();
 const rateSheetService = new USRateSheetService();
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
+const selectedState = ref('');
 
-// US Rate Sheet data - Holds ALL loaded data
-const usRateSheetData = ref<USRateSheetEntry[]>([]);
-const isDataLoading = ref(false);
+// Get data reactively from the store
+const tableData = computed(() => store.getRateSheetData);
+
+const isDataLoading = computed(() => store.getIsLoading);
 const isExporting = ref(false);
-const dataError = ref<string | null>(null);
+const dataError = computed(() => store.getError);
+
 const totalRecords = computed(() => {
-  // Calculate total based on filter to give accurate count
-  return applyLocalFilter(usRateSheetData.value).length;
+  // Calculate total based on filtered store data
+  return applyLocalFilter(tableData.value).length;
 });
 
-// Data displayed in the table (can be filtered/paginated)
+// Data displayed in the table (paginated slice of filtered store data)
 const displayedData = ref<USRateSheetEntry[]>([]);
 const isLoadingMore = ref(false);
 const scrollContainerRef = ref<HTMLElement | null>(null);
@@ -132,56 +161,97 @@ const loadMoreTriggerRef = ref<HTMLElement | null>(null);
 const PAGE_SIZE = 100;
 const offset = ref<number>(0);
 const hasMoreData = ref<boolean>(true);
+const availableStates = ref<string[]>([]);
 
 // Debounced search function
 const debouncedSearch = useDebounceFn(() => {
   debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
-  resetAndLoadData();
+  resetPaginationAndLoad(); // Just reset pagination, data updates reactively
 }, 300);
 
 // Watch raw search query to trigger debounced function
-// Store the stop handle returned by watch
 const stopSearchWatcher = watch(searchQuery, debouncedSearch);
 
 onMounted(async () => {
   console.log('USRateSheetTable mounted');
-  await resetAndLoadData();
+  // Ensure LERG is loaded
+  if (!lergStore.isLoaded) {
+    console.log('LERG data not loaded, attempting to initialize...');
+    try {
+      await initializeLergData();
+      if (lergStore.isLoaded) {
+        console.log('LERG data initialized successfully.');
+      } else {
+        console.error(
+          'Failed to initialize LERG data. State filtering will be unavailable.',
+          lergError.value
+        );
+      }
+    } catch (err) {
+      console.error('Error initializing LERG data:', err);
+    }
+  }
+  // Ensure store data is loaded if not already present
+  if (!store.getHasUsRateSheetData) {
+    console.log('[USRateSheetTable] Store data not loaded, calling loadRateSheetData...');
+    await store.loadRateSheetData();
+  }
+  // Initial calculation and pagination load
+  resetPaginationAndLoad();
 });
 
+// Watch for changes in the store's data to recalculate states and reset pagination
+watch(
+  tableData,
+  (newData, oldData) => {
+    // Simplified condition: Trigger if the reference changes or length changes
+    // Deep watcher should still catch internal changes, but let's log unconditionally first
+    console.log(
+      `[USRateSheetTable] WATCHER triggered. Old length: ${oldData?.length}, New length: ${newData?.length}`
+    );
+    // Optional: Check if effective date actually changed in the new data
+    if (newData.length > 0) {
+      console.log(
+        `[USRateSheetTable] WATCHER: First entry effective date: ${newData[0].effectiveDate}`
+      );
+    }
+
+    // Always reset if triggered for now
+    console.log('[USRateSheetTable] WATCHER: Recalculating states and resetting pagination.');
+    calculateAvailableStates();
+    resetPaginationAndLoad();
+
+    /* Original condition - keep for reference
+    if (newData.length !== oldData?.length || newData[0]?.id !== oldData[0]?.id) {
+      console.log(
+        '[USRateSheetTable] Store data changed (original condition met), recalculating states and resetting pagination.'
+      );
+      calculateAvailableStates();
+      resetPaginationAndLoad();
+    }
+    */
+  },
+  { deep: true } // Keep deep watcher
+);
+
 onBeforeUnmount(() => {
-  // Cleanup by stopping the watcher
   if (stopSearchWatcher) {
     stopSearchWatcher();
   }
 });
 
-// Combined function to reset state and load/filter data
-async function resetAndLoadData() {
-  isDataLoading.value = true;
-  dataError.value = null;
+// Renamed function - focuses on resetting local pagination/display
+function resetPaginationAndLoad() {
+  // Reset local display/pagination state
+  // isDataLoading is now driven by the store
   displayedData.value = [];
   offset.value = 0;
   hasMoreData.value = true;
   if (scrollContainerRef.value) {
     scrollContainerRef.value.scrollTop = 0;
   }
-
-  try {
-    if (usRateSheetData.value.length === 0) {
-      usRateSheetData.value = await rateSheetService.getData();
-      console.log(`Loaded ${usRateSheetData.value.length} total US rate sheet records`);
-    }
-
-    loadMoreData();
-  } catch (error) {
-    console.error('Error loading initial US rate sheet data:', error);
-    dataError.value = error instanceof Error ? error.message : 'Failed to load rate sheet data';
-    usRateSheetData.value = [];
-    displayedData.value = [];
-    hasMoreData.value = false;
-  } finally {
-    isDataLoading.value = false;
-  }
+  // No data fetching here, loadMoreData uses computed tableData
+  loadMoreData();
 }
 
 // Function to load more data for infinite scroll
@@ -192,8 +262,9 @@ function loadMoreData() {
   console.log('Loading more data...');
 
   try {
-    const filtered = applyLocalFilter(usRateSheetData.value);
-    totalRecords.value;
+    // Filter the computed data from the store
+    const filtered = applyLocalFilter(tableData.value);
+    // totalRecords is now computed based on filtered store data
 
     const nextPageData = filtered.slice(offset.value, offset.value + PAGE_SIZE);
 
@@ -209,7 +280,7 @@ function loadMoreData() {
     );
   } catch (error) {
     console.error('Error loading more data:', error);
-    dataError.value = error instanceof Error ? error.message : 'Failed to load more data';
+    // Use store error state if appropriate, or local state for display errors
   } finally {
     isLoadingMore.value = false;
   }
@@ -229,12 +300,43 @@ useIntersectionObserver(
   }
 );
 
-// Apply local search filter
-function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
-  if (!debouncedSearchQuery.value) {
-    return data;
+// Calculate unique states present in the loaded data (uses computed tableData)
+function calculateAvailableStates() {
+  if (!lergStore.isLoaded || tableData.value.length === 0) {
+    availableStates.value = [];
+    return;
   }
-  return data.filter((entry) => entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value));
+  const states = new Set<string>();
+  tableData.value.forEach((entry) => {
+    const location = lergStore.getLocationByNPA(entry.npa);
+    if (location?.country === 'US' && location.region) {
+      states.add(location.region);
+    }
+  });
+  availableStates.value = Array.from(states).sort();
+  console.log('Available states calculated:', availableStates.value);
+}
+
+// Apply local search and state filter (uses computed tableData)
+function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
+  let filteredData = data; // Start with store data passed as argument
+
+  // Apply search query filter
+  if (debouncedSearchQuery.value) {
+    filteredData = filteredData.filter((entry) =>
+      entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value)
+    );
+  }
+
+  // Apply state filter
+  if (selectedState.value && lergStore.isLoaded) {
+    filteredData = filteredData.filter((entry) => {
+      const location = lergStore.getLocationByNPA(entry.npa);
+      return location?.country === 'US' && location.region === selectedState.value;
+    });
+  }
+
+  return filteredData;
 }
 
 function formatRate(rate: number | null | undefined): string {
@@ -244,32 +346,23 @@ function formatRate(rate: number | null | undefined): string {
 
 async function handleClearData() {
   if (confirm('Are you sure you want to clear all US rate sheet data?')) {
-    isDataLoading.value = true;
-    try {
-      await rateSheetService.clearData();
-      usRateSheetData.value = [];
-      displayedData.value = [];
-      offset.value = 0;
-      hasMoreData.value = false;
-      store.clearUsRateSheetData();
-      console.log('US Rate Sheet data cleared.');
-    } catch (error) {
-      console.error('Error clearing data:', error);
-      alert('Failed to clear data.');
-    } finally {
-      isDataLoading.value = false;
-    }
+    // Call the store action to clear data
+    await store.clearUsRateSheetData();
+    // No need to manually clear local state, reactivity handles it
+    console.log('US Rate Sheet data cleared via store action.');
   }
 }
 
 function handleExport() {
-  if (usRateSheetData.value.length === 0) {
+  const dataToFilter = tableData.value; // Use computed store data
+  if (dataToFilter.length === 0) {
     alert('No data to export');
     return;
   }
   if (isExporting.value) return;
 
   isExporting.value = true;
+  // Use totalRecords computed property which is based on filtered store data
   console.log(`Exporting ${totalRecords.value} records...`);
 
   try {
@@ -281,10 +374,10 @@ function handleExport() {
       { label: 'Effective Date', value: 'effectiveDate' },
     ];
 
-    // Prepare data, handling missing effective dates
-    const dataToExport = applyLocalFilter(usRateSheetData.value).map((entry) => ({
+    // Prepare data, applying filter to the store data
+    const dataToExport = applyLocalFilter(dataToFilter).map((entry) => ({
       ...entry,
-      effectiveDate: entry.effectiveDate || '', // Replace undefined/null with empty string for CSV
+      effectiveDate: entry.effectiveDate || '',
     }));
 
     const csv = Papa.unparse({
@@ -312,6 +405,14 @@ function handleExport() {
     isExporting.value = false;
   }
 }
+
+// Watch for filter changes to reset pagination
+watch([debouncedSearchQuery, selectedState], () => {
+  console.log(
+    `Filters changed: Search='${debouncedSearchQuery.value}', State='${selectedState.value}'. Resetting pagination.`
+  );
+  resetPaginationAndLoad(); // Just resets pagination/display
+});
 </script>
 
 <style scoped>
