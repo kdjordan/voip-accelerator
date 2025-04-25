@@ -5,7 +5,6 @@ import type { USRateSheetEntry } from '@/types/domains/us-types';
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
   // usRateSheetTableName removed, handled by service
-  usRateSheetEffectiveDate: string | null; // Keep if needed, might need to be loaded
   isLoading: boolean;
   error: string | null;
   totalRecords: number;
@@ -19,7 +18,6 @@ const service = new USRateSheetService();
 export const useUsRateSheetStore = defineStore('usRateSheet', {
   state: (): USRateSheetState => ({
     hasUsRateSheetData: false,
-    usRateSheetEffectiveDate: null,
     isLoading: false,
     error: null,
     totalRecords: 0,
@@ -28,7 +26,6 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
 
   getters: {
     getHasUsRateSheetData: (state): boolean => state.hasUsRateSheetData,
-    getUsRateSheetEffectiveDate: (state): string | null => state.usRateSheetEffectiveDate,
     getIsLoading: (state): boolean => state.isLoading,
     getError: (state): string | null => state.error,
     getTotalRecords: (state): number => state.totalRecords,
@@ -59,9 +56,8 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         // If storing data in state:
         // this.rateSheetData = data;
         // TODO: How to get effective date? Needs to be stored/retrieved separately
-        // this.usRateSheetEffectiveDate = ???
+        // Effective date is now per-record, no single date needed
         if (!this.hasUsRateSheetData) {
-          this.usRateSheetEffectiveDate = null; // Clear date if no data
           this.totalRecords = 0;
         }
         console.log(
@@ -71,7 +67,6 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         console.error('[us-rate-sheet-store] Error loading rate sheet data:', err);
         this.setError('Failed to load rate sheet data.');
         this.hasUsRateSheetData = false;
-        this.usRateSheetEffectiveDate = null;
         this.totalRecords = 0;
         // this.rateSheetData = [];
       } finally {
@@ -81,17 +76,15 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
 
     /**
      * Handles successful upload: potentially reloads data or just sets flags.
-     * @param recordCount The number of records processed successfully.
      * @param fileName The name of the file that was processed.
      */
-    async handleUploadSuccess(recordCount: number, fileName: string) {
+    async handleUploadSuccess(processedData: { recordCount: number /* other fields maybe */ }) {
       console.log(
-        `[us-rate-sheet-store] handleUploadSuccess called with ${recordCount} records from ${fileName}`
+        `[us-rate-sheet-store] handleUploadSuccess called with ${processedData.recordCount} records.`
       );
 
-      // Set record count as effective date temporarily (for UI display)
-      this.usRateSheetEffectiveDate = recordCount.toString();
-      this.totalRecords = recordCount;
+      // Update total records from the processed data result
+      this.totalRecords = processedData.recordCount;
 
       // Set successful state
       this.hasUsRateSheetData = true;
@@ -112,7 +105,6 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
       try {
         await service.clearData(); // Call service method
         this.hasUsRateSheetData = false;
-        this.usRateSheetEffectiveDate = null;
         this.totalRecords = 0;
         // this.rateSheetData = [];
         console.log('[us-rate-sheet-store] Cleared rate sheet data and reset state.');

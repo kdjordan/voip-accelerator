@@ -144,10 +144,14 @@ export class USRateSheetService {
     file: File,
     columnMapping: USRateSheetColumnMapping,
     startLine: number,
-    indeterminateDefinition: string | undefined,
-    effectiveDate: string | undefined
+    indeterminateDefinition: string | undefined
   ): Promise<{ recordCount: number; invalidRows: InvalidUSRateSheetRow[] }> {
     console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
+
+    // Calculate effective date (7 days from now)
+    const effectiveDate = new Date();
+    effectiveDate.setDate(effectiveDate.getDate() + 7);
+    const effectiveDateString = effectiveDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
 
     // Wrap the entire processing logic in a try/catch to handle promise rejection
     try {
@@ -217,7 +221,8 @@ export class USRateSheetService {
                 totalChunks,
                 columnMapping,
                 indeterminateDefinition,
-                invalidRows
+                invalidRows,
+                effectiveDateString // Pass calculated effective date
               );
               if (processedRow) {
                 // Add id to each record for better indexing
@@ -274,7 +279,8 @@ export class USRateSheetService {
     rowIndex: number,
     columnMapping: USRateSheetColumnMapping,
     indeterminateDefinition: string | undefined,
-    invalidRows: InvalidUSRateSheetRow[]
+    invalidRows: InvalidUSRateSheetRow[],
+    effectiveDate: string // Accept calculated effective date
   ): USRateSheetEntry | null {
     let isValidRow = true;
     let npa = '';
@@ -359,23 +365,34 @@ export class USRateSheetService {
 
         // Handle Indeterminate Rate
         if (isValidRow) {
-          if (indeterminateDefinition === 'column') {
-            if (columnMapping.indeterminate !== -1) {
-              ijRate = parseRate(row[columnMapping.indeterminate]);
-              if (ijRate === null) isValidRow = false;
-            } else {
-              isValidRow = false;
-              errorReason = "Indeterminate rate definition set to 'column', but column not mapped.";
+          ijRate = null; // Start with null
+
+          // 1. Check if Indeterminate column is mapped and valid
+          if (columnMapping.indeterminate !== -1) {
+            ijRate = parseRate(row[columnMapping.indeterminate]);
+            if (ijRate === null) {
+              // If column mapped but value invalid/missing, try deriving
+              console.warn(
+                `Row ${rowIndex}: Indeterminate column mapped but value invalid/missing. Attempting derivation.`
+              );
+              ijRate = null; // Reset to null before deriving
             }
-          } else if (indeterminateDefinition === 'intrastate') {
-            ijRate = intraRate; // Use intrastate rate
-            if (ijRate === null) isValidRow = false; // Should already be false if intraRate was invalid
-          } else if (indeterminateDefinition === 'interstate') {
-            ijRate = interRate; // Use interstate rate
-            if (ijRate === null) isValidRow = false; // Should already be false if interRate was invalid
-          } else {
-            isValidRow = false;
-            errorReason = 'Invalid indeterminate rate definition specified.';
+          }
+
+          // 2. If ijRate is still null (column not mapped or value was invalid), derive it
+          if (ijRate === null) {
+            if (interRate !== null && intraRate !== null) {
+              // Default derivation: Use the minimum of Inter and Intra
+              ijRate = Math.min(interRate, intraRate);
+              console.log(
+                `Row ${rowIndex}: Derived Indeterminate Rate as min(Inter, Intra): ${ijRate}`
+              );
+            } else {
+              // Cannot derive if Inter or Intra is invalid
+              isValidRow = false;
+              errorReason =
+                'Cannot derive Indeterminate Rate because Interstate or Intrastate rate is invalid.';
+            }
           }
         }
       }
@@ -389,6 +406,7 @@ export class USRateSheetService {
           interRate,
           intraRate,
           ijRate,
+          effectiveDate, // Assign the calculated effective date
         };
       } else if (!isValidRow) {
         invalidRows.push({ rowIndex, rowData: row, reason: errorReason });
