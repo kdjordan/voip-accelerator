@@ -89,6 +89,25 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
   - [x] **Styling:** Applied consistent styling based on `USDetailedComparisonTable`.
   - [ ] **Advanced Filtering:** Implement more advanced filtering/sorting if needed (e.g., by rate value, state if LERG data is integrated).
 
+### Phase 3.1: Add State Filtering to US Rate Sheet Table
+
+- [ ] **Integrate LERG Data (`USRateSheetTable.vue`):**
+  - [ ] Import `useLergStore`.
+  - [ ] Ensure LERG data is available (e.g., check `isLoaded` in `onMounted` or trigger loading if necessary).
+- [ ] **Add State Filter UI (`USRateSheetTable.vue`):**
+  - [ ] Add a `<select>` dropdown for state filtering in the controls section, similar to `USDetailedComparisonTable.vue`.
+  - [ ] Populate the dropdown options with unique states derived from LERG data (consider filtering states to only those present in the current rate sheet data for relevance).
+  - [ ] Add a `ref` (`selectedState`) to store the chosen state filter.
+- [ ] **Implement State Filtering Logic (`USRateSheetTable.vue`):**
+  - [ ] Modify `applyLocalFilter` (or related computed property) to incorporate state filtering.
+  - [ ] Inside the filter logic, for each `USRateSheetEntry`, use `lergStore.getLocationByNPA(entry.npa)` to determine the state.
+  - [ ] Filter results based on `selectedState`. Handle the "All States" case.
+- [ ] **Update Data Loading & Display (`USRateSheetTable.vue`):**
+  - [ ] Ensure `totalRecords` computed reflects the combined filter count (search + state).
+  - [ ] Verify infinite scrolling (`loadMoreData`) works correctly with the state-filtered dataset.
+  - [ ] Adjust `resetAndLoadData` to clear the state filter or re-apply it appropriately when data reloads/search changes.
+- [ ] **(Optional) Performance Optimization:** Consider adding a temporary `stateCode` property to the `usRateSheetData` ref after initial load to avoid repeated LERG lookups during filtering, especially for large datasets.
+
 ### Phase 4: Refactor AZ Rate Sheet Storage (DexieJS Integration) - DEFERRED
 
 - [x] **Rename Store:** Renamed `rate-sheet-store.ts` to `az-rate-sheet-store.ts`. Updated ID to `azRateSheet` and function to `useAzRateSheetStore`.
@@ -141,6 +160,7 @@ Create a robust US Rate Sheet management feature, distinct from the AZ Rate Shee
 - The core functionality for uploading, processing, storing (via DexieJS), and displaying US Rate Sheet data is implemented.
 - Large file uploads are now stable due to fixes in schema handling and batch processing within the service.
 - The `USRateSheetTable` component correctly displays the US data structure with infinite scrolling and basic search.
+- **Reactivity Resolved:** The table now correctly reacts to changes in the `us-rate-sheet-store`, including updates triggered by changing the effective date. Data reloads initiated by the store successfully refresh the table's displayed data.
 - UI styling and layout for the US Rate Sheet view and table are consistent with other app sections.
 
 **Remaining Tasks (Phase 3):**

@@ -424,6 +424,70 @@ export class USRateSheetService {
   }
 
   /**
+   * Gets the effective date from the first record in the table.
+   * Assumes all records currently have the same effective date.
+   */
+  async getCurrentEffectiveDate(): Promise<string | null> {
+    console.log(
+      `[USRateSheetService] Getting current effective date from ${this.dbName}/'entries'`
+    );
+    try {
+      const db = await this.getDB(this.dbName);
+      if (!db.hasStore('entries')) {
+        console.warn('Entries table not found, cannot get effective date.');
+        return null;
+      }
+      const firstRecord = await db.table('entries').limit(1).first();
+      return firstRecord?.effectiveDate || null;
+    } catch (error) {
+      console.error(`[USRateSheetService] Error getting current effective date:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Updates the effectiveDate for all records in the 'entries' table.
+   * @param newDate The new effective date string (YYYY-MM-DD).
+   */
+  async updateAllEffectiveDates(newDate: string): Promise<void> {
+    console.log(`[USRateSheetService] Updating all effective dates to ${newDate}`);
+    try {
+      const db = await this.getDB(this.dbName);
+      if (!db.hasStore('entries')) {
+        throw new Error('Entries table not found, cannot update effective dates.');
+      }
+
+      const table = db.table<USRateSheetEntry>('entries');
+      const recordCount = await table.count();
+      console.log(`[USRateSheetService] Found ${recordCount} records to update.`);
+
+      if (recordCount === 0) {
+        console.warn('[USRateSheetService] No records found to update effective date.');
+        return; // Nothing to do
+      }
+
+      // Fetch all records (consider batching for very large datasets if needed)
+      const allRecords = await table.toArray();
+
+      // Update the effectiveDate field
+      const updatedRecords = allRecords.map((record) => ({
+        ...record,
+        effectiveDate: newDate,
+      }));
+
+      // Perform bulk update
+      console.log(`[USRateSheetService] Performing bulkPut to update effective dates...`);
+      await table.bulkPut(updatedRecords);
+      console.log(
+        `[USRateSheetService] Successfully updated effective date for ${updatedRecords.length} records.`
+      );
+    } catch (error) {
+      console.error(`[USRateSheetService] Error updating all effective dates:`, error);
+      throw new Error('Failed to update effective dates in the database.'); // Re-throw for the store to catch
+    }
+  }
+
+  /**
    * Loads all USRateSheetEntry data from the database.
    */
   async getData(): Promise<USRateSheetEntry[]> {
