@@ -283,147 +283,103 @@ async function handleModalConfirm(
   mappings: Record<string, string>,
   indeterminateDefinition?: string
 ) {
-  // Hide modal immediately to show processing state in drop zone
-  showPreviewModal.value = false;
-  uploadError.value = null;
-  store.setError(null);
-
-  // Return if no file selected
   if (!selectedFile.value) {
-    console.error('[handleModalConfirm] No file selected.');
-    uploadError.value = 'No file selected.';
-    store.setError('No file selected.');
+    console.error('No file selected for processing.');
     return;
   }
 
-  // Set loading state
   store.setLoading(true);
-  console.log('[handleModalConfirm] Started processing', { file: selectedFile.value.name });
+  store.setError(null);
+  uploadError.value = null;
+  rfUploadStatus.value = null;
+
+  console.log('[handleModalConfirm] Starting processing with modal confirmation...');
+  console.log('[handleModalConfirm] Mappings:', mappings);
+  console.log('[handleModalConfirm] Indeterminate Definition:', indeterminateDefinition);
+  console.log('[handleModalConfirm] Start Line:', startLine.value);
 
   try {
-    // Prepare column mapping
-    const columnMapping = {
-      npanxx: Number(
-        Object.entries(mappings).find(([_, value]) => value === USColumnRole.NPANXX)?.[0] ?? -1
-      ),
-      npa: Number(
-        Object.entries(mappings).find(([_, value]) => value === USColumnRole.NPA)?.[0] ?? -1
-      ),
-      nxx: Number(
-        Object.entries(mappings).find(([_, value]) => value === USColumnRole.NXX)?.[0] ?? -1
-      ),
-      interstate: Number(
-        Object.entries(mappings).find(([_, value]) => value === USColumnRole.INTERSTATE)?.[0] ?? -1
-      ),
-      intrastate: Number(
-        Object.entries(mappings).find(([_, value]) => value === USColumnRole.INTRASTATE)?.[0] ?? -1
-      ),
-      indeterminate: Number(
-        Object.entries(mappings).find(([_, value]) => value === USColumnRole.INDETERMINATE)?.[0] ??
-          -1
-      ),
-    };
+    const fileToProcess = selectedFile.value;
 
-    console.log('[handleModalConfirm] Calling service.processFile with', {
-      mappings: columnMapping,
-      startLine: startLine.value,
-      indeterminate: indeterminateDefinition || 'column',
-    });
-
-    try {
-      const result = await usRateSheetService.processFile(
-        selectedFile.value,
-        columnMapping,
-        startLine.value,
-        indeterminateDefinition || 'column',
-        undefined // effectiveDate is optional
-      );
-
-      console.log('[handleModalConfirm] Service.processFile returned:', result);
-      // Handle successful upload
-      store.handleUploadSuccess(result.recordCount, selectedFile.value.name);
-
-      // Set success status
-      rfUploadStatus.value = {
-        type: 'success',
-        message: `Successfully processed ${result.recordCount} records.`,
-      };
-
-      // Clear the selected file
-      selectedFile.value = null;
-    } catch (processError) {
-      console.error('[handleModalConfirm] Error processing file:', processError);
-
-      // If the error is related to Dexie or table not found, attempt to recover
-      if (
-        processError.name === 'InvalidTableError' ||
-        (processError.message && processError.message.includes('Table entries does not exist'))
-      ) {
-        console.log('[handleModalConfirm] Detected InvalidTableError, attempting to recover...');
-        // Clear data to potentially rebuild the table structure
-        try {
-          await usRateSheetService.clearData();
-          // Try processing again - if still fails, it will be caught by the outer catch block
-          const retryResult = await usRateSheetService.processFile(
-            selectedFile.value,
-            columnMapping,
-            startLine.value,
-            indeterminateDefinition || 'column',
-            undefined // effectiveDate is optional
-          );
-          console.log('[handleModalConfirm] Retry successful:', retryResult);
-          store.handleUploadSuccess(retryResult.recordCount, selectedFile.value.name);
-
-          // Set success status after retry
-          rfUploadStatus.value = {
-            type: 'success',
-            message: `Successfully processed ${retryResult.recordCount} records after recovery.`,
-          };
-
-          selectedFile.value = null;
-          return; // Exit if retry succeeds
-        } catch (retryError) {
-          console.error('[handleModalConfirm] Retry failed:', retryError);
-
-          // Set error status
-          rfUploadStatus.value = {
-            type: 'error',
-            message: retryError.message || 'Failed to process file after retry',
-          };
-
-          // Continue to the error handling below
+    // Correctly map the roles from the modal to the service's expected keys
+    const mappedColumns = Object.entries(mappings).reduce(
+      (acc, [indexStr, role]) => {
+        if (role) {
+          const index = parseInt(indexStr, 10);
+          switch (role) {
+            case USColumnRole.NPANXX:
+              acc.npanxx = index;
+              break;
+            case USColumnRole.NPA:
+              acc.npa = index;
+              break;
+            case USColumnRole.NXX:
+              acc.nxx = index;
+              break;
+            case USColumnRole.INTERSTATE:
+              acc.interstate = index;
+              break;
+            case USColumnRole.INTRASTATE:
+              acc.intrastate = index;
+              break;
+            case USColumnRole.INDETERMINATE:
+              acc.indeterminate = index;
+              break;
+          }
         }
+        return acc;
+      },
+      {
+        npanxx: -1,
+        npa: -1,
+        nxx: -1,
+        interstate: -1,
+        intrastate: -1,
+        indeterminate: -1,
       }
+    );
 
-      // Set appropriate error message
-      const errorMessage = processError.message || 'Unknown error processing file';
-      uploadError.value = errorMessage;
-      store.setError(errorMessage);
+    console.log('[handleModalConfirm] Mapped column indices:', mappedColumns);
 
-      // Set error status
-      rfUploadStatus.value = {
-        type: 'error',
-        message: errorMessage,
-      };
-
-      // Clear any potentially corrupted data
-      store.clearUsRateSheetData();
+    if (
+      mappedColumns.interstate === -1 ||
+      mappedColumns.intrastate === -1 ||
+      (mappedColumns.npanxx === -1 && (mappedColumns.npa === -1 || mappedColumns.nxx === -1))
+    ) {
+      throw new Error('Required columns (NPANXX/NPA+NXX, Interstate, Intrastate) are not mapped.');
     }
-  } catch (error) {
-    console.error('[handleModalConfirm] Unexpected error:', error);
-    uploadError.value = error instanceof Error ? error.message : 'Unexpected error occurred';
-    store.setError(uploadError.value);
 
-    // Set error status
-    rfUploadStatus.value = {
-      type: 'error',
-      message: uploadError.value,
-    };
+    console.log('[handleModalConfirm] Calling usRateSheetService.processFile...');
+    const processedData = await usRateSheetService.processFile(
+      fileToProcess,
+      mappedColumns,
+      startLine.value,
+      indeterminateDefinition
+    );
 
-    store.clearUsRateSheetData();
+    console.log(
+      '[handleModalConfirm] usRateSheetService.processFile completed. Result:',
+      processedData
+    );
+
+    console.log('[handleModalConfirm] Calling store.handleUploadSuccess...');
+    await store.handleUploadSuccess(processedData);
+    console.log('[handleModalConfirm] handleUploadSuccess completed.');
+
+    selectedFile.value = null; // Clear selected file after processing
+    showPreviewModal.value = false; // Close modal on success
+    rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
+  } catch (error: any) {
+    console.error('[handleModalConfirm] Error processing file:', error);
+    uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
+    // Clear potentially inconsistent data on error
+    await store.clearUsRateSheetData();
+    selectedFile.value = null; // Clear selected file on error
+    showPreviewModal.value = false; // Close modal on error
+    rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
   } finally {
+    console.log('[handleModalConfirm] Finishing final block...');
     store.setLoading(false);
-    console.log('[handleModalConfirm] Processing completed.');
   }
 }
 

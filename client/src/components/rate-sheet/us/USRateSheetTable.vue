@@ -66,6 +66,7 @@
             <th scope="col" class="px-4 py-2 text-left text-gray-300">Interstate Rate</th>
             <th scope="col" class="px-4 py-2 text-left text-gray-300">Intrastate Rate</th>
             <th scope="col" class="px-4 py-2 text-left text-gray-300">Indeterminate Rate</th>
+            <th scope="col" class="px-4 py-2 text-left text-gray-300">Effective Date</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
@@ -78,6 +79,7 @@
             <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.interRate) }}</td>
             <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.intraRate) }}</td>
             <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.ijRate) }}</td>
+            <td class="px-4 py-2 text-gray-400 font-mono">{{ entry.effectiveDate || 'N/A' }}</td>
           </tr>
         </tbody>
       </table>
@@ -271,30 +273,25 @@ function handleExport() {
   console.log(`Exporting ${totalRecords.value} records...`);
 
   try {
-    const dataToExportFiltered = applyLocalFilter(usRateSheetData.value);
-
-    const headers = [
-      'npa',
-      'nxx',
-      'npanxx',
-      'interstate_rate',
-      'intrastate_rate',
-      'indeterminate_rate',
+    const fields = [
+      { label: 'NPANXX', value: 'npanxx' },
+      { label: 'Interstate Rate', value: 'interRate' },
+      { label: 'Intrastate Rate', value: 'intraRate' },
+      { label: 'Indeterminate Rate', value: 'ijRate' },
+      { label: 'Effective Date', value: 'effectiveDate' },
     ];
 
-    const dataForPapa = dataToExportFiltered.map((entry) => ({
-      npa: entry.npa ?? '',
-      nxx: entry.nxx ?? '',
-      npanxx: entry.npanxx,
-      interstate_rate: formatRate(entry.interRate),
-      intrastate_rate: formatRate(entry.intraRate),
-      indeterminate_rate: formatRate(entry.ijRate),
+    // Prepare data, handling missing effective dates
+    const dataToExport = applyLocalFilter(usRateSheetData.value).map((entry) => ({
+      ...entry,
+      effectiveDate: entry.effectiveDate || '', // Replace undefined/null with empty string for CSV
     }));
 
-    const csv = Papa.unparse(dataForPapa, {
-      quotes: true,
-      header: true,
-      newline: '\r\n',
+    const csv = Papa.unparse({
+      fields: fields.map((f) => f.label), // Use labels for header row
+      data: dataToExport.map((row) =>
+        fields.map((field) => row[field.value as keyof USRateSheetEntry])
+      ),
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
