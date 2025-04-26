@@ -1,5 +1,51 @@
 <template>
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
+    <!-- Averages Section -->
+    <div class="mb-6">
+      <h4 class="text-xs font-medium text-gray-400 uppercase mb-3">Rate Averages</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Interstate Average -->
+        <div class="bg-gray-800/60 p-3 rounded-lg text-center">
+          <p class="text-sm text-gray-400 mb-1">Inter Avg</p>
+          <p
+            v-if="isCalculatingOverall || isCalculatingState"
+            class="text-lg font-semibold text-gray-500 italic"
+          >
+            Loading...
+          </p>
+          <p v-else class="text-lg font-semibold text-white font-mono">
+            {{ formatRate(currentDisplayAverages.inter) }}
+          </p>
+        </div>
+        <!-- Intrastate Average -->
+        <div class="bg-gray-800/60 p-3 rounded-lg text-center">
+          <p class="text-sm text-gray-400 mb-1">Intra Avg</p>
+          <p
+            v-if="isCalculatingOverall || isCalculatingState"
+            class="text-lg font-semibold text-gray-500 italic"
+          >
+            Loading...
+          </p>
+          <p v-else class="text-lg font-semibold text-white font-mono">
+            {{ formatRate(currentDisplayAverages.intra) }}
+          </p>
+        </div>
+        <!-- Indeterminate Average -->
+        <div class="bg-gray-800/60 p-3 rounded-lg text-center">
+          <p class="text-sm text-gray-400 mb-1">Indeterm Avg</p>
+          <p
+            v-if="isCalculatingOverall || isCalculatingState"
+            class="text-lg font-semibold text-gray-500 italic"
+          >
+            Loading...
+          </p>
+          <p v-else class="text-lg font-semibold text-white font-mono">
+            {{ formatRate(currentDisplayAverages.ij) }}
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Header Row -->
     <div class="mb-4 flex items-center gap-4">
       <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
@@ -141,6 +187,13 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
 
+// Type for average values
+interface RateAverages {
+  inter: number | null;
+  intra: number | null;
+  ij: number | null;
+}
+
 // Initialize store and service
 const store = useUsRateSheetStore();
 const lergStore = useLergStore();
@@ -167,14 +220,64 @@ const offset = ref<number>(0);
 const hasMoreData = ref<boolean>(true);
 const availableStates = ref<string[]>([]);
 
+// State for Average Calculation
+const overallAverages = ref<RateAverages | null>(null);
+const stateAverageCache = ref<Map<string, RateAverages>>(new Map());
+const currentDisplayAverages = ref<RateAverages>({ inter: null, intra: null, ij: null });
+const isCalculatingOverall = ref(false);
+const isCalculatingState = ref(false);
+
 const debouncedSearch = useDebounceFn(() => {
   debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
   resetPaginationAndLoad();
 }, 300);
 
 const stopSearchWatcher = watch(searchQuery, debouncedSearch);
-const stopStateWatcher = watch(selectedState, () => {
-  resetPaginationAndLoad();
+
+// Watcher for state filter changes - handles table reload AND average calculation
+const stopStateWatcher = watch(selectedState, async (newStateCode) => {
+  // 1. Reset table data and pagination
+  await resetPaginationAndLoad();
+
+  // 2. Update displayed averages based on the new state filter
+  console.log(
+    `[USRateSheetTable] State filter changed to: '${newStateCode || 'All'}'. Updating averages.`
+  );
+  if (!newStateCode) {
+    // Selected "All States/Provinces"
+    if (overallAverages.value) {
+      console.log('[USRateSheetTable] Using cached overall averages.');
+      currentDisplayAverages.value = overallAverages.value;
+    } else {
+      // Should ideally be calculated on mount, but recalculate if somehow missing
+      console.warn('[USRateSheetTable] Overall averages not found, recalculating...');
+      const avg = await calculateAverages();
+      overallAverages.value = avg;
+      currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+    }
+  } else {
+    // Selected a specific state/province
+    if (stateAverageCache.value.has(newStateCode)) {
+      // Cache Hit
+      console.log(`[USRateSheetTable] Using cached averages for state: ${newStateCode}`);
+      currentDisplayAverages.value = stateAverageCache.value.get(newStateCode)!;
+    } else {
+      // Cache Miss
+      console.log(`[USRateSheetTable] Cache miss for state: ${newStateCode}. Calculating...`);
+      // Show loading state for averages (clear current values)
+      currentDisplayAverages.value = { inter: null, intra: null, ij: null };
+      const stateAvg = await calculateAverages(newStateCode); // Sets isCalculatingState internally
+      if (stateAvg) {
+        stateAverageCache.value.set(newStateCode, stateAvg);
+        currentDisplayAverages.value = stateAvg;
+        console.log(`[USRateSheetTable] Averages calculated and cached for state: ${newStateCode}`);
+      } else {
+        // Handle error case where calculation failed
+        currentDisplayAverages.value = { inter: null, intra: null, ij: null }; // Show N/A
+        console.error(`[USRateSheetTable] Failed to calculate averages for state: ${newStateCode}`);
+      }
+    }
+  }
 });
 
 async function initializeRateSheetDB(): Promise<boolean> {
@@ -327,21 +430,117 @@ async function resetPaginationAndLoad() {
   }
 }
 
+/**
+ * Calculates the average rates for a given state or the entire dataset.
+ * Uses Dexie.each for memory efficiency.
+ * @param stateCode Optional state code to filter by.
+ * @returns Promise resolving to RateAverages or null if DB error.
+ */
+async function calculateAverages(stateCode?: string): Promise<RateAverages | null> {
+  const isLoadingOverall = !stateCode;
+  if (isLoadingOverall) {
+    isCalculatingOverall.value = true;
+  } else {
+    isCalculatingState.value = true;
+  }
+  console.log(
+    `[USRateSheetTable] Calculating averages for ${
+      stateCode ? `state ${stateCode}` : 'all data'
+    }...`
+  );
+
+  const dbReady = await initializeRateSheetDB();
+  if (!dbReady || !dbInstance) {
+    console.error('[USRateSheetTable] Cannot calculate averages, DB not ready.');
+    if (isLoadingOverall) isCalculatingOverall.value = false;
+    else isCalculatingState.value = false;
+    return null; // Indicate error or inability to calculate
+  }
+
+  let sumInter = 0;
+  let sumIntra = 0;
+  let sumIj = 0;
+  let count = 0;
+
+  try {
+    let query = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    if (stateCode) {
+      query = query.where('stateCode').equals(stateCode);
+    }
+
+    await query.each((entry) => {
+      // Ensure rates are numbers before summing
+      if (typeof entry.interRate === 'number') {
+        sumInter += entry.interRate;
+      }
+      if (typeof entry.intraRate === 'number') {
+        sumIntra += entry.intraRate;
+      }
+      if (typeof entry.ijRate === 'number') {
+        sumIj += entry.ijRate;
+      }
+      // Only count records where at least one rate is a valid number to avoid division by zero issues if all are null/bad
+      if (
+        typeof entry.interRate === 'number' ||
+        typeof entry.intraRate === 'number' ||
+        typeof entry.ijRate === 'number'
+      ) {
+        count++;
+      }
+    });
+
+    const averages: RateAverages = {
+      inter: count > 0 && !isNaN(sumInter) ? sumInter / count : null,
+      intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
+      ij: count > 0 && !isNaN(sumIj) ? sumIj / count : null,
+    };
+
+    console.log(
+      `[USRateSheetTable] Averages calculated (count: ${count}):`,
+      JSON.stringify(averages)
+    );
+    return averages;
+  } catch (err: any) {
+    console.error('[USRateSheetTable] Error calculating averages:', err);
+    dataError.value = err.message || 'Failed to calculate averages';
+    return null;
+  } finally {
+    if (isLoadingOverall) {
+      isCalculatingOverall.value = false;
+    } else {
+      isCalculatingState.value = false;
+    }
+  }
+}
+
 onMounted(async () => {
   console.log('USRateSheetTable mounted');
   if (!lergStore.isLoaded) {
     console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
   }
 
+  // Fetch initial data and averages if DB is ready and store indicates data exists
   isDataLoading.value = true;
   const dbReady = await initializeRateSheetDB();
   if (dbReady && store.getHasUsRateSheetData) {
+    // Fetch table data first
     await updateAvailableStates();
-    await resetPaginationAndLoad();
+    await resetPaginationAndLoad(); // This sets isDataLoading to false internally
+
+    // Now calculate overall averages
+    console.log('[USRateSheetTable] Calculating initial overall averages...');
+    overallAverages.value = await calculateAverages(); // Sets loading flag internally
+    currentDisplayAverages.value = overallAverages.value ?? { inter: null, intra: null, ij: null };
+    console.log('[USRateSheetTable] Initial overall averages set.', overallAverages.value);
   } else {
-    console.log('[USRateSheetTable] Skipping initial load/state fetch (DB not ready or no data).');
+    console.log(
+      '[USRateSheetTable] Skipping initial load/state/average fetch (DB not ready or no data).'
+    );
     totalRecords.value = 0;
     isDataLoading.value = false;
+    // Ensure averages are reset if no data
+    overallAverages.value = null;
+    currentDisplayAverages.value = { inter: null, intra: null, ij: null };
   }
 });
 
@@ -359,6 +558,7 @@ watch(
     );
     if (hasData !== oldHasData) {
       if (!hasData) {
+        // Clear local table state and averages
         dbInstance = null;
         totalRecords.value = 0;
         displayedData.value = [];
@@ -368,7 +568,13 @@ watch(
         hasMoreData.value = false;
         dataError.value = null;
         isDataLoading.value = false;
+        // Clear averages
+        overallAverages.value = null;
+        stateAverageCache.value.clear();
+        currentDisplayAverages.value = { inter: null, intra: null, ij: null };
+        console.log('[USRateSheetTable] Averages cleared due to store data change.');
       } else {
+        // Data has become available, re-initialize everything
         isDataLoading.value = true;
         const dbReady = await initializeRateSheetDB();
         if (dbReady) {
@@ -397,14 +603,28 @@ useIntersectionObserver(
   }
 );
 
+/**
+ * Formats a rate value for display, including a leading '$' and handling null/undefined.
+ * @param rate The rate value.
+ * @returns Formatted string (e.g., $0.008000) or 'N/A'.
+ */
 function formatRate(rate: number | string | null | undefined): string {
-  if (rate === null || rate === undefined) return 'N/A';
-  return rate.toFixed(6);
+  if (rate === null || rate === undefined || typeof rate !== 'number') {
+    return 'N/A';
+  }
+  // Ensure it's treated as a number, format, and prepend '$'
+  return `$${Number(rate).toFixed(6)}`;
 }
 
 function handleClearData() {
   console.log('[USRateSheetTable] Clear Data button clicked.');
   if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
+    // Clear local averages immediately for faster UI feedback
+    overallAverages.value = null;
+    stateAverageCache.value.clear();
+    currentDisplayAverages.value = { inter: null, intra: null, ij: null };
+    console.log('[USRateSheetTable] Local averages cleared immediately.');
+    // Trigger store action which will eventually trigger the watcher above
     store.clearUsRateSheetData();
   }
 }
