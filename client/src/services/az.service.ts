@@ -3,7 +3,6 @@ import {
   type InvalidAzRow,
   type AzCodeReport,
   type AZDetailedComparisonEntry,
-  type AZDetailedComparisonFilters,
   type AZEnhancedCodeReport,
   type AZReportsInput,
   type AzPricingReport,
@@ -11,14 +10,15 @@ import {
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
 import Papa from 'papaparse';
-import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
-import Dexie from 'dexie'; // Import Dexie static methods
+import useDexieDB from '@/composables/useDexieDB';
+import Dexie from 'dexie';
 import { INT_COUNTRY_CODES } from '@/types/constants/int-country-codes';
 import AzAnalyzerWorker from '@/workers/az-analyzer.worker.ts?worker';
 import AzComparisonWorker from '@/workers/az-comparison.worker.ts?worker';
 
 export class AZService {
   private store = useAzStore();
+  private dexieDB = useDexieDB();
 
   constructor() {
     console.log('[AZService] Initializing AZ service');
@@ -33,7 +33,7 @@ export class AZService {
   ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
     // Use a consistent table name instead of creating a new table for each file
     // const tableName = 'az_codes'; // Revert to original incorrect table name for now
-    const { storeInDexieDB } = useDexieDB();
+    const { storeInDexieDB } = this.dexieDB;
     const derivedTableName = file.name.toLowerCase().replace('.csv', '');
 
     // Clear any existing invalid rows for this file
@@ -133,6 +133,9 @@ export class AZService {
               `[AZService] Processing file ${file.name} for component ID: ${componentId}`
             );
 
+            // Calculate stats after storing data
+            await this.calculateFileStats(componentId, file.name);
+
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
             reject(error);
@@ -177,14 +180,14 @@ export class AZService {
 
   async clearData(): Promise<void> {
     try {
-      const { getDB } = useDexieDB();
+      const { getDB, getAllStoreNamesForDB, deleteTableStore } = this.dexieDB;
 
       // Clear all tables from az_rate_deck_db ONLY
       const azDb = await getDB(DBName.AZ);
-      const azTableNames = await azDb.getAllStoreNames();
+      const azTableNames = await getAllStoreNamesForDB(DBName.AZ);
       if (azTableNames.length > 0) {
         for (const tableName of azTableNames) {
-          await azDb.deleteStore(tableName);
+          await deleteTableStore(DBName.AZ, tableName);
           console.log(`[AZService] Deleted table ${tableName} from ${DBName.AZ}`);
         }
         console.log(`[AZService] Cleared all tables from ${DBName.AZ}`);
@@ -202,13 +205,13 @@ export class AZService {
   // New function specifically for clearing comparison data
   async clearComparisonData(): Promise<void> {
     try {
-      const { getDB } = useDexieDB();
+      const { getDB, getAllStoreNamesForDB, deleteTableStore } = this.dexieDB;
       // Clear all tables from az_pricing_comparison_db
       const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
-      const comparisonTableNames = await comparisonDb.getAllStoreNames();
+      const comparisonTableNames = await getAllStoreNamesForDB(DBName.AZ_PRICING_COMPARISON);
       if (comparisonTableNames.length > 0) {
         for (const tableName of comparisonTableNames) {
-          await comparisonDb.deleteStore(tableName);
+          await deleteTableStore(DBName.AZ_PRICING_COMPARISON, tableName);
           console.log(
             `[AZService] Deleted table ${tableName} from ${DBName.AZ_PRICING_COMPARISON}`
           );
@@ -225,6 +228,8 @@ export class AZService {
 
   async removeTable(tableName: string): Promise<void> {
     try {
+      // Use the instance-level dexieDB
+      const { getDB, deleteTableStore } = this.dexieDB;
       // tableName is the derived name (e.g., 'azfile1')
       const fileName = tableName + '.csv';
       let componentId = '';
@@ -239,51 +244,34 @@ export class AZService {
       }
 
       // Use DexieDB directly to remove the main rate deck table
-      const { getDB } = useDexieDB();
       const azDb = await getDB(DBName.AZ);
-      if (azDb.hasStore(tableName)) {
+      if (azDb.tables.some((table) => table.name === tableName)) {
+        // Clear the table data. Consider if deleting the store is intended.
+        // If deleting store: await deleteTableStore(DBName.AZ, tableName);
         await azDb.table(tableName).clear();
         console.log(`[AZService] Table ${tableName} cleared successfully in ${DBName.AZ}`);
+      } else {
+        console.log(`[AZService] Table ${tableName} not found in ${DBName.AZ}, skipping clear.`);
       }
 
       // --- Delete corresponding comparison table ---
+      // Example: Determine comparison table name based on the removed table
+      const comparisonTableName = `comparison_${tableName}`; // This naming needs confirmation
+      const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
 
-      // Check if the comparison database exists before attempting to interact with it
-      const dbExists = await Dexie.exists(DBName.AZ_PRICING_COMPARISON);
-
-      if (dbExists) {
-        // Check if there was another file uploaded
-        const otherFileEntry = fileEntries.find(([key, _]) => key !== componentId);
-
-        if (otherFileEntry) {
-          const otherFileName = otherFileEntry[1].fileName;
-          const otherTableName = otherFileName.toLowerCase().replace('.csv', '');
-
-          // Construct possible comparison table names
-          const comparisonTableName1 = `${tableName}_vs_${otherTableName}`;
-          const comparisonTableName2 = `${otherTableName}_vs_${tableName}`;
-
-          // Get the comparison DB instance ONLY if the DB exists
-          const { getDB } = useDexieDB();
-          const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
-
-          // Attempt to delete the first possible name
-          if (comparisonDb.hasStore(comparisonTableName1)) {
-            await comparisonDb.deleteStore(comparisonTableName1);
-            console.log(
-              `[AZService] Table ${comparisonTableName1} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
-            );
-          }
-
-          // Attempt to delete the second possible name
-          if (comparisonDb.hasStore(comparisonTableName2)) {
-            await comparisonDb.deleteStore(comparisonTableName2);
-            console.log(
-              `[AZService] Table ${comparisonTableName2} removed successfully from ${DBName.AZ_PRICING_COMPARISON}`
-            );
-          }
-        }
+      // Use standard Dexie check for table existence
+      if (comparisonDb.tables.some((table) => table.name === comparisonTableName)) {
+        // Use deleteTableStore from the composable
+        await deleteTableStore(DBName.AZ_PRICING_COMPARISON, comparisonTableName);
+        console.log(
+          `[AZService] Corresponding comparison table ${comparisonTableName} deleted from ${DBName.AZ_PRICING_COMPARISON}.`
+        );
+      } else {
+        console.log(
+          `[AZService] Corresponding comparison table ${comparisonTableName} not found in ${DBName.AZ_PRICING_COMPARISON}, skipping delete.`
+        );
       }
+
       // Note: Resetting reports and detailedComparisonTableName is handled by the store's removeFile action
     } catch (error) {
       console.error(`[AZService] Failed to remove table ${tableName}:`, error);
@@ -293,51 +281,47 @@ export class AZService {
 
   async getData(tableName: string): Promise<AZStandardizedData[]> {
     try {
-      // Get data directly from Dexie
-      const { loadFromDexieDB } = useDexieDB();
-      const data = await loadFromDexieDB<AZStandardizedData>(DBName.AZ, tableName);
-      console.log(`[AZService] Retrieved ${data.length} records from Dexie table: ${tableName}`);
-      return data;
+      // Use the instance-level dexieDB
+      const { loadFromDexieDB } = this.dexieDB;
+      return await loadFromDexieDB<AZStandardizedData>(DBName.AZ, tableName);
     } catch (error) {
-      console.error(`Failed to get data from table ${tableName}:`, error);
-      throw error;
+      console.error(`[AZService] Failed to get data from table ${tableName}:`, error);
+      return []; // Return empty array on error
     }
   }
 
   async getRecordCount(tableName: string): Promise<number> {
     try {
-      // Count records directly from Dexie
-      const { getDB } = useDexieDB();
+      // Use the instance-level dexieDB
+      const { getDB } = this.dexieDB;
       const db = await getDB(DBName.AZ);
-
-      if (db.hasStore(tableName)) {
-        const count = await db.table(tableName).count();
-        console.log(`[AZService] Count for Dexie table ${tableName}: ${count}`);
-        return count;
+      // Use standard Dexie check
+      if (!db.tables.some((table) => table.name === tableName)) {
+        console.warn(`[AZService] Table ${tableName} does not exist in ${DBName.AZ} for count.`);
+        return 0;
       }
-      return 0;
+      const count = await db.table(tableName).count();
+      console.log(`[AZService] Record count for ${tableName}: ${count}`);
+      return count;
     } catch (error) {
-      console.error(`Failed to get record count for table ${tableName}:`, error);
+      console.error(`[AZService] Failed to get record count for table ${tableName}:`, error);
       return 0;
     }
   }
 
   async listTables(): Promise<Record<string, number>> {
     try {
-      // Get all tables and their counts directly from Dexie
-      const { getDB } = useDexieDB();
-      const db = await getDB(DBName.AZ);
-
-      const result: Record<string, number> = {};
-      for (const table of db.tables) {
-        const count = await table.count();
-        result[table.name] = count;
+      // Use the instance-level dexieDB
+      const { getAllStoreNamesForDB } = this.dexieDB;
+      const tableNames = await getAllStoreNamesForDB(DBName.AZ);
+      const tableCounts: Record<string, number> = {};
+      for (const name of tableNames) {
+        tableCounts[name] = await this.getRecordCount(name);
       }
-
-      console.log(`[AZService] Listed ${Object.keys(result).length} Dexie tables`);
-      return result;
+      console.log('[AZService] Listed tables:', tableCounts);
+      return tableCounts;
     } catch (error) {
-      console.error('Failed to list tables:', error);
+      console.error('[AZService] Failed to list tables:', error);
       return {};
     }
   }
@@ -404,7 +388,7 @@ export class AZService {
 
       if (detailedData && detailedData.length > 0) {
         // Get the specific DB instance directly
-        const { getDB } = useDexieDB();
+        const { getDB } = this.dexieDB;
 
         try {
           const comparisonDb = await getDB(DBName.AZ_PRICING_COMPARISON);
@@ -495,15 +479,12 @@ export class AZService {
       `[AZService] Getting detailed comparison data from table: ${detailedComparisonTableName}`
     );
     try {
-      const { loadFromDexieDB } = useDexieDB();
-      const data = await loadFromDexieDB<AZDetailedComparisonEntry>(
+      // Use the instance-level dexieDB
+      const { loadFromDexieDB } = this.dexieDB;
+      return await loadFromDexieDB<AZDetailedComparisonEntry>(
         DBName.AZ_PRICING_COMPARISON,
         detailedComparisonTableName
       );
-      console.log(
-        `[AZService] Retrieved ${data.length} detailed records from ${detailedComparisonTableName}`
-      );
-      return data;
     } catch (error) {
       console.error(
         `[AZService] Failed to get detailed comparison data from table ${detailedComparisonTableName}:`,
@@ -519,60 +500,51 @@ export class AZService {
   async getPagedDetailedComparisonData(
     tableName: string,
     limit: number,
-    offset: number,
-    filters?: AZDetailedComparisonFilters
+    offset: number
   ): Promise<AZDetailedComparisonEntry[]> {
-    if (!tableName) {
-      console.warn('[AZService] getPagedDetailedComparisonData called with no table name.');
-      return [];
-    }
-    console.log(
-      `[AZService] Getting paged data (limit: ${limit}, offset: ${offset}) from ${tableName} with filters:`,
-      filters
-    );
-
-    const { getDB } = useDexieDB();
     try {
+      // Use the instance-level dexieDB
+      const { getDB } = this.dexieDB; // Keep loadPagedFromDexieDB if filters are not needed
       const db = await getDB(DBName.AZ_PRICING_COMPARISON);
-      const table = db.table<AZDetailedComparisonEntry>(tableName);
 
-      // Start with the full collection
-      let collection = table.offset(offset);
-
-      // Apply filters
-      if (filters) {
-        // Apply specific filters first if they exist
-        if (filters.matchStatus) {
-          collection = collection.filter((item) => item.matchStatus === filters.matchStatus);
-        }
-        if (filters.cheaper) {
-          collection = collection.filter((item) => item.cheaperFile === filters.cheaper);
-        }
-
-        // Apply the generic search filter LAST
-        if (filters.search) {
-          const searchTermLower = filters.search.toLowerCase();
-          collection = collection.filter((item) => {
-            const codeMatch = item.dialCode.startsWith(searchTermLower);
-            const dest1Match =
-              item.destName1 && item.destName1.toLowerCase().includes(searchTermLower);
-            const dest2Match =
-              item.destName2 && item.destName2.toLowerCase().includes(searchTermLower);
-            return codeMatch || dest1Match || dest2Match;
-          });
-        }
+      // Use standard Dexie check
+      if (!db.tables.some((table) => table.name === tableName)) {
+        console.warn(
+          `[AZService] Table ${tableName} does not exist in ${DBName.AZ_PRICING_COMPARISON} for paged data.`
+        );
+        return [];
       }
 
-      // Apply limit after filtering
-      const results = await collection.limit(limit).toArray();
+      let collection = db.table<AZDetailedComparisonEntry>(tableName);
+
+      // --- Placeholder for potential future filter logic ---
+      // if (filters) {
+      //   collection = collection.where(...); // Apply filters here if needed
+      //   // OR use collection.filter() if complex client-side filtering is acceptable
+      //   // Ensure filter predicate returns boolean!
+      // }
+      // --- End Placeholder ---
+
+      // This part might be the source of the overload error if filter was applied incorrectly
+      // Example check: ensure filter returns boolean:
+      // collection = collection.filter(item => {
+      //    const condition1 = filters.someCondition ? item.field === filters.someCondition : true;
+      //    const condition2 = filters.anotherCondition ? item.value > filters.anotherCondition : true;
+      //    return condition1 && condition2; // MUST return boolean
+      // })
+
+      const results = await collection.offset(offset).limit(limit).toArray();
+
       console.log(
-        `[AZService] Fetched ${results.length} comparison records for ${tableName} with offset ${offset}, limit ${limit}, filters:`,
-        filters
+        `[AZService] Loaded ${results.length} paged comparison records from ${tableName} (offset: ${offset}, limit: ${limit})`
       );
       return results;
     } catch (error) {
-      console.error(`[AZService] Error getting paged comparison data for ${tableName}:`, error);
-      throw error;
+      console.error(
+        `[AZService] Failed to get paged detailed comparison data from table ${tableName}:`,
+        error
+      );
+      return [];
     }
   }
 }

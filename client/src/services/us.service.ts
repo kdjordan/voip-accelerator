@@ -5,6 +5,7 @@ import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
 import { useLergStore } from '@/stores/lerg-store';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
+import { DBSchemas } from '@/types/app-types';
 
 import type {
   USPricingReport,
@@ -56,6 +57,18 @@ export class USService {
     console.log('[USService] Initializing US service');
   }
 
+  // Helper to extract the table name from a Dexie schema string
+  private _extractTableNameFromSchema(schemaString?: string): string | null {
+    if (!schemaString || !schemaString.includes(':')) {
+      console.error(
+        '[USService] Invalid or missing schema string for table name extraction:',
+        schemaString
+      );
+      return null;
+    }
+    return schemaString.substring(0, schemaString.indexOf(':')).trim();
+  }
+
   // Process file and store directly in Dexie
   async processFile(
     file: File,
@@ -65,7 +78,7 @@ export class USService {
   ): Promise<{ fileName: string; records: USStandardizedData[] }> {
     // Derive table name from file name (removing .csv extension)
     const tableName = file.name.toLowerCase().replace('.csv', '');
-    const { storeInDexieDB } = useDexieDB();
+    const { storeInDexieDB } = this.dexieDB;
 
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
@@ -224,6 +237,10 @@ export class USService {
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
 
+            await this.clearPricingComparisonData(); // Call the dedicated clear function
+
+            console.log(`[USService] Table ${tableName} removed.`);
+
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
             reject(error);
@@ -365,31 +382,39 @@ export class USService {
   // Remove a table directly from Dexie
   async removeTable(tableName: string): Promise<void> {
     try {
-      // Find the component ID associated with this table
+      // Find the component ID based on the table name
       const fileName = tableName + '.csv';
       let componentId = '';
-
       if (this.store.getFileNameByComponent('us1') === fileName) {
         componentId = 'us1';
       } else if (this.store.getFileNameByComponent('us2') === fileName) {
         componentId = 'us2';
       }
-
       if (componentId) {
-        // Clear file stats for this component
         this.store.clearFileStats(componentId);
       }
 
-      // Use DexieDB directly
-      const { getDB } = useDexieDB();
+      // Use the instance-level dexieDB
+      const { getDB, deleteTableStore } = this.dexieDB;
       const db = await getDB(DBName.US);
 
-      if (db.hasStore(tableName)) {
-        await db.deleteStore(tableName);
-        console.log(`Table ${tableName} removed successfully from Dexie`);
+      // Use standard Dexie check for table existence
+      if (db.tables.some((table) => table.name === tableName)) {
+        // Use deleteTableStore from the composable
+        await deleteTableStore(DBName.US, tableName);
+        console.log(`[USService] Table ${tableName} removed successfully from ${DBName.US}`);
+      } else {
+        console.log(`[USService] Table ${tableName} not found in ${DBName.US}, skipping delete.`);
       }
+
+      // Clear any existing comparison data if this was one of the compared files
+      // Note: The actual logic might depend on how comparison results are stored and named
+      // This is a basic example assuming comparison results might need explicit clearing.
+      await this.clearPricingComparisonData(); // Call the dedicated clear function
+
+      console.log(`[USService] Table ${tableName} removed.`);
     } catch (error) {
-      console.error(`Failed to remove table ${tableName}:`, error);
+      console.error(`[USService] Failed to remove table ${tableName}:`, error);
       throw error;
     }
   }
@@ -397,22 +422,31 @@ export class USService {
   // Clear all US data
   async clearData(): Promise<void> {
     try {
-      // Get all table names
-      const { getDB } = useDexieDB();
+      // Use the instance-level dexieDB
+      const { getDB, getAllStoreNamesForDB, deleteTableStore } = this.dexieDB;
       const db = await getDB(DBName.US);
-      const tableNames = await db.getAllStoreNames();
 
-      // Delete each table
-      for (const tableName of tableNames) {
-        await db.deleteStore(tableName);
-        console.log(`Table ${tableName} deleted during clearData`);
+      // Use getAllStoreNamesForDB from the composable
+      const tableNames = await getAllStoreNamesForDB(DBName.US);
+      if (tableNames.length > 0) {
+        for (const tableName of tableNames) {
+          // Use deleteTableStore from the composable
+          await deleteTableStore(DBName.US, tableName);
+          console.log(`[USService] Deleted table ${tableName} from ${DBName.US}`);
+        }
+        console.log(`[USService] Cleared all tables from ${DBName.US}`);
+      } else {
+        console.log(`[USService] No tables found to clear in ${DBName.US}`);
       }
 
-      // Reset the store state
+      // Also clear any associated comparison data
+      await this.clearPricingComparisonData();
+
+      // Reset the store state as well
       this.store.resetFiles();
-      console.log('All US data cleared successfully');
+      console.log('[USService] Cleared all US data and reset store.');
     } catch (error) {
-      console.error('Failed to clear US data:', error);
+      console.error('[USService] Failed to clear US data:', error);
       throw error;
     }
   }
@@ -420,16 +454,19 @@ export class USService {
   // Get record count for a table
   async getRecordCount(tableName: string): Promise<number> {
     try {
-      const { getDB } = useDexieDB();
+      // Use the instance-level dexieDB
+      const { getDB } = this.dexieDB;
       const db = await getDB(DBName.US);
-
-      if (db.hasStore(tableName)) {
-        const count = await db.table(tableName).count();
-        console.log(`[USService] Count for Dexie table ${tableName}: ${count}`);
+      // Use standard Dexie check
+      if (!db.tables.some((table) => table.name === tableName)) {
+        console.warn(`[USService] Table ${tableName} does not exist in ${DBName.US} for count.`);
+        return 0;
       }
-      return 0;
+      const count = await db.table(tableName).count();
+      console.log(`[USService] Count for Dexie table ${tableName}: ${count}`);
+      return count;
     } catch (error) {
-      console.error(`Failed to get record count for table ${tableName}:`, error);
+      console.error(`[USService] Failed to get record count for table ${tableName}:`, error);
       return 0;
     }
   }
@@ -437,47 +474,62 @@ export class USService {
   // List all tables and their record counts
   async listTables(): Promise<Record<string, number>> {
     try {
-      // Get all tables and their counts directly from Dexie
-      const { getDB } = useDexieDB();
-      const db = await getDB(DBName.US);
-
-      const result: Record<string, number> = {};
-      for (const table of db.tables) {
-        const count = await table.count();
-        result[table.name] = count;
+      // Use the instance-level dexieDB
+      const { getAllStoreNamesForDB } = this.dexieDB;
+      const tableNames = await getAllStoreNamesForDB(DBName.US);
+      const tableCounts: Record<string, number> = {};
+      for (const name of tableNames) {
+        // Use standard Dexie check before counting (safer)
+        const db = await this.dexieDB.getDB(DBName.US);
+        if (db.tables.some((table) => table.name === name)) {
+          tableCounts[name] = await db.table(name).count();
+        } else {
+          tableCounts[name] = 0; // Should not happen if getAllStoreNamesForDB is accurate
+        }
       }
-
-      console.log(`[USService] Listed ${Object.keys(result).length} Dexie tables`);
-      return result;
+      console.log('[USService] Listed tables:', tableCounts);
+      return tableCounts;
     } catch (error) {
-      console.error('Failed to list tables:', error);
+      console.error('[USService] Failed to list tables:', error);
       return {};
     }
   }
 
   async getTableCount(tableName: string): Promise<number> {
     try {
-      const { getDB } = useDexieDB();
+      // Use the instance-level dexieDB
+      const { getDB } = this.dexieDB;
       const db = await getDB(DBName.US);
-      if (db.hasStore(tableName)) {
-        return await db.table(tableName).count();
+      // Use standard Dexie check
+      if (!db.tables.some((table) => table.name === tableName)) {
+        console.warn(`[USService] Table ${tableName} does not exist in ${DBName.US} for count.`);
+        return 0;
       }
-      return 0;
+      return await db.table(tableName).count();
     } catch (error) {
-      console.error(`Failed to get count for table ${tableName}:`, error);
+      console.error(`[USService] Error getting record count for table ${tableName}:`, error);
       return 0;
     }
   }
 
   async processComparisons(file1Name: string, file2Name: string): Promise<void> {
-    const { loadFromDexieDB, getDB } = useDexieDB();
+    const { loadFromDexieDB, getDB } = this.dexieDB;
     const lergStore = useLergStore();
 
     // Derive table names from file names
     const table1Name = file1Name.toLowerCase().replace('.csv', '');
     const table2Name = file2Name.toLowerCase().replace('.csv', '');
-    // Use a fixed table name for comparison results
-    const comparisonTableName = 'comparison_results';
+
+    // Dynamically get the comparison table name from the central schema definition
+    const comparisonSchemaString = DBSchemas[DBName.US_PRICING_COMPARISON];
+    const comparisonTableName = this._extractTableNameFromSchema(comparisonSchemaString);
+
+    if (!comparisonTableName) {
+      // Throw an error if the table name couldn't be extracted (indicates bad schema def)
+      throw new Error(
+        `Could not extract table name from DBSchemas for ${DBName.US_PRICING_COMPARISON}`
+      );
+    }
 
     console.log(`[USService] Starting comparison: ${table1Name} vs ${table2Name}`);
     console.log(
@@ -503,34 +555,22 @@ export class USService {
 
       // 2. Prepare the target database and table for comparison results
       const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
-      const schemaDefinition = {
-        // Define schema for the fixed table name
-        // Use fixed name here
-        [comparisonTableName]:
-          '++id, npanxx, npa, nxx, stateCode, countryCode, cheaper_inter, cheaper_intra, cheaper_indeterm, diff_inter_pct, diff_intra_pct, diff_indeterm_pct, diff_inter_abs, diff_intra_abs, diff_indeterm_abs',
-      };
+      // No need to define schema locally - getDB handles it
 
-      // 3. Ensure schema exists, upgrade if necessary
-      console.log(
-        `[USService] Checking/defining schema for ${comparisonTableName} in ${comparisonDb.name}...`
-      );
+      // Ensure DB is open after potential initialization from getDB
+      if (!comparisonDb.isOpen()) await comparisonDb.open();
+
+      // Ensure the table exists after getDB initialization
       if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
-        const currentVersion = comparisonDb.verno;
-        comparisonDb.close();
-        const newVersion = currentVersion + 1;
-        console.log(
-          `[USService] Upgrading ${comparisonDb.name} DB to v${newVersion} for table ${comparisonTableName}`
+        console.error(
+          `[USService] CRITICAL: Table ${comparisonTableName} does not exist in ${comparisonDb.name} even after getDB.`
         );
-        comparisonDb.version(newVersion).stores(schemaDefinition);
-        await comparisonDb.open(); // Re-open DB with new schema
-        console.log(`[USService] DB ${comparisonDb.name} opened with new schema.`);
-      } else {
-        if (!comparisonDb.isOpen()) await comparisonDb.open(); // Ensure DB is open
-        console.log(
-          `[USService] Table ${comparisonTableName} schema already exists in ${comparisonDb.name}.`
-        );
+        // Handle this critical error - maybe throw, maybe return
+        this.store.setPricingReportProcessing(false);
+        throw new Error(`Comparison table ${comparisonTableName} could not be initialized.`);
       }
 
+      // Use the extracted table name here
       const comparisonTable = comparisonDb.table<USPricingComparisonRecord>(comparisonTableName);
 
       // 4. Clear existing comparison data
@@ -605,11 +645,6 @@ export class USService {
                 ? 'file2'
                 : 'same';
 
-            // Absolute Differences (File2 - File1)
-            const diff_inter_abs = rates2.inter - rates1.inter;
-            const diff_intra_abs = rates2.intra - rates1.intra;
-            const diff_indeterm_abs = rates2.indeterm - rates1.indeterm;
-
             // Percentage Differences (relative to cheaper rate)
             const calculatePctDiff = (
               rate1: number,
@@ -644,9 +679,6 @@ export class USService {
               file2_inter: rates2.inter,
               file2_intra: rates2.intra,
               file2_indeterm: rates2.indeterm,
-              diff_inter_abs,
-              diff_intra_abs,
-              diff_indeterm_abs,
               diff_inter_pct,
               diff_intra_pct,
               diff_indeterm_pct,
@@ -733,72 +765,91 @@ export class USService {
       const table1Name = file1Name.toLowerCase().replace('.csv', '');
       const table2Name = file2Name.toLowerCase().replace('.csv', '');
 
-      const { getDB } = useDexieDB();
-      const db = await getDB(DBName.US);
+      const { getDB } = this.dexieDB; // Use instance-level dexieDB
+      const usDb = await getDB(DBName.US);
+      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
+
+      // Extract comparison table name dynamically
+      const comparisonSchemaString = DBSchemas[DBName.US_PRICING_COMPARISON];
+      const comparisonTableName = this._extractTableNameFromSchema(comparisonSchemaString);
+      if (!comparisonTableName) {
+        throw new Error(
+          `Could not extract table name from DBSchemas for ${DBName.US_PRICING_COMPARISON} in makeUsCodeReport`
+        );
+      }
+
+      // Ensure comparison DB is open
+      if (!comparisonDb.isOpen()) await comparisonDb.open();
 
       // --- Fetch Data for Rate Calculations ---
       console.log(`[USService] Fetching full data for ${table1Name}...`);
-      const file1Data = await db.table<USStandardizedData>(table1Name).toArray();
+      const file1Data = await usDb.table<USStandardizedData>(table1Name).toArray(); // Use usDb
       console.log(`[USService] Fetched ${file1Data.length} records from ${table1Name}`);
 
       console.log(`[USService] Fetching full data for ${table2Name}...`);
-      const file2Data = await db.table<USStandardizedData>(table2Name).toArray();
+      const file2Data = await usDb.table<USStandardizedData>(table2Name).toArray(); // Use usDb
       console.log(`[USService] Fetched ${file2Data.length} records from ${table2Name}`);
 
-      const table1Count = file1Data.length;
-      const table2Count = file2Data.length;
-
-      // --- Calculate Rate Stats for File 1 ---
-      const file1InterRates = file1Data.map((d) => d.interRate);
-      const file1IntraRates = file1Data.map((d) => d.intraRate);
-      const file1IndetermRates = file1Data.map((d) => d.indetermRate);
-
-      const file1InterStats = this.calculateRateStats(file1InterRates);
-      const file1IntraStats = this.calculateRateStats(file1IntraRates);
-      const file1IndetermStats = this.calculateRateStats(file1IndetermRates);
-
-      // --- Calculate Rate Stats for File 2 ---
-      const file2InterRates = file2Data.map((d) => d.interRate);
-      const file2IntraRates = file2Data.map((d) => d.intraRate);
-      const file2IndetermRates = file2Data.map((d) => d.indetermRate);
-
-      const file2InterStats = this.calculateRateStats(file2InterRates);
-      const file2IntraStats = this.calculateRateStats(file2IntraRates);
-      const file2IndetermStats = this.calculateRateStats(file2IndetermRates);
-
-      // --- Initialize Report with Calculated Stats ---
-      const report: USCodeReport = {
-        file1: {
-          fileName: file1Name,
-          totalNPANXX: table1Count,
-          uniqueNPA: 0, // Will be calculated below
-          uniqueNXX: 0, // Can be added if needed
-          coveragePercentage: 0, // Can be added if needed
-          rateStats: {
-            interstate: file1InterStats,
-            intrastate: file1IntraStats,
-            indeterminate: file1IndetermStats,
-          },
-        },
-        file2: {
-          fileName: file2Name,
-          totalNPANXX: table2Count,
-          uniqueNPA: 0, // Will be calculated below
-          uniqueNXX: 0, // Can be added if needed
-          coveragePercentage: 0, // Can be added if needed
-          rateStats: {
-            interstate: file2InterStats,
-            intrastate: file2IntraStats,
-            indeterminate: file2IndetermStats,
-          },
-        },
-        matchedCodes: 0,
-        nonMatchedCodes: 0,
-        matchedCodesPercentage: 0,
-        nonMatchedCodesPercentage: 0,
-        matchedNPAs: 0,
-        totalUniqueNPAs: 0,
+      // --- Calculate Summary Stats ---
+      const file1Stats = {
+        inter: this.calculateRateStats(file1Data.map((r) => r.interRate)),
+        intra: this.calculateRateStats(file1Data.map((r) => r.intraRate)),
+        indeterm: this.calculateRateStats(file1Data.map((r) => r.indetermRate)),
       };
+
+      const file2Stats = {
+        inter: this.calculateRateStats(file2Data.map((r) => r.interRate)),
+        intra: this.calculateRateStats(file2Data.map((r) => r.intraRate)),
+        indeterm: this.calculateRateStats(file2Data.map((r) => r.indetermRate)),
+      };
+
+      // --- Fetch Comparison Data ---
+      console.log(
+        `[USService] Fetching comparison data from ${DBName.US_PRICING_COMPARISON}/${comparisonTableName}...`
+      );
+      // Check if table exists before querying
+      if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
+        console.warn(
+          `[USService] Comparison table ${comparisonTableName} not found in ${comparisonDb.name}. Returning empty comparison data for report.`
+        );
+        // Handle case where comparison hasn't run or table failed to create
+        // Potentially return an empty array or skip comparison stats calculation
+        // Depending on desired behavior, you might throw or return a partial report
+        // For now, let's proceed assuming comparisonData might be empty
+        // You could also throw here: throw new Error(`Comparison table ${comparisonTableName} not found.`);
+      }
+
+      // Use extracted table name
+      const comparisonData = comparisonDb.tables.some((t) => t.name === comparisonTableName)
+        ? await comparisonDb.table<USPricingComparisonRecord>(comparisonTableName).toArray()
+        : []; // Fetch data only if table exists, otherwise empty array
+
+      console.log(
+        `[USService] Fetched ${comparisonData.length} comparison records from ${comparisonTableName}.`
+      );
+
+      // --- Calculate Comparison Stats --- Needed? ---
+      // The USCodeReport interface doesn't seem to include these direct comparison stats.
+      // Let's comment them out for now unless they are intended for a different purpose.
+      /*
+      const comparisonStats = {
+        inter: {
+          cheaperFile1: comparisonData.filter((r) => r.cheaper_inter === 'file1').length,
+          cheaperFile2: comparisonData.filter((r) => r.cheaper_inter === 'file2').length,
+          same: comparisonData.filter((r) => r.cheaper_inter === 'same').length,
+        },
+        intra: {
+          cheaperFile1: comparisonData.filter((r) => r.cheaper_intra === 'file1').length,
+          cheaperFile2: comparisonData.filter((r) => r.cheaper_intra === 'file2').length,
+          same: comparisonData.filter((r) => r.cheaper_intra === 'same').length,
+        },
+        indeterm: {
+          cheaperFile1: comparisonData.filter((r) => r.cheaper_indeterm === 'file1').length,
+          cheaperFile2: comparisonData.filter((r) => r.cheaper_indeterm === 'file2').length,
+          same: comparisonData.filter((r) => r.cheaper_indeterm === 'same').length,
+        },
+      };
+      */
 
       // --- Calculate Matching and NPA Stats ---
       const file1NPAs = new Set<string>();
@@ -806,7 +857,6 @@ export class USService {
       const matchedNPAsSet = new Set<string>();
       const allUniqueNPAsSet = new Set<string>();
 
-      // Use fetched data instead of querying Dexie again
       const table2Map = new Map<string, { npa: string }>();
       file2Data.forEach((record) => {
         table2Map.set(record.npanxx, { npa: record.npa });
@@ -822,201 +872,97 @@ export class USService {
         const matchInFile2 = table2Map.get(record.npanxx);
         if (matchInFile2) {
           matchCount++;
+          // Ensure NPA match for matchedNPAsSet, adjust if logic needs refinement
           if (record.npa === matchInFile2.npa) {
             matchedNPAsSet.add(record.npa);
           }
         }
       });
 
-      // --- Populate Final Report Stats ---
-      report.matchedCodes = matchCount;
-      // Calculate non-matched based on total unique codes across both files
-      const allNpanxx = new Set([
+      const totalUniqueNpanxx = new Set([
         ...file1Data.map((r) => r.npanxx),
         ...file2Data.map((r) => r.npanxx),
-      ]);
-      report.nonMatchedCodes = allNpanxx.size - matchCount;
-      report.matchedCodesPercentage = allNpanxx.size > 0 ? (matchCount / allNpanxx.size) * 100 : 0;
-      report.nonMatchedCodesPercentage =
-        allNpanxx.size > 0 ? ((allNpanxx.size - matchCount) / allNpanxx.size) * 100 : 0;
+      ]).size;
+      const nonMatchedCount = totalUniqueNpanxx > 0 ? totalUniqueNpanxx - matchCount : 0;
 
-      report.matchedNPAs = matchedNPAsSet.size;
-      report.totalUniqueNPAs = allUniqueNPAsSet.size;
+      // --- Construct Report According to USCodeReport Interface ---
+      const report: USCodeReport = {
+        file1: {
+          fileName: file1Name,
+          totalNPANXX: file1Data.length,
+          uniqueNPA: file1NPAs.size,
+          uniqueNXX: new Set(file1Data.map((r) => r.nxx)).size, // Calculate unique NXX
+          coveragePercentage: 0, // TODO: Define how coveragePercentage is calculated
+          rateStats: {
+            interstate: file1Stats.inter,
+            intrastate: file1Stats.intra,
+            indeterminate: file1Stats.indeterm,
+          },
+        },
+        file2: {
+          fileName: file2Name,
+          totalNPANXX: file2Data.length,
+          uniqueNPA: file2NPAs.size,
+          uniqueNXX: new Set(file2Data.map((r) => r.nxx)).size, // Calculate unique NXX
+          coveragePercentage: 0, // TODO: Define how coveragePercentage is calculated
+          rateStats: {
+            interstate: file2Stats.inter,
+            intrastate: file2Stats.intra,
+            indeterminate: file2Stats.indeterm,
+          },
+        },
+        matchedCodes: matchCount,
+        nonMatchedCodes: nonMatchedCount,
+        matchedCodesPercentage: totalUniqueNpanxx > 0 ? (matchCount / totalUniqueNpanxx) * 100 : 0,
+        nonMatchedCodesPercentage:
+          totalUniqueNpanxx > 0 ? (nonMatchedCount / totalUniqueNpanxx) * 100 : 0,
+        matchedNPAs: matchedNPAsSet.size,
+        totalUniqueNPAs: allUniqueNPAsSet.size,
+      };
 
-      report.file1.uniqueNPA = file1NPAs.size;
-      report.file2.uniqueNPA = file2NPAs.size;
-      // Note: uniqueNXX calculation would require similar tracking if needed
-
-      console.log('[USService] Code Report Generated:', report);
-
+      console.log('[USService] Code report generated successfully.');
       return report;
     } catch (error) {
-      console.error('[USService] Error generating code report:', error);
+      console.error('[USService] Error generating US code report:', error);
       throw error;
     }
   }
 
-  /**
-   * Fetches the detailed comparison results from Dexie and calculates summary statistics.
-   *
-   * @param file1Name Name of the first file.
-   * @param file2Name Name of the second file.
-   * @returns Promise<USPricingReport>
-   */
-  async fetchPricingReportSummary(file1Name: string, file2Name: string): Promise<USPricingReport> {
-    console.log('[USService] Fetching pricing report summary...');
-    this.store.setPricingReportProcessing(true);
-    const comparisonDbName = DBName.US_PRICING_COMPARISON;
-    // Use the fixed table name
-    const comparisonTableName = 'comparison_results';
-
+  // Add method to clear US comparison data
+  async clearPricingComparisonData(): Promise<void> {
     try {
-      const comparisonDb = await this.dexieDB.getDB(comparisonDbName);
+      // Only need getDB from dexieDB
+      const { getDB } = this.dexieDB;
+      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
 
-      // Check if the fixed table exists before trying to read from it
-      if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
+      // Get the specific comparison table name
+      const comparisonSchemaString = DBSchemas[DBName.US_PRICING_COMPARISON];
+      const comparisonTableName = this._extractTableNameFromSchema(comparisonSchemaString);
+
+      if (!comparisonTableName) {
         console.warn(
-          `[USService] Comparison table ${comparisonTableName} not found in ${comparisonDbName}. Cannot generate summary.`
+          `[USService] Could not determine comparison table name in clearPricingComparisonData. Skipping clear.`
         );
-        // Return a default/empty report
-        return {
-          file1: {
-            fileName: file1Name,
-            averageInterRate: 0,
-            averageIntraRate: 0,
-            averageIJRate: 0,
-            medianInterRate: 0,
-            medianIntraRate: 0,
-            medianIJRate: 0,
-          },
-          file2: {
-            fileName: file2Name,
-            averageInterRate: 0,
-            averageIntraRate: 0,
-            averageIJRate: 0,
-            medianInterRate: 0,
-            medianIntraRate: 0,
-            medianIJRate: 0,
-          },
-          comparison: {
-            interRateDifference: 0,
-            intraRateDifference: 0,
-            ijRateDifference: 0,
-            totalHigher: 0,
-            totalLower: 0,
-            totalEqual: 0,
-          },
-        };
+        return;
       }
 
-      // Read from the fixed table name
-      const comparisonData = await comparisonDb
-        .table<USPricingComparisonRecord>(comparisonTableName) // Use fixed name
-        .toArray();
-
-      console.log(
-        `[USService] Fetched ${comparisonData.length} comparison records from ${comparisonTableName}.`
-      );
-
-      // --- Calculate Summary Stats ---
-      const file1InterRates: number[] = [];
-      const file1IntraRates: number[] = [];
-      const file1IndetermRates: number[] = [];
-      const file2InterRates: number[] = [];
-      const file2IntraRates: number[] = [];
-      const file2IndetermRates: number[] = [];
-
-      let totalHigher = 0; // File 1 is cheaper
-      let totalLower = 0; // File 2 is cheaper
-      let totalEqual = 0; // Rates are the same
-
-      const matchedInterDiffs: number[] = [];
-      const matchedIntraDiffs: number[] = [];
-      const matchedIndetermDiffs: number[] = [];
-
-      comparisonData.forEach((record) => {
-        // Collect rates for File 1 (present in file 1)
-        // Note: We are assuming records only contain matched data now
-        file1InterRates.push(record.file1_inter);
-        file1IntraRates.push(record.file1_intra);
-        file1IndetermRates.push(record.file1_indeterm);
-
-        // Collect rates for File 2 (present in file 2)
-        file2InterRates.push(record.file2_inter);
-        file2IntraRates.push(record.file2_intra);
-        file2IndetermRates.push(record.file2_indeterm);
-
-        // Analyze matched records for differences and cheaper file
-        // Use cheaper_inter as the primary indicator for this summary count
-        if (record.cheaper_inter === 'file1') totalHigher++;
-        else if (record.cheaper_inter === 'file2') totalLower++;
-        else if (record.cheaper_inter === 'same') totalEqual++;
-
-        // Collect absolute differences for matched records
-        // No null check needed as we only store matched records
-        matchedInterDiffs.push(record.diff_inter_abs);
-        matchedIntraDiffs.push(record.diff_intra_abs);
-        matchedIndetermDiffs.push(record.diff_indeterm_abs);
-      });
-
-      // Calculate stats for File 1
-      const file1InterStats = this.calculateRateStats(file1InterRates);
-      const file1IntraStats = this.calculateRateStats(file1IntraRates);
-      const file1IndetermStats = this.calculateRateStats(file1IndetermRates);
-
-      // Calculate stats for File 2
-      const file2InterStats = this.calculateRateStats(file2InterRates);
-      const file2IntraStats = this.calculateRateStats(file2IntraRates);
-      const file2IndetermStats = this.calculateRateStats(file2IndetermRates);
-
-      // Calculate average differences (absolute)
-      const avgInterDiff =
-        matchedInterDiffs.reduce((s, v) => s + v, 0) / (matchedInterDiffs.length || 1);
-      const avgIntraDiff =
-        matchedIntraDiffs.reduce((s, v) => s + v, 0) / (matchedIntraDiffs.length || 1);
-      const avgIndetermDiff =
-        matchedIndetermDiffs.reduce((s, v) => s + v, 0) / (matchedIndetermDiffs.length || 1);
-
-      // --- Construct the final report ---=
-      const report: USPricingReport = {
-        file1: {
-          fileName: file1Name,
-          averageInterRate: file1InterStats.average,
-          averageIntraRate: file1IntraStats.average,
-          averageIJRate: file1IndetermStats.average, // Using Indeterminate as IJRate
-          medianInterRate: file1InterStats.median,
-          medianIntraRate: file1IntraStats.median,
-          medianIJRate: file1IndetermStats.median, // Using Indeterminate as IJRate
-        },
-        file2: {
-          fileName: file2Name,
-          averageInterRate: file2InterStats.average,
-          averageIntraRate: file2IntraStats.average,
-          averageIJRate: file2IndetermStats.average, // Using Indeterminate as IJRate
-          medianInterRate: file2InterStats.median,
-          medianIntraRate: file2IntraStats.median,
-          medianIJRate: file2IndetermStats.median, // Using Indeterminate as IJRate
-        },
-        comparison: {
-          // Average difference (File2 - File1)
-          interRateDifference: avgInterDiff,
-          intraRateDifference: avgIntraDiff,
-          ijRateDifference: avgIndetermDiff, // Using Indeterminate as IJRate
-          totalHigher, // Count where file1 is cheaper
-          totalLower, // Count where file2 is cheaper
-          totalEqual, // Count where rates are the same
-        },
-      };
-
-      console.log('[USService] Calculated final pricing summary:', report);
-      return report;
+      // Check if the table exists before trying to clear
+      if (comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
+        const comparisonTable = comparisonDb.table(comparisonTableName);
+        console.log(
+          `[USService] Clearing data from table ${comparisonTableName} in ${DBName.US_PRICING_COMPARISON}`
+        );
+        await comparisonTable.clear(); // Use clear() instead of deleteTableStore
+        console.log(`[USService] Cleared data from ${comparisonTableName}.`);
+      } else {
+        console.log(
+          `[USService] Table ${comparisonTableName} not found in ${DBName.US_PRICING_COMPARISON}. No data to clear.`
+        );
+      }
     } catch (error) {
-      console.error('[USService] Error fetching pricing report summary:', error);
-      this.store.setPricingReportProcessing(false); // Ensure loading state is reset on error
-      // Consider returning a specific error object or re-throwing
-      throw new Error(`Failed to fetch or process pricing summary: ${error}`);
-    } finally {
-      this.store.setPricingReportProcessing(false); // Ensure loading state is always reset
+      console.error('[USService] Failed to clear US pricing comparison data:', error);
+      // Decide if error should be thrown or just logged
+      // throw error;
     }
   }
 }

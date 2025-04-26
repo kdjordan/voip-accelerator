@@ -493,14 +493,20 @@ async function handleReportsAction() {
     }
 
     // --- Fetch and Set Pricing Report Summary (only after comparison is done) ---
-    console.log('[USFileUploads] Fetching final pricing report summary...');
-    const pricingReportSummary = await service.fetchPricingReportSummary(
-      fileNames[0],
-      fileNames[1]
+    // TODO: Implement fetching or generating the pricing report summary.
+    // The data is available in the 'comparison_results' table in the
+    // DBName.US_PRICING_COMPARISON database after processComparisons runs.
+    // We need to either fetch and summarize here, or add a dedicated service function.
+    console.log(
+      '[USFileUploads] Skipping pricing report summary fetch (function not implemented).'
     );
-    console.log('[USFileUploads] Pricing report summary fetched.');
-    usStore.setPricingReport(pricingReportSummary);
-    console.log('[USFileUploads] Pricing report set in store.');
+    // const pricingReportSummary = await service.fetchPricingReportSummary(
+    //   fileNames[0],
+    //   fileNames[1]
+    // );
+    // console.log('[USFileUploads] Pricing report summary fetched.');
+    // usStore.setPricingReport(pricingReportSummary);
+    // console.log('[USFileUploads] Pricing report set in store.');
 
     // Reports are generated, potentially hide upload components
     usStore.showUploadComponents = false;
