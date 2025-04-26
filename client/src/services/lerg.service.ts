@@ -508,6 +508,7 @@ export class LergService {
    */
   async processLergData(): Promise<{
     stateMapping: StateNPAMapping;
+    canadaProvinces: Record<string, Set<string>>;
     countryData: CountryLergData[];
   }> {
     try {
@@ -526,6 +527,7 @@ export class LergService {
         console.log('No LERG table found, returning empty data');
         return {
           stateMapping: {},
+          canadaProvinces: {},
           countryData: [],
         };
       }
@@ -570,8 +572,10 @@ export class LergService {
         })
       );
 
+      // Return all processed structures
       return {
         stateMapping,
+        canadaProvinces,
         countryData: countryData.sort((a, b) => b.npaCount - a.npaCount),
       };
     } catch (error) {

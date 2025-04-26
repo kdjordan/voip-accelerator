@@ -359,7 +359,7 @@ export class USRateSheetService {
             // Handle cases where NPA is not found
             isValidRow = false; // Make row invalid if no location found
             errorReason = `NPA ${npa} not found in LERG data.`;
-            console.warn(`Row ${rowIndex}: ${errorReason}`);
+            // console.warn(`Row ${rowIndex}: ${errorReason}`); // Commented out to reduce console noise for valid cases where NPA is simply not in LERG (e.g., non-NANP)
           }
         } catch (lergError) {
           isValidRow = false; // Make row invalid on lookup error

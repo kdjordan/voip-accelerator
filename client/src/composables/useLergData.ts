@@ -271,6 +271,7 @@ export function useLergData() {
 
   const getProcessed = async (): Promise<{
     stateMapping: StateNPAMapping;
+    canadaProvinces: Record<string, Set<string>>;
     countryData: CountryLergData[];
     count: number;
   }> => {
@@ -290,6 +291,7 @@ export function useLergData() {
       // Return the structured data
       return {
         stateMapping: processedData.stateMapping,
+        canadaProvinces: processedData.canadaProvinces,
         countryData: processedData.countryData,
         count: processedData.count,
       };
@@ -328,52 +330,73 @@ export function useLergData() {
 
   const updateStoreData = async () => {
     try {
-      const { stateMapping, countryData, count } = await getProcessed();
+      // Destructure the new return shape from getProcessed (which calls service.getProcessedData)
+      const {
+        stateMapping,
+        canadaProvinces: processedCanadaProvinces,
+        countryData,
+        count,
+      } = await getProcessed();
       const { lastUpdated } = await lergService.getLastUpdatedTimestamp();
 
-      // Convert stateMapping to USStateNPAMap for US states
-      const usStates = new Map<string, NPAEntry[]>();
-      const canadaProvinces = new Map<string, NPAEntry[]>();
-      const otherCountries = new Map<string, NPAEntry[]>();
+      // Prepare maps for the store
+      const usStatesMap = new Map<string, NPAEntry[]>();
+      const canadaProvincesMap = new Map<string, NPAEntry[]>();
+      const otherCountriesMap = new Map<string, NPAEntry[]>();
 
-      // Process state mappings for US and Canadian provinces
+      // Process stateMapping (primarily US states)
       Object.entries(stateMapping).forEach(([stateCode, npas]) => {
-        if (stateCode.length === 2) {
-          const npasWithMeta: NPAEntry[] = npas.map((npa) => ({ npa }));
-
-          if (lergService.isUSState(stateCode)) {
-            usStates.set(stateCode, npasWithMeta);
-          } else if (lergService.isCanadianProvince(stateCode)) {
-            canadaProvinces.set(stateCode, npasWithMeta);
-          }
+        // We still only expect US states (or potentially XX) here based on service logic
+        if (lergService.isUSState(stateCode)) {
+          usStatesMap.set(
+            stateCode,
+            npas.map((npa) => ({ npa }))
+          );
+        } else if (stateCode === 'XX') {
+          // Handle the special 'XX' case if needed, maybe add to canadaProvinces or a separate category?
+          // For now, let's add it to canadaProvincesMap as 'Other Canadian Areas'
+          // canadaProvincesMap.set(stateCode, npas.map((npa) => ({ npa })));
+          console.warn(
+            `[useLergData] Found stateMapping entry for '${stateCode}', currently ignored for store maps.`
+          );
         }
       });
 
-      // Process country data for other countries
+      // Process the explicitly returned processedCanadaProvinces map
+      Object.entries(processedCanadaProvinces).forEach(([provinceCode, npaSet]) => {
+        // No need to check isCanadianProvince here, as the service already segregated them
+        canadaProvincesMap.set(
+          provinceCode,
+          Array.from(npaSet).map((npa) => ({ npa }))
+        );
+      });
+
+      // Process country data for other countries (remains the same)
       countryData
         .filter((country) => country.country !== 'US' && country.country !== 'CA')
         .forEach((country) => {
-          otherCountries.set(
+          otherCountriesMap.set(
             country.country,
             country.npas.map((npa) => ({ npa }))
           );
         });
 
       // Set data in the store using new methods
-      lergStore.setUSStates(usStates);
-      lergStore.setCanadaProvinces(canadaProvinces);
-      lergStore.setOtherCountries(otherCountries);
+      lergStore.setUSStates(usStatesMap);
+      lergStore.setCanadaProvinces(canadaProvincesMap); // Pass the correctly populated map
+      lergStore.setOtherCountries(otherCountriesMap);
 
-      // Update timestamp (now in stats) and status
-      lergStore.setLastUpdated(lastUpdated ? new Date(lastUpdated) : null);
-      lergStore.setProcessing(false);
-      lergStore.setLoaded(true);
+      // Update stats and status
       lergStore.updateStats();
+      lergStore.setLastUpdated(lastUpdated ? new Date(lastUpdated) : null);
+      lergStore.setLoaded(true);
 
-      isInitialized.value = true;
+      console.log(
+        `[useLergData] LERG Store updated. US States: ${usStatesMap.size}, CA Prov: ${canadaProvincesMap.size}, Other Countries: ${otherCountriesMap.size}`
+      );
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to update store data';
-      throw err;
+      console.error('[useLergData] Failed to update LERG store data:', err);
+      lergStore.setError(err instanceof Error ? err.message : 'Failed to update store data');
     }
   };
 
