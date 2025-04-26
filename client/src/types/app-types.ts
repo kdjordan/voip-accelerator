@@ -248,12 +248,6 @@ export const DBSchemas = {
 export const DynamicTableSchemas = {
   [DBName.AZ]: '++id, destName, dialCode, rate',
   [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
-  // [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
-  // [DBName.US_RATE_SHEET]: '++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
-  // Note: LERG, AZ_RATE_SHEET DBs might not need dynamic table schemas
-  // If they do, define them here.
-  // [DBName.US_PRICING_COMPARISON]:
-  //   '++id, npa, nxx, stateCode, countryCode, file1_rate, file1_inter, file1_intra, file1_indeterm, file2_rate, file2_inter, file2_intra, file2_indeterm, diff_intra_abs, diff_intra_pct, diff_inter_abs, diff_inter_pct, cheaper_file',
 } as const;
 
 // Type guard to check if a DBNameType is supported for schemas
