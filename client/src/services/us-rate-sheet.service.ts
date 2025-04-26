@@ -84,7 +84,7 @@ export class USRateSheetService {
       const db = await this.getDB(this.dbName);
 
       // Check if the 'entries' table exists and clear it if it does
-      if (db.hasStore('entries')) {
+      if (db.tables.some((table) => table.name === 'entries')) {
         await db.table('entries').clear();
         console.log(`[USRateSheetService] Cleared 'entries' table in database ${this.dbName}`);
       } else {
@@ -129,8 +129,8 @@ export class USRateSheetService {
     this.processingBatch = []; // Reset the batch
 
     try {
+      // Get DB instance here again
       const db = await this.getDB(this.dbName);
-      // Directly use bulkPut as the store is guaranteed to exist now
       await db.table('entries').bulkPut(batchToStore);
       console.log(
         `[USRateSheetService] Stored batch of ${batchToStore.length} records in 'entries' table.`
@@ -172,31 +172,28 @@ export class USRateSheetService {
     // Wrap the entire processing logic in a try/catch to handle promise rejection
     try {
       // --- Prepare Database --- START ---
-      try {
-        // Delete existing database for a clean slate
-        await this.deleteDatabase(this.dbName);
-        console.log(`[USRateSheetService] Deleted database ${this.dbName} to start fresh`);
-
-        // Initialize a new database instance - this should create the tables based on the schema in useDexieDB
-        await this.initializeDatabase(); // This opens the DB
-        console.log(`[USRateSheetService] Initialized new database ${this.dbName}`);
-
-        // Get DB instance AFTER initialization
-        // const db = await this.getDB(this.dbName); // No longer needed just for addStore
-
-        // REMOVED: Ensure the 'entries' table exists BEFORE starting parsing
-        // The initializeDatabase call handles this based on the defined schema
-        // await db.addStore('entries');
-        // console.log(`[USRateSheetService] Ensured 'entries' store exists in ${this.dbName}.`);
-      } catch (dbPrepError) {
-        console.error('[USRateSheetService] Critical error preparing database:', dbPrepError);
-        // Reject the main promise if DB preparation fails
-        return Promise.reject(new Error('Failed to prepare database table.'));
-      }
+      // REMOVED: Explicit deletion and re-initialization. DexieDB handles initialization,
+      // and data clearing can be managed via options in storeInDexieDB if needed.
+      // try {
+      // // Delete existing database for a clean slate
+      // await this.deleteDatabase(this.dbName);
+      // console.log(`[USRateSheetService] Deleted database ${this.dbName} to start fresh`);
+      //
+      // // Initialize a new database instance - this should create the tables based on the schema in useDexieDB
+      // await this.initializeDatabase(); // This opens the DB
+      // console.log(`[USRateSheetService] Initialized new database ${this.dbName}`);
+      // } catch (dbPrepError) {
+      //   console.error('[USRateSheetService] Critical error preparing database:', dbPrepError);
+      //   // Reject the main promise if DB preparation fails
+      //   return Promise.reject(new Error('Failed to prepare database table.'));
+      // }
       // --- Prepare Database --- END ---
 
       // Reset the batch in case there's anything left from a previous operation
       this.processingBatch = [];
+
+      // Array to hold promises for batch storage operations
+      const batchPromises: Promise<void>[] = [];
 
       const invalidRows: InvalidUSRateSheetRow[] = [];
       let totalRecords = 0;
@@ -251,7 +248,8 @@ export class USRateSheetService {
 
               // When we reach the batch size, store the batch and start a new one
               if (this.processingBatch.length >= BATCH_SIZE) {
-                this.storeBatch();
+                // Push the promise returned by storeBatch to the array
+                batchPromises.push(this.storeBatch());
               }
             } catch (error) {
               // Log but don't let it stop processing
@@ -259,9 +257,32 @@ export class USRateSheetService {
             }
           },
           complete: async () => {
+            // Wait for all intermediate batch storage operations to complete
+            try {
+              console.log(
+                `[USRateSheetService] Waiting for ${batchPromises.length} intermediate batch stores to finish...`
+              );
+              await Promise.all(batchPromises);
+              console.log('[USRateSheetService] Intermediate batch stores finished.');
+            } catch (batchError) {
+              console.error(
+                '[USRateSheetService] Error during intermediate batch storage:',
+                batchError
+              );
+              // Reject the main promise if any batch failed
+              reject(new Error('Failed to store one or more data batches.'));
+              return; // Stop further processing
+            }
+
             // Store any remaining rows in the final batch
             if (this.processingBatch.length > 0) {
-              await this.storeBatch();
+              try {
+                await this.storeBatch();
+              } catch (finalBatchError) {
+                console.error('[USRateSheetService] Error storing final batch:', finalBatchError);
+                reject(new Error('Failed to store the final data batch.'));
+                return; // Stop further processing
+              }
             }
 
             console.log(
@@ -479,7 +500,7 @@ export class USRateSheetService {
     );
     try {
       const db = await this.getDB(this.dbName);
-      if (!db.hasStore('entries')) {
+      if (!db.tables.some((table) => table.name === 'entries')) {
         console.warn('Entries table not found, cannot get effective date.');
         return null;
       }
