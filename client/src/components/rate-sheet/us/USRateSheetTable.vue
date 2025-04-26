@@ -78,6 +78,7 @@
             v-model="selectedState"
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 min-w-[150px]"
             :disabled="availableStates.length === 0 || isDataLoading"
+            size="10"
           >
             <option value="">All States/Provinces</option>
             <optgroup

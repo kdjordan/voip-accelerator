@@ -1,6 +1,82 @@
 <template>
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
-    <!-- Add Filter Controls -->
+    <!-- Filtered Data Average Rates Summary - Moved Up -->
+    <div
+      v-if="filteredComparisonData.length > 0 || isLoading || isCalculatingAverages"
+      class="mb-6 space-y-3"
+    >
+      <!-- File 1 Averages -->
+      <div>
+        <!-- File 1 Badge -->
+        <div class="mb-2">
+          <span
+            class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+            >{{ fileName1 }}</span
+          >
+        </div>
+        <!-- File 1 Bento Boxes -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Inter Avg</div>
+            <div class="text-base text-white">
+              <span v-if="isCalculatingAverages">...</span>
+              <span v-else>${{ fullFilteredAverages.file1_inter_avg.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Intra Avg</div>
+            <div class="text-base text-white">
+              <span v-if="isCalculatingAverages">...</span>
+              <span v-else>${{ fullFilteredAverages.file1_intra_avg.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Indeterm Avg</div>
+            <div class="text-base text-white">
+              <span v-if="isCalculatingAverages">...</span>
+              <span v-else>${{ fullFilteredAverages.file1_indeterm_avg.toFixed(6) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File 2 Averages -->
+      <div>
+        <!-- File 2 Badge -->
+        <div class="mb-2">
+          <span
+            class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+            >{{ fileName2 }}</span
+          >
+        </div>
+        <!-- File 2 Bento Boxes -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Inter Avg</div>
+            <div class="text-base text-white">
+              <span v-if="isCalculatingAverages">...</span>
+              <span v-else>${{ fullFilteredAverages.file2_inter_avg.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Intra Avg</div>
+            <div class="text-base text-white">
+              <span v-if="isCalculatingAverages">...</span>
+              <span v-else>${{ fullFilteredAverages.file2_intra_avg.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="bg-gray-800 p-2 rounded-lg text-center">
+            <div class="text-gray-400 text-xs mb-0.5">Indeterm Avg</div>
+            <div class="text-base text-white">
+              <span v-if="isCalculatingAverages">...</span>
+              <span v-else>${{ fullFilteredAverages.file2_indeterm_avg.toFixed(6) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Controls -->
     <div class="mb-4 flex flex-wrap gap-4 items-center">
       <!-- NPANXX Search -->
       <div>
@@ -24,12 +100,16 @@
         <select
           id="state-filter"
           v-model="selectedState"
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 min-w-[200px]"
+          :disabled="availableStates.length === 0 || isLoading || isFiltering"
+          size="10"
         >
-          <option value="">All States</option>
-          <option v-for="state in availableStates" :key="state" :value="state">
-            {{ state }}
-          </option>
+          <option value="">All States/Provinces</option>
+          <optgroup v-for="group in groupedAvailableStates" :key="group.label" :label="group.label">
+            <option v-for="regionCode in group.codes" :key="regionCode" :value="regionCode">
+              {{ getRegionDisplayName(regionCode) }} ({{ regionCode }})
+            </option>
+          </optgroup>
         </select>
       </div>
 
@@ -72,78 +152,6 @@
       </div>
     </div>
 
-    <!-- Filtered Data Average Rates Summary - Grouped by File with Badge Left -->
-    <div v-if="filteredComparisonData.length > 0" class="mb-4 space-y-3">
-      <!-- File 1 Averages -->
-      <div class="flex items-center space-x-4">
-        <!-- File 1 Badge -->
-        <div class="flex-shrink-0">
-          <span
-            class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
-            >{{ fileName1 }}</span
-          >
-        </div>
-        <!-- File 1 Bento Boxes -->
-        <div class="flex-grow grid grid-cols-3 gap-2">
-          <div class="bg-gray-800 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-xs mb-0.5">Inter Avg</div>
-            <div class="text-base text-white">
-              ${{ filteredAverageRates.file1_inter_avg.toFixed(6) }}
-            </div>
-          </div>
-          <div class="bg-gray-800 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-xs mb-0.5">Intra Avg</div>
-            <div class="text-base text-white">
-              ${{ filteredAverageRates.file1_intra_avg.toFixed(6) }}
-            </div>
-          </div>
-          <div class="bg-gray-800 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-xs mb-0.5">Indeterm Avg</div>
-            <div class="text-base text-white">
-              ${{ filteredAverageRates.file1_indeterm_avg.toFixed(6) }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- File 2 Averages -->
-      <div class="flex items-center space-x-4">
-        <!-- File 2 Badge -->
-        <div class="flex-shrink-0">
-          <span
-            class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
-            >{{ fileName2 }}</span
-          >
-        </div>
-        <!-- File 2 Bento Boxes -->
-        <div class="flex-grow grid grid-cols-3 gap-2">
-          <div class="bg-gray-800 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-xs mb-0.5">Inter Avg</div>
-            <div class="text-base text-white">
-              ${{ filteredAverageRates.file2_inter_avg.toFixed(6) }}
-            </div>
-          </div>
-          <div class="bg-gray-800 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-xs mb-0.5">Intra Avg</div>
-            <div class="text-base text-white">
-              ${{ filteredAverageRates.file2_intra_avg.toFixed(6) }}
-            </div>
-          </div>
-          <div class="bg-gray-800 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-xs mb-0.5">Indeterm Avg</div>
-            <div class="text-base text-white">
-              ${{ filteredAverageRates.file2_indeterm_avg.toFixed(6) }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Disclaimer -->
-      <p class="text-xs text-gray-500 text-center mt-2">
-        * Averages calculated based on currently displayed rows.
-      </p>
-    </div>
-
     <div
       v-if="isLoading && filteredComparisonData.length === 0"
       class="text-center text-gray-500 py-10"
@@ -162,7 +170,14 @@
     >
       No matching comparison data found. Ensure reports have been generated or adjust filters.
     </div>
-    <div v-else class="overflow-x-auto">
+    <div v-else class="overflow-x-auto relative">
+      <!-- Loading overlay for filter changes -->
+      <div
+        v-if="isFiltering"
+        class="absolute inset-0 bg-gray-900/70 flex items-center justify-center z-20 rounded-lg"
+      >
+        <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
+      </div>
       <!-- Make the container scrollable -->
       <div ref="scrollContainerRef" class="max-h-[600px] overflow-y-auto">
         <table class="min-w-full divide-y divide-gray-700 text-sm">
@@ -170,8 +185,8 @@
             <tr>
               <!-- Define table headers based on USPricingComparisonRecord -->
               <th class="px-4 py-2 text-left text-gray-300">NPANXX</th>
-              <th class="px-4 py-2 text-left text-gray-300">NPA</th>
-              <th class="px-4 py-2 text-left text-gray-300">NXX</th>
+              <!-- <th class="px-4 py-2 text-left text-gray-300">NPA</th> -->
+              <!-- <th class="px-4 py-2 text-left text-gray-300">NXX</th> -->
               <th class="px-4 py-2 text-left text-gray-300">State</th>
               <th class="px-4 py-2 text-left text-gray-300">Country</th>
               <!-- File 1 Inter -->
@@ -242,8 +257,8 @@
             >
               <!-- Populate table cells -->
               <td class="px-4 py-2 text-gray-400">{{ record.npanxx }}</td>
-              <td class="px-4 py-2 text-gray-400">{{ record.npa }}</td>
-              <td class="px-4 py-2 text-gray-400">{{ record.nxx }}</td>
+              <!-- <td class="px-4 py-2 text-gray-400">{{ record.npa }}</td> -->
+              <!-- <td class="px-4 py-2 text-gray-400">{{ record.nxx }}</td> -->
               <td class="px-4 py-2 text-gray-400">{{ record.stateCode }}</td>
               <td class="px-4 py-2 text-gray-400">{{ record.countryCode }}</td>
               <!-- File 1 Inter Rate -->
@@ -302,8 +317,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, computed } from 'vue';
-import { useIntersectionObserver } from '@vueuse/core';
+import { useIntersectionObserver, useDebounceFn } from '@vueuse/core';
 import { useUsStore } from '@/stores/us-store';
+import { useLergStore } from '@/stores/lerg-store'; // Import lergStore
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { USPricingComparisonRecord } from '@/types/domains/us-types';
@@ -312,10 +328,12 @@ import Papa from 'papaparse'; // Import PapaParse
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Icons
 
 const usStore = useUsStore(); // Instantiate usStore
+const lergStore = useLergStore(); // Instantiate lergStore
 const { getDB } = useDexieDB(); // Only need getDB now
 const filteredComparisonData = ref<USPricingComparisonRecord[]>([]);
 const isLoading = ref<boolean>(false); // Initial loading state
 const isLoadingMore = ref<boolean>(false); // Loading state for subsequent pages
+const isFiltering = ref<boolean>(false); // State for loading during filter changes
 const isExporting = ref<boolean>(false); // Export loading state
 const error = ref<string | null>(null);
 const availableStates = ref<string[]>([]); // For state filter dropdown
@@ -333,6 +351,17 @@ const hasMoreData = ref<boolean>(true);
 // Infinite Scroll Trigger Element
 const loadMoreTriggerRef = ref<HTMLElement | null>(null);
 const scrollContainerRef = ref<HTMLElement | null>(null); // Ref for the scrollable div
+
+// State for accurately calculated averages based on full filtered dataset
+const fullFilteredAverages = ref({
+  file1_inter_avg: 0,
+  file1_intra_avg: 0,
+  file1_indeterm_avg: 0,
+  file2_inter_avg: 0,
+  file2_intra_avg: 0,
+  file2_indeterm_avg: 0,
+});
+const isCalculatingAverages = ref<boolean>(false);
 
 // Use the fixed table name for comparison results
 const COMPARISON_TABLE_NAME = 'comparison_results';
@@ -411,117 +440,54 @@ async function downloadCsv(): Promise<void> {
     let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
     const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
     if (searchTerm.value) {
-      const lowerSearch = searchTerm.value.toLowerCase();
-      currentFilters.push((record: USPricingComparisonRecord) =>
-        record.npanxx.toLowerCase().startsWith(lowerSearch)
-      );
+      const term = searchTerm.value.trim();
+      if (term.length === 6) {
+        // Exact match for 6 digits
+        query = query.where('npanxx').equals(term);
+        console.log(`[USDetailedComparisonTable] Applying Dexie NPANXX filter: equals ${term}`);
+      } else {
+        // StartsWith for shorter terms
+        const lowerSearch = term.toLowerCase();
+        query = query.where('npanxx').startsWithIgnoreCase(lowerSearch);
+        console.log(
+          `[USDetailedComparisonTable] Applying Dexie NPANXX filter: startsWithIgnoreCase ${term}`
+        );
+      }
     }
     if (selectedState.value) {
-      currentFilters.push(
-        (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
+      // Apply state filter *after* potential NPANXX filter if it used an index
+      // If NPANXX filter didn't use an index (e.g., if we used .filter later), apply it here first.
+      query = query.and((record) => record.stateCode === selectedState.value);
+      console.log(
+        `[USDetailedComparisonTable] Applying Dexie State filter: equals ${selectedState.value}`
       );
     }
     if (selectedCheaperInter.value) {
-      currentFilters.push(
-        (record: USPricingComparisonRecord) => record.cheaper_inter === selectedCheaperInter.value
+      // Apply cheaper filter using .and() if other filters applied, otherwise .where()
+      const cheaperFilterFn = (record: USPricingComparisonRecord) =>
+        record.cheaper_inter === selectedCheaperInter.value;
+      query = query.and(cheaperFilterFn);
+      console.log(
+        `[USDetailedComparisonTable] Applying Dexie Cheaper Inter filter: equals ${selectedCheaperInter.value}`
       );
     }
 
-    // Apply filters without pagination
-    let filteredQuery = query;
-    if (currentFilters.length > 0) {
-      filteredQuery = query.filter((record) => currentFilters.every((fn) => fn(record)));
-    }
-
-    // Fetch ALL matching data
-    const allFilteredData = await filteredQuery.toArray();
+    // Apply pagination and fetch data
+    const newData = await query.offset(offset.value).limit(pageSize).toArray();
 
     console.log(
-      `[USDetailedComparisonTable] Fetched ${allFilteredData.length} records for CSV export.`
+      `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`
     );
 
-    if (allFilteredData.length === 0) {
-      console.warn('[USDetailedComparisonTable] No data matching filters found for export.');
-      // Optionally show a user message
-      alert('No data matches the current filters to export.');
-      return; // Exit if no data
-    }
-
-    // 2. Define headers (using dynamic filenames)
-    const headers = [
-      'NPANXX',
-      'NPA',
-      'NXX',
-      'State',
-      'Country',
-      `Inter (${fileName1.value})`,
-      `Inter (${fileName2.value})`,
-      'Diff Inter %',
-      `Intra (${fileName1.value})`,
-      `Intra (${fileName2.value})`,
-      'Diff Intra %',
-      `Indeterm (${fileName1.value})`,
-      `Indeterm (${fileName2.value})`,
-      'Diff Indeterm %',
-      'Cheaper Inter',
-      'Cheaper Intra',
-      'Cheaper Indeterm',
-    ];
-
-    // 3. Map the ALL filtered data for export
-    const dataToExport = allFilteredData.map((record) => ({
-      NPANXX: record.npanxx,
-      NPA: record.npa,
-      NXX: record.nxx,
-      State: record.stateCode,
-      Country: record.countryCode,
-      [`Inter (${fileName1.value})`]: record.file1_inter?.toFixed(6) ?? 'n/a',
-      [`Inter (${fileName2.value})`]: record.file2_inter?.toFixed(6) ?? 'n/a',
-      'Diff Inter %': record.diff_inter_pct ? `${record.diff_inter_pct.toFixed(2)}%` : 'n/a',
-      [`Intra (${fileName1.value})`]: record.file1_intra?.toFixed(6) ?? 'n/a',
-      [`Intra (${fileName2.value})`]: record.file2_intra?.toFixed(6) ?? 'n/a',
-      'Diff Intra %': record.diff_intra_pct ? `${record.diff_intra_pct.toFixed(2)}%` : 'n/a',
-      [`Indeterm (${fileName1.value})`]: record.file1_indeterm?.toFixed(6) ?? 'n/a',
-      [`Indeterm (${fileName2.value})`]: record.file2_indeterm?.toFixed(6) ?? 'n/a',
-      'Diff Indeterm %': record.diff_indeterm_pct
-        ? `${record.diff_indeterm_pct.toFixed(2)}%`
-        : 'n/a',
-      'Cheaper Inter': formatCheaperFile(record.cheaper_inter),
-      'Cheaper Intra': formatCheaperFile(record.cheaper_intra),
-      'Cheaper Indeterm': formatCheaperFile(record.cheaper_indeterm),
-    }));
-
-    // 4. Generate CSV string
-    const csv = Papa.unparse(
-      {
-        fields: headers,
-        data: dataToExport.map((row) => headers.map((header) => row[header as keyof typeof row])),
-      },
-      {
-        header: true,
-        quotes: true,
-      }
-    );
-
-    // 5. Trigger Download
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `us-compare-${timestamp}.csv`;
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (csvError: any) {
-    console.error('[USDetailedComparisonTable] Error generating or downloading CSV:', csvError);
-    error.value = csvError.message || 'Failed to generate CSV file.'; // Display error to user
+    filteredComparisonData.value.push(...newData); // Append new data
+    offset.value += newData.length; // Increment offset
+    hasMoreData.value = newData.length === pageSize; // Check if there might be more data
+  } catch (err: any) {
+    console.error('Error loading more comparison data:', err);
+    error.value = err.message || 'Failed to load data';
+    hasMoreData.value = false; // Stop trying to load more on error
   } finally {
-    isExporting.value = false; // Reset loading state
+    isLoadingMore.value = false;
   }
 }
 
@@ -550,18 +516,122 @@ async function initializeDB() {
   return true; // Already initialized
 }
 
+// Define US States and Canadian Provinces for sorting
+const US_STATES = [
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'FL',
+  'GA',
+  'HI',
+  'ID',
+  'IL',
+  'IN',
+  'IA',
+  'KS',
+  'KY',
+  'LA',
+  'ME',
+  'MD',
+  'MA',
+  'MI',
+  'MN',
+  'MS',
+  'MO',
+  'MT',
+  'NE',
+  'NV',
+  'NH',
+  'NJ',
+  'NM',
+  'NY',
+  'NC',
+  'ND',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VT',
+  'VA',
+  'WA',
+  'WV',
+  'WI',
+  'WY',
+  'DC',
+];
+const CA_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
+
 async function fetchUniqueStates() {
   if (!(await initializeDB()) || !dbInstance) return; // Ensure DB is ready
 
   try {
-    const states = await dbInstance.table(COMPARISON_TABLE_NAME).orderBy('stateCode').uniqueKeys();
-    availableStates.value = states.filter(Boolean).sort() as string[]; // Filter out null/empty and sort
-    console.log('[USDetailedComparisonTable] Fetched unique states:', availableStates.value);
+    const uniqueRegionCodes = (await dbInstance
+      .table(COMPARISON_TABLE_NAME)
+      .orderBy('stateCode')
+      .uniqueKeys()) as string[];
+
+    // Custom sort: US States first, then Canadian Provinces, then others (alphabetical within groups)
+    availableStates.value = uniqueRegionCodes
+      .filter(Boolean) // Remove null/undefined/empty strings
+      .sort((a, b) => {
+        const aIsUS = US_STATES.includes(a);
+        const bIsUS = US_STATES.includes(b);
+        const aIsCA = CA_PROVINCES.includes(a);
+        const bIsCA = CA_PROVINCES.includes(b);
+
+        if (aIsUS && !bIsUS) return -1; // US comes before non-US
+        if (!aIsUS && bIsUS) return 1; // non-US comes after US
+
+        if (aIsUS && bIsUS) return a.localeCompare(b); // Sort US states alphabetically
+
+        if (aIsCA && !bIsCA) return -1; // CA comes before others (non-US, non-CA)
+        if (!aIsCA && bIsCA) return 1; // Others come after CA
+
+        if (aIsCA && bIsCA) return a.localeCompare(b); // Sort CA provinces alphabetically
+
+        // Sort any remaining items alphabetically
+        return a.localeCompare(b);
+      });
+
+    console.log(
+      '[USDetailedComparisonTable] Fetched and sorted unique states:',
+      availableStates.value
+    );
   } catch (err: any) {
     console.error('Error fetching unique states:', err);
-    // Non-critical error, don't block UI
+    availableStates.value = []; // Clear on error
+    // Non-critical error, don't block UI, but maybe show a message?
+    error.value = 'Could not load state filter options.';
   }
 }
+
+// Computed property to structure states for the dropdown with optgroup
+const groupedAvailableStates = computed(() => {
+  const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
+  const caOptions = availableStates.value.filter((code) => CA_PROVINCES.includes(code));
+  // Add otherOptions if needed: const otherOptions = availableStates.value.filter(code => !US_STATES.includes(code) && !CA_PROVINCES.includes(code));
+
+  const groups = [];
+  if (usOptions.length > 0) {
+    groups.push({ label: 'United States', codes: usOptions });
+  }
+  if (caOptions.length > 0) {
+    groups.push({ label: 'Canada', codes: caOptions });
+  }
+  // if (otherOptions.length > 0) { groups.push({ label: 'Other', codes: otherOptions }); }
+  return groups;
+});
 
 async function loadMoreData() {
   if (isLoadingMore.value || !hasMoreData.value) return; // Don't load if already loading or no more data
@@ -580,10 +650,17 @@ async function loadMoreData() {
     // Apply filters
     const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
     if (searchTerm.value) {
-      const lowerSearch = searchTerm.value.toLowerCase();
-      currentFilters.push((record: USPricingComparisonRecord) =>
-        record.npanxx.toLowerCase().startsWith(lowerSearch)
-      );
+      const term = searchTerm.value.trim();
+      if (term.length === 6) {
+        // Exact match for 6 digits
+        currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
+      } else {
+        // StartsWith for shorter terms
+        const lowerSearch = term.toLowerCase();
+        currentFilters.push((record: USPricingComparisonRecord) =>
+          record.npanxx.toLowerCase().startsWith(lowerSearch)
+        );
+      }
     }
     if (selectedState.value) {
       currentFilters.push(
@@ -591,9 +668,9 @@ async function loadMoreData() {
       );
     }
     if (selectedCheaperInter.value) {
-      currentFilters.push(
-        (record: USPricingComparisonRecord) => record.cheaper_inter === selectedCheaperInter.value
-      );
+      const cheaperFilterFn = (record: USPricingComparisonRecord) =>
+        record.cheaper_inter === selectedCheaperInter.value;
+      currentFilters.push(cheaperFilterFn);
     }
 
     // Explicitly type as Collection or apply chain differently
@@ -616,7 +693,13 @@ async function loadMoreData() {
       `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`
     );
 
-    filteredComparisonData.value.push(...newData); // Append new data
+    // Replace data if it's the first page load (offset 0), otherwise append
+    if (offset.value === 0) {
+      filteredComparisonData.value = newData;
+    } else {
+      filteredComparisonData.value.push(...newData); // Append new data
+    }
+
     offset.value += newData.length; // Increment offset
     hasMoreData.value = newData.length === pageSize; // Check if there might be more data
   } catch (err: any) {
@@ -628,22 +711,138 @@ async function loadMoreData() {
   }
 }
 
+// New function to calculate averages based on ALL filtered data
+async function calculateFullFilteredAverages() {
+  if (!(await initializeDB()) || !dbInstance) return; // Ensure DB is ready
+
+  isCalculatingAverages.value = true;
+  console.log('[USDetailedComparisonTable] Calculating averages for ALL filtered data...');
+
+  const totals = {
+    file1_inter: { sum: 0, count: 0 },
+    file1_intra: { sum: 0, count: 0 },
+    file1_indeterm: { sum: 0, count: 0 },
+    file2_inter: { sum: 0, count: 0 },
+    file2_intra: { sum: 0, count: 0 },
+    file2_indeterm: { sum: 0, count: 0 },
+  };
+
+  try {
+    let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+
+    // Apply filters same as in loadMoreData
+    const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
+    if (searchTerm.value) {
+      const term = searchTerm.value.trim();
+      if (term.length === 6) {
+        // Exact match for 6 digits
+        currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
+      } else {
+        // StartsWith for shorter terms
+        const lowerSearch = term.toLowerCase();
+        currentFilters.push((record: USPricingComparisonRecord) =>
+          record.npanxx.toLowerCase().startsWith(lowerSearch)
+        );
+      }
+    }
+    if (selectedState.value) {
+      currentFilters.push(
+        (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
+      );
+    }
+    if (selectedCheaperInter.value) {
+      const cheaperFilterFn = (record: USPricingComparisonRecord) =>
+        record.cheaper_inter === selectedCheaperInter.value;
+      currentFilters.push(cheaperFilterFn);
+    }
+
+    let finalQueryChain = query;
+    if (currentFilters.length > 0) {
+      finalQueryChain = query.filter((record) => currentFilters.every((fn) => fn(record)));
+    }
+
+    // Use .each for potentially large datasets
+    await finalQueryChain.each((record) => {
+      const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
+        if (value !== null && value !== undefined && !isNaN(value)) {
+          totals[key].sum += value;
+          totals[key].count++;
+        }
+      };
+      addToTotals('file1_inter', record.file1_inter);
+      addToTotals('file1_intra', record.file1_intra);
+      addToTotals('file1_indeterm', record.file1_indeterm);
+      addToTotals('file2_inter', record.file2_inter);
+      addToTotals('file2_intra', record.file2_intra);
+      addToTotals('file2_indeterm', record.file2_indeterm);
+    });
+
+    // Helper to calculate average
+    const calculateAvg = (sum: number, count: number): number => {
+      return count > 0 ? sum / count : 0;
+    };
+
+    fullFilteredAverages.value = {
+      file1_inter_avg: calculateAvg(totals.file1_inter.sum, totals.file1_inter.count),
+      file1_intra_avg: calculateAvg(totals.file1_intra.sum, totals.file1_intra.count),
+      file1_indeterm_avg: calculateAvg(totals.file1_indeterm.sum, totals.file1_indeterm.count),
+      file2_inter_avg: calculateAvg(totals.file2_inter.sum, totals.file2_inter.count),
+      file2_intra_avg: calculateAvg(totals.file2_intra.sum, totals.file2_intra.count),
+      file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
+    };
+
+    console.log(
+      '[USDetailedComparisonTable] Full filtered averages calculated:',
+      fullFilteredAverages.value
+    );
+  } catch (err: any) {
+    console.error('[USDetailedComparisonTable] Error calculating full filtered averages:', err);
+    // Reset averages on error
+    fullFilteredAverages.value = {
+      file1_inter_avg: 0,
+      file1_intra_avg: 0,
+      file1_indeterm_avg: 0,
+      file2_inter_avg: 0,
+      file2_intra_avg: 0,
+      file2_indeterm_avg: 0,
+    };
+  } finally {
+    isCalculatingAverages.value = false;
+  }
+}
+
 // Function to reset and load initial data (used on mount and filter changes)
 async function resetAndFetchData() {
-  isLoading.value = true;
+  // Set loading states
+  isLoading.value = true; // Indicate initial load phase for this filter set
+  isFiltering.value = true; // Indicate filters are being applied
+
   // Reset scroll position to top when filters change
   if (scrollContainerRef.value) {
     scrollContainerRef.value.scrollTop = 0;
   }
-  // Reset state before fetching
-  filteredComparisonData.value = [];
+  // Reset state before fetching - DO NOT CLEAR filteredComparisonData here
   offset.value = 0;
   hasMoreData.value = true; // Assume there's data until proven otherwise
   error.value = null;
   isLoadingMore.value = false; // Ensure this is reset
 
-  await loadMoreData(); // Load the first page
-  isLoading.value = false;
+  // Trigger both table data fetch and full average calculation
+  // We pass 0 for offset to loadMoreData to signal it should replace the data
+  const dataFetchPromise = loadMoreData(); // Load the first page of table data
+  const averageCalcPromise = calculateFullFilteredAverages(); // Calculate averages for all filtered data
+
+  try {
+    // Wait for both to complete (or handle errors appropriately)
+    await Promise.all([dataFetchPromise, averageCalcPromise]);
+  } catch (err) {
+    // Error handling is done within the individual functions, but catch here just in case
+    console.error('[USDetailedComparisonTable] Error during resetAndFetchData:', err);
+  } finally {
+    // Reset loading states after fetching is complete
+    isLoading.value = false;
+    isFiltering.value = false;
+  }
 }
 
 // --- Lifecycle and Watchers ---
@@ -655,9 +854,14 @@ onMounted(async () => {
   isLoading.value = false;
 });
 
-// Watch for filter changes and reload data
-watch([searchTerm, selectedState, selectedCheaperInter], () => {
+// Watch for filter changes and reload data (DEBOUNCED)
+const debouncedResetAndFetch = useDebounceFn(() => {
   resetAndFetchData();
+}, 300); // 300ms debounce delay
+
+watch([searchTerm, selectedState, selectedCheaperInter], () => {
+  // Call the debounced function instead of the original
+  debouncedResetAndFetch();
 });
 
 // Setup Intersection Observer for infinite scrolling
@@ -713,6 +917,20 @@ function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
   } else {
     return 'N/A'; // Handle undefined/null case
   }
+}
+
+// Helper function to get display name for state or province
+function getRegionDisplayName(code: string): string {
+  if (!code) return '';
+  // Check US states first
+  const stateName = lergStore.getStateNameByCode(code);
+  if (stateName !== code) {
+    // getStateNameByCode returns the code itself if not found
+    return stateName;
+  }
+  // Check Canadian provinces if not found in US states
+  const provinceName = lergStore.getProvinceNameByCode(code);
+  return provinceName; // Returns the code itself if not found here either
 }
 </script>
 
