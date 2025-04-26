@@ -32,7 +32,7 @@ The US Rate Sheet feature allows users to upload, view, analyze, and manage US d
   - **Rate Averages:** Displays the average Interstate, Intrastate, and Indeterminate rates calculated across the dataset. These averages dynamically update based on the selected state/province filter, using an efficient hybrid caching strategy.
   - **Table Controls:** Provides tools to interact with the displayed data:
     - **NPANXX Search:** Filters the table based on partial NPANXX input (case-insensitive startswith search).
-    - **State/Province Filter:** Filters the table based on a selected state or province. The dropdown is populated with unique `stateCode` values found in the Dexie data.
+    - **State/Province Filter:** Filters the table based on a selected state or province. The dropdown is populated with unique `stateCode` values found in the Dexie data. (Refactored to use a custom, scrollable Headless UI Listbox for improved UX).
     - **Clear Data:** Allows users to permanently remove all US Rate Sheet data from the Dexie database.
     - **Export All:** Exports the _currently filtered_ data shown in the table to a new CSV file.
   - **Data Display:**
