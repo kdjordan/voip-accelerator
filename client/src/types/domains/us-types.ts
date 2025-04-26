@@ -320,12 +320,13 @@ export interface USRateSheetEntry {
   npa: string;
   nxx: string;
   npanxx: string; // Derived from npa + nxx
+  stateCode: string; // Added state code - derived from LERG
   interRate: number;
   intraRate: number;
   ijRate: number; // Can be derived from inter/intra based on user selection
   // Optional metadata/comparison fields
   effectiveDate?: string;
-  changeCode?: ChangeCode;
+
   // TBD: selectedRate and conflict might need rework for multiple rate types
   conflict?: boolean;
 }

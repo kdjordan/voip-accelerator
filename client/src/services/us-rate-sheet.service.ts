@@ -6,6 +6,7 @@ import { DBName } from '@/types/app-types';
 import type { DBNameType } from '@/types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
 import Dexie from 'dexie';
+import { useLergStore } from '@/stores/lerg-store';
 
 // Define the structure for column mapping indices
 interface USRateSheetColumnMapping {
@@ -35,6 +36,7 @@ export class USRateSheetService {
     options?: { sourceFile?: string; replaceExisting?: boolean }
   ) => Promise<void>;
   private deleteDatabase: (dbName: DBNameType) => Promise<void>;
+  private lergStore: ReturnType<typeof useLergStore>;
 
   constructor() {
     // Get required functions from the composable
@@ -43,7 +45,11 @@ export class USRateSheetService {
     this.loadFromDexieDB = loadFromDexieDB;
     this.storeInDexieDB = storeInDexieDB;
     this.deleteDatabase = deleteDatabase;
+    this.lergStore = useLergStore();
     console.log('USRateSheetService initialized');
+
+    // Ensure LERG data is loaded before proceeding (optional but recommended)
+    // Moved check to processFile as LERG might load after constructor
 
     // Only initialize the database but don't delete it automatically
     this.initializeDatabase().catch((error) => {
@@ -148,6 +154,16 @@ export class USRateSheetService {
   ): Promise<{ recordCount: number; invalidRows: InvalidUSRateSheetRow[] }> {
     console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
 
+    // --- Add Guard: Ensure LERG data is loaded --- START ---
+    if (!this.lergStore.isLoaded) {
+      const errorMsg =
+        'LERG data is not loaded. Cannot process rate sheet without state information.';
+      console.error(`[USRateSheetService] ${errorMsg}`);
+      // Reject the promise to stop processing and inform the caller
+      return Promise.reject(new Error(errorMsg));
+    }
+    // --- Add Guard: Ensure LERG data is loaded --- END ---
+
     // Calculate effective date (7 days from now)
     const effectiveDate = new Date();
     effectiveDate.setDate(effectiveDate.getDate() + 7);
@@ -161,17 +177,17 @@ export class USRateSheetService {
         await this.deleteDatabase(this.dbName);
         console.log(`[USRateSheetService] Deleted database ${this.dbName} to start fresh`);
 
-        // Initialize a new database instance
+        // Initialize a new database instance - this should create the tables based on the schema in useDexieDB
         await this.initializeDatabase(); // This opens the DB
         console.log(`[USRateSheetService] Initialized new database ${this.dbName}`);
 
         // Get DB instance AFTER initialization
-        const db = await this.getDB(this.dbName);
+        // const db = await this.getDB(this.dbName); // No longer needed just for addStore
 
-        // Ensure the 'entries' table exists BEFORE starting parsing
-        // This prevents repeated schema upgrades during batch processing
-        await db.addStore('entries');
-        console.log(`[USRateSheetService] Ensured 'entries' store exists in ${this.dbName}.`);
+        // REMOVED: Ensure the 'entries' table exists BEFORE starting parsing
+        // The initializeDatabase call handles this based on the defined schema
+        // await db.addStore('entries');
+        // console.log(`[USRateSheetService] Ensured 'entries' store exists in ${this.dbName}.`);
       } catch (dbPrepError) {
         console.error('[USRateSheetService] Critical error preparing database:', dbPrepError);
         // Reject the main promise if DB preparation fails
@@ -289,6 +305,7 @@ export class USRateSheetService {
     let interRate: number | null = null;
     let intraRate: number | null = null;
     let ijRate: number | null = null;
+    let stateCode: string | null = null; // Initialize stateCode to null
     let errorReason = '';
 
     try {
@@ -331,7 +348,27 @@ export class USRateSheetService {
         errorReason = 'Missing required NPA/NXX or NPANXX mapping.';
       }
 
-      // --- Extract and Validate Rates (only if NPA/NXX was valid so far) ---
+      // --- Get State Code from LERG (if row is valid so far) ---
+      if (isValidRow && npa) {
+        try {
+          const location = this.lergStore.getLocationByNPA(npa);
+          if (location?.region) {
+            // Accept any region code found
+            stateCode = location.region;
+          } else {
+            // Handle cases where NPA is not found
+            isValidRow = false; // Make row invalid if no location found
+            errorReason = `NPA ${npa} not found in LERG data.`;
+            console.warn(`Row ${rowIndex}: ${errorReason}`);
+          }
+        } catch (lergError) {
+          isValidRow = false; // Make row invalid on lookup error
+          errorReason = `LERG lookup error for NPA ${npa}.`;
+          console.error(`Row ${rowIndex}: Error looking up NPA ${npa} in LERG store:`, lergError);
+        }
+      }
+
+      // --- Extract and Validate Rates (only if row is valid so far) ---
       if (isValidRow) {
         const parseRate = (rateStr: string | undefined): number | null => {
           if (rateStr === undefined || rateStr === null || rateStr.trim() === '') {
@@ -398,17 +435,26 @@ export class USRateSheetService {
       }
 
       // Return the data if valid, otherwise add to invalidRows
-      if (isValidRow && interRate !== null && intraRate !== null && ijRate !== null) {
+      if (
+        isValidRow &&
+        interRate !== null &&
+        intraRate !== null &&
+        ijRate !== null &&
+        stateCode !== null
+      ) {
         return {
           npa,
           nxx,
           npanxx,
+          stateCode,
           interRate,
           intraRate,
           ijRate,
           effectiveDate, // Assign the calculated effective date
         };
       } else if (!isValidRow) {
+        // Ensure errorReason is set if validation failed earlier but wasn't caught
+        if (!errorReason) errorReason = 'Unknown validation error';
         invalidRows.push({ rowIndex, rowData: row, reason: errorReason });
       }
     } catch (error) {

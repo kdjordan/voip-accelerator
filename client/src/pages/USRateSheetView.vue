@@ -140,13 +140,6 @@
               </template>
             </div>
           </div>
-          <!-- Display success message -->
-          <div
-            v-if="rfUploadStatus?.type === 'success'"
-            class="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md text-sm text-green-400"
-          >
-            {{ rfUploadStatus.message }}
-          </div>
         </div>
 
         <!-- Data Table Section (MOVED INSIDE p-6 container) -->
@@ -348,6 +341,9 @@ async function handleModalConfirm(
   console.log('[handleModalConfirm] Indeterminate Definition:', indeterminateDefinition);
   console.log('[handleModalConfirm] Start Line:', startLine.value);
 
+  // --- Hide modal immediately upon confirmation ---
+  showPreviewModal.value = false;
+
   try {
     const fileToProcess = selectedFile.value;
 
@@ -417,7 +413,6 @@ async function handleModalConfirm(
     console.log('[handleModalConfirm] handleUploadSuccess completed.');
 
     selectedFile.value = null; // Clear selected file after processing
-    showPreviewModal.value = false; // Close modal on success
     rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
   } catch (error: any) {
     console.error('[handleModalConfirm] Error processing file:', error);
@@ -425,7 +420,6 @@ async function handleModalConfirm(
     // Clear potentially inconsistent data on error
     await store.clearUsRateSheetData();
     selectedFile.value = null; // Clear selected file on error
-    showPreviewModal.value = false; // Close modal on error
     rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
   } finally {
     console.log('[handleModalConfirm] Finishing final block...');
