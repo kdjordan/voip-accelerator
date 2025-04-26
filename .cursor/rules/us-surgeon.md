@@ -1,179 +1,70 @@
-# US Rate Sheet Surgeon: Refactor & Implementation Plan
+# US Rate Sheet Feature Summary
 
-## Goal
-
-Create a robust US Rate Sheet management feature, distinct from the AZ Rate Sheet view (`AZRateSheetView.vue` / `AZRateSheetTable.vue`). This involves:
-
-1.  **Refactoring:** Renaming existing AZ components for clarity (Done).
-2.  **Implementing US View:** Creating new US-specific components (Done).
-3.  **Integrating DexieJS (US):** Using DexieJS for storing and managing US Rate Sheet data with US-specific logic (no discrepancies/change codes, single optional effective date). Uses `us-rate-sheet-store.ts`.
-4.  **Integrating LERG:** Using `lergStore` to derive State information for display and filtering.
-5.  **Integrating DexieJS (AZ):** DEFERRED - Refactoring the AZ Rate Sheet components to use DexieJS, maintaining its existing logic.
+This document summarizes the functionality provided by the `USRateSheetView.vue` and `USRateSheetTable.vue` components for managing US Rate Sheet data.
 
 ---
 
-## Implementation Phases & Checklist
+## Core Functionality
 
-### Phase 1: Refactor Existing AZ Rate Sheet Components (DONE)
+The US Rate Sheet feature allows users to upload, view, analyze, and manage US domestic rate sheet data.
 
-- [x] **Rename View:** Rename `client/src/pages/RateSheetView.vue` to `client/src/pages/AZRateSheetView.vue`.
-- [x] **Rename & Move Table:** Rename `client/src/components/rate-sheet/RateSheetTable.vue` to `client/src/components/rate-sheet/az/AZRateSheetTable.vue`. Create the `az` subdirectory if it doesn't exist.
-- [x] **Update Imports:** Update all imports referencing the old component names/paths (e.g., in router, `AZRateSheetView.vue`).
-- [x] **Verify AZ Functionality:** Briefly test the AZ Rate Sheet feature to ensure the renaming didn't break anything (it still functions using Pinia/localStorage).
+### Data Upload & Processing (`USRateSheetView.vue`)
 
-### Phase 2: Create US Rate Sheet Component Foundation (DONE)
+- **File Upload:** Users can upload US Rate Sheet data via CSV files using either drag-and-drop or a file selection dialog.
+- **Preview & Mapping:** A preview modal (`PreviewModal.vue`) appears after file selection, showing the first few rows of the CSV.
+  - Users map their CSV columns to required roles: NPANXX (or NPA + NXX), Interstate Rate, Intrastate Rate. Indeterminate Rate is optional.
+  - Users specify the starting line number for data processing.
+- **Processing:** Upon confirmation, the `usRateSheetService` processes the CSV:
+  - Reads the data row by row.
+  - Validates required fields.
+  - Standardizes NPANXX format.
+  - **Integrates LERG:** Uses the `lergStore` to look up the `stateCode` based on the NPA of each row. Rows with NPAs not found in LERG are marked invalid (though currently not displayed).
+  - Stores valid, standardized data (`USRateSheetEntry`) into the `us_rate_sheet_db` DexieJS database in a table named `entries`. The `stateCode` derived from LERG is stored alongside the rate data.
+- **Error Handling:** Displays errors related to file type, parsing, or processing.
 
-- [x] **Create US View:** Create `client/src/pages/USRateSheetView.vue` by copying and adapting the refactored `AZRateSheetView.vue`.
-- [x] **Create US Table:** Create `client/src/components/rate-sheet/us/USRateSheetTable.vue` by copying and adapting the refactored `AZRateSheetTable.vue`. Create the `us` subdirectory.
-- [x] **Update US View:** Modify `USRateSheetView.vue` to import and use `USRateSheetTable.vue`.
-- [x] **Add Routing:** Add a new route for `/us-rate-sheet` (or similar) pointing to `USRateSheetView.vue`.
-- [x] **Update Navigation:** Add a link in the UI (e.g., sidebar) to navigate to the new US Rate Sheet page.
+### Data Display & Interaction (`USRateSheetView.vue` & `USRateSheetTable.vue`)
 
-### Phase 3: Implement US Rate Sheet Logic (DexieJS Integration)
-
-- [x] **Define US `USRateSheetEntry` Interface:** Defined in `us-types.ts`.
-- [x] **Define US DexieJS Storage:** Added `DBName.US_RATE_SHEET` ('us_rate_sheet_db') and schema using fixed table `'entries'`.
-- [x] **Update Dexie Schema (`app-types.ts`):** Added `stateCode` as an index to the `entries` table definition for `us_rate_sheet_db`.
-- [x] **Define US Column Mappings:** Uses `US_COLUMN_ROLE_OPTIONS`.
-- [x] \*\*Adapt Upload/Processing (`USRateSheetView.vue`):
-  - [x] Use `PreviewModal` with `US_COLUMN_ROLE_OPTIONS`.
-  - [x] Pass `:source="'US'"` to `PreviewModal`.
-  - [x] **Modify `handleModalConfirm` Logic:**
-    - [x] Confirmed it calls the service correctly.
-    - [x] `effectiveDate` is optional.
-    - [x] Correctly interpret `undefined` `indeterminateDefinition` as `'column'`.
-    - [x] Keep `store.clearUsRateSheetData()` in `catch` block.
-    - [x] Hide modal immediately on confirm.
-  - [x] Refactored to use `useDragDrop` composable.
-  - [x] Corrected `Papa.parse` logic for modal preview.
-  - [x] Added/refined logging.
-  - [x] **Add Upload Animation:** Implemented upload animation matching AZ Rate Sheet.
-  - [ ] **Implement Invalid Rows Display:** Add UI (collapsible section) similar to `AZRateSheetView.vue` to show invalid rows from the store.
-  - [ ] **Implement Total Records Display:** Add UI element to display the reactive total records count from the store.
-- [x] \*\*Create/Adapt Service (`usRateSheetService`):
-  - [x] `processFile` method handles parsing, validation, standardization.
-  - [x] Uses database `'us_rate_sheet_db'` and table name `'entries'`.
-  - [x] Added 7-digit NPANXX / 4-digit NPA handling.
-  - [x] `getData`, `getTableCount`, `clearData` methods added and corrected.
-  - [x] `processFile` handles optional `effectiveDate` and ensures table exists before parsing.
-  - [x] **Integrate LERG:** Injected `lergStore`, added logic in `processRow` to look up `stateCode` using `npa` and **save it to Dexie record**. Row marked invalid if NPA not found in LERG.
-  - [x] **Add LERG Guard:** Added check to `processFile` to prevent execution if `lergStore` is not loaded.
-  - [x] **Performance Optimizations:**
-    - [x] Implemented batch processing for large datasets.
-    - [x] Added progress indicators during processing.
-    - [x] Optimized memory usage by processing one row at a time.
-    - [x] Refined error handling to ensure processing continues even if some rows fail.
-    - [x] Fixed schema upgrade race conditions by ensuring store creation happens once.
-  - [x] **Modify `processFile` return value:** Return `{ recordCount: number; invalidRows: InvalidUsRow[] }`.
-- [ ] \*\*Create & Update `us-rate-sheet-store.ts`:
-  - [ ] **Add State:** Add `totalRecordsProcessed: number | null` and `invalidRows: InvalidUsRow[]`.
-  - [ ] **Update `handleUploadSuccess`:** Store `totalRecordsProcessed` and `invalidRows` returned from the service.
-  - [ ] **Add Getters:** Add `getTotalRecordsProcessed`, `getInvalidRows`, `hasInvalidRows`.
-- [x] \*\*Integrate `us-rate-sheet-store.ts` into `USRateSheetView.vue`:
-  - [x] Import and use store.
-  - [x] Call `store.loadRateSheetData()` (or initial check) in `onMounted`.
-  - [x] Updated `handleModalConfirm` to call `store.handleUploadSuccess`.
-  - [x] Updated `handleClearData` to call `store.clearUsRateSheetData`.
-  - [x] Use store state/getters for UI (loading, error, has data).
-  - [x] **Layout Adjustments:** Constrained table width and added top margin.
-  - [ ] **Connect UI:** Bind display elements for total records and invalid rows to store getters.
-- [x] \*\*Adapt Table Logic (`USRateSheetTable.vue` - DexieJS Focus):
-  - [x] **Data Fetching:** Fetch initial/paginated data directly from Dexie `entries` table.
-  - [x] **Implement Infinite Scrolling:** Use `useIntersectionObserver` and `loadMoreData` querying Dexie.
-  - [x] **Filtering/Searching:** Implemented Dexie `where('stateCode').equals(...)` for state/province and `where('npanxx').startsWithIgnoreCase(...)` for NPANXX search.
-  - [x] **Display Data:** Displays `USRateSheetEntry` data. State/Country derived via LERG lookup on NPA in the template.
-  - [x] **Remove Discrepancy/Conflict UI:** Removed AZ-specific UI and logic.
-  - [x] **Export Data:** Modified `handleExport` to query Dexie for filtered data.
-  - [x] **Clear Data Interaction:** Button calls store clear method.
-  - [x] **Styling:** Applied consistent styling.
-
-### Phase 3.1: Add State/Province Filtering to US Rate Sheet Table (In Progress)
-
-- [x] **Integrate LERG Data (`USRateSheetTable.vue`):**
-  - [x] Import `useLergStore`.
-  - [x] Ensure LERG data is available for display lookups.
-- [x] \*\*Add State Filter UI (`USRateSheetTable.vue`):
-  - [x] Add a `<select>` dropdown for state/province filtering.
-  - [x] **Populate Dropdown:** Modified `fetchUniqueStates` to query Dexie `entries` table for distinct `stateCode` values.
-  - [x] Add a `ref` (`selectedState`) to store the chosen state/province filter.
-- [x] \*\*Implement State Filtering Logic (`USRateSheetTable.vue`):
-  - [x] Modified `loadMoreData` to filter Dexie query directly using `where('stateCode').equals(selectedState.value)`.
-  - [x] Watch `selectedState` to trigger `resetPaginationAndLoad`.
-- [ ] **Current Issue:** After adding `stateCode` index to schema in `app-types.ts`, restoring LERG lookup/storage in `usRateSheetService`, and updating table logic to use `stateCode`, Dexie throws `SchemaError: KeyPath stateCode on object store entries is not indexed`. This indicates the Dexie database version was not incremented to apply the schema changes.
-
-### Phase 4: Refactor AZ Rate Sheet Storage (DexieJS Integration) - DEFERRED
-
-- [x] **Rename Store:** Renamed `rate-sheet-store.ts` to `az-rate-sheet-store.ts`. Updated ID to `azRateSheet` and function to `useAzRateSheetStore`.
-- [x] **Define AZ DexieJS Storage:**
-  - Renamed `DBName.RATE_SHEET` to `DBName.AZ_RATE_SHEET` ('az_rate_sheet_db') in `app-types.ts`.
-  - Updated schema for `az_rate_sheet_db` in `DBSchemas` (`app-types.ts`) based on `AZRateSheetEntry` (includes `effectiveDate`, potential conflict fields).
-- [ ] **Update AZ Store Imports/Usages:** Search codebase and update imports/usages of the renamed store.
-- [ ] **Define AZ `AZRateSheetEntry` Interface:**
-  - Confirm `AZRateSheetEntry` in `client/src/types/domains/rate-sheet-types.ts` has necessary fields (id, name, prefix, rate, effectiveDate, changeCode, conflict, etc.).
-- [ ] **Adapt Upload/Processing (`AZRateSheetView.vue`):**
-  - Modify the service (`azRateSheetService`) to:
-    - Standardize data into `AZRateSheetEntry` objects.
-    - Store standardized data in the `az_rate_sheet` DexieJS table within `az_rate_sheet_db`.
-- [ ] **Refactor `az-rate-sheet-store.ts`:**
-  - Remove localStorage logic (`saveToLocalStorage`, `loadFromLocalStorage`, etc.).
-  - Remove state variables holding the full dataset (`originalData`, `groupedData`).
-  - Keep/adapt state for metadata (e.g., `hasStoredData`, `tableName='entries'` (or similar), `discrepancyCount`, `optionalFields`, invalid row info if needed for display).
-  - Modify actions/getters to interact with DexieJS via the service (e.g., fetch `discrepancyCount` via query, check table existence).
-- [ ] \*\*Adapt Table Logic (`AZRateSheetTable.vue` - DexieJS Focus):
-  - **Refactor ALL data operations to use DexieJS:**
-    - Data Fetching (including grouping by destination). _(Service layer needed)_. Needs to fetch from `az_rate_sheet_db`.
-    - Filtering/Searching (Dexie queries via service).
-    - **Conflict Resolution:** Retain `handleBulkUpdate`, `saveRateSelection` logic but adapt to perform DexieJS updates against the table (via service).
-    - **Effective Date Setting (Per-Row):** Retain UI. Adapt `applyEffectiveDateSettings` to use the `effective-date-updater.worker.ts`, ensuring the worker interacts with the DexieJS table (via service).
-    - Export Data (query DexieJS via service).
-    - Clear Data (delete DexieJS table via service, reset store state).
+- **Dashboard Stats (`USRateSheetView.vue`):**
+  - **Storage Status:** Indicates if US Rate Sheet data is present in Dexie.
+  - **Total Records Processed:** Shows the count of records successfully processed from the last upload.
+  - **Effective Date:** Displays the effective date found in the data (if any) and allows users to apply a new global effective date to all records via a date picker. The `usRateSheetService` handles updating all Dexie records.
+- **Data Table (`USRateSheetTable.vue`):**
+  - **Rate Averages:** Displays the average Interstate, Intrastate, and Indeterminate rates calculated across the dataset. These averages dynamically update based on the selected state/province filter, using an efficient hybrid caching strategy.
+  - **Table Controls:** Provides tools to interact with the displayed data:
+    - **NPANXX Search:** Filters the table based on partial NPANXX input (case-insensitive startswith search).
+    - **State/Province Filter:** Filters the table based on a selected state or province. The dropdown is populated with unique `stateCode` values found in the Dexie data.
+    - **Clear Data:** Allows users to permanently remove all US Rate Sheet data from the Dexie database.
+    - **Export All:** Exports the _currently filtered_ data shown in the table to a new CSV file.
+  - **Data Display:**
+    - Shows paginated/infinitely scrolled rate sheet entries from Dexie.
+    - Displays columns: NPANXX, State, Country, Interstate Rate, Intrastate Rate, Indeterminate Rate, Effective Date.
+    - **LERG Integration:** Derives the display values for State and Country by looking up the NPA from the `lergStore`.
+    - Uses efficient DexieJS queries for filtering and pagination.
 
 ---
 
-## ✅ Resolved Questions
+## Next Steps: Rate Adjustment Feature
 
-1.  **Effective Date Requirement:** **Optional** for US Rate Sheets.
-2.  **Total Records Display:** Count comes from service (`processFile` return) -> store (`totalRecordsProcessed`) -> displayed reactively in `USRateSheetView.vue` (Store/UI connection still pending).
-3.  **Invalid Rows Display:** Yes, implement UI in `USRateSheetView.vue` similar to AZ view, populated from service -> store (`invalidRows`) (Store/UI connection still pending).
-4.  **Data Clearing Logic:** Keep current logic (clear on error in `handleModalConfirm`). Use `table.clear()` or DB delete/recreate in service.
-5.  **Table Component (`USRateSheetTable.vue`):** Fetch from Dexie via service. Implement infinite scrolling with Dexie filtering (now filtering by `stateCode`). Display correct US data.
-6.  **State Filtering Approach:** Decided to store `stateCode` in Dexie (like `USDetailedComparisonTable.vue`) and filter directly on that index, rather than deriving NPAs at runtime.
+The next major feature to implement is allowing users to adjust the loaded rates.
 
----
+- **Goal:** Enable users to select a subset of data (either "All" or a specific "State/Province" via the existing filter) and apply a percentage-based increase or decrease to the Interstate, Intrastate, and Indeterminate rates for that subset.
 
-## ❓ Open Questions & Prompts
-
-1.  **Dexie Initialization:** Where is the Dexie instance for `DBName.US_RATE_SHEET` initialized and versioned? Is it within `client/src/composables/useDexieDB.ts`? (Needed to resolve the `SchemaError`)
-2.  **AZ Schema:** (DEFERRED) Confirm the `AZRateSheetEntry` type and the schema defined for `DBName.AZ_RATE_SHEET` in `DBSchemas` are fully aligned.
-
----
-
-## 📝 Current Status & Next Steps (Updated [Current Date])
-
-**Status:**
-
-- Switched strategy to align `USRateSheetTable.vue` with `USDetailedComparisonTable.vue`.
-- `us-rate-sheet.service.ts` updated to look up `stateCode` via LERG and store it in Dexie.
-- `app-types.ts` updated to include `stateCode` index in the schema definition for `us_rate_sheet_db`.
-- `USRateSheetTable.vue` updated to fetch unique `stateCode` values directly from Dexie and filter using `where('stateCode').equals(...)`.
-- **Current Issue:** Dexie `SchemaError: KeyPath stateCode on object store entries is not indexed`. The database schema version needs to be incremented for the schema changes to take effect.
-
-**Remaining Tasks (Phase 3 & 3.1):**
-
-- **Resolve SchemaError:**
-  - Identify where the Dexie DB version for `us_rate_sheet_db` is managed.
-  - Increment the version number.
-- **Re-upload Data:** Clear existing data and re-upload the US Rate Sheet file to populate `stateCode` using the updated service logic.
-- **Verify Functionality:** Test state/province dropdown population and filtering in `USRateSheetTable.vue`.
-- **Store Enhancement:** Update `us-rate-sheet-store.ts` to store/expose `totalRecordsProcessed` & `invalidRows`.
-- **UI Updates (`USRateSheetView.vue`):** Display total records & invalid rows.
-
-**Next Steps (New Chat):**
-
-1.  **Answer Question 1:** Where is the Dexie DB version managed?
-// doesn't dexie have an internal mechanis
-2.  Increment the Dexie DB version number in the appropriate file.
-3.  Guide user to clear data and re-upload.
-4.  Verify the fix.
-
----
+- **Implementation Plan:**
+  1.  **UI Controls:**
+      - Add input fields (likely within the `USRateSheetTable.vue` component, near the filters) for the user to enter a percentage value.
+      - Add buttons for "Increase Rates" and "Decrease Rates".
+  2.  **Adjustment Logic:**
+      - Create a new method (likely in `usRateSheetService`) that accepts the filter criteria (`stateCode` or none for all) and the percentage adjustment.
+      - This service method will query Dexie for the matching records.
+      - It will iterate through the records (potentially using `modify` or batch updates for efficiency) and update the `interRate`, `intraRate`, and `ijRate` based on the percentage.
+  3.  **Component Interaction:**
+      - The "Increase/Decrease" buttons in `USRateSheetTable.vue` will trigger the new service method, passing the `selectedState.value` and the percentage input.
+  4.  **Cache Invalidation:**
+      - The rate adjustment logic (likely after the service call completes successfully) **must** invalidate the average rate caches in `USRateSheetTable.vue`:
+        - `overallAverages.value = null;`
+        - `stateAverageCache.value.clear();` (Or specifically delete the entry for the updated state if only one was updated).
+      - This ensures the displayed averages are recalculated based on the new data when the filter changes.
+  5.  **Data Refresh:** Trigger a reload/refresh of the visible table data (`resetPaginationAndLoad()`) to show the updated rates.
+  6.  **Download Updated CSV:**
+      - Add a new "Download Adjusted Rates" button (or modify the existing Export button's behavior/label when adjustments have been made).
+      - This button will trigger a function to query the _updated_ data from Dexie (potentially applying the current filters) and generate a downloadable CSV file reflecting the adjusted rates.
