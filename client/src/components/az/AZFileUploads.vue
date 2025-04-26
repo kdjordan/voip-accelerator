@@ -25,7 +25,7 @@
                     ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
                     : '',
                   azStore.isComponentUploading('az1')
-                    ? 'animate-upload-pulse cursor-not-allowed'
+                    ? 'cursor-not-allowed'
                     : !azStore.isComponentDisabled('az1')
                     ? 'cursor-pointer'
                     : '',
@@ -80,7 +80,7 @@
 
                   <template v-if="azStore.isComponentUploading('az1')">
                     <div
-                      class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
+                      class="flex-1 flex items-center justify-center bg-accent/10 w-full h-full absolute inset-0 min-h-[120px]"
                     >
                       <p class="text-sizeMd text-accent">Processing your file...</p>
                     </div>
@@ -113,7 +113,7 @@
                     ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
                     : '',
                   azStore.isComponentUploading('az2')
-                    ? 'animate-upload-pulse cursor-not-allowed'
+                    ? 'cursor-not-allowed'
                     : !azStore.isComponentDisabled('az2')
                     ? 'cursor-pointer'
                     : '',
@@ -168,7 +168,7 @@
 
                   <template v-if="azStore.isComponentUploading('az2')">
                     <div
-                      class="flex-1 flex items-center justify-center bg-accent/10 animate-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
+                      class="flex-1 flex items-center justify-center bg-accent/10 w-full h-full absolute inset-0 min-h-[120px]"
                     >
                       <p class="text-sizeMd text-accent">Processing your file...</p>
                     </div>
