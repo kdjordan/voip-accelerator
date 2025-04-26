@@ -71,26 +71,88 @@
           />
         </div>
         <!-- State Filter Dropdown -->
-        <div class="relative">
-          <label for="state-filter" class="sr-only">Filter by State/Province</label>
-          <select
-            id="state-filter"
-            v-model="selectedState"
-            class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 min-w-[150px]"
-            :disabled="availableStates.length === 0 || isDataLoading"
-            size="10"
-          >
-            <option value="">All States/Provinces</option>
-            <optgroup
-              v-for="group in groupedAvailableStates"
-              :key="group.label"
-              :label="group.label"
-            >
-              <option v-for="regionCode in group.codes" :key="regionCode" :value="regionCode">
-                {{ getRegionDisplayName(regionCode) }} ({{ regionCode }})
-              </option>
-            </optgroup>
-          </select>
+        <div class="relative w-52">
+          <Listbox v-model="selectedState" as="div">
+            <ListboxLabel class="sr-only">Filter by State/Province</ListboxLabel>
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+                :disabled="availableStates.length === 0 || isDataLoading"
+              >
+                <span class="block truncate text-white">{{
+                  selectedState
+                    ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
+                    : 'All States/Provinces'
+                }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <!-- "All States/Provinces" Option -->
+                  <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
+                    <li
+                      :class="[
+                        active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                        >All States/Provinces</span
+                      >
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+
+                  <!-- State/Province Groups -->
+                  <template v-for="group in groupedAvailableStates" :key="group.label">
+                    <!-- Group Label -->
+                    <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
+                      {{ group.label }}
+                    </li>
+                    <!-- Group Options -->
+                    <ListboxOption
+                      v-for="regionCode in group.codes"
+                      :key="regionCode"
+                      :value="regionCode"
+                      v-slot="{ active, selected }"
+                      as="template"
+                    >
+                      <li
+                        :class="[
+                          active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                          'relative cursor-default select-none py-2 pl-10 pr-4',
+                        ]"
+                      >
+                        <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                          >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                        >
+                        <span
+                          v-if="selected"
+                          class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                        >
+                          <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                        </span>
+                      </li>
+                    </ListboxOption>
+                  </template>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
         </div>
       </div>
 
@@ -184,7 +246,20 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { TrashIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
+import {
+  Listbox,
+  ListboxButton,
+  ListboxLabel,
+  ListboxOptions,
+  ListboxOption,
+} from '@headlessui/vue';
+import {
+  TrashIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
+} from '@heroicons/vue/20/solid';
 import type { USRateSheetEntry } from '@/types/rate-sheet-types';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
 import { useLergStore } from '@/stores/lerg-store';
