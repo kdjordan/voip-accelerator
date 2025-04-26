@@ -93,24 +93,90 @@
       </div>
 
       <!-- State Filter -->
-      <div>
-        <label for="state-filter" class="block text-sm font-medium text-gray-400 mb-1"
-          >Filter by State</label
-        >
-        <select
-          id="state-filter"
-          v-model="selectedState"
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 min-w-[200px]"
-          :disabled="availableStates.length === 0 || isLoading || isFiltering"
-          size="10"
-        >
-          <option value="">All States/Provinces</option>
-          <optgroup v-for="group in groupedAvailableStates" :key="group.label" :label="group.label">
-            <option v-for="regionCode in group.codes" :key="regionCode" :value="regionCode">
-              {{ getRegionDisplayName(regionCode) }} ({{ regionCode }})
-            </option>
-          </optgroup>
-        </select>
+      <div class="w-52">
+        <Listbox v-model="selectedState" as="div">
+          <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
+            >Filter by State</ListboxLabel
+          >
+          <div class="relative mt-1">
+            <ListboxButton
+              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+              :disabled="availableStates.length === 0 || isLoading || isFiltering"
+            >
+              <span class="block truncate text-white">{{
+                selectedState
+                  ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
+                  : 'All States/Provinces'
+              }}</span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </span>
+            </ListboxButton>
+
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <ListboxOptions
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hover:text-green-300"
+              >
+                <!-- "All States/Provinces" Option -->
+                <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
+                  <li
+                    :class="[
+                      active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
+                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                    ]"
+                  >
+                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                      >All States/Provinces</span
+                    >
+                    <span
+                      v-if="selected"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                    >
+                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </li>
+                </ListboxOption>
+
+                <!-- State/Province Groups -->
+                <template v-for="group in groupedAvailableStates" :key="group.label">
+                  <!-- Group Label -->
+                  <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
+                    {{ group.label }}
+                  </li>
+                  <!-- Group Options -->
+                  <ListboxOption
+                    v-for="regionCode in group.codes"
+                    :key="regionCode"
+                    :value="regionCode"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                        >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                      >
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                </template>
+              </ListboxOptions>
+            </transition>
+          </div>
+        </Listbox>
       </div>
 
       <!-- Cheaper File Filter (based on Inter) -->
@@ -184,69 +250,65 @@
           <thead class="bg-gray-800 sticky top-0 z-10">
             <tr>
               <!-- Define table headers based on USPricingComparisonRecord -->
-              <th class="px-4 py-2 text-left text-gray-300">NPANXX</th>
+              <th class="px-4 py-2 text-left text-gray-300 align-bottom">NPANXX</th>
               <!-- <th class="px-4 py-2 text-left text-gray-300">NPA</th> -->
               <!-- <th class="px-4 py-2 text-left text-gray-300">NXX</th> -->
-              <th class="px-4 py-2 text-left text-gray-300">State</th>
-              <th class="px-4 py-2 text-left text-gray-300">Country</th>
+              <th class="px-4 py-2 text-left text-gray-300 align-bottom">State</th>
+              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Country</th>
               <!-- File 1 Inter -->
-              <th class="px-4 py-2 text-left text-gray-300">
-                Inter&nbsp;
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
                 <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  class="mb-1 inline-block max-w-[100px] truncate text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  :title="fileName1"
                   >{{ fileName1 }}</span
-                >
+                ><br />Inter
               </th>
               <!-- File 2 Inter -->
-              <th class="px-4 py-2 text-left text-gray-300">
-                Inter&nbsp;
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
                 <span
-                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  class="mb-1 inline-block max-w-[100px] truncate text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  :title="fileName2"
                   >{{ fileName2 }}</span
-                >
+                ><br />Inter
               </th>
               <!-- Diff Inter % Header -->
-              <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
+              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
               <!-- File 1 Intra -->
-              <th class="px-4 py-2 text-left text-gray-300">
-                Intra&nbsp;
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
                 <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  class="mb-1 inline-block max-w-[100px] truncate text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  :title="fileName1"
                   >{{ fileName1 }}</span
-                >
+                ><br />Intra
               </th>
               <!-- File 2 Intra -->
-              <th class="px-4 py-2 text-left text-gray-300">
-                Intra&nbsp;
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
                 <span
-                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  class="mb-1 inline-block max-w-[100px] truncate text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  :title="fileName2"
                   >{{ fileName2 }}</span
-                >
+                ><br />Intra
               </th>
               <!-- Diff Intra % Header -->
-              <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
+              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
               <!-- File 1 Indeterm -->
-              <th class="px-4 py-2 text-left text-gray-300">
-                Indeterm&nbsp;
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
                 <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  class="mb-1 inline-block max-w-[100px] truncate text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  :title="fileName1"
                   >{{ fileName1 }}</span
-                >
+                ><br />Indeterm
               </th>
               <!-- File 2 Indeterm -->
-              <th class="px-4 py-2 text-left text-gray-300">
-                Indeterm&nbsp;
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
                 <span
-                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  class="mb-1 inline-block max-w-[100px] truncate text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                  :title="fileName2"
                   >{{ fileName2 }}</span
-                >
+                ><br />Indeterm
               </th>
               <!-- Diff Indeterm % Header -->
-              <th class="px-4 py-2 text-left text-gray-300">Diff %</th>
-              <!-- Difference Headers -->
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Cheaper Inter</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Cheaper Intra</th>
-              <th class="px-4 py-2 text-left text-gray-300">Cheaper Indeterm</th>
+              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-800">
@@ -262,41 +324,35 @@
               <td class="px-4 py-2 text-gray-400">{{ record.stateCode }}</td>
               <td class="px-4 py-2 text-gray-400">{{ record.countryCode }}</td>
               <!-- File 1 Inter Rate -->
-              <td class="px-4 py-2 text-white">{{ record.file1_inter?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-green-300 bg-green-900/50">
+                {{ record.file1_inter?.toFixed(6) }}
+              </td>
               <!-- File 2 Inter Rate -->
-              <td class="px-4 py-2 text-white">{{ record.file2_inter?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-blue-300 bg-blue-900/50">
+                {{ record.file2_inter?.toFixed(6) }}
+              </td>
               <!-- Diff Inter % Cell -->
-              <td class="px-4 py-2 text-white">{{ record.diff_inter_pct?.toFixed(2) }}%</td>
+              <td class="px-4 py-2 text-gray-400">{{ record.diff_inter_pct?.toFixed(2) }}%</td>
               <!-- File 1 Intra Rate -->
-              <td class="px-4 py-2 text-white">{{ record.file1_intra?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-green-300 bg-green-900/50">
+                {{ record.file1_intra?.toFixed(6) }}
+              </td>
               <!-- File 2 Intra Rate -->
-              <td class="px-4 py-2 text-white">{{ record.file2_intra?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-blue-300 bg-blue-900/50">
+                {{ record.file2_intra?.toFixed(6) }}
+              </td>
               <!-- Diff Intra % Cell -->
-              <td class="px-4 py-2 text-white">{{ record.diff_intra_pct?.toFixed(2) }}%</td>
+              <td class="px-4 py-2 text-gray-400">{{ record.diff_intra_pct?.toFixed(2) }}%</td>
               <!-- File 1 Indeterm Rate -->
-              <td class="px-4 py-2 text-white">{{ record.file1_indeterm?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-green-300 bg-green-900/50">
+                {{ record.file1_indeterm?.toFixed(6) }}
+              </td>
               <!-- File 2 Indeterm Rate -->
-              <td class="px-4 py-2 text-white">{{ record.file2_indeterm?.toFixed(6) }}</td>
+              <td class="px-4 py-2 text-blue-300 bg-blue-900/50">
+                {{ record.file2_indeterm?.toFixed(6) }}
+              </td>
               <!-- Diff Indeterm % Cell -->
-              <td class="px-4 py-2 text-white">{{ record.diff_indeterm_pct?.toFixed(2) }}%</td>
-              <!-- Cheaper Inter -->
-              <td class="px-4 py-2">
-                <span :class="getCheaperClass(record.cheaper_inter)">
-                  {{ formatCheaperFile(record.cheaper_inter) }}
-                </span>
-              </td>
-              <!-- Cheaper Intra -->
-              <td class="px-4 py-2">
-                <span :class="getCheaperClass(record.cheaper_intra)">
-                  {{ formatCheaperFile(record.cheaper_intra) }}
-                </span>
-              </td>
-              <!-- Cheaper Indeterm -->
-              <td class="px-4 py-2">
-                <span :class="getCheaperClass(record.cheaper_indeterm)">
-                  {{ formatCheaperFile(record.cheaper_indeterm) }}
-                </span>
-              </td>
+              <td class="px-4 py-2 text-gray-400">{{ record.diff_indeterm_pct?.toFixed(2) }}%</td>
             </tr>
           </tbody>
         </table>
@@ -318,6 +374,14 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useIntersectionObserver, useDebounceFn } from '@vueuse/core';
+import {
+  Listbox,
+  ListboxButton,
+  ListboxLabel,
+  ListboxOptions,
+  ListboxOption,
+} from '@headlessui/vue';
+import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
 import { useUsStore } from '@/stores/us-store';
 import { useLergStore } from '@/stores/lerg-store'; // Import lergStore
 import useDexieDB from '@/composables/useDexieDB';
@@ -424,11 +488,11 @@ const filteredAverageRates = computed(() => {
 
 // --- CSV Download Function (Updated) ---
 async function downloadCsv(): Promise<void> {
-  // Make async
   if (isExporting.value) return; // Prevent multiple exports
 
   isExporting.value = true;
   error.value = null; // Clear previous errors
+  console.log('[USDetailedComparisonTable] Starting CSV export...');
 
   try {
     // Ensure DB is initialized
@@ -438,56 +502,106 @@ async function downloadCsv(): Promise<void> {
 
     // 1. Build the query dynamically to get ALL filtered data
     let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+
+    // Apply filters
     const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
     if (searchTerm.value) {
       const term = searchTerm.value.trim();
       if (term.length === 6) {
-        // Exact match for 6 digits
-        query = query.where('npanxx').equals(term);
-        console.log(`[USDetailedComparisonTable] Applying Dexie NPANXX filter: equals ${term}`);
+        currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
       } else {
-        // StartsWith for shorter terms
         const lowerSearch = term.toLowerCase();
-        query = query.where('npanxx').startsWithIgnoreCase(lowerSearch);
-        console.log(
-          `[USDetailedComparisonTable] Applying Dexie NPANXX filter: startsWithIgnoreCase ${term}`
+        currentFilters.push((record: USPricingComparisonRecord) =>
+          record.npanxx.toLowerCase().startsWith(lowerSearch)
         );
       }
     }
     if (selectedState.value) {
-      // Apply state filter *after* potential NPANXX filter if it used an index
-      // If NPANXX filter didn't use an index (e.g., if we used .filter later), apply it here first.
-      query = query.and((record) => record.stateCode === selectedState.value);
-      console.log(
-        `[USDetailedComparisonTable] Applying Dexie State filter: equals ${selectedState.value}`
+      currentFilters.push(
+        (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
       );
     }
     if (selectedCheaperInter.value) {
-      // Apply cheaper filter using .and() if other filters applied, otherwise .where()
       const cheaperFilterFn = (record: USPricingComparisonRecord) =>
         record.cheaper_inter === selectedCheaperInter.value;
-      query = query.and(cheaperFilterFn);
-      console.log(
-        `[USDetailedComparisonTable] Applying Dexie Cheaper Inter filter: equals ${selectedCheaperInter.value}`
-      );
+      currentFilters.push(cheaperFilterFn);
     }
 
-    // Apply pagination and fetch data
-    const newData = await query.offset(offset.value).limit(pageSize).toArray();
-
+    // Fetch ALL data matching filters
+    let finalQueryChain = query;
+    if (currentFilters.length > 0) {
+      finalQueryChain = query.filter((record) => currentFilters.every((fn) => fn(record)));
+    }
+    const allFilteredData = await finalQueryChain.toArray();
     console.log(
-      `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`
+      `[USDetailedComparisonTable] Fetched ${allFilteredData.length} records for export.`
     );
 
-    filteredComparisonData.value.push(...newData); // Append new data
-    offset.value += newData.length; // Increment offset
-    hasMoreData.value = newData.length === pageSize; // Check if there might be more data
+    if (allFilteredData.length === 0) {
+      // Handle no data case - maybe show a notification?
+      console.warn('[USDetailedComparisonTable] No data matching filters to export.');
+      alert('No data matches the current filters to export.'); // Simple alert for now
+      return;
+    }
+
+    // 2. Define CSV Fields (excluding cheaper_ columns)
+    const fields = [
+      { label: 'NPANXX', value: 'npanxx' },
+      { label: 'State', value: 'stateCode' },
+      { label: 'Country', value: 'countryCode' },
+      { label: `${fileName1.value}_InterRate`, value: 'file1_inter' },
+      { label: `${fileName2.value}_InterRate`, value: 'file2_inter' },
+      { label: 'InterRateDiffPct', value: 'diff_inter_pct' },
+      { label: `${fileName1.value}_IntraRate`, value: 'file1_intra' },
+      { label: `${fileName2.value}_IntraRate`, value: 'file2_intra' },
+      { label: 'IntraRateDiffPct', value: 'diff_intra_pct' },
+      { label: `${fileName1.value}_IndetermRate`, value: 'file1_indeterm' },
+      { label: `${fileName2.value}_IndetermRate`, value: 'file2_indeterm' },
+      { label: 'IndetermRateDiffPct', value: 'diff_indeterm_pct' },
+    ];
+
+    // 3. Format data for PapaParse
+    const dataForCsv = allFilteredData.map((record) => {
+      return {
+        npanxx: record.npanxx,
+        stateCode: record.stateCode,
+        countryCode: record.countryCode,
+        file1_inter: record.file1_inter?.toFixed(6) ?? '',
+        file2_inter: record.file2_inter?.toFixed(6) ?? '',
+        diff_inter_pct: record.diff_inter_pct?.toFixed(2) ?? '',
+        file1_intra: record.file1_intra?.toFixed(6) ?? '',
+        file2_intra: record.file2_intra?.toFixed(6) ?? '',
+        diff_intra_pct: record.diff_intra_pct?.toFixed(2) ?? '',
+        file1_indeterm: record.file1_indeterm?.toFixed(6) ?? '',
+        file2_indeterm: record.file2_indeterm?.toFixed(6) ?? '',
+        diff_indeterm_pct: record.diff_indeterm_pct?.toFixed(2) ?? '',
+      };
+    });
+
+    // 4. Generate and Download CSV
+    const csv = Papa.unparse({
+      fields: fields.map((f) => f.label), // Use labels as headers
+      data: dataForCsv.map((row) => fields.map((field) => row[field.value as keyof typeof row])), // Map data according to field order
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.href = url;
+    link.setAttribute('download', `us-comparison-${timestamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    console.log('[USDetailedComparisonTable] CSV export complete.');
   } catch (err: any) {
-    console.error('Error loading more comparison data:', err);
-    error.value = err.message || 'Failed to load data';
-    hasMoreData.value = false; // Stop trying to load more on error
+    console.error('Error during CSV export:', err);
+    error.value = err.message || 'Failed to export data';
+    // Optionally show an alert or notification to the user
+    alert(`Export failed: ${error.value}`);
   } finally {
-    isLoadingMore.value = false;
+    isExporting.value = false;
   }
 }
 
