@@ -1,6 +1,6 @@
-<template>
-  <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="text-sizeXl tracking-wide text-accent uppercase mb-8 font-secondary">
+  <template>
+  <div class="min-h-screen text-white pt-2 w-full">
+    <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
       Admin Dashboard
     </h1>
 

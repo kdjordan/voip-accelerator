@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen text-white p-8 w-full">
-    <h1 class="mb-8">
-      <span class="text-sizeXl tracking-wide text-accent uppercase px-4 py-2 font-secondary"
+  <div class="min-h-screen text-white pt-2 w-full">
+    <h1 class="mb-2">
+      <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >US Rate Sheet Wizard
       </span>
     </h1>
