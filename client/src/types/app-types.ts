@@ -210,7 +210,8 @@ export const DBSchemas = {
   [DBName.AZ_RATE_SHEET]:
     'entries: ++id, destinationName, code, rate, effectiveDate, minDuration, increments',
   // Schema for US Rate Sheet (new)
-  [DBName.US_RATE_SHEET]: 'entries: ++id, npa, nxx, npanxx, interRate, intraRate, ijRate',
+  [DBName.US_RATE_SHEET]:
+    'entries: ++id, npa, nxx, npanxx, interRate, intraRate, ijRate, stateCode',
   [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
   [DBName.LERG]: 'npa, *state, *country',
   [DBName.US_PRICING_COMPARISON]: `

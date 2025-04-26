@@ -26,16 +26,16 @@
         </div>
         <!-- State Filter Dropdown -->
         <div class="relative">
-          <label for="state-filter" class="sr-only">Filter by State</label>
+          <label for="state-filter" class="sr-only">Filter by State/Province</label>
           <select
             id="state-filter"
             v-model="selectedState"
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 min-w-[150px]"
-            :disabled="availableStates.length === 0"
+            :disabled="availableStates.length === 0 || isDataLoading"
           >
-            <option value="">All States</option>
-            <option v-for="state in availableStates" :key="state" :value="state">
-              {{ lergStore.getStateNameByCode(state) }} ({{ state }})
+            <option value="">All States/Provinces</option>
+            <option v-for="regionCode in availableStates" :key="regionCode" :value="regionCode">
+              {{ getRegionDisplayName(regionCode) }} ({{ regionCode }})
             </option>
           </select>
         </div>
@@ -53,7 +53,7 @@
         </button>
         <button
           @click="handleExport"
-          :disabled="tableData.length === 0 || isExporting"
+          :disabled="totalRecords === 0 || isExporting"
           class="inline-flex items-center justify-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Export all loaded data"
         >
@@ -77,14 +77,16 @@
       </div>
     </div>
     <div
-      v-else-if="tableData.length > 0"
+      v-else-if="displayedData.length > 0"
       class="overflow-y-auto max-h-[60vh] relative"
-      ref="scrollContainer"
+      ref="scrollContainerRef"
     >
       <table class="min-w-full divide-y divide-gray-700 text-sm">
         <thead class="bg-gray-800 sticky top-0 z-10">
           <tr>
             <th scope="col" class="px-4 py-2 text-left text-gray-300">NPANXX</th>
+            <th scope="col" class="px-4 py-2 text-left text-gray-300">State</th>
+            <th scope="col" class="px-4 py-2 text-left text-gray-300">Country</th>
             <th scope="col" class="px-4 py-2 text-left text-gray-300">Interstate Rate</th>
             <th scope="col" class="px-4 py-2 text-left text-gray-300">Intrastate Rate</th>
             <th scope="col" class="px-4 py-2 text-left text-gray-300">Indeterminate Rate</th>
@@ -98,6 +100,12 @@
             class="hover:bg-gray-700/50"
           >
             <td class="px-4 py-2 text-gray-400 font-mono">{{ entry.npanxx }}</td>
+            <td class="px-4 py-2 text-gray-400">
+              {{ lergStore.getLocationByNPA(entry.npa)?.region || 'N/A' }}
+            </td>
+            <td class="px-4 py-2 text-gray-400">
+              {{ lergStore.getLocationByNPA(entry.npa)?.country || 'N/A' }}
+            </td>
             <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.interRate) }}</td>
             <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.intraRate) }}</td>
             <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.ijRate) }}</td>
@@ -124,36 +132,32 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { TrashIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
+import type { USRateSheetEntry } from '@/types/rate-sheet-types';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
 import { useLergStore } from '@/stores/lerg-store';
-import { useLergData } from '@/composables/useLergData';
-import { USRateSheetService } from '@/services/us-rate-sheet.service';
-import type { USRateSheetEntry } from '@/types/domains/us-types';
-import { useInfiniteScroll, useDebounceFn, useIntersectionObserver } from '@vueuse/core';
+import { useDebounceFn, useIntersectionObserver } from '@vueuse/core';
 import Papa from 'papaparse';
+import useDexieDB from '@/composables/useDexieDB';
+import { DBName } from '@/types/app-types';
+import type { DexieDBBase } from '@/composables/useDexieDB';
 
 // Initialize store and service
 const store = useUsRateSheetStore();
 const lergStore = useLergStore();
-const { initializeLergData, isLoading: isLergLoading, error: lergError } = useLergData();
-const rateSheetService = new USRateSheetService();
+const { getDB } = useDexieDB();
+let dbInstance: DexieDBBase | null = null;
+const RATE_SHEET_TABLE_NAME = 'entries';
+
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
 const selectedState = ref('');
 
-// Get data reactively from the store
-const tableData = computed(() => store.getRateSheetData);
-
-const isDataLoading = computed(() => store.getIsLoading);
+const isDataLoading = ref(true);
 const isExporting = ref(false);
-const dataError = computed(() => store.getError);
+const dataError = ref<string | null>(null);
 
-const totalRecords = computed(() => {
-  // Calculate total based on filtered store data
-  return applyLocalFilter(tableData.value).length;
-});
+const totalRecords = ref<number>(0);
 
-// Data displayed in the table (paginated slice of filtered store data)
 const displayedData = ref<USRateSheetEntry[]>([]);
 const isLoadingMore = ref(false);
 const scrollContainerRef = ref<HTMLElement | null>(null);
@@ -163,128 +167,221 @@ const offset = ref<number>(0);
 const hasMoreData = ref<boolean>(true);
 const availableStates = ref<string[]>([]);
 
-// Debounced search function
 const debouncedSearch = useDebounceFn(() => {
   debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
-  resetPaginationAndLoad(); // Just reset pagination, data updates reactively
+  resetPaginationAndLoad();
 }, 300);
 
-// Watch raw search query to trigger debounced function
 const stopSearchWatcher = watch(searchQuery, debouncedSearch);
-
-onMounted(async () => {
-  console.log('USRateSheetTable mounted');
-  // Ensure LERG is loaded
-  if (!lergStore.isLoaded) {
-    console.log('LERG data not loaded, attempting to initialize...');
-    try {
-      await initializeLergData();
-      if (lergStore.isLoaded) {
-        console.log('LERG data initialized successfully.');
-      } else {
-        console.error(
-          'Failed to initialize LERG data. State filtering will be unavailable.',
-          lergError.value
-        );
-      }
-    } catch (err) {
-      console.error('Error initializing LERG data:', err);
-    }
-  }
-  // Ensure store data is loaded if not already present
-  if (!store.getHasUsRateSheetData) {
-    console.log('[USRateSheetTable] Store data not loaded, calling loadRateSheetData...');
-    await store.loadRateSheetData();
-  }
-  // Initial calculation and pagination load
+const stopStateWatcher = watch(selectedState, () => {
   resetPaginationAndLoad();
 });
 
-// Watch for changes in the store's data to recalculate states and reset pagination
-watch(
-  tableData,
-  (newData, oldData) => {
-    // Simplified condition: Trigger if the reference changes or length changes
-    // Deep watcher should still catch internal changes, but let's log unconditionally first
-    console.log(
-      `[USRateSheetTable] WATCHER triggered. Old length: ${oldData?.length}, New length: ${newData?.length}`
-    );
-    // Optional: Check if effective date actually changed in the new data
-    if (newData.length > 0) {
-      console.log(
-        `[USRateSheetTable] WATCHER: First entry effective date: ${newData[0].effectiveDate}`
+async function initializeRateSheetDB(): Promise<boolean> {
+  if (dbInstance) return true;
+
+  try {
+    const targetDbName = DBName.US_RATE_SHEET;
+    console.log('[USRateSheetTable] Initializing Dexie DB:', targetDbName);
+    dbInstance = await getDB(targetDbName);
+    if (!dbInstance || !dbInstance.tables.some((t) => t.name === RATE_SHEET_TABLE_NAME)) {
+      console.warn(
+        `[USRateSheetTable] Table '${RATE_SHEET_TABLE_NAME}' not found in DB '${targetDbName}'. Checking store...`
       );
+      if (!store.getHasUsRateSheetData) {
+        dataError.value = null;
+        console.log('[USRateSheetTable] No rate sheet data uploaded.');
+      } else {
+        dataError.value = `Rate sheet table '${RATE_SHEET_TABLE_NAME}' seems to be missing. Try re-uploading.`;
+      }
+      hasMoreData.value = false;
+      totalRecords.value = 0;
+      displayedData.value = [];
+      return false;
     }
-
-    // Always reset if triggered for now
-    console.log('[USRateSheetTable] WATCHER: Recalculating states and resetting pagination.');
-    calculateAvailableStates();
-    resetPaginationAndLoad();
-
-    /* Original condition - keep for reference
-    if (newData.length !== oldData?.length || newData[0]?.id !== oldData[0]?.id) {
-      console.log(
-        '[USRateSheetTable] Store data changed (original condition met), recalculating states and resetting pagination.'
-      );
-      calculateAvailableStates();
-      resetPaginationAndLoad();
-    }
-    */
-  },
-  { deep: true } // Keep deep watcher
-);
-
-onBeforeUnmount(() => {
-  if (stopSearchWatcher) {
-    stopSearchWatcher();
+    console.log('[USRateSheetTable] Dexie DB Initialized successfully.');
+    dataError.value = null;
+    return true;
+  } catch (err: any) {
+    console.error('[USRateSheetTable] Error initializing Dexie DB:', err);
+    dataError.value = err.message || 'Failed to connect to the rate sheet database';
+    hasMoreData.value = false;
+    totalRecords.value = 0;
+    displayedData.value = [];
+    return false;
   }
-});
+}
 
-// Renamed function - focuses on resetting local pagination/display
-function resetPaginationAndLoad() {
-  // Reset local display/pagination state
-  // isDataLoading is now driven by the store
-  displayedData.value = [];
-  offset.value = 0;
-  hasMoreData.value = true;
+async function fetchUniqueStates() {
+  if (!(await initializeRateSheetDB()) || !dbInstance) {
+    console.warn('[USRateSheetTable] Cannot fetch states, DB not ready.');
+    availableStates.value = [];
+    return;
+  }
+
+  try {
+    console.log(
+      `[USRateSheetTable] Fetching unique state/province codes directly from table '${RATE_SHEET_TABLE_NAME}'...`
+    );
+
+    // Fetch unique state codes directly using Dexie's uniqueKeys
+    const uniqueRegionCodes = await dbInstance
+      .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
+      .orderBy('stateCode')
+      .uniqueKeys();
+
+    availableStates.value = (uniqueRegionCodes as string[]) // Cast assuming they are strings
+      .filter(Boolean) // Remove null/undefined/empty strings
+      .sort();
+
+    console.log(
+      '[USRateSheetTable] Found unique states/provinces from Dexie:',
+      availableStates.value
+    );
+  } catch (err: any) {
+    console.error('[USRateSheetTable] Error fetching unique states/provinces from Dexie:', err);
+    availableStates.value = []; // Clear on error
+    dataError.value = 'Could not load state/province filter options.'; // Inform user
+  }
+}
+
+async function updateAvailableStates() {
+  await fetchUniqueStates(); // Keep this function name for consistency
+}
+
+async function loadMoreData() {
+  if (isLoadingMore.value || !hasMoreData.value || !dbInstance) return;
+
+  isLoadingMore.value = true;
+  dataError.value = null;
+
+  try {
+    let query = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+
+    // Apply filters directly using Dexie queries
+    const filtersApplied: string[] = [];
+
+    // Apply NPANXX search filter (use startsWithIgnoreCase for index efficiency)
+    if (debouncedSearchQuery.value) {
+      query = query.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+      filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
+    }
+
+    // Apply State/Province filter (use equals for index efficiency)
+    if (selectedState.value) {
+      query = query.where('stateCode').equals(selectedState.value);
+      filtersApplied.push(`Region equals ${selectedState.value}`);
+    }
+
+    // Log applied filters
+    if (filtersApplied.length > 0) {
+      console.log(`[USRateSheetTable] Applying Dexie filters: ${filtersApplied.join(', ')}`);
+    } else {
+      console.log(`[USRateSheetTable] No Dexie filters applied.`);
+    }
+
+    // Get total count *after* applying filters
+    if (offset.value === 0) {
+      totalRecords.value = await query.count();
+      console.log(`[USRateSheetTable] Total matching records (post-filter): ${totalRecords.value}`);
+    }
+
+    // Fetch data with pagination *after* applying filters
+    const newData = await query.offset(offset.value).limit(PAGE_SIZE).toArray();
+
+    console.log(
+      `[USRateSheetTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${PAGE_SIZE})`
+    );
+
+    displayedData.value = offset.value === 0 ? newData : [...displayedData.value, ...newData];
+    offset.value += newData.length;
+    hasMoreData.value = newData.length === PAGE_SIZE && offset.value < totalRecords.value;
+  } catch (err: any) {
+    console.error('[USRateSheetTable] Error loading rate sheet data:', err);
+    dataError.value = err.message || 'Failed to load data';
+    hasMoreData.value = false;
+  } finally {
+    isLoadingMore.value = false;
+    if (isDataLoading.value) {
+      isDataLoading.value = false;
+    }
+  }
+}
+
+async function resetPaginationAndLoad() {
+  isDataLoading.value = true;
   if (scrollContainerRef.value) {
     scrollContainerRef.value.scrollTop = 0;
   }
-  // No data fetching here, loadMoreData uses computed tableData
-  loadMoreData();
-}
+  offset.value = 0;
+  displayedData.value = [];
+  hasMoreData.value = true;
+  dataError.value = null;
+  isLoadingMore.value = false;
 
-// Function to load more data for infinite scroll
-function loadMoreData() {
-  if (isLoadingMore.value || !hasMoreData.value || isDataLoading.value) return;
-
-  isLoadingMore.value = true;
-  console.log('Loading more data...');
-
-  try {
-    // Filter the computed data from the store
-    const filtered = applyLocalFilter(tableData.value);
-    // totalRecords is now computed based on filtered store data
-
-    const nextPageData = filtered.slice(offset.value, offset.value + PAGE_SIZE);
-
-    if (nextPageData.length > 0) {
-      displayedData.value = [...displayedData.value, ...nextPageData];
-      offset.value += nextPageData.length;
-    }
-
-    hasMoreData.value = offset.value < filtered.length;
-
-    console.log(
-      `Loaded ${nextPageData.length} more records. Total displayed: ${displayedData.value.length}. Has more: ${hasMoreData.value}`
-    );
-  } catch (error) {
-    console.error('Error loading more data:', error);
-    // Use store error state if appropriate, or local state for display errors
-  } finally {
-    isLoadingMore.value = false;
+  const dbReady = await initializeRateSheetDB();
+  if (dbReady) {
+    await loadMoreData();
+  } else {
+    isDataLoading.value = false;
   }
 }
+
+onMounted(async () => {
+  console.log('USRateSheetTable mounted');
+  if (!lergStore.isLoaded) {
+    console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
+  }
+
+  isDataLoading.value = true;
+  const dbReady = await initializeRateSheetDB();
+  if (dbReady && store.getHasUsRateSheetData) {
+    await updateAvailableStates();
+    await resetPaginationAndLoad();
+  } else {
+    console.log('[USRateSheetTable] Skipping initial load/state fetch (DB not ready or no data).');
+    totalRecords.value = 0;
+    isDataLoading.value = false;
+  }
+});
+
+onBeforeUnmount(() => {
+  stopSearchWatcher();
+  stopStateWatcher();
+  console.log('USRateSheetTable unmounted');
+});
+
+watch(
+  () => store.getHasUsRateSheetData,
+  async (hasData, oldHasData) => {
+    console.log(
+      `[USRateSheetTable] Store hasData changed: ${oldHasData} -> ${hasData}. Reloading table.`
+    );
+    if (hasData !== oldHasData) {
+      if (!hasData) {
+        dbInstance = null;
+        totalRecords.value = 0;
+        displayedData.value = [];
+        availableStates.value = [];
+        selectedState.value = '';
+        searchQuery.value = '';
+        hasMoreData.value = false;
+        dataError.value = null;
+        isDataLoading.value = false;
+      } else {
+        isDataLoading.value = true;
+        const dbReady = await initializeRateSheetDB();
+        if (dbReady) {
+          await updateAvailableStates();
+          await resetPaginationAndLoad();
+        } else {
+          isDataLoading.value = false;
+        }
+      }
+    }
+  },
+  { immediate: false }
+);
 
 useIntersectionObserver(
   loadMoreTriggerRef,
@@ -300,61 +397,20 @@ useIntersectionObserver(
   }
 );
 
-// Calculate unique states present in the loaded data (uses computed tableData)
-function calculateAvailableStates() {
-  if (!lergStore.isLoaded || tableData.value.length === 0) {
-    availableStates.value = [];
-    return;
-  }
-  const states = new Set<string>();
-  tableData.value.forEach((entry) => {
-    const location = lergStore.getLocationByNPA(entry.npa);
-    if (location?.country === 'US' && location.region) {
-      states.add(location.region);
-    }
-  });
-  availableStates.value = Array.from(states).sort();
-  console.log('Available states calculated:', availableStates.value);
-}
-
-// Apply local search and state filter (uses computed tableData)
-function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
-  let filteredData = data; // Start with store data passed as argument
-
-  // Apply search query filter
-  if (debouncedSearchQuery.value) {
-    filteredData = filteredData.filter((entry) =>
-      entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value)
-    );
-  }
-
-  // Apply state filter
-  if (selectedState.value && lergStore.isLoaded) {
-    filteredData = filteredData.filter((entry) => {
-      const location = lergStore.getLocationByNPA(entry.npa);
-      return location?.country === 'US' && location.region === selectedState.value;
-    });
-  }
-
-  return filteredData;
-}
-
-function formatRate(rate: number | null | undefined): string {
+function formatRate(rate: number | string | null | undefined): string {
   if (rate === null || rate === undefined) return 'N/A';
   return rate.toFixed(6);
 }
 
-async function handleClearData() {
-  if (confirm('Are you sure you want to clear all US rate sheet data?')) {
-    // Call the store action to clear data
-    await store.clearUsRateSheetData();
-    // No need to manually clear local state, reactivity handles it
-    console.log('US Rate Sheet data cleared via store action.');
+function handleClearData() {
+  console.log('[USRateSheetTable] Clear Data button clicked.');
+  if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
+    store.clearUsRateSheetData();
   }
 }
 
 function handleExport() {
-  const dataToFilter = tableData.value; // Use computed store data
+  const dataToFilter = displayedData.value;
   if (dataToFilter.length === 0) {
     alert('No data to export');
     return;
@@ -362,29 +418,36 @@ function handleExport() {
   if (isExporting.value) return;
 
   isExporting.value = true;
-  // Use totalRecords computed property which is based on filtered store data
   console.log(`Exporting ${totalRecords.value} records...`);
 
   try {
     const fields = [
       { label: 'NPANXX', value: 'npanxx' },
+      { label: 'State', value: 'state' },
+      { label: 'Country', value: 'country' },
       { label: 'Interstate Rate', value: 'interRate' },
       { label: 'Intrastate Rate', value: 'intraRate' },
       { label: 'Indeterminate Rate', value: 'ijRate' },
       { label: 'Effective Date', value: 'effectiveDate' },
     ];
 
-    // Prepare data, applying filter to the store data
-    const dataToExport = applyLocalFilter(dataToFilter).map((entry) => ({
-      ...entry,
-      effectiveDate: entry.effectiveDate || '',
-    }));
+    const dataToExport = applyLocalFilter(dataToFilter).map((entry) => {
+      const location = lergStore.getLocationByNPA(entry.npa);
+      return {
+        ...entry,
+        npanxx: entry.npanxx,
+        state: location?.region || '',
+        country: location?.country || '',
+        interRate: entry.interRate,
+        intraRate: entry.intraRate,
+        ijRate: entry.ijRate,
+        effectiveDate: entry.effectiveDate || '',
+      };
+    });
 
     const csv = Papa.unparse({
-      fields: fields.map((f) => f.label), // Use labels for header row
-      data: dataToExport.map((row) =>
-        fields.map((field) => row[field.value as keyof USRateSheetEntry])
-      ),
+      fields: fields.map((f) => f.label),
+      data: dataToExport.map((row) => fields.map((field) => row[field.value as keyof typeof row])),
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -406,13 +469,38 @@ function handleExport() {
   }
 }
 
-// Watch for filter changes to reset pagination
-watch([debouncedSearchQuery, selectedState], () => {
-  console.log(
-    `Filters changed: Search='${debouncedSearchQuery.value}', State='${selectedState.value}'. Resetting pagination.`
-  );
-  resetPaginationAndLoad(); // Just resets pagination/display
-});
+function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
+  let filteredData = data;
+
+  if (debouncedSearchQuery.value) {
+    filteredData = filteredData.filter((entry) =>
+      entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value)
+    );
+  }
+
+  if (selectedState.value && lergStore.isLoaded) {
+    filteredData = filteredData.filter((entry) => {
+      const location = lergStore.getLocationByNPA(entry.npa);
+      return location?.country === 'US' && location.region === selectedState.value;
+    });
+  }
+
+  return filteredData;
+}
+
+// Helper function to get display name for state or province
+function getRegionDisplayName(code: string): string {
+  if (!code) return '';
+  // Check US states first
+  const stateName = lergStore.getStateNameByCode(code);
+  if (stateName !== code) {
+    // getStateNameByCode returns the code itself if not found
+    return stateName;
+  }
+  // Check Canadian provinces if not found in US states
+  const provinceName = lergStore.getProvinceNameByCode(code);
+  return provinceName; // Returns the code itself if not found here either
+}
 </script>
 
 <style scoped>
@@ -434,7 +522,7 @@ watch([debouncedSearchQuery, selectedState], () => {
 thead th {
   position: sticky;
   top: 0;
-  background-color: theme('colors.gray.800');
+  background-color: #1f2937;
   z-index: 10;
 }
 </style>
