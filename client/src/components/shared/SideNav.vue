@@ -186,14 +186,14 @@ const items = ref<NavItem[]>([
     icon: DocumentChartBarIcon,
     children: [
       {
-        name: 'AZ Reporting',
-        to: '/azview',
-        icon: GlobeAltIcon,
-      },
-      {
         name: 'US Reporting',
         to: '/usview',
         icon: GlobeAmericasIcon,
+      },
+      {
+        name: 'AZ Reporting',
+        to: '/azview',
+        icon: GlobeAltIcon,
       },
     ],
   },

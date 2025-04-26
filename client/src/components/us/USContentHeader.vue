@@ -142,37 +142,22 @@ async function handleReset() {
   try {
     console.log('Resetting the US report');
 
-    // Get current file names before resetting store
-    const fileNames = usStore.getFileNames;
-    console.log('Cleaning up stores:', fileNames);
-
-    // Reset store state (resetFiles now handles the flags)
+    // Reset store state first
     usStore.resetFiles();
-    // usStore.setActiveReportType(ReportTypes.FILES); // resetFiles should handle this
 
-    // Clean up Dexie stores using actual file names
-    if (fileNames.length > 0) {
-      // Assuming DBName.US is the correct DB for the main file data
-      const db = await useDexieDB().getDB(DBName.US);
-      await Promise.all(
-        fileNames.map((fileName) => {
-          const tableName = fileName.toLowerCase().replace('.csv', '');
-          console.log(`Attempting to delete Dexie table: ${tableName} in DB ${DBName.US}`);
-          return db
-            .deleteStore(tableName)
-            .catch((err) => console.error(`Failed to delete ${tableName}:`, err));
-        })
+    // --- Delete relevant Dexie Databases --- START ---
+    console.log(`Attempting to delete Dexie database: ${DBName.US}`);
+    await deleteDatabase(DBName.US)
+      .then(() => console.log(`Successfully deleted database: ${DBName.US}`))
+      .catch((err) => console.error(`Failed to delete database ${DBName.US}:`, err));
+
+    console.log(`Attempting to delete Dexie database: ${DBName.US_PRICING_COMPARISON}`);
+    await deleteDatabase(DBName.US_PRICING_COMPARISON)
+      .then(() => console.log(`Successfully deleted database: ${DBName.US_PRICING_COMPARISON}`))
+      .catch((err) =>
+        console.error(`Failed to delete database ${DBName.US_PRICING_COMPARISON}:`, err)
       );
-
-      // Also delete the comparison DB table
-      try {
-        const comparisonDb = await useDexieDB().getDB(DBName.US_PRICING_COMPARISON);
-        await comparisonDb.deleteStore('comparison_results');
-        console.log('Deleted comparison_results table.');
-      } catch (err) {
-        console.error('Failed to delete comparison_results table:', err);
-      }
-    }
+    // --- Delete relevant Dexie Databases --- END ---
 
     console.log('Reset completed successfully');
   } catch (error) {

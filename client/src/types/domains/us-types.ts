@@ -1,5 +1,5 @@
 import type { CountryLergData } from '@/types/domains/lerg-types';
-import type { InvalidUsRow, USStandardizedData } from './us-types';
+// import type { InvalidUsRow, USStandardizedData } from './us-types'; // REMOVED redundant import
 import type { ChangeCode } from './rate-sheet-types'; // Import ChangeCode
 
 export interface USStandardizedData {
@@ -297,11 +297,6 @@ export interface USPricingComparisonRecord {
   file2_inter: number;
   file2_intra: number;
   file2_indeterm: number;
-
-  // Absolute Differences (File2 - File1)
-  diff_inter_abs: number;
-  diff_intra_abs: number;
-  diff_indeterm_abs: number;
 
   // Percentage Differences (Relative to cheaper file)
   diff_inter_pct: number;
