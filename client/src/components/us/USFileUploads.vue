@@ -22,7 +22,7 @@
                     ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
                     : '',
                   usStore.isComponentUploading('us1')
-                    ? 'animate-upload-pulse cursor-not-allowed'
+                    ? 'cursor-not-allowed'
                     : usStore.isComponentUploading('us2')
                     ? 'opacity-50 cursor-not-allowed border-gray-600' /* Dim if other is uploading */
                     : !usStore.isComponentDisabled('us1')
@@ -130,7 +130,7 @@
                     ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
                     : '',
                   usStore.isComponentUploading('us2')
-                    ? 'animate-upload-pulse cursor-not-allowed'
+                    ? 'cursor-not-allowed'
                     : usStore.isComponentUploading('us1')
                     ? 'opacity-50 cursor-not-allowed border-gray-600' /* Dim if other is uploading */
                     : !usStore.isComponentDisabled('us2')

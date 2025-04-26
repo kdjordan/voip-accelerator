@@ -11,6 +11,7 @@ interface USRateSheetState {
   currentEffectiveDate: string | null; // Add state for current effective date
   isUpdatingEffectiveDate: boolean; // Add state for update process
   rateSheetData: USRateSheetEntry[]; // Add state for the actual data
+  lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
 }
 
 // Instantiate service outside the store definition (singleton pattern)
@@ -25,6 +26,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     currentEffectiveDate: null,
     isUpdatingEffectiveDate: false,
     rateSheetData: [], // Initialize data state
+    lastDbUpdateTime: Date.now(), // Initialize timestamp
   }),
 
   getters: {
@@ -154,10 +156,14 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         await service.updateAllEffectiveDates(newDate);
         // Update successful, refresh the current date in the store
         this.currentEffectiveDate = newDate;
-        console.log(`[us-rate-sheet-store] Effective date updated successfully to ${newDate}`);
-        // Trigger data reload to refresh table and ensure consistency
-        await this.loadRateSheetData();
-        console.log('[us-rate-sheet-store] Data reloaded after effective date update.');
+        // Update the timestamp to notify listeners
+        this.lastDbUpdateTime = Date.now();
+        console.log(
+          `[us-rate-sheet-store] Effective date updated successfully to ${newDate} and timestamp updated.`
+        );
+        // Trigger data reload to refresh table and ensure consistency - REMOVED as table will react to timestamp
+        // await this.loadRateSheetData();
+        // console.log('[us-rate-sheet-store] Data reloaded after effective date update.');
       } catch (err) {
         console.error('[us-rate-sheet-store] Error updating effective date:', err);
         this.setError('Failed to update effective date.');

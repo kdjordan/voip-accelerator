@@ -80,9 +80,15 @@
             :disabled="availableStates.length === 0 || isDataLoading"
           >
             <option value="">All States/Provinces</option>
-            <option v-for="regionCode in availableStates" :key="regionCode" :value="regionCode">
-              {{ getRegionDisplayName(regionCode) }} ({{ regionCode }})
-            </option>
+            <optgroup
+              v-for="group in groupedAvailableStates"
+              :key="group.label"
+              :label="group.label"
+            >
+              <option v-for="regionCode in group.codes" :key="regionCode" :value="regionCode">
+                {{ getRegionDisplayName(regionCode) }} ({{ regionCode }})
+              </option>
+            </optgroup>
           </select>
         </div>
       </div>
@@ -220,6 +226,82 @@ const offset = ref<number>(0);
 const hasMoreData = ref<boolean>(true);
 const availableStates = ref<string[]>([]);
 
+// Define US States and Canadian Provinces for sorting
+const US_STATES = [
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'FL',
+  'GA',
+  'HI',
+  'ID',
+  'IL',
+  'IN',
+  'IA',
+  'KS',
+  'KY',
+  'LA',
+  'ME',
+  'MD',
+  'MA',
+  'MI',
+  'MN',
+  'MS',
+  'MO',
+  'MT',
+  'NE',
+  'NV',
+  'NH',
+  'NJ',
+  'NM',
+  'NY',
+  'NC',
+  'ND',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VT',
+  'VA',
+  'WA',
+  'WV',
+  'WI',
+  'WY',
+  'DC',
+];
+const CA_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
+
+// Computed property to structure states for the dropdown with optgroup
+const groupedAvailableStates = computed(() => {
+  const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
+  const caOptions = availableStates.value.filter((code) => CA_PROVINCES.includes(code));
+  // You could add another group here for any codes not in US_STATES or CA_PROVINCES if necessary
+  // const otherOptions = availableStates.value.filter(code => !US_STATES.includes(code) && !CA_PROVINCES.includes(code));
+
+  const groups = [];
+  if (usOptions.length > 0) {
+    groups.push({ label: 'United States', codes: usOptions });
+  }
+  if (caOptions.length > 0) {
+    groups.push({ label: 'Canada', codes: caOptions });
+  }
+  // if (otherOptions.length > 0) {
+  //   groups.push({ label: 'Other', codes: otherOptions });
+  // }
+  return groups;
+});
+
 // State for Average Calculation
 const overallAverages = ref<RateAverages | null>(null);
 const stateAverageCache = ref<Map<string, RateAverages>>(new Map());
@@ -280,6 +362,28 @@ const stopStateWatcher = watch(selectedState, async (newStateCode) => {
   }
 });
 
+// Watch for external DB updates signaled by the store timestamp
+const stopDbUpdateWatcher = watch(
+  () => store.lastDbUpdateTime,
+  async (newTimestamp, oldTimestamp) => {
+    if (newTimestamp !== oldTimestamp) {
+      console.log('[USRateSheetTable] Detected store.lastDbUpdateTime change. Reloading data...');
+      // Optionally, re-fetch unique states if they might have changed (unlikely for just date update)
+      // await updateAvailableStates();
+      await resetPaginationAndLoad();
+      // Also, recalculate averages as data changed
+      const avg = await calculateAverages(selectedState.value || undefined);
+      if (selectedState.value) {
+        if (avg) stateAverageCache.value.set(selectedState.value, avg);
+        currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+      } else {
+        overallAverages.value = avg;
+        currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+      }
+    }
+  }
+);
+
 async function initializeRateSheetDB(): Promise<boolean> {
   if (dbInstance) return true;
 
@@ -328,17 +432,36 @@ async function fetchUniqueStates() {
     );
 
     // Fetch unique state codes directly using Dexie's uniqueKeys
-    const uniqueRegionCodes = await dbInstance
+    const uniqueRegionCodes = (await dbInstance
       .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
-      .orderBy('stateCode')
-      .uniqueKeys();
+      .orderBy('stateCode') // Keep initial order by code for consistency within groups
+      .uniqueKeys()) as string[]; // Cast assuming they are strings
 
-    availableStates.value = (uniqueRegionCodes as string[]) // Cast assuming they are strings
+    // Custom sort: US States first, then Canadian Provinces, then others (alphabetical within groups)
+    availableStates.value = uniqueRegionCodes
       .filter(Boolean) // Remove null/undefined/empty strings
-      .sort();
+      .sort((a, b) => {
+        const aIsUS = US_STATES.includes(a);
+        const bIsUS = US_STATES.includes(b);
+        const aIsCA = CA_PROVINCES.includes(a);
+        const bIsCA = CA_PROVINCES.includes(b);
+
+        if (aIsUS && !bIsUS) return -1; // US comes before non-US
+        if (!aIsUS && bIsUS) return 1; // non-US comes after US
+
+        if (aIsUS && bIsUS) return a.localeCompare(b); // Sort US states alphabetically
+
+        if (aIsCA && !bIsCA) return -1; // CA comes before others (non-US, non-CA)
+        if (!aIsCA && bIsCA) return 1; // Others come after CA
+
+        if (aIsCA && bIsCA) return a.localeCompare(b); // Sort CA provinces alphabetically
+
+        // Sort any remaining items alphabetically (shouldn't happen with current lists)
+        return a.localeCompare(b);
+      });
 
     console.log(
-      '[USRateSheetTable] Found unique states/provinces from Dexie:',
+      '[USRateSheetTable] Found and sorted unique states/provinces from Dexie:',
       availableStates.value
     );
   } catch (err: any) {
@@ -547,6 +670,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopSearchWatcher();
   stopStateWatcher();
+  stopDbUpdateWatcher();
   console.log('USRateSheetTable unmounted');
 });
 
