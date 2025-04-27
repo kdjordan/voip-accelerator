@@ -191,20 +191,17 @@
       >
         <!-- Reports Button -->
         <div class="flex justify-end mt-8">
-          <!-- Get Full Reports Button (Only when two files are uploaded) -->
-          <button
+          <!-- Use BaseButton for Get Reports -->
+          <BaseButton
+            variant="primary"
+            size="standard"
+            :icon="ArrowRightIcon"
             @click="handleReportsAction"
             :disabled="isGeneratingReports"
-            class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
             :class="{ 'animate-pulse': isGeneratingReports }"
           >
-            <div class="flex items-center justify-center space-x-2">
-              <span class="text-sm text-accent">{{
-                isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports'
-              }}</span>
-              <ArrowRightIcon class="w-4 h-4 text-accent" />
-            </div>
-          </button>
+            {{ reportsButtonText }}
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -236,6 +233,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 import { useAzStore } from '@/stores/az-store';
 import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
 import type {
@@ -258,6 +256,11 @@ type ComponentId = 'az1' | 'az2';
 
 const azStore = useAzStore();
 const azService = new AZService();
+
+// Computed property for button text
+const reportsButtonText = computed(() => {
+  return isGeneratingReports.value ? 'GENERATING REPORTS' : 'Get Reports';
+});
 
 const isGeneratingReports = ref(false);
 

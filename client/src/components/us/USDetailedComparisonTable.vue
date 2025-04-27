@@ -9,10 +9,7 @@
       <div>
         <!-- File 1 Badge -->
         <div class="mb-2">
-          <span
-            class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
-            >{{ fileName1 }}</span
-          >
+          <BaseBadge size="small" variant="success">{{ fileName1 }}</BaseBadge>
         </div>
         <!-- File 1 Bento Boxes -->
         <div class="grid grid-cols-3 gap-2">
@@ -44,10 +41,7 @@
       <div>
         <!-- File 2 Badge -->
         <div class="mb-2">
-          <span
-            class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
-            >{{ fileName2 }}</span
-          >
+          <BaseBadge size="small" variant="info">{{ fileName2 }}</BaseBadge>
         </div>
         <!-- File 2 Bento Boxes -->
         <div class="grid grid-cols-3 gap-2">
@@ -181,23 +175,25 @@
 
       <!-- Download CSV Button -->
       <div class="ml-auto self-end">
-        <button
+        <BaseButton
+          variant="primary"
+          size="small"
           @click="downloadCsv"
           :disabled="
             isLoading || isLoadingMore || filteredComparisonData.length === 0 || isExporting
           "
-          title="Download Current View"
-          class="inline-flex items-center justify-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
+          title="Download Filtered Data"
+          class="min-w-[180px]"
         >
-          <span v-if="isExporting" class="flex items-center">
-            <ArrowPathIcon class="animate-spin w-5 h-5 mr-2" />
+          <span v-if="isExporting" class="flex items-center justify-center">
+            <ArrowPathIcon class="animate-spin w-4 h-4 mr-1.5" />
             Exporting...
           </span>
-          <span v-else class="flex items-center">
-            <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
+          <span v-else class="flex items-center justify-center">
+            <ArrowDownTrayIcon class="w-4 h-4 mr-1.5" />
             Export Filtered Data
           </span>
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -240,54 +236,66 @@
               <th class="px-4 py-2 text-left text-gray-300 align-bottom">Country</th>
               <!-- File 1 Inter -->
               <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <span
-                  class="mb-1 inline-block max-w-[100px] truncate text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                <BaseBadge
+                  size="small"
+                  variant="success"
+                  class="mb-1 max-w-[100px] truncate"
                   :title="fileName1"
-                  >{{ fileName1 }}</span
+                  >{{ fileName1 }}</BaseBadge
                 ><br />Inter
               </th>
               <!-- File 2 Inter -->
               <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <span
-                  class="mb-1 inline-block max-w-[100px] truncate text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                <BaseBadge
+                  size="small"
+                  variant="info"
+                  class="mb-1 max-w-[100px] truncate"
                   :title="fileName2"
-                  >{{ fileName2 }}</span
+                  >{{ fileName2 }}</BaseBadge
                 ><br />Inter
               </th>
               <!-- Diff Inter % Header -->
               <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
               <!-- File 1 Intra -->
               <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <span
-                  class="mb-1 inline-block max-w-[100px] truncate text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                <BaseBadge
+                  size="small"
+                  variant="success"
+                  class="mb-1 max-w-[100px] truncate"
                   :title="fileName1"
-                  >{{ fileName1 }}</span
+                  >{{ fileName1 }}</BaseBadge
                 ><br />Intra
               </th>
               <!-- File 2 Intra -->
               <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <span
-                  class="mb-1 inline-block max-w-[100px] truncate text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                <BaseBadge
+                  size="small"
+                  variant="info"
+                  class="mb-1 max-w-[100px] truncate"
                   :title="fileName2"
-                  >{{ fileName2 }}</span
+                  >{{ fileName2 }}</BaseBadge
                 ><br />Intra
               </th>
               <!-- Diff Intra % Header -->
               <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
               <!-- File 1 Indeterm -->
               <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <span
-                  class="mb-1 inline-block max-w-[100px] truncate text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                <BaseBadge
+                  size="small"
+                  variant="success"
+                  class="mb-1 max-w-[100px] truncate"
                   :title="fileName1"
-                  >{{ fileName1 }}</span
+                  >{{ fileName1 }}</BaseBadge
                 ><br />Indeterm
               </th>
               <!-- File 2 Indeterm -->
               <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <span
-                  class="mb-1 inline-block max-w-[100px] truncate text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
+                <BaseBadge
+                  size="small"
+                  variant="info"
+                  class="mb-1 max-w-[100px] truncate"
                   :title="fileName2"
-                  >{{ fileName2 }}</span
+                  >{{ fileName2 }}</BaseBadge
                 ><br />Indeterm
               </th>
               <!-- Diff Indeterm % Header -->
@@ -373,6 +381,8 @@ import type { USPricingComparisonRecord } from '@/types/domains/us-types';
 import type { DexieDBBase } from '@/composables/useDexieDB'; // Import the class type
 import Papa from 'papaparse'; // Import PapaParse
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Icons
+import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
+import BaseButton from '@/components/shared/BaseButton.vue'; // Import BaseButton
 
 const usStore = useUsStore(); // Instantiate usStore
 const lergStore = useLergStore(); // Instantiate lergStore

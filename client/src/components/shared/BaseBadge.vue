@@ -21,7 +21,7 @@ const baseClasses = 'inline-flex items-center font-medium border rounded-full';
 // Classes based on variant
 const variantClasses = computed(() => {
   switch (props.variant) {
-    case 'primary':
+    case 'accent':
       return 'bg-accent/10 border-accent/50 text-accent';
     case 'info':
       return 'bg-blue-900/30 border-blue-700/50 text-blue-300';

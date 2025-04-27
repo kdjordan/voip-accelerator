@@ -46,13 +46,16 @@
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
           ></div>
         </button>
-        <button
+        <!-- Use BaseButton for Reset -->
+        <BaseButton
           v-if="azStore.filesUploaded.size > 0"
+          variant="destructive"
+          size="small"
           @click="handleReset"
-          class="px-4 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors ml-auto text-red-400"
+          class="ml-auto"
         >
           Reset
-        </button>
+        </BaseButton>
       </div>
     </div>
   </div>
@@ -64,6 +67,7 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types';
 import { computed } from 'vue';
 import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 const azStore = useAzStore();
 const { deleteDatabase } = useDexieDB();

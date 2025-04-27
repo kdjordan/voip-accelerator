@@ -212,6 +212,15 @@ export interface AZDetailedComparisonEntry {
 }
 
 /**
+ * Defines the available filters for the paged detailed comparison view.
+ */
+export interface AZDetailedComparisonFilters {
+  search?: string; // For searching dialCode or destName
+  cheaper?: 'file1' | 'file2' | 'same'; // Filter by which file has the cheaper rate
+  matchStatus?: 'both' | 'file1_only' | 'file2_only'; // Filter by match status
+}
+
+/**
  * Represents the information about a single file in the enhanced code report.
  */
 export interface AZFileInfo {

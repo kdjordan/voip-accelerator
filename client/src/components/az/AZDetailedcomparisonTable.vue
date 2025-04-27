@@ -50,69 +50,107 @@
 
       <!-- Download CSV Button -->
       <div class="ml-auto self-end">
-        <button
+        <!-- Use BaseButton for Export -->
+        <BaseButton
+          variant="primary"
+          size="small"
           @click="downloadCsv"
-          :disabled="isLoading || isLoadingMore || comparisonData.length === 0"
-          title="Download Current View"
-          class="inline-flex items-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isLoading || isLoadingMore || comparisonData.length === 0 || isExporting"
+          title="Export Current View"
+          class="min-w-[180px]"
         >
-          <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
-          Export Current View
-        </button>
+          <span v-if="isExporting" class="flex items-center justify-center">
+            <ArrowPathIcon class="animate-spin w-4 h-4 mr-1.5" />
+            Exporting...
+          </span>
+          <span v-else class="flex items-center justify-center">
+            <ArrowDownTrayIcon class="w-4 h-4 mr-1.5" />
+            Export Current View
+          </span>
+        </BaseButton>
       </div>
     </div>
 
-    <div v-if="isLoading && comparisonData.length === 0" class="text-center text-gray-500 py-10">
-      Loading detailed comparison data...
+    <!-- 1. Loading Spinner (show whenever isLoading is true) -->
+    <div v-if="isLoading" class="text-center text-gray-500 py-10">
+      <div class="flex items-center justify-center space-x-2">
+        <ArrowPathIcon class="animate-spin w-5 h-5" />
+        <span>Loading comparison data...</span>
+      </div>
     </div>
+
+    <!-- 2. Error Message -->
     <div v-else-if="error" class="text-center text-red-500 py-10">
       Error loading data: {{ error }}
     </div>
-    <div
-      v-else-if="comparisonData.length === 0 && !isLoading"
-      class="text-center text-gray-500 py-10"
-    >
-      No matching comparison data found. Ensure reports have been generated or adjust filters.
+
+    <!-- 3. No Data Message Block (Now contains spinner instead of text) -->
+    <div v-else-if="comparisonData.length === 0" class="text-center text-gray-500 py-10">
+      <!-- Spinner content moved here -->
+      <div class="flex items-center justify-center space-x-2 text-accent bg-accent/10 border border-accent/50 rounded-lg p-2 w-1/2 mx-auto">
+        <ArrowPathIcon class="animate-spin w-5 h-5" />
+        <span>Loading comparison data...</span>
+      </div>
     </div>
+
+    <!-- 4. Data Table (show if not loading, no error, and data exists) -->
     <div v-else class="overflow-x-auto">
       <div ref="scrollContainerRef" class="max-h-[600px] overflow-y-auto">
         <table class="min-w-full divide-y divide-gray-700 text-sm">
           <thead class="bg-gray-800 sticky top-0 z-10">
             <tr>
               <!-- Headers based on AZDetailedComparisonEntry -->
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Dial Code</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Match Status</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[250px]">
-                Dest Name&nbsp;
-                <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md"
-                  >{{ fileName1 }}</span
-                >
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">
+                Dial Code
               </th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[250px]">
-                Dest Name&nbsp;
-                <span
-                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md"
-                  >{{ fileName2 }}</span
-                >
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">
+                Match Status
               </th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[200px]">
-                Rate&nbsp;
-                <span
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md"
-                  >{{ fileName1 }}</span
-                >
+              <!-- Updated Dest Name Header for File 1 -->
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[250px]">
+                <BaseBadge
+                  size="small"
+                  variant="success"
+                  class="mb-1 max-w-[150px] truncate"
+                  :title="fileName1"
+                  >{{ fileName1 }}</BaseBadge
+                ><br />Dest Name
               </th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[200px]">
-                Rate&nbsp;
-                <span
-                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md"
-                  >{{ fileName2 }}</span
-                >
+              <!-- Updated Dest Name Header for File 2 -->
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[250px]">
+                <BaseBadge
+                  size="small"
+                  variant="info"
+                  class="mb-1 max-w-[150px] truncate"
+                  :title="fileName2"
+                  >{{ fileName2 }}</BaseBadge
+                ><br />Dest Name
               </th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Diff</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[100px]">Diff %</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px]">Cheaper File</th>
+              <!-- Updated Rate Header for File 1 -->
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[200px]">
+                <BaseBadge
+                  size="small"
+                  variant="success"
+                  class="mb-1 max-w-[150px] truncate"
+                  :title="fileName1"
+                  >{{ fileName1 }}</BaseBadge
+                ><br />Rate
+              </th>
+              <!-- Updated Rate Header for File 2 -->
+              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[200px]">
+                <BaseBadge
+                  size="small"
+                  variant="info"
+                  class="mb-1 max-w-[150px] truncate"
+                  :title="fileName2"
+                  >{{ fileName2 }}</BaseBadge
+                ><br />Rate
+              </th>
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">Diff</th>
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[100px] align-bottom">Diff %</th>
+              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">
+                Cheaper File
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-800">
@@ -122,41 +160,39 @@
               class="hover:bg-gray-700/50"
             >
               <!-- Populate table cells -->
-              <td class="px-4 py-2 text-gray-400">{{ record.dialCode }}</td>
-              <td class="px-4 py-2 text-gray-300">
-                <span
-                  v-if="record.matchStatus === 'file1_only'"
-                  class="text-green-300 bg-green-900/50 border border-green-700 font-medium px-2 py-0.5 rounded-md text-xs"
+              <td class="px-4 py-2 text-gray-400 text-center">{{ record.dialCode }}</td>
+              <!-- Updated Match Status cell -->
+              <td class="px-4 py-2 text-center">
+                <BaseBadge
+                  size="small"
+                  :variant="
+                    record.matchStatus === 'both'
+                      ? 'warning'
+                      : record.matchStatus === 'file1_only'
+                      ? 'success'
+                      : record.matchStatus === 'file2_only'
+                      ? 'info'
+                      : 'neutral'
+                  "
                 >
                   {{ formatMatchStatus(record.matchStatus) }}
-                </span>
-                <span
-                  v-else-if="record.matchStatus === 'file2_only'"
-                  class="text-blue-300 bg-blue-900/50 border border-blue-700 font-medium px-2 py-0.5 rounded-md text-xs"
-                >
-                  {{ formatMatchStatus(record.matchStatus) }}
-                </span>
-                <span
-                  v-else-if="record.matchStatus === 'both'"
-                  class="text-orange-300 bg-orange-900/50 border border-orange-700 font-medium px-2 py-0.5 rounded-md text-xs"
-                >
-                  {{ formatMatchStatus(record.matchStatus) }}
-                </span>
-                <span v-else class="text-gray-500">
-                  {{ formatMatchStatus(record.matchStatus) }}
-                </span>
+                </BaseBadge>
               </td>
-              <td class="px-4 py-2 text-gray-400">{{ record.destName1 ?? 'N/A' }}</td>
-              <td class="px-4 py-2 text-gray-400">{{ record.destName2 ?? 'N/A' }}</td>
-              <td class="px-4 py-2 text-white">{{ record.rate1?.toFixed(6) ?? 'N/A' }}</td>
-              <td class="px-4 py-2 text-white">{{ record.rate2?.toFixed(6) ?? 'N/A' }}</td>
-              <td class="px-4 py-2" :class="getDiffClass(record.diff)">
+              <td class="px-4 py-2 text-gray-400 text-center">{{ record.destName1 ?? 'N/A' }}</td>
+              <td class="px-4 py-2 text-gray-400 text-center">{{ record.destName2 ?? 'N/A' }}</td>
+              <td class="px-4 py-2 text-white text-center">
+                {{ record.rate1?.toFixed(6) ?? 'N/A' }}
+              </td>
+              <td class="px-4 py-2 text-white text-center">
+                {{ record.rate2?.toFixed(6) ?? 'N/A' }}
+              </td>
+              <td class="px-4 py-2 text-center" :class="getDiffClass(record.diff)">
                 {{ record.diff?.toFixed(6) ?? 'N/A' }}
               </td>
-              <td class="px-4 py-2" :class="getDiffPercentClass(record.diffPercent)">
+              <td class="px-4 py-2 text-center" :class="getDiffPercentClass(record.diffPercent)">
                 {{ record.diffPercent ? record.diffPercent.toFixed(2) + '%' : 'N/A' }}
               </td>
-              <td class="px-4 py-2">
+              <td class="px-4 py-2 text-center">
                 <span :class="getCheaperClass(record.cheaperFile)">
                   {{ formatCheaperFile(record.cheaperFile) }}
                 </span>
@@ -164,10 +200,19 @@
             </tr>
           </tbody>
         </table>
+
         <!-- Trigger for loading more -->
         <div ref="loadMoreTriggerRef" class="h-10"></div>
-        <!-- Loading indicator -->
-        <div v-if="isLoadingMore" class="text-center text-gray-500 py-4">Loading more...</div>
+
+        <!-- Loading indicator for subsequent pages -->
+        <div v-if="isLoadingMore" class="text-center text-gray-500 py-4">
+          <div class="flex items-center justify-center space-x-2">
+            <ArrowPathIcon class="animate-spin w-5 h-5" />
+            <span>Loading more...</span>
+          </div>
+        </div>
+
+        <!-- End of results message -->
         <div
           v-if="!hasMoreData && comparisonData.length > 0"
           class="text-center text-gray-600 py-4"
@@ -185,7 +230,9 @@ import { useIntersectionObserver } from '@vueuse/core';
 import { useAzStore } from '@/stores/az-store';
 import { AZService } from '@/services/az.service';
 import Papa from 'papaparse';
-import { ArrowDownTrayIcon } from '@heroicons/vue/20/solid';
+import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
+import BaseBadge from '@/components/shared/BaseBadge.vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 import type {
   AZDetailedComparisonEntry,
   AZDetailedComparisonFilters,
@@ -198,6 +245,7 @@ const comparisonData = ref<AZDetailedComparisonEntry[]>([]);
 const isLoading = ref<boolean>(false); // Initial loading
 const isLoadingMore = ref<boolean>(false); // Subsequent page loading
 const error = ref<string | null>(null);
+const isExporting = ref(false);
 
 // Filter State
 const searchTerm = ref<string>('');
@@ -323,8 +371,12 @@ async function resetAndFetchData() {
   hasMoreData.value = true;
   error.value = null;
   isLoadingMore.value = false;
+  isLoading.value = true; // Ensure loading state is active
 
-  await fetchData(currentTableName.value, true);
+  // Explicitly clear the data array *before* fetching new data on reset
+  comparisonData.value = [];
+
+  await fetchData(currentTableName.value, true); // Pass reset = true
 }
 
 watch(
