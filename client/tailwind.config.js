@@ -21,7 +21,11 @@ export default {
         fbWhite: colors.slate['300'],
         fbHover: colors.slate['800'],
         accent: 'hsl(160, 100%, 40%)',
+        'accent-background': 'hsl(160, 100%, 40%, 0.2)',
         warning: colors.orange[400],
+        'warning-background': `${colors.orange[400]}1A`,
+        info: colors.blue[500],
+        'info-background': `${colors.blue[500]}1A`,
       },
       fontSize: {
         xxs: ['0.65rem', '1rem'],
