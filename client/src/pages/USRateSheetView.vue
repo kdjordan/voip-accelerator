@@ -466,34 +466,3 @@ function toggleEffectiveDateSettings() {
   showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
 }
 </script>
-
-<style scoped>
-.file-upload-pulse {
-  animation: uploadPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes uploadPulse {
-  0%,
-  100% {
-    background-color: rgba(0, 255, 170, 0.1);
-  }
-  50% {
-    background-color: rgba(0, 255, 170, 0.2);
-  }
-}
-
-.spinner-accent {
-  width: 22px;
-  height: 22px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-top-color: hsl(160, 100%, 40%);
-  border-radius: 50%;
-  animation: spinner 0.8s linear infinite;
-}
-
-@keyframes spinner {
-  to {
-    transform: rotate(360deg);
-  }
-}
-</style>

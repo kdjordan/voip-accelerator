@@ -72,6 +72,3 @@ const iconClasses = computed(() => {
 });
 </script>
 
-<style scoped>
-/* Add any component-specific styles here if needed, but prefer Tailwind utilities */
-</style>

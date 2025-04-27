@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { RouterLink } from 'vue-router';
-  import TopNav from '@/components/shared/TopNav.vue';
-  import TheFooter from '@/components/shared/TheFooter.vue';
-  import FeatureCards from '@/components/home/FeatureCards.vue';
+import { RouterLink } from 'vue-router';
+import TopNav from '@/components/shared/TopNav.vue';
+import TheFooter from '@/components/shared/TheFooter.vue';
+import FeatureCards from '@/components/home/FeatureCards.vue';
 </script>
 
 <template>
@@ -10,7 +10,9 @@
     <!-- Top Navigation Bar -->
 
     <!-- Hero Section - Simplified to match reference design -->
-    <section class="mt-4 rounded-3xl mx-4 pb-32 pt-16 bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack">
+    <section
+      class="mt-4 rounded-3xl mx-4 pb-32 pt-16 bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack"
+    >
       <TopNav />
       <!-- Colorful gradient background -->
       <!-- <div class="absolute inset-0 bg-gradient-to-br from-accent/20 via-accent/10 to-fbBlack z-0 border border-fbBorder/20 m-8 rounded-lg"></div> -->
@@ -28,8 +30,8 @@
           </h1>
           <!-- Subheading - Clean and focused -->
           <p class="text-base md:text-2xl text-fbWhite/80 max-w-2xl">
-            Compare your rates against theirs, leverage LERG lookups, keep everything safe in your browser, and export
-            your reports.
+            Compare your rates against theirs, leverage LERG lookups, keep everything safe in your
+            browser, and export your reports.
             <span class="text-white block mt-4 font-secondary text-xl">Simplify your data.</span>
             <span class="text-white block font-secondary text-xl">Accelerate your decisions.</span>
           </p>
@@ -66,8 +68,9 @@
         </div>
         <div class="w-2/3 bg-fbWhite rounded-3xl p-8">
           <p class="text-4xl max-w-4xl text-right mx-auto text-fbBlack leading-normal uppercase">
-            No more wasted time staring at Excel only to learn nothing actionable. Upload your decks, get pricing and
-            code insights, and find your opportunities - all before your coffee cools.
+            No more wasted time staring at Excel only to learn nothing actionable. Upload your
+            decks, get pricing and code insights, and find your opportunities - all before your
+            coffee cools.
           </p>
         </div>
       </div>
@@ -76,9 +79,15 @@
     <!-- Features Section with Infinite Scroll -->
     <section class="pt-8 pb-8 relative z-10 bg-fbBlack">
       <div class="container mx-auto mb-2 font-secondary w-full">
-        <h2 class="text-size3xl text-center mx-auto mb-4 text-accent uppercase font-">Why You'll Love VOIP Accelerator</h2>
-        <h3 class="text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">Efficiency. Accuracy. Insight.</h3>
-        <h3 class="text-3xl mb-12 text-fbWhite max-w-3xl text-center mx-auto">All Without Excel...</h3>
+        <h2 class="text-size3xl text-center mx-auto mb-4 text-accent uppercase font-">
+          Why You'll Love VOIP Accelerator
+        </h2>
+        <h3 class="text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">
+          Efficiency. Accuracy. Insight.
+        </h3>
+        <h3 class="text-3xl mb-12 text-fbWhite max-w-3xl text-center mx-auto">
+          All Without Excel...
+        </h3>
       </div>
 
       <!-- Import the Feature Cards component -->
@@ -91,7 +100,9 @@
         <div class="container mx-auto px-4">
           <div class="flex flex-col items-center justify-center text-center max-w-3xl mx-auto">
             <div class="mb-12">
-              <p class="text-fbWhite text-sm mx-auto mb-12 tracking-wider font-secondary">GET STARTED</p>
+              <p class="text-fbWhite text-sm mx-auto mb-12 tracking-wider font-secondary">
+                GET STARTED
+              </p>
               <h2 class="text-3xl mb-8 text-white">Ready to optimize your VOIP pricing?</h2>
               <p class="text-fbWhite text-xl mx-auto w-2/3 font-secondary">
                 Get the cheat code for buying and selling in the VOIP market.
@@ -114,11 +125,3 @@
     <!-- Footer -->
   </div>
 </template>
-
-<style scoped>
-  .bg-grid-pattern {
-    background-size: 50px 50px;
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  }
-</style>

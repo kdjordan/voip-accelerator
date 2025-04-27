@@ -458,9 +458,3 @@ function downloadCsv(): void {
   }
 }
 </script>
-
-<style scoped>
-thead th {
-  background-color: #1f2937;
-}
-</style>

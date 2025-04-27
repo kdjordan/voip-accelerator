@@ -1014,10 +1014,3 @@ function getRegionDisplayName(code: string): string {
   return provinceName; // Returns the code itself if not found here either
 }
 </script>
-
-<style scoped>
-/* Ensure the sticky header works well */
-thead th {
-  background-color: #1f2937; /* bg-gray-800 */
-}
-</style>
