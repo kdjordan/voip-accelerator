@@ -1,4 +1,4 @@
-  <template>
+<template>
   <div class="min-h-screen text-white pt-2 w-full">
     <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
       Admin Dashboard
@@ -853,32 +853,5 @@ const getNonUSTotalNPAs = computed(() => {
   animation: pulse-width 2s infinite ease-in-out;
 }
 
-.animate-status-pulse-success {
-  animation: pulse 2s infinite;
-  box-shadow: 0 0 12px rgba(76, 175, 80, 0.5);
-  width: 12px;
-  height: 12px;
-}
-
-.animate-status-pulse-error {
-  animation: pulse 2s infinite;
-  box-shadow: 0 0 12px rgba(244, 67, 54, 0.5);
-  width: 12px;
-  height: 12px;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.95);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-  100% {
-    opacity: 0.5;
-    transform: scale(0.95);
-  }
-}
+/* Removed redundant status pulse definitions below */
 </style>
