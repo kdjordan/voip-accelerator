@@ -53,6 +53,7 @@
           size="small"
           @click="handleReset"
           class="ml-auto"
+          :is-loading="isResetting"
         >
           Reset
         </BaseButton>
@@ -65,12 +66,13 @@ import { useAzStore } from '@/stores/az-store';
 import { ReportTypes, type ReportType } from '@/types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
 import BaseButton from '@/components/shared/BaseButton.vue';
 
 const azStore = useAzStore();
 const { deleteDatabase } = useDexieDB();
+const isResetting = ref(false);
 
 const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
 
@@ -115,6 +117,7 @@ const journeyMessage = computed(() => {
 });
 
 async function handleReset() {
+  isResetting.value = true;
   try {
     console.log('Resetting the AZ report...');
 
@@ -126,6 +129,8 @@ async function handleReset() {
     console.log('Reset completed successfully');
   } catch (error) {
     console.error('Error during reset:', error);
+  } finally {
+    isResetting.value = false;
   }
 }
 

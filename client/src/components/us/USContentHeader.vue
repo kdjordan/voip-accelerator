@@ -52,6 +52,7 @@
           size="small"
           @click="handleReset"
           class="ml-auto"
+          :is-loading="isResetting"
         >
           Reset
         </BaseButton>
@@ -66,11 +67,12 @@ import { ReportTypes, type ReportType } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types';
 import { US_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
-import { computed, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
 import BaseButton from '@/components/shared/BaseButton.vue';
 
 const usStore = useUsStore();
 const { deleteDatabase } = useDexieDB();
+const isResetting = ref(false);
 
 // Compute available report types based on the new readiness flags
 const availableReportTypes = computed(() => {
@@ -143,6 +145,7 @@ const journeyMessage = computed(() => {
 });
 
 async function handleReset() {
+  isResetting.value = true;
   try {
     console.log('Resetting the US report');
 
@@ -166,6 +169,8 @@ async function handleReset() {
     console.log('Reset completed successfully');
   } catch (error) {
     console.error('Error during reset:', error);
+  } finally {
+    isResetting.value = false;
   }
 }
 </script>
