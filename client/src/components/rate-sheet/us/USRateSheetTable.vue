@@ -158,29 +158,26 @@
 
       <!-- Right Side: Actions -->
       <div class="flex items-center gap-4 flex-wrap">
-        <button
+        <BaseButton
+          variant="destructive"
+          size="standard"
+          :icon="TrashIcon"
           @click="handleClearData"
-          class="inline-flex items-center justify-center px-4 py-2 border border-red-700 text-sm font-medium rounded-md shadow-sm text-red-300 bg-red-900/50 hover:bg-red-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Clear all rate sheet data"
         >
-          <TrashIcon class="w-5 h-5 mr-2" />
           Clear Data
-        </button>
-        <button
-          @click="handleExport"
+        </BaseButton>
+        <BaseButton
+          variant="primary"
+          size="standard"
+          :icon="ArrowDownTrayIcon"
+          :loading="isExporting"
           :disabled="totalRecords === 0 || isExporting"
-          class="inline-flex items-center justify-center px-4 py-2 border border-green-700 text-sm font-medium rounded-md shadow-sm text-green-300 bg-green-900/50 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="handleExport"
           title="Export all loaded data"
         >
-          <span v-if="isExporting" class="flex items-center">
-            <ArrowPathIcon class="animate-spin w-5 h-5 mr-2" />
-            Exporting...
-          </span>
-          <span v-else class="flex items-center">
-            <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
-            Export All
-          </span>
-        </button>
+          Export All
+        </BaseButton>
       </div>
     </div>
 
@@ -268,6 +265,7 @@ import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 // Type for average values
 interface RateAverages {

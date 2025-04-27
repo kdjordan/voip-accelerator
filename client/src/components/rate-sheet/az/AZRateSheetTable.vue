@@ -74,18 +74,17 @@
           </div>
 
           <div class="flex justify-end w-full">
-            <button
-              @click="applyEffectiveDateSettings"
-              class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
-              :class="{
-                'animate-opacity-pulse': isApplyingSettings,
-                'opacity-50 cursor-not-allowed': isApplyingSettings || !hasDateSettingsChanged,
-              }"
+            <BaseButton
+              variant="primary"
+              size="small"
+              :loading="isApplyingSettings"
               :disabled="isApplyingSettings || !hasDateSettingsChanged"
+              :icon="ArrowRightIcon"
+              @click="applyEffectiveDateSettings"
+              title="Apply effective date settings to all records"
             >
-              <span>{{ isApplyingSettings ? 'Applying...' : 'Apply' }}</span>
-              <ArrowRightIcon class="ml-1 w-3 h-3" v-if="!isApplyingSettings" />
-            </button>
+              Apply
+            </BaseButton>
           </div>
         </div>
       </div>
@@ -101,13 +100,15 @@
           </span>
         </div>
         <div class="flex items-center gap-2">
-          <button
+          <BaseButton
+            variant="destructive"
+            size="standard"
+            :icon="TrashIcon"
             @click="handleClearData"
-            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium rounded-md bg-red-900/50 border border-red-500/40 hover:bg-red-900/70 hover:border-red-500/60 text-red-400 transition-colors"
+            title="Clear all loaded rate sheet data"
           >
-            <TrashIcon class="w-4 h-4" />
             Clear Rate Sheet Data
-          </button>
+          </BaseButton>
         </div>
       </div>
 
@@ -190,36 +191,42 @@
             <div class="space-y-2">
               <!-- Action buttons -->
               <div class="flex gap-2">
-                <button
-                  @click="handleBulkUpdate('highest')"
+                <BaseButton
+                  variant="secondary"
+                  size="standard"
+                  class="flex-1"
+                  :loading="isBulkProcessing && bulkMode === 'highest'"
                   :disabled="isBulkProcessing"
-                  class="flex-1 px-3 py-2 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md text-gray-300 transition-colors"
-                  :class="{
-                    'opacity-50 cursor-not-allowed animate-opacity-pulse': isBulkProcessing,
-                  }"
+                  @click="handleBulkUpdate('highest')"
                 >
-                  {{ isBulkProcessing ? 'Processing...' : 'Use Highest' }}
-                </button>
-                <button
-                  v-if="!isBulkProcessing"
+                  Use Highest
+                </BaseButton>
+                <BaseButton
+                  variant="secondary"
+                  size="standard"
+                  class="flex-1"
+                  :loading="isBulkProcessing && bulkMode === 'lowest'"
+                  :disabled="isBulkProcessing"
+                  v-if="!isBulkProcessing || bulkMode !== 'lowest'"
                   @click="handleBulkUpdate('lowest')"
-                  class="flex-1 px-3 py-2 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md text-gray-300 transition-colors"
                 >
                   Use Lowest
-                </button>
+                </BaseButton>
               </div>
             </div>
           </div>
           <!-- Export Action -->
           <div v-else-if="!isBulkProcessing && store.getDiscrepancyCount === 0">
             <label class="block text-sm text-gray-400 mb-1">Actions</label>
-            <button
+            <BaseButton
+              variant="primary"
+              size="standard"
+              class="w-full"
+              :icon="ArrowDownTrayIcon"
               @click="handleExport"
-              class="w-full inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium rounded-md text-green-400 hover:text-green-300 bg-green-400/10 hover:bg-green-400/20 transition-colors border border-green-400/30"
             >
-              <ArrowDownTrayIcon class="w-4 h-4" />
               Export Rate Sheet
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>
@@ -343,29 +350,32 @@
                   <div class="flex items-center justify-between mb-4">
                     <h4 class="text-sm font-medium text-white">Rate Distribution</h4>
                     <div class="flex items-center gap-2">
-                      <button
+                      <BaseButton
                         v-if="
                           !areAllRateCodesExpanded(group.destinationName) && group.rates.length > 1
                         "
+                        variant="secondary"
+                        size="small"
                         @click="toggleAllRateCodesForDestination(group.destinationName, true)"
-                        class="px-3 py-1.5 text-xs bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md transition-colors"
                       >
                         Show All Codes
-                      </button>
-                      <button
+                      </BaseButton>
+                      <BaseButton
                         v-if="areAnyRateCodesExpanded(group.destinationName)"
+                        variant="secondary"
+                        size="small"
                         @click="toggleAllRateCodesForDestination(group.destinationName, false)"
-                        class="px-3 py-1.5 text-xs bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md transition-colors"
                       >
                         Hide All Codes
-                      </button>
-                      <button
+                      </BaseButton>
+                      <BaseButton
                         v-if="group.hasDiscrepancy || hasUnsavedChanges(group.destinationName)"
+                        variant="primary"
+                        size="small"
                         @click="saveRateSelection(group)"
-                        class="px-3 py-1.5 text-sm bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
                       >
                         Save Changes
-                      </button>
+                      </BaseButton>
                     </div>
                   </div>
                   <div class="space-y-2">
@@ -475,12 +485,14 @@
                           <span v-if="customRates[group.destinationName]" class="text-accent">
                             {{ formatRate(customRates[group.destinationName]) }}
                           </span>
-                          <button
+                          <BaseButton
+                            variant="secondary"
+                            size="small"
+                            class="ml-2"
                             @click.stop="openCustomRateInput(group.destinationName)"
-                            class="px-2 py-1 text-xs bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md ml-2 transition-colors"
                           >
                             {{ customRates[group.destinationName] ? 'Edit' : 'Set Rate' }}
-                          </button>
+                          </BaseButton>
                         </div>
                       </label>
                     </div>
@@ -520,18 +532,10 @@
           @keyup.enter="saveCustomRate"
         />
         <div class="flex justify-end gap-2">
-          <button
-            @click="customRateModal.isOpen = false"
-            class="px-3 py-1.5 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md transition-colors"
-          >
+          <BaseButton variant="secondary" size="standard" @click="customRateModal.isOpen = false">
             Cancel
-          </button>
-          <button
-            @click="saveCustomRate"
-            class="px-3 py-1.5 text-sm bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
-          >
-            Save
-          </button>
+          </BaseButton>
+          <BaseButton variant="primary" size="standard" @click="saveCustomRate"> Save </BaseButton>
         </div>
       </div>
     </div>
@@ -567,6 +571,7 @@ import type {
   EffectiveDateStoreSettings,
 } from '@/types/domains/rate-sheet-types';
 import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 // Define emits
 const emit = defineEmits(['update:discrepancy-count']);
@@ -623,6 +628,7 @@ const customRateInput = ref<HTMLInputElement | null>(null);
 
 // Add new refs for processing state
 const isBulkProcessing = ref(false);
+const bulkMode = ref<'highest' | 'lowest' | null>(null);
 const processedCount = ref(0);
 const totalToProcess = ref(0);
 const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
@@ -945,6 +951,7 @@ function saveCustomRate() {
 async function handleBulkUpdate(mode: 'highest' | 'lowest') {
   isBulkProcessing.value = true;
   processedCount.value = 0;
+  bulkMode.value = mode;
 
   // Give the browser a chance to update the UI and show the animation
   // by using requestAnimationFrame and a small setTimeout
@@ -960,6 +967,7 @@ async function handleBulkUpdate(mode: 'highest' | 'lowest') {
 
   if (destinationsToFix.length === 0) {
     isBulkProcessing.value = false;
+    bulkMode.value = null;
     return;
   }
 
@@ -992,6 +1000,7 @@ async function handleBulkUpdate(mode: 'highest' | 'lowest') {
     await new Promise((resolve) => setTimeout(resolve, 300));
   } finally {
     isBulkProcessing.value = false;
+    bulkMode.value = null;
   }
 }
 

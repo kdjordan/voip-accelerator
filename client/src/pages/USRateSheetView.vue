@@ -53,15 +53,17 @@
                   class="bg-gray-800 border border-gray-700 rounded text-sm px-3 py-2 text-white w-full"
                   :min="minDate"
                 />
-                <button
-                  @click="handleApplyEffectiveDate"
+                <BaseButton
+                  variant="primary"
+                  size="small"
                   :disabled="!isDateChanged || store.isLoading"
-                  class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors whitespace-nowrap"
-                  :class="{ 'opacity-50 cursor-not-allowed': !isDateChanged || store.isLoading }"
+                  :loading="store.isUpdatingEffectiveDate"
+                  :icon="ArrowRightIcon"
+                  @click="handleApplyEffectiveDate"
+                  class="whitespace-nowrap"
                 >
-                  <span>{{ store.isUpdatingEffectiveDate ? 'Applying...' : 'Apply' }}</span>
-                  <ArrowRightIcon class="ml-1 w-3 h-3" v-if="!store.isUpdatingEffectiveDate" />
-                </button>
+                  Apply
+                </BaseButton>
               </div>
               <div v-else class="text-sm text-gray-500 italic">Upload data first</div>
             </div>
@@ -173,6 +175,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 import {
   ArrowUpTrayIcon,

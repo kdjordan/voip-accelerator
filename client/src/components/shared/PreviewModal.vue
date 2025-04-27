@@ -20,18 +20,59 @@
             <div class="flex justify-between items-center mb-6">
               <h3 class="text-lg leading-6 font-medium text-fbWhite">Select Column Roles</h3>
               <div class="flex flex-col items-center gap-2">
-                <label for="start-line" class="block text-sm font-medium text-fbWhite/70"
-                  >Data starts on line:</label
-                >
-                <select
-                  id="start-line"
-                  v-model="startLine"
-                  class="select-custom mt-1 block w-32 bg-fbHover text-fbWhite rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
-                >
-                  <option v-for="i in 15" :key="i" :value="i">
-                    {{ i }}
-                  </option>
-                </select>
+                <Listbox v-model="startLine" as="div" class="w-32">
+                  <ListboxLabel class="block text-sm font-medium text-fbWhite/70"
+                    >Data starts on line:</ListboxLabel
+                  >
+                  <div class="relative mt-1">
+                    <ListboxButton
+                      class="relative w-full cursor-default rounded-md bg-fbHover py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm border border-fbWhite/20"
+                    >
+                      <span class="block truncate text-fbWhite">{{ startLine }}</span>
+                      <span
+                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                      >
+                        <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      </span>
+                    </ListboxButton>
+
+                    <transition
+                      leave-active-class="transition duration-100 ease-in"
+                      leave-from-class="opacity-100"
+                      leave-to-class="opacity-0"
+                    >
+                      <ListboxOptions
+                        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-fbHover py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                      >
+                        <ListboxOption
+                          v-for="i in 15"
+                          :key="i"
+                          :value="i"
+                          v-slot="{ active, selected }"
+                          as="template"
+                        >
+                          <li
+                            :class="[
+                              active ? 'bg-accent/20 text-accent' : 'text-fbWhite',
+                              'relative cursor-default select-none py-2 pl-10 pr-4',
+                            ]"
+                          >
+                            <span
+                              :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                              >{{ i }}</span
+                            >
+                            <span
+                              v-if="selected"
+                              class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                            >
+                              <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                            </span>
+                          </li>
+                        </ListboxOption>
+                      </ListboxOptions>
+                    </transition>
+                  </div>
+                </Listbox>
               </div>
             </div>
 
@@ -60,21 +101,67 @@
 
             <!-- US-specific Indeterminate Rate Definition -->
             <div v-if="isUSFile" class="mb-6">
-              <label class="block text-sm font-medium text-fbWhite/70 mb-2">
-                Indeterminate Rate defined by:
-              </label>
-              <select
-                v-model="indeterminateRateDefinition"
-                class="select-custom block w-64 bg-fbHover text-fbWhite rounded-md py-2 pl-3 focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm"
-                :class="{
-                  'border-red-500': shouldShowIndeterminateError && showValidationErrors,
-                }"
-                @change="handleIndeterminateRateChange"
-              >
-                <option value="column">Column Role</option>
-                <option value="intrastate">Use Intrastate Rate</option>
-                <option value="interstate">Use Interstate Rate</option>
-              </select>
+              <Listbox v-model="indeterminateRateDefinition" as="div" class="w-64">
+                <ListboxLabel class="block text-sm font-medium text-fbWhite/70 mb-2"
+                  >Indeterminate Rate defined by:</ListboxLabel
+                >
+                <div class="relative mt-1">
+                  <ListboxButton
+                    class="relative w-full cursor-default rounded-md bg-fbHover py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm border"
+                    :class="[
+                      shouldShowIndeterminateError && showValidationErrors
+                        ? 'border-red-500'
+                        : 'border-fbWhite/20',
+                    ]"
+                    @click="handleIndeterminateListboxClick"
+                  >
+                    <span class="block truncate text-fbWhite">{{
+                      selectedIndeterminateLabel
+                    }}</span>
+                    <span
+                      class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                    >
+                      <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </span>
+                  </ListboxButton>
+
+                  <transition
+                    leave-active-class="transition duration-100 ease-in"
+                    leave-from-class="opacity-100"
+                    leave-to-class="opacity-0"
+                  >
+                    <ListboxOptions
+                      class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-fbHover py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                    >
+                      <ListboxOption
+                        v-for="option in indeterminateOptions"
+                        :key="option.value"
+                        :value="option.value"
+                        v-slot="{ active, selected }"
+                        as="template"
+                      >
+                        <li
+                          :class="[
+                            active ? 'bg-accent/20 text-accent' : 'text-fbWhite',
+                            'relative cursor-default select-none py-2 pl-10 pr-4',
+                          ]"
+                        >
+                          <span
+                            :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                            >{{ option.label }}</span
+                          >
+                          <span
+                            v-if="selected"
+                            class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                          >
+                            <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                          </span>
+                        </li>
+                      </ListboxOption>
+                    </ListboxOptions>
+                  </transition>
+                </div>
+              </Listbox>
               <p
                 v-if="shouldShowIndeterminateError && showValidationErrors"
                 class="mt-1 text-xs text-red-500"
@@ -97,38 +184,103 @@
                         :key="index"
                         class="px-6 py-3 text-left text-xs font-medium text-fbWhite/70 uppercase tracking-wider"
                       >
-                        <select
-                          v-model="mappings[index]"
-                          class="select-custom min-w-[180px] block w-full rounded-md py-2 pl-3 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-accent"
-                          :class="{
-                            'bg-accent/20 text-accent border border-accent/50':
-                              mappings[index] !== '',
-                            'bg-fbHover text-fbWhite border border-fbWhite/20':
-                              mappings[index] === '' &&
-                              (!allColumnsMapped || props.validateRequired),
-                            'bg-fbHover/30 text-fbWhite/30 border border-fbWhite/10 cursor-not-allowed':
-                              mappings[index] === '' &&
-                              allColumnsMapped &&
-                              !props.validateRequired &&
-                              !(isUSFile && indeterminateRateDefinition === 'column'),
-                          }"
-                          @change="handleMappingChange"
-                          :disabled="
-                            mappings[index] === '' &&
-                            allColumnsMapped &&
-                            !props.validateRequired &&
-                            !(isUSFile && indeterminateRateDefinition === 'column')
-                          "
-                        >
-                          <option value="">Select Column Role</option>
-                          <option
-                            v-for="option in availableOptions(index)"
-                            :key="option.value"
-                            :value="option.value"
-                          >
-                            {{ option.label }}
-                          </option>
-                        </select>
+                        <Listbox v-model="mappings[index]" as="div" class="min-w-[180px]">
+                          <div class="relative mt-1">
+                            <ListboxButton
+                              class="relative w-full cursor-default rounded-md py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm transition-colors duration-200 border"
+                              :class="{
+                                'bg-accent/20 text-accent border-accent/50': mappings[index] !== '',
+                                'bg-fbHover text-fbWhite border-fbWhite/20':
+                                  mappings[index] === '' &&
+                                  (!allColumnsMapped || props.validateRequired),
+                                'bg-fbHover/30 text-fbWhite/30 border-fbWhite/10 cursor-not-allowed':
+                                  mappings[index] === '' &&
+                                  allColumnsMapped &&
+                                  !props.validateRequired &&
+                                  !(isUSFile && indeterminateRateDefinition === 'column'),
+                              }"
+                              :disabled="
+                                mappings[index] === '' &&
+                                allColumnsMapped &&
+                                !props.validateRequired &&
+                                !(isUSFile && indeterminateRateDefinition === 'column')
+                              "
+                            >
+                              <span class="block truncate">{{
+                                selectedColumnRoleLabel(index)
+                              }}</span>
+                              <span
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                              >
+                                <ChevronUpDownIcon
+                                  class="h-5 w-5 text-gray-400"
+                                  aria-hidden="true"
+                                />
+                              </span>
+                            </ListboxButton>
+
+                            <transition
+                              leave-active-class="transition duration-100 ease-in"
+                              leave-from-class="opacity-100"
+                              leave-to-class="opacity-0"
+                            >
+                              <ListboxOptions
+                                class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-fbHover py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                              >
+                                <ListboxOption value="" v-slot="{ active, selected }" as="template">
+                                  <li
+                                    :class="[
+                                      active ? 'bg-accent/20 text-accent' : 'text-fbWhite',
+                                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                                    ]"
+                                  >
+                                    <span
+                                      :class="[
+                                        selected ? 'font-medium' : 'font-normal',
+                                        'block truncate',
+                                      ]"
+                                      >Select Column Role</span
+                                    >
+                                    <span
+                                      v-if="selected"
+                                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                                    >
+                                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  </li>
+                                </ListboxOption>
+                                <ListboxOption
+                                  v-for="option in availableOptions(index)"
+                                  :key="option.value"
+                                  :value="option.value"
+                                  v-slot="{ active, selected }"
+                                  as="template"
+                                >
+                                  <li
+                                    :class="[
+                                      active ? 'bg-accent/20 text-accent' : 'text-fbWhite',
+                                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                                    ]"
+                                  >
+                                    <span
+                                      :class="[
+                                        selected ? 'font-medium' : 'font-normal',
+                                        'block truncate',
+                                      ]"
+                                      >{{ option.label }}</span
+                                    >
+                                    <span
+                                      v-if="selected"
+                                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                                    >
+                                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  </li>
+                                </ListboxOption>
+                              </ListboxOptions>
+                            </transition>
+                          </div>
+                        </Listbox>
                       </th>
                     </tr>
                   </thead>
@@ -207,6 +359,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import {
+  Listbox,
+  ListboxButton,
+  ListboxLabel,
+  ListboxOptions,
+  ListboxOption,
+} from '@headlessui/vue';
+import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
 import BaseButton from '@/components/shared/BaseButton.vue';
 import { USColumnRole } from '@/types/domains/us-types';
 import {
@@ -238,6 +398,21 @@ const startLine = ref(props.startLine);
 const indeterminateRateDefinition = ref('column');
 const showValidationErrors = ref(false);
 const effectiveDate = ref(''); // Add ref for effective date
+
+// Options for Indeterminate Rate Listbox
+const indeterminateOptions = [
+  { value: 'column', label: 'Column Role' },
+  { value: 'intrastate', label: 'Use Intrastate Rate' },
+  { value: 'interstate', label: 'Use Interstate Rate' },
+];
+
+// Computed property for selected indeterminate rate label
+const selectedIndeterminateLabel = computed(() => {
+  return (
+    indeterminateOptions.find((option) => option.value === indeterminateRateDefinition.value)
+      ?.label || 'Column Role'
+  );
+});
 
 // Add onMounted hook to set default date
 onMounted(() => {
@@ -307,14 +482,31 @@ watch(
   }
 );
 
-function handleIndeterminateRateChange() {
-  emit('update:indeterminate-definition', indeterminateRateDefinition.value);
-
+// Update watcher for indeterminate rate definition to handle Listbox v-model changes
+watch(indeterminateRateDefinition, (newValue) => {
+  emit('update:indeterminate-definition', newValue);
   // Reset validation errors when the selection changes
   showValidationErrors.value = false;
-
-  // Update validation
+  // Update overall validation status
   emit('update:valid', isValid.value);
+});
+
+// Computed property to get the label for the selected column role
+function selectedColumnRoleLabel(index: number): string {
+  const selectedValue = mappings.value[index];
+  if (selectedValue === '') {
+    return 'Select Column Role';
+  }
+  // Find the option label in the full list (props.columnOptions)
+  return (
+    props.columnOptions.find((option) => option.value === selectedValue)?.label || selectedValue
+  );
+}
+
+function handleIndeterminateListboxClick() {
+  // This function can potentially be used to clear validation errors immediately on click
+  // For now, the watcher handles it on selection change, which is generally sufficient
+  // showValidationErrors.value = false;
 }
 
 function availableOptions(currentIndex: number) {
