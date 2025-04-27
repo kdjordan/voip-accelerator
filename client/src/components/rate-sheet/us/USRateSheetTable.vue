@@ -407,13 +407,21 @@
       <table class="min-w-full divide-y divide-gray-700 text-sm">
         <thead class="bg-gray-800 sticky top-0 z-10">
           <tr>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">NPANXX</th>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">State</th>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">Country</th>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">Interstate Rate</th>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">Intrastate Rate</th>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">Indeterminate Rate</th>
-            <th scope="col" class="px-4 py-2 text-left text-gray-300">Effective Date</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">NPANXX</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">State</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Country</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
+              Interstate Rate
+            </th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
+              Intrastate Rate
+            </th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
+              Indeterminate Rate
+            </th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
+              Effective Date
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
@@ -422,17 +430,25 @@
             :key="entry.id || entry.npanxx"
             class="hover:bg-gray-700/50"
           >
-            <td class="px-4 py-2 text-gray-400 font-mono">{{ entry.npanxx }}</td>
-            <td class="px-4 py-2 text-gray-400">
+            <td class="px-4 py-2 text-gray-400 font-mono text-center">{{ entry.npanxx }}</td>
+            <td class="px-4 py-2 text-gray-400 text-center">
               {{ lergStore.getLocationByNPA(entry.npa)?.region || 'N/A' }}
             </td>
-            <td class="px-4 py-2 text-gray-400">
+            <td class="px-4 py-2 text-gray-400 text-center">
               {{ lergStore.getLocationByNPA(entry.npa)?.country || 'N/A' }}
             </td>
-            <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.interRate) }}</td>
-            <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.intraRate) }}</td>
-            <td class="px-4 py-2 text-white font-mono">{{ formatRate(entry.ijRate) }}</td>
-            <td class="px-4 py-2 text-gray-400 font-mono">{{ entry.effectiveDate || 'N/A' }}</td>
+            <td class="px-4 py-2 text-white font-mono text-center">
+              {{ formatRate(entry.interRate) }}
+            </td>
+            <td class="px-4 py-2 text-white font-mono text-center">
+              {{ formatRate(entry.intraRate) }}
+            </td>
+            <td class="px-4 py-2 text-white font-mono text-center">
+              {{ formatRate(entry.ijRate) }}
+            </td>
+            <td class="px-4 py-2 text-gray-400 font-mono text-center">
+              {{ entry.effectiveDate || 'N/A' }}
+            </td>
           </tr>
         </tbody>
       </table>
