@@ -95,7 +95,7 @@
                 leave-to-class="opacity-0"
               >
                 <ListboxOptions
-                  class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
                 >
                   <!-- "All States/Provinces" Option -->
                   <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
