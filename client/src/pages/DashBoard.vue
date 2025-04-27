@@ -160,11 +160,9 @@
         v-else-if="isLoadingDatabaseInfo"
         class="bg-gray-800 rounded-lg p-6 flex justify-center items-center h-36 border border-gray-700/50"
       >
-        <div class="text-center">
-          <p class="text-lg mb-3">Loading database information...</p>
-          <div
-            class="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full mx-auto"
-          ></div>
+        <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+          <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+          <p class="text-sm text-accent">Loading database information...</p>
         </div>
       </div>
       <div
@@ -193,6 +191,8 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import BaseBadge from '@/components/shared/BaseBadge.vue';
 import type { BaseBadgeProps, DBNameType } from '@/types/app-types';
+import Dexie from 'dexie';
+import { ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 // Shared store for user info
 const sharedStore = useSharedStore();
@@ -307,33 +307,49 @@ async function loadDatabaseInfo() {
   console.log('[DashBoard] Loading database info...');
 
   try {
-    const dbNames = Object.values(DBName);
-    for (const dbName of dbNames) {
-      console.log(`[DashBoard] Checking DB: ${dbName}`);
-      await dexieDB.getDB(dbName as DBNameType);
-      const storeNames = await dexieDB.getAllStoreNamesForDB(dbName as DBNameType);
+    // 1. Get names of all IndexedDB databases present in the browser
+    const existingDbNames = await Dexie.getDatabaseNames();
+    console.log('[DashBoard] Found existing databases:', existingDbNames);
+
+    // 2. Filter to get only our application's known databases that currently exist
+    const knownAppDbNames = Object.values(DBName) as DBNameType[];
+    const relevantExistingDbNames = existingDbNames.filter((name) =>
+      knownAppDbNames.includes(name as DBNameType)
+    );
+    console.log('[DashBoard] Relevant existing app databases:', relevantExistingDbNames);
+
+    // 3. Iterate only over the databases that actually exist
+    for (const dbName of relevantExistingDbNames) {
+      console.log(`[DashBoard] Checking existing DB: ${dbName}`);
+      // We still need getDB to get table names/counts, but now only for existing DBs
+      // getDB ensures the connection is open if needed
+      const dbInstance = await dexieDB.getDB(dbName); // `getDB` is okay here as we know the DB exists
+      const storeNames = await dexieDB.getAllStoreNamesForDB(dbName);
       console.log(`[DashBoard] Stores found in ${dbName}:`, storeNames);
 
       for (const storeName of storeNames) {
         try {
-          const records = await dexieDB.loadFromDexieDB(dbName as DBNameType, storeName);
+          // Use the specific dbInstance obtained above for counting
+          const count = await dbInstance.table(storeName).count();
           allDatabaseTables.value.push({
             name: storeName,
             storage: 'indexeddb',
-            count: records.length,
+            count: count,
           });
-          console.log(
-            `[DashBoard] Added table: ${dbName}/${storeName} (${records.length} records)`
-          );
+          console.log(`[DashBoard] Added table: ${dbName}/${storeName} (${count} records)`);
         } catch (loadError) {
           console.error(`[DashBoard] Failed to load count for ${dbName}/${storeName}:`, loadError);
+          // Optionally add an entry indicating the error
           allDatabaseTables.value.push({
-            name: `${storeName} (Error Loading)`,
+            name: `${storeName} (Error Loading Count)`,
             storage: 'indexeddb',
             count: 0,
           });
         }
       }
+      // Optional: Close the specific Dexie instance if useDexieDB doesn't manage singletons well,
+      // but useDexieDB is designed to handle this, so explicit close likely not needed.
+      // if (dbInstance.isOpen()) dbInstance.close();
     }
     console.log('[DashBoard] Finished loading database info. Tables:', allDatabaseTables.value);
   } catch (error) {
