@@ -1,1 +1,0 @@
-OK - now somehow we are requiring increments and effective date somewhere for @USRateSheetView.vue and it's process. We should be allowing those to be absent and we will be having hte user define those in their process. 
