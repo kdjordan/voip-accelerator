@@ -197,8 +197,7 @@
             size="standard"
             :icon="ArrowRightIcon"
             @click="handleReportsAction"
-            :disabled="isGeneratingReports"
-            :class="{ 'animate-pulse': isGeneratingReports }"
+            :loading="isGeneratingReports"
           >
             {{ reportsButtonText }}
           </BaseButton>

@@ -85,7 +85,8 @@ export interface BaseButtonProps {
   size?: 'standard' | 'small';
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
-  icon?: Component; // Allow passing an icon component
+  icon?: Component | null;
+  loading?: boolean;
 }
 
 // New: Define props for the BaseBadge component

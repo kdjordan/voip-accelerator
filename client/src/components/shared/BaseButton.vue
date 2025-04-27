@@ -1,23 +1,31 @@
 <template>
-  <button :type="type" :class="buttonClasses" :disabled="disabled">
-    <!-- Render icon if provided -->
-    <component v-if="icon" :is="icon" :class="iconClasses" aria-hidden="true" />
-    <!-- Button text/content -->
-    <slot></slot>
+  <button :type="type" :class="buttonClasses" :disabled="disabled || loading">
+    <!-- Loading State -->
+    <span v-if="loading" class="flex items-center justify-center">
+      <ArrowPathIcon :class="spinnerClasses" aria-hidden="true" />
+      <!-- Optionally add loading text here if needed -->
+    </span>
+    <!-- Default State -->
+    <span v-else class="inline-flex items-center justify-center">
+      <component v-if="icon" :is="icon" :class="iconClasses" aria-hidden="true" />
+      <slot></slot>
+    </span>
   </button>
 </template>
 
 <script setup lang="ts">
 import { computed, type Component, useSlots } from 'vue';
+import { ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import loading icon
 import type { BaseButtonProps } from '@/types/app-types';
 
-// Define props with defaults
+// Define props with defaults, including loading
 const props = withDefaults(defineProps<BaseButtonProps>(), {
   variant: 'primary',
   size: 'standard',
   type: 'button',
   disabled: false,
   icon: undefined,
+  loading: false, // Default loading to false
 });
 
 // Get slots
@@ -60,15 +68,26 @@ const buttonClasses = computed(() => {
 const iconClasses = computed(() => {
   const baseIcon = 'shrink-0'; // Prevent icon from shrinking
   const hasText = !!slots.default; // Check if there is text content in the slot
-  // Determine margin based on size and presence of text
   if (!hasText) return baseIcon; // No margin needed if only icon
   switch (props.size) {
     case 'small':
-      return `${baseIcon} -ml-0.5 mr-1.5 h-4 w-4`; // Adjusted spacing for small
+      return `${baseIcon} -ml-0.5 mr-1.5 h-4 w-4`;
     case 'standard':
     default:
-      return `${baseIcon} -ml-1 mr-2 h-5 w-5`; // Standard spacing
+      return `${baseIcon} -ml-1 mr-2 h-5 w-5`;
+  }
+});
+
+// Classes for the loading spinner
+const spinnerClasses = computed(() => {
+  const baseSpinner = 'animate-spin shrink-0';
+  // Use similar sizing as the regular icon
+  switch (props.size) {
+    case 'small':
+      return `${baseSpinner} h-4 w-4`; // Match small icon size
+    case 'standard':
+    default:
+      return `${baseSpinner} h-5 w-5`; // Match standard icon size
   }
 });
 </script>
-
