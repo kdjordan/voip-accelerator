@@ -21,6 +21,7 @@ export default {
         fbWhite: colors.slate['300'],
         fbHover: colors.slate['800'],
         accent: 'hsl(160, 100%, 40%)',
+        warning: colors.orange[400],
       },
       keyframes: {
         'upload-pulse': {
@@ -31,24 +32,44 @@ export default {
             background: 'hsl(160, 100%, 40%, 0.2)',
           },
         },
-        'status-pulse-success': {
+        'status-pulse-success-shadow': {
           '0%, 100%': {
             opacity: 1,
-            boxShadow: '0 0 0 0 rgba(var(--accent) / 0.7)',
+            boxShadow: '0 0 0 0 theme(colors.accent/0.7)',
           },
           '50%': {
             opacity: 0.6,
-            boxShadow: '0 0 0 6px rgba(var(--accent) / 0)',
+            boxShadow: '0 0 0 6px theme(colors.accent/0)',
           },
         },
-        'status-pulse-error': {
+        'status-pulse-error-shadow': {
           '0%, 100%': {
             opacity: 1,
-            boxShadow: '0 0 0 0 rgba(var(--destructive) / 0.7)',
+            boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.7)',
           },
           '50%': {
             opacity: 0.6,
-            boxShadow: '0 0 0 6px rgba(var(--destructive) / 0)',
+            boxShadow: '0 0 0 6px rgba(244, 67, 54, 0)',
+          },
+        },
+        'status-pulse-warning-shadow': {
+          '0%, 100%': {
+            opacity: 1,
+            boxShadow: '0 0 0 0 theme(colors.warning/0.7)',
+          },
+          '50%': {
+            opacity: 0.6,
+            boxShadow: '0 0 0 6px theme(colors.warning/0)',
+          },
+        },
+        pulse: {
+          '0%, 100%': {
+            opacity: 0.5,
+            transform: 'scale(0.95)',
+          },
+          '50%': {
+            opacity: 1,
+            transform: 'scale(1.05)',
           },
         },
         spin: {
@@ -58,8 +79,11 @@ export default {
       },
       animation: {
         'upload-pulse': 'upload-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'status-pulse-success': 'status-pulse-success 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'status-pulse-error': 'status-pulse-error 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'status-pulse-success':
+          'status-pulse-success-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'status-pulse-error': 'status-pulse-error-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'status-pulse-warning':
+          'status-pulse-warning-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         spin: 'spin 1s linear infinite',
       },
     },

@@ -21,8 +21,8 @@
                   class="w-3 h-3 rounded-full"
                   :class="[
                     isLocallyStored
-                      ? 'bg-green-500 animate-status-pulse-success'
-                      : 'bg-red-500 animate-status-pulse-error',
+                      ? 'bg-accent animate-status-pulse-success'
+                      : 'bg-warning animate-status-pulse-warning',
                   ]"
                 ></div>
                 <span class="text-sm">{{ isLocallyStored ? 'Data Loaded' : 'No Data' }}</span>

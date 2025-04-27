@@ -8,7 +8,7 @@ import type {
 } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 
-export const useUsStore = defineStore('usStore', {
+export const useUsStore = defineStore('us', {
   state: () => ({
     filesUploaded: new Map<string, { fileName: string }>(),
     showUploadComponents: true,
