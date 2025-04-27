@@ -220,7 +220,6 @@ const items = ref<NavItem[]>([
   },
 ]);
 </script>
-
 <style scoped>
 /* Removed unused style */
 /* .router-link-active-style {

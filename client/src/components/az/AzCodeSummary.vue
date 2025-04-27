@@ -251,38 +251,3 @@ const filteredCountries = computed<AZCountryBreakdown[]>(() => {
   }
 });
 </script>
-
-<style scoped>
-/* Ensure list-none removes default marker from summary */
-summary {
-  list-style: none;
-}
-summary::-webkit-details-marker {
-  display: none; /* Chrome, Safari, Edge */
-}
-summary::marker {
-  display: none; /* Firefox */
-}
-
-/* Custom tiny text size */
-.text-xxs {
-  font-size: 0.65rem; /* Adjust as needed */
-  line-height: 1rem;
-}
-
-/* Scrollbar styling */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
-}
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: theme('colors.gray.700');
-  border-radius: 3px;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.500');
-  border-radius: 3px;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.gray.400');
-}
-</style>

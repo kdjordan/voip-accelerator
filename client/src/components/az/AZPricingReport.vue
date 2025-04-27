@@ -56,20 +56,6 @@ function goToFilesTab() {
   // Potentially trigger router navigation if tabs are route-based
 }
 
-// Keep the detailed table component
-// const detailedTableRef = ref<InstanceType<typeof AZDetailedComparisonTable> | null>(null);
-
-// --- REMOVED Logic for Summary Sections ---
-// Removed expandedSections, expandedDestinations, expandedCodeRows refs
-// Removed sellSearchQuery, buySearchQuery, sameSearchQuery, unmatchedSearchQuery refs
-// Removed sellSortBy, buySortBy, sameSortBy refs
-// Removed toggleSection, toggleDestinationExpand, toggleExpandRow, isCodeExpanded functions
-// Removed filteredSellItems, filteredBuyItems, filteredSameItems, filteredUnmatchedItems computed properties
-// Removed formatPercentage helper (if only used here)
-
-// --- Existing Logic to Keep (if any) ---
 </script>
 
-<style scoped>
-/* Add any necessary styles here */
-</style>
+

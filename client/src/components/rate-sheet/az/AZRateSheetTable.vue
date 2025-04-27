@@ -78,7 +78,7 @@
               @click="applyEffectiveDateSettings"
               class="inline-flex items-center px-2 py-1 text-xs bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 rounded-md transition-colors"
               :class="{
-                'animate-pulse-fast': isApplyingSettings,
+                'animate-opacity-pulse': isApplyingSettings,
                 'opacity-50 cursor-not-allowed': isApplyingSettings || !hasDateSettingsChanged,
               }"
               :disabled="isApplyingSettings || !hasDateSettingsChanged"
@@ -138,10 +138,10 @@
               v-model="searchQuery"
               type="text"
               placeholder="Search by Name or Prefix Start..."
-              class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
+              class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2 pr-8"
             />
-            <div v-if="isSearching" class="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <div class="spinner-accent"></div>
+            <div v-if="isSearching" class="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <ArrowPathIcon class="w-5 h-5 text-gray-400 animate-spin" />
             </div>
           </div>
         </div>
@@ -158,7 +158,9 @@
                   @click="handleBulkUpdate('highest')"
                   :disabled="isBulkProcessing"
                   class="flex-1 px-3 py-2 text-sm bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 rounded-md text-gray-300 transition-colors"
-                  :class="{ 'opacity-50 cursor-not-allowed animate-pulse-fast': isBulkProcessing }"
+                  :class="{
+                    'opacity-50 cursor-not-allowed animate-opacity-pulse': isBulkProcessing,
+                  }"
                 >
                   {{ isBulkProcessing ? 'Processing...' : 'Use Highest' }}
                 </button>
@@ -458,8 +460,8 @@
     <!-- Empty State -->
     <div v-else class="text-center py-12 bg-gray-800 rounded-lg">
       <p class="text-gray-400" v-if="isSearching">
-        <span class="inline-flex items-center gap-2">
-          Searching<span class="dots-loading"></span>
+        <span class="inline-flex items-center gap-1">
+          Searching <ArrowPathIcon class="w-4 h-4 animate-spin" />
         </span>
       </p>
       <p class="text-gray-400" v-else>No destinations found matching your filters</p>
@@ -509,6 +511,7 @@ import {
   CalendarDaysIcon,
   ChevronDownIcon,
   ArrowRightIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
 import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
@@ -1675,69 +1678,3 @@ watch(
   }
 );
 </script>
-
-<style scoped>
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.animate-pulse-fast {
-  animation: pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.spinner-accent {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-top-color: var(
-    --color-accent,
-    #10b981
-  ); /* Use theme accent color with fallback to green */
-  border-radius: 50%;
-  animation: spinner 0.8s linear infinite;
-}
-
-@keyframes spinner {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.dots-loading {
-  display: inline-block;
-  position: relative;
-  width: 20px;
-  height: 20px;
-}
-
-.dots-loading:after {
-  content: '...';
-  font-weight: bold;
-  color: var(--color-accent, #10b981);
-  animation: dots 1.5s infinite;
-}
-
-@keyframes dots {
-  0%,
-  20% {
-    content: '.';
-  }
-  40% {
-    content: '..';
-  }
-  60%,
-  100% {
-    content: '...';
-  }
-}
-</style>

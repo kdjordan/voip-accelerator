@@ -23,6 +23,9 @@ export default {
         accent: 'hsl(160, 100%, 40%)',
         warning: colors.orange[400],
       },
+      fontSize: {
+        xxs: ['0.65rem', '1rem'],
+      },
       keyframes: {
         'upload-pulse': {
           '0%, 100%': {
@@ -72,6 +75,10 @@ export default {
             transform: 'scale(1.05)',
           },
         },
+        'opacity-pulse': {
+          '0%, 100%': { opacity: 1 },
+          '50%': { opacity: 0.5 },
+        },
         spin: {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
@@ -84,6 +91,7 @@ export default {
         'status-pulse-error': 'status-pulse-error-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-warning':
           'status-pulse-warning-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'animate-opacity-pulse': 'opacity-pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         spin: 'spin 1s linear infinite',
       },
     },
