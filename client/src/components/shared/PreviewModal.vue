@@ -171,24 +171,17 @@
               :handle-confirm="handleConfirm"
               :handle-cancel="handleCancel"
             >
-              <button
-                @click="handleConfirm"
+              <BaseButton
                 :disabled="!isValid"
-                :class="[
-                  'px-6 py-2 rounded-lg transition-colors',
-                  isValid
-                    ? 'bg-accent/20 border border-accent/50 hover:bg-accent/30 text-accent'
-                    : 'bg-fbHover/50 text-fbWhite/50 border border-fbWhite/20 cursor-not-allowed',
-                ]"
+                size="standard"
+                variant="primary"
+                @click="handleConfirm"
               >
                 Confirm
-              </button>
-              <button
-                @click="handleCancel"
-                class="border border-destructive/50 bg-destructive/20 hover:bg-destructive/30 text-destructive transition-all text-xl rounded-md px-2"
-              >
+              </BaseButton>
+              <BaseButton size="standard" variant="destructive" @click="handleCancel">
                 &times;
-              </button>
+              </BaseButton>
             </slot>
 
             <!-- Conditional Effective Date Input for US Rate Sheet -->
@@ -214,6 +207,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 import { USColumnRole } from '@/types/domains/us-types';
 import {
   PREVIEW_MODAL_MESSAGES,

@@ -113,21 +113,57 @@
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <!-- Filter -->
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">View Filter</label>
-          <select
-            v-model="filterStatus"
-            class="w-full bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300 px-3 py-2"
-          >
-            <option value="all">All Destinations</option>
-            <option value="conflicts">Rate Conflicts</option>
-            <option value="no-conflicts">No Conflicts</option>
-            <optgroup label="Change Status">
-              <option value="change-same">Same Rate</option>
-              <option value="change-increase">Rate Increase</option>
-              <option value="change-decrease">Rate Decrease</option>
-            </optgroup>
-          </select>
+        <div class="w-full">
+          <Listbox v-model="filterStatus" as="div">
+            <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
+              >View Filter</ListboxLabel
+            >
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-900 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 sm:text-sm border border-gray-700"
+              >
+                <span class="block truncate text-gray-300">{{ selectedFilterLabel }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <ListboxOption
+                    v-for="option in filterOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-accent/20 text-accent' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                        option.label
+                      }}</span>
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
         </div>
 
         <!-- Search -->
@@ -512,7 +548,16 @@ import {
   ChevronDownIcon,
   ArrowRightIcon,
   ArrowPathIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
 } from '@heroicons/vue/24/outline';
+import {
+  Listbox,
+  ListboxButton,
+  ListboxLabel,
+  ListboxOptions,
+  ListboxOption,
+} from '@headlessui/vue';
 import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
 import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
 import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
@@ -1677,4 +1722,21 @@ watch(
     }
   }
 );
+
+// Define filter options
+const filterOptions = [
+  { value: 'all', label: 'All Destinations' },
+  { value: 'conflicts', label: 'Rate Conflicts' },
+  { value: 'no-conflicts', label: 'No Conflicts' },
+  { value: 'change-same', label: 'Same Rate' },
+  { value: 'change-increase', label: 'Rate Increase' },
+  { value: 'change-decrease', label: 'Rate Decrease' },
+];
+
+// Computed property for selected filter label
+const selectedFilterLabel = computed(() => {
+  return (
+    filterOptions.find((option) => option.value === filterStatus.value)?.label || 'All Destinations'
+  );
+});
 </script>
