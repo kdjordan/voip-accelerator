@@ -181,6 +181,215 @@
       </div>
     </div>
 
+    <!-- Rate Adjustment Section -->
+    <div class="bg-gray-900/50 p-4 rounded-lg mb-4">
+      <h4 class="text-sm font-medium text-gray-300 mb-4">
+        Apply Rate Adjustments (to Filtered Results)
+      </h4>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+        <!-- Adjustment Type -->
+        <div class="relative">
+          <Listbox v-model="adjustmentType" as="div">
+            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
+              >Adjustment</ListboxLabel
+            >
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+              >
+                <span class="block truncate text-white">{{ selectedAdjustmentTypeLabel }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <ListboxOption
+                    v-for="option in adjustmentTypeOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                        option.label
+                      }}</span>
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
+        </div>
+
+        <!-- Value Type -->
+        <div class="relative">
+          <Listbox v-model="adjustmentValueType" as="div">
+            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1">By</ListboxLabel>
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+              >
+                <span class="block truncate text-white">{{
+                  selectedAdjustmentValueTypeLabel
+                }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <ListboxOption
+                    v-for="option in adjustmentValueTypeOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                        option.label
+                      }}</span>
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
+        </div>
+
+        <!-- Value Input -->
+        <div>
+          <label for="adjustment-value" class="block text-xs font-medium text-gray-400 mb-1"
+            >Value</label
+          >
+          <input
+            id="adjustment-value"
+            v-model.number="adjustmentValue"
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Enter value..."
+            class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg p-2.5 focus:ring-primary-500 focus:border-primary-500"
+          />
+        </div>
+
+        <!-- Target Rate Type -->
+        <div class="relative">
+          <Listbox v-model="targetRateType" as="div">
+            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
+              >Target Rate</ListboxLabel
+            >
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+              >
+                <span class="block truncate text-white">{{ selectedTargetRateTypeLabel }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <ListboxOption
+                    v-for="option in targetRateTypeOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                        option.label
+                      }}</span>
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
+        </div>
+
+        <!-- Apply Button -->
+        <div>
+          <BaseButton
+            variant="primary"
+            size="standard"
+            class="w-full"
+            :icon="ArrowRightIcon"
+            :loading="isApplyingAdjustment"
+            :disabled="
+              isApplyingAdjustment ||
+              adjustmentValue === null ||
+              adjustmentValue <= 0 ||
+              totalRecords === 0
+            "
+            @click="applyRateAdjustments"
+            title="Apply adjustment to all currently filtered records"
+          >
+            Apply
+          </BaseButton>
+        </div>
+      </div>
+      <!-- Feedback Area -->
+      <div v-if="adjustmentStatusMessage || adjustmentError" class="mt-3 text-xs">
+        <p v-if="adjustmentStatusMessage" class="text-green-400">{{ adjustmentStatusMessage }}</p>
+        <p v-if="adjustmentError" class="text-red-400">Error: {{ adjustmentError }}</p>
+      </div>
+    </div>
+
     <!-- Table Container -->
     <div v-if="isDataLoading" class="text-center text-gray-500 py-10">
       <div
@@ -258,6 +467,7 @@ import {
   ArrowPathIcon,
   CheckIcon,
   ChevronUpDownIcon,
+  ArrowRightIcon,
 } from '@heroicons/vue/20/solid';
 import type { USRateSheetEntry } from '@/types/rate-sheet-types';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
@@ -268,6 +478,11 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import {
+  type AdjustmentType,
+  type AdjustmentValueType,
+  type TargetRateType,
+} from '@/types/rate-sheet-types'; // Assuming types are defined here
 
 // Type for average values
 interface RateAverages {
@@ -282,6 +497,33 @@ const lergStore = useLergStore();
 const { getDB } = useDexieDB();
 let dbInstance: DexieDBBase | null = null;
 const RATE_SHEET_TABLE_NAME = 'entries';
+
+// --- Rate Adjustment Options Data ---
+const adjustmentTypeOptions = [
+  { value: 'markup', label: 'Markup' },
+  { value: 'markdown', label: 'Markdown' },
+];
+const adjustmentValueTypeOptions = [
+  { value: 'percentage', label: 'Percentage (%)' },
+  { value: 'fixed', label: 'Fixed Amount ($)' },
+];
+const targetRateTypeOptions = [
+  { value: 'all', label: 'All Rates' },
+  { value: 'inter', label: 'Interstate' },
+  { value: 'intra', label: 'Intrastate' },
+  { value: 'ij', label: 'Indeterminate' },
+];
+// --- End Rate Adjustment Options Data ---
+
+// --- Rate Adjustment State ---
+const adjustmentType = ref<AdjustmentType>(adjustmentTypeOptions[0].value);
+const adjustmentValueType = ref<AdjustmentValueType>(adjustmentValueTypeOptions[0].value);
+const adjustmentValue = ref<number | null>(null);
+const targetRateType = ref<TargetRateType>(targetRateTypeOptions[0].value);
+const isApplyingAdjustment = ref(false);
+const adjustmentStatusMessage = ref<string | null>(null);
+const adjustmentError = ref<string | null>(null);
+// --- End Rate Adjustment State ---
 
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
@@ -887,13 +1129,21 @@ async function handleExport() {
 
     const dataToExport = allMatchingData.map((entry) => {
       const location = lergStore.getLocationByNPA(entry.npa);
+      // Helper to format rate for export (number to string with 6 decimals, or 'N/A')
+      const formatExportRate = (rate: number | string | null | undefined): string => {
+        if (rate === null || rate === undefined || typeof rate !== 'number') {
+          return 'N/A';
+        }
+        return Number(rate).toFixed(6);
+      };
+
       return {
         npanxx: entry.npanxx,
         state: location?.region || 'N/A', // Use LERG data or fallback
         country: location?.country || 'N/A', // Use LERG data or fallback
-        interRate: formatRate(entry.interRate), // Format rates consistently
-        intraRate: formatRate(entry.intraRate),
-        ijRate: formatRate(entry.ijRate),
+        interRate: formatExportRate(entry.interRate), // Format rates for CSV
+        intraRate: formatExportRate(entry.intraRate),
+        ijRate: formatExportRate(entry.ijRate),
         effectiveDate: entry.effectiveDate || 'N/A', // Handle missing date
       };
     });
@@ -962,6 +1212,203 @@ function getRegionDisplayName(code: string): string {
   const provinceName = lergStore.getProvinceNameByCode(code);
   return provinceName; // Returns the code itself if not found here either
 }
+
+/**
+ * Applies rate adjustments (markup/markdown) to filtered entries in the DexieDB.
+ */
+async function applyRateAdjustments() {
+  if (isApplyingAdjustment.value || !dbInstance) {
+    console.warn('[USRateSheetTable] Adjustment already in progress or DB not ready.');
+    return;
+  }
+  if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
+    adjustmentError.value = 'Please enter a positive adjustment value.';
+    adjustmentStatusMessage.value = null;
+    return;
+  }
+
+  isApplyingAdjustment.value = true;
+  adjustmentStatusMessage.value = null;
+  adjustmentError.value = null;
+  const startTime = performance.now();
+  console.log(
+    `[USRateSheetTable] Starting rate adjustment: ${adjustmentType.value} ${adjustmentValue.value}${
+      adjustmentValueType.value === 'percentage' ? '%' : '$'
+    } to ${targetRateType.value} rates.`
+  );
+
+  try {
+    // 1. Get Primary Keys of Filtered Records
+    let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance
+      .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
+      .toCollection();
+
+    const filtersApplied: string[] = [];
+
+    // Apply filters progressively
+    if (debouncedSearchQuery.value) {
+      collection = collection.filter((record) =>
+        record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
+      );
+      filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
+      // Note: Dexie's startsWithIgnoreCase is preferable for index usage, but .filter() is more flexible
+      // if combining non-indexed criteria. Reverting to filter for simplicity in combining.
+      // If performance becomes an issue with large datasets, revisit index usage.
+      // Alternative using indexed search:
+      // collection = collection.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+    }
+
+    if (selectedState.value) {
+      // If we already filtered by npanxx, chain the state filter
+      collection = collection.filter((record) => record.stateCode === selectedState.value);
+      filtersApplied.push(`Region equals '${selectedState.value}'`);
+      // Alternative using indexed search (if query started with where clause):
+      // collection = collection.and(record => record.stateCode === selectedState.value);
+      // Or if query could be table:
+      // collection = collection.where('stateCode').equals(selectedState.value);
+    }
+
+    console.log(`[USRateSheetTable] Applying filters: ${filtersApplied.join(' AND ') || 'None'}`);
+    const primaryKeys = await collection.primaryKeys();
+    const recordCount = primaryKeys.length;
+
+    if (recordCount === 0) {
+      adjustmentStatusMessage.value =
+        'No records match the current filters. No adjustments applied.';
+      isApplyingAdjustment.value = false;
+      return;
+    }
+
+    console.log(`[USRateSheetTable] Found ${recordCount} records matching filters to adjust.`);
+    adjustmentStatusMessage.value = `Calculating adjustments for ${recordCount} records...`;
+
+    // 2. Fetch Records and Calculate ALL Changes (outside transaction)
+    const allUpdatesToApply: { key: any; changes: Partial<USRateSheetEntry> }[] = [];
+    const chunkSize = 1000; // Adjust chunk size for fetching/calculation if needed
+
+    for (let i = 0; i < recordCount; i += chunkSize) {
+      const chunkKeys = primaryKeys.slice(i, i + chunkSize);
+      if (chunkKeys.length === 0) continue;
+
+      const recordsInChunk = await dbInstance
+        .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
+        .bulkGet(chunkKeys);
+
+      for (const record of recordsInChunk) {
+        if (!record) continue;
+
+        const changes: Partial<USRateSheetEntry> = {};
+        let changed = false;
+        const targets: (keyof Pick<USRateSheetEntry, 'interRate' | 'intraRate' | 'ijRate'>)[] = [];
+
+        if (targetRateType.value === 'all' || targetRateType.value === 'inter')
+          targets.push('interRate');
+        if (targetRateType.value === 'all' || targetRateType.value === 'intra')
+          targets.push('intraRate');
+        if (targetRateType.value === 'all' || targetRateType.value === 'ij') targets.push('ijRate');
+
+        targets.forEach((rateField) => {
+          const currentRate = record[rateField];
+          if (typeof currentRate !== 'number') return;
+
+          let adjustedRate: number;
+          const value = adjustmentValue.value!; // Already validated
+
+          if (adjustmentValueType.value === 'percentage') {
+            const percentage = value / 100;
+            adjustedRate =
+              currentRate * (adjustmentType.value === 'markup' ? 1 + percentage : 1 - percentage);
+          } else {
+            adjustedRate = currentRate + (adjustmentType.value === 'markup' ? value : -value);
+          }
+
+          const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
+
+          if (finalRate !== currentRate) {
+            changes[rateField] = finalRate;
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          allUpdatesToApply.push({ key: record.id || record.npanxx, changes });
+        }
+      }
+      // Optional: Update status during calculation if it takes long
+      // adjustmentStatusMessage.value = `Calculating... ${Math.round(((i + chunkKeys.length) / recordCount) * 100)}%`;
+      // await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI update during calculation
+    }
+
+    const updatesCount = allUpdatesToApply.length;
+    if (updatesCount === 0) {
+      adjustmentStatusMessage.value = 'No changes needed for the matching records.';
+      isApplyingAdjustment.value = false;
+      return;
+    }
+
+    console.log(
+      `[USRateSheetTable] Calculated ${updatesCount} updates. Starting write operation...`
+    );
+    adjustmentStatusMessage.value = `Applying ${updatesCount} updates...`;
+
+    // 3. Perform ALL Updates using bulkUpdate for efficiency
+    // bulkUpdate handles transaction management internally for the batch.
+    const tableToUpdate = dbInstance.table<USRateSheetEntry, number | string>(
+      RATE_SHEET_TABLE_NAME
+    ); // Specify key type if known (e.g., number or string)
+    await tableToUpdate.bulkUpdate(allUpdatesToApply);
+
+    console.log(`[USRateSheetTable] bulkUpdate finished.`);
+
+    // Update completed successfully
+    const endTime = performance.now();
+    const duration = ((endTime - startTime) / 1000).toFixed(2);
+    // Use updatesCount instead of recordCount for the final message
+    adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
+    console.log(`[USRateSheetTable] Adjustment finished in ${duration}s.`);
+
+    // 4. Refresh Data and Averages
+    console.log('[USRateSheetTable] Refreshing table data and averages after adjustment...');
+    await resetPaginationAndLoad(); // Reload table data
+
+    // Recalculate averages
+    const avg = await calculateAverages(selectedState.value || undefined);
+    if (selectedState.value) {
+      if (avg) stateAverageCache.value.set(selectedState.value, avg);
+      currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+    } else {
+      overallAverages.value = avg;
+      currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+    }
+    console.log('[USRateSheetTable] Averages recalculated.');
+
+    // Explicitly update store timestamp to signal DB change
+    store.lastDbUpdateTime = Date.now();
+    console.log('[USRateSheetTable] Updated store lastDbUpdateTime.');
+
+    // Optional: Clear inputs after success
+    // adjustmentValue.value = null;
+  } catch (err: any) {
+    console.error('[USRateSheetTable] Error applying rate adjustments:', err);
+    adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
+    adjustmentStatusMessage.value = null;
+  } finally {
+    isApplyingAdjustment.value = false;
+  }
+}
+
+// --- Computed properties for Listbox labels ---
+const selectedAdjustmentTypeLabel = computed(
+  () => adjustmentTypeOptions.find((opt) => opt.value === adjustmentType.value)?.label || ''
+);
+const selectedAdjustmentValueTypeLabel = computed(
+  () =>
+    adjustmentValueTypeOptions.find((opt) => opt.value === adjustmentValueType.value)?.label || ''
+);
+const selectedTargetRateTypeLabel = computed(
+  () => targetRateTypeOptions.find((opt) => opt.value === targetRateType.value)?.label || ''
+);
+// --- End Computed properties ---
 </script>
 
 <style scoped>

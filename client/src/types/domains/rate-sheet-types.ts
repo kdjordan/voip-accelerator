@@ -8,6 +8,19 @@ export interface RateSheetRecord {
   increments?: number;
 }
 
+// --- US Rate Sheet Adjustment Types ---
+export type AdjustmentType = 'markup' | 'markdown';
+export type AdjustmentValueType = 'percentage' | 'fixed';
+export type TargetRateType = 'all' | 'inter' | 'intra' | 'ij';
+
+export interface RateAdjustmentSettings {
+  adjustmentType: AdjustmentType;
+  adjustmentValueType: AdjustmentValueType;
+  adjustmentValue: number;
+  targetRateType: TargetRateType;
+}
+// --- End US Rate Sheet Adjustment Types ---
+
 export interface EffectiveDateSettings {
   same: 'today' | 'tomorrow' | 'custom';
   increase: 'today' | 'tomorrow' | 'week' | 'custom';
