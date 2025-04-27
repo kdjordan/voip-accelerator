@@ -520,7 +520,7 @@ export class USRateSheetService {
     console.log(`[USRateSheetService] Updating all effective dates to ${newDate}`);
     try {
       const db = await this.getDB(this.dbName);
-      if (!db.hasStore('entries')) {
+      if (!db.tables.some((table) => table.name === 'entries')) {
         throw new Error('Entries table not found, cannot update effective dates.');
       }
 

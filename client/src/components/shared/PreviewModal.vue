@@ -184,7 +184,7 @@
                         :key="index"
                         class="px-6 py-3 text-left text-xs font-medium text-fbWhite/70 uppercase tracking-wider"
                       >
-                        <Listbox v-model="mappings[index]" as="div" class="min-w-[180px]">
+                        <Listbox v-model="mappings[index]" as="div" class="min-w-[200px]">
                           <div class="relative mt-1">
                             <ListboxButton
                               class="relative w-full cursor-default rounded-md py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-accent sm:text-sm transition-colors duration-200 border"

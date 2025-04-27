@@ -66,7 +66,7 @@
             id="npanxx-search"
             v-model="searchQuery"
             type="text"
-            placeholder="Search NPANXX..."
+            placeholder="Filter by NPANXX..."
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
           />
         </div>
@@ -183,7 +183,9 @@
 
     <!-- Table Container -->
     <div v-if="isDataLoading" class="text-center text-gray-500 py-10">
-      <div class="flex items-center justify-center space-x-2">
+      <div
+        class="flex items-center justify-center space-x-2 text-accent bg-accent/20 rounded-lg p-2 w-1/2 mx-auto border border-accent/50"
+      >
         <ArrowPathIcon class="animate-spin w-6 h-6" />
         <span>Loading Rate Sheet Data...</span>
       </div>
@@ -827,61 +829,102 @@ function handleClearData() {
   }
 }
 
-function handleExport() {
-  const dataToFilter = displayedData.value;
-  if (dataToFilter.length === 0) {
-    alert('No data to export');
+async function handleExport() {
+  // 1. Check if already exporting or if DB is ready
+  if (isExporting.value) return;
+  const dbReady = await initializeRateSheetDB(); // Ensure DB is initialized
+  if (!dbReady || !dbInstance) {
+    alert('Database is not ready. Cannot export.');
+    console.error('[USRateSheetTable] Export failed: DB instance not available.');
     return;
   }
-  if (isExporting.value) return;
 
   isExporting.value = true;
-  console.log(`Exporting ${totalRecords.value} records...`);
+  dataError.value = null;
+  console.log(
+    `[USRateSheetTable] Starting export for filters: search='${debouncedSearchQuery.value}', state='${selectedState.value}'`
+  );
 
   try {
+    // 2. Build the query based on current filters
+    let query = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    const filtersApplied: string[] = [];
+
+    if (debouncedSearchQuery.value) {
+      query = query.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+      filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
+    }
+    if (selectedState.value) {
+      query = query.where('stateCode').equals(selectedState.value);
+      filtersApplied.push(`State Code equals '${selectedState.value}'`);
+    }
+
+    // 3. Fetch ALL matching data from Dexie
+    console.log(
+      `[USRateSheetTable] Fetching all data matching filters: ${
+        filtersApplied.join(', ') || 'None'
+      }`
+    );
+    const allMatchingData = await query.toArray();
+    console.log(`[USRateSheetTable] Fetched ${allMatchingData.length} records for export.`);
+
+    if (allMatchingData.length === 0) {
+      alert('No data matches the current filters to export.');
+      isExporting.value = false;
+      return;
+    }
+
+    // 4. Define fields and map data (using LERG)
     const fields = [
       { label: 'NPANXX', value: 'npanxx' },
-      { label: 'State', value: 'state' },
-      { label: 'Country', value: 'country' },
+      { label: 'State', value: 'state' }, // Will be populated from LERG
+      { label: 'Country', value: 'country' }, // Will be populated from LERG
       { label: 'Interstate Rate', value: 'interRate' },
       { label: 'Intrastate Rate', value: 'intraRate' },
       { label: 'Indeterminate Rate', value: 'ijRate' },
       { label: 'Effective Date', value: 'effectiveDate' },
     ];
 
-    const dataToExport = applyLocalFilter(dataToFilter).map((entry) => {
+    const dataToExport = allMatchingData.map((entry) => {
       const location = lergStore.getLocationByNPA(entry.npa);
       return {
-        ...entry,
         npanxx: entry.npanxx,
-        state: location?.region || '',
-        country: location?.country || '',
-        interRate: entry.interRate,
-        intraRate: entry.intraRate,
-        ijRate: entry.ijRate,
-        effectiveDate: entry.effectiveDate || '',
+        state: location?.region || 'N/A', // Use LERG data or fallback
+        country: location?.country || 'N/A', // Use LERG data or fallback
+        interRate: formatRate(entry.interRate), // Format rates consistently
+        intraRate: formatRate(entry.intraRate),
+        ijRate: formatRate(entry.ijRate),
+        effectiveDate: entry.effectiveDate || 'N/A', // Handle missing date
       };
     });
 
+    // 5. Unparse to CSV using PapaParse
     const csv = Papa.unparse({
-      fields: fields.map((f) => f.label),
-      data: dataToExport.map((row) => fields.map((field) => row[field.value as keyof typeof row])),
+      fields: fields.map((f) => f.label), // Use labels as headers
+      data: dataToExport.map((row) => fields.map((field) => row[field.value as keyof typeof row])), // Extract values in correct order
     });
 
+    // 6. Trigger download
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    let filename = 'us-rate-sheet';
+    if (selectedState.value) filename += `-${selectedState.value}`;
+    if (debouncedSearchQuery.value) filename += `-search_${debouncedSearchQuery.value}`;
+    filename += `-${timestamp}.csv`;
+
     link.href = url;
-    link.setAttribute('download', `us-rate-sheet-${timestamp}.csv`);
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    console.log('Export complete.');
-  } catch (exportError) {
-    console.error('Error during export:', exportError);
-    alert('An error occurred during export.');
+    console.log('[USRateSheetTable] Export complete.');
+  } catch (exportError: any) {
+    console.error('[USRateSheetTable] Error during export:', exportError);
+    dataError.value = exportError.message || 'An error occurred during export.';
+    alert(`Export failed: ${dataError.value}`);
   } finally {
     isExporting.value = false;
   }
