@@ -275,7 +275,7 @@
             <tr
               class="hover:bg-gray-700/50 cursor-pointer"
               :class="{ 'bg-red-900/10': group.hasDiscrepancy }"
-              @click="toggleExpand(group.destinationName)"
+              @click="handleToggleExpandRow(group.destinationName)"
             >
               <td class="px-3 py-4">
                 <ChevronRightIcon
@@ -347,38 +347,252 @@
                 class="px-3 py-4 bg-gray-900/30"
               >
                 <div class="pl-8">
+                  <!-- Header for Expanded Row -->
                   <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-sm font-medium text-white">Rate Distribution</h4>
+                    <h4 class="text-sm font-medium text-white">
+                      {{ group.hasDiscrepancy ? 'Rate Distribution' : 'Adjust Rate' }}
+                    </h4>
                     <div class="flex items-center gap-2">
+                      <!-- Show/Hide All Codes Button (Only for Discrepancies) -->
+                      <template v-if="group.hasDiscrepancy">
+                        <BaseButton
+                          v-if="
+                            !areAllRateCodesExpanded(group.destinationName) &&
+                            group.rates.length > 1
+                          "
+                          variant="secondary"
+                          size="small"
+                          @click="toggleAllRateCodesForDestination(group.destinationName, true)"
+                        >
+                          Show All Codes
+                        </BaseButton>
+                        <BaseButton
+                          v-if="areAnyRateCodesExpanded(group.destinationName)"
+                          variant="secondary"
+                          size="small"
+                          @click="toggleAllRateCodesForDestination(group.destinationName, false)"
+                        >
+                          Hide All Codes
+                        </BaseButton>
+                      </template>
+                      <!-- Save Changes Button (Common) -->
                       <BaseButton
-                        v-if="
-                          !areAllRateCodesExpanded(group.destinationName) && group.rates.length > 1
-                        "
-                        variant="secondary"
-                        size="small"
-                        @click="toggleAllRateCodesForDestination(group.destinationName, true)"
-                      >
-                        Show All Codes
-                      </BaseButton>
-                      <BaseButton
-                        v-if="areAnyRateCodesExpanded(group.destinationName)"
-                        variant="secondary"
-                        size="small"
-                        @click="toggleAllRateCodesForDestination(group.destinationName, false)"
-                      >
-                        Hide All Codes
-                      </BaseButton>
-                      <BaseButton
-                        v-if="group.hasDiscrepancy || hasUnsavedChanges(group.destinationName)"
+                        v-if="hasUnsavedChanges(group.destinationName)"
                         variant="primary"
                         size="small"
+                        :loading="isSavingChanges === group.destinationName"
+                        :disabled="isSavingChanges === group.destinationName"
                         @click="saveRateSelection(group)"
                       >
                         Save Changes
                       </BaseButton>
                     </div>
                   </div>
-                  <div class="space-y-2">
+
+                  <!-- UI for Destinations WITHOUT Rate Discrepancy -->
+                  <div
+                    v-if="!group.hasDiscrepancy && singleRateAdjustments[group.destinationName]"
+                    class="space-y-4"
+                  >
+                    <!-- Display Current Rate -->
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="text-gray-400">Current Rate:</span>
+                      <span class="text-white font-semibold font-mono">{{
+                        formatRate(group.rates[0].rate)
+                      }}</span>
+                    </div>
+
+                    <!-- Adjustment Input Section -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <!-- Adjustment Type -->
+                      <div class="relative">
+                        <Listbox
+                          v-model="singleRateAdjustments[group.destinationName].adjustmentType"
+                          as="div"
+                        >
+                          <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
+                            >Adjustment</ListboxLabel
+                          >
+                          <div class="relative mt-1">
+                            <ListboxButton
+                              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 sm:text-sm border border-gray-700"
+                            >
+                              <span class="block truncate text-white">{{
+                                getAdjustmentTypeLabel(
+                                  singleRateAdjustments[group.destinationName]?.adjustmentType
+                                )
+                              }}</span>
+                              <span
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                              >
+                                <ChevronUpDownIcon
+                                  class="h-5 w-5 text-gray-400"
+                                  aria-hidden="true"
+                                />
+                              </span>
+                            </ListboxButton>
+                            <transition
+                              leave-active-class="transition duration-100 ease-in"
+                              leave-from-class="opacity-100"
+                              leave-to-class="opacity-0"
+                            >
+                              <ListboxOptions
+                                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                              >
+                                <ListboxOption
+                                  v-for="option in adjustmentTypeOptions"
+                                  :key="option.value"
+                                  :value="option.value"
+                                  v-slot="{ active, selected }"
+                                  as="template"
+                                >
+                                  <li
+                                    :class="[
+                                      active ? 'bg-accent/20 text-accent' : 'text-gray-300',
+                                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                                    ]"
+                                  >
+                                    <span
+                                      :class="[
+                                        selected ? 'font-medium' : 'font-normal',
+                                        'block truncate',
+                                      ]"
+                                      >{{ option.label }}</span
+                                    >
+                                    <span
+                                      v-if="selected"
+                                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                                    >
+                                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  </li>
+                                </ListboxOption>
+                              </ListboxOptions>
+                            </transition>
+                          </div>
+                        </Listbox>
+                      </div>
+
+                      <!-- Value Type -->
+                      <div class="relative">
+                        <Listbox
+                          v-model="singleRateAdjustments[group.destinationName].adjustmentValueType"
+                          as="div"
+                        >
+                          <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
+                            >By</ListboxLabel
+                          >
+                          <div class="relative mt-1">
+                            <ListboxButton
+                              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 sm:text-sm border border-gray-700"
+                            >
+                              <span class="block truncate text-white">{{
+                                getAdjustmentValueTypeLabel(
+                                  singleRateAdjustments[group.destinationName]?.adjustmentValueType
+                                )
+                              }}</span>
+                              <span
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                              >
+                                <ChevronUpDownIcon
+                                  class="h-5 w-5 text-gray-400"
+                                  aria-hidden="true"
+                                />
+                              </span>
+                            </ListboxButton>
+                            <transition
+                              leave-active-class="transition duration-100 ease-in"
+                              leave-from-class="opacity-100"
+                              leave-to-class="opacity-0"
+                            >
+                              <ListboxOptions
+                                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                              >
+                                <ListboxOption
+                                  v-for="option in adjustmentValueTypeOptions"
+                                  :key="option.value"
+                                  :value="option.value"
+                                  v-slot="{ active, selected }"
+                                  as="template"
+                                >
+                                  <li
+                                    :class="[
+                                      active ? 'bg-accent/20 text-accent' : 'text-gray-300',
+                                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                                    ]"
+                                  >
+                                    <span
+                                      :class="[
+                                        selected ? 'font-medium' : 'font-normal',
+                                        'block truncate',
+                                      ]"
+                                      >{{ option.label }}</span
+                                    >
+                                    <span
+                                      v-if="selected"
+                                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                                    >
+                                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  </li>
+                                </ListboxOption>
+                              </ListboxOptions>
+                            </transition>
+                          </div>
+                        </Listbox>
+                      </div>
+
+                      <!-- Value Input -->
+                      <div>
+                        <label
+                          :for="`adjustment-value-${group.destinationName}`"
+                          class="block text-xs font-medium text-gray-400 mb-1"
+                          >Value</label
+                        >
+                        <input
+                          :id="`adjustment-value-${group.destinationName}`"
+                          v-model.number="
+                            singleRateAdjustments[group.destinationName].adjustmentValue
+                          "
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="Enter value..."
+                          @input="directSetRates[group.destinationName] = null"
+                          class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg p-2 focus:ring-accent focus:border-accent"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- OR Separator -->
+                    <div class="flex items-center my-4">
+                      <div class="flex-grow border-t border-gray-700"></div>
+                      <span class="flex-shrink mx-4 text-gray-500 text-xs">OR</span>
+                      <div class="flex-grow border-t border-gray-700"></div>
+                    </div>
+
+                    <!-- Direct Rate Set -->
+                    <div class="w-1/5">
+                      <label
+                        :for="`direct-rate-${group.destinationName}`"
+                        class="block text-xs font-medium text-gray-400 mb-1"
+                        >Set New Rate Directly</label
+                      >
+                      <input
+                        :id="`direct-rate-${group.destinationName}`"
+                        v-model.number="directSetRates[group.destinationName]"
+                        type="number"
+                        min="0"
+                        step="0.000001"
+                        placeholder="Enter new rate..."
+                        @input="singleRateAdjustments[group.destinationName].adjustmentValue = null"
+                        class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg p-2 focus:ring-accent focus:border-accent"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- UI for Destinations WITH Rate Discrepancy (Existing Logic) -->
+                  <div v-else-if="group.hasDiscrepancy" class="space-y-2">
                     <div v-for="rate in getSortedRates(group)" :key="rate.rate">
                       <!-- Rate row -->
                       <div
@@ -394,7 +608,7 @@
                             :value="rate.rate"
                             :checked="isSelectedRate(group.destinationName, rate.rate)"
                             @change="selectRate(group.destinationName, rate.rate)"
-                            class="text-accent"
+                            class="text-accent focus:ring-accent"
                           />
                           <span class="text-white">{{ formatRate(rate.rate) }}</span>
                           <span
@@ -465,38 +679,8 @@
                         </div>
                       </div>
                     </div>
-
-                    <!-- Custom Rate Option -->
-                    <div
-                      class="flex items-center justify-between text-sm p-2 rounded-md"
-                      @click.stop
-                    >
-                      <label class="flex items-center gap-2 flex-1 cursor-pointer">
-                        <input
-                          type="radio"
-                          :name="`rate-${group.destinationName}`"
-                          value="custom"
-                          :checked="isCustomRate(group.destinationName)"
-                          @change="enableCustomRate(group.destinationName)"
-                          class="text-accent"
-                        />
-                        <div class="flex items-center gap-2">
-                          <span class="text-white">Custom Rate:</span>
-                          <span v-if="customRates[group.destinationName]" class="text-accent">
-                            {{ formatRate(customRates[group.destinationName]) }}
-                          </span>
-                          <BaseButton
-                            variant="secondary"
-                            size="small"
-                            class="ml-2"
-                            @click.stop="openCustomRateInput(group.destinationName)"
-                          >
-                            {{ customRates[group.destinationName] ? 'Edit' : 'Set Rate' }}
-                          </BaseButton>
-                        </div>
-                      </label>
-                    </div>
                   </div>
+                  <!-- End Conditional UI -->
                 </div>
               </td>
             </tr>
@@ -513,31 +697,6 @@
         </span>
       </p>
       <p class="text-gray-400" v-else>No destinations found matching your filters</p>
-    </div>
-
-    <!-- Custom Rate Modal -->
-    <div
-      v-if="customRateModal.isOpen"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center"
-      @click.self="customRateModal.isOpen = false"
-    >
-      <div class="bg-gray-800 p-4 rounded-lg w-96">
-        <h3 class="text-lg font-medium mb-4">Set Custom Rate</h3>
-        <input
-          ref="customRateInput"
-          type="number"
-          step="0.000001"
-          v-model="customRateModal.value"
-          class="bg-gray-900 border border-gray-700 rounded px-3 py-2 w-full text-white mb-4"
-          @keyup.enter="saveCustomRate"
-        />
-        <div class="flex justify-end gap-2">
-          <BaseButton variant="secondary" size="standard" @click="customRateModal.isOpen = false">
-            Cancel
-          </BaseButton>
-          <BaseButton variant="primary" size="standard" @click="saveCustomRate"> Save </BaseButton>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -569,6 +728,8 @@ import { RateSheetService } from '@/services/az-rate-sheet.service';
 import type {
   EffectiveDateSettings,
   EffectiveDateStoreSettings,
+  AdjustmentType,
+  AdjustmentValueType,
 } from '@/types/domains/rate-sheet-types';
 import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
 import BaseButton from '@/components/shared/BaseButton.vue';
@@ -616,15 +777,34 @@ const debouncedSearchQuery = ref('');
 const isSearching = ref(false);
 const searchProgress = ref(0);
 const searchTotal = ref(0);
+const isSavingChanges = ref<string | null>(null); // Track saving state per destination
+
+// State for multi-rate (discrepancy) destinations
 const selectedRates = ref<Record<string, number>>({});
-const customRates = ref<Record<string, number>>({});
-const originalRates = ref<Record<string, number>>({});
-const customRateModal = ref({
-  isOpen: false,
-  destinationName: '',
-  value: '',
-});
-const customRateInput = ref<HTMLInputElement | null>(null);
+const originalRates = ref<Record<string, number>>({}); // Store original selected/single rate
+
+// State for single-rate (no discrepancy) destinations
+const singleRateAdjustments = ref<
+  Record<
+    string,
+    {
+      adjustmentType: AdjustmentType;
+      adjustmentValueType: AdjustmentValueType;
+      adjustmentValue: number | null;
+    }
+  >
+>({});
+const directSetRates = ref<Record<string, number | null>>({});
+
+// Options for adjustment dropdowns
+const adjustmentTypeOptions = [
+  { value: 'markup', label: 'Markup' },
+  { value: 'markdown', label: 'Markdown' },
+];
+const adjustmentValueTypeOptions = [
+  { value: 'percentage', label: 'Percentage (%)' },
+  { value: 'fixed', label: 'Fixed Amount ($)' },
+];
 
 // Add new refs for processing state
 const isBulkProcessing = ref(false);
@@ -633,7 +813,7 @@ const processedCount = ref(0);
 const totalToProcess = ref(0);
 const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
 
-// Track which rate's codes are expanded
+// Track which rate's codes are expanded (only for multi-rate)
 const expandedRateCodes = ref<{ [key: string]: number[] }>({});
 
 // Cache for codes by destination and rate to improve performance
@@ -855,24 +1035,41 @@ function isCodeMatchingSearch(destinationName: string, rate: number, code: strin
   return !!searchQuery.value && !!matchingCodes.value[destinationName]?.[rate]?.includes(code);
 }
 
-function toggleExpand(destinationName: string) {
+function handleToggleExpandRow(destinationName: string) {
   const index = expandedRows.value.indexOf(destinationName);
   if (index > -1) {
     expandedRows.value.splice(index, 1);
   } else {
-    expandedRows.value.push(destinationName);
+    const group = groupedData.value.find((g) => g.destinationName === destinationName);
+    if (group) {
+      // Initialize state *before* adding to expandedRows to ensure it exists before render attempt
+      if (!group.hasDiscrepancy) {
+        initializeSingleRateState(destinationName);
+      }
 
-    // Initialize selected rate if not already set
-    if (selectedRates.value[destinationName] === undefined) {
-      // Find the group for this destination
-      const group = groupedData.value.find((g) => g.destinationName === destinationName);
-      if (group) {
-        // If no conflicts, use the only rate. If conflicts, use the most common rate (first one with isCommon=true)
+      // Add to expandedRows *after* potential state initialization
+      expandedRows.value.push(destinationName);
+
+      // Store the original rate when expanding, regardless of discrepancy
+      if (originalRates.value[destinationName] === undefined) {
+        if (!group.hasDiscrepancy) {
+          originalRates.value[destinationName] = group.rates[0].rate;
+        } else {
+          const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
+          if (mostCommonRate !== undefined) {
+            originalRates.value[destinationName] = mostCommonRate;
+            if (selectedRates.value[destinationName] === undefined) {
+              selectedRates.value[destinationName] = mostCommonRate;
+            }
+          }
+        }
+      }
+
+      // Initialize multi-rate selected rate if it wasn't set by original rate logic above
+      if (group.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
         const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
         if (mostCommonRate !== undefined) {
           selectedRates.value[destinationName] = mostCommonRate;
-          // Also store as original rate for detecting changes
-          originalRates.value[destinationName] = mostCommonRate;
         }
       }
     }
@@ -880,74 +1077,169 @@ function toggleExpand(destinationName: string) {
 }
 
 function formatRate(rate: number): string {
+  if (typeof rate !== 'number' || isNaN(rate)) {
+    return 'N/A'; // Handle invalid input
+  }
   return rate.toFixed(6);
 }
 
+// --- Multi-Rate Logic ---
 function isSelectedRate(destinationName: string, rate: number): boolean {
   return selectedRates.value[destinationName] === rate;
-}
-
-function isCustomRate(destinationName: string): boolean {
-  return selectedRates.value[destinationName] === customRates.value[destinationName];
 }
 
 function selectRate(destinationName: string, rate: number) {
   selectedRates.value[destinationName] = rate;
 }
 
-function enableCustomRate(destinationName: string) {
-  if (!customRates.value[destinationName]) {
-    customRates.value[destinationName] = 0;
+// --- Single-Rate Calculation Helper ---
+function calculateAdjustedRate(currentRate: number, adjustment: any): number {
+  if (!adjustment || adjustment.adjustmentValue === null || adjustment.adjustmentValue <= 0) {
+    return currentRate;
   }
-  selectedRates.value[destinationName] = customRates.value[destinationName];
-}
 
-function handleCustomRateInput(destinationName: string, event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value);
-  if (!isNaN(value)) {
-    customRates.value[destinationName] = value;
-    selectedRates.value[destinationName] = value;
+  let adjustedRate: number;
+  const value = adjustment.adjustmentValue!;
+
+  if (adjustment.adjustmentValueType === 'percentage') {
+    const percentage = value / 100;
+    adjustedRate =
+      currentRate * (adjustment.adjustmentType === 'markup' ? 1 + percentage : 1 - percentage);
+  } else {
+    // fixed amount
+    adjustedRate = currentRate + (adjustment.adjustmentType === 'markup' ? value : -value);
   }
+  // Ensure rate doesn't go below 0 and format to 6 decimals
+  return Math.max(0, parseFloat(adjustedRate.toFixed(6)));
 }
+// --- End Single-Rate Calculation Helper ---
 
+// --- Change Detection ---
 function hasUnsavedChanges(destinationName: string): boolean {
-  return selectedRates.value[destinationName] !== originalRates.value[destinationName];
-}
+  const group = groupedData.value.find((g) => g.destinationName === destinationName);
+  if (!group) return false;
 
-async function saveRateSelection(group: GroupedRateData) {
-  const newRate = selectedRates.value[group.destinationName];
-  if (newRate !== undefined) {
-    await store.updateDestinationRate(group.destinationName, newRate);
-    originalRates.value[group.destinationName] = newRate;
-    store.setGroupedData(store.getGroupedData);
-    const index = expandedRows.value.indexOf(group.destinationName);
-    if (index > -1) {
-      expandedRows.value.splice(index, 1);
+  const originalRate = originalRates.value[destinationName];
+  if (originalRate === undefined) return false; // Cannot detect changes if original is unknown
+
+  if (group.hasDiscrepancy) {
+    // Multi-rate logic
+    return selectedRates.value[destinationName] !== originalRate;
+  } else {
+    // Single-rate logic
+    const directRate = directSetRates.value[destinationName];
+    const adjustment = singleRateAdjustments.value[destinationName];
+
+    // Check if direct rate is set and different from original
+    if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
+      return true;
     }
+
+    // Check if adjustment is configured and leads to a different rate
+    if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+      const calculatedRate = calculateAdjustedRate(originalRate, adjustment);
+      return calculatedRate !== originalRate;
+    }
+    return false; // No direct rate set, no adjustment configured
   }
 }
+// --- End Change Detection ---
 
-function openCustomRateInput(destinationName: string) {
-  customRateModal.value = {
-    isOpen: true,
-    destinationName,
-    value: customRates.value[destinationName]?.toString() || '',
-  };
-  nextTick(() => {
-    customRateInput.value?.focus();
-  });
-}
+// --- Save Logic ---
+async function saveRateSelection(group: GroupedRateData) {
+  if (isSavingChanges.value === group.destinationName) return; // Prevent double-clicks
 
-function saveCustomRate() {
-  const value = parseFloat(customRateModal.value.value);
-  if (!isNaN(value)) {
-    const { destinationName } = customRateModal.value;
-    customRates.value[destinationName] = value;
-    selectedRates.value[destinationName] = value;
-    customRateModal.value.isOpen = false;
+  let rateToSave: number | undefined;
+  const originalRate = originalRates.value[group.destinationName];
+
+  if (originalRate === undefined) {
+    console.error(`Cannot save changes for ${group.destinationName}: Original rate unknown.`);
+    return;
+  }
+
+  isSavingChanges.value = group.destinationName; // Set loading state
+
+  try {
+    if (!group.hasDiscrepancy) {
+      // Single-rate destination logic
+      const directRate = directSetRates.value[group.destinationName];
+      const adjustment = singleRateAdjustments.value[group.destinationName];
+
+      if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
+        rateToSave = directRate;
+        console.log(`Saving direct rate for ${group.destinationName}: ${rateToSave}`);
+      } else if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+        const calculatedRate = calculateAdjustedRate(originalRate, adjustment);
+        if (calculatedRate !== originalRate) {
+          rateToSave = calculatedRate;
+          console.log(`Saving adjusted rate for ${group.destinationName}: ${rateToSave}`);
+        } else {
+          console.log(
+            `No effective change from adjustment for ${group.destinationName}, not saving.`
+          );
+        }
+      } else {
+        console.log(`No changes detected to save for single-rate ${group.destinationName}`);
+        // No need to save if no changes. Collapse the row.
+        const index = expandedRows.value.indexOf(group.destinationName);
+        if (index > -1) expandedRows.value.splice(index, 1);
+        isSavingChanges.value = null; // Reset loading state
+        return;
+      }
+    } else {
+      // Multi-rate destination logic (existing, simplified)
+      const selected = selectedRates.value[group.destinationName];
+      if (selected !== undefined && selected !== originalRate) {
+        rateToSave = selected;
+        console.log(`Saving selected rate for multi-rate ${group.destinationName}: ${rateToSave}`);
+      } else {
+        console.log(`No change in selection for multi-rate ${group.destinationName}, not saving.`);
+        // No need to save if no changes. Collapse the row.
+        const index = expandedRows.value.indexOf(group.destinationName);
+        if (index > -1) expandedRows.value.splice(index, 1);
+        isSavingChanges.value = null; // Reset loading state
+        return;
+      }
+    }
+
+    if (rateToSave !== undefined) {
+      await store.updateDestinationRate(group.destinationName, rateToSave);
+      originalRates.value[group.destinationName] = rateToSave; // Update original rate after save
+
+      // Reset local state for single-rate destinations after successful save
+      if (!group.hasDiscrepancy) {
+        directSetRates.value[group.destinationName] = null;
+        if (singleRateAdjustments.value[group.destinationName]) {
+          singleRateAdjustments.value[group.destinationName].adjustmentValue = null;
+        }
+      } else {
+        // Reset custom rate input if it was used
+        if (isCustomRate(group.destinationName)) {
+          customRates.value[group.destinationName] = rateToSave; // Update custom rate to saved value
+        }
+      }
+
+      // Collapse the row after saving
+      const index = expandedRows.value.indexOf(group.destinationName);
+      if (index > -1) {
+        expandedRows.value.splice(index, 1);
+      }
+    } else {
+      console.warn(`Rate to save for ${group.destinationName} was undefined or unchanged.`);
+      // Collapse the row if nothing was saved
+      const index = expandedRows.value.indexOf(group.destinationName);
+      if (index > -1) expandedRows.value.splice(index, 1);
+    }
+  } catch (error) {
+    console.error(`Failed to save rate for ${group.destinationName}:`, error);
+    // Optionally show an error message to the user
+  } finally {
+    isSavingChanges.value = null; // Reset loading state
   }
 }
+// --- End Save Logic ---
 
+// --- Bulk Update ---
 async function handleBulkUpdate(mode: 'highest' | 'lowest') {
   isBulkProcessing.value = true;
   processedCount.value = 0;
@@ -1003,6 +1295,7 @@ async function handleBulkUpdate(mode: 'highest' | 'lowest') {
     bulkMode.value = null;
   }
 }
+// --- End Bulk Update ---
 
 function handleClearData() {
   if (confirm('Are you sure you want to clear all rate sheet data?')) {
@@ -1052,6 +1345,7 @@ function formatDate(date: string): string {
   return formattedDate.toLocaleDateString();
 }
 
+// --- Multi-Rate Code Expansion Logic ---
 function toggleRateCodes(destinationName: string, rate: number) {
   if (!expandedRateCodes.value[destinationName]) {
     expandedRateCodes.value[destinationName] = [];
@@ -1118,8 +1412,9 @@ function areAllRateCodesExpanded(destinationName: string): boolean {
 function areAnyRateCodesExpanded(destinationName: string): boolean {
   return !!expandedRateCodes.value[destinationName]?.length;
 }
+// --- End Multi-Rate Code Expansion Logic ---
 
-// Watch for changes in currentDiscrepancyCount and emit to parent
+// --- Watchers ---
 watch(currentDiscrepancyCount, (newCount) => {
   emit('update:discrepancy-count', newCount);
 });
@@ -1134,8 +1429,9 @@ watch(
   },
   { immediate: true }
 );
+// --- End Watchers ---
 
-// Function to calculate date based on setting
+// --- Effective Date Logic ---
 function getEffectiveDate(changeCode: ChangeCodeType): string {
   const today = new Date();
   let effectiveDate = today;
@@ -1175,7 +1471,6 @@ function getEffectiveDate(changeCode: ChangeCodeType): string {
   return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 }
 
-// Function to initialize and cleanup the worker
 function initWorker() {
   console.log('Initializing effective date worker');
 
@@ -1663,6 +1958,7 @@ function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') {
   effectiveDateSettings.value.decrease = value;
 }
 
+// --- Multi-Rate Sorting & Display ---
 function getSortedRates(group: GroupedRateData): {
   rate: number;
   count: number;
@@ -1714,13 +2010,8 @@ function getSortedRates(group: GroupedRateData): {
 
   return rates;
 }
+// --- End Multi-Rate Sorting & Display ---
 
-// Now, let's add code to open the settings panel by default after file upload
-// This happens in the store's API callback after file processing
-// Let's add a watcher to detect when the file is processed
-
-// Add this after other watchers in the component:
-// Watch for changes in store.hasStoredData to automatically open effective date settings
 watch(
   () => store.hasStoredData,
   (newValue, oldValue) => {
@@ -1732,7 +2023,7 @@ watch(
   }
 );
 
-// Define filter options
+// --- Filter Options & Label ---
 const filterOptions = [
   { value: 'all', label: 'All Destinations' },
   { value: 'conflicts', label: 'Rate Conflicts' },
@@ -1742,10 +2033,89 @@ const filterOptions = [
   { value: 'change-decrease', label: 'Rate Decrease' },
 ];
 
-// Computed property for selected filter label
 const selectedFilterLabel = computed(() => {
   return (
     filterOptions.find((option) => option.value === filterStatus.value)?.label || 'All Destinations'
   );
 });
+// --- End Filter Options & Label ---
+
+// --- Helper Functions for Adjustment Dropdowns ---
+function getAdjustmentTypeLabel(value: AdjustmentType | undefined): string {
+  return adjustmentTypeOptions.find((opt) => opt.value === value)?.label || 'N/A';
+}
+
+function getAdjustmentValueTypeLabel(value: AdjustmentValueType | undefined): string {
+  return adjustmentValueTypeOptions.find((opt) => opt.value === value)?.label || 'N/A';
+}
+// --- End Helper Functions ---
+
+// --- Helper Functions ---
+
+// Helper to initialize state for single-rate destinations when expanded
+function initializeSingleRateState(destinationName: string) {
+  console.log(`Initializing state for single-rate: ${destinationName}`);
+  if (!singleRateAdjustments.value[destinationName]) {
+    singleRateAdjustments.value[destinationName] = {
+      adjustmentType: 'markup',
+      adjustmentValueType: 'percentage',
+      adjustmentValue: null,
+    };
+  }
+  if (directSetRates.value[destinationName] === undefined) {
+    directSetRates.value[destinationName] = null;
+  }
+}
+
+// ... other helper functions (formatRate, calculateAdjustedRate, etc.) ...
+
+// Keep the original toggleExpand function here
+function toggleExpand(destinationName: string) {
+  const index = expandedRows.value.indexOf(destinationName);
+  if (index > -1) {
+    expandedRows.value.splice(index, 1);
+  } else {
+    const group = groupedData.value.find((g) => g.destinationName === destinationName);
+    if (group) {
+      // Initialize state *before* adding to expandedRows to ensure it exists before render attempt
+      if (!group.hasDiscrepancy) {
+        initializeSingleRateState(destinationName); // Call the function
+      }
+
+      // Add to expandedRows *after* potential state initialization
+      expandedRows.value.push(destinationName);
+
+      // Store the original rate when expanding, regardless of discrepancy
+      if (originalRates.value[destinationName] === undefined) {
+        if (!group.hasDiscrepancy) {
+          originalRates.value[destinationName] = group.rates[0].rate;
+        } else {
+          // For discrepancies, find the most common rate initially selected
+          const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
+          if (mostCommonRate !== undefined) {
+            originalRates.value[destinationName] = mostCommonRate;
+            // Set the initial selection if not already set
+            if (selectedRates.value[destinationName] === undefined) {
+              selectedRates.value[destinationName] = mostCommonRate;
+            }
+          }
+        }
+      }
+
+      // Initialize multi-rate selected rate if it wasn't set by original rate logic above
+      if (group.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
+        const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
+        if (mostCommonRate !== undefined) {
+          selectedRates.value[destinationName] = mostCommonRate;
+        }
+      }
+    }
+  }
+}
+
+// ... rest of the script setup ...
 </script>
+
+<style scoped>
+/* ... styles ... */
+</style>
