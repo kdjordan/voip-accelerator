@@ -77,17 +77,24 @@
             @drop.prevent="handleDrop"
             class="relative rounded-lg p-6 h-[120px] flex items-center justify-center transition-colors duration-200"
             :class="[
-              isDragging && !showPreviewModal && !isProcessing
+              // Dragging state (only when not processing)
+              isDragging && !isProcessing && !showPreviewModal
                 ? 'border-2 border-solid border-accent bg-fbWhite/10'
-                : 'border-2 border-dashed border-gray-600',
-              !showPreviewModal && !isProcessing
+                : 'border-2 border-dashed border-gray-600', // Default border
+
+              // Hover state (only when not processing and not showing modal)
+              !isProcessing && !showPreviewModal
                 ? 'hover:border-accent-hover hover:bg-fbWhite/10'
-                : 'opacity-50',
+                : '',
+
+              // Cursor state
               isProcessing
                 ? 'cursor-not-allowed'
                 : !showPreviewModal
                 ? 'cursor-pointer'
                 : 'cursor-default',
+
+              // Error state border
               uploadError ? 'border-2 border-solid border-red-500' : '',
             ]"
           >
@@ -129,13 +136,9 @@
 
               <!-- Uploading state -->
               <template v-else>
-                <div
-                  class="flex-1 flex items-center justify-center bg-accent/10 file-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
-                >
-                  <div class="text-center">
-                    <div class="spinner-accent mx-auto mb-2"></div>
-                    <p class="text-base text-accent">Processing your file...</p>
-                  </div>
+                <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+                  <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                  <p class="text-sm text-accent">Processing your file...</p>
                 </div>
               </template>
             </div>
@@ -177,6 +180,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ArrowRightIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';

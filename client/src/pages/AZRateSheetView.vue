@@ -192,12 +192,20 @@
                 handleFileDrop(e);
               }
             "
-            class="relative rounded-lg p-6 h-[120px] flex items-center justify-center"
+            class="relative rounded-lg p-6 h-[120px] flex items-center justify-center transition-colors duration-200"
             :class="[
-              isDragging
+              // Dragging state (only when not processing)
+              isDragging && !isProcessing
                 ? 'border-2 border-solid border-accent bg-fbWhite/10'
-                : 'border-2 border-dashed border-gray-600 hover:border-accent-hover hover:bg-fbWhite/10',
-              isRFUploading ? 'cursor-not-allowed' : 'cursor-pointer',
+                : 'border-2 border-dashed border-gray-600', // Default border
+
+              // Hover state (only when not processing)
+              !isProcessing ? 'hover:border-accent-hover hover:bg-fbWhite/10' : '',
+
+              // Cursor state
+              isProcessing ? 'cursor-not-allowed' : 'cursor-pointer',
+
+              // Error state border
               uploadError ? 'border-2 border-solid border-red-500' : '',
             ]"
           >
@@ -240,13 +248,9 @@
 
               <!-- Uploading state -->
               <template v-else>
-                <div
-                  class="flex-1 flex items-center justify-center bg-accent/10 file-upload-pulse w-full h-full absolute inset-0 min-h-[120px]"
-                >
-                  <div class="text-center">
-                    <div class="spinner-accent mx-auto mb-2"></div>
-                    <p class="text-base text-accent">Processing your file...</p>
-                  </div>
+                <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+                  <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                  <p class="text-sm text-accent">Processing your file...</p>
                 </div>
               </template>
             </div>
@@ -288,6 +292,7 @@ import {
   TrashIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import RateSheetTable from '@/components/rate-sheet/az/AZRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';

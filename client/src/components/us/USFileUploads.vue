@@ -54,9 +54,9 @@
                 <div class="flex flex-col items-center justify-center w-full h-full text-center">
                   <!-- Uploading State -->
                   <template v-if="usStore.isComponentUploading('us1')">
-                    <div class="flex-1 flex items-center justify-center w-full">
-                      <p class="text-sizeMd text-accent">Processing your file...</p>
-                      <!-- Optional: Add spinner or more visual indication -->
+                    <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+                      <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                      <p class="text-sm text-accent">Processing your file...</p>
                     </div>
                   </template>
 
@@ -160,8 +160,9 @@
                 <div class="flex flex-col items-center justify-center w-full h-full text-center">
                   <!-- Uploading State -->
                   <template v-if="usStore.isComponentUploading('us2')">
-                    <div class="flex-1 flex items-center justify-center w-full">
-                      <p class="text-sizeMd text-accent">Processing your file...</p>
+                    <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+                      <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                      <p class="text-sm text-accent">Processing your file...</p>
                     </div>
                   </template>
 
@@ -263,6 +264,7 @@ import {
   DocumentIcon,
   TrashIcon,
   ArrowRightIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { useUsStore } from '@/stores/us-store';

@@ -79,10 +79,9 @@
                   </template>
 
                   <template v-if="azStore.isComponentUploading('az1')">
-                    <div
-                      class="flex-1 flex items-center justify-center bg-accent/10 w-full h-full absolute inset-0 min-h-[120px]"
-                    >
-                      <p class="text-sizeMd text-accent">Processing your file...</p>
+                    <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+                      <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                      <p class="text-sm text-accent">Processing your file...</p>
                     </div>
                   </template>
                 </div>
@@ -167,10 +166,9 @@
                   </template>
 
                   <template v-if="azStore.isComponentUploading('az2')">
-                    <div
-                      class="flex-1 flex items-center justify-center bg-accent/10 w-full h-full absolute inset-0 min-h-[120px]"
-                    >
-                      <p class="text-sizeMd text-accent">Processing your file...</p>
+                    <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
+                      <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                      <p class="text-sm text-accent">Processing your file...</p>
                     </div>
                   </template>
                 </div>
@@ -235,6 +233,7 @@ import {
   DocumentIcon,
   TrashIcon,
   ArrowRightIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { useAzStore } from '@/stores/az-store';
