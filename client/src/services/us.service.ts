@@ -237,8 +237,6 @@ export class USService {
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
 
-            await this.clearPricingComparisonData(); // Call the dedicated clear function
-
             console.log(`[USService] Table ${tableName} removed.`);
 
             resolve({ fileName: file.name, records: validRecords });
@@ -406,11 +404,6 @@ export class USService {
       } else {
         console.log(`[USService] Table ${tableName} not found in ${DBName.US}, skipping delete.`);
       }
-
-      // Clear any existing comparison data if this was one of the compared files
-      // Note: The actual logic might depend on how comparison results are stored and named
-      // This is a basic example assuming comparison results might need explicit clearing.
-      await this.clearPricingComparisonData(); // Call the dedicated clear function
 
       console.log(`[USService] Table ${tableName} removed.`);
     } catch (error) {

@@ -413,25 +413,27 @@ async function handleFileUploaded(componentName: ComponentId, fileName: string) 
     const tableName = fileName.toLowerCase().replace('.csv', '');
 
     // Get the data from the service
-    const data = await service.getData(tableName);
-    if (!data || data.length === 0) {
-      throw new Error(`No data found for file ${fileName}`);
-    }
+    // REMOVED: No longer getting data here just to pass to analyzer
+    // const data = await service.getData(tableName);
+    // if (!data || data.length === 0) {
+    //   throw new Error(`No data found for file ${fileName}`);
+    // }
 
-    // Create analyzer instance
-    const analyzer = new USNPAAnalyzerService();
+    // REMOVED: Analyzer instantiation and call
+    // const analyzer = new USNPAAnalyzerService();
+    // const enhancedReport = await analyzer.analyzeTableNPAs(tableName, fileName);
+    // console.log(`[USFileUploads] NPA analysis completed:`, enhancedReport);
 
-    // Analyze the table and get the enhanced report
-    const enhancedReport = await analyzer.analyzeTableNPAs(tableName, fileName);
-    console.log(`[USFileUploads] NPA analysis completed:`, enhancedReport);
+    // REMOVED: Storing the enhanced report
+    // usStore.setEnhancedCodeReport(enhancedReport);
 
-    // Store the enhanced report
-    usStore.setEnhancedCodeReport(enhancedReport);
-
-    // Remove the creation of empty reports for single file
-    // We'll only generate reports when explicitly requested or when we have two files
+    // Keep the log indicating successful upload registration
+    console.log(
+      `[USFileUploads] File ${fileName} processed and registered for component ${componentName}.`
+    );
   } catch (error) {
-    console.error(`[Main] Error in NPA analysis:`, error);
+    // Updated error message context
+    console.error(`[Main] Error during post-upload processing for ${fileName}:`, error);
   }
 }
 

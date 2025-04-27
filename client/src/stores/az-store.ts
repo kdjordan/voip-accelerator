@@ -9,6 +9,8 @@ import type {
 import type { DomainStore, ReportType } from '@/types';
 import { ReportTypes } from '@/types';
 import { AZService } from '@/services/az.service';
+import useDexieDB from '@/composables/useDexieDB';
+import { DBName } from '@/types';
 
 interface FileStats {
   totalCodes: number;
@@ -130,17 +132,17 @@ export const useAzStore = defineStore('az', {
       }
     },
 
-    resetFiles() {
-      const azService = new AZService();
-      // Call service to clear Dexie data for AZ
-      azService
-        .clearData()
-        .then(() => {
-          console.log('[az-store] Dexie data cleared successfully for AZ.');
-        })
-        .catch((error) => {
-          console.error('[az-store] Error clearing Dexie data for AZ:', error);
-        });
+    async resetFiles() {
+      const { deleteDatabase } = useDexieDB();
+
+      try {
+        console.log('[az-store] Deleting AZ Dexie databases...');
+        await deleteDatabase(DBName.AZ);
+        await deleteDatabase(DBName.AZ_PRICING_COMPARISON);
+        console.log('[az-store] AZ Dexie databases deleted successfully.');
+      } catch (dbError) {
+        console.error('[az-store] Error deleting AZ Dexie databases:', dbError);
+      }
 
       this.filesUploaded.clear();
       this.fileStats.clear();
