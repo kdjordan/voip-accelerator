@@ -29,27 +29,25 @@
             </table>
 
             <!-- Invalid Rows Section for File 1 -->
-            <div v-if="hasInvalidRows(fileNameAz1)" class="-mx-6 mt-4">
+            <div v-if="hasInvalidRows(fileNameAz1)" class="mt-4">
               <div
                 @click="toggleInvalidRowsDetails('az1')"
-                class="bg-red-900/50 px-6 py-3 border-y border-red-500/30 cursor-pointer hover:bg-red-900/70 transition-colors"
+                class="flex items-center justify-between w-full px-6 py-3 rounded-md cursor-pointer bg-red-900/50 border border-red-500/40 hover:bg-red-900/70 hover:border-red-500/60 transition-colors shadow-sm"
               >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-2">
-                    <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                    <span class="text-sm font-medium text-red-400"
-                      >({{ getInvalidRowsForFile(fileNameAz1).length }})</span
-                    >
-                  </div>
-                  <ChevronDownIcon
-                    :class="{ 'transform rotate-180': expandedInvalidSections.az1 }"
-                    class="w-4 h-4 text-red-400"
-                  />
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
+                  <span class="text-sm font-medium text-red-400"
+                    >({{ getInvalidRowsForFile(fileNameAz1).length }})</span
+                  >
                 </div>
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': expandedInvalidSections.az1 }"
+                  class="w-4 h-4 text-red-400"
+                />
               </div>
               <div
                 v-if="expandedInvalidSections.az1"
-                class="transition-all duration-300 ease-in-out bg-red-900/50"
+                class="mt-1 transition-all duration-300 ease-in-out bg-red-900/50 rounded-b-md overflow-hidden border-x border-b border-red-500/40"
               >
                 <div class="px-6 py-4">
                   <!-- Invalid Rows Table for File 1 -->
@@ -120,27 +118,25 @@
               </tbody>
             </table>
             <!-- Invalid Rows Section for File 2 -->
-            <div v-if="hasInvalidRows(fileNameAz2)" class="-mx-6 mt-4">
+            <div v-if="hasInvalidRows(fileNameAz2)" class="mt-4">
               <div
                 @click="toggleInvalidRowsDetails('az2')"
-                class="bg-red-900/50 px-6 py-3 border-y border-red-500/30 cursor-pointer hover:bg-red-900/70 transition-colors"
+                class="flex items-center justify-between w-full px-6 py-3 rounded-md cursor-pointer bg-red-900/50 border border-red-500/40 hover:bg-red-900/70 hover:border-red-500/60 transition-colors shadow-sm"
               >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-2">
-                    <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                    <span class="text-sm font-medium text-red-400"
-                      >({{ getInvalidRowsForFile(fileNameAz2).length }})</span
-                    >
-                  </div>
-                  <ChevronDownIcon
-                    :class="{ 'transform rotate-180': expandedInvalidSections.az2 }"
-                    class="w-4 h-4 text-red-400"
-                  />
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
+                  <span class="text-sm font-medium text-red-400"
+                    >({{ getInvalidRowsForFile(fileNameAz2).length }})</span
+                  >
                 </div>
+                <ChevronDownIcon
+                  :class="{ 'transform rotate-180': expandedInvalidSections.az2 }"
+                  class="w-4 h-4 text-red-400"
+                />
               </div>
               <div
                 v-if="expandedInvalidSections.az2"
-                class="transition-all duration-300 ease-in-out bg-red-900/50"
+                class="mt-1 transition-all duration-300 ease-in-out bg-red-900/50 rounded-b-md overflow-hidden border-x border-b border-red-500/40"
               >
                 <div class="px-6 py-4">
                   <!-- Invalid Rows Table for File 2 -->
