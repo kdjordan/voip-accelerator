@@ -112,10 +112,11 @@ const journeyMessage = computed(() => {
 
 async function handleReset() {
   try {
-    console.log('Resetting the AZ report');
+    console.log('Resetting the AZ report...');
 
-    // Reset store state - this now also handles clearing Dexie tables via azService.clearData()
-    azStore.resetFiles();
+    // Reset store state - this will now trigger DB deletion internally
+    await azStore.resetFiles();
+
     azStore.setActiveReportType('files');
 
     console.log('Reset completed successfully');

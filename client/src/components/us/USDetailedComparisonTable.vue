@@ -179,23 +179,6 @@
         </Listbox>
       </div>
 
-      <!-- Cheaper File Filter (based on Inter) -->
-      <div>
-        <label for="cheaper-filter" class="block text-sm font-medium text-gray-400 mb-1"
-          >Cheaper Inter Rate</label
-        >
-        <select
-          id="cheaper-filter"
-          v-model="selectedCheaperInter"
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
-        >
-          <option value="">All</option>
-          <option value="file1">{{ fileName1 }} Cheaper</option>
-          <option value="file2">{{ fileName2 }} Cheaper</option>
-          <option value="same">Same Rate</option>
-        </select>
-      </div>
-
       <!-- Download CSV Button -->
       <div class="ml-auto self-end">
         <button
@@ -405,7 +388,6 @@ const availableStates = ref<string[]>([]); // For state filter dropdown
 // Filter State Variables
 const searchTerm = ref<string>('');
 const selectedState = ref<string>('');
-const selectedCheaperInter = ref<'' | 'file1' | 'file2' | 'same'>('');
 
 // Pagination State
 const offset = ref<number>(0);
@@ -520,11 +502,6 @@ async function downloadCsv(): Promise<void> {
       currentFilters.push(
         (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
       );
-    }
-    if (selectedCheaperInter.value) {
-      const cheaperFilterFn = (record: USPricingComparisonRecord) =>
-        record.cheaper_inter === selectedCheaperInter.value;
-      currentFilters.push(cheaperFilterFn);
     }
 
     // Fetch ALL data matching filters
@@ -781,11 +758,6 @@ async function loadMoreData() {
         (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
       );
     }
-    if (selectedCheaperInter.value) {
-      const cheaperFilterFn = (record: USPricingComparisonRecord) =>
-        record.cheaper_inter === selectedCheaperInter.value;
-      currentFilters.push(cheaperFilterFn);
-    }
 
     // Explicitly type as Collection or apply chain differently
     let finalQueryChain;
@@ -863,11 +835,6 @@ async function calculateFullFilteredAverages() {
       currentFilters.push(
         (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
       );
-    }
-    if (selectedCheaperInter.value) {
-      const cheaperFilterFn = (record: USPricingComparisonRecord) =>
-        record.cheaper_inter === selectedCheaperInter.value;
-      currentFilters.push(cheaperFilterFn);
     }
 
     let finalQueryChain = query;
@@ -973,7 +940,7 @@ const debouncedResetAndFetch = useDebounceFn(() => {
   resetAndFetchData();
 }, 300); // 300ms debounce delay
 
-watch([searchTerm, selectedState, selectedCheaperInter], () => {
+watch([searchTerm, selectedState], () => {
   // Call the debounced function instead of the original
   debouncedResetAndFetch();
 });
