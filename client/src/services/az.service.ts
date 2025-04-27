@@ -6,6 +6,7 @@ import {
   type AZEnhancedCodeReport,
   type AZReportsInput,
   type AzPricingReport,
+  type AZDetailedComparisonFilters,
 } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
@@ -500,11 +501,11 @@ export class AZService {
   async getPagedDetailedComparisonData(
     tableName: string,
     limit: number,
-    offset: number
+    offset: number,
+    filters?: AZDetailedComparisonFilters
   ): Promise<AZDetailedComparisonEntry[]> {
     try {
-      // Use the instance-level dexieDB
-      const { getDB } = this.dexieDB; // Keep loadPagedFromDexieDB if filters are not needed
+      const { getDB } = this.dexieDB;
       const db = await getDB(DBName.AZ_PRICING_COMPARISON);
 
       // Use standard Dexie check
@@ -515,25 +516,41 @@ export class AZService {
         return [];
       }
 
-      let collection = db.table<AZDetailedComparisonEntry>(tableName);
+      const table: Dexie.Table<AZDetailedComparisonEntry, number> = db.table(tableName);
 
-      // --- Placeholder for potential future filter logic ---
-      // if (filters) {
-      //   collection = collection.where(...); // Apply filters here if needed
-      //   // OR use collection.filter() if complex client-side filtering is acceptable
-      //   // Ensure filter predicate returns boolean!
-      // }
-      // --- End Placeholder ---
+      // --- Start Filtering Logic ---
+      let collection = table.offset(offset); // Apply offset first
 
-      // This part might be the source of the overload error if filter was applied incorrectly
-      // Example check: ensure filter returns boolean:
-      // collection = collection.filter(item => {
-      //    const condition1 = filters.someCondition ? item.field === filters.someCondition : true;
-      //    const condition2 = filters.anotherCondition ? item.value > filters.anotherCondition : true;
-      //    return condition1 && condition2; // MUST return boolean
-      // })
+      if (filters) {
+        // Apply search filter (if provided) - searches dialCode or destName1/2
+        if (filters.search) {
+          const searchTermLower = filters.search.toLowerCase();
+          // Use filter for more complex search logic
+          collection = collection.filter((item) => {
+            const dialCodeMatch = item.dialCode.toLowerCase().includes(searchTermLower);
+            // Ensure null/undefined destNames don't cause errors
+            const destName1Match = item.destName1?.toLowerCase().includes(searchTermLower) ?? false;
+            const destName2Match = item.destName2?.toLowerCase().includes(searchTermLower) ?? false;
+            return dialCodeMatch || destName1Match || destName2Match;
+          });
+        }
 
-      const results = await collection.offset(offset).limit(limit).toArray();
+        // Apply cheaper file filter (if provided)
+        if (filters.cheaper) {
+          // Assuming 'cheaperFile' is indexed or filter is acceptable
+          collection = collection.filter((item) => item.cheaperFile === filters.cheaper);
+        }
+
+        // Apply match status filter (if provided)
+        if (filters.matchStatus) {
+          // Assuming 'matchStatus' is indexed or filter is acceptable
+          collection = collection.filter((item) => item.matchStatus === filters.matchStatus);
+        }
+      }
+      // --- End Filtering Logic ---
+
+      // Apply limit *after* filtering
+      const results = await collection.limit(limit).toArray();
 
       console.log(
         `[AZService] Loaded ${results.length} paged comparison records from ${tableName} (offset: ${offset}, limit: ${limit})`

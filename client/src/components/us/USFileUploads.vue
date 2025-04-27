@@ -221,20 +221,18 @@
       <!-- Reports Button -->
       <div class="border-t border-gray-700/50">
         <div class="flex justify-end mt-8">
-          <button
+          <!-- Use BaseButton for Get Reports -->
+          <BaseButton
             v-if="!(usStore.isCodeReportReady && usStore.isPricingReportReady)"
+            variant="primary"
+            size="standard"
+            :icon="ArrowRightIcon"
             @click="handleReportsAction"
             :disabled="!usStore.isFull || isGeneratingReports"
-            class="px-6 py-2 bg-accent/20 border border-accent/50 hover:bg-accent/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800 disabled:border disabled:border-gray-700"
             :class="{ 'animate-pulse': isGeneratingReports }"
           >
-            <div class="flex items-center justify-center space-x-2">
-              <span class="text-sm text-accent">{{
-                isGeneratingReports ? 'GENERATING REPORTS' : 'Get Reports'
-              }}</span>
-              <ArrowRightIcon class="w-4 h-4 text-accent" />
-            </div>
-          </button>
+            {{ reportsButtonText }}
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -258,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import {
   ArrowUpTrayIcon,
   DocumentIcon,
@@ -267,6 +265,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 import { useUsStore } from '@/stores/us-store';
 import { USService } from '@/services/us.service';
 import { USNPAAnalyzerService } from '@/services/us-npa-analyzer.service';
@@ -294,6 +293,11 @@ import type { RateStats } from '@/types/domains/us-types';
 const usStore = useUsStore();
 const service = new USService();
 const lergStore = useLergStore();
+
+// Computed property for the reports button text
+const reportsButtonText = computed(() => {
+  return isGeneratingReports.value ? 'GENERATING REPORTS' : 'Get Reports';
+});
 
 // Component state
 const isGeneratingReports = ref<boolean>(false);

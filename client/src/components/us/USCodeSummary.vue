@@ -4,20 +4,17 @@
     <div class="mb-4 flex items-center justify-between">
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
       <div class="flex items-center space-x-2">
-        <div
-          class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/50"
-        >
-          <span class="text-sm text-accent">{{ usStore.getFileNameByComponent(componentId) }}</span>
-        </div>
-        <button
+        <BaseBadge size="small" variant="info">
+          {{ usStore.getFileNameByComponent(componentId) }}
+        </BaseBadge>
+        <BaseButton
+          variant="destructive"
+          size="small"
+          :icon="TrashIcon"
           @click="$emit('remove-file', componentId)"
-          class="px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-500/50 rounded-md transition-colors"
         >
-          <div class="flex items-center justify-center space-x-1.5">
-            <TrashIcon class="w-3 h-3 text-red-400" />
-            <span class="text-xs text-red-400">Remove</span>
-          </div>
-        </button>
+          Remove
+        </BaseButton>
       </div>
     </div>
 
@@ -249,6 +246,8 @@ import { useLergStore } from '@/stores/lerg-store';
 import { getStateName } from '@/types/constants/state-codes';
 import { getCountryName } from '@/types/constants/country-codes';
 import { TrashIcon } from '@heroicons/vue/24/outline';
+import BaseButton from '@/components/shared/BaseButton.vue';
+import BaseBadge from '@/components/shared/BaseBadge.vue';
 import type { ComponentId } from '@/types/app-types';
 import type {
   USEnhancedCodeReport,
