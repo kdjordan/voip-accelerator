@@ -21,30 +21,36 @@ This plan outlines the steps to add functionality for marking up or down rates (
 - **State Management:** ✅ Added `ref`s for adjustment parameters, loading state, and messages.
 - **`applyRateAdjustments` Function:**
   - ✅ Implemented function structure (validation, key fetching, calculation logic, refresh calls).
-  - ✅ Resolved Dexie `InvalidStateError` by switching from individual updates in a transaction loop to using `bulkUpdate`.
+  - ✅ Resolved Dexie `InvalidStateError` by switching from individual updates in a transaction loop to using `bulkUpdate` for improved performance and transaction stability with large datasets.
   - ✅ Status/error feedback implemented.
   - ✅ Refresh logic (`resetPaginationAndLoad`, `calculateAverages`) implemented.
 - **Imports:** ✅ Added `Listbox` components, icons, and necessary types.
 
-## 3. Type Safety (`types/`) - ✅ COMPLETE
+## 3. Export Functionality (`handleExport`) - ✅ COMPLETE
+
+- **Data Fetching:** ✅ Fetches all data matching current filters.
+- **Formatting:** ✅ Correctly formats rate data to 6 decimal places (as strings) for CSV export, removing the currency symbol.
+
+## 4. Type Safety (`types/`) - ✅ COMPLETE
 
 - Defined types (`AdjustmentType`, `AdjustmentValueType`, `TargetRateType`, `RateAdjustmentSettings`) in `client/src/types/domains/rate-sheet-types.ts`.
 
-## 4. DexieDB (`useDexieDB.ts` / `USRateSheetTable.vue`) - ✅ REVIEWED
+## 5. DexieDB (`useDexieDB.ts` / `USRateSheetTable.vue`) - ✅ REVIEWED
 
 - **Indexing:** Confirmed `npanxx` and `stateCode` are correctly indexed in the schema.
 - **Connection:** Existing DB connection handling seems adequate.
 
-## 5. Store Interaction (`us-rate-sheet-store.ts`) - ✅ REVIEWED & UPDATED
+## 6. Store Interaction (`us-rate-sheet-store.ts`) - ✅ REVIEWED & UPDATED
 
 - **Refresh:** Confirmed component refresh logic (`resetPaginationAndLoad`, `calculateAverages`) is in place.
 - **Signaling:** ✅ Added `store.lastDbUpdateTime = Date.now();` after successful adjustment for explicit signaling.
 
-## 6. Testing - ⏳ READY FOR TESTING
+## 7. Testing - ⏳ READY FOR TESTING
 
-- Test various combinations of filters and adjustments.
+- Test various combinations of filters and rate adjustments.
 - Verify data persistence after refresh.
 - Test edge cases (zero value, no matching records).
+- Verify exported CSV file format and rate precision.
 
 ---
 
