@@ -79,6 +79,22 @@ export interface BasePreviewModalEmits {
   cancel: [];
 }
 
+// Define props for the BaseButton component
+export interface BaseButtonProps {
+  variant?: 'primary' | 'destructive';
+  size?: 'standard' | 'small';
+  type?: 'button' | 'submit' | 'reset';
+  disabled?: boolean;
+  icon?: Component; // Allow passing an icon component
+}
+
+// New: Define props for the BaseBadge component
+export interface BaseBadgeProps {
+  variant?: 'primary' | 'info' | 'success' | 'warning' | 'destructive' | 'neutral' | 'violet'; // Added violet for memory storage
+  size?: 'standard' | 'small';
+  uppercase?: boolean;
+}
+
 // Generic file upload state type
 export interface BaseFileUploadState {
   isGeneratingReports: boolean;
