@@ -16,6 +16,10 @@ export default {
       // body: ['Open Sans', 'sans-serif'],
     },
     extend: {
+      // NOTE: When using semi-transparent backgrounds for icon containers or similar elements
+      // (e.g., bg-blue-900/30, bg-yellow-900/30, bg-accent/30),
+      // always add a matching border with 50% opacity for consistency.
+      // Example: `bg-blue-900/30 border border-blue-400/50`
       colors: {
         fbBlack: colors.gray['950'],
         fbWhite: colors.slate['300'],

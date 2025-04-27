@@ -1,4 +1,4 @@
-  <template>
+<template>
   <div class="min-h-screen text-white pt-2 w-full">
     <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">Dashboard</h1>
 
@@ -27,11 +27,9 @@
               </div>
 
               <div class="mt-3 md:mt-0">
-                <span
-                  class="bg-accent/20 text-accent px-3 py-1 rounded-full text-sm font-medium uppercase"
-                >
+                <BaseBadge variant="primary" uppercase>
                   {{ sharedStore.user.currentPlan }} Plan
-                </span>
+                </BaseBadge>
               </div>
             </div>
           </div>
@@ -45,7 +43,7 @@
                 <p class="text-gray-400 text-sm">Last Login</p>
                 <p class="text-lg font-medium mt-1">{{ formattedLastLogin }}</p>
               </div>
-              <div class="p-2 bg-blue-900/30 rounded-lg">
+              <div class="p-2 bg-blue-900/30 rounded-lg border border-blue-400/50">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   class="h-5 w-5 text-blue-400"
@@ -68,10 +66,10 @@
                 <p class="text-gray-400 text-sm">Uploads Today</p>
                 <p class="text-lg font-medium mt-1">{{ userUsage.uploadsToday }}</p>
               </div>
-              <div class="p-2 bg-violet-900/30 rounded-lg">
+              <div class="p-2 bg-yellow-900/30 rounded-lg border border-yellow-400/50">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5 text-violet-400"
+                  class="h-5 w-5 text-yellow-400"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -91,10 +89,10 @@
                 <p class="text-gray-400 text-sm">Account Created</p>
                 <p class="text-lg font-medium mt-1">{{ formattedCreatedAt }}</p>
               </div>
-              <div class="p-2 bg-green-900/30 rounded-lg">
+              <div class="p-2 bg-accent/30 rounded-lg border border-accent/50">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5 text-green-400"
+                  class="h-5 w-5 text-accent"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -113,7 +111,7 @@
       <!-- Database Tables Info -->
       <div
         v-if="!isLoadingDatabaseInfo && allDatabaseTables.length > 0"
-        class="bg-gray-800 rounded-lg p-6"
+        class="bg-gray-800 rounded-lg p-6 border border-gray-700/50"
       >
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold">Database Tables</h2>
@@ -135,36 +133,19 @@
               <tr
                 v-for="table in allDatabaseTables"
                 :key="`${table.name}-${table.storage}`"
-                class="border-b border-gray-700/30"
+                class="border-b border-gray-700/30 hover:bg-gray-700/20"
               >
                 <td class="py-3 pl-2 font-mono text-accent">{{ table.name }}</td>
                 <td class="py-3">
-                  <span
-                    class="px-2 py-0.5 rounded text-xs font-medium"
-                    :class="
-                      table.storage === 'memory'
-                        ? 'bg-violet-900/30 text-violet-300'
-                        : 'bg-blue-900/30 text-blue-300'
-                    "
-                  >
-                    {{ table.storage === 'memory' ? 'Memory' : 'IndexedDB' }}
-                  </span>
+                  <BaseBadge size="small" variant="info">
+                    {{ 'IndexedDB' }}
+                  </BaseBadge>
                 </td>
                 <td class="py-3 text-green-400">{{ table.count.toLocaleString() }}</td>
                 <td class="py-3">
-                  <span
-                    class="px-2 py-0.5 rounded text-xs font-medium"
-                    :class="{
-                      'bg-blue-900/30 text-blue-300': getModuleForTable(table.name) === 'AZ',
-                      'bg-green-900/30 text-green-300': getModuleForTable(table.name) === 'US',
-                      'bg-yellow-900/30 text-yellow-300': getModuleForTable(table.name) === 'LERG',
-                      'bg-purple-900/30 text-purple-300':
-                        getModuleForTable(table.name) === 'Rate Sheet',
-                      'bg-gray-900/30 text-gray-300': getModuleForTable(table.name) === 'Other',
-                    }"
-                  >
+                  <BaseBadge size="small" :variant="getModuleBadgeVariant(table.name)">
                     {{ getModuleForTable(table.name) }}
-                  </span>
+                  </BaseBadge>
                 </td>
               </tr>
             </tbody>
@@ -172,16 +153,12 @@
         </div>
 
         <div class="mt-4 text-xs text-gray-400">
-          <p>
-            Memory: {{ totalMemoryRecords.toLocaleString() }} records | IndexedDB:
-            {{ totalIndexedDbRecords.toLocaleString() }} records
-          </p>
-          <p>Total records: {{ totalRecords.toLocaleString() }}</p>
+          <p>Total IndexedDB records: {{ totalRecords.toLocaleString() }}</p>
         </div>
       </div>
       <div
         v-else-if="isLoadingDatabaseInfo"
-        class="bg-gray-800 rounded-lg p-6 flex justify-center items-center h-36"
+        class="bg-gray-800 rounded-lg p-6 flex justify-center items-center h-36 border border-gray-700/50"
       >
         <div class="text-center">
           <p class="text-lg mb-3">Loading database information...</p>
@@ -190,7 +167,10 @@
           ></div>
         </div>
       </div>
-      <div v-else class="bg-gray-800 rounded-lg p-6 flex justify-center items-center h-36">
+      <div
+        v-else
+        class="bg-gray-800 rounded-lg p-6 flex justify-center items-center h-36 border border-gray-700/50"
+      >
         <div class="text-center text-lg text-gray-500">
           <p>No database tables found</p>
           <p class="text-sm mt-2">
@@ -209,6 +189,10 @@ import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import { useLergStore } from '@/stores/lerg-store';
 import { useLergData } from '@/composables/useLergData';
+import useDexieDB from '@/composables/useDexieDB';
+import { DBName } from '@/types/app-types';
+import BaseBadge from '@/components/shared/BaseBadge.vue';
+import type { BaseBadgeProps, DBNameType } from '@/types/app-types';
 
 // Shared store for user info
 const sharedStore = useSharedStore();
@@ -248,68 +232,149 @@ const formattedCreatedAt = computed(() => {
   });
 });
 
+// DexieDB instance
+const dexieDB = useDexieDB();
+
 // Database tables information
 const isLoadingDatabaseInfo = ref(false);
 const allDatabaseTables = ref<
   Array<{
     name: string;
-    storage: 'memory' | 'indexeddb';
+    storage: 'indexeddb';
     count: number;
   }>
 >([]);
 
 // Calculate totals for records
-const totalMemoryRecords = computed(() => {
-  return allDatabaseTables.value
-    .filter((table) => table.storage === 'memory')
-    .reduce((sum, table) => sum + table.count, 0);
-});
-
 const totalIndexedDbRecords = computed(() => {
-  return allDatabaseTables.value
-    .filter((table) => table.storage === 'indexeddb')
-    .reduce((sum, table) => sum + table.count, 0);
+  return allDatabaseTables.value.reduce((sum, table) => sum + table.count, 0);
 });
 
+// Simplify totalRecords computation
 const totalRecords = computed(() => {
-  return totalMemoryRecords.value + totalIndexedDbRecords.value;
+  return totalIndexedDbRecords.value;
 });
 
 // Function to determine module based on table name
 function getModuleForTable(tableName: string): string {
-  if (tableName.startsWith('az') || tableName.includes('az_')) {
+  if (tableName.toLowerCase().startsWith('az') || tableName.toLowerCase().includes('az_')) {
     return 'AZ';
-  } else if (tableName.startsWith('us') || tableName.includes('us_')) {
+  } else if (tableName.toLowerCase().startsWith('us') || tableName.toLowerCase().includes('us_')) {
     return 'US';
-  } else if (tableName === 'lerg' || tableName.includes('lerg')) {
+  } else if (tableName.toLowerCase().includes('lerg')) {
     return 'LERG';
-  } else if (tableName.includes('rate_sheet')) {
+  } else if (tableName.toLowerCase().includes('rate_sheet')) {
     return 'Rate Sheet';
+  } else if (tableName.toLowerCase().includes('comparison')) {
+    return 'US Comparison';
   } else {
     return 'Other';
   }
 }
 
-// Stores for accessing memory (Pinia) data
+// Helper function to map module name to badge variant
+function getModuleBadgeVariant(tableName: string): BaseBadgeProps['variant'] {
+  const module = getModuleForTable(tableName);
+  switch (module) {
+    case 'AZ':
+      return 'info';
+    case 'US':
+      return 'success';
+    case 'LERG':
+      return 'warning';
+    case 'Rate Sheet':
+      return 'violet';
+    case 'US Comparison':
+      return 'accent';
+    case 'Other':
+    default:
+      return 'neutral';
+  }
+}
+
+// Stores for accessing memory (Pinia) data and triggering updates
 const azStore = useAzStore();
 const usStore = useUsStore();
 const lergStore = useLergStore();
 
-
 // LERG initialization
 const { initializeLergData, error: lergError } = useLergData();
 
-// Function to load database information
+// Function to load database information from IndexedDB
+async function loadDatabaseInfo() {
+  isLoadingDatabaseInfo.value = true;
+  allDatabaseTables.value = [];
+  console.log('[DashBoard] Loading database info...');
 
+  try {
+    const dbNames = Object.values(DBName);
+    for (const dbName of dbNames) {
+      console.log(`[DashBoard] Checking DB: ${dbName}`);
+      await dexieDB.getDB(dbName as DBNameType);
+      const storeNames = await dexieDB.getAllStoreNamesForDB(dbName as DBNameType);
+      console.log(`[DashBoard] Stores found in ${dbName}:`, storeNames);
 
-// Initialize LERG data on component mount
+      for (const storeName of storeNames) {
+        try {
+          const records = await dexieDB.loadFromDexieDB(dbName as DBNameType, storeName);
+          allDatabaseTables.value.push({
+            name: storeName,
+            storage: 'indexeddb',
+            count: records.length,
+          });
+          console.log(
+            `[DashBoard] Added table: ${dbName}/${storeName} (${records.length} records)`
+          );
+        } catch (loadError) {
+          console.error(`[DashBoard] Failed to load count for ${dbName}/${storeName}:`, loadError);
+          allDatabaseTables.value.push({
+            name: `${storeName} (Error Loading)`,
+            storage: 'indexeddb',
+            count: 0,
+          });
+        }
+      }
+    }
+    console.log('[DashBoard] Finished loading database info. Tables:', allDatabaseTables.value);
+  } catch (error) {
+    console.error('[DashBoard] Error loading database info:', error);
+  } finally {
+    isLoadingDatabaseInfo.value = false;
+  }
+}
+
+// Initialize LERG data and load DB info on component mount
 onMounted(async () => {
   try {
-    // Initialize LERG data
     await initializeLergData();
-
   } catch (err) {
-    console.error('Failed to initialize services:', err);
+    console.error('[DashBoard] Failed to initialize LERG:', err);
   }
+
+  await loadDatabaseInfo();
 });
+
+watch(
+  () => azStore.filesUploaded.size,
+  async (newSize, oldSize) => {
+    if (newSize !== oldSize) {
+      console.log('[DashBoard] AZ Store uploads changed, reloading DB info...');
+      await loadDatabaseInfo();
+    }
+  }
+);
+
+watch(
+  () => usStore.filesUploaded.size,
+  async (newSize, oldSize) => {
+    if (newSize !== oldSize) {
+      console.log('[DashBoard] US Store uploads changed, reloading DB info...');
+      await loadDatabaseInfo();
+    }
+  }
+);
 </script>
+
+<style scoped>
+/* Add specific styles if needed, otherwise rely on Tailwind */
+</style>
