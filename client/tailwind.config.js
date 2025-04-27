@@ -51,11 +51,16 @@ export default {
             boxShadow: '0 0 0 6px rgba(var(--destructive) / 0)',
           },
         },
+        spin: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'upload-pulse': 'upload-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-success': 'status-pulse-success 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-error': 'status-pulse-error 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        spin: 'spin 1s linear infinite',
       },
     },
   },
