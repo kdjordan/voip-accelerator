@@ -47,9 +47,17 @@ import { useSharedStore } from '@/stores/shared-store';
 import { clearApplicationDatabases } from '@/utils/cleanup';
 import { RouterView, useRoute } from 'vue-router';
 import { computed } from 'vue';
+// Import relevant stores
+import { useAzStore } from '@/stores/az-store';
+import { useUsStore } from '@/stores/us-store';
+// TODO: Add imports for other stores if needed (e.g., rate sheets)
 
 const route = useRoute();
 const sharedStore = useSharedStore();
+// Instantiate stores
+const azStore = useAzStore();
+const usStore = useUsStore();
+// TODO: Instantiate other stores if needed
 
 // Public routes where SideNav should not be shown
 const publicRoutes = ['/', '/home', '/about', '/pricing', '/login', '/signup'];
@@ -77,8 +85,22 @@ onMounted(async () => {
   await clearApplicationDatabases();
   // -------------------------
 
+  // --- Reset Store States ---
+  console.log('[App Mount] Resetting store states...');
   try {
-    console.log('Starting application initialization AFTER cleanup...');
+    // Call reset actions for stores managing data related to cleared DBs
+    await azStore.resetFiles(); // Resets AZ files, reports, comparison table name
+    await usStore.resetFiles(); // Resets US files, reports, etc.
+    // TODO: Add resets for other stores if they manage data in cleared DBs
+    // e.g., await rateSheetStore.resetState();
+    console.log('[App Mount] Store states reset.');
+  } catch (storeResetError) {
+    console.error('[App Mount] Error resetting store states:', storeResetError);
+  }
+  // --------------------------
+
+  try {
+    console.log('Starting application initialization AFTER cleanup and store reset...');
     // Rest of your initialization logic can go here
   } catch (error) {
     console.error('Error during initialization:', error);
