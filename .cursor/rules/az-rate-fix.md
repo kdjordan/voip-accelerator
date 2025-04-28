@@ -1,5 +1,7 @@
 # AZ Rate Sheet Refactor: Pinia/LocalStorage to IndexedDB (`useDexieDB`)
 
+# find
+
 **Goal:** Refactor the AZ Rate Sheet feature (`AZRateSheetView.vue`, `AZRateSheetTable.vue`, `az-rate-sheet-store.ts`, `az-rate-sheet.service.ts`) to use IndexedDB for data storage via the `useDexieDB` composable, mirroring the architecture of the US Rate Sheet feature. This aims to significantly reduce memory consumption, improve performance, and enhance scalability while preserving all existing functionality and user experience.
 
 **Current Architecture:**
