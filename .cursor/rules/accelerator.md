@@ -5,7 +5,7 @@
 VoIP Accelerator is a modern, local-first web application designed to empower telecom professionals by streamlining the analysis and comparison of Voice over IP (VoIP) pricing and telecommunication code data across different carriers. The application prioritizes a fast, offline-first user experience, leveraging IndexedDB (via DexieJS) for local data storage and Supabase for cloud synchronization, user management, and specialized data handling (like LERG).
 
 ## Core Functionality
-## triggers
+## trigger
 ### Supported Data Types
 
 The application is built to handle several types of CSV files common in the telecom industry:
