@@ -280,7 +280,7 @@ export function useLergData() {
       error.value = null;
 
       // Call the LERG service to get processed data
-      const processedData = await lergService.getProcessedData();
+      const processedData = await lergService.processLergData();
 
       // Check if data is valid and not null
       if (!processedData?.stateMapping || !processedData?.countryData) {
@@ -293,7 +293,7 @@ export function useLergData() {
         stateMapping: processedData.stateMapping,
         canadaProvinces: processedData.canadaProvinces,
         countryData: processedData.countryData,
-        count: processedData.count,
+        count: processedData.countryData.reduce((total, country) => total + country.npaCount, 0),
       };
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to process LERG data';

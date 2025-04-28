@@ -3,6 +3,9 @@ import { type DBNameType, DBName } from '@/types';
 import { useDBStore } from '@/stores/db-store';
 import { DBSchemas, DynamicTableSchemas } from '@/types/app-types';
 
+// Export DexieDBBase type alias
+export type DexieDBBase = Dexie;
+
 async function defineSchema(
   db: Dexie,
   dbName: DBNameType,

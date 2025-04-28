@@ -337,7 +337,10 @@
             </slot>
 
             <!-- Conditional Effective Date Input for US Rate Sheet -->
-            <div v-if="props.source === 'US_RATE_SHEET'" class="flex items-center gap-2 mr-auto">
+            <div
+              v-if="props.source && props.source === 'US_RATE_DECK'"
+              class="flex items-center gap-2 mr-auto"
+            >
               <label
                 for="effective-date"
                 class="block text-sm font-medium text-fbWhite/70 whitespace-nowrap"
@@ -620,39 +623,31 @@ const isValid = computed(() => {
 });
 
 function handleConfirm() {
-  if (!isValid.value) {
-    showValidationErrors.value = true;
-    return;
+  // First ensure all required fields are mapped
+  if (props.validateRequired) {
+    const requiredMapped = props.columnOptions
+      .filter((option) => option.required)
+      .every((option) => Object.values(mappings.value).includes(option.value));
+
+    // For US files with indeterminate rate, check if mapping is required but not mapped
+    // and indeterminate strategy is 'column'
+    const requiresIndeterminateMapping =
+      isUSFile.value &&
+      indeterminateRateDefinition.value === 'column' &&
+      !hasIndeterminateColumn.value;
+
+    if (!requiredMapped || requiresIndeterminateMapping) {
+      showValidationErrors.value = true;
+      return; // Don't proceed if validation fails
+    }
   }
 
-  if (isUSFile.value) {
-    const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
-    const hasIndeterminate = mappedRoles.has(USColumnRole.INDETERMINATE);
-
-    // Only pass the indeterminate definition if we're not using a column
-    if (indeterminateRateDefinition.value !== 'column') {
-      // Emit effective date for US Rate Sheet source
-      if (props.source === 'US_RATE_SHEET') {
-        emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value);
-      } else {
-        emit('confirm', mappings.value, indeterminateRateDefinition.value);
-      }
-    } else {
-      // When using a column, don't pass a definition
-      // Emit effective date for US Rate Sheet source
-      if (props.source === 'US_RATE_SHEET') {
-        emit('confirm', mappings.value, undefined, effectiveDate.value);
-      } else {
-        emit('confirm', mappings.value);
-      }
-    }
+  // Emit all mappings, indeterminate definition, and effective date for US_RATE_DECK
+  if (props.source && props.source === 'US_RATE_DECK') {
+    emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value);
   } else {
-    // Emit effective date for US Rate Sheet source (though unlikely to be AZ)
-    if (props.source === 'US_RATE_SHEET') {
-      emit('confirm', mappings.value, undefined, effectiveDate.value);
-    } else {
-      emit('confirm', mappings.value);
-    }
+    // For non-US_RATE_DECK, exclude the effective date
+    emit('confirm', mappings.value, indeterminateRateDefinition.value);
   }
 }
 

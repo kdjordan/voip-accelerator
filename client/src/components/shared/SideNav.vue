@@ -98,6 +98,7 @@
             <ul v-if="isOpen && expandedSections[index]" class="mt-1 ml-4 pl-2">
               <li v-for="child in item.children" :key="child.name" class="my-1">
                 <RouterLink
+                  v-if="child.to"
                   :to="child.to"
                   class="flex items-center py-1.5 px-3 rounded-md border transition-all"
                   :class="[
@@ -106,8 +107,6 @@
                       : 'hover:bg-fbHover/80 border-transparent text-fbWhite',
                   ]"
                 >
-                  <!-- Optional: Add child icons if needed -->
-                  <!-- <component :is="child.icon" class="w-4 h-4 mr-2 flex-shrink-0" /> -->
                   <span class="whitespace-nowrap text-xs">{{ child.name }}</span>
                 </RouterLink>
               </li>

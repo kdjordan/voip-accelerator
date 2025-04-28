@@ -190,7 +190,7 @@ import PreviewModal from '@/components/shared/PreviewModal.vue';
 import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
-import { USRateSheetService } from '@/services/us-rate-sheet.service.ts';
+import { USRateSheetService } from '@/services/us-rate-sheet.service';
 import { USColumnRole } from '@/types/domains/us-types';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
 import { useDragDrop } from '@/composables/useDragDrop';

@@ -323,8 +323,8 @@ async function loadDatabaseInfo() {
       console.log(`[DashBoard] Checking existing DB: ${dbName}`);
       // We still need getDB to get table names/counts, but now only for existing DBs
       // getDB ensures the connection is open if needed
-      const dbInstance = await dexieDB.getDB(dbName); // `getDB` is okay here as we know the DB exists
-      const storeNames = await dexieDB.getAllStoreNamesForDB(dbName);
+      const dbInstance = await dexieDB.getDB(dbName as DBNameType); // Cast to DBNameType
+      const storeNames = await dexieDB.getAllStoreNamesForDB(dbName as DBNameType); // Cast to DBNameType
       console.log(`[DashBoard] Stores found in ${dbName}:`, storeNames);
 
       for (const storeName of storeNames) {
@@ -347,9 +347,6 @@ async function loadDatabaseInfo() {
           });
         }
       }
-      // Optional: Close the specific Dexie instance if useDexieDB doesn't manage singletons well,
-      // but useDexieDB is designed to handle this, so explicit close likely not needed.
-      // if (dbInstance.isOpen()) dbInstance.close();
     }
     console.log('[DashBoard] Finished loading database info. Tables:', allDatabaseTables.value);
   } catch (error) {
