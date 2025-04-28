@@ -78,7 +78,7 @@
               variant="primary"
               size="small"
               :loading="isApplyingSettings"
-              :disabled="isApplyingSettings || !hasDateSettingsChanged"
+              :disabled="!hasDateSettingsChanged"
               :icon="ArrowRightIcon"
               @click="applyEffectiveDateSettings"
               title="Apply effective date settings to all records"
@@ -95,9 +95,7 @@
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-4">
           <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
-          <span class="text-sm text-gray-400">
-            Showing {{ filteredData.length }} destinations
-          </span>
+          <span class="text-sm text-info"> Showing {{ filteredData.length }} destinations </span>
         </div>
         <div class="flex items-center gap-2">
           <BaseButton
@@ -192,7 +190,9 @@
               <!-- Action buttons -->
               <div class="flex gap-2">
                 <BaseButton
-                  variant="secondary"
+                  :variant="
+                    isBulkProcessing && bulkMode === 'highest' ? 'primary' : 'secondary-outline'
+                  "
                   size="standard"
                   class="flex-1"
                   :loading="isBulkProcessing && bulkMode === 'highest'"
@@ -202,12 +202,13 @@
                   Use Highest
                 </BaseButton>
                 <BaseButton
-                  variant="secondary"
+                  :variant="
+                    isBulkProcessing && bulkMode === 'lowest' ? 'primary' : 'secondary-outline'
+                  "
                   size="standard"
                   class="flex-1"
                   :loading="isBulkProcessing && bulkMode === 'lowest'"
                   :disabled="isBulkProcessing"
-                  v-if="!isBulkProcessing || bulkMode !== 'lowest'"
                   @click="handleBulkUpdate('lowest')"
                 >
                   Use Lowest
@@ -286,12 +287,15 @@
               <td class="px-3 py-4 text-sm">
                 <div class="flex items-center">
                   <span class="font-medium text-white">{{ group.destinationName }}</span>
-                  <div
+                  <!-- Use BaseBadge for Rate Conflict -->
+                  <BaseBadge
                     v-if="group.hasDiscrepancy"
-                    class="ml-2 inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-400/20"
+                    variant="destructive"
+                    size="small"
+                    class="ml-2"
                   >
                     Rate Conflict
-                  </div>
+                  </BaseBadge>
                 </div>
               </td>
               <td class="px-3 py-4 text-sm text-gray-300">{{ group.codes.length }} codes</td>
@@ -302,27 +306,27 @@
                 <template v-else> Multiple Rates </template>
               </td>
               <!-- Change Code column -->
-              <td class="px-3 py-4 text-sm">
-                <div
-                  class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
-                  :class="{
-                    'bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30':
-                      group.changeCode === ChangeCode.SAME,
-                    'bg-red-400/10 text-red-400 ring-1 ring-inset ring-red-400/30':
-                      group.changeCode === ChangeCode.DECREASE,
-                    'bg-orange-400/10 text-orange-400 ring-1 ring-inset ring-orange-400/30':
-                      group.changeCode === ChangeCode.INCREASE,
-                  }"
+              <td class="px-3 py-4 text-sm text-center align-middle">
+                <BaseBadge
+                  :variant="
+                    group.changeCode === ChangeCode.INCREASE
+                      ? 'accent'
+                      : group.changeCode === ChangeCode.DECREASE
+                      ? 'destructive'
+                      : 'info'
+                  "
+                  size="small"
                 >
                   {{ group.changeCode }}
-                </div>
+                </BaseBadge>
               </td>
               <td class="px-3 py-4 text-sm text-gray-300">
                 <div
                   class="flex items-center"
                   :class="{
-                    'text-orange-400': group.changeCode === ChangeCode.INCREASE,
-                    'text-red-400': group.changeCode === ChangeCode.DECREASE,
+                    'text-accent': group.changeCode === ChangeCode.INCREASE,
+                    'text-destructive': group.changeCode === ChangeCode.DECREASE,
+                    'text-info': group.changeCode === ChangeCode.SAME, // Add condition for SAME
                   }"
                 >
                   <CalendarDaysIcon
@@ -349,9 +353,10 @@
                 <div class="pl-8">
                   <!-- Header for Expanded Row -->
                   <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-sm font-medium text-white">
+                    <h4 class="text-sm font-medium text-accent text-secondary uppercase">
                       {{ group.hasDiscrepancy ? 'Resolve Rate Conflict' : 'Adjust Rate' }}
                     </h4>
+                    <!-- Moved Save Changes button below inputs -->
                     <div class="flex items-center gap-2">
                       <!-- Show/Hide All Codes Button (Only for Discrepancies) -->
                       <template v-if="group.hasDiscrepancy">
@@ -375,17 +380,7 @@
                           Hide All Codes
                         </BaseButton>
                       </template>
-                      <!-- Save Changes Button (Common) -->
-                      <BaseButton
-                        v-if="hasUnsavedChanges(group.destinationName)"
-                        variant="primary"
-                        size="small"
-                        :loading="isSavingChanges === group.destinationName"
-                        :disabled="isSavingChanges === group.destinationName"
-                        @click="saveRateSelection(group)"
-                      >
-                        Save Changes
-                      </BaseButton>
+                      <!-- Save Changes Button REMOVED FROM HERE -->
                     </div>
                   </div>
 
@@ -481,22 +476,39 @@
 
                   <!-- Section 2: Unified Adjustment Controls for ALL destinations -->
                   <div v-if="singleRateAdjustments[group.destinationName]" class="space-y-4">
-                    <!-- Display Current Rate for both single and multi-rate -->
-                    <div class="flex items-center gap-2 text-sm">
-                      <span class="text-gray-400">{{
-                        group.hasDiscrepancy ? 'Selected Rate:' : 'Current Rate:'
-                      }}</span>
-                      <span class="text-white font-semibold font-mono">{{
-                        group.hasDiscrepancy
-                          ? formatRate(selectedRates[group.destinationName] || 0)
-                          : formatRate(group.rates[0].rate)
-                      }}</span>
+                    <!-- Display Current Rate and Updated Rate Preview -->
+                    <div class="flex items-baseline gap-4 text-sm">
+                      <div class="flex items-center gap-2">
+                        <span class="text-gray-400">{{
+                          group.hasDiscrepancy ? 'Selected Base Rate:' : 'Current Rate:'
+                        }}</span>
+                        <span class="text-white font-semibold font-mono">{{
+                          group.hasDiscrepancy
+                            ? formatRate(selectedRates[group.destinationName] || 0)
+                            : formatRate(
+                                originalRates[group.destinationName] ?? group.rates[0].rate
+                              )
+                        }}</span>
+                      </div>
+                      <div
+                        v-if="hasPendingChanges(group.destinationName)"
+                        class="flex items-center gap-2 text-info"
+                      >
+                        <span class="text-gray-400">Updated Rate:</span>
+                        <span class="text-white font-semibold font-mono">{{
+                          formatRate(getPendingUpdatedRate(group.destinationName) ?? 0)
+                        }}</span>
+                      </div>
+                      <div v-else class="flex items-center gap-2">
+                        <span class="text-gray-400">Updated Rate:</span>
+                        <span class="text-gray-500 italic">TBD</span>
+                      </div>
                     </div>
 
-                    <!-- Adjustment Input Section -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <!-- Unified Adjustment Input Section (Flex Row) -->
+                    <div class="flex items-end gap-4">
                       <!-- Adjustment Type -->
-                      <div class="relative">
+                      <div class="relative flex-1">
                         <Listbox
                           v-model="singleRateAdjustments[group.destinationName].adjustmentType"
                           as="div"
@@ -574,7 +586,7 @@
                       </div>
 
                       <!-- Value Type -->
-                      <div class="relative">
+                      <div class="relative flex-1">
                         <Listbox
                           v-model="singleRateAdjustments[group.destinationName].adjustmentValueType"
                           as="div"
@@ -652,7 +664,7 @@
                       </div>
 
                       <!-- Value Input -->
-                      <div>
+                      <div class="flex-1">
                         <label
                           :for="`adjustment-value-${group.destinationName}`"
                           class="block text-xs font-medium text-gray-400 mb-1"
@@ -680,40 +692,56 @@
                           }"
                         />
                       </div>
-                    </div>
 
-                    <!-- OR Separator -->
-                    <div class="flex items-center my-4">
-                      <div class="flex-grow border-t border-gray-700"></div>
-                      <span class="flex-shrink mx-4 text-gray-500 text-xs">OR</span>
-                      <div class="flex-grow border-t border-gray-700"></div>
-                    </div>
+                      <!-- Vertical Separator -->
+                      <div class="h-10 border-l border-gray-700 mx-2 self-end mb-1"></div>
 
-                    <!-- Direct Rate Set -->
-                    <div class="w-1/5">
-                      <label
-                        :for="`direct-rate-${group.destinationName}`"
-                        class="block text-xs font-medium text-gray-400 mb-1"
-                        >Set New Rate Directly</label
-                      >
-                      <input
-                        :id="`direct-rate-${group.destinationName}`"
-                        v-model.number="directSetRates[group.destinationName]"
-                        type="number"
-                        min="0"
-                        step="0.000001"
-                        placeholder="Enter new rate..."
-                        @input="singleRateAdjustments[group.destinationName].adjustmentValue = null"
-                        class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg p-2 focus:ring-accent focus:border-accent"
-                        :disabled="
-                          group.hasDiscrepancy && selectedRates[group.destinationName] === undefined
-                        "
-                        :class="{
-                          'opacity-50':
+                      <!-- Direct Rate Set -->
+                      <div class="flex-1">
+                        <label
+                          :for="`direct-rate-${group.destinationName}`"
+                          class="block text-xs font-medium text-gray-400 mb-1"
+                          >Set New Rate Directly</label
+                        >
+                        <input
+                          :id="`direct-rate-${group.destinationName}`"
+                          v-model.number="directSetRates[group.destinationName]"
+                          type="number"
+                          min="0"
+                          step="0.000001"
+                          placeholder="Enter new rate..."
+                          @input="
+                            singleRateAdjustments[group.destinationName].adjustmentValue = null
+                          "
+                          class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg p-2 focus:ring-accent focus:border-accent"
+                          :disabled="
                             group.hasDiscrepancy &&
-                            selectedRates[group.destinationName] === undefined,
-                        }"
-                      />
+                            selectedRates[group.destinationName] === undefined
+                          "
+                          :class="{
+                            'opacity-50':
+                              group.hasDiscrepancy &&
+                              selectedRates[group.destinationName] === undefined,
+                          }"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Save Changes Button (Moved here) -->
+                    <div class="flex justify-end mt-4">
+                      <BaseButton
+                        variant="primary"
+                        size="small"
+                        :icon="ArrowRightIcon"
+                        :loading="isSavingChanges === group.destinationName"
+                        :disabled="
+                          isSavingChanges === group.destinationName ||
+                          !hasUnsavedChanges(group.destinationName)
+                        "
+                        @click="saveRateSelection(group)"
+                      >
+                        Save Changes
+                      </BaseButton>
                     </div>
                   </div>
                   <!-- End Adjustment Controls -->
@@ -769,6 +797,7 @@ import type {
 } from '@/types/domains/rate-sheet-types';
 import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
 
 // Define emits
 const emit = defineEmits(['update:discrepancy-count']);
@@ -793,12 +822,35 @@ const hasDateSettingsChanged = computed(() => {
   const defaultDecreaseDate = today;
   const defaultIncreaseDate = sevenDaysStr;
 
+  // Current values from the ref
+  const currentSame = effectiveDateSettings.value.sameCustomDate;
+  const currentDecrease = effectiveDateSettings.value.decreaseCustomDate;
+  const currentIncrease = effectiveDateSettings.value.increaseCustomDate;
+
   // Check if any date is different from its default value
-  const sameDateChanged = effectiveDateSettings.value.sameCustomDate !== defaultSameDate;
-  const decreaseDateChanged =
-    effectiveDateSettings.value.decreaseCustomDate !== defaultDecreaseDate;
-  const increaseDateChanged =
-    effectiveDateSettings.value.increaseCustomDate !== defaultIncreaseDate;
+  const sameDateChanged = currentSame !== defaultSameDate;
+  const decreaseDateChanged = currentDecrease !== defaultDecreaseDate;
+  const increaseDateChanged = currentIncrease !== defaultIncreaseDate;
+
+  // Log the comparison for debugging
+  console.log('Date Settings Change Check:', {
+    defaults: {
+      same: defaultSameDate,
+      decrease: defaultDecreaseDate,
+      increase: defaultIncreaseDate,
+    },
+    current: {
+      same: currentSame,
+      decrease: currentDecrease,
+      increase: currentIncrease,
+    },
+    changed: {
+      same: sameDateChanged,
+      decrease: decreaseDateChanged,
+      increase: increaseDateChanged,
+    },
+    result: sameDateChanged || decreaseDateChanged || increaseDateChanged,
+  });
 
   // Return true if any date has changed
   return sameDateChanged || decreaseDateChanged || increaseDateChanged;
@@ -912,25 +964,48 @@ let searchDebounceTimeout: NodeJS.Timeout | null = null;
 onMounted(() => {
   console.log('today', new Date().toISOString().split('T')[0]);
   const savedSettings = store.getEffectiveDateSettings;
+
   if (savedSettings) {
-    // Cast the saved settings to ensure correct types
+    console.log('Loading saved settings:', savedSettings);
+    // Apply saved modes and custom dates first
     effectiveDateSettings.value = {
       same: savedSettings.same as 'today' | 'tomorrow' | 'custom',
       increase: savedSettings.increase as 'today' | 'tomorrow' | 'week' | 'custom',
       decrease: savedSettings.decrease as 'today' | 'tomorrow' | 'custom',
       sameCustomDate: savedSettings.sameCustomDate,
-      increaseCustomDate: savedSettings.increaseCustomDate,
+      increaseCustomDate: savedSettings.increaseCustomDate, // Temporarily assign saved date
       decreaseCustomDate: savedSettings.decreaseCustomDate,
     };
+
+    // *** Crucial Fix: Recalculate increaseCustomDate if mode is 'week' ***
+    if (effectiveDateSettings.value.increase === 'week') {
+      const sevenDaysDate = new Date();
+      sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
+      const correctWeekDate = sevenDaysDate.toISOString().split('T')[0];
+      // Only update if the saved date doesn't match the correct 'week' date
+      if (effectiveDateSettings.value.increaseCustomDate !== correctWeekDate) {
+        console.log(
+          `Correcting increaseCustomDate for 'week' mode. Was: ${effectiveDateSettings.value.increaseCustomDate}, Should be: ${correctWeekDate}`
+        );
+        effectiveDateSettings.value.increaseCustomDate = correctWeekDate;
+      }
+    }
+    // Similarly, ensure 'today' and 'tomorrow' modes reflect the current date
+    else if (effectiveDateSettings.value.increase === 'today') {
+      effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
+    } else if (effectiveDateSettings.value.increase === 'tomorrow') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
+    }
+    // If mode is 'custom', we keep the loaded increaseCustomDate
   } else {
-    // Explicitly set increase date to 7 days from now if no saved settings
-    const sevenDaysDate = new Date();
-    sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
-    effectiveDateSettings.value.increaseCustomDate = sevenDaysDate.toISOString().split('T')[0];
+    // Defaults are now set during ref initialization, log the initial state
+    console.log('Using default settings (set during ref init):', effectiveDateSettings.value);
   }
 
-  // Log the effective date settings to debug
-  console.log('Effective date settings after init:', {
+  // Log the final effective date settings after potential load/init and correction
+  console.log('Final effective date settings after init:', {
     same: effectiveDateSettings.value.same,
     sameCustomDate: effectiveDateSettings.value.sameCustomDate,
     increase: effectiveDateSettings.value.increase,
@@ -2197,6 +2272,70 @@ function toggleExpand(destinationName: string) {
     }
   }
 }
+
+// --- Real-time Update Calculation Logic ---
+
+// Function to check if there are pending, uncommitted changes
+function hasPendingChanges(destinationName: string): boolean {
+  const directRate = directSetRates.value[destinationName];
+  const adjustment = singleRateAdjustments.value[destinationName];
+
+  // Check if direct rate input has a value
+  if (directRate !== null && directRate !== undefined) {
+    return true;
+  }
+
+  // Check if adjustment inputs have a value
+  if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+    // Additional check for multi-rate: ensure a base rate is selected
+    const group = groupedData.value.find((g) => g.destinationName === destinationName);
+    if (group?.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
+      return false; // Cannot calculate adjustment without a selected base rate
+    }
+    return true;
+  }
+
+  return false;
+}
+
+// Function to get the calculated rate based on pending inputs
+function getPendingUpdatedRate(destinationName: string): number | null {
+  const group = groupedData.value.find((g) => g.destinationName === destinationName);
+  if (!group) return null;
+
+  const directRate = directSetRates.value[destinationName];
+  const adjustment = singleRateAdjustments.value[destinationName];
+
+  // Priority 1: Direct Rate Input
+  if (directRate !== null && directRate !== undefined) {
+    return directRate;
+  }
+
+  // Priority 2: Adjustment Calculation
+  if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+    let baseRate: number | undefined;
+
+    if (group.hasDiscrepancy) {
+      // Use the currently selected rate for multi-rate destinations
+      baseRate = selectedRates.value[destinationName];
+    } else {
+      // Use the original rate for single-rate destinations
+      baseRate = originalRates.value[destinationName] ?? group.rates[0].rate;
+    }
+
+    // Cannot calculate if base rate is missing (e.g., multi-rate not selected yet)
+    if (baseRate === undefined) {
+      return null;
+    }
+
+    return calculateAdjustedRate(baseRate, adjustment);
+  }
+
+  // No pending changes that result in a new rate
+  return null;
+}
+
+// --- End Real-time Calculation Logic ---
 
 // ... rest of the script setup ...
 </script>
