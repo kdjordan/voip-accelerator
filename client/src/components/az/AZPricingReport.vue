@@ -44,8 +44,11 @@ import { storeToRefs } from 'pinia';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/vue/24/solid';
 import AZDetailedComparisonTable from './AZDetailedComparisonTable.vue';
 import { ReportTypes } from '@/types/app-types';
+import { useSharedStore } from '@/stores/shared-store';
+import { DBName } from '@/types/app-types';
 
 const azStore = useAzStore();
+const sharedStore = useSharedStore();
 const { pricingReport: report, getFileNames } = storeToRefs(azStore);
 
 const hasTwoFiles = computed(() => getFileNames.value.length === 2);
@@ -55,7 +58,4 @@ function goToFilesTab() {
   azStore.setActiveReportType(ReportTypes.FILES);
   // Potentially trigger router navigation if tabs are route-based
 }
-
 </script>
-
-

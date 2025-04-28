@@ -410,18 +410,10 @@
             <th scope="col" class="px-4 py-2 text-gray-300 text-center">NPANXX</th>
             <th scope="col" class="px-4 py-2 text-gray-300 text-center">State</th>
             <th scope="col" class="px-4 py-2 text-gray-300 text-center">Country</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
-              Interstate Rate
-            </th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
-              Intrastate Rate
-            </th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
-              Indeterminate Rate
-            </th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">
-              Effective Date
-            </th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Interstate Rate</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Intrastate Rate</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Indeterminate Rate</th>
+            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Effective Date</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
@@ -485,7 +477,7 @@ import {
   ChevronUpDownIcon,
   ArrowRightIcon,
 } from '@heroicons/vue/20/solid';
-import type { USRateSheetEntry } from '@/types/rate-sheet-types';
+import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
 import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
 import { useLergStore } from '@/stores/lerg-store';
 import { useDebounceFn, useIntersectionObserver } from '@vueuse/core';
@@ -498,7 +490,8 @@ import {
   type AdjustmentType,
   type AdjustmentValueType,
   type TargetRateType,
-} from '@/types/rate-sheet-types'; // Assuming types are defined here
+} from '@/types/domains/rate-sheet-types';
+import Dexie from 'dexie';
 
 // Type for average values
 interface RateAverages {
@@ -518,17 +511,17 @@ const RATE_SHEET_TABLE_NAME = 'entries';
 const adjustmentTypeOptions = [
   { value: 'markup', label: 'Markup' },
   { value: 'markdown', label: 'Markdown' },
-];
+] as const;
 const adjustmentValueTypeOptions = [
   { value: 'percentage', label: 'Percentage (%)' },
   { value: 'fixed', label: 'Fixed Amount ($)' },
-];
+] as const;
 const targetRateTypeOptions = [
   { value: 'all', label: 'All Rates' },
   { value: 'inter', label: 'Interstate' },
   { value: 'intra', label: 'Intrastate' },
   { value: 'ij', label: 'Indeterminate' },
-];
+] as const;
 // --- End Rate Adjustment Options Data ---
 
 // --- Rate Adjustment State ---
@@ -816,20 +809,24 @@ async function loadMoreData() {
   dataError.value = null;
 
   try {
-    let query = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
+      table;
 
-    // Apply filters directly using Dexie queries
     const filtersApplied: string[] = [];
 
-    // Apply NPANXX search filter (use startsWithIgnoreCase for index efficiency)
     if (debouncedSearchQuery.value) {
-      query = query.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+      queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
       filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
-    }
 
-    // Apply State/Province filter (use equals for index efficiency)
-    if (selectedState.value) {
-      query = query.where('stateCode').equals(selectedState.value);
+      // Chain state filter if both are present
+      if (selectedState.value) {
+        queryChain = queryChain.and((record) => record.stateCode === selectedState.value);
+        filtersApplied.push(`Region equals ${selectedState.value}`);
+      }
+    } else if (selectedState.value) {
+      // Only state filter is present
+      queryChain = table.where('stateCode').equals(selectedState.value);
       filtersApplied.push(`Region equals ${selectedState.value}`);
     }
 
@@ -842,12 +839,12 @@ async function loadMoreData() {
 
     // Get total count *after* applying filters
     if (offset.value === 0) {
-      totalRecords.value = await query.count();
+      totalRecords.value = await queryChain.count();
       console.log(`[USRateSheetTable] Total matching records (post-filter): ${totalRecords.value}`);
     }
 
     // Fetch data with pagination *after* applying filters
-    const newData = await query.offset(offset.value).limit(PAGE_SIZE).toArray();
+    const newData = await queryChain.offset(offset.value).limit(PAGE_SIZE).toArray();
 
     console.log(
       `[USRateSheetTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${PAGE_SIZE})`
@@ -920,12 +917,15 @@ async function calculateAverages(stateCode?: string): Promise<RateAverages | nul
   let count = 0;
 
   try {
-    let query = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
+      table;
+
     if (stateCode) {
-      query = query.where('stateCode').equals(stateCode);
+      queryChain = table.where('stateCode').equals(stateCode);
     }
 
-    await query.each((entry) => {
+    await queryChain.each((entry) => {
       // Ensure rates are numbers before summing
       if (typeof entry.interRate === 'number') {
         sumInter += entry.interRate;
@@ -1104,26 +1104,33 @@ async function handleExport() {
   );
 
   try {
-    // 2. Build the query based on current filters
-    let query = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
+      table;
     const filtersApplied: string[] = [];
 
     if (debouncedSearchQuery.value) {
-      query = query.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+      queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
       filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
-    }
-    if (selectedState.value) {
-      query = query.where('stateCode').equals(selectedState.value);
+
+      // Chain state filter if both are present
+      if (selectedState.value) {
+        queryChain = queryChain.and((record) => record.stateCode === selectedState.value);
+        filtersApplied.push(`State Code equals '${selectedState.value}'`);
+      }
+    } else if (selectedState.value) {
+      // Only state filter is present
+      queryChain = table.where('stateCode').equals(selectedState.value);
       filtersApplied.push(`State Code equals '${selectedState.value}'`);
     }
 
-    // 3. Fetch ALL matching data from Dexie
+    // Fetch ALL matching data from Dexie
     console.log(
       `[USRateSheetTable] Fetching all data matching filters: ${
         filtersApplied.join(', ') || 'None'
       }`
     );
-    const allMatchingData = await query.toArray();
+    const allMatchingData = await queryChain.toArray();
     console.log(`[USRateSheetTable] Fetched ${allMatchingData.length} records for export.`);
 
     if (allMatchingData.length === 0) {
@@ -1263,25 +1270,18 @@ async function applyRateAdjustments() {
 
     // Apply filters progressively
     if (debouncedSearchQuery.value) {
-      collection = collection.filter((record) =>
+      collection = collection.filter((record: USRateSheetEntry) =>
         record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
       );
       filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
-      // Note: Dexie's startsWithIgnoreCase is preferable for index usage, but .filter() is more flexible
-      // if combining non-indexed criteria. Reverting to filter for simplicity in combining.
-      // If performance becomes an issue with large datasets, revisit index usage.
-      // Alternative using indexed search:
-      // collection = collection.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
     }
 
     if (selectedState.value) {
-      // If we already filtered by npanxx, chain the state filter
-      collection = collection.filter((record) => record.stateCode === selectedState.value);
+      // Chain the state filter
+      collection = collection.filter(
+        (record: USRateSheetEntry) => record.stateCode === selectedState.value
+      );
       filtersApplied.push(`Region equals '${selectedState.value}'`);
-      // Alternative using indexed search (if query started with where clause):
-      // collection = collection.and(record => record.stateCode === selectedState.value);
-      // Or if query could be table:
-      // collection = collection.where('stateCode').equals(selectedState.value);
     }
 
     console.log(`[USRateSheetTable] Applying filters: ${filtersApplied.join(' AND ') || 'None'}`);

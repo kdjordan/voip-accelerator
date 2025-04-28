@@ -182,3 +182,18 @@ export interface InvalidRowsState {
 }
 
 export type FileKey = 'file1' | 'file2';
+
+/**
+ * Types for the US Rate Sheet entries
+ */
+export interface USRateSheetEntry {
+  id?: number;
+  npa: string;
+  nxx: string;
+  npanxx: string;
+  interRate: number;
+  intraRate: number;
+  ijRate?: number;
+  stateCode?: string;
+  effectiveDate?: string;
+}

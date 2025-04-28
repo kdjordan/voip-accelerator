@@ -514,12 +514,12 @@ async function downloadCsv(): Promise<void> {
       );
     }
 
-    // Fetch ALL data matching filters
-    let finalQueryChain = query;
+    // Fetch ALL data matching filters by chaining
+    let filteredQuery = query.toCollection(); // Start with a collection
     if (currentFilters.length > 0) {
-      finalQueryChain = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      filteredQuery = query.filter((record) => currentFilters.every((fn) => fn(record)));
     }
-    const allFilteredData = await finalQueryChain.toArray();
+    const allFilteredData = await filteredQuery.toArray(); // Chain .toArray() after filter
     console.log(
       `[USDetailedComparisonTable] Fetched ${allFilteredData.length} records for export.`
     );
@@ -824,7 +824,7 @@ async function calculateFullFilteredAverages() {
   };
 
   try {
-    let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+    const query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
     // Apply filters same as in loadMoreData
     const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
@@ -847,13 +847,15 @@ async function calculateFullFilteredAverages() {
       );
     }
 
-    let finalQueryChain = query;
+    // Apply filters and use .each directly
+    let filteredQuery = query.toCollection(); // Start with a collection
     if (currentFilters.length > 0) {
-      finalQueryChain = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      filteredQuery = query.filter((record) => currentFilters.every((fn) => fn(record)));
     }
 
-    // Use .each for potentially large datasets
-    await finalQueryChain.each((record) => {
+    // Use .each on the filtered collection
+    await filteredQuery.each((record) => {
+      // Chain .each() after filter
       const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
         if (value !== null && value !== undefined && !isNaN(value)) {
           totals[key].sum += value;

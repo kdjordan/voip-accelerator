@@ -81,7 +81,7 @@ export interface BasePreviewModalEmits {
 
 // Define props for the BaseButton component
 export interface BaseButtonProps {
-  variant?: 'primary' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'destructive';
   size?: 'standard' | 'small';
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
@@ -91,7 +91,15 @@ export interface BaseButtonProps {
 
 // New: Define props for the BaseBadge component
 export interface BaseBadgeProps {
-  variant?: 'primary' | 'info' | 'success' | 'warning' | 'destructive' | 'neutral' | 'violet'; // Added violet for memory storage
+  variant?:
+    | 'primary'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'destructive'
+    | 'neutral'
+    | 'violet'
+    | 'accent'; // Added accent for highlighting
   size?: 'standard' | 'small';
   uppercase?: boolean;
 }
