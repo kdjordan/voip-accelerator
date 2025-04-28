@@ -365,119 +365,45 @@
                     <!-- Moved Save Changes button below inputs -->
                     <div class="flex items-center gap-2">
                       <!-- Show/Hide All Codes Button (Only for Discrepancies) -->
-                      <template v-if="group.hasDiscrepancy">
-                        <BaseButton
-                          v-if="
-                            !areAllRateCodesExpanded(group.destinationName) &&
-                            group.rates.length > 1
-                          "
-                          variant="secondary"
-                          size="small"
-                          @click="toggleAllRateCodesForDestination(group.destinationName, true)"
-                        >
-                          Show All Codes
-                        </BaseButton>
-                        <BaseButton
-                          v-if="areAnyRateCodesExpanded(group.destinationName)"
-                          variant="secondary"
-                          size="small"
-                          @click="toggleAllRateCodesForDestination(group.destinationName, false)"
-                        >
-                          Hide All Codes
-                        </BaseButton>
-                      </template>
+                      <!-- REMOVED Show/Hide All Codes Buttons -->
                       <!-- Save Changes Button REMOVED FROM HERE -->
                     </div>
                   </div>
 
                   <!-- Section 1: Rate Distribution (Only for Multi-Rate) -->
-                  <div v-if="group.hasDiscrepancy" class="space-y-2 mb-4">
-                    <div v-for="rate in getSortedRates(group)" :key="rate.rate">
-                      <!-- Rate row -->
+                  <div v-if="group.hasDiscrepancy" class="mb-4">
+                    <!-- Flex container for horizontal buttons -->
+                    <div class="flex flex-wrap gap-2">
                       <div
-                        class="flex items-center justify-between text-sm p-2 rounded-md"
-                        :class="{
-                          'bg-gray-800/50': isSelectedRate(group.destinationName, rate.rate),
-                        }"
+                        v-for="rate in getSortedRates(group)"
+                        :key="rate.rate"
+                        class="w-full sm:w-1/4"
                       >
-                        <label class="flex items-center gap-2 flex-1 cursor-pointer">
-                          <input
-                            type="radio"
-                            :name="`rate-${group.destinationName}`"
-                            :value="rate.rate"
-                            :checked="isSelectedRate(group.destinationName, rate.rate)"
-                            @change="selectRate(group.destinationName, rate.rate)"
-                            class="text-accent focus:ring-accent"
-                          />
-                          <span class="text-white">{{ formatRate(rate.rate) }}</span>
+                        <!-- Rate Button -->
+                        <BaseButton
+                          :variant="
+                            isSelectedRate(group.destinationName, rate.rate) &&
+                            userExplicitlySelectedRate[group.destinationName]
+                              ? 'primary'
+                              : 'secondary-outline'
+                          "
+                          size="small"
+                          class="w-full justify-start text-left font-mono"
+                          @click="selectRate(group.destinationName, rate.rate)"
+                        >
+                          {{ formatRate(rate.rate) }} ({{ Math.round(rate.percentage) }}%)
                           <span
-                            v-if="rate.isHighestPercentage && !rate.hasEqualDistribution"
+                            v-if="rate.isHighestPercentage"
                             class="ml-2 text-xs px-1.5 py-0.5 bg-accent/10 text-accent rounded-sm"
                           >
                             Most Common
                           </span>
-                          <span
-                            v-if="rate.hasEqualDistribution"
-                            class="ml-2 text-xs px-1.5 py-0.5 bg-blue-400/10 text-blue-400 rounded-sm"
-                          >
-                            Equal Dist.
-                          </span>
-                        </label>
-                        <div
-                          class="text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 transition-colors"
-                          @click.stop="toggleRateCodes(group.destinationName, rate.rate)"
-                        >
-                          <span>{{ rate.count }} codes ({{ Math.round(rate.percentage) }}%)</span>
-                          <ChevronDownIcon
-                            class="w-4 h-4 transition-transform"
-                            :class="{
-                              'rotate-180': isRateCodesExpanded(group.destinationName, rate.rate),
-                            }"
-                          />
-                        </div>
-                      </div>
-
-                      <!-- Codes section directly under the rate -->
-                      <div
-                        v-if="isRateCodesExpanded(group.destinationName, rate.rate)"
-                        class="mt-1 mb-3 bg-gray-900/50 p-3 rounded-md"
-                      >
-                        <div class="flex justify-between items-center mb-2">
-                          <div class="text-xs text-gray-300">
-                            Prefixes with rate {{ formatRate(rate.rate) }}:
-                          </div>
-                          <div class="text-xs text-gray-400">
-                            {{ getCodesForRate(group, rate.rate).length }} total codes
-                          </div>
-                        </div>
-
-                        <!-- Code grid with responsive layout -->
-                        <div
-                          class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 max-h-60 overflow-y-auto p-1"
-                        >
-                          <div
-                            v-for="(code, index) in getCodesForRate(group, rate.rate)"
-                            :key="index"
-                            class="px-2 py-1 bg-gray-800/50 hover:bg-gray-700/50 rounded text-sm text-gray-300 font-mono transition-colors"
-                            :class="{
-                              'bg-accent/20 text-accent border border-accent/50 font-medium':
-                                isCodeMatchingSearch(group.destinationName, rate.rate, code),
-                            }"
-                            :title="code"
-                          >
-                            {{ code }}
-                          </div>
-                        </div>
-
-                        <!-- Show when there are many codes -->
-                        <div
-                          v-if="getCodesForRate(group, rate.rate).length > 24"
-                          class="mt-2 text-xs text-right text-gray-500"
-                        >
-                          Scroll to see all {{ getCodesForRate(group, rate.rate).length }} codes
-                        </div>
+                          <!-- REMOVED Equal Dist. span -->
+                        </BaseButton>
+                        <!-- REMOVED Codes count and dropdown chevron div -->
                       </div>
                     </div>
+                    <!-- Removed code details section -->
                   </div>
 
                   <!-- Section 2: Unified Adjustment Controls for ALL destinations -->
@@ -889,6 +815,7 @@ const singleRateAdjustments = ref<
   >
 >({});
 const directSetRates = ref<Record<string, number | null>>({});
+const userExplicitlySelectedRate = ref<Record<string, boolean>>({}); // <-- Add state tracker
 
 // Options for adjustment dropdowns
 const adjustmentTypeOptions = [
@@ -1171,6 +1098,7 @@ function handleToggleExpandRow(destinationName: string) {
         if (!group.hasDiscrepancy) {
           originalRates.value[destinationName] = group.rates[0].rate;
         } else {
+          userExplicitlySelectedRate.value[destinationName] = false; // <-- Initialize tracker
           const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
           if (mostCommonRate !== undefined) {
             originalRates.value[destinationName] = mostCommonRate;
@@ -1207,6 +1135,7 @@ function isSelectedRate(destinationName: string, rate: number): boolean {
 
 function selectRate(destinationName: string, rate: number) {
   selectedRates.value[destinationName] = rate;
+  userExplicitlySelectedRate.value[destinationName] = true; // <-- Set tracker on explicit click
 
   // When a new rate is selected, clear both the adjustment value and direct set rate
   if (singleRateAdjustments.value[destinationName]) {
@@ -1244,50 +1173,45 @@ function hasUnsavedChanges(destinationName: string): boolean {
   if (!group) return false;
 
   const originalRate = originalRates.value[destinationName];
-  if (originalRate === undefined) return false; // Cannot detect changes if original is unknown
+  // No original rate? Can't determine changes.
+  if (originalRate === undefined) return false;
 
-  if (group.hasDiscrepancy) {
-    // Multi-rate logic - check all possible ways the rate could change
-    const selectedRate = selectedRates.value[destinationName];
+  const directRate = directSetRates.value[destinationName];
+  const adjustment = singleRateAdjustments.value[destinationName];
+  const selectedRate = selectedRates.value[destinationName]; // Base rate for multi-rate
+  const userMadeExplicitSelection = userExplicitlySelectedRate.value[destinationName] === true;
 
-    // First check if the base rate selection has changed
-    if (selectedRate !== undefined && selectedRate !== originalRate) {
-      return true;
-    }
-
-    // Check if direct rate is set on a multi-rate destination
-    const directRate = directSetRates.value[destinationName];
-    if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
-      return true;
-    }
-
-    // Check if adjustment is configured on a multi-rate destination
-    if (selectedRate !== undefined) {
-      const adjustment = singleRateAdjustments.value[destinationName];
-      if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
-        const calculatedRate = calculateAdjustedRate(selectedRate, adjustment);
-        return calculatedRate !== originalRate;
-      }
-    }
-
-    return false;
-  } else {
-    // Single-rate logic (unchanged)
-    const directRate = directSetRates.value[destinationName];
-    const adjustment = singleRateAdjustments.value[destinationName];
-
-    // Check if direct rate is set and different from original
-    if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
-      return true;
-    }
-
-    // Check if adjustment is configured and leads to a different rate
-    if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
-      const calculatedRate = calculateAdjustedRate(originalRate, adjustment);
-      return calculatedRate !== originalRate;
-    }
-    return false; // No direct rate set, no adjustment configured
+  // 1. Check for changes via direct rate input
+  const hasDirectRateChange =
+    directRate !== null && directRate !== undefined && directRate !== originalRate;
+  if (hasDirectRateChange) {
+    return true;
   }
+
+  // 2. Check for changes via adjustment calculation
+  let hasAdjustmentChange = false;
+  if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+    // Determine the base rate for adjustment calculation
+    const baseRateForAdjustment = group.hasDiscrepancy ? selectedRate : originalRate;
+    // Ensure we have a valid base rate to calculate from
+    if (baseRateForAdjustment !== undefined) {
+      const calculatedRate = calculateAdjustedRate(baseRateForAdjustment, adjustment);
+      // Change detected if calculated rate differs from the original stored rate
+      hasAdjustmentChange = calculatedRate !== originalRate;
+    }
+  }
+  if (hasAdjustmentChange) {
+    return true;
+  }
+
+  // 3. For multi-rate conflicts, check if the user explicitly clicked ANY rate button.
+  // This enables saving even if the user clicks the button corresponding to the original default rate.
+  if (group.hasDiscrepancy && userMadeExplicitSelection) {
+    return true;
+  }
+
+  // 4. If none of the above conditions are met, there are no unsaved changes.
+  return false;
 }
 // --- End Change Detection ---
 
@@ -1551,32 +1475,6 @@ function getCodesForRate(group: GroupedRateData, rate: number): string[] {
   codesCache.value[cacheKey][rate] = codes;
 
   return codes;
-}
-
-function toggleAllRateCodesForDestination(destinationName: string, expand: boolean) {
-  // Get all rates for this destination
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
-  if (!group) return;
-
-  if (expand) {
-    // Expand all rates
-    expandedRateCodes.value[destinationName] = group.rates.map((r) => r.rate);
-  } else {
-    // Collapse all rates
-    expandedRateCodes.value[destinationName] = [];
-  }
-}
-
-function areAllRateCodesExpanded(destinationName: string): boolean {
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
-  if (!group) return false;
-
-  const allRates = group.rates.map((r) => r.rate);
-  return allRates.every((rate) => isRateCodesExpanded(destinationName, rate));
-}
-
-function areAnyRateCodesExpanded(destinationName: string): boolean {
-  return !!expandedRateCodes.value[destinationName]?.length;
 }
 // --- End Multi-Rate Code Expansion Logic ---
 
@@ -2301,6 +2199,12 @@ function hasPendingChanges(destinationName: string): boolean {
     return true;
   }
 
+  // Check if user explicitly selected a rate in a multi-rate scenario
+  const group = groupedData.value.find((g) => g.destinationName === destinationName);
+  if (group?.hasDiscrepancy && userExplicitlySelectedRate.value[destinationName] === true) {
+    return true;
+  }
+
   return false;
 }
 
@@ -2311,6 +2215,7 @@ function getPendingUpdatedRate(destinationName: string): number | null {
 
   const directRate = directSetRates.value[destinationName];
   const adjustment = singleRateAdjustments.value[destinationName];
+  const selectedRate = selectedRates.value[destinationName]; // Get the selected base rate
 
   // Priority 1: Direct Rate Input
   if (directRate !== null && directRate !== undefined) {
@@ -2323,7 +2228,7 @@ function getPendingUpdatedRate(destinationName: string): number | null {
 
     if (group.hasDiscrepancy) {
       // Use the currently selected rate for multi-rate destinations
-      baseRate = selectedRates.value[destinationName];
+      baseRate = selectedRate;
     } else {
       // Use the original rate for single-rate destinations
       baseRate = originalRates.value[destinationName] ?? group.rates[0].rate;
@@ -2337,7 +2242,17 @@ function getPendingUpdatedRate(destinationName: string): number | null {
     return calculateAdjustedRate(baseRate, adjustment);
   }
 
-  // No pending changes that result in a new rate
+  // Priority 3: Show the explicitly selected base rate for multi-rate conflicts
+  // if no direct rate or adjustment is pending
+  if (
+    group.hasDiscrepancy &&
+    userExplicitlySelectedRate.value[destinationName] === true &&
+    selectedRate !== undefined
+  ) {
+    return selectedRate;
+  }
+
+  // No pending changes that result in a new rate preview
   return null;
 }
 

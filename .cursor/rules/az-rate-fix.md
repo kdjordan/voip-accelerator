@@ -77,3 +77,22 @@ The implementation highlighted several aspects of the component's architecture:
 4. **Responsive Feedback**: Disabling controls when they're not applicable provides immediate visual feedback to users about the available actions.
 
 This implementation successfully addresses the need for a more flexible and intuitive workflow for managing rate discrepancies while maintaining compatibility with the existing codebase.
+
+## Recent UI Refinements (Post-Initial Refactor)
+
+Further refinements were made to the multi-rate selection UI:
+
+1.  **Radio Buttons Replaced:** Replaced the radio buttons for rate selection with `BaseButton` components.
+2.  **Horizontal Layout:** Arranged the rate selection buttons in a horizontal, wrapping row, with each button taking `w-full sm:w-1/4` width.
+3.  **Simplified Display:**
+    - Removed the "Show/Hide All Codes" functionality and buttons.
+    - Removed the "Equal Dist." indicator from rate buttons.
+    - Removed the code count and dropdown chevron from the rate selection row.
+4.  **Explicit Selection Logic:**
+    - Introduced `userExplicitlySelectedRate` state to track if a user has actively clicked a rate button.
+    - Modified `hasUnsavedChanges` to only enable the "Save Changes" button if an explicit selection is made (or adjustments/direct set are used).
+    - Updated the rate button `:variant` binding to only show the `primary` style after an explicit click, ensuring all buttons appear greyed out initially.
+
+## Current Outstanding Issue
+
+- **Updated Rate Preview:** When a user clicks a rate selection button in a discrepancy row, the "Updated Rate: ..." text preview does not update to reflect the selected rate value unless an adjustment or direct rate is also entered. The logic in `getPendingUpdatedRate` needs to be adjusted to handle this scenario correctly.
