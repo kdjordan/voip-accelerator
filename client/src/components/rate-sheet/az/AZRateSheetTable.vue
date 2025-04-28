@@ -91,7 +91,10 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-gray-800 rounded-lg p-4 mb-4">
+    <div
+      class="bg-gray-800 rounded-lg p-4 mb-4"
+      :class="{ 'min-h-[16rem]': filteredData.length === 0 }"
+    >
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-4">
           <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
@@ -234,9 +237,12 @@
     </div>
 
     <!-- Table -->
-    <div v-if="filteredData.length > 0" class="overflow-hidden rounded-lg bg-gray-800 shadow">
+    <div
+      v-if="filteredData.length > 0"
+      class="overflow-hidden rounded-lg bg-gray-800 shadow max-h-[600px] overflow-y-auto"
+    >
       <table class="min-w-full divide-y divide-gray-700">
-        <thead class="bg-gray-900/50">
+        <thead class="bg-gray-900/50 sticky top-0 z-10">
           <tr>
             <th scope="col" class="w-8 px-3 py-3"></th>
             <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
@@ -326,7 +332,7 @@
                   :class="{
                     'text-accent': group.changeCode === ChangeCode.INCREASE,
                     'text-destructive': group.changeCode === ChangeCode.DECREASE,
-                    'text-info': group.changeCode === ChangeCode.SAME, // Add condition for SAME
+                    'text-info': group.changeCode === ChangeCode.SAME,
                   }"
                 >
                   <CalendarDaysIcon
