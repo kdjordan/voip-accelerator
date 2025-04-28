@@ -79,13 +79,18 @@ export interface BasePreviewModalEmits {
   cancel: [];
 }
 
-// Define props for the BaseButton component
+// Button Component
+export type ButtonVariant = 'primary' | 'secondary' | 'secondary-outline' | 'destructive';
+export type ButtonSize = 'small' | 'standard';
+export type ButtonType = 'button' | 'submit' | 'reset';
+
+// New: Define props for the BaseButton component
 export interface BaseButtonProps {
-  variant?: 'primary' | 'secondary' | 'destructive';
-  size?: 'standard' | 'small';
-  type?: 'button' | 'submit' | 'reset';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  type?: ButtonType;
   disabled?: boolean;
-  icon?: Component | null;
+  icon?: Component;
   loading?: boolean;
 }
 

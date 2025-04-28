@@ -30,6 +30,8 @@ export default {
         'warning-background': `${colors.orange[400]}1A`,
         info: colors.blue[500],
         'info-background': `${colors.blue[500]}1A`,
+        destructive: colors.red[400],
+        'destructive-background': `${colors.red[400]}1A`,
       },
       fontSize: {
         xxs: ['0.65rem', '1rem'],

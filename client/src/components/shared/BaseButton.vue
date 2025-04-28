@@ -33,13 +33,17 @@ const slots = useSlots();
 
 // Base classes shared by all buttons
 const baseClasses =
-  'inline-flex items-center justify-center rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900'; // Added flex alignment for icon
+  'inline-flex items-center justify-center rounded-md border font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900'; // Adjusted font-medium
 
 // Classes based on variant
 const variantClasses = computed(() => {
   switch (props.variant) {
     case 'destructive':
       return 'bg-red-950 text-red-400 border-red-500/50 hover:bg-red-900 active:bg-red-800 disabled:bg-slate-800/50 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed focus:ring-red-500';
+    case 'secondary': // Styles for the standard secondary button (like the current 'Use Highest')
+      return 'bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 active:bg-gray-600 disabled:bg-slate-800/50 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed focus:ring-gray-500';
+    case 'secondary-outline': // Styles for the less prominent outline button (for 'Use Lowest')
+      return 'bg-transparent text-gray-400 border-gray-700 hover:bg-gray-800/50 hover:border-gray-600 hover:text-gray-300 active:bg-gray-800 disabled:bg-transparent disabled:text-slate-600 disabled:border-slate-800 disabled:cursor-not-allowed focus:ring-gray-600';
     case 'primary':
     default:
       return 'bg-accent/20 text-accent border-accent hover:bg-accent/30 active:bg-accent/40 disabled:bg-slate-800/50 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed focus:ring-accent';
