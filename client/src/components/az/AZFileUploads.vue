@@ -91,7 +91,7 @@
             <!-- Show Code Summary and Remove Button when file IS uploaded -->
             <template v-else>
               <!-- Single File Report Section - Pass remove handler -->
-              <AzCodeSummary :componentId="'az1'" :on-remove="() => handleRemoveFile('az1')" />
+              <AZCodeSummary :componentId="'az1'" :on-remove="() => handleRemoveFile('az1')" />
             </template>
           </div>
 
@@ -178,7 +178,7 @@
             <!-- Show Code Summary and Remove Button when file IS uploaded -->
             <template v-else>
               <!-- Single File Report Section - Pass remove handler -->
-              <AzCodeSummary :componentId="'az2'" :on-remove="() => handleRemoveFile('az2')" />
+              <AZCodeSummary :componentId="'az2'" :on-remove="() => handleRemoveFile('az2')" />
             </template>
           </div>
         </div>
@@ -247,7 +247,7 @@ import { AZColumnRole } from '@/types/domains/az-types';
 import Papa from 'papaparse';
 import { AZService } from '@/services/az.service';
 import { ReportTypes } from '@/types';
-import AzCodeSummary from '@/components/az/AzCodeSummary.vue';
+import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
 import { useDragDrop } from '@/composables/useDragDrop';
 
 // Define the component ID type to avoid TypeScript errors
