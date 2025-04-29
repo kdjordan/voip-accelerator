@@ -217,6 +217,19 @@
                   Use Lowest
                 </BaseButton>
               </div>
+              <!-- New Most Common Button -->
+              <BaseButton
+                :variant="
+                  isBulkProcessing && bulkMode === 'mostCommon' ? 'primary' : 'secondary-outline'
+                "
+                size="standard"
+                class="w-full"
+                :loading="isBulkProcessing && bulkMode === 'mostCommon'"
+                :disabled="isBulkProcessing"
+                @click="handleBulkUpdateMostCommon"
+              >
+                Use Most Common Rate
+              </BaseButton>
             </div>
           </div>
           <!-- Export Action -->
@@ -318,8 +331,8 @@
                     group.changeCode === ChangeCode.INCREASE
                       ? 'accent'
                       : group.changeCode === ChangeCode.DECREASE
-                      ? 'destructive'
-                      : 'info'
+                        ? 'destructive'
+                        : 'info'
                   "
                   size="small"
                 >
@@ -829,7 +842,7 @@ const adjustmentValueTypeOptions = [
 
 // Add new refs for processing state
 const isBulkProcessing = ref(false);
-const bulkMode = ref<'highest' | 'lowest' | null>(null);
+const bulkMode = ref<'highest' | 'lowest' | 'mostCommon' | null>(null);
 const processedCount = ref(0);
 const totalToProcess = ref(0);
 const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
@@ -1386,6 +1399,71 @@ async function handleBulkUpdate(mode: 'highest' | 'lowest') {
   }
 }
 // --- End Bulk Update ---
+
+// --- Bulk Update Most Common ---
+async function handleBulkUpdateMostCommon() {
+  isBulkProcessing.value = true;
+  bulkMode.value = 'mostCommon';
+  processedCount.value = 0;
+
+  // Give the browser a chance to update the UI
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 50);
+    });
+  });
+
+  // Get all destinations with discrepancies
+  const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
+
+  if (destinationsToFix.length === 0) {
+    isBulkProcessing.value = false;
+    bulkMode.value = null;
+    return;
+  }
+
+  const updates: { name: string; rate: number }[] = [];
+
+  for (const group of destinationsToFix) {
+    const sortedRatesInfo = getSortedRates(group);
+
+    // Find rates marked as highest percentage (could be multiple if equal distribution)
+    const highestPercentageRates = sortedRatesInfo.filter((r) => r.isHighestPercentage);
+
+    // Only proceed if there's exactly one rate with the highest percentage
+    if (highestPercentageRates.length === 1) {
+      const mostCommonRate = highestPercentageRates[0].rate;
+      updates.push({ name: group.destinationName, rate: mostCommonRate });
+    }
+    // Skip destinations with equal distribution (highestPercentageRates.length > 1 or 0)
+  }
+
+  totalToProcess.value = updates.length;
+
+  if (updates.length > 0) {
+    try {
+      console.time('bulkUpdateMostCommon');
+      await store.bulkUpdateDestinationRates(updates);
+      processedCount.value = updates.length;
+      // Force a final update of the grouped data
+      store.setGroupedData(store.getGroupedData);
+      console.timeEnd('bulkUpdateMostCommon');
+      await new Promise((resolve) => setTimeout(resolve, 300)); // Show feedback
+    } catch (error) {
+      console.error('Bulk update with most common rate failed:', error);
+      // Optionally show an error to the user
+    } finally {
+      isBulkProcessing.value = false;
+      bulkMode.value = null;
+    }
+  } else {
+    console.log('No destinations found with a single most common rate to apply for bulk update.');
+    // Optionally provide feedback to the user (e.g., via a toast message)
+    isBulkProcessing.value = false;
+    bulkMode.value = null;
+  }
+}
+// --- End Bulk Update Most Common ---
 
 function handleClearData() {
   if (confirm('Are you sure you want to clear all rate sheet data?')) {
