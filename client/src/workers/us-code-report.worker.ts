@@ -216,10 +216,17 @@ function processFileData(
     });
   }
 
+  // --- Calculate OVERALL rate statistics for the entire file --- //
+  console.log(`[Worker] Calculating overall rate stats for ${fileName}`);
+  const overallRateStats = calculateRateStats(fileData);
+  console.log(`[Worker] Overall Rate Stats for ${fileName}:`, JSON.stringify(overallRateStats));
+  // --- END Overall Rate Stats Calculation --- //
+
   return {
     fileName,
     totalCodes: fileData.length,
     countries,
+    rateStats: overallRateStats, // Attach the overall stats here
   };
 }
 
@@ -331,29 +338,37 @@ function calculateRateStats(entries: USStandardizedData[]): {
     const end = Math.min(i + chunkSize, entries.length);
     const chunk = entries.slice(i, end);
 
-    // Calculate interstate stats for this chunk
+    // Calculate stats for this chunk
     chunk.forEach((entry, entryIndex) => {
+      // Parse rates as numbers and handle potential NaN
+      const interRateNum = parseFloat(String(entry.interRate));
+      const intraRateNum = parseFloat(String(entry.intraRate));
+      const indetermRateNum = parseFloat(String(entry.indetermRate));
+
       // --- DEBUGGING STEP 3 START ---
       // Log the rates of the first 5 entries in the first chunk
       if (i === 0 && entryIndex < 5) {
         console.log(
-          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Rates -> inter: ${entry.interRate}, intra: ${entry.intraRate}, indeterm: ${entry.indetermRate}`
+          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Original Rates -> inter: ${entry.interRate}, intra: ${entry.intraRate}, indeterm: ${entry.indetermRate}`
+        );
+        console.log(
+          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Parsed Rates -> inter: ${interRateNum}, intra: ${intraRateNum}, indeterm: ${indetermRateNum}`
         );
       }
       // --- DEBUGGING STEP 3 END ---
 
-      if (entry.interRate !== null && entry.interRate !== undefined) {
-        interSum += entry.interRate;
+      if (!isNaN(interRateNum)) {
+        interSum += interRateNum;
         interCount++;
       }
 
-      if (entry.intraRate !== null && entry.intraRate !== undefined) {
-        intraSum += entry.intraRate;
+      if (!isNaN(intraRateNum)) {
+        intraSum += intraRateNum;
         intraCount++;
       }
 
-      if (entry.indetermRate !== null && entry.indetermRate !== undefined) {
-        indetermSum += entry.indetermRate;
+      if (!isNaN(indetermRateNum)) {
+        indetermSum += indetermRateNum;
         indetermCount++;
       }
 

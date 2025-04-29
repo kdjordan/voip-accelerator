@@ -1105,36 +1105,16 @@ async function handleExport() {
 
   try {
     const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-    let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
-      table;
-    const filtersApplied: string[] = [];
 
-    if (debouncedSearchQuery.value) {
-      queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
-      filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
-
-      // Chain state filter if both are present
-      if (selectedState.value) {
-        queryChain = queryChain.and((record) => record.stateCode === selectedState.value);
-        filtersApplied.push(`State Code equals '${selectedState.value}'`);
-      }
-    } else if (selectedState.value) {
-      // Only state filter is present
-      queryChain = table.where('stateCode').equals(selectedState.value);
-      filtersApplied.push(`State Code equals '${selectedState.value}'`);
-    }
-
-    // Fetch ALL matching data from Dexie
+    // Fetch ALL data directly from the table
     console.log(
-      `[USRateSheetTable] Fetching all data matching filters: ${
-        filtersApplied.join(', ') || 'None'
-      }`
+      `[USRateSheetTable] Fetching all data from table '${RATE_SHEET_TABLE_NAME}' for export.`
     );
-    const allMatchingData = await queryChain.toArray();
+    const allMatchingData = await table.toArray(); // Fetch all data
     console.log(`[USRateSheetTable] Fetched ${allMatchingData.length} records for export.`);
 
     if (allMatchingData.length === 0) {
-      alert('No data matches the current filters to export.');
+      alert('No data found in the rate sheet to export.'); // Updated message
       isExporting.value = false;
       return;
     }

@@ -16,14 +16,14 @@
             <div class="bg-gray-800 p-3 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">Inter Avg</div>
               <div class="text-lg text-white">
-                ${{ enhancedReport1?.file1.rateStats?.interstate?.average?.toFixed(4) ?? '0.0000' }}
+                ${{ enhancedReport1?.file1.rateStats?.interstate?.average?.toFixed(6) ?? '0.0000' }}
               </div>
             </div>
             <!-- Intrastate -->
             <div class="bg-gray-800 p-3 rounded-lg">
               <div class="text-gray-400 text-sm mb-1">Intra Avg</div>
               <div class="text-lg text-white">
-                ${{ enhancedReport1?.file1.rateStats?.intrastate?.average?.toFixed(4) ?? '0.0000' }}
+                ${{ enhancedReport1?.file1.rateStats?.intrastate?.average?.toFixed(6) ?? '0.0000' }}
               </div>
             </div>
             <!-- Indeterminate -->
@@ -31,7 +31,7 @@
               <div class="text-gray-400 text-sm mb-1">Indeterm Avg</div>
               <div class="text-lg text-white">
                 ${{
-                  enhancedReport1?.file1.rateStats?.indeterminate?.average?.toFixed(4) ?? '0.0000'
+                  enhancedReport1?.file1.rateStats?.indeterminate?.average?.toFixed(6) ?? '0.0000'
                 }}
               </div>
             </div>
