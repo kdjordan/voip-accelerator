@@ -334,7 +334,8 @@
         </div>
       </div>
 
-      <!-- LERG Management Section -->
+      <!-- LERG Management Section 
+      
       <div class="bg-gray-900/50">
         <div
           @click="toggleLergSection"
@@ -349,9 +350,7 @@
           </div>
         </div>
 
-        <!-- Expandable content -->
         <div v-if="showLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
-          <!-- LERG Upload -->
           <div>
             <h3 class="text-lg font-medium mb-4">Upload LERG File</h3>
             <div
@@ -377,7 +376,7 @@
                 @change="handleLergFileChange"
               />
 
-              <!-- Empty State -->
+              
               <div v-if="!isLergUploading && !lergUploadStatus" class="text-center">
                 <ArrowUpTrayIcon
                   class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
@@ -388,7 +387,6 @@
                 <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
               </div>
 
-              <!-- Processing/Uploading State -->
               <div v-else-if="isLergUploading" class="text-center">
                 <DocumentIcon
                   class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10 animate-pulse"
@@ -399,7 +397,6 @@
                 </div>
               </div>
 
-              <!-- Error State -->
               <div v-else-if="lergUploadStatus?.type === 'error'" class="text-center">
                 <div class="bg-red-500/10 p-4 rounded-lg">
                   <p class="text-red-400 font-medium">{{ lergUploadStatus.message }}</p>
@@ -415,7 +412,6 @@
                 </div>
               </div>
 
-              <!-- Warning State -->
               <div v-else-if="lergUploadStatus?.type === 'warning'" class="text-center">
                 <div class="bg-yellow-500/10 p-4 rounded-lg">
                   <p class="text-yellow-400 font-medium">{{ lergUploadStatus.message }}</p>
@@ -428,7 +424,6 @@
                 </div>
               </div>
 
-              <!-- Success State -->
               <div v-else-if="lergUploadStatus?.type === 'success'" class="text-center">
                 <div class="bg-green-500/10 p-4 rounded-lg">
                   <DocumentIcon
@@ -443,7 +438,7 @@
             </div>
           </div>
 
-          <!-- Danger Zone -->
+          
           <div class="bg-destructive/10 border border-destructive/50 rounded-lg p-6 mt-6">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-destructive">Danger Zone</h3>
@@ -458,6 +453,7 @@
           </div>
         </div>
       </div>
+      -->
     </div>
 
     <!-- New Preview Modal -->
