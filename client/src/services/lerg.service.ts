@@ -17,21 +17,30 @@ export class LergServiceError extends Error {
 }
 
 export class LergConnectionError extends LergServiceError {
-  constructor(message: string, public originalError?: Error) {
+  constructor(
+    message: string,
+    public originalError?: Error
+  ) {
     super(`LERG database connection error: ${message}`);
     this.name = 'LergConnectionError';
   }
 }
 
 export class LergDataError extends LergServiceError {
-  constructor(message: string, public originalError?: Error) {
+  constructor(
+    message: string,
+    public originalError?: Error
+  ) {
     super(`LERG data error: ${message}`);
     this.name = 'LergDataError';
   }
 }
 
 export class LergSchemaError extends LergServiceError {
-  constructor(message: string, public originalError?: Error) {
+  constructor(
+    message: string,
+    public originalError?: Error
+  ) {
     super(`LERG schema error: ${message}`);
     this.name = 'LergSchemaError';
   }
@@ -60,11 +69,13 @@ export class LergService {
   // Cache for processed data
   private processedDataCache: {
     stateMapping: StateNPAMapping | null;
+    canadaProvinces: Record<string, Set<string>> | null;
     countryData: CountryLergData[] | null;
     timestamp: number;
     recordCount: number;
   } = {
     stateMapping: null,
+    canadaProvinces: null,
     countryData: null,
     timestamp: 0,
     recordCount: 0,
@@ -260,6 +271,7 @@ export class LergService {
 
     return (
       this.processedDataCache.stateMapping !== null &&
+      this.processedDataCache.canadaProvinces !== null &&
       this.processedDataCache.countryData !== null &&
       this.processedDataCache.recordCount > 0 &&
       cacheAge < this.CACHE_EXPIRATION_MS
@@ -273,6 +285,7 @@ export class LergService {
   invalidateCache(): void {
     this.processedDataCache = {
       stateMapping: null,
+      canadaProvinces: null,
       countryData: null,
       timestamp: 0,
       recordCount: 0,
@@ -467,30 +480,30 @@ export class LergService {
   /**
    * Get processed LERG data with caching
    * @param forceRefresh Force a refresh of the cache
-   * @returns Promise resolving to processed LERG data
+   * @returns Promise resolving to processed LERG data including canadaProvinces
    */
   async getProcessedData(forceRefresh = false): Promise<{
     stateMapping: StateNPAMapping;
+    canadaProvinces: Record<string, Set<string>>;
     countryData: CountryLergData[];
     count: number;
   }> {
-    // Check if we can use the cache
     if (!forceRefresh && this.isCacheValid()) {
       console.log('Using cached LERG processed data');
       return {
         stateMapping: this.processedDataCache.stateMapping!,
+        canadaProvinces: this.processedDataCache.canadaProvinces!,
         countryData: this.processedDataCache.countryData!,
         count: this.processedDataCache.recordCount,
       };
     }
 
-    // Process the data if cache is invalid or refresh is forced
     const result = await this.processLergData();
     const count = await this.getRecordCount();
 
-    // Update the cache
     this.processedDataCache = {
       stateMapping: result.stateMapping,
+      canadaProvinces: result.canadaProvinces,
       countryData: result.countryData,
       timestamp: Date.now(),
       recordCount: count,
@@ -504,7 +517,7 @@ export class LergService {
 
   /**
    * Process LERG data into application format
-   * @returns Promise resolving to processed LERG data
+   * @returns Promise resolving to processed LERG data including canadaProvinces
    */
   async processLergData(): Promise<{
     stateMapping: StateNPAMapping;

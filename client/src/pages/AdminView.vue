@@ -334,124 +334,134 @@
         </div>
       </div>
 
-      <!-- LERG Management Section 
-      
+      <!-- NEW: Add Single LERG Record Section -->
       <div class="bg-gray-900/50">
         <div
-          @click="toggleLergSection"
+          @click="toggleAddLergSection"
           class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
         >
           <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold">LERG File Management</h2>
+            <h2 class="text-xl font-semibold">Add Single LERG Record</h2>
             <ChevronDownIcon
-              :class="{ 'transform rotate-180': showLergSection }"
+              :class="{ 'transform rotate-180': showAddLergSection }"
               class="w-5 h-5 transition-transform text-gray-400"
             />
           </div>
         </div>
 
-        <div v-if="showLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
-          <div>
-            <h3 class="text-lg font-medium mb-4">Upload LERG File</h3>
-            <div
-              class="relative border-2 rounded-lg p-8 h-[160px] flex items-center justify-center"
-              :class="[
-                isDragging
-                  ? 'border-accent bg-fbWhite/10'
-                  : 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600',
-                isLergUploading ? 'animate-upload-pulse cursor-not-allowed' : 'cursor-pointer',
-                lergUploadStatus?.type === 'error' ? 'border-red-500' : '',
-              ]"
-              @dragenter.prevent="() => (isDragging = true)"
-              @dragleave.prevent="() => (isDragging = false)"
-              @dragover.prevent
-              @drop.prevent="handleLergFileDrop"
-            >
-              <input
-                type="file"
-                ref="lergFileInput"
-                class="absolute inset-0 opacity-0 cursor-pointer"
-                :class="{ 'pointer-events-none': isLergUploading }"
-                accept=".csv"
-                @change="handleLergFileChange"
-              />
-
-              
-              <div v-if="!isLergUploading && !lergUploadStatus" class="text-center">
-                <ArrowUpTrayIcon
-                  class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
+        <div v-if="showAddLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
+          <!-- Form for adding a single record -->
+          <form @submit.prevent="handleAddSingleRecord" class="space-y-4">
+            <!-- Form Row -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- NPA Input -->
+              <div>
+                <label for="npa" class="block text-sm font-medium text-gray-300 mb-1">NPA</label>
+                <input
+                  type="text"
+                  id="npa"
+                  v-model="newRecord.npa"
+                  required
+                  maxlength="3"
+                  pattern="^[0-9]{3}$"
+                  placeholder="e.g., 212"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
                 />
-                <p class="mt-2 text-base text-foreground text-accent">
-                  DRAG & DROP to upload or CLICK to select file
+                <p v-if="validationErrors.npa" class="mt-1 text-xs text-red-400">
+                  {{ validationErrors.npa }}
                 </p>
-                <p class="text-xs text-gray-500 mt-1">Supports CSV files (max 500MB)</p>
               </div>
 
-              <div v-else-if="isLergUploading" class="text-center">
-                <DocumentIcon
-                  class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10 animate-pulse"
+              <!-- State Input -->
+              <div>
+                <label for="state" class="block text-sm font-medium text-gray-300 mb-1"
+                  >State/Province (2-Letter Code)</label
+                >
+                <input
+                  type="text"
+                  id="state"
+                  v-model="newRecord.state"
+                  required
+                  maxlength="2"
+                  pattern="^[A-Za-z]{2}$"
+                  placeholder="e.g., NY or ON"
+                  @input="newRecord.state = newRecord.state.toUpperCase()"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
                 />
-                <p class="mt-2 text-base text-accent">Processing your file...</p>
-                <div class="w-full mt-2 h-2 rounded-full bg-gray-700">
-                  <div class="h-full bg-accent rounded-full animate-pulse-width"></div>
-                </div>
+                <p v-if="validationErrors.state" class="mt-1 text-xs text-red-400">
+                  {{ validationErrors.state }}
+                </p>
               </div>
 
-              <div v-else-if="lergUploadStatus?.type === 'error'" class="text-center">
-                <div class="bg-red-500/10 p-4 rounded-lg">
-                  <p class="text-red-400 font-medium">{{ lergUploadStatus.message }}</p>
-                  <p v-if="lergUploadStatus.source" class="text-xs text-red-300 mt-1">
-                    Source: {{ lergUploadStatus.source }}
-                  </p>
-                  <p v-if="lergUploadStatus.details" class="text-xs text-red-300 mt-1">
-                    {{ lergUploadStatus.details }}
-                  </p>
-                  <p class="text-xs text-red-400 mt-2">
-                    Please try again or contact support if the issue persists
-                  </p>
-                </div>
-              </div>
-
-              <div v-else-if="lergUploadStatus?.type === 'warning'" class="text-center">
-                <div class="bg-yellow-500/10 p-4 rounded-lg">
-                  <p class="text-yellow-400 font-medium">{{ lergUploadStatus.message }}</p>
-                  <p v-if="lergUploadStatus.details" class="text-xs text-yellow-300 mt-1">
-                    {{ lergUploadStatus.details }}
-                  </p>
-                  <div class="w-full mt-3 h-2 rounded-full bg-gray-700">
-                    <div class="h-full bg-yellow-500 rounded-full animate-pulse-width"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else-if="lergUploadStatus?.type === 'success'" class="text-center">
-                <div class="bg-green-500/10 p-4 rounded-lg">
-                  <DocumentIcon
-                    class="w-12 h-12 text-accent mx-auto border border-accent/50 rounded-full p-2 bg-accent/10"
-                  />
-                  <p class="mt-2 text-xl text-accent">{{ lergUploadStatus.message }}</p>
-                  <p v-if="lergUploadStatus.details" class="text-sm text-accent/80 mt-1">
-                    {{ lergUploadStatus.details }}
-                  </p>
-                </div>
+              <!-- Country Input -->
+              <div>
+                <label for="country" class="block text-sm font-medium text-gray-300 mb-1"
+                  >Country (2-Letter Code)</label
+                >
+                <input
+                  type="text"
+                  id="country"
+                  v-model="newRecord.country"
+                  required
+                  maxlength="2"
+                  pattern="^[A-Za-z]{2}$"
+                  placeholder="e.g., US or CA"
+                  @input="newRecord.country = newRecord.country.toUpperCase()"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
+                />
+                <p v-if="validationErrors.country" class="mt-1 text-xs text-red-400">
+                  {{ validationErrors.country }}
+                </p>
               </div>
             </div>
-          </div>
 
-          
-          <div class="bg-destructive/10 border border-destructive/50 rounded-lg p-6 mt-6">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-medium text-destructive">Danger Zone</h3>
+            <!-- Submission Button and Feedback -->
+            <div class="flex items-center justify-end space-x-3">
+              <!-- Loading Indicator -->
+              <div v-if="isLoading" class="flex items-center space-x-2 text-sm text-gray-400">
+                <svg
+                  class="animate-spin h-4 w-4 text-accent"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span>Processing...</span>
+              </div>
+              <!-- Error Message -->
+              <p v-if="error && !isLoading" class="text-sm text-red-400">Error: {{ error }}</p>
+              <!-- Success Message -->
+              <p v-if="addSuccessMessage" class="text-sm text-green-400">{{ addSuccessMessage }}</p>
+
               <button
-                @click="confirmClearLergData"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm border border-destructive/50 bg-destructive/20 hover:bg-destructive/30 text-destructive transition-all rounded-md"
+                type="submit"
+                :disabled="isLoading || !isFormValid"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <TrashIcon class="w-3.5 h-3.5" />
-                Clear All LERG Data
+                Add Record
               </button>
             </div>
-          </div>
+          </form>
         </div>
+      </div>
+
+      <!-- LERG Management Section (File Upload/Clear - Commented Out) -->
+      <!--
+      <div class="bg-gray-900/50">
+         ... existing commented out file management ...
       </div>
       -->
     </div>
@@ -475,7 +485,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue';
 import { useLergStore } from '@/stores/lerg-store';
 import { useLergData } from '@/composables/useLergData';
 import { usePingStatus } from '@/composables/usePingStatus';
@@ -484,10 +494,12 @@ import {
   TrashIcon,
   ArrowUpTrayIcon,
   DocumentIcon,
+  PlusCircleIcon,
 } from '@heroicons/vue/24/outline';
-import { getCountryName } from '@/types/constants/country-codes';
-import { getStateName, STATE_CODES } from '@/types/constants/state-codes';
+import { COUNTRY_CODES, getCountryName } from '@/types/constants/country-codes';
+import { STATE_CODES, getStateName } from '@/types/constants/state-codes';
 import { PROVINCE_CODES } from '@/types/constants/province-codes';
+import type { LERGRecord } from '@/types/domains/lerg-types';
 import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/domains/lerg-types';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import Papa from 'papaparse';
@@ -504,6 +516,7 @@ const {
   isInitialized,
   isEdgeFunctionAvailable,
   initializeLergData,
+  addAndRefreshLergRecord,
 } = useLergData();
 const lergFileInput = ref<HTMLInputElement>();
 const lergStats = computed(() => store.stats);
@@ -514,12 +527,12 @@ const expandedProvinces = ref<string[]>([]);
 const showCountryDetails = ref(false);
 const showLergSection = ref(false);
 const showLergDetails = ref(true);
+const showAddLergSection = ref(true);
 
 const isLergLocallyStored = computed(() => {
   return store.$state.isLoaded;
 });
 
-// Define interfaces for status objects
 interface UploadStatus {
   type: 'success' | 'error' | 'warning';
   message: string;
@@ -535,15 +548,11 @@ interface DbStatus {
 const isDragging = ref(false);
 const lergUploadStatus = ref<UploadStatus | null>(null);
 const isLergUploading = ref(false);
-const dbStatus = computed<{
-  connected: boolean;
-  error: string | null;
-}>(() => ({
+const dbStatus = computed<DbStatus>(() => ({
   connected: pingStatus.value?.hasLergTable === true,
-  error: error.value,
+  error: pingStatus.value?.error || null,
 }));
 
-// Preview state
 const showPreviewModal = ref(false);
 const columns = ref<string[]>([]);
 const previewData = ref<string[][]>([]);
@@ -553,33 +562,44 @@ const isModalValid = ref(false);
 const columnMappings = ref<Record<string, string>>({});
 const selectedFile = ref<File | null>(null);
 
-// Added state for Canadian provinces section
 const showCanadianDetails = ref(false);
 
-// Add ping status
 const { status: pingStatus, checkPingStatus } = usePingStatus();
 const pingInterval = ref<number | null>(null);
 
+const newRecord = reactive<Pick<LERGRecord, 'npa' | 'state' | 'country'>>({
+  npa: '',
+  state: '',
+  country: '',
+});
+const validationErrors = reactive<{ npa?: string; state?: string; country?: string }>({});
+const addSuccessMessage = ref<string | null>(null);
+
+const isFormValid = computed(() => {
+  return (
+    /^[0-9]{3}$/.test(newRecord.npa) &&
+    /^[A-Za-z]{2}$/.test(newRecord.state) &&
+    /^[A-Za-z]{2}$/.test(newRecord.country) &&
+    Object.values(validationErrors).every((err) => !err)
+  );
+});
+
 onMounted(async () => {
   try {
-    // Initialize LERG data
     await initializeLergData();
   } catch (err) {
     console.error('Failed to initialize LERG service:', err);
     error.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
   }
 
-  // Initial ping check
   await checkPingStatus();
 
-  // Setup periodic ping checks every 30 seconds
   pingInterval.value = window.setInterval(async () => {
     await checkPingStatus();
   }, 30000);
 });
 
 onUnmounted(() => {
-  // Clear ping interval
   if (pingInterval.value) {
     clearInterval(pingInterval.value);
   }
@@ -698,7 +718,6 @@ function handleModalCancel() {
     lergFileInput.value.value = '';
   }
 
-  // Clear any previous upload status
   lergUploadStatus.value = null;
 }
 
@@ -715,7 +734,6 @@ async function confirmClearLergData() {
       details: 'This may take a moment',
     };
 
-    // Check edge function availability first
     await checkEdgeFunctionStatus();
 
     if (!isEdgeFunctionAvailable.value) {
@@ -724,7 +742,6 @@ async function confirmClearLergData() {
       );
     }
 
-    // Use the composable to clear all data (local and remote)
     await clearLerg();
 
     isLergUploading.value = false;
@@ -734,7 +751,6 @@ async function confirmClearLergData() {
       details: 'Data has been removed from both the local store and the database',
     };
 
-    // Refresh connection status
     await checkConnection();
     await checkPingStatus();
   } catch (error) {
@@ -801,35 +817,103 @@ function toggleLergDetails() {
   showLergDetails.value = !showLergDetails.value;
 }
 
+function toggleAddLergSection() {
+  showAddLergSection.value = !showAddLergSection.value;
+}
+
 function handleMappingUpdate(newMappings: Record<string, string>) {
   columnMappings.value = newMappings;
 }
 
-// Toggle function for Canadian section
 function toggleCanadianDetails() {
   showCanadianDetails.value = !showCanadianDetails.value;
 }
 
-// Computed property to get total Canadian NPAs
 const getCanadaTotalNPAs = computed(() => {
   return store.getCanadianProvinces.reduce((total, province) => {
     return total + province.npas.length;
   }, 0);
 });
 
-// Computed property to get total US NPAs
 const getUSTotalNPAs = computed(() => {
   return store.getUSStates.reduce((total, state) => {
     return total + state.npas.length;
   }, 0);
 });
 
-// Computed property to get total Non-US NPAs
 const getNonUSTotalNPAs = computed(() => {
   return store.getDistinctCountries.reduce((total, country) => {
     return total + country.npaCount;
   }, 0);
 });
+
+function validateForm(): boolean {
+  let isValid = true;
+  validationErrors.npa = undefined;
+  validationErrors.state = undefined;
+  validationErrors.country = undefined;
+
+  if (!/^[0-9]{3}$/.test(newRecord.npa)) {
+    validationErrors.npa = 'NPA must be exactly 3 digits.';
+    isValid = false;
+  }
+
+  if (!/^[A-Za-z]{2}$/.test(newRecord.state)) {
+    validationErrors.state = 'State/Province must be exactly 2 letters.';
+    isValid = false;
+  } else if (newRecord.country === 'US' && !(newRecord.state in STATE_CODES)) {
+    validationErrors.state = `Invalid US State code: ${newRecord.state}`;
+    isValid = false;
+  } else if (newRecord.country === 'CA' && !(newRecord.state in PROVINCE_CODES)) {
+    validationErrors.state = `Invalid Canadian Province code: ${newRecord.state}`;
+    isValid = false;
+  }
+
+  if (!/^[A-Za-z]{2}$/.test(newRecord.country)) {
+    validationErrors.country = 'Country must be exactly 2 letters.';
+    isValid = false;
+  } else if (!(newRecord.country in COUNTRY_CODES)) {
+    validationErrors.country = `Invalid Country code: ${newRecord.country}`;
+    isValid = false;
+  }
+
+  return isValid;
+}
+
+watch(newRecord, () => {
+  validateForm();
+});
+
+async function handleAddSingleRecord() {
+  addSuccessMessage.value = null;
+  if (!validateForm()) {
+    return;
+  }
+
+  try {
+    await addAndRefreshLergRecord({
+      npa: newRecord.npa,
+      state: newRecord.state.toUpperCase(),
+      country: newRecord.country.toUpperCase(),
+    });
+
+    if (!error.value) {
+      addSuccessMessage.value = `Record ${newRecord.npa} added successfully. Data refreshed.`;
+      newRecord.npa = '';
+      newRecord.state = '';
+      newRecord.country = '';
+      validationErrors.npa = undefined;
+      validationErrors.state = undefined;
+      validationErrors.country = undefined;
+
+      setTimeout(() => {
+        addSuccessMessage.value = null;
+      }, 5000);
+    }
+  } catch (err) {
+    console.error('[AdminView] Error calling addAndRefreshLergRecord:', err);
+  }
+}
 </script>
 
 <style>
@@ -848,6 +932,4 @@ const getNonUSTotalNPAs = computed(() => {
 .animate-pulse-width {
   animation: pulse-width 2s infinite ease-in-out;
 }
-
-/* Removed redundant status pulse definitions below */
 </style>

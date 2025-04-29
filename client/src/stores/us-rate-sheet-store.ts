@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import service
-import type { USRateSheetEntry } from '@/types/domains/us-types';
+import type { USRateSheetEntry, InvalidUSRateSheetRow } from '@/types/domains/us-types';
 
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
@@ -12,6 +12,7 @@ interface USRateSheetState {
   isUpdatingEffectiveDate: boolean; // Add state for update process
   rateSheetData: USRateSheetEntry[]; // Add state for the actual data
   lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
+  invalidRateSheetRows: InvalidUSRateSheetRow[]; // Added state for invalid rows
 }
 
 // Instantiate service outside the store definition (singleton pattern)
@@ -27,6 +28,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     isUpdatingEffectiveDate: false,
     rateSheetData: [], // Initialize data state
     lastDbUpdateTime: Date.now(), // Initialize timestamp
+    invalidRateSheetRows: [], // Initialize invalid rows state
   }),
 
   getters: {
@@ -36,6 +38,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getTotalRecords: (state): number => state.totalRecords,
     getCurrentEffectiveDate: (state): string | null => state.currentEffectiveDate, // Add getter
     getRateSheetData: (state): USRateSheetEntry[] => state.rateSheetData, // Add getter for data
+    getInvalidRateSheetRows: (state): InvalidUSRateSheetRow[] => state.invalidRateSheetRows, // Added getter
   },
 
   actions: {
@@ -103,18 +106,23 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
 
     /**
      * Handles successful upload: potentially reloads data or just sets flags.
+     * Stores both valid record count and invalid rows.
      * @param processedData The result from the service's processFile method.
      */
-    async handleUploadSuccess(processedData: { recordCount: number }) {
+    async handleUploadSuccess(processedData: {
+      recordCount: number;
+      invalidRows: InvalidUSRateSheetRow[]; // Updated parameter type
+    }) {
       console.log(
-        `[us-rate-sheet-store] handleUploadSuccess called with ${processedData.recordCount} records.`
+        `[us-rate-sheet-store] handleUploadSuccess called with ${processedData.recordCount} valid records and ${processedData.invalidRows.length} invalid rows.`
       );
 
-      // Set record count
+      // Store valid record count and invalid rows
       this.totalRecords = processedData.recordCount;
+      this.invalidRateSheetRows = processedData.invalidRows;
 
       // Set successful state
-      this.hasUsRateSheetData = true;
+      this.hasUsRateSheetData = true; // Indicate data (even if only invalid rows were processed, unlikely but possible)
       this.error = null;
 
       // Reload data from Dexie to ensure consistency and fetch effective date
@@ -135,6 +143,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.currentEffectiveDate = null; // Clear effective date
         this.totalRecords = 0;
         this.rateSheetData = []; // Clear data state
+        this.invalidRateSheetRows = []; // Clear invalid rows state
         console.log('[us-rate-sheet-store] Cleared rate sheet data and reset state.');
       } catch (err) {
         console.error('[us-rate-sheet-store] Error clearing rate sheet data:', err);

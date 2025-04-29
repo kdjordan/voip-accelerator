@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { supabase } from '@/utils/supabase';
 import { useLergStore } from '@/stores/lerg-store';
-import { LergService } from '@/services/lerg.service';
+import { LergService, LergDataError } from '@/services/lerg.service';
 import type {
   LERGRecord,
   StateNPAMapping,
@@ -9,9 +9,9 @@ import type {
   NPAEntry,
 } from '@/types/domains/lerg-types';
 import Papa from 'papaparse';
+import { FunctionsHttpError } from '@supabase/functions-js';
 
 export function useLergData() {
-  // Get the LERG service using the singleton instance
   const lergService = LergService.getInstance();
   const lergStore = useLergStore();
   const isLoading = ref(false);
@@ -39,25 +39,34 @@ export function useLergData() {
     if (isInitializing.value) return;
 
     isInitializing.value = true;
+    isLoading.value = true;
     error.value = null;
 
     try {
-      // First check if we already have LERG data in the store
-      if (lergStore.stats?.totalNPAs > 0) return;
+      if (lergStore.stats?.totalNPAs > 0 && isInitialized.value) {
+        console.log('LERG data already initialized. Skipping fetch.');
+        isLoading.value = false;
+        isInitializing.value = false;
+        return;
+      }
 
-      // Check edge function availability first
       await checkEdgeFunctionStatus();
 
       if (isEdgeFunctionAvailable.value) {
+        console.log('Initializing/Refreshing LERG data from Supabase...');
         await uploadLerg(null);
+        isInitialized.value = true;
+        console.log('LERG data initialization/refresh complete.');
       } else {
-        error.value = 'Edge functions are not available';
+        throw new Error('Edge functions are not available for LERG data initialization.');
       }
     } catch (err) {
+      console.error('Error during LERG data initialization:', err);
       error.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
-      throw err;
+      isInitialized.value = false;
     } finally {
       isInitializing.value = false;
+      isLoading.value = false;
     }
   };
 
@@ -69,49 +78,54 @@ export function useLergData() {
       isLoading.value = true;
       error.value = null;
 
-      // Always check edge function status first
       const isAvailable = await checkEdgeFunctionStatus();
       if (!isAvailable) {
         throw new Error('Edge functions are not available');
       }
 
-      // If no file is provided, just check if LERG data exists
       if (!file) {
+        console.log('uploadLerg called with null file, proceeding with data fetch/refresh.');
         const { data: pingData, error: pingError } = await supabase.functions.invoke('ping-status');
         if (pingError) throw new Error(pingError.message);
 
         if (!pingData?.hasLergTable) {
+          console.log('No LERG table found in Supabase. Clearing local data.');
+          await lergService.clearLergData();
+          await updateStoreData();
           return null;
         }
 
-        const { data: lergData, error: lergError } = await supabase.functions.invoke(
-          'get-lerg-data'
-        );
+        console.log('Fetching LERG data from Supabase via get-lerg-data function...');
+        const { data: lergData, error: lergError } =
+          await supabase.functions.invoke('get-lerg-data');
         if (lergError) throw new Error(lergError.message);
 
-        if (lergData?.data?.length) {
-          // Extract the last_updated timestamp from the first record
+        if (lergData?.data?.length > 0) {
+          console.log(`Fetched ${lergData.data.length} LERG records. Initializing local table...`);
           const lastUpdated = lergData.data[0]?.last_updated
             ? new Date(lergData.data[0].last_updated)
             : new Date();
 
-          // Set each record's last_updated field
           const recordsWithTimestamp = lergData.data.map((record: LERGRecord) => ({
             ...record,
             last_updated: lastUpdated,
           }));
 
-          // Use the Dexie service to initialize the table
           await lergService.initializeLergTable(recordsWithTimestamp);
+          console.log('Local LERG table initialized. Updating store data...');
+          await updateStoreData();
+          console.log('LERG store data updated.');
+        } else {
+          console.log('No LERG data found in Supabase. Clearing local data.');
+          await lergService.clearLergData();
           await updateStoreData();
         }
         return lergData;
       }
 
-      // Read and parse the CSV file
+      console.log(`Processing uploaded LERG file: ${file.name}`);
       const fileText = await file.text();
 
-      // Parse CSV with Papa Parse - without headers
       const { data: csvData, errors } = Papa.parse<string[]>(fileText, {
         header: false,
         skipEmptyLines: true,
@@ -122,10 +136,8 @@ export function useLergData() {
         throw new Error('Failed to parse CSV file: ' + errors[0].message);
       }
 
-      // Map columns using provided mappings
       const mappings = options?.mappings || {};
 
-      // Find the indices for our required fields
       const npaIndex = Object.entries(mappings).find(
         ([_, val]) => val.toUpperCase() === 'NPA'
       )?.[0];
@@ -136,15 +148,13 @@ export function useLergData() {
         ([_, val]) => val.toUpperCase() === 'COUNTRY'
       )?.[0];
 
-      if (!npaIndex || !stateIndex || !countryIndex) {
+      if (npaIndex === undefined || stateIndex === undefined || countryIndex === undefined) {
         throw new Error('Required mappings (NPA, State, Country) not found');
       }
 
-      // Skip header row if specified
       const startLine = options?.startLine || 0;
       const dataRows = startLine > 0 ? csvData.slice(startLine) : csvData;
 
-      // Process and deduplicate records
       const uniqueRecords = new Map<string, LERGRecord>();
 
       for (const row of dataRows) {
@@ -153,14 +163,18 @@ export function useLergData() {
         const country = row[parseInt(countryIndex)]?.trim();
 
         if (npa && state && country) {
-          // Validate NPA format (3 digits)
-          if (!/^[0-9]{3}$/.test(npa)) continue;
-
-          // Validate state (2 characters)
-          if (state.length !== 2) continue;
-
-          // Validate country (2 characters)
-          if (country.length !== 2) continue;
+          if (!/^[0-9]{3}$/.test(npa)) {
+            console.warn(`Skipping row with invalid NPA: ${npa}`);
+            continue;
+          }
+          if (state.length !== 2) {
+            console.warn(`Skipping row with invalid State: ${state} (NPA: ${npa})`);
+            continue;
+          }
+          if (country.length !== 2) {
+            console.warn(`Skipping row with invalid Country: ${country} (NPA: ${npa})`);
+            continue;
+          }
 
           if (!uniqueRecords.has(npa)) {
             uniqueRecords.set(npa, {
@@ -168,13 +182,16 @@ export function useLergData() {
               state,
               country,
             });
+          } else {
+            console.warn(`Duplicate NPA found in file, keeping first occurrence: ${npa}`);
           }
         }
       }
 
       const records = Array.from(uniqueRecords.values());
+      console.log(`Processed ${records.length} unique valid records from file.`);
 
-      // Send to edge function
+      console.log('Sending records to upload-lerg function...');
       const { data: uploadData, error: uploadError } = await supabase.functions.invoke(
         'upload-lerg',
         {
@@ -184,31 +201,15 @@ export function useLergData() {
 
       if (uploadError) throw uploadError;
       if (!uploadData) throw new Error('No response data from upload function');
+      console.log('upload-lerg function successful:', uploadData);
 
-      const { data: lergData, error: lergError } = await supabase.functions.invoke('get-lerg-data');
-      if (lergError) throw new Error(lergError.message);
+      console.log('File upload successful. Triggering full data refresh...');
+      await initializeLergData();
 
-      if (lergData?.data?.length) {
-        // Extract the last_updated timestamp from the first record or use current date
-        const lastUpdated = lergData.data[0]?.last_updated
-          ? new Date(lergData.data[0].last_updated)
-          : new Date();
-
-        // Set each record's last_updated field
-        const recordsWithTimestamp = lergData.data.map((record: LERGRecord) => ({
-          ...record,
-          last_updated: lastUpdated,
-        }));
-
-        // Use the Dexie service to initialize the table
-        await lergService.initializeLergTable(recordsWithTimestamp);
-        await updateStoreData();
-      }
-
-      return lergData;
+      return uploadData;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to upload LERG data';
-      throw err;
+      console.error('Error in uploadLerg:', err);
+      error.value = err instanceof Error ? err.message : 'Failed to upload/process LERG data';
     } finally {
       isLoading.value = false;
     }
@@ -228,7 +229,14 @@ export function useLergData() {
       if (downloadError) throw new Error(downloadError.message);
 
       if (data?.data?.length) {
-        await lergService.initializeLergTable(data.data);
+        const lastUpdated = data.data[0]?.last_updated
+          ? new Date(data.data[0].last_updated)
+          : new Date();
+        const recordsWithTimestamp = data.data.map((record: LERGRecord) => ({
+          ...record,
+          last_updated: lastUpdated,
+        }));
+        await lergService.initializeLergTable(recordsWithTimestamp);
         await updateStoreData();
       }
 
@@ -248,22 +256,18 @@ export function useLergData() {
 
       const isAvailable = await checkEdgeFunctionStatus();
       if (!isAvailable) {
-        throw new Error('Edge functions are not available');
+        throw new Error('Edge functions are not available for clearing LERG data');
       }
 
-      const { data: clearData, error: clearError } = await supabase.functions.invoke('clear-lerg');
-      if (clearError) throw clearError;
+      const { error: clearError } = await supabase.functions.invoke('clear-lerg');
+      if (clearError) throw new Error(clearError.message);
 
-      // Clear the store
-      lergStore.clearLergData();
-
-      // Clear IndexedDB using our Dexie service
       await lergService.clearLergData();
+      console.log('Cleared LERG data locally and remotely.');
 
-      return { success: true };
+      await updateStoreData();
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to clear LERG data';
-      throw err;
     } finally {
       isLoading.value = false;
     }
@@ -274,144 +278,159 @@ export function useLergData() {
     canadaProvinces: Record<string, Set<string>>;
     countryData: CountryLergData[];
     count: number;
-  }> => {
+  } | null> => {
     try {
-      isLoading.value = true;
-      error.value = null;
-
-      // Call the LERG service to get processed data
-      const processedData = await lergService.processLergData();
-
-      // Check if data is valid and not null
-      if (!processedData?.stateMapping || !processedData?.countryData) {
-        error.value = 'Failed to process LERG data: received invalid data';
-        throw new Error('Failed to process LERG data: received invalid data');
+      const result = await lergService.getProcessedData();
+      if (!result || typeof result.canadaProvinces === 'undefined') {
+        throw new Error('Processed data from service is missing expected properties.');
       }
-
-      // Return the structured data
-      return {
-        stateMapping: processedData.stateMapping,
-        canadaProvinces: processedData.canadaProvinces,
-        countryData: processedData.countryData,
-        count: processedData.countryData.reduce((total, country) => total + country.npaCount, 0),
-      };
+      return result;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to process LERG data';
-      throw err;
-    } finally {
-      isLoading.value = false;
+      console.error('Error getting processed LERG data:', err);
+      error.value = err instanceof Error ? err.message : 'Failed to get processed data';
+      return null;
     }
   };
 
   const getAll = async (): Promise<LERGRecord[]> => {
     try {
-      isLoading.value = true;
-      error.value = null;
-      // Call the LERG service to get all records
-      const records = await lergService.getAllRecords();
-      return records || [];
+      return await lergService.getAllRecords();
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch all LERG records';
-      throw err;
+      console.error('Error getting all LERG records:', err);
+      error.value = err instanceof Error ? err.message : 'Failed to get all records';
+      return [];
+    }
+  };
+
+  const ping = async () => {
+    return checkEdgeFunctionStatus();
+  };
+
+  const updateStoreData = async () => {
+    console.log('Updating LERG store data...');
+    try {
+      const processedData = await lergService.getProcessedData();
+      if (!processedData) {
+        throw new Error('Failed to get processed data for store update.');
+      }
+
+      const {
+        stateMapping,
+        canadaProvinces,
+        countryData,
+        count
+      } = processedData;
+
+      const lastUpdatedResult = await lergService.getLastUpdatedTimestamp();
+
+      const usStatesMap = new Map<string, NPAEntry[]>();
+      const canadaProvincesMap = new Map<string, NPAEntry[]>();
+      const otherCountriesMap = new Map<string, NPAEntry[]>();
+
+      Object.entries(stateMapping)
+        .filter(([code]) => lergService.isUSState(code))
+        .forEach(([code, npas]) => {
+          usStatesMap.set(
+            code,
+            npas.map((npa: string) => ({ npa }))
+          );
+        });
+
+      Object.entries(canadaProvinces).forEach(([code, npaSet]) => {
+        canadaProvincesMap.set(
+          code,
+          Array.from(npaSet).map((npa: string) => ({ npa }))
+        );
+      });
+
+      countryData
+        .filter((c) => c.country !== 'US' && c.country !== 'CA')
+        .forEach((c) => {
+          otherCountriesMap.set(
+            c.country,
+            c.npas.map((npa: string) => ({ npa }))
+          );
+        });
+
+      lergStore.setUSStates(usStatesMap);
+      lergStore.setCanadaProvinces(canadaProvincesMap);
+      lergStore.setOtherCountries(otherCountriesMap);
+      lergStore.setLastUpdated(
+        lastUpdatedResult.lastUpdated ? new Date(lastUpdatedResult.lastUpdated) : null
+      );
+      lergStore.updateStats();
+      lergStore.setLoaded(count > 0);
+      lergStore.setError(null);
+      console.log('LERG store updated successfully.');
+    } catch (err) {
+      console.error('Failed to update LERG store data:', err);
+      lergStore.setError(err instanceof Error ? err.message : 'Failed to update store');
+      lergStore.clearLergData();
+    }
+  };
+
+  const addAndRefreshLergRecord = async (record: Pick<LERGRecord, 'npa' | 'state' | 'country'>) => {
+    isLoading.value = true;
+    error.value = null;
+    let didFunctionFail = false;
+    try {
+      console.log(`Invoking Supabase function add-lerg-record for: ${JSON.stringify(record)}`);
+      const { error: functionError } = await supabase.functions.invoke('add-lerg-record', {
+        body: record,
+      });
+
+      if (functionError) {
+        didFunctionFail = true;
+        console.error('Supabase function invocation error:', functionError);
+        let errorMessage = 'Failed to add LERG record.';
+        if (functionError instanceof FunctionsHttpError) {
+          try {
+            const errorContext = await functionError.context.json();
+            errorMessage = errorContext.error || functionError.message;
+          } catch (parseError) {
+            errorMessage = functionError.message;
+          }
+
+          if (functionError.context.status === 409) {
+            error.value = errorMessage;
+          } else if (functionError.context.status === 400) {
+            error.value = `Invalid data: ${errorMessage}`;
+          } else {
+            error.value = `Error ${functionError.context.status}: ${errorMessage}`;
+          }
+        } else {
+          error.value = functionError.message;
+        }
+        throw new Error(error.value ?? 'Supabase function invocation failed');
+      }
+
+      console.log('Supabase function "add-lerg-record" successful. Triggering refresh...');
+      await initializeLergData();
+      console.log('LERG data refresh completed after adding single record.');
+    } catch (err) {
+      console.error('Error in addAndRefreshLergRecord:', err);
+      if (!didFunctionFail) {
+        error.value = err instanceof Error ? err.message : 'An unexpected error occurred during refresh.';
+      }
     } finally {
       isLoading.value = false;
     }
   };
 
-  const ping = async () => {
-    try {
-      const { data, error: pingError } = await supabase.functions.invoke('ping-status');
-      if (pingError) return false;
-      return data?.status === 'ok';
-    } catch (err) {
-      return false;
-    }
-  };
-
-  const updateStoreData = async () => {
-    try {
-      // Destructure the new return shape from getProcessed (which calls service.getProcessedData)
-      const {
-        stateMapping,
-        canadaProvinces: processedCanadaProvinces,
-        countryData,
-        count,
-      } = await getProcessed();
-      const { lastUpdated } = await lergService.getLastUpdatedTimestamp();
-
-      // Prepare maps for the store
-      const usStatesMap = new Map<string, NPAEntry[]>();
-      const canadaProvincesMap = new Map<string, NPAEntry[]>();
-      const otherCountriesMap = new Map<string, NPAEntry[]>();
-
-      // Process stateMapping (primarily US states)
-      Object.entries(stateMapping).forEach(([stateCode, npas]) => {
-        // We still only expect US states (or potentially XX) here based on service logic
-        if (lergService.isUSState(stateCode)) {
-          usStatesMap.set(
-            stateCode,
-            npas.map((npa) => ({ npa }))
-          );
-        } else if (stateCode === 'XX') {
-          // Handle the special 'XX' case if needed, maybe add to canadaProvinces or a separate category?
-          // For now, let's add it to canadaProvincesMap as 'Other Canadian Areas'
-          // canadaProvincesMap.set(stateCode, npas.map((npa) => ({ npa })));
-          console.warn(
-            `[useLergData] Found stateMapping entry for '${stateCode}', currently ignored for store maps.`
-          );
-        }
-      });
-
-      // Process the explicitly returned processedCanadaProvinces map
-      Object.entries(processedCanadaProvinces).forEach(([provinceCode, npaSet]) => {
-        // No need to check isCanadianProvince here, as the service already segregated them
-        canadaProvincesMap.set(
-          provinceCode,
-          Array.from(npaSet).map((npa) => ({ npa }))
-        );
-      });
-
-      // Process country data for other countries (remains the same)
-      countryData
-        .filter((country) => country.country !== 'US' && country.country !== 'CA')
-        .forEach((country) => {
-          otherCountriesMap.set(
-            country.country,
-            country.npas.map((npa) => ({ npa }))
-          );
-        });
-
-      // Set data in the store using new methods
-      lergStore.setUSStates(usStatesMap);
-      lergStore.setCanadaProvinces(canadaProvincesMap); // Pass the correctly populated map
-      lergStore.setOtherCountries(otherCountriesMap);
-
-      // Update stats and status
-      lergStore.updateStats();
-      lergStore.setLastUpdated(lastUpdated ? new Date(lastUpdated) : null);
-      lergStore.setLoaded(true);
-
-      console.log(
-        `[useLergData] LERG Store updated. US States: ${usStatesMap.size}, CA Prov: ${canadaProvincesMap.size}, Other Countries: ${otherCountriesMap.size}`
-      );
-    } catch (err) {
-      console.error('[useLergData] Failed to update LERG store data:', err);
-      lergStore.setError(err instanceof Error ? err.message : 'Failed to update store data');
-    }
-  };
-
   return {
+    isLoading,
+    error,
+    isInitialized,
+    isEdgeFunctionAvailable,
+    isInitializing,
+    initializeLergData,
     uploadLerg,
     downloadLerg,
     clearLerg,
     getProcessed,
     getAll,
-    ping,
-    initializeLergData,
-    isLoading,
-    error,
-    isInitialized,
-    isEdgeFunctionAvailable,
     checkEdgeFunctionStatus,
+    ping,
+    addAndRefreshLergRecord,
   };
 }

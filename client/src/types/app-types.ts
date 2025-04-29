@@ -242,7 +242,7 @@ export const DBSchemas = {
   // Schema for US Rate Sheet (new)
   [DBName.US_RATE_SHEET]:
     'entries: ++id, npa, nxx, npanxx, interRate, intraRate, ijRate, stateCode',
-  [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
+  // [DBName.RATE_SHEET]: '++id, npanxx, interRate, intraRate, indetermRate',
   [DBName.LERG]: 'npa, *state, *country',
   [DBName.US_PRICING_COMPARISON]: `
     comparison_results: ++id, &npanxx,
