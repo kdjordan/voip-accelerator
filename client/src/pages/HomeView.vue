@@ -24,7 +24,7 @@ import FeatureCards from '@/components/home/FeatureCards.vue';
       <div class="container relative z-10 max-w-7xl mx-auto">
         <div class="space-y-8">
           <!-- Main headline - Large and prominent -->
-          <h1 class="text-6xl md:text-7xl lg:text-size4xl font-medium tracking-tighter">
+          <h1 class="text-6xl md:text-7xl lg:text-7xl font-medium tracking-tighter">
             Instant Rate Deck Insights
             <!-- <span class="text-accent block mt-2">Instant Rate Deck Insights</span> -->
           </h1>
@@ -59,7 +59,7 @@ import FeatureCards from '@/components/home/FeatureCards.vue';
     <section class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
       <div class="flex flex-row gap-4">
         <div class="w-1/3 bg-accent/70 rounded-3xl p-8">
-          <div class="text-size4xl max-w-4xl text-center mx-auto text-fbBlack leading-none">
+          <div class="text-6xl max-w-4xl text-center mx-auto text-fbBlack leading-none">
             <span class="font-secondary block font-bold">CRUSH</span>
             <span class="font-secondary block font-bold">YOUR</span>
             <span class="font-secondary block font-bold">BUSINESS</span>
@@ -79,7 +79,7 @@ import FeatureCards from '@/components/home/FeatureCards.vue';
     <!-- Features Section with Infinite Scroll -->
     <section class="pt-8 pb-8 relative z-10 bg-fbBlack">
       <div class="container mx-auto mb-2 font-secondary w-full">
-        <h2 class="text-size3xl text-center mx-auto mb-4 text-accent uppercase font-">
+        <h2 class="text-5xl text-center mx-auto mb-4 text-accent uppercase font-">
           Why You'll Love VOIP Accelerator
         </h2>
         <h3 class="text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">
