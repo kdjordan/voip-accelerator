@@ -554,10 +554,12 @@ export class USRateSheetService {
 
   /**
    * Loads ALL USRateSheetEntry data from the database.
+   * Note: This might load a large amount of data. Use cautiously.
    */
   async getData(): Promise<USRateSheetEntry[]> {
-    // REVERTED: Removed warning
-    console.log(`[USRateSheetService] Attempting to load ALL data from ${this.dbName}/'entries'`);
+    console.warn(
+      `[USRateSheetService] Attempting to load ALL data from ${this.dbName}/'entries'. This could be memory intensive.`
+    );
     try {
       // Load data from the correct 'entries' table
       const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, 'entries');
