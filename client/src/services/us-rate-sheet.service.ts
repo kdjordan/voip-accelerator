@@ -458,7 +458,6 @@ export class USRateSheetService {
     console.log(`[USRateSheetService] Updating all effective dates to ${newDate}`);
     try {
       const db = await this.getDB(this.dbName);
-      // REVERTED: Simplified table existence check
       if (!db.tables.some((table) => table.name === 'entries')) {
         throw new Error('Entries table not found, cannot update effective dates.');
       }
@@ -472,16 +471,16 @@ export class USRateSheetService {
         return; // Nothing to do
       }
 
-      // REVERTED: Less efficient fetch-modify-put cycle
-      const allRecords = await table.toArray();
-      const updatedRecords = allRecords.map((record) => ({
-        ...record,
-        effectiveDate: newDate,
-      }));
-      await table.bulkPut(updatedRecords);
+      // Use table.modify() for memory efficiency
+      const updatedCount = await table.toCollection().modify((record: USRateSheetEntry) => {
+        // This modification function runs for each record.
+        // We don't need to check `record` itself, just apply the change.
+        record.effectiveDate = newDate;
+        // No need to return anything, modify works in place
+      });
 
       console.log(
-        `[USRateSheetService] Successfully updated effective date for ${updatedRecords.length} records.`
+        `[USRateSheetService] Successfully updated effective date for ${updatedCount} records using modify().`
       );
     } catch (error) {
       console.error(`[USRateSheetService] Error updating all effective dates:`, error);
