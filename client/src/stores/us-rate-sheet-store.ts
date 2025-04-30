@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import service
-import type { USRateSheetEntry, InvalidUSRateSheetRow } from '@/types/domains/us-types';
+import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
+import type { InvalidUsRow } from '@/types/domains/us-types';
 
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
@@ -10,7 +11,7 @@ interface USRateSheetState {
   currentEffectiveDate: string | null; // Add state for current effective date
   isUpdatingEffectiveDate: boolean; // Add state for update process
   lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
-  invalidRateSheetRows: InvalidUSRateSheetRow[]; // Added state for invalid rows
+  invalidRateSheetRows: InvalidUsRow[]; // Added state for invalid rows
 }
 
 // Instantiate service outside the store definition (singleton pattern)
@@ -34,7 +35,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getError: (state): string | null => state.error,
     getTotalRecords: (state): number => state.totalRecords,
     getCurrentEffectiveDate: (state): string | null => state.currentEffectiveDate, // Add getter
-    getInvalidRateSheetRows: (state): InvalidUSRateSheetRow[] => state.invalidRateSheetRows, // Added getter
+    getInvalidRateSheetRows: (state): InvalidUsRow[] => state.invalidRateSheetRows, // Added getter
     hasInvalidRateSheetRows: (state): boolean => state.invalidRateSheetRows.length > 0, // Added getter
   },
 
@@ -99,10 +100,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
      * Handles successful upload: updates metadata and stores invalid rows.
      * @param processedData The result from the service's processFile method.
      */
-    async handleUploadSuccess(processedData: {
-      recordCount: number;
-      invalidRows: InvalidUSRateSheetRow[];
-    }) {
+    async handleUploadSuccess(processedData: { recordCount: number; invalidRows: InvalidUsRow[] }) {
       console.log(
         `[us-rate-sheet-store] handleUploadSuccess called with ${processedData.recordCount} valid records and ${processedData.invalidRows.length} invalid rows.`
       );

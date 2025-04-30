@@ -11,16 +11,38 @@ async function defineSchema(
   dbName: DBNameType,
   initialSchemaDefinition: string | Record<string, string | null> | undefined
 ): Promise<void> {
-  const baseSchema =
-    typeof initialSchemaDefinition === 'string' && initialSchemaDefinition.includes(':')
-      ? parseSchemaString(initialSchemaDefinition)
-      : typeof initialSchemaDefinition === 'object' && initialSchemaDefinition !== null
-        ? initialSchemaDefinition
-        : {};
+  let schemaToDefine: Record<string, string | null> = {};
 
-  console.log(`[useDexieDB] Defining Version 1 for ${dbName} with schema:`, baseSchema);
-  if (Object.keys(baseSchema).length > 0) {
-    db.version(1).stores(baseSchema as Record<string, string | null>);
+  if (typeof initialSchemaDefinition === 'string') {
+    if (initialSchemaDefinition.includes(':')) {
+      // Handle format "tableName: schema"
+      schemaToDefine = parseSchemaString(initialSchemaDefinition);
+    } else if (initialSchemaDefinition.trim() !== '') {
+      // Handle simple schema string, assume default table name 'data'
+      // (Adjust 'data' if a different convention is preferred)
+      console.log(
+        `[useDexieDB] Schema string for ${dbName} lacks explicit table name. Assuming default table 'data'.`
+      );
+      schemaToDefine = { data: initialSchemaDefinition };
+    } else {
+      // Handle empty string case
+      console.warn(`[useDexieDB] Received empty schema string for ${dbName}. Defining no stores.`);
+      schemaToDefine = {};
+    }
+  } else if (typeof initialSchemaDefinition === 'object' && initialSchemaDefinition !== null) {
+    // Handle schema provided as an object
+    schemaToDefine = initialSchemaDefinition;
+  } else {
+    // Handle undefined or null case
+    console.warn(
+      `[useDexieDB] Received undefined or null schema for ${dbName}. Defining no stores.`
+    );
+    schemaToDefine = {};
+  }
+
+  console.log(`[useDexieDB] Defining Version 1 for ${dbName} with schema:`, schemaToDefine);
+  if (Object.keys(schemaToDefine).length > 0) {
+    db.version(1).stores(schemaToDefine);
   } else {
     db.version(1).stores({});
   }
@@ -169,14 +191,25 @@ function getSchemaDefinitionForVersion(
 
 export default function useDexieDB() {
   const dbStore = useDBStore();
+  const creatingDB = new Set<DBNameType>(); // Track DBs currently being created
 
   async function getDB(dbName: DBNameType): Promise<Dexie> {
-    let db = dbStore.activeConnections[dbName]; // Get existing connection if available
+    let db = dbStore.activeConnections[dbName];
+
+    // Check if DB is already being created
+    while (creatingDB.has(dbName)) {
+      console.log(`[useDexieDB] Waiting for creation of ${dbName} to complete...`);
+      await new Promise((resolve) => setTimeout(resolve, 50)); // Wait briefly
+      db = dbStore.activeConnections[dbName]; // Re-check if it exists now
+      if (db) break; // Exit loop if found
+    }
 
     if (!db) {
+      // Mark this DB name as being created
+      creatingDB.add(dbName);
       console.log(`[useDexieDB] No active connection for ${dbName}. Creating new instance.`);
       db = new Dexie(dbName);
-      const initialSchema = DBSchemas[dbName];
+      const initialSchema = DBSchemas[dbName as keyof typeof DBSchemas];
       // Define initial schema for brand new DB
       await defineSchema(db, dbName, initialSchema);
 
@@ -191,6 +224,10 @@ export default function useDexieDB() {
         console.error(`[useDexieDB] Failed to open database ${dbName}:`, error);
         db.close(); // Ensure closed on failure
         throw error; // Rethrow
+      } finally {
+        // Ensure the flag is removed whether creation succeeded or failed
+        creatingDB.delete(dbName);
+        console.log(`[useDexieDB] Creation flag removed for ${dbName}`);
       }
     } else {
       // DB instance exists, ensure it's open
