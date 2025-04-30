@@ -7,12 +7,12 @@
         <!-- Interstate Average -->
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Inter Avg</p>
-          <p
+          <div
             v-if="isCalculatingOverall || isCalculatingState"
-            class="text-lg font-semibold text-gray-500 italic"
+            class="flex items-center justify-center h-6"
           >
-            Loading...
-          </p>
+            <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
+          </div>
           <p v-else class="text-lg font-semibold text-white font-mono">
             {{ formatRate(currentDisplayAverages.inter) }}
           </p>
@@ -20,12 +20,12 @@
         <!-- Intrastate Average -->
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Intra Avg</p>
-          <p
+          <div
             v-if="isCalculatingOverall || isCalculatingState"
-            class="text-lg font-semibold text-gray-500 italic"
+            class="flex items-center justify-center h-6"
           >
-            Loading...
-          </p>
+            <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
+          </div>
           <p v-else class="text-lg font-semibold text-white font-mono">
             {{ formatRate(currentDisplayAverages.intra) }}
           </p>
@@ -33,12 +33,12 @@
         <!-- Indeterminate Average -->
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Indeterm Avg</p>
-          <p
+          <div
             v-if="isCalculatingOverall || isCalculatingState"
-            class="text-lg font-semibold text-gray-500 italic"
+            class="flex items-center justify-center h-6"
           >
-            Loading...
-          </p>
+            <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
+          </div>
           <p v-else class="text-lg font-semibold text-white font-mono">
             {{ formatRate(currentDisplayAverages.ij) }}
           </p>
@@ -538,6 +538,9 @@ const isApplyingAdjustment = ref(false); // Renamed back from isAdjusting
 const adjustmentStatusMessage = ref<string | null>(null);
 const adjustmentError = ref<string | null>(null);
 // --- End Rate Adjustment State ---
+
+// Timeout ID for clearing the status message
+let adjustmentStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
@@ -1225,6 +1228,12 @@ async function handleApplyAdjustment() {
     return;
   }
 
+  // Clear previous timeout if any
+  if (adjustmentStatusTimeoutId) {
+    clearTimeout(adjustmentStatusTimeoutId);
+    adjustmentStatusTimeoutId = null;
+  }
+
   isApplyingAdjustment.value = true;
   adjustmentStatusMessage.value = null;
   adjustmentError.value = null;
@@ -1345,11 +1354,17 @@ async function handleApplyAdjustment() {
     adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
     console.log(`[USRateSheetTable] Adjustment finished in ${duration}s.`);
 
-    // 4. Refresh Data and Averages
-    console.log('[USRateSheetTable] Refreshing table data and averages after adjustment...');
-    await resetPaginationAndLoad(); // Reload table data
-    await calculateAverages(selectedState.value || undefined); // Recalculate averages
-    store.lastDbUpdateTime = Date.now(); // Signal update
+    // Automatically clear the status message after 4 seconds
+    adjustmentStatusTimeoutId = setTimeout(() => {
+      adjustmentStatusMessage.value = null;
+      adjustmentStatusTimeoutId = null; // Clear the ID after execution
+    }, 4000);
+
+    // 4. Refresh Data and Averages - REMOVED MANUAL CALLS, RELY ON WATCHER
+    // console.log('[USRateSheetTable] Refreshing table data and averages after adjustment...');
+    // await resetPaginationAndLoad(); // Reload table data - REMOVED
+    // await calculateAverages(selectedState.value || undefined); // Recalculate averages - REMOVED
+    store.lastDbUpdateTime = Date.now(); // Signal update - KEEP THIS TO TRIGGER WATCHER
   } catch (err: any) {
     console.error('[USRateSheetTable] Error applying rate adjustments:', err);
     adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';

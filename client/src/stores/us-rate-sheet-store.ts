@@ -130,7 +130,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
       this.setLoading(true);
       this.setError(null);
       try {
-        await service.clearData(); // Call service method
+        await service.clearData(); // Call service method which now deletes the DB
         this.hasUsRateSheetData = false;
         this.currentEffectiveDate = null; // Clear effective date
         this.totalRecords = 0;
@@ -141,6 +141,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.setError('Failed to clear local rate sheet data.');
       } finally {
         this.setLoading(false);
+        this.lastDbUpdateTime = 0; // Reset timestamp to indicate cleared/initial state
       }
     },
 
