@@ -212,18 +212,14 @@ const items = ref<NavItem[]>([
       },
     ],
   },
-  // {
-  //   name: 'Lerg Admin',
-  //   to: '/admin',
-  //   icon: Cog6ToothIcon,
-  // },
+  {
+    name: 'Lerg Admin',
+    to: '/admin',
+    icon: Cog6ToothIcon,
+  },
 ]);
 </script>
 <style scoped>
-/* Removed unused style */
-/* .router-link-active-style {
-  background-color: rgb(var(--muted) / 0.9);
-} */
 
 .sidebar {
   display: flex;

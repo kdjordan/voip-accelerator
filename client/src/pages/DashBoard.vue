@@ -27,7 +27,7 @@
               </div>
 
               <div class="mt-3 md:mt-0">
-                <BaseBadge variant="primary" uppercase>
+                <BaseBadge variant="accent" uppercase>
                   {{ sharedStore.user.currentPlan }} Plan
                 </BaseBadge>
               </div>
@@ -44,18 +44,7 @@
                 <p class="text-lg font-medium mt-1">{{ formattedLastLogin }}</p>
               </div>
               <div class="p-2 bg-blue-900/30 rounded-lg border border-blue-400/50">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5 text-blue-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 10.75a.75.75 0 01-1.5 0V7.75a.75.75 0 011.5 0v5z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <InformationCircleIcon class="h-5 w-5 text-blue-400" />
               </div>
             </div>
           </div>
@@ -67,18 +56,7 @@
                 <p class="text-lg font-medium mt-1">{{ userUsage.uploadsToday }}</p>
               </div>
               <div class="p-2 bg-yellow-900/30 rounded-lg border border-yellow-400/50">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5 text-yellow-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <ArrowUpTrayIcon class="h-5 w-5 text-yellow-400" />
               </div>
             </div>
           </div>
@@ -90,18 +68,7 @@
                 <p class="text-lg font-medium mt-1">{{ formattedCreatedAt }}</p>
               </div>
               <div class="p-2 bg-accent/30 rounded-lg border border-accent/50">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5 text-accent"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <CalendarDaysIcon class="h-5 w-5 text-accent" />
               </div>
             </div>
           </div>
@@ -193,6 +160,7 @@ import BaseBadge from '@/components/shared/BaseBadge.vue';
 import type { BaseBadgeProps, DBNameType } from '@/types/app-types';
 import Dexie from 'dexie';
 import { ArrowPathIcon } from '@heroicons/vue/24/outline';
+import { InformationCircleIcon, ArrowUpTrayIcon, CalendarDaysIcon } from '@heroicons/vue/24/solid';
 
 // Shared store for user info
 const sharedStore = useSharedStore();
