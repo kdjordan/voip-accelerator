@@ -51,10 +51,10 @@ export class USRateSheetService {
     // Ensure LERG data is loaded before proceeding (optional but recommended)
     // Moved check to processFile as LERG might load after constructor
 
-    // Only initialize the database but don't delete it automatically
-    this.initializeDatabase().catch((error) => {
-      console.error('Error initializing US Rate Sheet database:', error);
-    });
+    // REMOVED: Automatic database initialization on service creation
+    // this.initializeDatabase().catch((error) => {
+    //   console.error('Error initializing US Rate Sheet database:', error);
+    // });
   }
 
   /**
@@ -75,38 +75,19 @@ export class USRateSheetService {
   }
 
   /**
-   * Clears all data from the database.
+   * Clears all data from the database by deleting the database itself.
    */
   async clearData(): Promise<void> {
-    console.log(`[USRateSheetService] Clearing US Rate Sheet data`);
+    console.log(
+      `[USRateSheetService] Clearing US Rate Sheet data by deleting database ${this.dbName}`
+    );
     try {
-      // Get the database instance
-      const db = await this.getDB(this.dbName);
-
-      // Check if the 'entries' table exists and clear it if it does
-      if (db.tables.some((table) => table.name === 'entries')) {
-        await db.table('entries').clear();
-        console.log(`[USRateSheetService] Cleared 'entries' table in database ${this.dbName}`);
-      } else {
-        console.log(`[USRateSheetService] 'entries' table not found. No data to clear.`);
-      }
+      await this.deleteDatabase(this.dbName); // Directly call deleteDatabase from the composable
+      console.log(`[USRateSheetService] Database ${this.dbName} deleted successfully.`);
     } catch (error) {
-      console.warn(
-        `[USRateSheetService] Error clearing 'entries' table, attempting to recreate database:`,
-        error
-      );
-
-      // Fallback: Delete and recreate the database
-      try {
-        await this.deleteDatabase(this.dbName);
-        console.log(`[USRateSheetService] Database deleted successfully.`);
-
-        // Reinitialize the database so it's ready for new data
-        await this.initializeDatabase();
-      } catch (deleteError) {
-        console.error(`[USRateSheetService] Error deleting database:`, deleteError);
-        throw deleteError; // Rethrow critical error
-      }
+      console.error(`[USRateSheetService] Error deleting database ${this.dbName}:`, error);
+      // Rethrow the error so the store can potentially handle it
+      throw error;
     }
   }
 
@@ -499,13 +480,23 @@ export class USRateSheetService {
       `[USRateSheetService] Getting current effective date from ${this.dbName}/'entries'`
     );
     try {
+      // Check if DB exists before trying to open it
+      const dbExists = await Dexie.exists(this.dbName);
+      if (!dbExists) {
+        console.log(
+          `[USRateSheetService] Database ${this.dbName} does not exist. Cannot get effective date.`
+        );
+        return null;
+      }
+
+      // DB exists, now open it and query
       const db = await this.getDB(this.dbName);
-      // REVERTED: Simplified table existence check
+      // Check if the table exists within the opened DB
       if (!db.tables.some((table) => table.name === 'entries')) {
         console.warn('[USRateSheetService] Entries table not found, cannot get effective date.');
         return null;
       }
-      const firstRecord = await db.table<USRateSheetEntry>('entries').limit(1).first(); // REVERTED: Direct query
+      const firstRecord = await db.table<USRateSheetEntry>('entries').limit(1).first();
       return firstRecord?.effectiveDate || null;
     } catch (error) {
       console.error(`[USRateSheetService] Error getting current effective date:`, error);
