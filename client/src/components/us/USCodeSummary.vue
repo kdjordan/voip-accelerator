@@ -5,7 +5,7 @@
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
       <div class="flex items-center space-x-2">
         <BaseBadge size="small" variant="info">
-          {{ usStore.getFileNameByComponent(componentId) }}
+          {{ truncatedFileName }}
         </BaseBadge>
         <BaseButton
           variant="destructive"
@@ -111,117 +111,120 @@
             <!-- Countries Section -->
             <div v-else class="space-y-4">
               <template v-for="country in filteredCountries" :key="country.countryCode">
-                <div class="bg-gray-900 p-3 rounded-lg">
-                  <div
-                    @click="toggleCountryExpanded(country.countryCode)"
-                    class="flex justify-between items-center cursor-pointer"
-                  >
-                    <span class="text-gray-300">{{ country.countryName }}</span>
-                    <div class="flex items-center space-x-2">
-                      <span class="text-accent">
-                        {{ formatCoverage(country.npaCoverage) }}% Coverage
-                      </span>
-                      <span
-                        class="transform transition-transform"
-                        :class="{ 'rotate-180': expandedCountries.has(country.countryCode) }"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                <!-- Only render the country block if coverage > 0 -->
+                <template v-if="country.npaCoverage > 0">
+                  <div class="bg-gray-900 p-3 rounded-lg">
+                    <div
+                      @click="toggleCountryExpanded(country.countryCode)"
+                      class="flex justify-between items-center cursor-pointer"
+                    >
+                      <span class="text-gray-300">{{ country.countryName }}</span>
+                      <div class="flex items-center space-x-2">
+                        <span class="text-accent">
+                          {{ formatCoverage(country.npaCoverage) }}% Coverage
+                        </span>
+                        <span
+                          class="transform transition-transform"
+                          :class="{ 'rotate-180': expandedCountries.has(country.countryCode) }"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- States/Provinces Section -->
+                    <div v-if="expandedCountries.has(country.countryCode)" class="mt-3 space-y-2">
+                      <template v-for="state in country.states" :key="state.stateCode">
+                        <div class="bg-gray-800/60 rounded overflow-hidden">
+                          <div
+                            @click="toggleStateExpanded(state.stateCode)"
+                            class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
+                          >
+                            <span class="text-gray-300">{{
+                              getStateName(state.stateCode, country.countryCode)
+                            }}</span>
+                            <div class="flex items-center space-x-2">
+                              <span class="text-accent">
+                                {{ formatCoverage(state.coverage) }}% Coverage
+                              </span>
+                              <span
+                                class="transform transition-transform"
+                                :class="{ 'rotate-180': expandedStates.has(state.stateCode) }"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  class="h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              </span>
+                            </div>
+                          </div>
+
+                          <!-- NPAs List -->
+                          <div
+                            v-if="expandedStates.has(state.stateCode)"
+                            class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
+                          >
+                            <!-- Rate Stats -->
+                            <div class="mb-3 grid grid-cols-3 gap-2">
+                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                                <div class="text-xs text-gray-400 mb-1">IE Rate</div>
+                                <div class="text-sm text-white">
+                                  ${{ formatRate(state.rateStats?.interstate?.average) }}
+                                </div>
+                              </div>
+                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                                <div class="text-xs text-gray-400 mb-1">IA Rate</div>
+                                <div class="text-sm text-white">
+                                  ${{ formatRate(state.rateStats?.intrastate?.average) }}
+                                </div>
+                              </div>
+                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                                <div class="text-xs text-gray-400 mb-1">IJ Rate</div>
+                                <div class="text-sm text-white">
+                                  ${{ formatRate(state.rateStats?.indeterminate?.average) }}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="text-xs text-gray-400 mb-2">NPAs:</div>
+                            <div class="flex flex-wrap gap-2">
+                              <div
+                                v-for="npa in state.npas"
+                                :key="npa"
+                                class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
+                              >
+                                {{ npa }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
                     </div>
                   </div>
-
-                  <!-- States/Provinces Section -->
-                  <div v-if="expandedCountries.has(country.countryCode)" class="mt-3 space-y-2">
-                    <template v-for="state in country.states" :key="state.stateCode">
-                      <div class="bg-gray-800/60 rounded overflow-hidden">
-                        <div
-                          @click="toggleStateExpanded(state.stateCode)"
-                          class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
-                        >
-                          <span class="text-gray-300">{{
-                            getStateName(state.stateCode, country.countryCode)
-                          }}</span>
-                          <div class="flex items-center space-x-2">
-                            <span class="text-accent">
-                              {{ formatCoverage(state.coverage) }}% Coverage
-                            </span>
-                            <span
-                              class="transform transition-transform"
-                              :class="{ 'rotate-180': expandedStates.has(state.stateCode) }"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <!-- NPAs List -->
-                        <div
-                          v-if="expandedStates.has(state.stateCode)"
-                          class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
-                        >
-                          <!-- Rate Stats -->
-                          <div class="mb-3 grid grid-cols-3 gap-2">
-                            <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                              <div class="text-xs text-gray-400 mb-1">IE Rate</div>
-                              <div class="text-sm text-white">
-                                ${{ formatRate(state.rateStats?.interstate?.average) }}
-                              </div>
-                            </div>
-                            <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                              <div class="text-xs text-gray-400 mb-1">IA Rate</div>
-                              <div class="text-sm text-white">
-                                ${{ formatRate(state.rateStats?.intrastate?.average) }}
-                              </div>
-                            </div>
-                            <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                              <div class="text-xs text-gray-400 mb-1">IJ Rate</div>
-                              <div class="text-sm text-white">
-                                ${{ formatRate(state.rateStats?.indeterminate?.average) }}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div class="text-xs text-gray-400 mb-2">NPAs:</div>
-                          <div class="flex flex-wrap gap-2">
-                            <div
-                              v-for="npa in state.npas"
-                              :key="npa"
-                              class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
-                            >
-                              {{ npa }}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </div>
+                </template>
               </template>
             </div>
 
@@ -272,6 +275,15 @@ const searchQuery = ref('');
 const isFiltering = ref(false);
 const expandedStates = ref<Set<string>>(new Set());
 const expandedCountries = ref<Set<string>>(new Set());
+
+// Create a computed property for the truncated filename
+const truncatedFileName = computed(() => {
+  const fullName = usStore.getFileNameByComponent(props.componentId);
+  if (fullName.length > 10) {
+    return `${fullName.slice(0, 10)}...`;
+  }
+  return fullName;
+});
 
 // Get the enhanced report for this component
 const enhancedReport = computed(() => {
