@@ -334,130 +334,6 @@
         </div>
       </div>
 
-      <!-- NEW: Add Single LERG Record Section -->
-      <div class="bg-gray-900/50">
-        <div
-          @click="toggleAddLergSection"
-          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
-        >
-          <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold">Add Single LERG Record</h2>
-            <ChevronDownIcon
-              :class="{ 'transform rotate-180': showAddLergSection }"
-              class="w-5 h-5 transition-transform text-gray-400"
-            />
-          </div>
-        </div>
-
-        <div v-if="showAddLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
-          <!-- Form for adding a single record -->
-          <form @submit.prevent="handleAddSingleRecord" class="space-y-4">
-            <!-- Form Row -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <!-- NPA Input -->
-              <div>
-                <label for="npa" class="block text-sm font-medium text-gray-300 mb-1">NPA</label>
-                <input
-                  type="text"
-                  id="npa"
-                  v-model="newRecord.npa"
-                  required
-                  maxlength="3"
-                  pattern="^[0-9]{3}$"
-                  placeholder="e.g., 212"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
-                />
-                <p v-if="validationErrors.npa" class="mt-1 text-xs text-red-400">
-                  {{ validationErrors.npa }}
-                </p>
-              </div>
-
-              <!-- State Input -->
-              <div>
-                <label for="state" class="block text-sm font-medium text-gray-300 mb-1"
-                  >State/Province (2-Letter Code)</label
-                >
-                <input
-                  type="text"
-                  id="state"
-                  v-model="newRecord.state"
-                  required
-                  maxlength="2"
-                  pattern="^[A-Za-z]{2}$"
-                  placeholder="e.g., NY or ON"
-                  @input="newRecord.state = newRecord.state.toUpperCase()"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
-                />
-                <p v-if="validationErrors.state" class="mt-1 text-xs text-red-400">
-                  {{ validationErrors.state }}
-                </p>
-              </div>
-
-              <!-- Country Input -->
-              <div>
-                <label for="country" class="block text-sm font-medium text-gray-300 mb-1"
-                  >Country (2-Letter Code)</label
-                >
-                <input
-                  type="text"
-                  id="country"
-                  v-model="newRecord.country"
-                  required
-                  maxlength="2"
-                  pattern="^[A-Za-z]{2}$"
-                  placeholder="e.g., US or CA"
-                  @input="newRecord.country = newRecord.country.toUpperCase()"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
-                />
-                <p v-if="validationErrors.country" class="mt-1 text-xs text-red-400">
-                  {{ validationErrors.country }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Submission Button and Feedback -->
-            <div class="flex items-center justify-end space-x-3">
-              <!-- Loading Indicator -->
-              <div v-if="isLoading" class="flex items-center space-x-2 text-sm text-gray-400">
-                <svg
-                  class="animate-spin h-4 w-4 text-accent"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                <span>Processing...</span>
-              </div>
-              <!-- Error Message -->
-              <p v-if="error && !isLoading" class="text-sm text-red-400">Error: {{ error }}</p>
-              <!-- Success Message -->
-              <p v-if="addSuccessMessage" class="text-sm text-green-400">{{ addSuccessMessage }}</p>
-
-              <button
-                type="submit"
-                :disabled="isLoading || !isFormValid"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add Record
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
       <!-- LERG Management Section (File Upload/Clear - Commented Out) -->
       <div class="bg-gray-900/50">
         <div
@@ -554,15 +430,123 @@
 
           <!-- Clear LERG Data Button -->
           <div class="flex justify-end">
-            <button
-              @click="confirmClearLergData"
+            <BaseButton
+              variant="destructive"
+              size="standard"
+              :icon="TrashIcon"
               :disabled="isLergUploading"
-              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-destructive hover:bg-destructive/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="confirmClearLergData"
             >
-              <TrashIcon class="w-5 h-5 mr-2" />
               Clear All LERG Data
-            </button>
+            </BaseButton>
           </div>
+        </div>
+      </div>
+
+      <!-- NEW: Add Single LERG Record Section -->
+      <div class="bg-gray-900/50">
+        <div
+          @click="toggleAddLergSection"
+          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">Add Single LERG Record</h2>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': showAddLergSection }"
+              class="w-5 h-5 transition-transform text-gray-400"
+            />
+          </div>
+        </div>
+
+        <div v-if="showAddLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
+          <!-- Form for adding a single record -->
+          <form @submit.prevent="handleAddSingleRecord" class="space-y-4">
+            <!-- Form Row -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- NPA Input -->
+              <div>
+                <label for="npa" class="block text-sm font-medium text-gray-300 mb-1">NPA</label>
+                <input
+                  type="text"
+                  id="npa"
+                  v-model="newRecord.npa"
+                  required
+                  maxlength="3"
+                  pattern="^[0-9]{3}$"
+                  placeholder="e.g., 212"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
+                />
+                <p v-if="validationErrors.npa" class="mt-1 text-xs text-red-400">
+                  {{ validationErrors.npa }}
+                </p>
+              </div>
+
+              <!-- State Input -->
+              <div>
+                <label for="state" class="block text-sm font-medium text-gray-300 mb-1"
+                  >State/Province (2-Letter Code)</label
+                >
+                <input
+                  type="text"
+                  id="state"
+                  v-model="newRecord.state"
+                  required
+                  maxlength="2"
+                  pattern="^[A-Za-z]{2}$"
+                  placeholder="e.g., NY or ON"
+                  @input="newRecord.state = newRecord.state.toUpperCase()"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
+                />
+                <p v-if="validationErrors.state" class="mt-1 text-xs text-red-400">
+                  {{ validationErrors.state }}
+                </p>
+              </div>
+
+              <!-- Country Input -->
+              <div>
+                <label for="country" class="block text-sm font-medium text-gray-300 mb-1"
+                  >Country (2-Letter Code)</label
+                >
+                <input
+                  type="text"
+                  id="country"
+                  v-model="newRecord.country"
+                  required
+                  maxlength="2"
+                  pattern="^[A-Za-z]{2}$"
+                  placeholder="e.g., US or CA"
+                  @input="newRecord.country = newRecord.country.toUpperCase()"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
+                />
+                <p v-if="validationErrors.country" class="mt-1 text-xs text-red-400">
+                  {{ validationErrors.country }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Submission Button and Feedback -->
+            <div class="flex items-center justify-end space-x-3">
+              <!-- Loading Indicator -->
+              <div v-if="isLoading" class="flex items-center space-x-2 text-sm text-gray-400">
+                <ArrowPathIcon class="animate-spin h-4 w-4 text-accent" />
+                <span>Processing...</span>
+              </div>
+              <!-- Error Message -->
+              <p v-if="error && !isLoading" class="text-sm text-red-400">Error: {{ error }}</p>
+              <!-- Success Message -->
+              <p v-if="addSuccessMessage" class="text-sm text-green-400">{{ addSuccessMessage }}</p>
+
+              <BaseButton
+                type="submit"
+                variant="primary"
+                size="standard"
+                :disabled="isLoading || !isFormValid"
+                :loading="isLoading"
+              >
+                Add Record
+              </BaseButton>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -607,6 +591,7 @@ import PreviewModal from '@/components/shared/PreviewModal.vue';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 import { useDragDrop } from '@/composables/useDragDrop';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 const store = useLergStore();
 const {
@@ -1059,21 +1044,3 @@ async function handleAddSingleRecord() {
   }
 }
 </script>
-
-<style>
-@keyframes pulse-width {
-  0% {
-    width: 5%;
-  }
-  50% {
-    width: 75%;
-  }
-  100% {
-    width: 5%;
-  }
-}
-
-.animate-pulse-width {
-  animation: pulse-width 2s infinite ease-in-out;
-}
-</style>
