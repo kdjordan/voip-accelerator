@@ -40,3 +40,6 @@ coverage
 
 # Server logs
 ../server/logs/*
+
+# Sample Data
+/data/sample/
