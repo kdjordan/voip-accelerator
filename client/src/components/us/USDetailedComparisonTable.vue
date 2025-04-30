@@ -201,7 +201,9 @@
       v-if="isLoading && filteredComparisonData.length === 0"
       class="text-center text-gray-500 py-10"
     >
-      <div class="flex items-center justify-center space-x-2">
+      <div
+        class="flex items-center justify-center space-x-2 text-accent bg-accent/20 border-accent border p-2 rounded-lg w-1/2 mx-auto"
+      >
         <ArrowPathIcon class="animate-spin w-6 h-6" />
         <span>Loading comparison data...</span>
       </div>
