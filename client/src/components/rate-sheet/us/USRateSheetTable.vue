@@ -162,6 +162,8 @@
           variant="destructive"
           size="standard"
           :icon="TrashIcon"
+          :loading="store.isLoading"
+          :disabled="store.isLoading"
           @click="handleClearData"
           title="Clear all rate sheet data"
         >
