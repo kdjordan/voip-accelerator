@@ -1,9 +1,20 @@
 <template>
   <div class="min-h-screen text-white pt-2 w-full">
-    <h1 class="mb-2">
+    <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >US Rate Sheet Wizard
       </span>
+      <!-- Info Icon Button -->
+      <button
+        @click="openInfoModal"
+        class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
+        aria-label="Show usage information"
+      >
+        <!-- Apply dashboard styling here -->
+        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+          <InformationCircleIcon class="w-5 h-5 text-blue-400" />
+        </div>
+      </button>
     </h1>
 
     <!-- Stats Dashboard -->
@@ -205,12 +216,16 @@
         @cancel="handleModalCancel"
       />
     </div>
+
+    <!-- Info Modal -->
+    <InfoModal :show-modal="showInfoModal" :type="'us_rate_sheet'" @close="closeInfoModal" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import InfoModal from '@/components/shared/InfoModal.vue';
 
 import {
   ArrowUpTrayIcon,
@@ -219,6 +234,7 @@ import {
   ChevronUpIcon,
   ArrowRightIcon,
   ArrowPathIcon,
+  InformationCircleIcon,
 } from '@heroicons/vue/24/outline';
 import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
@@ -361,6 +377,10 @@ function processFile(file: File) {
   }
 }
 
+// --- Info Modal State ---
+const showInfoModal = ref(false);
+// --- End Info Modal State ---
+
 async function handleModalConfirm(
   mappings: Record<string, string>,
   indeterminateDefinition?: string
@@ -496,4 +516,14 @@ async function handleApplyEffectiveDate() {
 function toggleEffectiveDateSettings() {
   showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
 }
+
+// --- Info Modal Functions ---
+function openInfoModal() {
+  showInfoModal.value = true;
+}
+
+function closeInfoModal() {
+  showInfoModal.value = false;
+}
+// --- End Info Modal Functions ---
 </script>
