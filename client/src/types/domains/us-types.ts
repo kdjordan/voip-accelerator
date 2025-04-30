@@ -87,24 +87,24 @@ export interface USPricingReport {
     fileName: string;
     averageInterRate: number;
     averageIntraRate: number;
-    averageIJRate: number;
+    averageIndetermRate: number;
     medianInterRate: number;
     medianIntraRate: number;
-    medianIJRate: number;
+    medianIndetermRate: number;
   };
   file2: {
     fileName: string;
     averageInterRate: number;
     averageIntraRate: number;
-    averageIJRate: number;
+    averageIndetermRate: number;
     medianInterRate: number;
     medianIntraRate: number;
-    medianIJRate: number;
+    medianIndetermRate: number;
   };
   comparison: {
     interRateDifference: number;
     intraRateDifference: number;
-    ijRateDifference: number;
+    indetermRateDifference: number;
     totalHigher: number;
     totalLower: number;
     totalEqual: number;
@@ -127,7 +127,7 @@ export const USColumnRole = {
   NPANXX: 'npanxx',
   INTERSTATE: 'interRate',
   INTRASTATE: 'intraRate',
-  INDETERMINATE: 'ijRate',
+  INDETERMINATE: 'indetermRate',
   SELECT: '',
 } as const;
 
@@ -318,7 +318,7 @@ export interface USRateSheetEntry {
   stateCode: string; // Added state code - derived from LERG
   interRate: number;
   intraRate: number;
-  ijRate: number; // Can be derived from inter/intra based on user selection
+  indetermRate: number; // Changed ijRate to indetermRate
   // Optional metadata/comparison fields
   effectiveDate?: string;
 
