@@ -459,11 +459,112 @@
       </div>
 
       <!-- LERG Management Section (File Upload/Clear - Commented Out) -->
-      <!--
       <div class="bg-gray-900/50">
-         ... existing commented out file management ...
+        <div
+          @click="toggleLergSection"
+          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
+        >
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">LERG Management (Upload / Clear)</h2>
+            <ChevronDownIcon
+              :class="{ 'transform rotate-180': showLergSection }"
+              class="w-5 h-5 transition-transform text-gray-400"
+            />
+          </div>
+        </div>
+
+        <div v-if="showLergSection" class="border-t border-gray-700/50 p-6 space-y-6">
+          <!-- LERG Upload Card -->
+          <div
+            class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-colors"
+            :class="{
+              'border-accent bg-accent/10 border-solid': isDragging,
+              'hover:border-accent-hover hover:bg-fbWhite/10 border-dashed border-gray-600':
+                !isDragging && !dragDropErrorMessage,
+              'border-red-500 border-solid': !!dragDropErrorMessage,
+            }"
+            @dragenter.prevent="handleDragEnter"
+            @dragleave.prevent="handleDragLeave"
+            @dragover.prevent="handleDragOver"
+            @drop.prevent="handleDropFromComposable"
+          >
+            <div class="flex flex-col items-center justify-center space-y-4 pointer-events-none">
+              <ArrowUpTrayIcon
+                class="w-10 h-10 mx-auto border rounded-full p-2"
+                :class="
+                  !!dragDropErrorMessage
+                    ? 'text-red-500 border-red-500/50 bg-red-500/10'
+                    : 'text-accent border-accent/50 bg-accent/10'
+                "
+              />
+              <p
+                class="mt-2 text-base"
+                :class="!!dragDropErrorMessage ? 'text-red-500' : 'text-accent'"
+              >
+                {{
+                  dragDropErrorMessage
+                    ? dragDropErrorMessage
+                    : 'DRAG & DROP to upload or CLICK to select file'
+                }}
+              </p>
+            </div>
+            <input
+              ref="lergFileInput"
+              type="file"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              accept=".csv,.txt"
+              :disabled="isLergUploading"
+              @change="handleLergFileChange"
+            />
+          </div>
+
+          <!-- Upload Status -->
+          <div
+            v-if="lergUploadStatus"
+            class="p-4 rounded-md"
+            :class="getStatusClass(lergUploadStatus.type)"
+          >
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <!-- Icon based on status type -->
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium" :class="getStatusTextClass(lergUploadStatus.type)">
+                  {{ lergUploadStatus.message }}
+                </h3>
+                <div
+                  class="mt-2 text-sm"
+                  :class="getStatusTextClass(lergUploadStatus.type)"
+                  v-if="lergUploadStatus.details"
+                >
+                  <p>{{ lergUploadStatus.details }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading Indicator during Upload/Clear -->
+          <div
+            v-if="isLergUploading"
+            class="flex items-center justify-center space-x-2 text-gray-400"
+          >
+            <ArrowPathIcon class="animate-spin h-5 w-5 text-accent" />
+            <span>Processing LERG data... Please wait.</span>
+          </div>
+
+          <!-- Clear LERG Data Button -->
+          <div class="flex justify-end">
+            <button
+              @click="confirmClearLergData"
+              :disabled="isLergUploading"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-destructive hover:bg-destructive/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <TrashIcon class="w-5 h-5 mr-2" />
+              Clear All LERG Data
+            </button>
+          </div>
+        </div>
       </div>
-      -->
     </div>
 
     <!-- New Preview Modal -->
@@ -495,6 +596,7 @@ import {
   ArrowUpTrayIcon,
   DocumentIcon,
   PlusCircleIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import { COUNTRY_CODES, getCountryName } from '@/types/constants/country-codes';
 import { STATE_CODES, getStateName } from '@/types/constants/state-codes';
@@ -504,6 +606,7 @@ import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/domains/lerg-types';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
+import { useDragDrop } from '@/composables/useDragDrop';
 
 const store = useLergStore();
 const {
@@ -545,7 +648,6 @@ interface DbStatus {
   error: string | null;
 }
 
-const isDragging = ref(false);
 const lergUploadStatus = ref<UploadStatus | null>(null);
 const isLergUploading = ref(false);
 const dbStatus = computed<DbStatus>(() => ({
@@ -642,15 +744,32 @@ function formatErrorMessage(error: Error): string {
   return error.message || 'An unknown error occurred';
 }
 
-async function handleLergFileChange(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) return;
+// --- Drag and Drop Setup ---
+const handleFileDrop = (file: File) => {
   selectedFile.value = file;
+  lergUploadStatus.value = null; // Clear previous status
+  clearDragDropError(); // Clear composable error
 
   Papa.parse(file, {
     header: false,
     skipEmptyLines: true,
     complete: (results: ParseResult<string[]>) => {
+      if (results.errors.length > 0) {
+        lergUploadStatus.value = {
+          type: 'error',
+          message: 'Failed to parse CSV',
+          details: results.errors[0].message,
+        };
+        return;
+      }
+      if (results.data.length === 0 || results.data[0].length === 0) {
+        lergUploadStatus.value = {
+          type: 'error',
+          message: 'Empty or invalid CSV file',
+          details: 'The file appears to be empty or could not be parsed correctly.',
+        };
+        return;
+      }
       columns.value = results.data[0].map((h) => h.trim());
       previewData.value = results.data
         .slice(0, 10)
@@ -658,7 +777,41 @@ async function handleLergFileChange(event: Event) {
       startLine.value = 1;
       showPreviewModal.value = true;
     },
+    error: (error: Error) => {
+      lergUploadStatus.value = {
+        type: 'error',
+        message: 'Failed to read file',
+        details: error.message,
+      };
+    },
   });
+};
+
+const handleDropError = (message: string) => {
+  // Display error using the composable's error message ref
+};
+
+const {
+  isDragging, // Use isDragging from composable
+  errorMessage: dragDropErrorMessage,
+  handleDragEnter,
+  handleDragLeave,
+  handleDragOver,
+  handleDrop: handleDropFromComposable, // Rename to avoid conflict with template event
+  clearError: clearDragDropError,
+} = useDragDrop({
+  acceptedExtensions: ['.csv', '.txt'],
+  onDropCallback: handleFileDrop,
+  onError: handleDropError,
+});
+// --- End Drag and Drop Setup ---
+
+async function handleLergFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  // Clear potential error from composable if user selects via button
+  clearDragDropError();
+  handleFileDrop(file); // Reuse the file processing logic
 }
 
 async function handleModalConfirm(mappings: Record<string, string>) {
@@ -762,15 +915,6 @@ async function confirmClearLergData() {
       message: error instanceof Error ? error.message : 'Failed to clear data',
       details: 'There was an issue clearing the LERG data. Please try again or contact support.',
     };
-  }
-}
-
-async function handleLergFileDrop(event: DragEvent) {
-  event.preventDefault();
-  isDragging.value = false;
-  const file = event.dataTransfer?.files[0];
-  if (file) {
-    await handleLergFileChange({ target: { files: [file] } } as unknown as Event);
   }
 }
 
