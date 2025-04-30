@@ -311,7 +311,7 @@
 
         <!-- Target Rate Type -->
         <div class="relative">
-          <Listbox v-model="targetRateType" as="div">
+          <Listbox v-model="adjustmentTargetRate" as="div">
             <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
               >Target Rate</ListboxLabel
             >
@@ -319,7 +319,9 @@
               <ListboxButton
                 class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
               >
-                <span class="block truncate text-white">{{ selectedTargetRateTypeLabel }}</span>
+                <span class="block truncate text-white">{{
+                  selectedAdjustmentTargetRateLabel
+                }}</span>
                 <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </span>
@@ -333,7 +335,7 @@
                   class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
                 >
                   <ListboxOption
-                    v-for="option in targetRateTypeOptions"
+                    v-for="option in adjustmentTargetRateOptions"
                     :key="option.value"
                     :value="option.value"
                     v-slot="{ active, selected }"
@@ -376,7 +378,7 @@
               adjustmentValue <= 0 ||
               totalRecords === 0
             "
-            @click="applyRateAdjustments"
+            @click="handleApplyAdjustment"
             title="Apply adjustment to all currently filtered records"
           >
             Apply
@@ -511,32 +513,33 @@ const RATE_SHEET_TABLE_NAME = 'entries';
 const adjustmentTypeOptions = [
   { value: 'markup', label: 'Markup' },
   { value: 'markdown', label: 'Markdown' },
+  { value: 'set', label: 'Set To Value' },
 ] as const;
 const adjustmentValueTypeOptions = [
   { value: 'percentage', label: 'Percentage (%)' },
-  { value: 'fixed', label: 'Fixed Amount ($)' },
+  { value: 'fixed', label: 'Fixed Amount' },
 ] as const;
-const targetRateTypeOptions = [
+const adjustmentTargetRateOptions = [
   { value: 'all', label: 'All Rates' },
-  { value: 'inter', label: 'Interstate' },
-  { value: 'intra', label: 'Intrastate' },
-  { value: 'ij', label: 'Indeterminate' },
+  { value: 'inter', label: 'Interstate Only' },
+  { value: 'intra', label: 'Intrastate Only' },
+  { value: 'ij', label: 'Indeterminate Only' },
 ] as const;
 // --- End Rate Adjustment Options Data ---
 
-// --- Rate Adjustment State ---
+// --- Rate Adjustment State (Reverted) ---
 const adjustmentType = ref<AdjustmentType>(adjustmentTypeOptions[0].value);
 const adjustmentValueType = ref<AdjustmentValueType>(adjustmentValueTypeOptions[0].value);
-const adjustmentValue = ref<number | null>(null);
-const targetRateType = ref<TargetRateType>(targetRateTypeOptions[0].value);
-const isApplyingAdjustment = ref(false);
+const adjustmentValue = ref<number | null>(null); // Reverted to allow null
+const adjustmentTargetRate = ref<TargetRateType>(adjustmentTargetRateOptions[0].value);
+const isApplyingAdjustment = ref(false); // Renamed back from isAdjusting
 const adjustmentStatusMessage = ref<string | null>(null);
 const adjustmentError = ref<string | null>(null);
 // --- End Rate Adjustment State ---
 
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
-const selectedState = ref('');
+const selectedState = ref<string>('');
 
 const isDataLoading = ref(true);
 const isExporting = ref(false);
@@ -1202,28 +1205,18 @@ function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
   return filteredData;
 }
 
-// Helper function to get display name for state or province
-function getRegionDisplayName(code: string): string {
-  if (!code) return '';
-  // Check US states first
-  const stateName = lergStore.getStateNameByCode(code);
-  if (stateName !== code) {
-    // getStateNameByCode returns the code itself if not found
-    return stateName;
-  }
-  // Check Canadian provinces if not found in US states
-  const provinceName = lergStore.getProvinceNameByCode(code);
-  return provinceName; // Returns the code itself if not found here either
-}
-
+// --- Adjustment Logic (Reverted) ---
 /**
- * Applies rate adjustments (markup/markdown) to filtered entries in the DexieDB.
+ * Applies rate adjustments (markup/markdown/set) to filtered entries in the DexieDB.
+ * WARNING: This implementation fetches all filtered data into memory first.
  */
-async function applyRateAdjustments() {
+async function handleApplyAdjustment() {
+  // Rename function back if needed, or keep handleApplyAdjustment
   if (isApplyingAdjustment.value || !dbInstance) {
     console.warn('[USRateSheetTable] Adjustment already in progress or DB not ready.');
     return;
   }
+  // Reverted validation to allow null but check > 0
   if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
     adjustmentError.value = 'Please enter a positive adjustment value.';
     adjustmentStatusMessage.value = null;
@@ -1233,15 +1226,15 @@ async function applyRateAdjustments() {
   isApplyingAdjustment.value = true;
   adjustmentStatusMessage.value = null;
   adjustmentError.value = null;
-  const startTime = performance.now();
+  const startTime = performance.now(); // Keep startTime for duration calculation
   console.log(
     `[USRateSheetTable] Starting rate adjustment: ${adjustmentType.value} ${adjustmentValue.value}${
-      adjustmentValueType.value === 'percentage' ? '%' : '$'
-    } to ${targetRateType.value} rates.`
+      adjustmentValueType.value === 'percentage' ? '%' : '' // Removed $ sign assumption
+    } to ${adjustmentTargetRate.value} rates.`
   );
 
   try {
-    // 1. Get Primary Keys of Filtered Records
+    // 1. Get Primary Keys or Full Records of Filtered Data (Original inefficient approach)
     let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance
       .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
       .toCollection();
@@ -1255,9 +1248,7 @@ async function applyRateAdjustments() {
       );
       filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
     }
-
     if (selectedState.value) {
-      // Chain the state filter
       collection = collection.filter(
         (record: USRateSheetEntry) => record.stateCode === selectedState.value
       );
@@ -1265,8 +1256,9 @@ async function applyRateAdjustments() {
     }
 
     console.log(`[USRateSheetTable] Applying filters: ${filtersApplied.join(' AND ') || 'None'}`);
-    const primaryKeys = await collection.primaryKeys();
-    const recordCount = primaryKeys.length;
+    // Fetching ALL filtered records - this is the memory issue part
+    const filteredRecords = await collection.toArray();
+    const recordCount = filteredRecords.length;
 
     if (recordCount === 0) {
       adjustmentStatusMessage.value =
@@ -1276,63 +1268,55 @@ async function applyRateAdjustments() {
     }
 
     console.log(`[USRateSheetTable] Found ${recordCount} records matching filters to adjust.`);
-    adjustmentStatusMessage.value = `Calculating adjustments for ${recordCount} records...`;
+    // Reverted status message
+    adjustmentStatusMessage.value = `Applying ${recordCount} updates...`;
 
-    // 2. Fetch Records and Calculate ALL Changes (outside transaction)
+    // 2. Calculate ALL Changes in Memory
     const allUpdatesToApply: { key: any; changes: Partial<USRateSheetEntry> }[] = [];
-    const chunkSize = 1000; // Adjust chunk size for fetching/calculation if needed
 
-    for (let i = 0; i < recordCount; i += chunkSize) {
-      const chunkKeys = primaryKeys.slice(i, i + chunkSize);
-      if (chunkKeys.length === 0) continue;
+    for (const record of filteredRecords) {
+      if (!record) continue;
 
-      const recordsInChunk = await dbInstance
-        .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
-        .bulkGet(chunkKeys);
+      const changes: Partial<USRateSheetEntry> = {};
+      let changed = false;
+      const targets: (keyof Pick<USRateSheetEntry, 'interRate' | 'intraRate' | 'ijRate'>)[] = [];
 
-      for (const record of recordsInChunk) {
-        if (!record) continue;
+      if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'inter')
+        targets.push('interRate');
+      if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'intra')
+        targets.push('intraRate');
+      if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'ij')
+        targets.push('ijRate');
 
-        const changes: Partial<USRateSheetEntry> = {};
-        let changed = false;
-        const targets: (keyof Pick<USRateSheetEntry, 'interRate' | 'intraRate' | 'ijRate'>)[] = [];
+      targets.forEach((rateField) => {
+        const currentRate = record[rateField];
+        if (typeof currentRate !== 'number') return;
 
-        if (targetRateType.value === 'all' || targetRateType.value === 'inter')
-          targets.push('interRate');
-        if (targetRateType.value === 'all' || targetRateType.value === 'intra')
-          targets.push('intraRate');
-        if (targetRateType.value === 'all' || targetRateType.value === 'ij') targets.push('ijRate');
+        let adjustedRate: number;
+        const value = adjustmentValue.value!; // Already validated > 0
 
-        targets.forEach((rateField) => {
-          const currentRate = record[rateField];
-          if (typeof currentRate !== 'number') return;
-
-          let adjustedRate: number;
-          const value = adjustmentValue.value!; // Already validated
-
-          if (adjustmentValueType.value === 'percentage') {
-            const percentage = value / 100;
-            adjustedRate =
-              currentRate * (adjustmentType.value === 'markup' ? 1 + percentage : 1 - percentage);
-          } else {
-            adjustedRate = currentRate + (adjustmentType.value === 'markup' ? value : -value);
-          }
-
-          const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
-
-          if (finalRate !== currentRate) {
-            changes[rateField] = finalRate;
-            changed = true;
-          }
-        });
-
-        if (changed) {
-          allUpdatesToApply.push({ key: record.id || record.npanxx, changes });
+        if (adjustmentType.value === 'set') {
+          adjustedRate = value;
+        } else if (adjustmentValueType.value === 'percentage') {
+          const percentage = value / 100;
+          adjustedRate =
+            currentRate * (adjustmentType.value === 'markup' ? 1 + percentage : 1 - percentage);
+        } else {
+          adjustedRate = currentRate + (adjustmentType.value === 'markup' ? value : -value);
         }
+
+        const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
+
+        if (finalRate !== currentRate) {
+          changes[rateField] = finalRate;
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        // Assuming 'id' or 'npanxx' can serve as a key, might need adjustment based on actual schema
+        allUpdatesToApply.push({ key: record.id || record.npanxx, changes });
       }
-      // Optional: Update status during calculation if it takes long
-      // adjustmentStatusMessage.value = `Calculating... ${Math.round(((i + chunkKeys.length) / recordCount) * 100)}%`;
-      // await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI update during calculation
     }
 
     const updatesCount = allUpdatesToApply.length;
@@ -1345,45 +1329,25 @@ async function applyRateAdjustments() {
     console.log(
       `[USRateSheetTable] Calculated ${updatesCount} updates. Starting write operation...`
     );
-    adjustmentStatusMessage.value = `Applying ${updatesCount} updates...`;
 
-    // 3. Perform ALL Updates using bulkUpdate for efficiency
-    // bulkUpdate handles transaction management internally for the batch.
+    // 3. Perform ALL Updates using bulkUpdate (This part was actually efficient)
     const tableToUpdate = dbInstance.table<USRateSheetEntry, number | string>(
       RATE_SHEET_TABLE_NAME
-    ); // Specify key type if known (e.g., number or string)
+    );
     await tableToUpdate.bulkUpdate(allUpdatesToApply);
-
     console.log(`[USRateSheetTable] bulkUpdate finished.`);
 
     // Update completed successfully
     const endTime = performance.now();
     const duration = ((endTime - startTime) / 1000).toFixed(2);
-    // Use updatesCount instead of recordCount for the final message
     adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
     console.log(`[USRateSheetTable] Adjustment finished in ${duration}s.`);
 
     // 4. Refresh Data and Averages
     console.log('[USRateSheetTable] Refreshing table data and averages after adjustment...');
     await resetPaginationAndLoad(); // Reload table data
-
-    // Recalculate averages
-    const avg = await calculateAverages(selectedState.value || undefined);
-    if (selectedState.value) {
-      if (avg) stateAverageCache.value.set(selectedState.value, avg);
-      currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
-    } else {
-      overallAverages.value = avg;
-      currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
-    }
-    console.log('[USRateSheetTable] Averages recalculated.');
-
-    // Explicitly update store timestamp to signal DB change
-    store.lastDbUpdateTime = Date.now();
-    console.log('[USRateSheetTable] Updated store lastDbUpdateTime.');
-
-    // Optional: Clear inputs after success
-    // adjustmentValue.value = null;
+    await calculateAverages(selectedState.value || undefined); // Recalculate averages
+    store.lastDbUpdateTime = Date.now(); // Signal update
   } catch (err: any) {
     console.error('[USRateSheetTable] Error applying rate adjustments:', err);
     adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
@@ -1392,8 +1356,9 @@ async function applyRateAdjustments() {
     isApplyingAdjustment.value = false;
   }
 }
+// --- End Rate Adjustment ---
 
-// --- Computed properties for Listbox labels ---
+// --- Computed properties for Listbox labels (Reverted names) ---
 const selectedAdjustmentTypeLabel = computed(
   () => adjustmentTypeOptions.find((opt) => opt.value === adjustmentType.value)?.label || ''
 );
@@ -1401,10 +1366,20 @@ const selectedAdjustmentValueTypeLabel = computed(
   () =>
     adjustmentValueTypeOptions.find((opt) => opt.value === adjustmentValueType.value)?.label || ''
 );
-const selectedTargetRateTypeLabel = computed(
-  () => targetRateTypeOptions.find((opt) => opt.value === targetRateType.value)?.label || ''
+const selectedAdjustmentTargetRateLabel = computed(
+  () =>
+    adjustmentTargetRateOptions.find((opt) => opt.value === adjustmentTargetRate.value)?.label || ''
 );
 // --- End Computed properties ---
+
+// Helper function to get display name for state or province
+function getRegionDisplayName(code: string): string {
+  if (!code) return '';
+  const stateName = lergStore.getStateNameByCode(code);
+  if (stateName !== code) return stateName;
+  const provinceName = lergStore.getProvinceNameByCode(code);
+  return provinceName;
+}
 </script>
 
 <style scoped>
