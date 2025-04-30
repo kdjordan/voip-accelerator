@@ -232,8 +232,9 @@ export type SchemaDBType =
   | typeof DBName.AZ_PRICING_COMPARISON;
 
 export const DBSchemas = {
-  [DBName.AZ]: '++id, destName, dialCode, rate',
-  [DBName.US]: '++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, *npanxxIdx, sourceFile',
+  // [DBName.AZ]: '++id, destName, dialCode, rate',
+  [DBName.AZ]: '',
+  [DBName.US]: '',
   // Schema for AZ Rate Sheet (formerly RATE_SHEET)
   [DBName.AZ_RATE_SHEET]:
     'entries: ++id, destinationName, code, rate, effectiveDate, minDuration, increments',

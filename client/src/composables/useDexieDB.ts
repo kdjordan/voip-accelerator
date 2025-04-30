@@ -1,5 +1,5 @@
-import Dexie, { Table, type IndexableType, type IndexSpec } from 'dexie';
-import { type DBNameType, DBName } from '@/types';
+import Dexie, { Table,  type IndexSpec } from 'dexie';
+import { type DBNameType } from '@/types';
 import { useDBStore } from '@/stores/db-store';
 import { DBSchemas, DynamicTableSchemas } from '@/types/app-types';
 
