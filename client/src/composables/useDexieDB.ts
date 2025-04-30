@@ -15,8 +15,8 @@ async function defineSchema(
     typeof initialSchemaDefinition === 'string' && initialSchemaDefinition.includes(':')
       ? parseSchemaString(initialSchemaDefinition)
       : typeof initialSchemaDefinition === 'object' && initialSchemaDefinition !== null
-      ? initialSchemaDefinition
-      : {};
+        ? initialSchemaDefinition
+        : {};
 
   console.log(`[useDexieDB] Defining Version 1 for ${dbName} with schema:`, baseSchema);
   if (Object.keys(baseSchema).length > 0) {

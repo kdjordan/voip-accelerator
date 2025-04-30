@@ -19,10 +19,16 @@ interface USRateSheetColumnMapping {
 }
 
 // Define structure for invalid rows
-interface InvalidUSRateSheetRow {
+interface InvalidUsRow {
   rowIndex: number;
   rowData: string[];
   reason: string;
+}
+
+// Interface for the return type of processFile, matching the store's expectation
+interface ProcessFileResult {
+  recordCount: number;
+  invalidRows: InvalidUsRow[]; // Use the exported type from us-types
 }
 
 export class USRateSheetService {
@@ -132,7 +138,7 @@ export class USRateSheetService {
     columnMapping: USRateSheetColumnMapping,
     startLine: number,
     indeterminateDefinition: string | undefined
-  ): Promise<{ recordCount: number; invalidRows: InvalidUSRateSheetRow[] }> {
+  ): Promise<ProcessFileResult> {
     console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
 
     // --- Add Guard: Ensure LERG data is loaded --- START ---
@@ -176,7 +182,7 @@ export class USRateSheetService {
       // Array to hold promises for batch storage operations
       const batchPromises: Promise<void>[] = [];
 
-      const invalidRows: InvalidUSRateSheetRow[] = [];
+      const invalidRows: InvalidUsRow[] = [];
       let totalRecords = 0;
       let totalChunks = 0;
       const BATCH_SIZE = 1000; // Smaller batch size for more reliable processing
@@ -297,7 +303,7 @@ export class USRateSheetService {
     rowIndex: number,
     columnMapping: USRateSheetColumnMapping,
     indeterminateDefinition: string | undefined,
-    invalidRows: InvalidUSRateSheetRow[],
+    invalidRows: InvalidUsRow[],
     effectiveDate: string // Accept calculated effective date
   ): USRateSheetEntry | null {
     let isValidRow = true;
@@ -306,7 +312,7 @@ export class USRateSheetService {
     let npanxx = '';
     let interRate: number | null = null;
     let intraRate: number | null = null;
-    let ijRate: number | null = null;
+    let indetermRate: number | null = null;
     let stateCode: string | null = null; // Initialize stateCode to null
     let errorReason = '';
 
@@ -404,27 +410,27 @@ export class USRateSheetService {
 
         // Handle Indeterminate Rate
         if (isValidRow) {
-          ijRate = null; // Start with null
+          indetermRate = null; // Start with null
 
           // 1. Check if Indeterminate column is mapped and valid
           if (columnMapping.indeterminate !== -1) {
-            ijRate = parseRate(row[columnMapping.indeterminate]);
-            if (ijRate === null) {
+            indetermRate = parseRate(row[columnMapping.indeterminate]);
+            if (indetermRate === null) {
               // If column mapped but value invalid/missing, try deriving
               console.warn(
                 `Row ${rowIndex}: Indeterminate column mapped but value invalid/missing. Attempting derivation.`
               );
-              ijRate = null; // Reset to null before deriving
+              indetermRate = null; // Reset to null before deriving
             }
           }
 
-          // 2. If ijRate is still null (column not mapped or value was invalid), derive it
-          if (ijRate === null) {
+          // 2. If indetermRate is still null (column not mapped or value was invalid), derive it
+          if (indetermRate === null) {
             if (interRate !== null && intraRate !== null) {
               // Default derivation: Use the minimum of Inter and Intra
-              ijRate = Math.min(interRate, intraRate);
+              indetermRate = Math.min(interRate, intraRate);
               console.log(
-                `Row ${rowIndex}: Derived Indeterminate Rate as min(Inter, Intra): ${ijRate}`
+                `Row ${rowIndex}: Derived Indeterminate Rate as min(Inter, Intra): ${indetermRate}`
               );
             } else {
               // Cannot derive if Inter or Intra is invalid
@@ -441,7 +447,7 @@ export class USRateSheetService {
         isValidRow &&
         interRate !== null &&
         intraRate !== null &&
-        ijRate !== null &&
+        indetermRate !== null &&
         stateCode !== null
       ) {
         return {
@@ -451,7 +457,7 @@ export class USRateSheetService {
           stateCode,
           interRate,
           intraRate,
-          ijRate,
+          indetermRate,
           effectiveDate, // Assign the calculated effective date
         };
       } else if (!isValidRow) {
