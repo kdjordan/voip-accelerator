@@ -212,11 +212,11 @@ const items = ref<NavItem[]>([
       },
     ],
   },
-  {
-    name: 'Lerg Admin',
-    to: '/admin',
-    icon: Cog6ToothIcon,
-  },
+  // {
+  //   name: 'Lerg Admin',
+  //   to: '/admin',
+  //   icon: Cog6ToothIcon,
+  // },
 ]);
 </script>
 <style scoped>
