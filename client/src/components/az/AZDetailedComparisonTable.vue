@@ -17,35 +17,115 @@
       </div>
 
       <!-- Cheaper Rate Filter -->
-      <div>
-        <label for="cheaper-filter" class="block text-sm font-medium text-gray-400 mb-1"
-          >Rate Comparison</label
-        >
-        <select
-          id="cheaper-filter"
-          v-model="selectedCheaper"
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
-        >
-          <option v-for="option in rateComparisonOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
+      <div class="w-52">
+        <Listbox v-model="selectedCheaper">
+          <div class="relative mt-1">
+            <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
+              >Rate Comparison</ListboxLabel
+            >
+            <ListboxButton
+              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm border border-gray-700 text-white"
+            >
+              <span class="block truncate">{{
+                rateComparisonOptions.find((opt) => opt.value === selectedCheaper)?.label ??
+                'Select...'
+              }}</span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </span>
+            </ListboxButton>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <ListboxOptions
+                class="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-20"
+              >
+                <ListboxOption
+                  v-slot="{ active, selected }"
+                  v-for="option in rateComparisonOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  as="template"
+                >
+                  <li
+                    :class="[
+                      active ? 'bg-accent/20 text-accent' : 'text-gray-300',
+                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                    ]"
+                  >
+                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                      option.label
+                    }}</span>
+                    <span
+                      v-if="selected"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                    >
+                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </li>
+                </ListboxOption>
+              </ListboxOptions>
+            </transition>
+          </div>
+        </Listbox>
       </div>
 
       <!-- Match Status Filter -->
-      <div>
-        <label for="match-status-filter" class="block text-sm font-medium text-gray-400 mb-1"
-          >Match Status</label
-        >
-        <select
-          id="match-status-filter"
-          v-model="selectedMatchStatus"
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
-        >
-          <option v-for="option in matchStatusOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
+      <div class="w-52">
+        <Listbox v-model="selectedMatchStatus">
+          <div class="relative mt-1">
+            <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
+              >Match Status</ListboxLabel
+            >
+            <ListboxButton
+              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm border border-gray-700 text-white"
+            >
+              <span class="block truncate">{{
+                matchStatusOptions.find((opt) => opt.value === selectedMatchStatus)?.label ??
+                'Select...'
+              }}</span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </span>
+            </ListboxButton>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <ListboxOptions
+                class="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-20"
+              >
+                <ListboxOption
+                  v-slot="{ active, selected }"
+                  v-for="option in matchStatusOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  as="template"
+                >
+                  <li
+                    :class="[
+                      active ? 'bg-accent/20 text-accent' : 'text-gray-300',
+                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                    ]"
+                  >
+                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                      option.label
+                    }}</span>
+                    <span
+                      v-if="selected"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                    >
+                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </li>
+                </ListboxOption>
+              </ListboxOptions>
+            </transition>
+          </div>
+        </Listbox>
       </div>
 
       <!-- Download CSV Button -->
@@ -87,7 +167,9 @@
     <!-- 3. No Data Message Block (Now contains spinner instead of text) -->
     <div v-else-if="comparisonData.length === 0" class="text-center text-gray-500 py-10">
       <!-- Spinner content moved here -->
-      <div class="flex items-center justify-center space-x-2 text-accent bg-accent/10 border border-accent/50 rounded-lg p-2 w-1/2 mx-auto">
+      <div
+        class="flex items-center justify-center space-x-2 text-accent bg-accent/10 border border-accent/50 rounded-lg p-2 w-1/2 mx-auto"
+      >
         <ArrowPathIcon class="animate-spin w-5 h-5" />
         <span>Loading comparison data...</span>
       </div>
@@ -169,10 +251,10 @@
                     record.matchStatus === 'both'
                       ? 'warning'
                       : record.matchStatus === 'file1_only'
-                      ? 'success'
-                      : record.matchStatus === 'file2_only'
-                      ? 'info'
-                      : 'neutral'
+                        ? 'success'
+                        : record.matchStatus === 'file2_only'
+                          ? 'info'
+                          : 'neutral'
                   "
                 >
                   {{ formatMatchStatus(record.matchStatus) }}
@@ -237,6 +319,14 @@ import type {
   AZDetailedComparisonEntry,
   AZDetailedComparisonFilters,
 } from '@/types/domains/az-types';
+import {
+  Listbox,
+  ListboxButton,
+  ListboxLabel,
+  ListboxOptions,
+  ListboxOption,
+} from '@headlessui/vue';
+import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
 
 const azStore = useAzStore();
 const azService = new AZService();
