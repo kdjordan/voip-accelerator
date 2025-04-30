@@ -395,7 +395,7 @@ const emit = defineEmits<{
   confirm: [
     mappings: Record<string, string>,
     indeterminateDefinition?: string,
-    effectiveDate?: string
+    effectiveDate?: string,
   ];
   cancel: [];
 }>();

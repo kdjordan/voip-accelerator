@@ -101,7 +101,7 @@ export class USRateSheetService {
     }
   }
 
-  // Store the current batch in a transaction for better performance
+  // Store the current batch using the composable's function for better handling
   private async storeBatch(): Promise<void> {
     if (this.processingBatch.length === 0) return;
 
@@ -109,16 +109,20 @@ export class USRateSheetService {
     this.processingBatch = []; // Reset the batch
 
     try {
-      // Get DB instance here again
-      const db = await this.getDB(this.dbName);
-      await db.table('entries').bulkPut(batchToStore);
+      // Use the composable function which handles table creation
+      await this.storeInDexieDB(batchToStore, this.dbName, 'entries', {
+        replaceExisting: false, // Don't replace, just add
+      });
       console.log(
-        `[USRateSheetService] Stored batch of ${batchToStore.length} records in 'entries' table.`
+        `[USRateSheetService] Stored batch of ${batchToStore.length} records in 'entries' table via storeInDexieDB.`
       );
     } catch (error) {
-      console.error(`[USRateSheetService] Error storing batch directly to table 'entries':`, error);
-      // Continue processing - don't want to lose subsequent data
-      // Future enhancement: Add failed rows to invalidRows list
+      console.error(`[USRateSheetService] Error storing batch via storeInDexieDB:`, error);
+      // Consider how to handle failed batches - re-adding to processingBatch,
+      // adding to invalidRows, or rejecting the main promise.
+      // For now, just log the error.
+      // Example: Add failed rows back to invalidRows if possible
+      // this.addFailedBatchToInvalidRows(batchToStore, error);
     }
   }
 
@@ -317,10 +321,21 @@ export class USRateSheetService {
     let nxx: string | undefined;
 
     // Validate and determine NPANXX, NPA, NXX
-    if (rawNpanxx && rawNpanxx.length === 6 && /^[0-9]+$/.test(rawNpanxx)) {
+    if (
+      rawNpanxx &&
+      rawNpanxx.length === 7 &&
+      rawNpanxx.startsWith('1') &&
+      /^[0-9]+$/.test(rawNpanxx)
+    ) {
+      npanxx = rawNpanxx.substring(1); // Remove leading '1'
+      npa = npanxx.substring(0, 3);
+      nxx = npanxx.substring(3, 6);
+      console.log(`[processRow ${rowIndex}] Stripped leading '1' from 7-digit NPANXX: ${npanxx}`);
+    } else if (rawNpanxx && rawNpanxx.length === 6 && /^[0-9]+$/.test(rawNpanxx)) {
       npanxx = rawNpanxx;
       npa = rawNpanxx.substring(0, 3);
       nxx = rawNpanxx.substring(3, 6);
+      console.log(`[processRow ${rowIndex}] Using 6-digit NPANXX: ${npanxx}`);
     } else if (
       rawNpa &&
       rawNpa.length === 3 &&
