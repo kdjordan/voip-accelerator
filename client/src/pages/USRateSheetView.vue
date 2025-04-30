@@ -72,9 +72,7 @@
 
         <!-- Invalid Rows Section (NEW) -->
         <div v-if="store.hasInvalidRateSheetRows" class="my-4">
-          <details
-            class="bg-red-950 border border-red-500/50 rounded-lg overflow-hidden group"
-          >
+          <details class="bg-red-950 border border-red-500/50 rounded-lg overflow-hidden group">
             <summary
               class="p-3 cursor-pointer list-none flex justify-between items-center group-open:bg-red-900/50 transition-colors duration-150 hover:bg-red-900/25"
             >
@@ -338,7 +336,7 @@ function processFile(file: File) {
         console.log('[processFile] Papa.parse complete: Data found, processing for modal.');
         columns.value = results.data[0].map((h) => h?.trim() || '');
         previewData.value = results.data
-          .slice(1, 11)
+          .slice(0, 11)
           .map((row) => (Array.isArray(row) ? row.map((cell) => cell?.trim() || '') : []));
         startLine.value = 1;
         console.log('[processFile] Setting showPreviewModal = true');
