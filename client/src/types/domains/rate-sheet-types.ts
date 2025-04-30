@@ -9,7 +9,7 @@ export interface RateSheetRecord {
 }
 
 // --- US Rate Sheet Adjustment Types ---
-export type AdjustmentType = 'markup' | 'markdown';
+export type AdjustmentType = 'markup' | 'markdown' | 'set';
 export type AdjustmentValueType = 'percentage' | 'fixed';
 export type TargetRateType = 'all' | 'inter' | 'intra' | 'ij';
 

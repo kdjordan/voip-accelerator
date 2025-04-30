@@ -96,7 +96,8 @@
                     <span class="text-red-400 text-xxs italic">{{ row.reason }}</span>
                   </div>
                   <div class="text-gray-400 break-all">
-                    {{ row.rowData.join(', ') }}
+                    NPANXX: {{ row.npanxx || 'N/A' }}, Inter: {{ row.interRate ?? 'N/A' }}, Intra:
+                    {{ row.intraRate ?? 'N/A' }}, Indeterm: {{ row.indetermRate ?? 'N/A' }}
                   </div>
                 </div>
               </div>

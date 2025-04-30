@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
-import { USColumnRole, type USRateSheetEntry } from '@/types/domains/us-types';
+import { USColumnRole, type USRateSheetEntry, type InvalidUsRow } from '@/types/domains/us-types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DBNameType } from '@/types';
@@ -18,17 +18,10 @@ interface USRateSheetColumnMapping {
   indeterminate: number;
 }
 
-// Define structure for invalid rows
-interface InvalidUsRow {
-  rowIndex: number;
-  rowData: string[];
-  reason: string;
-}
-
-// Interface for the return type of processFile, matching the store's expectation
+// Interface for the return type of processFile, now using the imported InvalidUsRow
 interface ProcessFileResult {
   recordCount: number;
-  invalidRows: InvalidUsRow[]; // Use the exported type from us-types
+  invalidRows: InvalidUsRow[]; // Use the imported type from us-types
 }
 
 export class USRateSheetService {
@@ -303,178 +296,110 @@ export class USRateSheetService {
     rowIndex: number,
     columnMapping: USRateSheetColumnMapping,
     indeterminateDefinition: string | undefined,
-    invalidRows: InvalidUsRow[],
+    invalidRows: InvalidUsRow[], // This now expects the imported type
     effectiveDate: string // Accept calculated effective date
   ): USRateSheetEntry | null {
-    let isValidRow = true;
-    let npa = '';
-    let nxx = '';
-    let npanxx = '';
-    let interRate: number | null = null;
-    let intraRate: number | null = null;
-    let indetermRate: number | null = null;
-    let stateCode: string | null = null; // Initialize stateCode to null
-    let errorReason = '';
+    // Helper function to safely get data from row using index
+    const getData = (index: number): string | undefined => {
+      return row && row.length > index ? row[index]?.trim() : undefined;
+    };
 
-    try {
-      // --- Extract and Validate NPA/NXX/NPANXX ---
-      if (columnMapping.npanxx !== -1) {
-        npanxx = row[columnMapping.npanxx]?.trim() || '';
+    // Extract data using mapping
+    const rawNpanxx = getData(columnMapping.npanxx);
+    const rawNpa = getData(columnMapping.npa);
+    const rawNxx = getData(columnMapping.nxx);
+    const rawInterstate = getData(columnMapping.interstate);
+    const rawIntrastate = getData(columnMapping.intrastate);
+    const rawIndeterminate = getData(columnMapping.indeterminate);
 
-        // --- Add 7-digit handling from us.service.ts --- START ---
-        if (npanxx.length === 7 && npanxx.startsWith('1')) {
-          npanxx = npanxx.substring(1); // Remove leading "1"
-        }
-        // --- Add 7-digit handling from us.service.ts --- END ---
+    let npanxx: string | undefined;
+    let npa: string | undefined;
+    let nxx: string | undefined;
 
-        if (npanxx.length === 6 && /^[0-9]+$/.test(npanxx)) {
-          npa = npanxx.substring(0, 3);
-          nxx = npanxx.substring(3, 6);
-        } else {
-          isValidRow = false;
-          errorReason = `Invalid NPANXX format (expected 6 digits): ${npanxx}`;
-        }
-      } else if (columnMapping.npa !== -1 && columnMapping.nxx !== -1) {
-        // --- Handle separate NPA/NXX columns ---
-        npa = row[columnMapping.npa]?.trim() || '';
-        nxx = row[columnMapping.nxx]?.trim() || '';
-
-        // --- Add NPA startsWith('1') handling --- START ---
-        if (npa.startsWith('1') && npa.length === 4) {
-          npa = npa.substring(1); // Remove leading "1"
-        }
-        // --- Add NPA startsWith('1') handling --- END ---
-
-        if (npa.length === 3 && /^[0-9]+$/.test(npa) && nxx.length === 3 && /^[0-9]+$/.test(nxx)) {
-          npanxx = npa + nxx;
-        } else {
-          isValidRow = false;
-          errorReason = `Invalid NPA/NXX format: NPA=${npa}, NXX=${nxx}`;
-        }
-      } else {
-        isValidRow = false;
-        errorReason = 'Missing required NPA/NXX or NPANXX mapping.';
-      }
-
-      // --- Get State Code from LERG (if row is valid so far) ---
-      if (isValidRow && npa) {
-        try {
-          const location = this.lergStore.getLocationByNPA(npa);
-          if (location?.region) {
-            // Accept any region code found
-            stateCode = location.region;
-          } else {
-            // Handle cases where NPA is not found
-            isValidRow = false; // Make row invalid if no location found
-            errorReason = `NPA ${npa} not found in LERG data.`;
-            // console.warn(`Row ${rowIndex}: ${errorReason}`); // Commented out to reduce console noise for valid cases where NPA is simply not in LERG (e.g., non-NANP)
-          }
-        } catch (lergError) {
-          isValidRow = false; // Make row invalid on lookup error
-          errorReason = `LERG lookup error for NPA ${npa}.`;
-          console.error(`Row ${rowIndex}: Error looking up NPA ${npa} in LERG store:`, lergError);
-        }
-      }
-
-      // --- Extract and Validate Rates (only if row is valid so far) ---
-      if (isValidRow) {
-        const parseRate = (rateStr: string | undefined): number | null => {
-          if (rateStr === undefined || rateStr === null || rateStr.trim() === '') {
-            errorReason = 'Missing rate value';
-            return null;
-          }
-          const cleanedRate = rateStr.replace(/[^\d.-]/g, '');
-          const rate = parseFloat(cleanedRate);
-          if (isNaN(rate) || !isFinite(rate)) {
-            errorReason = `Invalid rate format: ${rateStr}`;
-            return null;
-          }
-          return rate;
-        };
-
-        interRate = parseRate(row[columnMapping.interstate]);
-        if (interRate === null && columnMapping.interstate !== -1) isValidRow = false;
-        else if (columnMapping.interstate === -1) {
-          isValidRow = false;
-          errorReason = 'Interstate rate column not mapped.';
-        }
-
-        if (isValidRow && columnMapping.intrastate !== -1) {
-          intraRate = parseRate(row[columnMapping.intrastate]);
-          if (intraRate === null) isValidRow = false;
-        } else if (isValidRow) {
-          // Intrastate is required if column is mapped
-          isValidRow = false;
-          errorReason = 'Intrastate rate column not mapped.';
-        }
-
-        // Handle Indeterminate Rate
-        if (isValidRow) {
-          indetermRate = null; // Start with null
-
-          // 1. Check if Indeterminate column is mapped and valid
-          if (columnMapping.indeterminate !== -1) {
-            indetermRate = parseRate(row[columnMapping.indeterminate]);
-            if (indetermRate === null) {
-              // If column mapped but value invalid/missing, try deriving
-              console.warn(
-                `Row ${rowIndex}: Indeterminate column mapped but value invalid/missing. Attempting derivation.`
-              );
-              indetermRate = null; // Reset to null before deriving
-            }
-          }
-
-          // 2. If indetermRate is still null (column not mapped or value was invalid), derive it
-          if (indetermRate === null) {
-            if (interRate !== null && intraRate !== null) {
-              // Default derivation: Use the minimum of Inter and Intra
-              indetermRate = Math.min(interRate, intraRate);
-              console.log(
-                `Row ${rowIndex}: Derived Indeterminate Rate as min(Inter, Intra): ${indetermRate}`
-              );
-            } else {
-              // Cannot derive if Inter or Intra is invalid
-              isValidRow = false;
-              errorReason =
-                'Cannot derive Indeterminate Rate because Interstate or Intrastate rate is invalid.';
-            }
-          }
-        }
-      }
-
-      // Return the data if valid, otherwise add to invalidRows
-      if (
-        isValidRow &&
-        interRate !== null &&
-        intraRate !== null &&
-        indetermRate !== null &&
-        stateCode !== null
-      ) {
-        return {
-          npa,
-          nxx,
-          npanxx,
-          stateCode,
-          interRate,
-          intraRate,
-          indetermRate,
-          effectiveDate, // Assign the calculated effective date
-        };
-      } else if (!isValidRow) {
-        // Ensure errorReason is set if validation failed earlier but wasn't caught
-        if (!errorReason) errorReason = 'Unknown validation error';
-        invalidRows.push({ rowIndex, rowData: row, reason: errorReason });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+    // Validate and determine NPANXX, NPA, NXX
+    if (rawNpanxx && rawNpanxx.length === 6 && /^[0-9]+$/.test(rawNpanxx)) {
+      npanxx = rawNpanxx;
+      npa = rawNpanxx.substring(0, 3);
+      nxx = rawNpanxx.substring(3, 6);
+    } else if (
+      rawNpa &&
+      rawNpa.length === 3 &&
+      /^[0-9]+$/.test(rawNpa) &&
+      rawNxx &&
+      rawNxx.length === 3 &&
+      /^[0-9]+$/.test(rawNxx)
+    ) {
+      npanxx = rawNpa + rawNxx;
+      npa = rawNpa;
+      nxx = rawNxx;
+    } else {
+      // Add to invalid rows if NPANXX/NPA+NXX is missing or invalid
       invalidRows.push({
         rowIndex,
-        rowData: row,
-        reason: `Processing error: ${message}`,
+        npanxx: rawNpanxx ?? '-', // Use raw or placeholder
+        npa: rawNpa ?? '-',
+        nxx: rawNxx ?? '-',
+        interRate: rawInterstate ?? '-',
+        intraRate: rawIntrastate ?? '-',
+        indetermRate: rawIndeterminate ?? '-',
+        reason: 'Invalid or missing NPANXX/NPA+NXX format',
       });
+      return null;
     }
 
-    return null; // Row wasn't valid
+    // Helper to parse rates, returns null if invalid
+    const parseRate = (rateStr: string | undefined): number | null => {
+      if (rateStr === undefined || rateStr === '' || rateStr === 'null' || rateStr === '-')
+        return 0; // Treat empty/nullish as 0
+      const num = parseFloat(rateStr);
+      // Check if it's a valid number and non-negative
+      return !isNaN(num) && num >= 0 ? num : null;
+    };
+
+    const interRate = parseRate(rawInterstate);
+    const intraRate = parseRate(rawIntrastate);
+    let indetermRate: number | null = null;
+
+    // Handle indeterminate rate based on definition
+    if (indeterminateDefinition === 'highest') {
+      indetermRate = Math.max(interRate ?? 0, intraRate ?? 0);
+    } else if (indeterminateDefinition === 'provided') {
+      indetermRate = parseRate(rawIndeterminate);
+    } else {
+      // Default: Assume 0 if not provided or definition is unclear
+      indetermRate = parseRate(rawIndeterminate) ?? 0;
+    }
+
+    // Check if rates are valid numbers
+    if (interRate === null || intraRate === null || indetermRate === null) {
+      // Add to invalid rows if any rate is invalid
+      invalidRows.push({
+        rowIndex,
+        npanxx: npanxx, // NPANXX is valid here
+        npa: npa, // NPA is valid here
+        nxx: nxx, // NXX is valid here
+        interRate: rawInterstate ?? '-', // Show raw invalid value
+        intraRate: rawIntrastate ?? '-', // Show raw invalid value
+        indetermRate: rawIndeterminate ?? '-', // Show raw invalid value
+        reason: 'Invalid rate format (non-numeric or negative)',
+      });
+      return null;
+    }
+
+    // Get state code from LergStore
+    const stateCode = this.lergStore.getLocationByNPA(npa)?.region || 'N/A';
+
+    // Return the standardized entry
+    return {
+      npa,
+      nxx,
+      npanxx,
+      interRate,
+      intraRate,
+      indetermRate, // Use the processed indetermRate
+      stateCode,
+      effectiveDate, // Use the calculated effective date
+    };
   }
 
   /**

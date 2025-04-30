@@ -204,7 +204,6 @@ export const DBName = {
   AZ: 'az_rate_deck_db',
   US: 'us_rate_deck_db',
   LERG: 'lerg_db',
-  RATE_SHEET: 'rate_sheet_db',
   AZ_RATE_SHEET: 'az_rate_sheet_db',
   US_RATE_SHEET: 'us_rate_sheet_db',
   US_PRICING_COMPARISON: 'us_pricing_comparison_db',
@@ -227,7 +226,6 @@ export type SchemaDBType =
   | typeof DBName.AZ
   | typeof DBName.US
   | typeof DBName.LERG
-  | typeof DBName.RATE_SHEET
   | typeof DBName.AZ_RATE_SHEET
   | typeof DBName.US_RATE_SHEET
   | typeof DBName.US_PRICING_COMPARISON
@@ -284,7 +282,6 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
   return (
     dbName === DBName.AZ ||
     dbName === DBName.US ||
-    dbName === DBName.RATE_SHEET ||
     dbName === DBName.AZ_RATE_SHEET ||
     dbName === DBName.US_RATE_SHEET ||
     dbName === DBName.LERG ||
