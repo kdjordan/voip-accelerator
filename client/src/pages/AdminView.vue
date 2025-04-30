@@ -1043,4 +1043,42 @@ async function handleAddSingleRecord() {
     console.error('[AdminView] Error calling addAndRefreshLergRecord:', err);
   }
 }
+
+// --- Helper Functions ---
+
+/**
+ * Returns Tailwind classes for the status container based on the status type.
+ * @param statusType - The type of the status ('success', 'error', 'warning').
+ * @returns Tailwind CSS class string.
+ */
+function getStatusClass(statusType: 'success' | 'error' | 'warning'): string {
+  switch (statusType) {
+    case 'success':
+      return 'bg-green-100 border border-green-400';
+    case 'error':
+      return 'bg-red-100 border border-red-400';
+    case 'warning':
+      return 'bg-yellow-100 border border-yellow-400';
+    default:
+      return 'bg-gray-100 border border-gray-400';
+  }
+}
+
+/**
+ * Returns Tailwind text color classes based on the status type.
+ * @param statusType - The type of the status ('success', 'error', 'warning').
+ * @returns Tailwind CSS class string for text color.
+ */
+function getStatusTextClass(statusType: 'success' | 'error' | 'warning'): string {
+  switch (statusType) {
+    case 'success':
+      return 'text-green-800';
+    case 'error':
+      return 'text-red-800';
+    case 'warning':
+      return 'text-yellow-800';
+    default:
+      return 'text-gray-800';
+  }
+}
 </script>
