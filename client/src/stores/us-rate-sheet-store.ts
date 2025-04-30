@@ -4,13 +4,11 @@ import type { USRateSheetEntry, InvalidUSRateSheetRow } from '@/types/domains/us
 
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
-  // usRateSheetTableName removed, handled by service
   isLoading: boolean;
   error: string | null;
   totalRecords: number;
   currentEffectiveDate: string | null; // Add state for current effective date
   isUpdatingEffectiveDate: boolean; // Add state for update process
-  rateSheetData: USRateSheetEntry[]; // RESTORED: state for the actual data
   lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
   invalidRateSheetRows: InvalidUSRateSheetRow[]; // Added state for invalid rows
 }
@@ -26,7 +24,6 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     totalRecords: 0,
     currentEffectiveDate: null,
     isUpdatingEffectiveDate: false,
-    rateSheetData: [], // RESTORED: Initialize data state
     lastDbUpdateTime: Date.now(), // Initialize timestamp
     invalidRateSheetRows: [], // Initialize invalid rows state
   }),
@@ -37,8 +34,8 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getError: (state): string | null => state.error,
     getTotalRecords: (state): number => state.totalRecords,
     getCurrentEffectiveDate: (state): string | null => state.currentEffectiveDate, // Add getter
-    getRateSheetData: (state): USRateSheetEntry[] => state.rateSheetData, // RESTORED: getter for data
     getInvalidRateSheetRows: (state): InvalidUSRateSheetRow[] => state.invalidRateSheetRows, // Added getter
+    hasInvalidRateSheetRows: (state): boolean => state.invalidRateSheetRows.length > 0, // Added getter
   },
 
   actions: {
@@ -51,36 +48,32 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     },
 
     /**
-     * Attempts to load data from the Dexie table via the service.
+     * Attempts to load metadata (effective date) from the Dexie table via the service.
      * Updates state based on success.
      */
     async loadRateSheetData() {
-      console.log('[us-rate-sheet-store] loadRateSheetData starting...');
+      console.log('[us-rate-sheet-store] loadRateSheetData (metadata - date only) starting...');
       this.setLoading(true);
       this.setError(null);
       try {
-        // RESTORED: Get all data
-        const data = await service.getData(); // Call service method
-        this.rateSheetData = data; // Store the fetched data
-        this.totalRecords = data.length;
-        this.hasUsRateSheetData = data.length > 0;
+        // Only fetch the effective date for now
+        const date = await service.getCurrentEffectiveDate();
+        this.currentEffectiveDate = date;
 
-        // Fetch the effective date if data exists
-        if (this.hasUsRateSheetData) {
-          await this.fetchCurrentEffectiveDate();
-        } else {
-          this.currentEffectiveDate = null; // Clear date if no data
-        }
+        // Update state based on date presence (count will be updated after upload/clear)
+        this.hasUsRateSheetData = date !== null;
+        // Reset count here, it will be updated on successful upload
+        this.totalRecords = this.hasUsRateSheetData ? this.totalRecords : 0; // Keep existing count if date found, else 0
+
         console.log(
-          `[us-rate-sheet-store] loadRateSheetData finished. Found data: ${this.hasUsRateSheetData}, records: ${this.totalRecords}, effectiveDate: ${this.currentEffectiveDate}`
+          `[us-rate-sheet-store] loadRateSheetData finished. Found data: ${this.hasUsRateSheetData}, effectiveDate: ${this.currentEffectiveDate}`
         );
       } catch (err) {
-        console.error('[us-rate-sheet-store] Error loading rate sheet data:', err);
-        this.setError('Failed to load rate sheet data.');
+        console.error('[us-rate-sheet-store] Error loading rate sheet metadata (date):', err);
+        this.setError('Failed to load rate sheet metadata.');
         this.hasUsRateSheetData = false;
         this.currentEffectiveDate = null;
         this.totalRecords = 0;
-        this.rateSheetData = []; // Clear data on error
       } finally {
         this.setLoading(false);
       }
@@ -91,21 +84,19 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
      */
     async fetchCurrentEffectiveDate() {
       console.log('[us-rate-sheet-store] Fetching current effective date...');
-      // REVERTED: Removed setting error/loading here as it was before
       try {
         const date = await service.getCurrentEffectiveDate();
         this.currentEffectiveDate = date;
         console.log(`[us-rate-sheet-store] Current effective date set to: ${date}`);
       } catch (err) {
         console.error('[us-rate-sheet-store] Error fetching effective date:', err);
-        // REVERTED: Setting error
         this.setError('Failed to fetch current effective date.');
-        this.currentEffectiveDate = null; // Still clear date on error
+        this.currentEffectiveDate = null;
       }
     },
 
     /**
-     * Handles successful upload: reloads data and stores invalid rows.
+     * Handles successful upload: updates metadata and stores invalid rows.
      * @param processedData The result from the service's processFile method.
      */
     async handleUploadSuccess(processedData: {
@@ -118,13 +109,18 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
 
       // Store invalid rows
       this.invalidRateSheetRows = processedData.invalidRows;
-      // totalRecords and hasUsRateSheetData will be set by loadRateSheetData
+      // Update metadata based on processed data
+      this.totalRecords = processedData.recordCount;
+      this.hasUsRateSheetData = processedData.recordCount > 0;
       this.error = null;
 
-      // Reload data from Dexie to ensure consistency and fetch effective date
-      await this.loadRateSheetData();
+      // Fetch the effective date (which should have been set during processing)
+      await this.fetchCurrentEffectiveDate();
 
-      console.log('[us-rate-sheet-store] US Rate Sheet data loaded successfully after upload');
+      // Update timestamp to trigger reactivity
+      this.lastDbUpdateTime = Date.now();
+
+      console.log('[us-rate-sheet-store] US Rate Sheet metadata updated successfully after upload');
     },
 
     /**
@@ -138,7 +134,6 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.hasUsRateSheetData = false;
         this.currentEffectiveDate = null; // Clear effective date
         this.totalRecords = 0;
-        this.rateSheetData = []; // RESTORED: Clear data state
         this.invalidRateSheetRows = []; // Clear invalid rows state
         console.log('[us-rate-sheet-store] Cleared rate sheet data and reset state.');
       } catch (err) {
@@ -166,9 +161,6 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         console.log(
           `[us-rate-sheet-store] Effective date updated successfully to ${newDate} and timestamp updated.`
         );
-        // RESTORED: Trigger data reload (original behavior - might be desired or not)
-        await this.loadRateSheetData();
-        console.log('[us-rate-sheet-store] Data reloaded after effective date update.');
       } catch (err) {
         console.error('[us-rate-sheet-store] Error updating effective date:', err);
         this.setError('Failed to update effective date.');
@@ -178,7 +170,5 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.isUpdatingEffectiveDate = false;
       }
     },
-
-    // REVERTED: Removed the store's getRecordCount action
   },
 });
