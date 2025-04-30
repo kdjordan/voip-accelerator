@@ -205,18 +205,18 @@ const items = ref<NavItem[]>([
         to: '/us-rate-sheet',
         icon: AdjustmentsVerticalIcon,
       },
-      // {
-      //   name: 'AZ Rate Wizard',
-      //   to: '/az-rate-sheet',
-      //   icon: AdjustmentsVerticalIcon,
-      // },
+      {
+        name: 'AZ Rate Wizard',
+        to: '/az-rate-sheet',
+        icon: AdjustmentsVerticalIcon,
+      },
     ],
   },
-  {
-    name: 'Lerg Admin',
-    to: '/admin',
-    icon: Cog6ToothIcon,
-  },
+  // {
+  //   name: 'Lerg Admin',
+  //   to: '/admin',
+  //   icon: Cog6ToothIcon,
+  // },
 ]);
 </script>
 <style scoped>
