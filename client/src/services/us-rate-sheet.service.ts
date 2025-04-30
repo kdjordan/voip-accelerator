@@ -5,7 +5,7 @@ import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DBNameType } from '@/types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
-import Dexie from 'dexie';
+import Dexie, { type Table } from 'dexie';
 import { useLergStore } from '@/stores/lerg-store';
 
 // Define the structure for column mapping indices
@@ -500,15 +500,16 @@ export class USRateSheetService {
     );
     try {
       const db = await this.getDB(this.dbName);
+      // REVERTED: Simplified table existence check
       if (!db.tables.some((table) => table.name === 'entries')) {
-        console.warn('Entries table not found, cannot get effective date.');
+        console.warn('[USRateSheetService] Entries table not found, cannot get effective date.');
         return null;
       }
-      const firstRecord = await db.table('entries').limit(1).first();
+      const firstRecord = await db.table<USRateSheetEntry>('entries').limit(1).first(); // REVERTED: Direct query
       return firstRecord?.effectiveDate || null;
     } catch (error) {
       console.error(`[USRateSheetService] Error getting current effective date:`, error);
-      return null;
+      return null; // Return null on error
     }
   }
 
@@ -520,6 +521,7 @@ export class USRateSheetService {
     console.log(`[USRateSheetService] Updating all effective dates to ${newDate}`);
     try {
       const db = await this.getDB(this.dbName);
+      // REVERTED: Simplified table existence check
       if (!db.tables.some((table) => table.name === 'entries')) {
         throw new Error('Entries table not found, cannot update effective dates.');
       }
@@ -533,18 +535,14 @@ export class USRateSheetService {
         return; // Nothing to do
       }
 
-      // Fetch all records (consider batching for very large datasets if needed)
+      // REVERTED: Less efficient fetch-modify-put cycle
       const allRecords = await table.toArray();
-
-      // Update the effectiveDate field
       const updatedRecords = allRecords.map((record) => ({
         ...record,
         effectiveDate: newDate,
       }));
-
-      // Perform bulk update
-      console.log(`[USRateSheetService] Performing bulkPut to update effective dates...`);
       await table.bulkPut(updatedRecords);
+
       console.log(
         `[USRateSheetService] Successfully updated effective date for ${updatedRecords.length} records.`
       );
@@ -555,10 +553,11 @@ export class USRateSheetService {
   }
 
   /**
-   * Loads all USRateSheetEntry data from the database.
+   * Loads ALL USRateSheetEntry data from the database.
    */
   async getData(): Promise<USRateSheetEntry[]> {
-    console.log(`[USRateSheetService] Attempting to load data from ${this.dbName}/'entries'`);
+    // REVERTED: Removed warning
+    console.log(`[USRateSheetService] Attempting to load ALL data from ${this.dbName}/'entries'`);
     try {
       // Load data from the correct 'entries' table
       const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, 'entries');
