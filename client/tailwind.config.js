@@ -24,6 +24,9 @@ export default {
         fbBlack: colors.gray['950'],
         fbWhite: colors.slate['300'],
         fbHover: colors.slate['800'],
+        // Define specific colors for animation
+        'info-pulse-start': 'rgba(30, 58, 138, 0.3)', // blue-900/30
+        'info-pulse-mid': 'rgba(30, 64, 175, 0.45)', // blue-800/45 (slightly brighter midpoint)
         accent: 'hsl(160, 100%, 40%)',
         'accent-background': 'hsl(160, 100%, 40%, 0.2)',
         warning: colors.orange[400],
@@ -75,6 +78,16 @@ export default {
             boxShadow: '0 0 0 6px theme(colors.warning/0)',
           },
         },
+        'info-pulse-shadow': {
+          '0%, 100%': {
+            opacity: 1,
+            boxShadow: '0 0 0 0 theme(colors.info/0.6)',
+          },
+          '50%': {
+            opacity: 0.5,
+            boxShadow: '0 0 0 6px theme(colors.info/0)',
+          },
+        },
         pulse: {
           '0%, 100%': {
             opacity: 0.5,
@@ -102,6 +115,7 @@ export default {
         'status-pulse-warning':
           'status-pulse-warning-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'animate-opacity-pulse': 'opacity-pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'animate-info-pulse': 'info-pulse-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         spin: 'spin 1s linear infinite',
       },
     },
