@@ -106,9 +106,41 @@ function setContentByType(type: InfoModalType) {
         Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>The system automatically parses your file, validates the data, and stores it locally in your browser for fast access and comparison. Simplify your international pricing strategy today!`;
       break;
     case 'us_rate_deck':
-      title.value = 'US Rate Deck Info';
-      message.value =
-        'Upload <strong>US rate decks</strong> (CSV format) containing <code class="bg-gray-700 px-1 rounded text-accent text-sm">OCN</code>, <code class="bg-gray-700 px-1 rounded text-accent text-sm">State</code>, <code class="bg-gray-700 px-1 rounded text-accent text-sm">Tier</code>, and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code> information. Map the columns correctly during the preview step.';
+      title.value = 'US Rate Deck Analyzer Info';
+      message.value = `
+        <strong>Analyze & Compare US Rate Decks Like Never Before!</strong> This powerful tool allows you to upload and compare multiple US termination rate decks side-by-side.<br><br>
+        Simply drag and drop your CSV files (up to two) containing columns for:
+        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">OCN</code> (Operating Company Number)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">State</code> (or Jurisdiction)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Tier</code> (or Rate Center)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
+        </ul>
+        During the upload process, you'll map your columns to ensure accuracy. Once uploaded, the analyzer generates two insightful reports:
+        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><strong>Code Report:</strong> Identifies differences in OCN coverage between the decks.</li>
+          <li><strong>Pricing Report:</strong> Highlights discrepancies in rates for matching OCNs across the decks.</li>
+        </ul>
+        Leverage this tool to optimize your US termination strategy, identify cost-saving opportunities, and ensure competitive pricing.
+      `;
+      break;
+    case 'az_rate_deck_analyzer':
+      title.value = 'A-Z Rate Deck Analyzer Info';
+      message.value = `
+        <strong>Deep Dive into A-Z Rate Deck Comparisons!</strong> This analyzer empowers you to upload and meticulously compare two international A-Z rate decks.<br><br>
+        Upload your CSV files (up to two). Each file should ideally contain:
+        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (Prefix)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code> (Destination)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
+        </ul>
+        Map your columns accurately during the upload preview. Once processed, the tool generates two key reports:
+        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><strong>Code Report:</strong> Pinpoints differences in dial code coverage and destination names between the decks.</li>
+          <li><strong>Pricing Report:</strong> Reveals rate discrepancies for matching dial codes across both decks.</li>
+        </ul>
+        Use these insights to refine your international routing, negotiate better rates, and gain a competitive edge in the global market.
+      `;
       break;
     // Add cases for other types here as needed
     default:

@@ -1,9 +1,20 @@
 <template>
   <div class="min-h-screen text-white pt-2 w-full">
-    <h1 class="mb-2">
+    <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
         US Rate Deck Analyzer
       </span>
+      <!-- Info Icon Button -->
+      <button
+        @click="openInfoModal"
+        class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
+        aria-label="Show US Rate Deck Analyzer information"
+      >
+        <!-- Apply dashboard styling -->
+        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+          <InformationCircleIcon class="w-5 h-5 text-blue-400" />
+        </div>
+      </button>
     </h1>
     <USContentHeader />
 
@@ -30,6 +41,9 @@
         </div>
       </transition>
     </div>
+
+    <!-- Info Modal -->
+    <InfoModal :show-modal="showInfoModal" :type="'us_rate_deck'" @close="closeInfoModal" />
   </div>
 </template>
 
@@ -38,9 +52,11 @@ import USFileUploads from '@/components/us/USFileUploads.vue';
 import USCodeReport from '@/components/us/USCodeReport.vue';
 import USPricingReport from '@/components/us/USPricingReport.vue';
 import USContentHeader from '@/components/us/USContentHeader.vue';
+import InfoModal from '@/components/shared/InfoModal.vue';
+import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { useUsStore } from '@/stores/us-store';
 import { ReportTypes } from '@/types/app-types';
-import { onMounted, watch } from 'vue';
+import { onMounted, watch, ref } from 'vue';
 import { useLergData } from '@/composables/useLergData';
 import { loadSampleDecks } from '@/utils/load-sample-data';
 import { DBName } from '@/types/app-types';
@@ -49,6 +65,9 @@ import { useLergStore } from '@/stores/lerg-store';
 const usStore = useUsStore();
 const { ping, error } = useLergData();
 const lergStore = useLergStore();
+
+// Info Modal state
+const showInfoModal = ref(false);
 
 const { initializeLergData, error: lergError } = useLergData();
 
@@ -70,6 +89,15 @@ watch(
     }
   }
 );
+
+// Info Modal functions
+function openInfoModal() {
+  showInfoModal.value = true;
+}
+
+function closeInfoModal() {
+  showInfoModal.value = false;
+}
 
 onMounted(async () => {
   // Ensure LERG data is loaded first, before anything else happens
@@ -96,7 +124,7 @@ onMounted(async () => {
       // Only load sample decks if no files are already uploaded
       // console.log('[UsView] No files uploaded, loading sample data');
       const sampleDecks = setTimeout(async () => {
-        // await loadSampleDecks([DBName.US]); 
+        // await loadSampleDecks([DBName.US]);
       }, 1000);
 
       // Clear timeout on component unmount
