@@ -223,307 +223,281 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import InfoModal from '@/components/shared/InfoModal.vue';
+  import { computed, ref, onMounted, watch } from 'vue';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import InfoModal from '@/components/shared/InfoModal.vue';
 
-import {
-  ArrowUpTrayIcon,
-  TrashIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ArrowRightIcon,
-  ArrowPathIcon,
-  InformationCircleIcon,
-} from '@heroicons/vue/24/outline';
-import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
-import PreviewModal from '@/components/shared/PreviewModal.vue';
-import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
-import Papa from 'papaparse';
-import type { ParseResult } from 'papaparse';
-import { USRateSheetService } from '@/services/us-rate-sheet.service';
-import { USColumnRole } from '@/types/domains/us-types';
-import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
-import { useDragDrop } from '@/composables/useDragDrop';
+  import {
+    ArrowUpTrayIcon,
+    TrashIcon,
+    ChevronDownIcon,
+    ChevronUpIcon,
+    ArrowRightIcon,
+    ArrowPathIcon,
+    InformationCircleIcon,
+  } from '@heroicons/vue/24/outline';
+  import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
+  import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
+  import Papa from 'papaparse';
+  import type { ParseResult } from 'papaparse';
+  import { USRateSheetService } from '@/services/us-rate-sheet.service';
+  import { USColumnRole } from '@/types/domains/us-types';
+  import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+  import { useDragDrop } from '@/composables/useDragDrop';
 
-const store = useUsRateSheetStore();
-const usRateSheetService = new USRateSheetService();
-const isLocallyStored = computed(() => store.getHasUsRateSheetData);
-const isRFUploading = ref(false);
-const isRFRemoving = ref(false);
-const uploadError = ref<string | null>(store.getError);
-const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
-const isProcessing = computed(() => store.isLoading);
+  const store = useUsRateSheetStore();
+  const usRateSheetService = new USRateSheetService();
+  const isLocallyStored = computed(() => store.getHasUsRateSheetData);
+  const isRFUploading = ref(false);
+  const isRFRemoving = ref(false);
+  const uploadError = ref<string | null>(store.getError);
+  const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+  const isProcessing = computed(() => store.isLoading);
 
-// Preview Modal state
-const showPreviewModal = ref(false);
-const previewData = ref<string[][]>([]);
-const columns = ref<string[]>([]);
-const startLine = ref(1);
-const columnMappings = ref<Record<string, string>>({});
-const isValid = ref(false);
-const selectedFile = ref<File | null>(null);
+  // Preview Modal state
+  const showPreviewModal = ref(false);
+  const previewData = ref<string[][]>([]);
+  const columns = ref<string[]>([]);
+  const startLine = ref(1);
+  const columnMappings = ref<Record<string, string>>({});
+  const isValid = ref(false);
+  const selectedFile = ref<File | null>(null);
 
-// Effective Date State
-const showEffectiveDateSettings = ref(true); // Default to open
-const selectedEffectiveDate = ref<string>('');
-const minDate = computed(() => new Date().toISOString().split('T')[0]); // Minimum date is today
+  // Effective Date State
+  const showEffectiveDateSettings = ref(true); // Default to open
+  const selectedEffectiveDate = ref<string>('');
+  const minDate = computed(() => new Date().toISOString().split('T')[0]); // Minimum date is today
 
-// Computed property to check if the selected date is different from the stored one
-const isDateChanged = computed(() => {
-  // Make sure both values are valid date strings before comparing
-  const currentDate = store.getCurrentEffectiveDate;
-  const selectedDate = selectedEffectiveDate.value;
-  // Check if selectedDate is a valid YYYY-MM-DD string
-  const isValidDateString = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate);
-  return isValidDateString && selectedDate !== currentDate;
-});
-
-// Watch the store's effective date getter to update the local ref
-watch(
-  () => store.getCurrentEffectiveDate,
-  (newDate) => {
-    console.log('[Watch store.getCurrentEffectiveDate] New date from store:', newDate);
-    // Only update if the new date is different from the current input value
-    // to avoid resetting user input during typing/selection
-    if (newDate && newDate !== selectedEffectiveDate.value) {
-      selectedEffectiveDate.value = newDate;
-      console.log(
-        '[Watch store.getCurrentEffectiveDate] selectedEffectiveDate.value updated to:',
-        newDate
-      );
-    }
-  },
-  { immediate: true }
-); // immediate: true to run on component mount
-
-// --- Drag and Drop Setup ---
-const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, clearError } =
-  useDragDrop({
-    acceptedExtensions: ['.csv'],
-    onDropCallback: (file: File) => {
-      uploadError.value = null;
-      clearError();
-      processFile(file);
-    },
-    onError: (message: string) => {
-      uploadError.value = message;
-      store.setError(message);
-    },
+  // Computed property to check if the selected date is different from the stored one
+  const isDateChanged = computed(() => {
+    // Make sure both values are valid date strings before comparing
+    const currentDate = store.getCurrentEffectiveDate;
+    const selectedDate = selectedEffectiveDate.value;
+    // Check if selectedDate is a valid YYYY-MM-DD string
+    const isValidDateString = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate);
+    return isValidDateString && selectedDate !== currentDate;
   });
 
-// --- End Drag and Drop Setup ---
+  // Watch the store's effective date getter to update the local ref
+  watch(
+    () => store.getCurrentEffectiveDate,
+    (newDate) => {
+      // Only update if the new date is different from the current input value
+      // to avoid resetting user input during typing/selection
+      if (newDate && newDate !== selectedEffectiveDate.value) {
+        selectedEffectiveDate.value = newDate;
+      }
+    },
+    { immediate: true } // immediate: true to run on component mount
+  );
 
-onMounted(async () => {
-  // Load initial data state from Dexie via the store
-  // loadRateSheetData now triggers fetchCurrentEffectiveDate internally
-  // The watcher above will handle setting selectedEffectiveDate.value
-  await store.loadRateSheetData();
-});
-
-function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (!input.files || input.files.length === 0) return;
-
-  uploadError.value = null;
-  clearError();
-  const file = input.files[0];
-  processFile(file);
-}
-
-function processFile(file: File) {
-  console.log('[processFile] Started processing file:', file.name);
-  selectedFile.value = file;
-
-  try {
-    console.log('[processFile] Calling Papa.parse...');
-    Papa.parse(file, {
-      preview: 20,
-      skipEmptyLines: true,
-      complete: (results: ParseResult<string[]>) => {
-        console.log('[processFile] Papa.parse complete callback reached.');
-        if (results.data.length === 0) {
-          console.log('[processFile] Papa.parse complete: No data found.');
-          const emptyErrorMessage = 'CSV file appears to be empty or invalid.';
-          uploadError.value = emptyErrorMessage;
-          store.setError(emptyErrorMessage);
-          showPreviewModal.value = false;
-          return;
-        }
-        console.log('[processFile] Papa.parse complete: Data found, processing for modal.');
-        columns.value = results.data[0].map((h) => h?.trim() || '');
-        previewData.value = results.data
-          .slice(0, 11)
-          .map((row) => (Array.isArray(row) ? row.map((cell) => cell?.trim() || '') : []));
-        startLine.value = 1;
-        console.log('[processFile] Setting showPreviewModal = true');
-        showPreviewModal.value = true;
+  // --- Drag and Drop Setup ---
+  const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, clearError } =
+    useDragDrop({
+      acceptedExtensions: ['.csv'],
+      onDropCallback: (file: File) => {
+        uploadError.value = null;
+        clearError();
+        processFile(file);
       },
-      error: (error) => {
-        console.error('[processFile] Papa.parse error callback reached:', error);
-        const parseErrorMessage = 'Failed to parse CSV file: ' + error.message;
-        uploadError.value = parseErrorMessage;
-        store.setError(parseErrorMessage);
-        showPreviewModal.value = false;
+      onError: (message: string) => {
+        uploadError.value = message;
+        store.setError(message);
       },
     });
-  } catch (error) {
-    console.error('[processFile] Error during Papa.parse try/catch:', error);
-    const processErrorMessage =
-      'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
-    uploadError.value = processErrorMessage;
-    store.setError(processErrorMessage);
-    showPreviewModal.value = false;
-  }
-}
 
-// --- Info Modal State ---
-const showInfoModal = ref(false);
-// --- End Info Modal State ---
+  // --- End Drag and Drop Setup ---
 
-async function handleModalConfirm(
-  mappings: Record<string, string>,
-  indeterminateDefinition?: string
-) {
-  if (!selectedFile.value) {
-    console.error('No file selected for processing.');
-    return;
+  onMounted(async () => {
+    // Load initial data state from Dexie via the store
+    // loadRateSheetData now triggers fetchCurrentEffectiveDate internally
+    // The watcher above will handle setting selectedEffectiveDate.value
+    await store.loadRateSheetData();
+  });
+
+  function handleFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    uploadError.value = null;
+    clearError();
+    const file = input.files[0];
+    processFile(file);
   }
 
-  store.setLoading(true);
-  store.setError(null);
-  uploadError.value = null;
-  rfUploadStatus.value = null;
+  function processFile(file: File) {
+    selectedFile.value = file;
 
-  console.log('[handleModalConfirm] Starting processing with modal confirmation...');
-  console.log('[handleModalConfirm] Mappings:', mappings);
-  console.log('[handleModalConfirm] Indeterminate Definition:', indeterminateDefinition);
-  console.log('[handleModalConfirm] Start Line:', startLine.value);
-
-  // --- Hide modal immediately upon confirmation ---
-  showPreviewModal.value = false;
-
-  try {
-    const fileToProcess = selectedFile.value;
-
-    // Correctly map the roles from the modal to the service's expected keys
-    const mappedColumns = Object.entries(mappings).reduce(
-      (acc, [indexStr, role]) => {
-        if (role) {
-          const index = parseInt(indexStr, 10);
-          switch (role) {
-            case USColumnRole.NPANXX:
-              acc.npanxx = index;
-              break;
-            case USColumnRole.NPA:
-              acc.npa = index;
-              break;
-            case USColumnRole.NXX:
-              acc.nxx = index;
-              break;
-            case USColumnRole.INTERSTATE:
-              acc.interstate = index;
-              break;
-            case USColumnRole.INTRASTATE:
-              acc.intrastate = index;
-              break;
-            case USColumnRole.INDETERMINATE:
-              acc.indeterminate = index;
-              break;
+    try {
+      Papa.parse(file, {
+        preview: 20,
+        skipEmptyLines: true,
+        complete: (results: ParseResult<string[]>) => {
+          if (results.data.length === 0) {
+            const emptyErrorMessage = 'CSV file appears to be empty or invalid.';
+            uploadError.value = emptyErrorMessage;
+            store.setError(emptyErrorMessage);
+            showPreviewModal.value = false;
+            return;
           }
-        }
-        return acc;
-      },
-      {
-        npanxx: -1,
-        npa: -1,
-        nxx: -1,
-        interstate: -1,
-        intrastate: -1,
-        indeterminate: -1,
-      }
-    );
+          columns.value = results.data[0].map((h) => h?.trim() || '');
+          previewData.value = results.data
+            .slice(0, 11)
+            .map((row) => (Array.isArray(row) ? row.map((cell) => cell?.trim() || '') : []));
+          startLine.value = 1;
+          showPreviewModal.value = true;
+        },
+        error: (error) => {
+          console.error('[processFile] Papa.parse error callback reached:', error);
+          const parseErrorMessage = 'Failed to parse CSV file: ' + error.message;
+          uploadError.value = parseErrorMessage;
+          store.setError(parseErrorMessage);
+          showPreviewModal.value = false;
+        },
+      });
+    } catch (error) {
+      console.error('[processFile] Error during Papa.parse try/catch:', error);
+      const processErrorMessage =
+        'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
+      uploadError.value = processErrorMessage;
+      store.setError(processErrorMessage);
+      showPreviewModal.value = false;
+    }
+  }
 
-    console.log('[handleModalConfirm] Mapped column indices:', mappedColumns);
+  // --- Info Modal State ---
+  const showInfoModal = ref(false);
+  // --- End Info Modal State ---
 
-    if (
-      mappedColumns.interstate === -1 ||
-      mappedColumns.intrastate === -1 ||
-      (mappedColumns.npanxx === -1 && (mappedColumns.npa === -1 || mappedColumns.nxx === -1))
-    ) {
-      throw new Error('Required columns (NPANXX/NPA+NXX, Interstate, Intrastate) are not mapped.');
+  async function handleModalConfirm(
+    mappings: Record<string, string>,
+    indeterminateDefinition?: string
+  ) {
+    if (!selectedFile.value) {
+      console.error('No file selected for processing.');
+      return;
     }
 
-    console.log('[handleModalConfirm] Calling usRateSheetService.processFile...');
-    const processedData = await usRateSheetService.processFile(
-      fileToProcess,
-      mappedColumns,
-      startLine.value,
-      indeterminateDefinition
-    );
+    store.setLoading(true);
+    store.setError(null);
+    uploadError.value = null;
+    rfUploadStatus.value = null;
 
-    console.log(
-      '[handleModalConfirm] usRateSheetService.processFile completed. Result:',
-      processedData
-    );
+    // --- Hide modal immediately upon confirmation ---
+    showPreviewModal.value = false;
 
-    console.log('[handleModalConfirm] Calling store.handleUploadSuccess...');
-    await store.handleUploadSuccess(processedData);
-    console.log('[handleModalConfirm] handleUploadSuccess completed.');
+    try {
+      const fileToProcess = selectedFile.value;
 
-    selectedFile.value = null; // Clear selected file after processing
-    rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
-  } catch (error: any) {
-    console.error('[handleModalConfirm] Error processing file:', error);
-    uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
-    // Clear potentially inconsistent data on error
-    await store.clearUsRateSheetData();
-    selectedFile.value = null; // Clear selected file on error
-    rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
-  } finally {
-    console.log('[handleModalConfirm] Finishing final block...');
-    store.setLoading(false);
+      // Correctly map the roles from the modal to the service's expected keys
+      const mappedColumns = Object.entries(mappings).reduce(
+        (acc, [indexStr, role]) => {
+          if (role) {
+            const index = parseInt(indexStr, 10);
+            switch (role) {
+              case USColumnRole.NPANXX:
+                acc.npanxx = index;
+                break;
+              case USColumnRole.NPA:
+                acc.npa = index;
+                break;
+              case USColumnRole.NXX:
+                acc.nxx = index;
+                break;
+              case USColumnRole.INTERSTATE:
+                acc.interstate = index;
+                break;
+              case USColumnRole.INTRASTATE:
+                acc.intrastate = index;
+                break;
+              case USColumnRole.INDETERMINATE:
+                acc.indeterminate = index;
+                break;
+            }
+          }
+          return acc;
+        },
+        {
+          npanxx: -1,
+          npa: -1,
+          nxx: -1,
+          interstate: -1,
+          intrastate: -1,
+          indeterminate: -1,
+        }
+      );
+
+      if (
+        mappedColumns.interstate === -1 ||
+        mappedColumns.intrastate === -1 ||
+        (mappedColumns.npanxx === -1 && (mappedColumns.npa === -1 || mappedColumns.nxx === -1))
+      ) {
+        throw new Error(
+          'Required columns (NPANXX/NPA+NXX, Interstate, Intrastate) are not mapped.'
+        );
+      }
+
+      const processedData = await usRateSheetService.processFile(
+        fileToProcess,
+        mappedColumns,
+        startLine.value,
+        indeterminateDefinition
+      );
+
+      await store.handleUploadSuccess(processedData);
+
+      selectedFile.value = null; // Clear selected file after processing
+      rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
+    } catch (error: any) {
+      console.error('[handleModalConfirm] Error processing file:', error);
+      uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
+      // Clear potentially inconsistent data on error
+      await store.clearUsRateSheetData();
+      selectedFile.value = null; // Clear selected file on error
+      rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
+    } finally {
+      store.setLoading(false);
+    }
   }
-}
 
-function handleModalCancel() {
-  showPreviewModal.value = false;
-  selectedFile.value = null;
-}
-
-function handleMappingUpdate(newMappings: Record<string, string>) {
-  columnMappings.value = newMappings;
-}
-
-// Update handleClearData to use the store action
-async function handleClearData() {
-  if (confirm('Are you sure you want to clear all US Rate Sheet data?')) {
-    await store.clearUsRateSheetData();
+  function handleModalCancel() {
+    showPreviewModal.value = false;
+    selectedFile.value = null;
   }
-}
 
-async function handleApplyEffectiveDate() {
-  if (!selectedEffectiveDate.value || !isDateChanged.value) {
-    console.warn('No new effective date selected or date has not changed.');
-    return;
+  function handleMappingUpdate(newMappings: Record<string, string>) {
+    columnMappings.value = newMappings;
   }
-  console.log(`Applying new effective date: ${selectedEffectiveDate.value}`);
-  await store.updateEffectiveDate(selectedEffectiveDate.value);
-  // Optionally show a success message or handle errors from the store action
-}
 
-// Function to toggle the effective date section
-function toggleEffectiveDateSettings() {
-  showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
-}
+  // Update handleClearData to use the store action
+  async function handleClearData() {
+    if (confirm('Are you sure you want to clear all US Rate Sheet data?')) {
+      await store.clearUsRateSheetData();
+    }
+  }
 
-// --- Info Modal Functions ---
-function openInfoModal() {
-  showInfoModal.value = true;
-}
+  async function handleApplyEffectiveDate() {
+    if (!selectedEffectiveDate.value || !isDateChanged.value) {
+      console.warn('No new effective date selected or date has not changed.');
+      return;
+    }
+    await store.updateEffectiveDate(selectedEffectiveDate.value);
+    // Optionally show a success message or handle errors from the store action
+  }
 
-function closeInfoModal() {
-  showInfoModal.value = false;
-}
-// --- End Info Modal Functions ---
+  // Function to toggle the effective date section
+  function toggleEffectiveDateSettings() {
+    showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
+  }
+
+  // --- Info Modal Functions ---
+  function openInfoModal() {
+    showInfoModal.value = true;
+  }
+
+  function closeInfoModal() {
+    showInfoModal.value = false;
+  }
+  // --- End Info Modal Functions ---
 </script>

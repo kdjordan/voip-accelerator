@@ -40,7 +40,7 @@
             <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
           </div>
           <p v-else class="text-lg font-semibold text-white font-mono">
-            {{ formatRate(currentDisplayAverages.ij) }}
+            {{ formatRate(currentDisplayAverages.indeterm) }}
           </p>
         </div>
       </div>
@@ -440,7 +440,7 @@
               {{ formatRate(entry.intraRate) }}
             </td>
             <td class="px-4 py-2 text-white font-mono text-center">
-              {{ formatRate(entry.ijRate) }}
+              {{ formatRate(entry.indetermRate) }}
             </td>
             <td class="px-4 py-2 text-gray-400 font-mono text-center">
               {{ entry.effectiveDate || 'N/A' }}
@@ -465,960 +465,852 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import {
-  Listbox,
-  ListboxButton,
-  ListboxLabel,
-  ListboxOptions,
-  ListboxOption,
-} from '@headlessui/vue';
-import {
-  TrashIcon,
-  ArrowDownTrayIcon,
-  ArrowPathIcon,
-  CheckIcon,
-  ChevronUpDownIcon,
-  ArrowRightIcon,
-} from '@heroicons/vue/20/solid';
-import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
-import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
-import { useLergStore } from '@/stores/lerg-store';
-import { useDebounceFn, useIntersectionObserver } from '@vueuse/core';
-import Papa from 'papaparse';
-import useDexieDB from '@/composables/useDexieDB';
-import { DBName } from '@/types/app-types';
-import type { DexieDBBase } from '@/composables/useDexieDB';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import {
-  type AdjustmentType,
-  type AdjustmentValueType,
-  type TargetRateType,
-} from '@/types/domains/rate-sheet-types';
-import Dexie from 'dexie';
+  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+  import {
+    Listbox,
+    ListboxButton,
+    ListboxLabel,
+    ListboxOptions,
+    ListboxOption,
+  } from '@headlessui/vue';
+  import {
+    TrashIcon,
+    ArrowDownTrayIcon,
+    ArrowPathIcon,
+    CheckIcon,
+    ChevronUpDownIcon,
+    ArrowRightIcon,
+  } from '@heroicons/vue/20/solid';
+  import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
+  import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+  import { useLergStore } from '@/stores/lerg-store';
+  import { useDebounceFn, useIntersectionObserver } from '@vueuse/core';
+  import Papa from 'papaparse';
+  import useDexieDB from '@/composables/useDexieDB';
+  import { DBName } from '@/types/app-types';
+  import type { DexieDBBase } from '@/composables/useDexieDB';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import {
+    type AdjustmentType,
+    type AdjustmentValueType,
+    type TargetRateType,
+  } from '@/types/domains/rate-sheet-types';
+  import Dexie from 'dexie';
 
-// Type for average values
-interface RateAverages {
-  inter: number | null;
-  intra: number | null;
-  ij: number | null;
-}
-
-// Initialize store and service
-const store = useUsRateSheetStore();
-const lergStore = useLergStore();
-const { getDB } = useDexieDB();
-let dbInstance: DexieDBBase | null = null;
-const RATE_SHEET_TABLE_NAME = 'entries';
-
-// --- Rate Adjustment Options Data ---
-const adjustmentTypeOptions = [
-  { value: 'markup', label: 'Markup' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'set', label: 'Set To Value' },
-] as const;
-const adjustmentValueTypeOptions = [
-  { value: 'percentage', label: 'Percentage (%)' },
-  { value: 'fixed', label: 'Fixed Amount' },
-] as const;
-const adjustmentTargetRateOptions = [
-  { value: 'all', label: 'All Rates' },
-  { value: 'inter', label: 'Interstate Only' },
-  { value: 'intra', label: 'Intrastate Only' },
-  { value: 'ij', label: 'Indeterminate Only' },
-] as const;
-// --- End Rate Adjustment Options Data ---
-
-// --- Rate Adjustment State (Reverted) ---
-const adjustmentType = ref<AdjustmentType>(adjustmentTypeOptions[0].value);
-const adjustmentValueType = ref<AdjustmentValueType>(adjustmentValueTypeOptions[0].value);
-const adjustmentValue = ref<number | null>(null); // Reverted to allow null
-const adjustmentTargetRate = ref<TargetRateType>(adjustmentTargetRateOptions[0].value);
-const isApplyingAdjustment = ref(false); // Renamed back from isAdjusting
-const adjustmentStatusMessage = ref<string | null>(null);
-const adjustmentError = ref<string | null>(null);
-// --- End Rate Adjustment State ---
-
-// Timeout ID for clearing the status message
-let adjustmentStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
-
-const searchQuery = ref('');
-const debouncedSearchQuery = ref('');
-const selectedState = ref<string>('');
-
-const isDataLoading = ref(true);
-const isExporting = ref(false);
-const dataError = ref<string | null>(null);
-
-const totalRecords = ref<number>(0);
-
-const displayedData = ref<USRateSheetEntry[]>([]);
-const isLoadingMore = ref(false);
-const scrollContainerRef = ref<HTMLElement | null>(null);
-const loadMoreTriggerRef = ref<HTMLElement | null>(null);
-const PAGE_SIZE = 100;
-const offset = ref<number>(0);
-const hasMoreData = ref<boolean>(true);
-const availableStates = ref<string[]>([]);
-
-// Define US States and Canadian Provinces for sorting
-const US_STATES = [
-  'AL',
-  'AK',
-  'AZ',
-  'AR',
-  'CA',
-  'CO',
-  'CT',
-  'DE',
-  'FL',
-  'GA',
-  'HI',
-  'ID',
-  'IL',
-  'IN',
-  'IA',
-  'KS',
-  'KY',
-  'LA',
-  'ME',
-  'MD',
-  'MA',
-  'MI',
-  'MN',
-  'MS',
-  'MO',
-  'MT',
-  'NE',
-  'NV',
-  'NH',
-  'NJ',
-  'NM',
-  'NY',
-  'NC',
-  'ND',
-  'OH',
-  'OK',
-  'OR',
-  'PA',
-  'RI',
-  'SC',
-  'SD',
-  'TN',
-  'TX',
-  'UT',
-  'VT',
-  'VA',
-  'WA',
-  'WV',
-  'WI',
-  'WY',
-  'DC',
-];
-const CA_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
-
-// Computed property to structure states for the dropdown with optgroup
-const groupedAvailableStates = computed(() => {
-  const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
-  const caOptions = availableStates.value.filter((code) => CA_PROVINCES.includes(code));
-  // You could add another group here for any codes not in US_STATES or CA_PROVINCES if necessary
-  // const otherOptions = availableStates.value.filter(code => !US_STATES.includes(code) && !CA_PROVINCES.includes(code));
-
-  const groups = [];
-  if (usOptions.length > 0) {
-    groups.push({ label: 'United States', codes: usOptions });
+  // Type for average values
+  interface RateAverages {
+    inter: number | null;
+    intra: number | null;
+    indeterm: number | null;
   }
-  if (caOptions.length > 0) {
-    groups.push({ label: 'Canada', codes: caOptions });
-  }
-  // if (otherOptions.length > 0) {
-  //   groups.push({ label: 'Other', codes: otherOptions });
-  // }
-  return groups;
-});
 
-// State for Average Calculation
-const overallAverages = ref<RateAverages | null>(null);
-const stateAverageCache = ref<Map<string, RateAverages>>(new Map());
-const currentDisplayAverages = ref<RateAverages>({ inter: null, intra: null, ij: null });
-const isCalculatingOverall = ref(false);
-const isCalculatingState = ref(false);
+  // Initialize store and service
+  const store = useUsRateSheetStore();
+  const lergStore = useLergStore();
+  const { getDB } = useDexieDB();
+  let dbInstance: DexieDBBase | null = null;
+  const RATE_SHEET_TABLE_NAME = 'entries';
 
-const debouncedSearch = useDebounceFn(() => {
-  debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
-  resetPaginationAndLoad();
-}, 300);
+  // --- Rate Adjustment Options Data ---
+  const adjustmentTypeOptions = [
+    { value: 'markup', label: 'Markup' },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'set', label: 'Set To Value' },
+  ] as const;
+  const adjustmentValueTypeOptions = [
+    { value: 'percentage', label: 'Percentage (%)' },
+    { value: 'fixed', label: 'Fixed Amount' },
+  ] as const;
+  const adjustmentTargetRateOptions = [
+    { value: 'all', label: 'All Rates' },
+    { value: 'inter', label: 'Interstate Only' },
+    { value: 'intra', label: 'Intrastate Only' },
+    { value: 'indeterm', label: 'Indeterminate Only' },
+  ] as const;
+  // --- End Rate Adjustment Options Data ---
 
-const stopSearchWatcher = watch(searchQuery, debouncedSearch);
+  // --- Rate Adjustment State (Reverted) ---
+  const adjustmentType = ref<AdjustmentType>(adjustmentTypeOptions[0].value);
+  const adjustmentValueType = ref<AdjustmentValueType>(adjustmentValueTypeOptions[0].value);
+  const adjustmentValue = ref<number | null>(null);
+  const adjustmentTargetRate = ref<TargetRateType>(adjustmentTargetRateOptions[0].value);
+  const isApplyingAdjustment = ref(false);
+  const adjustmentStatusMessage = ref<string | null>(null);
+  const adjustmentError = ref<string | null>(null);
+  // --- End Rate Adjustment State ---
 
-// Watcher for state filter changes - handles table reload AND average calculation
-const stopStateWatcher = watch(selectedState, async (newStateCode) => {
-  // 1. Reset table data and pagination
-  await resetPaginationAndLoad();
+  // Timeout ID for clearing the status message
+  let adjustmentStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  // 2. Update displayed averages based on the new state filter
-  console.log(
-    `[USRateSheetTable] State filter changed to: '${newStateCode || 'All'}'. Updating averages.`
-  );
-  if (!newStateCode) {
-    // Selected "All States/Provinces"
-    if (overallAverages.value) {
-      console.log('[USRateSheetTable] Using cached overall averages.');
-      currentDisplayAverages.value = overallAverages.value;
-    } else {
-      // Should ideally be calculated on mount, but recalculate if somehow missing
-      console.warn('[USRateSheetTable] Overall averages not found, recalculating...');
-      const avg = await calculateAverages();
-      overallAverages.value = avg;
-      currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+  const searchQuery = ref('');
+  const debouncedSearchQuery = ref('');
+  const selectedState = ref<string>('');
+
+  const isDataLoading = ref(true);
+  const isExporting = ref(false);
+  const dataError = ref<string | null>(null);
+
+  const totalRecords = ref<number>(0);
+
+  const displayedData = ref<USRateSheetEntry[]>([]);
+  const isLoadingMore = ref(false);
+  const scrollContainerRef = ref<HTMLElement | null>(null);
+  const loadMoreTriggerRef = ref<HTMLElement | null>(null);
+  const PAGE_SIZE = 100;
+  const offset = ref<number>(0);
+  const hasMoreData = ref<boolean>(true);
+  const availableStates = ref<string[]>([]);
+
+  // Define US States and Canadian Provinces for sorting
+  const US_STATES = [
+    'AL',
+    'AK',
+    'AZ',
+    'AR',
+    'CA',
+    'CO',
+    'CT',
+    'DE',
+    'FL',
+    'GA',
+    'HI',
+    'ID',
+    'IL',
+    'IN',
+    'IA',
+    'KS',
+    'KY',
+    'LA',
+    'ME',
+    'MD',
+    'MA',
+    'MI',
+    'MN',
+    'MS',
+    'MO',
+    'MT',
+    'NE',
+    'NV',
+    'NH',
+    'NJ',
+    'NM',
+    'NY',
+    'NC',
+    'ND',
+    'OH',
+    'OK',
+    'OR',
+    'PA',
+    'RI',
+    'SC',
+    'SD',
+    'TN',
+    'TX',
+    'UT',
+    'VT',
+    'VA',
+    'WA',
+    'WV',
+    'WI',
+    'WY',
+    'DC',
+  ];
+  const CA_PROVINCES = [
+    'AB',
+    'BC',
+    'MB',
+    'NB',
+    'NL',
+    'NS',
+    'NT',
+    'NU',
+    'ON',
+    'PE',
+    'QC',
+    'SK',
+    'YT',
+  ];
+
+  // Computed property to structure states for the dropdown with optgroup
+  const groupedAvailableStates = computed(() => {
+    const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
+    const caOptions = availableStates.value.filter((code) => CA_PROVINCES.includes(code));
+
+    const groups = [];
+    if (usOptions.length > 0) {
+      groups.push({ label: 'United States', codes: usOptions });
     }
-  } else {
-    // Selected a specific state/province
-    if (stateAverageCache.value.has(newStateCode)) {
-      // Cache Hit
-      console.log(`[USRateSheetTable] Using cached averages for state: ${newStateCode}`);
-      currentDisplayAverages.value = stateAverageCache.value.get(newStateCode)!;
-    } else {
-      // Cache Miss
-      console.log(`[USRateSheetTable] Cache miss for state: ${newStateCode}. Calculating...`);
-      // Show loading state for averages (clear current values)
-      currentDisplayAverages.value = { inter: null, intra: null, ij: null };
-      const stateAvg = await calculateAverages(newStateCode); // Sets isCalculatingState internally
-      if (stateAvg) {
-        stateAverageCache.value.set(newStateCode, stateAvg);
-        currentDisplayAverages.value = stateAvg;
-        console.log(`[USRateSheetTable] Averages calculated and cached for state: ${newStateCode}`);
-      } else {
-        // Handle error case where calculation failed
-        currentDisplayAverages.value = { inter: null, intra: null, ij: null }; // Show N/A
-        console.error(`[USRateSheetTable] Failed to calculate averages for state: ${newStateCode}`);
-      }
+    if (caOptions.length > 0) {
+      groups.push({ label: 'Canada', codes: caOptions });
     }
-  }
-});
+    return groups;
+  });
 
-// Watch for external DB updates signaled by the store timestamp
-const stopDbUpdateWatcher = watch(
-  () => store.lastDbUpdateTime,
-  async (newTimestamp, oldTimestamp) => {
-    if (newTimestamp !== oldTimestamp) {
-      console.log('[USRateSheetTable] Detected store.lastDbUpdateTime change. Reloading data...');
-      // Optionally, re-fetch unique states if they might have changed (unlikely for just date update)
-      // await updateAvailableStates();
-      await resetPaginationAndLoad();
-      // Also, recalculate averages as data changed
-      const avg = await calculateAverages(selectedState.value || undefined);
-      if (selectedState.value) {
-        if (avg) stateAverageCache.value.set(selectedState.value, avg);
-        currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+  // State for Average Calculation
+  const overallAverages = ref<RateAverages | null>(null);
+  const stateAverageCache = ref<Map<string, RateAverages>>(new Map());
+  const currentDisplayAverages = ref<RateAverages>({ inter: null, intra: null, indeterm: null });
+  const isCalculatingOverall = ref(false);
+  const isCalculatingState = ref(false);
+
+  const debouncedSearch = useDebounceFn(() => {
+    debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
+    resetPaginationAndLoad();
+  }, 300);
+
+  const stopSearchWatcher = watch(searchQuery, debouncedSearch);
+
+  // Watcher for state filter changes - handles table reload AND average calculation
+  const stopStateWatcher = watch(selectedState, async (newStateCode) => {
+    // 1. Reset table data and pagination
+    await resetPaginationAndLoad();
+
+    // 2. Update displayed averages based on the new state filter
+    if (!newStateCode) {
+      // Selected "All States/Provinces"
+      if (overallAverages.value) {
+        currentDisplayAverages.value = overallAverages.value;
       } else {
+        // Should ideally be calculated on mount, but recalculate if somehow missing
+        console.warn('[USRateSheetTable] Overall averages not found, recalculating...');
+        const avg = await calculateAverages();
         overallAverages.value = avg;
-        currentDisplayAverages.value = avg ?? { inter: null, intra: null, ij: null };
+        currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
+      }
+    } else {
+      // Selected a specific state/province
+      if (stateAverageCache.value.has(newStateCode)) {
+        currentDisplayAverages.value = stateAverageCache.value.get(newStateCode)!;
+      } else {
+        // Show loading state for averages (clear current values)
+        currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+        const stateAvg = await calculateAverages(newStateCode);
+        if (stateAvg) {
+          stateAverageCache.value.set(newStateCode, stateAvg);
+          currentDisplayAverages.value = stateAvg;
+        } else {
+          // Handle error case where calculation failed
+          currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+          console.error(
+            `[USRateSheetTable] Failed to calculate averages for state: ${newStateCode}`
+          );
+        }
       }
     }
-  }
-);
+  });
 
-async function initializeRateSheetDB(): Promise<boolean> {
-  if (dbInstance) return true;
-
-  try {
-    const targetDbName = DBName.US_RATE_SHEET;
-    console.log('[USRateSheetTable] Initializing Dexie DB:', targetDbName);
-    dbInstance = await getDB(targetDbName);
-    if (!dbInstance || !dbInstance.tables.some((t) => t.name === RATE_SHEET_TABLE_NAME)) {
-      console.warn(
-        `[USRateSheetTable] Table '${RATE_SHEET_TABLE_NAME}' not found in DB '${targetDbName}'. Checking store...`
-      );
-      if (!store.getHasUsRateSheetData) {
-        dataError.value = null;
-        console.log('[USRateSheetTable] No rate sheet data uploaded.');
-      } else {
-        dataError.value = `Rate sheet table '${RATE_SHEET_TABLE_NAME}' seems to be missing. Try re-uploading.`;
+  // Watch for external DB updates signaled by the store timestamp
+  const stopDbUpdateWatcher = watch(
+    () => store.lastDbUpdateTime,
+    async (newTimestamp, oldTimestamp) => {
+      if (newTimestamp !== oldTimestamp) {
+        await resetPaginationAndLoad();
+        const avg = await calculateAverages(selectedState.value || undefined);
+        if (selectedState.value) {
+          if (avg) stateAverageCache.value.set(selectedState.value, avg);
+          currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
+        } else {
+          overallAverages.value = avg;
+          currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
+        }
       }
+    }
+  );
+
+  async function initializeRateSheetDB(): Promise<boolean> {
+    if (dbInstance) return true;
+
+    try {
+      const targetDbName = DBName.US_RATE_SHEET;
+      dbInstance = await getDB(targetDbName);
+      if (!dbInstance || !dbInstance.tables.some((t) => t.name === RATE_SHEET_TABLE_NAME)) {
+        console.warn(
+          `[USRateSheetTable] Table '${RATE_SHEET_TABLE_NAME}' not found in DB '${targetDbName}'. Checking store...`
+        );
+        if (!store.getHasUsRateSheetData) {
+          dataError.value = null;
+        } else {
+          dataError.value = `Rate sheet table '${RATE_SHEET_TABLE_NAME}' seems to be missing. Try re-uploading.`;
+        }
+        hasMoreData.value = false;
+        totalRecords.value = 0;
+        displayedData.value = [];
+        return false;
+      }
+      dataError.value = null;
+      return true;
+    } catch (err: any) {
+      console.error('[USRateSheetTable] Error initializing Dexie DB:', err);
+      dataError.value = err.message || 'Failed to connect to the rate sheet database';
       hasMoreData.value = false;
       totalRecords.value = 0;
       displayedData.value = [];
       return false;
     }
-    console.log('[USRateSheetTable] Dexie DB Initialized successfully.');
-    dataError.value = null;
-    return true;
-  } catch (err: any) {
-    console.error('[USRateSheetTable] Error initializing Dexie DB:', err);
-    dataError.value = err.message || 'Failed to connect to the rate sheet database';
-    hasMoreData.value = false;
-    totalRecords.value = 0;
-    displayedData.value = [];
-    return false;
-  }
-}
-
-async function fetchUniqueStates() {
-  if (!(await initializeRateSheetDB()) || !dbInstance) {
-    console.warn('[USRateSheetTable] Cannot fetch states, DB not ready.');
-    availableStates.value = [];
-    return;
   }
 
-  try {
-    console.log(
-      `[USRateSheetTable] Fetching unique state/province codes directly from table '${RATE_SHEET_TABLE_NAME}'...`
-    );
+  async function fetchUniqueStates() {
+    if (!(await initializeRateSheetDB()) || !dbInstance) {
+      console.warn('[USRateSheetTable] Cannot fetch states, DB not ready.');
+      availableStates.value = [];
+      return;
+    }
 
-    // Fetch unique state codes directly using Dexie's uniqueKeys
-    const uniqueRegionCodes = (await dbInstance
-      .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
-      .orderBy('stateCode') // Keep initial order by code for consistency within groups
-      .uniqueKeys()) as string[]; // Cast assuming they are strings
+    try {
+      const uniqueRegionCodes = (await dbInstance
+        .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
+        .orderBy('stateCode')
+        .uniqueKeys()) as string[];
 
-    // Custom sort: US States first, then Canadian Provinces, then others (alphabetical within groups)
-    availableStates.value = uniqueRegionCodes
-      .filter(Boolean) // Remove null/undefined/empty strings
-      .sort((a, b) => {
+      availableStates.value = uniqueRegionCodes.filter(Boolean).sort((a, b) => {
         const aIsUS = US_STATES.includes(a);
         const bIsUS = US_STATES.includes(b);
         const aIsCA = CA_PROVINCES.includes(a);
         const bIsCA = CA_PROVINCES.includes(b);
 
-        if (aIsUS && !bIsUS) return -1; // US comes before non-US
-        if (!aIsUS && bIsUS) return 1; // non-US comes after US
+        if (aIsUS && !bIsUS) return -1;
+        if (!aIsUS && bIsUS) return 1;
 
-        if (aIsUS && bIsUS) return a.localeCompare(b); // Sort US states alphabetically
+        if (aIsUS && bIsUS) return a.localeCompare(b);
 
-        if (aIsCA && !bIsCA) return -1; // CA comes before others (non-US, non-CA)
-        if (!aIsCA && bIsCA) return 1; // Others come after CA
+        if (aIsCA && !bIsCA) return -1;
+        if (!aIsCA && bIsCA) return 1;
 
-        if (aIsCA && bIsCA) return a.localeCompare(b); // Sort CA provinces alphabetically
+        if (aIsCA && bIsCA) return a.localeCompare(b);
 
-        // Sort any remaining items alphabetically (shouldn't happen with current lists)
         return a.localeCompare(b);
       });
-
-    console.log(
-      '[USRateSheetTable] Found and sorted unique states/provinces from Dexie:',
-      availableStates.value
-    );
-  } catch (err: any) {
-    console.error('[USRateSheetTable] Error fetching unique states/provinces from Dexie:', err);
-    availableStates.value = []; // Clear on error
-    dataError.value = 'Could not load state/province filter options.'; // Inform user
+    } catch (err: any) {
+      console.error('[USRateSheetTable] Error fetching unique states/provinces from Dexie:', err);
+      availableStates.value = [];
+      dataError.value = 'Could not load state/province filter options.';
+    }
   }
-}
 
-async function updateAvailableStates() {
-  await fetchUniqueStates(); // Keep this function name for consistency
-}
+  async function updateAvailableStates() {
+    await fetchUniqueStates();
+  }
 
-async function loadMoreData() {
-  if (isLoadingMore.value || !hasMoreData.value || !dbInstance) return;
+  async function loadMoreData() {
+    if (isLoadingMore.value || !hasMoreData.value || !dbInstance) return;
 
-  isLoadingMore.value = true;
-  dataError.value = null;
+    isLoadingMore.value = true;
+    dataError.value = null;
 
-  try {
-    const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-    let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
-      table;
+    try {
+      const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
+        table;
 
-    const filtersApplied: string[] = [];
+      const filtersApplied: string[] = [];
 
-    if (debouncedSearchQuery.value) {
-      queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
-      filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
+      if (debouncedSearchQuery.value) {
+        queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+        filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
 
-      // Chain state filter if both are present
-      if (selectedState.value) {
-        queryChain = queryChain.and((record) => record.stateCode === selectedState.value);
+        if (selectedState.value) {
+          queryChain = queryChain.and((record) => record.stateCode === selectedState.value);
+          filtersApplied.push(`Region equals ${selectedState.value}`);
+        }
+      } else if (selectedState.value) {
+        queryChain = table.where('stateCode').equals(selectedState.value);
         filtersApplied.push(`Region equals ${selectedState.value}`);
       }
-    } else if (selectedState.value) {
-      // Only state filter is present
-      queryChain = table.where('stateCode').equals(selectedState.value);
-      filtersApplied.push(`Region equals ${selectedState.value}`);
+
+      if (filtersApplied.length > 0) {
+      } else {
+      }
+
+      if (offset.value === 0) {
+        totalRecords.value = await queryChain.count();
+      }
+
+      const newData = await queryChain.offset(offset.value).limit(PAGE_SIZE).toArray();
+
+      displayedData.value = offset.value === 0 ? newData : [...displayedData.value, ...newData];
+      offset.value += newData.length;
+      hasMoreData.value = newData.length === PAGE_SIZE && offset.value < totalRecords.value;
+    } catch (err: any) {
+      console.error('[USRateSheetTable] Error loading rate sheet data:', err);
+      dataError.value = err.message || 'Failed to load data';
+      hasMoreData.value = false;
+    } finally {
+      isLoadingMore.value = false;
+      if (isDataLoading.value) {
+        isDataLoading.value = false;
+      }
     }
+  }
 
-    // Log applied filters
-    if (filtersApplied.length > 0) {
-      console.log(`[USRateSheetTable] Applying Dexie filters: ${filtersApplied.join(', ')}`);
-    } else {
-      console.log(`[USRateSheetTable] No Dexie filters applied.`);
+  async function resetPaginationAndLoad() {
+    isDataLoading.value = true;
+    if (scrollContainerRef.value) {
+      scrollContainerRef.value.scrollTop = 0;
     }
-
-    // Get total count *after* applying filters
-    if (offset.value === 0) {
-      totalRecords.value = await queryChain.count();
-      console.log(`[USRateSheetTable] Total matching records (post-filter): ${totalRecords.value}`);
-    }
-
-    // Fetch data with pagination *after* applying filters
-    const newData = await queryChain.offset(offset.value).limit(PAGE_SIZE).toArray();
-
-    console.log(
-      `[USRateSheetTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${PAGE_SIZE})`
-    );
-
-    displayedData.value = offset.value === 0 ? newData : [...displayedData.value, ...newData];
-    offset.value += newData.length;
-    hasMoreData.value = newData.length === PAGE_SIZE && offset.value < totalRecords.value;
-  } catch (err: any) {
-    console.error('[USRateSheetTable] Error loading rate sheet data:', err);
-    dataError.value = err.message || 'Failed to load data';
-    hasMoreData.value = false;
-  } finally {
+    offset.value = 0;
+    displayedData.value = [];
+    hasMoreData.value = true;
+    dataError.value = null;
     isLoadingMore.value = false;
-    if (isDataLoading.value) {
+
+    const dbReady = await initializeRateSheetDB();
+    if (dbReady) {
+      await loadMoreData();
+    } else {
       isDataLoading.value = false;
     }
   }
-}
 
-async function resetPaginationAndLoad() {
-  isDataLoading.value = true;
-  if (scrollContainerRef.value) {
-    scrollContainerRef.value.scrollTop = 0;
-  }
-  offset.value = 0;
-  displayedData.value = [];
-  hasMoreData.value = true;
-  dataError.value = null;
-  isLoadingMore.value = false;
-
-  const dbReady = await initializeRateSheetDB();
-  if (dbReady) {
-    await loadMoreData();
-  } else {
-    isDataLoading.value = false;
-  }
-}
-
-/**
- * Calculates the average rates for a given state or the entire dataset.
- * Uses Dexie.each for memory efficiency.
- * @param stateCode Optional state code to filter by.
- * @returns Promise resolving to RateAverages or null if DB error.
- */
-async function calculateAverages(stateCode?: string): Promise<RateAverages | null> {
-  const isLoadingOverall = !stateCode;
-  if (isLoadingOverall) {
-    isCalculatingOverall.value = true;
-  } else {
-    isCalculatingState.value = true;
-  }
-  console.log(
-    `[USRateSheetTable] Calculating averages for ${
-      stateCode ? `state ${stateCode}` : 'all data'
-    }...`
-  );
-
-  const dbReady = await initializeRateSheetDB();
-  if (!dbReady || !dbInstance) {
-    console.error('[USRateSheetTable] Cannot calculate averages, DB not ready.');
-    if (isLoadingOverall) isCalculatingOverall.value = false;
-    else isCalculatingState.value = false;
-    return null; // Indicate error or inability to calculate
-  }
-
-  let sumInter = 0;
-  let sumIntra = 0;
-  let sumIj = 0;
-  let count = 0;
-
-  try {
-    const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-    let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
-      table;
-
-    if (stateCode) {
-      queryChain = table.where('stateCode').equals(stateCode);
-    }
-
-    await queryChain.each((entry) => {
-      // Ensure rates are numbers before summing
-      if (typeof entry.interRate === 'number') {
-        sumInter += entry.interRate;
-      }
-      if (typeof entry.intraRate === 'number') {
-        sumIntra += entry.intraRate;
-      }
-      if (typeof entry.ijRate === 'number') {
-        sumIj += entry.ijRate;
-      }
-      // Only count records where at least one rate is a valid number to avoid division by zero issues if all are null/bad
-      if (
-        typeof entry.interRate === 'number' ||
-        typeof entry.intraRate === 'number' ||
-        typeof entry.ijRate === 'number'
-      ) {
-        count++;
-      }
-    });
-
-    const averages: RateAverages = {
-      inter: count > 0 && !isNaN(sumInter) ? sumInter / count : null,
-      intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
-      ij: count > 0 && !isNaN(sumIj) ? sumIj / count : null,
-    };
-
-    console.log(
-      `[USRateSheetTable] Averages calculated (count: ${count}):`,
-      JSON.stringify(averages)
-    );
-    return averages;
-  } catch (err: any) {
-    console.error('[USRateSheetTable] Error calculating averages:', err);
-    dataError.value = err.message || 'Failed to calculate averages';
-    return null;
-  } finally {
+  /**
+   * Calculates the average rates for a given state or the entire dataset.
+   * Uses Dexie.each for memory efficiency.
+   * @param stateCode Optional state code to filter by.
+   * @returns Promise resolving to RateAverages or null if DB error.
+   */
+  async function calculateAverages(stateCode?: string): Promise<RateAverages | null> {
+    const isLoadingOverall = !stateCode;
     if (isLoadingOverall) {
-      isCalculatingOverall.value = false;
+      isCalculatingOverall.value = true;
     } else {
-      isCalculatingState.value = false;
+      isCalculatingState.value = true;
     }
-  }
-}
 
-onMounted(async () => {
-  console.log('USRateSheetTable mounted');
-  if (!lergStore.isLoaded) {
-    console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
-  }
+    const dbReady = await initializeRateSheetDB();
+    if (!dbReady || !dbInstance) {
+      console.error('[USRateSheetTable] Cannot calculate averages, DB not ready.');
+      if (isLoadingOverall) isCalculatingOverall.value = false;
+      else isCalculatingState.value = false;
+      return null;
+    }
 
-  // Fetch initial data and averages if DB is ready and store indicates data exists
-  isDataLoading.value = true;
-  const dbReady = await initializeRateSheetDB();
-  if (dbReady && store.getHasUsRateSheetData) {
-    // Fetch table data first
-    await updateAvailableStates();
-    await resetPaginationAndLoad(); // This sets isDataLoading to false internally
+    let sumInter = 0;
+    let sumIntra = 0;
+    let sumIndeterm = 0;
+    let count = 0;
 
-    // Now calculate overall averages
-    console.log('[USRateSheetTable] Calculating initial overall averages...');
-    overallAverages.value = await calculateAverages(); // Sets loading flag internally
-    currentDisplayAverages.value = overallAverages.value ?? { inter: null, intra: null, ij: null };
-    console.log('[USRateSheetTable] Initial overall averages set.', overallAverages.value);
-  } else {
-    console.log(
-      '[USRateSheetTable] Skipping initial load/state/average fetch (DB not ready or no data).'
-    );
-    totalRecords.value = 0;
-    isDataLoading.value = false;
-    // Ensure averages are reset if no data
-    overallAverages.value = null;
-    currentDisplayAverages.value = { inter: null, intra: null, ij: null };
-  }
-});
+    try {
+      const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
+        table;
 
-onBeforeUnmount(() => {
-  stopSearchWatcher();
-  stopStateWatcher();
-  stopDbUpdateWatcher();
-  console.log('USRateSheetTable unmounted');
-});
-
-watch(
-  () => store.getHasUsRateSheetData,
-  async (hasData, oldHasData) => {
-    console.log(
-      `[USRateSheetTable] Store hasData changed: ${oldHasData} -> ${hasData}. Reloading table.`
-    );
-    if (hasData !== oldHasData) {
-      if (!hasData) {
-        // Clear local table state and averages
-        dbInstance = null;
-        totalRecords.value = 0;
-        displayedData.value = [];
-        availableStates.value = [];
-        selectedState.value = '';
-        searchQuery.value = '';
-        hasMoreData.value = false;
-        dataError.value = null;
-        isDataLoading.value = false;
-        // Clear averages
-        overallAverages.value = null;
-        stateAverageCache.value.clear();
-        currentDisplayAverages.value = { inter: null, intra: null, ij: null };
-        console.log('[USRateSheetTable] Averages cleared due to store data change.');
-      } else {
-        // Data has become available, re-initialize everything
-        isDataLoading.value = true;
-        const dbReady = await initializeRateSheetDB();
-        if (dbReady) {
-          await updateAvailableStates();
-          await resetPaginationAndLoad();
-        } else {
-          isDataLoading.value = false;
-        }
+      if (stateCode) {
+        queryChain = table.where('stateCode').equals(stateCode);
       }
-    }
-  },
-  { immediate: false }
-);
 
-useIntersectionObserver(
-  loadMoreTriggerRef,
-  ([{ isIntersecting }]) => {
-    if (isIntersecting && hasMoreData.value && !isLoadingMore.value && !isDataLoading.value) {
-      console.log('[USRateSheetTable] Load more trigger intersecting, loading data...');
-      loadMoreData();
-    }
-  },
-  {
-    root: scrollContainerRef.value,
-    threshold: 0.1,
-  }
-);
-
-/**
- * Formats a rate value for display, including a leading '$' and handling null/undefined.
- * @param rate The rate value.
- * @returns Formatted string (e.g., $0.008000) or 'N/A'.
- */
-function formatRate(rate: number | string | null | undefined): string {
-  if (rate === null || rate === undefined || typeof rate !== 'number') {
-    return 'N/A';
-  }
-  // Ensure it's treated as a number, format, and prepend '$'
-  return `$${Number(rate).toFixed(6)}`;
-}
-
-function handleClearData() {
-  console.log('[USRateSheetTable] Clear Data button clicked.');
-  if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
-    // Clear local averages immediately for faster UI feedback
-    overallAverages.value = null;
-    stateAverageCache.value.clear();
-    currentDisplayAverages.value = { inter: null, intra: null, ij: null };
-    console.log('[USRateSheetTable] Local averages cleared immediately.');
-    // Trigger store action which will eventually trigger the watcher above
-    store.clearUsRateSheetData();
-  }
-}
-
-async function handleExport() {
-  // 1. Check if already exporting or if DB is ready
-  if (isExporting.value) return;
-  const dbReady = await initializeRateSheetDB(); // Ensure DB is initialized
-  if (!dbReady || !dbInstance) {
-    alert('Database is not ready. Cannot export.');
-    console.error('[USRateSheetTable] Export failed: DB instance not available.');
-    return;
-  }
-
-  isExporting.value = true;
-  dataError.value = null;
-  console.log(
-    `[USRateSheetTable] Starting export for filters: search='${debouncedSearchQuery.value}', state='${selectedState.value}'`
-  );
-
-  try {
-    const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-
-    // Fetch ALL data directly from the table
-    console.log(
-      `[USRateSheetTable] Fetching all data from table '${RATE_SHEET_TABLE_NAME}' for export.`
-    );
-    const allMatchingData = await table.toArray(); // Fetch all data
-    console.log(`[USRateSheetTable] Fetched ${allMatchingData.length} records for export.`);
-
-    if (allMatchingData.length === 0) {
-      alert('No data found in the rate sheet to export.'); // Updated message
-      isExporting.value = false;
-      return;
-    }
-
-    // 4. Define fields and map data (using LERG)
-    const fields = [
-      { label: 'NPANXX', value: 'npanxx' },
-      { label: 'State', value: 'state' }, // Will be populated from LERG
-      { label: 'Country', value: 'country' }, // Will be populated from LERG
-      { label: 'Interstate Rate', value: 'interRate' },
-      { label: 'Intrastate Rate', value: 'intraRate' },
-      { label: 'Indeterminate Rate', value: 'ijRate' },
-      { label: 'Effective Date', value: 'effectiveDate' },
-    ];
-
-    const dataToExport = allMatchingData.map((entry) => {
-      const location = lergStore.getLocationByNPA(entry.npa);
-      // Helper to format rate for export (number to string with 6 decimals, or 'N/A')
-      const formatExportRate = (rate: number | string | null | undefined): string => {
-        if (rate === null || rate === undefined || typeof rate !== 'number') {
-          return 'N/A';
+      await queryChain.each((entry) => {
+        if (typeof entry.interRate === 'number') {
+          sumInter += entry.interRate;
         }
-        return Number(rate).toFixed(6);
-      };
-
-      return {
-        npanxx: entry.npanxx,
-        state: location?.region || 'N/A', // Use LERG data or fallback
-        country: location?.country || 'N/A', // Use LERG data or fallback
-        interRate: formatExportRate(entry.interRate), // Format rates for CSV
-        intraRate: formatExportRate(entry.intraRate),
-        ijRate: formatExportRate(entry.ijRate),
-        effectiveDate: entry.effectiveDate || 'N/A', // Handle missing date
-      };
-    });
-
-    // 5. Unparse to CSV using PapaParse
-    const csv = Papa.unparse({
-      fields: fields.map((f) => f.label), // Use labels as headers
-      data: dataToExport.map((row) => fields.map((field) => row[field.value as keyof typeof row])), // Extract values in correct order
-    });
-
-    // 6. Trigger download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    let filename = 'us-rate-sheet';
-    if (selectedState.value) filename += `-${selectedState.value}`;
-    if (debouncedSearchQuery.value) filename += `-search_${debouncedSearchQuery.value}`;
-    filename += `-${timestamp}.csv`;
-
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    console.log('[USRateSheetTable] Export complete.');
-  } catch (exportError: any) {
-    console.error('[USRateSheetTable] Error during export:', exportError);
-    dataError.value = exportError.message || 'An error occurred during export.';
-    alert(`Export failed: ${dataError.value}`);
-  } finally {
-    isExporting.value = false;
-  }
-}
-
-function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
-  let filteredData = data;
-
-  if (debouncedSearchQuery.value) {
-    filteredData = filteredData.filter((entry) =>
-      entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value)
-    );
-  }
-
-  if (selectedState.value && lergStore.isLoaded) {
-    filteredData = filteredData.filter((entry) => {
-      const location = lergStore.getLocationByNPA(entry.npa);
-      return location?.country === 'US' && location.region === selectedState.value;
-    });
-  }
-
-  return filteredData;
-}
-
-// --- Adjustment Logic (Reverted) ---
-/**
- * Applies rate adjustments (markup/markdown/set) to filtered entries in the DexieDB.
- * WARNING: This implementation fetches all filtered data into memory first.
- */
-async function handleApplyAdjustment() {
-  // Rename function back if needed, or keep handleApplyAdjustment
-  if (isApplyingAdjustment.value || !dbInstance) {
-    console.warn('[USRateSheetTable] Adjustment already in progress or DB not ready.');
-    return;
-  }
-  // Reverted validation to allow null but check > 0
-  if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
-    adjustmentError.value = 'Please enter a positive adjustment value.';
-    adjustmentStatusMessage.value = null;
-    return;
-  }
-
-  // Clear previous timeout if any
-  if (adjustmentStatusTimeoutId) {
-    clearTimeout(adjustmentStatusTimeoutId);
-    adjustmentStatusTimeoutId = null;
-  }
-
-  isApplyingAdjustment.value = true;
-  adjustmentStatusMessage.value = null;
-  adjustmentError.value = null;
-  const startTime = performance.now(); // Keep startTime for duration calculation
-  console.log(
-    `[USRateSheetTable] Starting rate adjustment: ${adjustmentType.value} ${adjustmentValue.value}${
-      adjustmentValueType.value === 'percentage' ? '%' : '' // Removed $ sign assumption
-    } to ${adjustmentTargetRate.value} rates.`
-  );
-
-  try {
-    // 1. Get Primary Keys or Full Records of Filtered Data (Original inefficient approach)
-    let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance
-      .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
-      .toCollection();
-
-    const filtersApplied: string[] = [];
-
-    // Apply filters progressively
-    if (debouncedSearchQuery.value) {
-      collection = collection.filter((record: USRateSheetEntry) =>
-        record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
-      );
-      filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
-    }
-    if (selectedState.value) {
-      collection = collection.filter(
-        (record: USRateSheetEntry) => record.stateCode === selectedState.value
-      );
-      filtersApplied.push(`Region equals '${selectedState.value}'`);
-    }
-
-    console.log(`[USRateSheetTable] Applying filters: ${filtersApplied.join(' AND ') || 'None'}`);
-    // Fetching ALL filtered records - this is the memory issue part
-    const filteredRecords = await collection.toArray();
-    const recordCount = filteredRecords.length;
-
-    if (recordCount === 0) {
-      adjustmentStatusMessage.value =
-        'No records match the current filters. No adjustments applied.';
-      isApplyingAdjustment.value = false;
-      return;
-    }
-
-    console.log(`[USRateSheetTable] Found ${recordCount} records matching filters to adjust.`);
-    // Reverted status message
-    adjustmentStatusMessage.value = `Applying ${recordCount} updates...`;
-
-    // 2. Calculate ALL Changes in Memory
-    const allUpdatesToApply: { key: any; changes: Partial<USRateSheetEntry> }[] = [];
-
-    for (const record of filteredRecords) {
-      if (!record) continue;
-
-      const changes: Partial<USRateSheetEntry> = {};
-      let changed = false;
-      const targets: (keyof Pick<USRateSheetEntry, 'interRate' | 'intraRate' | 'ijRate'>)[] = [];
-
-      if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'inter')
-        targets.push('interRate');
-      if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'intra')
-        targets.push('intraRate');
-      if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'ij')
-        targets.push('ijRate');
-
-      targets.forEach((rateField) => {
-        const currentRate = record[rateField];
-        if (typeof currentRate !== 'number') return;
-
-        let adjustedRate: number;
-        const value = adjustmentValue.value!; // Already validated > 0
-
-        if (adjustmentType.value === 'set') {
-          adjustedRate = value;
-        } else if (adjustmentValueType.value === 'percentage') {
-          const percentage = value / 100;
-          adjustedRate =
-            currentRate * (adjustmentType.value === 'markup' ? 1 + percentage : 1 - percentage);
-        } else {
-          adjustedRate = currentRate + (adjustmentType.value === 'markup' ? value : -value);
+        if (typeof entry.intraRate === 'number') {
+          sumIntra += entry.intraRate;
         }
-
-        const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
-
-        if (finalRate !== currentRate) {
-          changes[rateField] = finalRate;
-          changed = true;
+        if (typeof entry.indetermRate === 'number') {
+          sumIndeterm += entry.indetermRate;
+        }
+        if (
+          typeof entry.interRate === 'number' ||
+          typeof entry.intraRate === 'number' ||
+          typeof entry.indetermRate === 'number'
+        ) {
+          count++;
         }
       });
 
-      if (changed) {
-        // Assuming 'id' or 'npanxx' can serve as a key, might need adjustment based on actual schema
-        allUpdatesToApply.push({ key: record.id || record.npanxx, changes });
+      const averages: RateAverages = {
+        inter: count > 0 && !isNaN(sumInter) ? sumInter / count : null,
+        intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
+        indeterm: count > 0 && !isNaN(sumIndeterm) ? sumIndeterm / count : null,
+      };
+
+      return averages;
+    } catch (err: any) {
+      console.error('[USRateSheetTable] Error calculating averages:', err);
+      dataError.value = err.message || 'Failed to calculate averages';
+      return null;
+    } finally {
+      if (isLoadingOverall) {
+        isCalculatingOverall.value = false;
+      } else {
+        isCalculatingState.value = false;
       }
     }
+  }
 
-    const updatesCount = allUpdatesToApply.length;
-    if (updatesCount === 0) {
-      adjustmentStatusMessage.value = 'No changes needed for the matching records.';
-      isApplyingAdjustment.value = false;
+  onMounted(async () => {
+    if (!lergStore.isLoaded) {
+      console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
+    }
+
+    isDataLoading.value = true;
+    const dbReady = await initializeRateSheetDB();
+    if (dbReady && store.getHasUsRateSheetData) {
+      await updateAvailableStates();
+      await resetPaginationAndLoad();
+
+      overallAverages.value = await calculateAverages();
+      currentDisplayAverages.value = overallAverages.value ?? {
+        inter: null,
+        intra: null,
+        indeterm: null,
+      };
+    } else {
+      totalRecords.value = 0;
+      isDataLoading.value = false;
+      overallAverages.value = null;
+      currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+    }
+  });
+
+  onBeforeUnmount(() => {
+    stopSearchWatcher();
+    stopStateWatcher();
+    stopDbUpdateWatcher();
+  });
+
+  watch(
+    () => store.getHasUsRateSheetData,
+    async (hasData, oldHasData) => {
+      if (hasData !== oldHasData) {
+        if (!hasData) {
+          dbInstance = null;
+          totalRecords.value = 0;
+          displayedData.value = [];
+          availableStates.value = [];
+          selectedState.value = '';
+          searchQuery.value = '';
+          hasMoreData.value = false;
+          dataError.value = null;
+          isDataLoading.value = false;
+          overallAverages.value = null;
+          stateAverageCache.value.clear();
+          currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+        } else {
+          isDataLoading.value = true;
+          const dbReady = await initializeRateSheetDB();
+          if (dbReady) {
+            await updateAvailableStates();
+            await resetPaginationAndLoad();
+          } else {
+            isDataLoading.value = false;
+          }
+        }
+      }
+    },
+    { immediate: false }
+  );
+
+  useIntersectionObserver(
+    loadMoreTriggerRef,
+    ([{ isIntersecting }]) => {
+      if (isIntersecting && hasMoreData.value && !isLoadingMore.value && !isDataLoading.value) {
+        loadMoreData();
+      }
+    },
+    {
+      root: scrollContainerRef.value,
+      threshold: 0.1,
+    }
+  );
+
+  /**
+   * Formats a rate value for display, including a leading '$' and handling null/undefined.
+   * @param rate The rate value.
+   * @returns Formatted string (e.g., $0.008000) or 'N/A'.
+   */
+  function formatRate(rate: number | string | null | undefined): string {
+    if (rate === null || rate === undefined || typeof rate !== 'number') {
+      return 'N/A';
+    }
+    return `$${Number(rate).toFixed(6)}`;
+  }
+
+  function handleClearData() {
+    if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
+      overallAverages.value = null;
+      stateAverageCache.value.clear();
+      currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+      store.clearUsRateSheetData();
+    }
+  }
+
+  async function handleExport() {
+    if (isExporting.value) return;
+    const dbReady = await initializeRateSheetDB();
+    if (!dbReady || !dbInstance) {
+      alert('Database is not ready. Cannot export.');
+      console.error('[USRateSheetTable] Export failed: DB instance not available.');
       return;
     }
 
-    console.log(
-      `[USRateSheetTable] Calculated ${updatesCount} updates. Starting write operation...`
-    );
+    isExporting.value = true;
+    dataError.value = null;
 
-    // 3. Perform ALL Updates using bulkUpdate (This part was actually efficient)
-    const tableToUpdate = dbInstance.table<USRateSheetEntry, number | string>(
-      RATE_SHEET_TABLE_NAME
-    );
-    await tableToUpdate.bulkUpdate(allUpdatesToApply);
-    console.log(`[USRateSheetTable] bulkUpdate finished.`);
+    try {
+      const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
 
-    // Update completed successfully
-    const endTime = performance.now();
-    const duration = ((endTime - startTime) / 1000).toFixed(2);
-    adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
-    console.log(`[USRateSheetTable] Adjustment finished in ${duration}s.`);
+      const allMatchingData = await table.toArray();
 
-    // Automatically clear the status message after 4 seconds
-    adjustmentStatusTimeoutId = setTimeout(() => {
-      adjustmentStatusMessage.value = null;
-      adjustmentStatusTimeoutId = null; // Clear the ID after execution
-    }, 4000);
+      if (allMatchingData.length === 0) {
+        alert('No data found in the rate sheet to export.');
+        isExporting.value = false;
+        return;
+      }
 
-    // 4. Refresh Data and Averages - REMOVED MANUAL CALLS, RELY ON WATCHER
-    // console.log('[USRateSheetTable] Refreshing table data and averages after adjustment...');
-    // await resetPaginationAndLoad(); // Reload table data - REMOVED
-    // await calculateAverages(selectedState.value || undefined); // Recalculate averages - REMOVED
-    store.lastDbUpdateTime = Date.now(); // Signal update - KEEP THIS TO TRIGGER WATCHER
-  } catch (err: any) {
-    console.error('[USRateSheetTable] Error applying rate adjustments:', err);
-    adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
-    adjustmentStatusMessage.value = null;
-  } finally {
-    isApplyingAdjustment.value = false;
+      const fields = [
+        { label: 'NPANXX', value: 'npanxx' },
+        { label: 'State', value: 'state' },
+        { label: 'Country', value: 'country' },
+        { label: 'Interstate Rate', value: 'interRate' },
+        { label: 'Intrastate Rate', value: 'intraRate' },
+        { label: 'Indeterminate Rate', value: 'indetermRate' },
+        { label: 'Effective Date', value: 'effectiveDate' },
+      ];
+
+      const dataToExport = allMatchingData.map((entry) => {
+        const location = lergStore.getLocationByNPA(entry.npa);
+        const formatExportRate = (rate: number | string | null | undefined): string => {
+          if (rate === null || rate === undefined || typeof rate !== 'number') {
+            return 'N/A';
+          }
+          return Number(rate).toFixed(6);
+        };
+
+        return {
+          npanxx: entry.npanxx,
+          state: location?.region || 'N/A',
+          country: location?.country || 'N/A',
+          interRate: formatExportRate(entry.interRate),
+          intraRate: formatExportRate(entry.intraRate),
+          indetermRate: formatExportRate(entry.indetermRate),
+          effectiveDate: entry.effectiveDate || 'N/A',
+        };
+      });
+
+      const csv = Papa.unparse({
+        fields: fields.map((f) => f.label),
+        data: dataToExport.map((row) =>
+          fields.map((field) => row[field.value as keyof typeof row])
+        ),
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      let filename = 'us-rate-sheet';
+      if (selectedState.value) filename += `-${selectedState.value}`;
+      if (debouncedSearchQuery.value) filename += `-search_${debouncedSearchQuery.value}`;
+      filename += `-${timestamp}.csv`;
+
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (exportError: any) {
+      console.error('[USRateSheetTable] Error during export:', exportError);
+      dataError.value = exportError.message || 'An error occurred during export.';
+      alert(`Export failed: ${dataError.value}`);
+    } finally {
+      isExporting.value = false;
+    }
   }
-}
-// --- End Rate Adjustment ---
 
-// --- Computed properties for Listbox labels (Reverted names) ---
-const selectedAdjustmentTypeLabel = computed(
-  () => adjustmentTypeOptions.find((opt) => opt.value === adjustmentType.value)?.label || ''
-);
-const selectedAdjustmentValueTypeLabel = computed(
-  () =>
-    adjustmentValueTypeOptions.find((opt) => opt.value === adjustmentValueType.value)?.label || ''
-);
-const selectedAdjustmentTargetRateLabel = computed(
-  () =>
-    adjustmentTargetRateOptions.find((opt) => opt.value === adjustmentTargetRate.value)?.label || ''
-);
-// --- End Computed properties ---
+  function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
+    let filteredData = data;
 
-// Helper function to get display name for state or province
-function getRegionDisplayName(code: string): string {
-  if (!code) return '';
-  const stateName = lergStore.getStateNameByCode(code);
-  if (stateName !== code) return stateName;
-  const provinceName = lergStore.getProvinceNameByCode(code);
-  return provinceName;
-}
+    if (debouncedSearchQuery.value) {
+      filteredData = filteredData.filter((entry) =>
+        entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value)
+      );
+    }
+
+    if (selectedState.value && lergStore.isLoaded) {
+      filteredData = filteredData.filter((entry) => {
+        const location = lergStore.getLocationByNPA(entry.npa);
+        return location?.country === 'US' && location.region === selectedState.value;
+      });
+    }
+
+    return filteredData;
+  }
+
+  async function handleApplyAdjustment() {
+    if (isApplyingAdjustment.value || !dbInstance) {
+      console.warn('[USRateSheetTable] Adjustment already in progress or DB not ready.');
+      return;
+    }
+    if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
+      adjustmentError.value = 'Please enter a positive adjustment value.';
+      adjustmentStatusMessage.value = null;
+      return;
+    }
+
+    if (adjustmentStatusTimeoutId) {
+      clearTimeout(adjustmentStatusTimeoutId);
+      adjustmentStatusTimeoutId = null;
+    }
+
+    isApplyingAdjustment.value = true;
+    adjustmentStatusMessage.value = null;
+    adjustmentError.value = null;
+    const startTime = performance.now();
+
+    try {
+      let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance
+        .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
+        .toCollection();
+
+      const filtersApplied: string[] = [];
+
+      if (debouncedSearchQuery.value) {
+        collection = collection.filter((record: USRateSheetEntry) =>
+          record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
+        );
+        filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
+      }
+      if (selectedState.value) {
+        collection = collection.filter(
+          (record: USRateSheetEntry) => record.stateCode === selectedState.value
+        );
+        filtersApplied.push(`Region equals '${selectedState.value}'`);
+      }
+
+      const filteredRecords = await collection.toArray();
+      const recordCount = filteredRecords.length;
+
+      if (recordCount === 0) {
+        adjustmentStatusMessage.value =
+          'No records match the current filters. No adjustments applied.';
+        isApplyingAdjustment.value = false;
+        return;
+      }
+
+      adjustmentStatusMessage.value = `Applying ${recordCount} updates...`;
+
+      const allUpdatesToApply: { key: any; changes: Partial<USRateSheetEntry> }[] = [];
+
+      for (const record of filteredRecords) {
+        if (!record) continue;
+
+        const changes: Partial<USRateSheetEntry> = {};
+        let changed = false;
+        const targets: (keyof Pick<
+          USRateSheetEntry,
+          'interRate' | 'intraRate' | 'indetermRate'
+        >)[] = [];
+
+        if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'inter')
+          targets.push('interRate');
+        if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'intra')
+          targets.push('intraRate');
+        if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'indeterm')
+          targets.push('indetermRate');
+
+        targets.forEach((rateField) => {
+          const currentRate = record[rateField];
+          if (typeof currentRate !== 'number') return;
+
+          let adjustedRate: number;
+          const value = adjustmentValue.value!;
+
+          if (adjustmentType.value === 'set') {
+            adjustedRate = value;
+          } else if (adjustmentValueType.value === 'percentage') {
+            const percentage = value / 100;
+            adjustedRate =
+              currentRate * (adjustmentType.value === 'markup' ? 1 + percentage : 1 - percentage);
+          } else {
+            adjustedRate = currentRate + (adjustmentType.value === 'markup' ? value : -value);
+          }
+
+          const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
+
+          if (finalRate !== currentRate) {
+            changes[rateField] = finalRate;
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          allUpdatesToApply.push({ key: record.id || record.npanxx, changes });
+        }
+      }
+
+      const updatesCount = allUpdatesToApply.length;
+      if (updatesCount === 0) {
+        adjustmentStatusMessage.value = 'No changes needed for the matching records.';
+        isApplyingAdjustment.value = false;
+        return;
+      }
+
+      const tableToUpdate = dbInstance.table<USRateSheetEntry, number | string>(
+        RATE_SHEET_TABLE_NAME
+      );
+      await tableToUpdate.bulkUpdate(allUpdatesToApply);
+
+      const endTime = performance.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(2);
+      adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
+
+      adjustmentStatusTimeoutId = setTimeout(() => {
+        adjustmentStatusMessage.value = null;
+        adjustmentStatusTimeoutId = null;
+      }, 4000);
+
+      store.lastDbUpdateTime = Date.now();
+    } catch (err: any) {
+      console.error('[USRateSheetTable] Error applying rate adjustments:', err);
+      adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
+      adjustmentStatusMessage.value = null;
+    } finally {
+      isApplyingAdjustment.value = false;
+    }
+  }
+
+  const selectedAdjustmentTypeLabel = computed(
+    () => adjustmentTypeOptions.find((opt) => opt.value === adjustmentType.value)?.label || ''
+  );
+  const selectedAdjustmentValueTypeLabel = computed(
+    () =>
+      adjustmentValueTypeOptions.find((opt) => opt.value === adjustmentValueType.value)?.label || ''
+  );
+  const selectedAdjustmentTargetRateLabel = computed(
+    () =>
+      adjustmentTargetRateOptions.find((opt) => opt.value === adjustmentTargetRate.value)?.label ||
+      ''
+  );
+
+  function getRegionDisplayName(code: string): string {
+    if (!code) return '';
+    const stateName = lergStore.getStateNameByCode(code);
+    if (stateName !== code) return stateName;
+    const provinceName = lergStore.getProvinceNameByCode(code);
+    return provinceName;
+  }
 </script>
 
 <style scoped>
-.spinner-accent {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: var(--color-accent, #10b981);
-  border-radius: 50%;
-  animation: spinner 0.8s linear infinite;
-}
-
-@keyframes spinner {
-  to {
-    transform: rotate(360deg);
+  .spinner-accent {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--color-accent, #10b981);
+    border-radius: 50%;
+    animation: spinner 0.8s linear infinite;
   }
-}
 
-thead th {
-  position: sticky;
-  top: 0;
-  background-color: #1f2937;
-  z-index: 10;
-}
+  @keyframes spinner {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background-color: #1f2937;
+    z-index: 10;
+  }
 </style>

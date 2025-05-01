@@ -45,7 +45,6 @@ export class USRateSheetService {
     this.storeInDexieDB = storeInDexieDB;
     this.deleteDatabase = deleteDatabase;
     this.lergStore = useLergStore();
-    console.log('USRateSheetService initialized');
 
     // Ensure LERG data is loaded before proceeding (optional but recommended)
     // Moved check to processFile as LERG might load after constructor
@@ -63,7 +62,6 @@ export class USRateSheetService {
     try {
       // Get a reference to the database to create it with the proper schema if it doesn't exist
       const db = await this.getDB(this.dbName);
-      console.log(`[USRateSheetService] Database ${this.dbName} initialized. Ready for data.`);
     } catch (error) {
       // Only log the error but don't throw - this allows the service to continue working
       console.error(
@@ -77,12 +75,8 @@ export class USRateSheetService {
    * Clears all data from the database by deleting the database itself.
    */
   async clearData(): Promise<void> {
-    console.log(
-      `[USRateSheetService] Clearing US Rate Sheet data by deleting database ${this.dbName}`
-    );
     try {
       await this.deleteDatabase(this.dbName); // Directly call deleteDatabase from the composable
-      console.log(`[USRateSheetService] Database ${this.dbName} deleted successfully.`);
     } catch (error) {
       console.error(`[USRateSheetService] Error deleting database ${this.dbName}:`, error);
       // Rethrow the error so the store can potentially handle it
@@ -95,7 +89,6 @@ export class USRateSheetService {
     try {
       // Simply ensure the database is initialized
       await this.initializeDatabase();
-      console.log(`[USRateSheetService] Database optimized for bulk operations`);
     } catch (error) {
       console.warn(`[USRateSheetService] Error optimizing database:`, error);
     }
@@ -113,9 +106,6 @@ export class USRateSheetService {
       await this.storeInDexieDB(batchToStore, this.dbName, 'entries', {
         replaceExisting: false, // Don't replace, just add
       });
-      console.log(
-        `[USRateSheetService] Stored batch of ${batchToStore.length} records in 'entries' table via storeInDexieDB.`
-      );
     } catch (error) {
       console.error(`[USRateSheetService] Error storing batch via storeInDexieDB:`, error);
       // Consider how to handle failed batches - re-adding to processingBatch,
@@ -136,8 +126,6 @@ export class USRateSheetService {
     startLine: number,
     indeterminateDefinition: string | undefined
   ): Promise<ProcessFileResult> {
-    console.log('USRateSheetService processing file:', { fileName: file.name, startLine });
-
     // --- Add Guard: Ensure LERG data is loaded --- START ---
     if (!this.lergStore.isLoaded) {
       const errorMsg =
@@ -155,24 +143,6 @@ export class USRateSheetService {
 
     // Wrap the entire processing logic in a try/catch to handle promise rejection
     try {
-      // --- Prepare Database --- START ---
-      // REMOVED: Explicit deletion and re-initialization. DexieDB handles initialization,
-      // and data clearing can be managed via options in storeInDexieDB if needed.
-      // try {
-      // // Delete existing database for a clean slate
-      // await this.deleteDatabase(this.dbName);
-      // console.log(`[USRateSheetService] Deleted database ${this.dbName} to start fresh`);
-      //
-      // // Initialize a new database instance - this should create the tables based on the schema in useDexieDB
-      // await this.initializeDatabase(); // This opens the DB
-      // console.log(`[USRateSheetService] Initialized new database ${this.dbName}`);
-      // } catch (dbPrepError) {
-      //   console.error('[USRateSheetService] Critical error preparing database:', dbPrepError);
-      //   // Reject the main promise if DB preparation fails
-      //   return Promise.reject(new Error('Failed to prepare database table.'));
-      // }
-      // --- Prepare Database --- END ---
-
       // Reset the batch in case there's anything left from a previous operation
       this.processingBatch = [];
 
@@ -202,9 +172,6 @@ export class USRateSheetService {
             // Update progress periodically
             const now = Date.now();
             if (now - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
-              console.log(
-                `[USRateSheetService] Processing progress: ${totalChunks} rows, ${totalRecords} valid records`
-              );
               lastProgressUpdate = now;
             }
 
@@ -223,10 +190,11 @@ export class USRateSheetService {
               );
               if (processedRow) {
                 // Add id to each record for better indexing
-                this.processingBatch.push({
+                const recordToBatch = {
                   ...processedRow,
-                  id: Date.now() + totalRecords, // Using timestamp + counter as ID
-                });
+                  id: Date.now() + totalRecords,
+                };
+                this.processingBatch.push(recordToBatch);
                 totalRecords++;
               }
 
@@ -243,11 +211,7 @@ export class USRateSheetService {
           complete: async () => {
             // Wait for all intermediate batch storage operations to complete
             try {
-              console.log(
-                `[USRateSheetService] Waiting for ${batchPromises.length} intermediate batch stores to finish...`
-              );
               await Promise.all(batchPromises);
-              console.log('[USRateSheetService] Intermediate batch stores finished.');
             } catch (batchError) {
               console.error(
                 '[USRateSheetService] Error during intermediate batch storage:',
@@ -268,10 +232,6 @@ export class USRateSheetService {
                 return; // Stop further processing
               }
             }
-
-            console.log(
-              `[USRateSheetService] Parsing complete. Processed ${totalRecords} valid records out of ${totalChunks} total rows.`
-            );
 
             // Resolve the promise with the results
             resolve({
@@ -330,12 +290,10 @@ export class USRateSheetService {
       npanxx = rawNpanxx.substring(1); // Remove leading '1'
       npa = npanxx.substring(0, 3);
       nxx = npanxx.substring(3, 6);
-      console.log(`[processRow ${rowIndex}] Stripped leading '1' from 7-digit NPANXX: ${npanxx}`);
     } else if (rawNpanxx && rawNpanxx.length === 6 && /^[0-9]+$/.test(rawNpanxx)) {
       npanxx = rawNpanxx;
       npa = rawNpanxx.substring(0, 3);
       nxx = rawNpanxx.substring(3, 6);
-      console.log(`[processRow ${rowIndex}] Using 6-digit NPANXX: ${npanxx}`);
     } else if (
       rawNpa &&
       rawNpa.length === 3 &&
@@ -422,16 +380,10 @@ export class USRateSheetService {
    * Assumes all records currently have the same effective date.
    */
   async getCurrentEffectiveDate(): Promise<string | null> {
-    console.log(
-      `[USRateSheetService] Getting current effective date from ${this.dbName}/'entries'`
-    );
     try {
       // Check if DB exists before trying to open it
       const dbExists = await Dexie.exists(this.dbName);
       if (!dbExists) {
-        console.log(
-          `[USRateSheetService] Database ${this.dbName} does not exist. Cannot get effective date.`
-        );
         return null;
       }
 
@@ -455,7 +407,6 @@ export class USRateSheetService {
    * @param newDate The new effective date string (YYYY-MM-DD).
    */
   async updateAllEffectiveDates(newDate: string): Promise<void> {
-    console.log(`[USRateSheetService] Updating all effective dates to ${newDate}`);
     try {
       const db = await this.getDB(this.dbName);
       if (!db.tables.some((table) => table.name === 'entries')) {
@@ -464,7 +415,6 @@ export class USRateSheetService {
 
       const table = db.table<USRateSheetEntry>('entries');
       const recordCount = await table.count();
-      console.log(`[USRateSheetService] Found ${recordCount} records to update.`);
 
       if (recordCount === 0) {
         console.warn('[USRateSheetService] No records found to update effective date.');
@@ -478,10 +428,6 @@ export class USRateSheetService {
         record.effectiveDate = newDate;
         // No need to return anything, modify works in place
       });
-
-      console.log(
-        `[USRateSheetService] Successfully updated effective date for ${updatedCount} records using modify().`
-      );
     } catch (error) {
       console.error(`[USRateSheetService] Error updating all effective dates:`, error);
       throw new Error('Failed to update effective dates in the database.'); // Re-throw for the store to catch
@@ -499,7 +445,6 @@ export class USRateSheetService {
     try {
       // Load data from the correct 'entries' table
       const data = await this.loadFromDexieDB<USRateSheetEntry>(this.dbName, 'entries');
-      console.log(`[USRateSheetService] Loaded ${data.length} records from 'entries' table.`);
       return data;
     } catch (error) {
       console.error(
