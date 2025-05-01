@@ -223,7 +223,7 @@
         <div class="flex justify-end mt-8">
           <!-- Use BaseButton for Get Reports -->
           <BaseButton
-            v-if="usStore.isFull && !usStore.reportsGenerated"
+            v-if="usStore.isFull"
             variant="primary"
             size="standard"
             :icon="ArrowRightIcon"
