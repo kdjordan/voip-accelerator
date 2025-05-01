@@ -40,14 +40,6 @@ export default {
         xxs: ['0.65rem', '1rem'],
       },
       keyframes: {
-        'upload-pulse': {
-          '0%, 100%': {
-            background: 'hsl(160, 100%, 40%, 0.1)',
-          },
-          '50%': {
-            background: 'hsl(160, 100%, 40%, 0.2)',
-          },
-        },
         'status-pulse-success-shadow': {
           '0%, 100%': {
             opacity: 1,
@@ -78,29 +70,15 @@ export default {
             boxShadow: '0 0 0 6px theme(colors.warning/0)',
           },
         },
-        'info-pulse-shadow': {
+        'pulse-info-shadow': {
           '0%, 100%': {
             opacity: 1,
             boxShadow: '0 0 0 0 theme(colors.info/0.6)',
           },
           '50%': {
-            opacity: 0.5,
+            opacity: 0.6,
             boxShadow: '0 0 0 6px theme(colors.info/0)',
           },
-        },
-        pulse: {
-          '0%, 100%': {
-            opacity: 0.5,
-            transform: 'scale(0.95)',
-          },
-          '50%': {
-            opacity: 1,
-            transform: 'scale(1.05)',
-          },
-        },
-        'opacity-pulse': {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.5 },
         },
         spin: {
           '0%': { transform: 'rotate(0deg)' },
@@ -108,14 +86,12 @@ export default {
         },
       },
       animation: {
-        'upload-pulse': 'upload-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-success':
           'status-pulse-success-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-error': 'status-pulse-error-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-warning':
           'status-pulse-warning-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'animate-opacity-pulse': 'opacity-pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'animate-info-pulse': 'info-pulse-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-info': 'pulse-info-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         spin: 'spin 1s linear infinite',
       },
     },

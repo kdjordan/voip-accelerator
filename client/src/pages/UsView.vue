@@ -5,13 +5,13 @@
         US Rate Deck Analyzer
       </span>
       <!-- Info Icon Button -->
-      <button
+     <button
         @click="openInfoModal"
         class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
-        aria-label="Show US Rate Deck Analyzer information"
+        aria-label="Show AZ Rate Deck Analyzer information"
       >
         <!-- Apply dashboard styling -->
-        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+        <div class="p-1 bg-blue-900/40 rounded-lg border border-blue-400/50 animate-pulse-info">
           <InformationCircleIcon class="w-5 h-5 text-blue-400" />
         </div>
       </button>
@@ -124,7 +124,7 @@ onMounted(async () => {
       // Only load sample decks if no files are already uploaded
       // console.log('[UsView] No files uploaded, loading sample data');
       const sampleDecks = setTimeout(async () => {
-        // await loadSampleDecks([DBName.US]);
+        await loadSampleDecks([DBName.US]);
       }, 1000);
 
       // Clear timeout on component unmount

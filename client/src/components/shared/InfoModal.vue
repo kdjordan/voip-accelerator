@@ -63,11 +63,11 @@
 import { ref, watch } from 'vue';
 import { XCircleIcon } from '@heroicons/vue/24/outline';
 import BaseButton from '@/components/shared/BaseButton.vue';
-import type { InfoModalType } from '@/types/ui-types'; // Assuming types are in ui-types
+import { InfoModalContentType } from '@/types/app-types';
 
 interface InfoModalProps {
   showModal: boolean;
-  type: InfoModalType;
+  type: InfoModalContentType;
 }
 
 const props = defineProps<InfoModalProps>();
@@ -77,7 +77,7 @@ const message = ref('');
 const title = ref('');
 
 // Function to set the message and title based on type
-function setContentByType(type: InfoModalType) {
+function setContentByType(type: InfoModalContentType) {
   switch (type) {
     case 'us_rate_sheet':
       title.value = 'US Rate Sheet Instructions';
@@ -95,8 +95,8 @@ function setContentByType(type: InfoModalType) {
         Our guided process makes column mapping a breeze, and all your data is stored securely and locally in your browser for instant access.<br>
         You'll wonder how you ever managed US Rate Sheets without this indispensable tool!`;
       break;
-    case 'az_rate_deck':
-      title.value = 'A-Z Rate Deck Wizard';
+    case 'az_rate_sheet':
+      title.value = 'A-Z Rate Sheet Wizard';
       message.value = `<strong>Effortlessly Manage Global Rates!</strong> This tool simplifies uploading and managing your international A-Z rate decks.<br><br>Upload your CSV file containing at least these columns:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (or Prefix)</li>
@@ -105,7 +105,7 @@ function setContentByType(type: InfoModalType) {
         </ul>
         Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>The system automatically parses your file, validates the data, and stores it locally in your browser for fast access and comparison. Simplify your international pricing strategy today!`;
       break;
-    case 'us_rate_deck':
+    case 'us_comparison':
       title.value = 'US Rate Deck Analyzer Info';
       message.value = `
         <strong>Analyze & Compare US Rate Decks Like Never Before!</strong> This powerful tool allows you to upload and compare multiple US termination rate decks side-by-side.<br><br>
@@ -124,7 +124,7 @@ function setContentByType(type: InfoModalType) {
         Leverage this tool to optimize your US termination strategy, identify cost-saving opportunities, and ensure competitive pricing.
       `;
       break;
-    case 'az_rate_deck_analyzer':
+    case 'az_comparison':
       title.value = 'A-Z Rate Deck Analyzer Info';
       message.value = `
         <strong>Deep Dive into A-Z Rate Deck Comparisons!</strong> This analyzer empowers you to upload and meticulously compare two international A-Z rate decks.<br><br>

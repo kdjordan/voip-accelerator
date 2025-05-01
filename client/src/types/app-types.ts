@@ -257,7 +257,7 @@ export const DBSchemas = {
     file2_inter,
     file2_intra,
     file2_indeterm,
-    cheaper_file
+    cheaper_filep
   `,
   // Add schema for AZ Pricing Comparison DB
   [DBName.AZ_PRICING_COMPARISON]: `
@@ -290,3 +290,14 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
     dbName === DBName.AZ_PRICING_COMPARISON
   );
 }
+
+/**
+ * Types for the InfoModal component content
+ */
+export type InfoModalContentType =
+  | 'az_comparison'
+  | 'us_comparison'
+  | 'az_rate_sheet'
+  | 'us_rate_sheet'
+  
+
