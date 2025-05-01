@@ -28,7 +28,7 @@
           >
             <h2
               id="info-modal-title"
-              class="text-lg leading-6 font-medium text-fbWhite text-secondary uppercase tracking-wider"
+              class="text-lg leading-6 font-medium text-accent text-secondary uppercase tracking-wider"
             >
               {{ title }}
             </h2>
@@ -88,14 +88,22 @@ function setContentByType(type: InfoModalType) {
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
         </ol>
-        But that's just the beginning! Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise markup or percentage, targeting specific NPAs, NPANXX ranges, or even entire states. Complex adjustments are now just a few clicks away!<br><br>
-        Our guided process makes column mapping a breeze, and all your data is stored securely and locally in your browser for instant access.<br><br>
+        <br>
+        But that's just the beginning! Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise markup or percentage, targeting specific NPAs, individaul NPANXXs, or even entire states ro provinces.
+        <br><br>
+        Complex adjustments are now just a few clicks away!<br><br>
+        Our guided process makes column mapping a breeze, and all your data is stored securely and locally in your browser for instant access.<br>
         You'll wonder how you ever managed US Rate Sheets without this indispensable tool!`;
       break;
     case 'az_rate_deck':
-      title.value = 'A-Z Rate Deck Info';
-      message.value =
-        'Upload <strong>A-Z rate decks</strong> here. Ensure the CSV has columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code>, <code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code>, and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code>. The system will process the file and store the data locally.';
+      title.value = 'A-Z Rate Deck Wizard';
+      message.value = `<strong>Effortlessly Manage Global Rates!</strong> This tool simplifies uploading and managing your international A-Z rate decks.<br><br>Upload your CSV file containing at least these columns:
+        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (or Prefix)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code> (or Destination)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
+        </ul>
+        Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>The system automatically parses your file, validates the data, and stores it locally in your browser for fast access and comparison. Simplify your international pricing strategy today!`;
       break;
     case 'us_rate_deck':
       title.value = 'US Rate Deck Info';

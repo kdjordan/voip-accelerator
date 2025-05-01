@@ -1,9 +1,20 @@
 <template>
   <div class="min-h-screen text-white pt-2 w-full">
-    <h1 class="mb-2">
+    <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >AZ Rate Sheet Wizard
       </span>
+      <!-- Info Icon Button -->
+      <button
+        @click="openInfoModal"
+        class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
+        aria-label="Show A-Z Rate Sheet information"
+      >
+        <!-- Apply dashboard styling -->
+        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+          <InformationCircleIcon class="w-5 h-5 text-blue-400" />
+        </div>
+      </button>
     </h1>
 
     <!-- Stats Dashboard -->
@@ -280,6 +291,9 @@
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
+
+    <!-- Info Modal -->
+    <InfoModal :show-modal="showInfoModal" :type="'az_rate_deck'" @close="closeInfoModal" />
   </div>
 </template>
 
@@ -293,6 +307,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ArrowPathIcon,
+  InformationCircleIcon,
 } from '@heroicons/vue/24/outline';
 import RateSheetTable from '@/components/rate-sheet/az/AZRateSheetTable.vue';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
@@ -300,6 +315,7 @@ import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 import { RateSheetService } from '@/services/az-rate-sheet.service';
+import InfoModal from '@/components/shared/InfoModal.vue';
 
 const store = useAzRateSheetStore();
 const rateSheetService = new RateSheetService();
@@ -330,6 +346,9 @@ const selectedFile = ref<File | null>(null);
 
 // Invalid Rows state
 const showInvalidRowsDetails = ref(false);
+
+// Info Modal state
+const showInfoModal = ref(false);
 
 onMounted(() => {
   // Check if data is already stored in localStorage via the store
@@ -474,5 +493,14 @@ function handleMappingUpdate(newMappings: Record<string, string>) {
 
 function toggleInvalidRowsDetails() {
   showInvalidRowsDetails.value = !showInvalidRowsDetails.value;
+}
+
+// Info Modal functions
+function openInfoModal() {
+  showInfoModal.value = true;
+}
+
+function closeInfoModal() {
+  showInfoModal.value = false;
 }
 </script>
