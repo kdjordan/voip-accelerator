@@ -32,13 +32,14 @@
             >
               {{ title }}
             </h2>
-            <BaseButton
-              variant="secondary-outline"
-              size="small"
-              :icon="XCircleIcon"
+            <button
+              type="button"
               @click="closeModal"
               aria-label="Close modal"
-            />
+              class="rounded-md p-1 text-gray-400 hover:text-white hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 focus:ring-offset-gray-800 transition-colors"
+            >
+              <XCircleIcon class="h-6 w-6" aria-hidden="true" />
+            </button>
           </div>
 
           <!-- Modal Body -->
@@ -80,8 +81,16 @@ function setContentByType(type: InfoModalType) {
   switch (type) {
     case 'us_rate_sheet':
       title.value = 'US Rate Sheet Instructions';
-      message.value =
-        'This wizard helps you upload and manage <strong>US Rate Sheet</strong> data. <br>Drag & drop or click to upload a CSV file containing: <ol><li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX</code> (or <code class="bg-gray-700 px-1 rounded text-accent text-sm">NPA</code> + <code class="bg-gray-700 px-1 rounded text-accent text-sm">NXX</code>)</li><li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li><li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li></ol>The tool will guide you through column mapping and processing. <br>All data is stored locally in your browser.';
+      message.value = `<strong>Unlock Effortless US Rate Sheet Management!</strong> This intuitive wizard streamlines your workflow, saving you time and ensuring pinpoint accuracy.<br><br>
+        Simply drag & drop or click to upload your CSV containing:
+        <ol class="list-decimal list-inside my-2 space-y-1">
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX</code> (or <code class="bg-gray-700 px-1 rounded text-accent text-sm">NPA</code> + <code class="bg-gray-700 px-1 rounded text-accent text-sm">NXX</code>)</li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
+        </ol>
+        But that's just the beginning! Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise markup or percentage, targeting specific NPAs, NPANXX ranges, or even entire states. Complex adjustments are now just a few clicks away!<br><br>
+        Our guided process makes column mapping a breeze, and all your data is stored securely and locally in your browser for instant access.<br><br>
+        You'll wonder how you ever managed US Rate Sheets without this indispensable tool!`;
       break;
     case 'az_rate_deck':
       title.value = 'A-Z Rate Deck Info';
