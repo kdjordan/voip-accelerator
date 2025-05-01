@@ -421,11 +421,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
-          <tr
-            v-for="entry in displayedData"
-            :key="entry.id || entry.npanxx"
-            class="hover:bg-gray-700/50"
-          >
+          <tr v-for="entry in displayedData" :key="entry.npanxx" class="hover:bg-gray-700/50">
             <td class="px-4 py-2 text-gray-400 font-mono text-center">{{ entry.npanxx }}</td>
             <td class="px-4 py-2 text-gray-400 text-center">
               {{ lergStore.getLocationByNPA(entry.npa)?.region || 'N/A' }}
@@ -529,7 +525,7 @@
   ] as const;
   // --- End Rate Adjustment Options Data ---
 
-  // --- Rate Adjustment State (Reverted) ---
+  // --- Rate Adjustment State ---
   const adjustmentType = ref<AdjustmentType>(adjustmentTypeOptions[0].value);
   const adjustmentValueType = ref<AdjustmentValueType>(adjustmentValueTypeOptions[0].value);
   const adjustmentValue = ref<number | null>(null);
@@ -1233,8 +1229,8 @@
           }
         });
 
-        if (changed) {
-          allUpdatesToApply.push({ key: record.id || record.npanxx, changes });
+        if (changed && record.id) {
+          allUpdatesToApply.push({ key: record.id, changes });
         }
       }
 

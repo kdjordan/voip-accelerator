@@ -11,7 +11,7 @@ export interface RateSheetRecord {
 // --- US Rate Sheet Adjustment Types ---
 export type AdjustmentType = 'markup' | 'markdown' | 'set';
 export type AdjustmentValueType = 'percentage' | 'fixed';
-export type TargetRateType = 'all' | 'inter' | 'intra' | 'ij';
+export type TargetRateType = 'all' | 'inter' | 'intra' | 'indeterm';
 
 export interface RateAdjustmentSettings {
   adjustmentType: AdjustmentType;
@@ -186,12 +186,15 @@ export type FileKey = 'file1' | 'file2';
 /**
  * Types for the US Rate Sheet entries
  */
-import type { RateSheetEntryBase } from './common-rate-sheet-types';
-
 // Specific fields for a US Rate Sheet Entry
-export interface USRateSheetEntry extends RateSheetEntryBase {
-  // Other fields like npa, nxx, npanxx, stateCode are inherited
+export interface USRateSheetEntry {
+  id?: number; // Primary key added by Dexie
+  npa: string;
+  nxx: string;
+  npanxx: string;
+  stateCode: string; // Add stateCode
+  effectiveDate?: string; // Add effectiveDate (make optional if needed)
   interRate: number | null;
   intraRate: number | null;
-  indetermRate: number | null;
+  indetermRate: number | null; // Keep indetermRate as requested
 }
