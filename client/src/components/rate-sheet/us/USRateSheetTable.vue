@@ -699,9 +699,23 @@
   const stopDbUpdateWatcher = watch(
     () => store.lastDbUpdateTime,
     async (newTimestamp, oldTimestamp) => {
-      if (newTimestamp !== oldTimestamp) {
+      // Add detailed logging here
+      console.log('[USRateSheetTable] DB Update Watcher Triggered.', {
+        newTimestamp,
+        oldTimestamp,
+      });
+      if (newTimestamp !== oldTimestamp && newTimestamp !== 0) {
+        // Added check for 0 timestamp which might indicate initial load or clear
+        console.log('[USRateSheetTable] Timestamp changed, refreshing data...');
         await resetPaginationAndLoad();
+        console.log('[USRateSheetTable] Data refresh initiated by resetPaginationAndLoad.');
+
+        // Add log before calculating averages
+        console.log('[USRateSheetTable] Recalculating averages...');
         const avg = await calculateAverages(selectedState.value || undefined);
+        // Add log after calculating averages
+        console.log('[USRateSheetTable] Averages recalculated:', avg);
+
         if (selectedState.value) {
           if (avg) stateAverageCache.value.set(selectedState.value, avg);
           currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
@@ -709,6 +723,9 @@
           overallAverages.value = avg;
           currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
         }
+        console.log('[USRateSheetTable] Display averages updated.');
+      } else {
+        console.log('[USRateSheetTable] Timestamp did not change or was reset, skipping refresh.');
       }
     }
   );

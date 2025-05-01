@@ -407,30 +407,40 @@ export class USRateSheetService {
    * @param newDate The new effective date string (YYYY-MM-DD).
    */
   async updateAllEffectiveDates(newDate: string): Promise<void> {
+    const db = await this.getDB(this.dbName);
+    const entriesTable = db.table<USRateSheetEntry>('entries');
+
+    if (!db.tables.some((table) => table.name === 'entries')) {
+      throw new Error('Entries table not found, cannot update effective dates.');
+    }
+
+    console.log(
+      `[USRateSheetService] Starting effective date update using modify() for date: ${newDate}...`
+    );
+
     try {
-      const db = await this.getDB(this.dbName);
-      if (!db.tables.some((table) => table.name === 'entries')) {
-        throw new Error('Entries table not found, cannot update effective dates.');
-      }
+      // Use a single transaction
+      await db.transaction('rw', entriesTable, async () => {
+        // Use modify() to update all records in the table
+        const updatedCount = await entriesTable.toCollection().modify({
+          effectiveDate: newDate,
+        });
 
-      const table = db.table<USRateSheetEntry>('entries');
-      const recordCount = await table.count();
-
-      if (recordCount === 0) {
-        console.warn('[USRateSheetService] No records found to update effective date.');
-        return; // Nothing to do
-      }
-
-      // Use table.modify() for memory efficiency
-      const updatedCount = await table.toCollection().modify((record: USRateSheetEntry) => {
-        // This modification function runs for each record.
-        // We don't need to check `record` itself, just apply the change.
-        record.effectiveDate = newDate;
-        // No need to return anything, modify works in place
+        console.log(
+          `[USRateSheetService] modify() update complete. Matched and potentially updated: ${updatedCount} records.`
+        );
+        // Note: modify() returns the count of matched records, not necessarily changed records.
+        // We assume success if no error is thrown.
       });
+
+      console.log(`[USRateSheetService] Effective date update transaction completed successfully.`);
     } catch (error) {
-      console.error(`[USRateSheetService] Error updating all effective dates:`, error);
-      throw new Error('Failed to update effective dates in the database.'); // Re-throw for the store to catch
+      // Catch errors from the transaction or modify operation
+      console.error(`[USRateSheetService] Error during modify() effective date update:`, error);
+      if (error instanceof Error && 'name' in error && error.name !== 'Error') {
+        console.error(`[USRateSheetService] Dexie error name: ${error.name}`);
+      }
+      throw new Error('Failed to update effective dates using modify().');
     }
   }
 
