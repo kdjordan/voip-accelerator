@@ -7,41 +7,43 @@
         <!-- Interstate Average -->
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Inter Avg</p>
-          <div
-            v-if="isCalculatingOverall || isCalculatingState"
-            class="flex items-center justify-center h-6"
-          >
-            <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
+          <div class="flex items-center justify-center min-h-[28px]">
+            <p class="text-lg font-semibold text-white font-mono mr-2">
+              {{ currentDisplayAverages.inter === null ? 'N/A' : formatRate(animatedInterAvg) }}
+            </p>
+            <ArrowPathIcon
+              v-if="isCalculatingOverall || isCalculatingState"
+              class="w-4 h-4 text-accent animate-spin"
+            />
           </div>
-          <p v-else class="text-lg font-semibold text-white font-mono">
-            {{ formatRate(currentDisplayAverages.inter) }}
-          </p>
         </div>
         <!-- Intrastate Average -->
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Intra Avg</p>
-          <div
-            v-if="isCalculatingOverall || isCalculatingState"
-            class="flex items-center justify-center h-6"
-          >
-            <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
+          <div class="flex items-center justify-center min-h-[28px]">
+            <p class="text-lg font-semibold text-white font-mono mr-2">
+              {{ currentDisplayAverages.intra === null ? 'N/A' : formatRate(animatedIntraAvg) }}
+            </p>
+            <ArrowPathIcon
+              v-if="isCalculatingOverall || isCalculatingState"
+              class="w-4 h-4 text-accent animate-spin"
+            />
           </div>
-          <p v-else class="text-lg font-semibold text-white font-mono">
-            {{ formatRate(currentDisplayAverages.intra) }}
-          </p>
         </div>
         <!-- Indeterminate Average -->
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Indeterm Avg</p>
-          <div
-            v-if="isCalculatingOverall || isCalculatingState"
-            class="flex items-center justify-center h-6"
-          >
-            <ArrowPathIcon class="w-5 h-5 text-accent animate-spin" />
+          <div class="flex items-center justify-center min-h-[28px]">
+            <p class="text-lg font-semibold text-white font-mono mr-2">
+              {{
+                currentDisplayAverages.indeterm === null ? 'N/A' : formatRate(animatedIndetermAvg)
+              }}
+            </p>
+            <ArrowPathIcon
+              v-if="isCalculatingOverall || isCalculatingState"
+              class="w-4 h-4 text-accent animate-spin"
+            />
           </div>
-          <p v-else class="text-lg font-semibold text-white font-mono">
-            {{ formatRate(currentDisplayAverages.indeterm) }}
-          </p>
         </div>
       </div>
     </div>
@@ -399,19 +401,7 @@
     </div>
 
     <!-- Table Container -->
-    <div v-if="isDataLoading" class="text-center text-gray-500 py-10">
-      <div
-        class="flex items-center justify-center space-x-2 text-accent bg-accent/20 rounded-lg p-2 w-1/2 mx-auto border border-accent/50"
-      >
-        <ArrowPathIcon class="animate-spin w-6 h-6" />
-        <span>Loading Rate Sheet Data...</span>
-      </div>
-    </div>
-    <div
-      v-else-if="displayedData.length > 0"
-      class="overflow-y-auto max-h-[60vh] relative"
-      ref="scrollContainerRef"
-    >
+    <div class="overflow-y-auto max-h-[60vh] relative min-h-[300px]" ref="scrollContainerRef">
       <table class="min-w-full divide-y divide-gray-700 text-sm">
         <thead class="bg-gray-800 sticky top-0 z-10">
           <tr>
@@ -425,41 +415,73 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
-          <tr v-for="entry in displayedData" :key="entry.npanxx" class="hover:bg-gray-700/50">
-            <td class="px-4 py-2 text-gray-400 font-mono text-center">{{ entry.npanxx }}</td>
-            <td class="px-4 py-2 text-gray-400 text-center">
-              {{ lergStore.getLocationByNPA(entry.npa)?.region || 'N/A' }}
+          <!-- Loading State -->
+          <tr v-if="isDataLoading">
+            <td colspan="7" class="text-center py-10">
+              <div class="flex items-center justify-center space-x-2 text-accent">
+                <ArrowPathIcon class="animate-spin w-6 h-6" />
+                <span>Loading Rate Sheet Data...</span>
+              </div>
             </td>
-            <td class="px-4 py-2 text-gray-400 text-center">
-              {{ lergStore.getLocationByNPA(entry.npa)?.country || 'N/A' }}
-            </td>
-            <td class="px-4 py-2 text-white font-mono text-center">
-              {{ formatRate(entry.interRate) }}
-            </td>
-            <td class="px-4 py-2 text-white font-mono text-center">
-              {{ formatRate(entry.intraRate) }}
-            </td>
-            <td class="px-4 py-2 text-white font-mono text-center">
-              {{ formatRate(entry.indetermRate) }}
-            </td>
-            <td class="px-4 py-2 text-gray-400 font-mono text-center">
-              {{ store.getCurrentEffectiveDate || 'N/A' }}
+          </tr>
+
+          <!-- Data Rows -->
+          <template v-else-if="displayedData.length > 0">
+            <tr v-for="entry in displayedData" :key="entry.npanxx" class="hover:bg-gray-700/50">
+              <td class="px-4 py-2 text-gray-400 font-mono text-center">{{ entry.npanxx }}</td>
+              <td class="px-4 py-2 text-gray-400 text-center">
+                {{ lergStore.getLocationByNPA(entry.npa)?.region || 'N/A' }}
+              </td>
+              <td class="px-4 py-2 text-gray-400 text-center">
+                {{ lergStore.getLocationByNPA(entry.npa)?.country || 'N/A' }}
+              </td>
+              <td class="px-4 py-2 text-white font-mono text-center">
+                {{ formatRate(entry.interRate) }}
+              </td>
+              <td class="px-4 py-2 text-white font-mono text-center">
+                {{ formatRate(entry.intraRate) }}
+              </td>
+              <td class="px-4 py-2 text-white font-mono text-center">
+                {{ formatRate(entry.indetermRate) }}
+              </td>
+              <td class="px-4 py-2 text-gray-400 font-mono text-center">
+                {{ store.getCurrentEffectiveDate || 'N/A' }}
+              </td>
+            </tr>
+          </template>
+
+          <!-- Empty State -->
+          <tr v-else>
+            <td colspan="7" class="text-center text-gray-500 py-10">
+              {{
+                totalRecords > 0
+                  ? 'No records match the current filters.'
+                  : 'No US Rate Sheet data found. Please upload a file.'
+              }}
             </td>
           </tr>
         </tbody>
       </table>
-      <!-- Trigger for loading more -->
-      <div ref="loadMoreTriggerRef" class="h-10"></div>
-      <!-- Loading indicator -->
-      <div v-if="isLoadingMore" class="text-center text-gray-500 py-4">Loading more...</div>
-      <div v-if="!hasMoreData && displayedData.length > 0" class="text-center text-gray-600 py-4">
+
+      <!-- Trigger for loading more (only shown when there's data) -->
+      <div
+        v-if="displayedData.length > 0 && hasMoreData"
+        ref="loadMoreTriggerRef"
+        class="h-10"
+      ></div>
+
+      <!-- Loading more indicator (only shown when there's data and loading more) -->
+      <div v-if="isLoadingMore && displayedData.length > 0" class="text-center text-gray-500 py-4">
+        Loading more...
+      </div>
+
+      <!-- End of results message (only shown when there's data and no more to load) -->
+      <div
+        v-if="!hasMoreData && displayedData.length > 0 && totalRecords > 0"
+        class="text-center text-gray-600 py-4"
+      >
         End of results.
       </div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else class="text-center text-gray-500 py-10">
-      No US Rate Sheet data found. Please upload a file.
     </div>
   </div>
 </template>
@@ -484,7 +506,7 @@
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import { useLergStore } from '@/stores/lerg-store';
-  import { useDebounceFn, useIntersectionObserver } from '@vueuse/core';
+  import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types/app-types';
@@ -653,6 +675,17 @@
   const isCalculatingOverall = ref(false);
   const isCalculatingState = ref(false);
 
+  // --- Animated Averages ---
+  const transitionConfig = { duration: 500 };
+  const interAvgSource = computed(() => currentDisplayAverages.value.inter ?? 0);
+  const intraAvgSource = computed(() => currentDisplayAverages.value.intra ?? 0);
+  const indetermAvgSource = computed(() => currentDisplayAverages.value.indeterm ?? 0);
+
+  const animatedInterAvg = useTransition(interAvgSource, transitionConfig);
+  const animatedIntraAvg = useTransition(intraAvgSource, transitionConfig);
+  const animatedIndetermAvg = useTransition(indetermAvgSource, transitionConfig);
+  // --- End Animated Averages ---
+
   const debouncedSearch = useDebounceFn(() => {
     debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
     resetPaginationAndLoad();
@@ -682,15 +715,14 @@
       if (stateAverageCache.value.has(newStateCode)) {
         currentDisplayAverages.value = stateAverageCache.value.get(newStateCode)!;
       } else {
-        // Show loading state for averages (clear current values)
-        currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+        // No need to clear currentDisplayAverages here, the spinner indicates loading
         const stateAvg = await calculateAverages(newStateCode);
         if (stateAvg) {
           stateAverageCache.value.set(newStateCode, stateAvg);
           currentDisplayAverages.value = stateAvg;
         } else {
           // Handle error case where calculation failed
-          currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+          currentDisplayAverages.value = { inter: null, intra: null, indeterm: null }; // Set to null on error
           console.error(
             `[USRateSheetTable] Failed to calculate averages for state: ${newStateCode}`
           );
