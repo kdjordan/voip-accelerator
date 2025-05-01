@@ -1,26 +1,7 @@
 <template>
   <div class="w-full">
-    <!-- Journey Message Section -->
-    <div class="bg-gray-800 rounded-t-lg p-6">
-      <div class="pb-4">
-        <Transition name="fade" mode="out-in">
-          <!-- User Journey Section -->
-          <div :key="currentJourneyState" class="min-h-24">
-            <!-- Title -->
-            <h3 class="text-sizeLg tracking-wide text-white mb-2">{{ journeyMessage.title }}</h3>
-            <!-- Message -->
-            <p
-              class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md text-blue-400"
-              v-html="journeyMessage.message"
-            ></p>
-          </div>
-        </Transition>
-      </div>
-      <div class="border-b border-gray-700/50 mx-2"></div>
-    </div>
-
     <!-- Report Type Tabs -->
-    <div class="bg-gray-800 px-6 pb-6">
+    <div class="bg-gray-800 px-6 pb-6 rounded-t-lg">
       <div class="flex items-center border-b border-gray-700">
         <button
           v-for="type in availableReportTypes"
@@ -47,16 +28,17 @@
           ></div>
         </button>
         <!-- Use BaseButton for Reset -->
-        <BaseButton
-          v-if="azStore.filesUploaded.size > 0"
-          variant="destructive"
-          size="small"
-          @click="handleReset"
-          class="ml-auto"
-          :is-loading="isResetting"
-        >
-          Reset
-        </BaseButton>
+        <div class="ml-auto flex items-center space-x-2">
+          <BaseButton
+            v-if="azStore.filesUploaded.size === 2"
+            variant="destructive"
+            size="small"
+            @click="handleReset"
+            :is-loading="isResetting"
+          >
+            Reset
+          </BaseButton>
+        </div>
       </div>
     </div>
   </div>
@@ -67,7 +49,6 @@ import { ReportTypes, type ReportType } from '@/types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types';
 import { computed, ref } from 'vue';
-import { AZ_JOURNEY_MESSAGES, JOURNEY_STATE, type JourneyState } from '@/types/constants/messages';
 import BaseButton from '@/components/shared/BaseButton.vue';
 
 const azStore = useAzStore();
@@ -82,38 +63,6 @@ const availableReportTypes = computed(() => {
     return [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
   }
   return [ReportTypes.FILES];
-});
-
-const showReportTabs = computed(() => {
-  // Only show tabs when reports are generated (two files compared)
-  return azStore.reportsGenerated;
-});
-
-const currentJourneyState = computed<JourneyState>(() => {
-  if (azStore.reportsGenerated) {
-    return JOURNEY_STATE.REPORTS_READY;
-  }
-
-  if (azStore.hasSingleFileReport) {
-    return JOURNEY_STATE.ONE_FILE_REPORT;
-  }
-
-  const uploadedCount = azStore.getNumberOfFilesUploaded;
-
-  switch (uploadedCount) {
-    case 0:
-      return JOURNEY_STATE.INITIAL;
-    case 1:
-      return JOURNEY_STATE.ONE_FILE;
-    case 2:
-      return JOURNEY_STATE.TWO_FILES;
-    default:
-      return JOURNEY_STATE.INITIAL;
-  }
-});
-
-const journeyMessage = computed(() => {
-  return AZ_JOURNEY_MESSAGES[currentJourneyState.value];
 });
 
 async function handleReset() {

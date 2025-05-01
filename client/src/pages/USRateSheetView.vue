@@ -11,7 +11,7 @@
         aria-label="Show usage information"
       >
         <!-- Apply dashboard styling -->
-        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+        <div class="p-1 bg-blue-900/40 rounded-lg border border-blue-400/50 animate-pulse-info">
           <InformationCircleIcon class="w-5 h-5 text-blue-400" />
         </div>
       </button>

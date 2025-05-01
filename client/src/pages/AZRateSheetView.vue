@@ -11,7 +11,7 @@
         aria-label="Show A-Z Rate Sheet information"
       >
         <!-- Apply dashboard styling -->
-        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+        <div class="p-1 bg-blue-900/40 rounded-lg border border-blue-400/50 animate-pulse-info">
           <InformationCircleIcon class="w-5 h-5 text-blue-400" />
         </div>
       </button>
@@ -292,8 +292,6 @@
       @cancel="handleModalCancel"
     />
 
-    <!-- Info Modal -->
-    <InfoModal :show-modal="showInfoModal" :type="'az_rate_deck'" @close="closeInfoModal" />
   </div>
 </template>
 
@@ -315,7 +313,6 @@ import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
 import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 import { RateSheetService } from '@/services/az-rate-sheet.service';
-import InfoModal from '@/components/shared/InfoModal.vue';
 
 const store = useAzRateSheetStore();
 const rateSheetService = new RateSheetService();
@@ -346,9 +343,6 @@ const selectedFile = ref<File | null>(null);
 
 // Invalid Rows state
 const showInvalidRowsDetails = ref(false);
-
-// Info Modal state
-const showInfoModal = ref(false);
 
 onMounted(() => {
   // Check if data is already stored in localStorage via the store
@@ -495,12 +489,4 @@ function toggleInvalidRowsDetails() {
   showInvalidRowsDetails.value = !showInvalidRowsDetails.value;
 }
 
-// Info Modal functions
-function openInfoModal() {
-  showInfoModal.value = true;
-}
-
-function closeInfoModal() {
-  showInfoModal.value = false;
-}
 </script>
