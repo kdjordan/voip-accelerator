@@ -7,23 +7,17 @@
           v-for="type in availableReportTypes"
           :key="type"
           @click="usStore.setActiveReportType(type)"
-          class="mr-8 py-4 px-1 relative"
-          :class="[
-            'hover:text-white transition-colors',
-            {
-              'text-white': usStore.activeReportType === type,
-              'text-gray-400': usStore.activeReportType !== type,
-            },
-          ]"
+          class="mr-8 py-4 px-1 relative hover:text-white transition-colors"
+          :class="{
+            'text-white': usStore.activeReportType === type,
+            'text-gray-400': usStore.activeReportType !== type,
+          }"
         >
-          <span v-if="type === ReportTypes.CODE">Code Compare</span>
-          <span v-else-if="type === ReportTypes.PRICING">Pricing Report</span>
-
-          <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
+          <span>{{ getReportLabel(type) }}</span>
           <div
             v-if="usStore.activeReportType === type"
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
-          ></div>
+          />
         </button>
         <div class="ml-auto flex items-center space-x-2">
           <BaseButton
@@ -75,6 +69,17 @@ watch(
   }
 );
 
+// Helper function to get the correct report label
+function getReportLabel(type: ReportType): string {
+  if (type === ReportTypes.CODE) {
+    return 'Code Compare';
+  }
+  if (type === ReportTypes.PRICING) {
+    return 'Pricing Report';
+  }
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 async function handleReset() {
   isResetting.value = true;
   try {
@@ -83,7 +88,6 @@ async function handleReset() {
     // Reset store state first
     usStore.resetFiles();
 
-    // --- Delete relevant Dexie Databases --- START ---
     console.log(`Attempting to delete Dexie database: ${DBName.US}`);
     await deleteDatabase(DBName.US)
       .then(() => console.log(`Successfully deleted database: ${DBName.US}`))
@@ -95,7 +99,6 @@ async function handleReset() {
       .catch((err) =>
         console.error(`Failed to delete database ${DBName.US_PRICING_COMPARISON}:`, err)
       );
-    // --- Delete relevant Dexie Databases --- END ---
 
     console.log('Reset completed successfully');
   } catch (error) {
@@ -105,15 +108,3 @@ async function handleReset() {
   }
 }
 </script>
-
-<style>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

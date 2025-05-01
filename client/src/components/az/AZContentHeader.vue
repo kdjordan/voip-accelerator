@@ -7,27 +7,15 @@
           v-for="type in availableReportTypes"
           :key="type"
           @click="azStore.setActiveReportType(type)"
-          class="mr-8 py-4 px-1 relative"
-          :class="[
-            'hover:text-white transition-colors',
-            {
-              'text-white': azStore.activeReportType === type,
-              'text-gray-400': azStore.activeReportType !== type,
-            },
-          ]"
+          class="mr-8 py-4 px-1 relative hover:text-white transition-colors"
+          :class="azStore.activeReportType === type ? 'text-white' : 'text-gray-400'"
         >
-          <span v-if="type === 'code' && azStore.reportsGenerated">Code Compare</span>
-          <span v-else-if="type !== 'files'"
-            >{{ type.charAt(0).toUpperCase() + type.slice(1) }} Report</span
-          >
-          <span v-else>{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
-          <!-- Active Tab Indicator -->
-          <div
-            v-if="azStore.activeReportType === type"
-            class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
-          ></div>
+          <span>{{ getReportLabel(type) }}</span>
+          <template v-if="azStore.activeReportType === type">
+            <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+          </template>
         </button>
-        <!-- Use BaseButton for Reset -->
+
         <div class="ml-auto flex items-center space-x-2">
           <BaseButton
             v-if="azStore.filesUploaded.size === 2"
@@ -43,38 +31,50 @@
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
 import { useAzStore } from '@/stores/az-store';
 import { ReportTypes, type ReportType } from '@/types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types';
-import { computed, ref } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import BaseButton from '@/components/shared/BaseButton.vue';
 
 const azStore = useAzStore();
 const { deleteDatabase } = useDexieDB();
 const isResetting = ref(false);
 
-const reportTypes: ReportType[] = [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
+// Defensive + debugged report types list
+const availableReportTypes = computed((): ReportType[] => {
+  const raw = azStore.reportsGenerated
+    ? [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING]
+    : [ReportTypes.FILES];
 
-// Compute available report types based on the current state
-const availableReportTypes = computed(() => {
-  if (azStore.reportsGenerated) {
-    return [ReportTypes.FILES, ReportTypes.CODE, ReportTypes.PRICING];
-  }
-  return [ReportTypes.FILES];
+  // Filter to ensure all are non-null valid strings
+  const safe = raw.filter((t): t is ReportType => typeof t === 'string' && !!t);
+
+  return safe;
 });
 
+// Debug logger to see what's in the computed array
+watchEffect(() => {
+  console.log('[availableReportTypes]', availableReportTypes.value);
+});
+
+// Label rendering logic
+function getReportLabel(type: ReportType): string {
+  if (type === ReportTypes.CODE && azStore.reportsGenerated) return 'Code Compare';
+  if (type === ReportTypes.FILES) return 'Files';
+  return `${type.charAt(0).toUpperCase()}${type.slice(1)} Report`;
+}
+
+// Reset logic
 async function handleReset() {
   isResetting.value = true;
   try {
     console.log('Resetting the AZ report...');
-
-    // Reset store state - this will now trigger DB deletion internally
     await azStore.resetFiles();
-
-    azStore.setActiveReportType('files');
-
+    azStore.setActiveReportType(ReportTypes.FILES);
     console.log('Reset completed successfully');
   } catch (error) {
     console.error('Error during reset:', error);
@@ -82,18 +82,4 @@ async function handleReset() {
     isResetting.value = false;
   }
 }
-
-// Log on component mount
 </script>
-
-<style>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
