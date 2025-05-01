@@ -72,13 +72,31 @@ const buttonClasses = computed(() => {
 const iconClasses = computed(() => {
   const baseIcon = 'shrink-0'; // Prevent icon from shrinking
   const hasText = !!slots.default; // Check if there is text content in the slot
-  if (!hasText) return baseIcon; // No margin needed if only icon
+
+  // Determine size classes
+  let sizeClass = '';
   switch (props.size) {
     case 'small':
-      return `${baseIcon} -ml-0.5 mr-1.5 h-4 w-4`;
+      sizeClass = 'h-4 w-4';
+      break;
     case 'standard':
     default:
-      return `${baseIcon} -ml-1 mr-2 h-5 w-5`;
+      sizeClass = 'h-5 w-5';
+      break;
+  }
+
+  // Add margins only if there is text
+  if (hasText) {
+    switch (props.size) {
+      case 'small':
+        return `${baseIcon} ${sizeClass} -ml-0.5 mr-1.5`;
+      case 'standard':
+      default:
+        return `${baseIcon} ${sizeClass} -ml-1 mr-2`;
+    }
+  } else {
+    // No text, just return base icon and size
+    return `${baseIcon} ${sizeClass}`;
   }
 });
 

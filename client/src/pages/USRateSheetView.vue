@@ -10,7 +10,7 @@
         class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
         aria-label="Show usage information"
       >
-        <!-- Apply dashboard styling here -->
+        <!-- Apply dashboard styling -->
         <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
           <InformationCircleIcon class="w-5 h-5 text-blue-400" />
         </div>
