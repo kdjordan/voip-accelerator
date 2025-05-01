@@ -186,14 +186,12 @@ export type FileKey = 'file1' | 'file2';
 /**
  * Types for the US Rate Sheet entries
  */
-export interface USRateSheetEntry {
-  id?: number;
-  npa: string;
-  nxx: string;
-  npanxx: string;
-  interRate: number;
-  intraRate: number;
-  ijRate?: number;
-  stateCode?: string;
-  effectiveDate?: string;
+import type { RateSheetEntryBase } from './common-rate-sheet-types';
+
+// Specific fields for a US Rate Sheet Entry
+export interface USRateSheetEntry extends RateSheetEntryBase {
+  // Other fields like npa, nxx, npanxx, stateCode are inherited
+  interRate: number | null;
+  intraRate: number | null;
+  indetermRate: number | null;
 }
