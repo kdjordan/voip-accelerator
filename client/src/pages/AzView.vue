@@ -80,7 +80,7 @@ onMounted(async () => {
     console.log('[AzView] Files already uploaded, skipping sample data loading');
   } else {
     const sampleDecks = setTimeout(async () => {
-      // await loadSampleDecks([DBName.AZ]);
+      await loadSampleDecks([DBName.AZ]);
     }, 1000);
     return () => clearTimeout(sampleDecks);
   }
