@@ -91,7 +91,7 @@ export default {
         'status-pulse-error': 'status-pulse-error-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'status-pulse-warning':
           'status-pulse-warning-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'pulse-info': 'pulse-info-shadow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-info': 'pulse-info-shadow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         spin: 'spin 1s linear infinite',
       },
     },

@@ -28,7 +28,7 @@
           >
             <h2
               id="info-modal-title"
-              class="text-lg leading-6 font-medium text-accent text-secondary uppercase tracking-wider"
+              class="text-lg leading-6 font-medium text-accent uppercase tracking-wider font-secondary"
             >
               {{ title }}
             </h2>
@@ -80,20 +80,23 @@ const title = ref('');
 function setContentByType(type: InfoModalContentType) {
   switch (type) {
     case 'us_rate_sheet':
-      title.value = 'US Rate Sheet Instructions';
-      message.value = `<strong>Unlock Effortless US Rate Sheet Management!</strong> This intuitive wizard streamlines your workflow, saving you time and ensuring pinpoint accuracy.<br><br>
-        Simply drag & drop or click to upload your CSV containing:
-        <ol class="list-decimal list-inside my-2 space-y-1">
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX</code> (or <code class="bg-gray-700 px-1 rounded text-accent text-sm">NPA</code> + <code class="bg-gray-700 px-1 rounded text-accent text-sm">NXX</code>)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
-        </ol>
+      title.value = 'US Rate Sheet Wizard';
+      message.value = `<strong>Unlock Effortless US Rate Sheet Management!</strong><br> 
+        This intuitive wizard streamlines your workflow, saving you time and ensuring pinpoint accuracy.<br><br>
+        Simply drag & drop or click to upload your Rate Deck CSV containing:
+        <ul class="my-2 space-y-1 pl-4 list-disc marker:rounded-full marker:bg-gray-800 marker:text-transparent marker:w-2 marker:h-2 marker:inline-block">
+          <li>NPANXX(or NPA + NXX)</li>
+          <li>Interstate Rate</li>
+          <li>Intrastate Rate</li>
+          <li>Indeterminate Rate</li>
+        </ul>
         <br>
-        But that's just the beginning! Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise markup or percentage, targeting specific NPAs, individaul NPANXXs, or even entire states ro provinces.
+        Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise percentages or fixed amounts.<br> 
+        Target specific NPAs, individual NPANXXs, or even entire states or provinces.
         <br><br>
-        Complex adjustments are now just a few clicks away!<br><br>
-        Our guided process makes column mapping a breeze, and all your data is stored securely and locally in your browser for instant access.<br>
-        You'll wonder how you ever managed US Rate Sheets without this indispensable tool!`;
+        Get surgical with your rate adjustments!<br><br>
+        Once you have your adjustments, you can set an effective date and export your new rate sheet for use in your switch provider's portal.<br><br>
+        Say goodbye to leaving minutes or margin on the table...`;
       break;
     case 'az_rate_sheet':
       title.value = 'A-Z Rate Sheet Wizard';
@@ -108,7 +111,7 @@ function setContentByType(type: InfoModalContentType) {
     case 'us_comparison':
       title.value = 'US Rate Deck Analyzer Info';
       message.value = `
-        <strong>Analyze & Compare US Rate Decks Like Never Before!</strong> This powerful tool allows you to upload and compare multiple US termination rate decks side-by-side.<br><br>
+        <strong>Analyze & Compare US Rate Decks Like Never Before!</strong><br> This powerful tool allows you to upload and compare multiple US termination rate decks side-by-side.<br><br>
         Simply drag and drop your CSV files (up to two) containing columns for:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">OCN</code> (Operating Company Number)</li>

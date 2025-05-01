@@ -249,10 +249,14 @@
             <div class="relative mt-1">
               <ListboxButton
                 class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+                :disabled="adjustmentType === 'set'"
               >
-                <span class="block truncate text-white">{{
-                  selectedAdjustmentValueTypeLabel
-                }}</span>
+                <span
+                  class="block truncate"
+                  :class="adjustmentType === 'set' ? 'text-gray-500' : 'text-white'"
+                >
+                  {{ selectedAdjustmentValueTypeLabel }}
+                </span>
                 <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </span>
@@ -439,7 +443,7 @@
               {{ formatRate(entry.indetermRate) }}
             </td>
             <td class="px-4 py-2 text-gray-400 font-mono text-center">
-              {{ entry.effectiveDate || 'N/A' }}
+              {{ store.getCurrentEffectiveDate || 'N/A' }}
             </td>
           </tr>
         </tbody>
@@ -695,41 +699,6 @@
     }
   });
 
-  // Watch for external DB updates signaled by the store timestamp
-  const stopDbUpdateWatcher = watch(
-    () => store.lastDbUpdateTime,
-    async (newTimestamp, oldTimestamp) => {
-      // Add detailed logging here
-      console.log('[USRateSheetTable] DB Update Watcher Triggered.', {
-        newTimestamp,
-        oldTimestamp,
-      });
-      if (newTimestamp !== oldTimestamp && newTimestamp !== 0) {
-        // Added check for 0 timestamp which might indicate initial load or clear
-        console.log('[USRateSheetTable] Timestamp changed, refreshing data...');
-        await resetPaginationAndLoad();
-        console.log('[USRateSheetTable] Data refresh initiated by resetPaginationAndLoad.');
-
-        // Add log before calculating averages
-        console.log('[USRateSheetTable] Recalculating averages...');
-        const avg = await calculateAverages(selectedState.value || undefined);
-        // Add log after calculating averages
-        console.log('[USRateSheetTable] Averages recalculated:', avg);
-
-        if (selectedState.value) {
-          if (avg) stateAverageCache.value.set(selectedState.value, avg);
-          currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
-        } else {
-          overallAverages.value = avg;
-          currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
-        }
-        console.log('[USRateSheetTable] Display averages updated.');
-      } else {
-        console.log('[USRateSheetTable] Timestamp did not change or was reset, skipping refresh.');
-      }
-    }
-  );
-
   async function initializeRateSheetDB(): Promise<boolean> {
     if (dbInstance) return true;
 
@@ -977,7 +946,6 @@
   onBeforeUnmount(() => {
     stopSearchWatcher();
     stopStateWatcher();
-    stopDbUpdateWatcher();
   });
 
   watch(
@@ -1089,13 +1057,13 @@
         };
 
         return {
-          npanxx: entry.npanxx,
+          npanxx: `1${entry.npanxx}`,
           state: location?.region || 'N/A',
           country: location?.country || 'N/A',
           interRate: formatExportRate(entry.interRate),
           intraRate: formatExportRate(entry.intraRate),
           indetermRate: formatExportRate(entry.indetermRate),
-          effectiveDate: entry.effectiveDate || 'N/A',
+          effectiveDate: store.getCurrentEffectiveDate || 'N/A',
         };
       });
 
@@ -1266,6 +1234,33 @@
       const endTime = performance.now();
       const duration = ((endTime - startTime) / 1000).toFixed(2);
       adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
+
+      // --- Refresh data and averages after successful update ---
+      await resetPaginationAndLoad(); // Reload table data
+
+      // Recalculate averages based on current filter
+      if (selectedState.value) {
+        const stateAvg = await calculateAverages(selectedState.value);
+        if (stateAvg) {
+          stateAverageCache.value.set(selectedState.value, stateAvg);
+          currentDisplayAverages.value = stateAvg;
+        }
+      } else {
+        overallAverages.value = await calculateAverages();
+        currentDisplayAverages.value = overallAverages.value ?? {
+          inter: null,
+          intra: null,
+          indeterm: null,
+        };
+      }
+      // --- End refresh ---
+
+      // --- Reset adjustment form ---
+      adjustmentType.value = adjustmentTypeOptions[0].value;
+      adjustmentValueType.value = adjustmentValueTypeOptions[0].value;
+      adjustmentValue.value = null;
+      adjustmentTargetRate.value = adjustmentTargetRateOptions[0].value;
+      // --- End reset form ---
 
       adjustmentStatusTimeoutId = setTimeout(() => {
         adjustmentStatusMessage.value = null;

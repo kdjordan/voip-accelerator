@@ -68,7 +68,6 @@
                   variant="primary"
                   size="small"
                   :disabled="!isDateChanged || store.isLoading"
-                  :loading="store.isUpdatingEffectiveDate"
                   :icon="ArrowRightIcon"
                   @click="handleApplyEffectiveDate"
                   class="whitespace-nowrap"

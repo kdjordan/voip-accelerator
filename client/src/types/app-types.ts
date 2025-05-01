@@ -240,7 +240,7 @@ export const DBSchemas = {
     'entries: ++id, destinationName, code, rate, effectiveDate, minDuration, increments',
   // Schema for US Rate Sheet (new) - CORRECTED
   [DBName.US_RATE_SHEET]:
-    'entries: ++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, stateCode, effectiveDate',
+    'entries: ++id, npa, nxx, npanxx, interRate, intraRate, indetermRate, stateCode',
   [DBName.LERG]: 'lerg: npa, *state, *country',
   [DBName.US_PRICING_COMPARISON]: `
     comparison_results: ++id, &npanxx,
@@ -298,6 +298,4 @@ export type InfoModalContentType =
   | 'az_comparison'
   | 'us_comparison'
   | 'az_rate_sheet'
-  | 'us_rate_sheet'
-  
-
+  | 'us_rate_sheet';

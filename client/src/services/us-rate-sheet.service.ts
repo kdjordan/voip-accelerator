@@ -117,6 +117,21 @@ export class USRateSheetService {
   }
 
   /**
+   * Gets the number of records currently stored in the Dexie table.
+   */
+  async getRecordCount(): Promise<number> {
+    try {
+      const db = await this.getDB(this.dbName);
+      const table: Table<USRateSheetEntry, number> = db.table('entries');
+      return await table.count();
+    } catch (error) {
+      console.error(`[USRateSheetService] Error getting record count for ${this.dbName}:`, error);
+      // Return 0 or throw, depending on desired behavior on error
+      return 0;
+    }
+  }
+
+  /**
    * Processes the uploaded US Rate Sheet CSV file, parses it,
    * and stores the standardized data in the Dexie database.
    */
@@ -135,11 +150,6 @@ export class USRateSheetService {
       return Promise.reject(new Error(errorMsg));
     }
     // --- Add Guard: Ensure LERG data is loaded --- END ---
-
-    // Calculate effective date (7 days from now)
-    const effectiveDate = new Date();
-    effectiveDate.setDate(effectiveDate.getDate() + 7);
-    const effectiveDateString = effectiveDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
 
     // Wrap the entire processing logic in a try/catch to handle promise rejection
     try {
@@ -185,8 +195,7 @@ export class USRateSheetService {
                 totalChunks,
                 columnMapping,
                 indeterminateDefinition,
-                invalidRows,
-                effectiveDateString // Pass calculated effective date
+                invalidRows
               );
               if (processedRow) {
                 // Add id to each record for better indexing
@@ -260,8 +269,7 @@ export class USRateSheetService {
     rowIndex: number,
     columnMapping: USRateSheetColumnMapping,
     indeterminateDefinition: string | undefined,
-    invalidRows: InvalidUsRow[], // This now expects the imported type
-    effectiveDate: string // Accept calculated effective date
+    invalidRows: InvalidUsRow[] // This now expects the imported type
   ): USRateSheetEntry | null {
     // Helper function to safely get data from row using index
     const getData = (index: number): string | undefined => {
@@ -371,77 +379,7 @@ export class USRateSheetService {
       intraRate,
       indetermRate, // Use the processed indetermRate
       stateCode,
-      effectiveDate, // Use the calculated effective date
     };
-  }
-
-  /**
-   * Gets the effective date from the first record in the table.
-   * Assumes all records currently have the same effective date.
-   */
-  async getCurrentEffectiveDate(): Promise<string | null> {
-    try {
-      // Check if DB exists before trying to open it
-      const dbExists = await Dexie.exists(this.dbName);
-      if (!dbExists) {
-        return null;
-      }
-
-      // DB exists, now open it and query
-      const db = await this.getDB(this.dbName);
-      // Check if the table exists within the opened DB
-      if (!db.tables.some((table) => table.name === 'entries')) {
-        console.warn('[USRateSheetService] Entries table not found, cannot get effective date.');
-        return null;
-      }
-      const firstRecord = await db.table<USRateSheetEntry>('entries').limit(1).first();
-      return firstRecord?.effectiveDate || null;
-    } catch (error) {
-      console.error(`[USRateSheetService] Error getting current effective date:`, error);
-      return null; // Return null on error
-    }
-  }
-
-  /**
-   * Updates the effectiveDate for all records in the 'entries' table.
-   * @param newDate The new effective date string (YYYY-MM-DD).
-   */
-  async updateAllEffectiveDates(newDate: string): Promise<void> {
-    const db = await this.getDB(this.dbName);
-    const entriesTable = db.table<USRateSheetEntry>('entries');
-
-    if (!db.tables.some((table) => table.name === 'entries')) {
-      throw new Error('Entries table not found, cannot update effective dates.');
-    }
-
-    console.log(
-      `[USRateSheetService] Starting effective date update using modify() for date: ${newDate}...`
-    );
-
-    try {
-      // Use a single transaction
-      await db.transaction('rw', entriesTable, async () => {
-        // Use modify() to update all records in the table
-        const updatedCount = await entriesTable.toCollection().modify({
-          effectiveDate: newDate,
-        });
-
-        console.log(
-          `[USRateSheetService] modify() update complete. Matched and potentially updated: ${updatedCount} records.`
-        );
-        // Note: modify() returns the count of matched records, not necessarily changed records.
-        // We assume success if no error is thrown.
-      });
-
-      console.log(`[USRateSheetService] Effective date update transaction completed successfully.`);
-    } catch (error) {
-      // Catch errors from the transaction or modify operation
-      console.error(`[USRateSheetService] Error during modify() effective date update:`, error);
-      if (error instanceof Error && 'name' in error && error.name !== 'Error') {
-        console.error(`[USRateSheetService] Dexie error name: ${error.name}`);
-      }
-      throw new Error('Failed to update effective dates using modify().');
-    }
   }
 
   /**

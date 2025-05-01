@@ -193,7 +193,6 @@ export interface USRateSheetEntry {
   nxx: string;
   npanxx: string;
   stateCode: string; // Add stateCode
-  effectiveDate?: string; // Add effectiveDate (make optional if needed)
   interRate: number | null;
   intraRate: number | null;
   indetermRate: number | null; // Keep indetermRate as requested
