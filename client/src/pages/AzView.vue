@@ -1,9 +1,20 @@
 <template>
   <div class="min-h-screen text-white pt-2 w-full">
-    <h1 class="mb-2">
+    <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
         AZ Rate Deck Analyzer
       </span>
+      <!-- Info Icon Button -->
+      <button
+        @click="openInfoModal"
+        class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
+        aria-label="Show AZ Rate Deck Analyzer information"
+      >
+        <!-- Apply dashboard styling -->
+        <div class="p-1 bg-blue-900/30 rounded-lg border border-blue-400/50">
+          <InformationCircleIcon class="w-5 h-5 text-blue-400" />
+        </div>
+      </button>
     </h1>
     <AZContentHeader />
 
@@ -25,6 +36,13 @@
         </div>
       </transition>
     </div>
+
+    <!-- Info Modal -->
+    <InfoModal
+      :show-modal="showInfoModal"
+      :type="'az_rate_deck_analyzer'"
+      @close="closeInfoModal"
+    />
   </div>
 </template>
 
@@ -33,13 +51,27 @@ import AZFileUploads from '@/components/az/AZFileUploads.vue';
 import CodeReportAZ from '@/components/az/AZCodeReport.vue';
 import PricingReportAZ from '@/components/az/AZPricingReport.vue';
 import AZContentHeader from '@/components/az/AZContentHeader.vue';
+import InfoModal from '@/components/shared/InfoModal.vue';
+import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { useAzStore } from '@/stores/az-store';
 import { ReportTypes } from '@/types/app-types';
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { loadSampleDecks } from '@/utils/load-sample-data';
 import { DBName } from '@/types/app-types';
 
 const azStore = useAzStore();
+
+// Info Modal state
+const showInfoModal = ref(false);
+
+// Info Modal functions
+function openInfoModal() {
+  showInfoModal.value = true;
+}
+
+function closeInfoModal() {
+  showInfoModal.value = false;
+}
 
 onMounted(async () => {
   const filesAlreadyUploaded = azStore.getNumberOfFilesUploaded > 0;
