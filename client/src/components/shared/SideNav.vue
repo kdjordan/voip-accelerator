@@ -29,8 +29,8 @@
       <div :class="['px-3 py-3 flex items-center', isOpen ? 'justify-start' : 'justify-center']">
         <RouterLink to="/home" class="flex items-center text-accent gap-2">
           <BoltIcon class="w-8 h-8 flex-shrink-0" />
-          <span v-if="isOpen" class="font-medium text-accent whitespace-nowrap"
-            >VOIP Accelerator</span
+          <span v-if="isOpen" class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter"
+            >VoIP Accelerator</span
           >
         </RouterLink>
       </div>
