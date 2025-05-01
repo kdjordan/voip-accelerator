@@ -43,7 +43,7 @@
     </div>
 
     <!-- Info Modal -->
-    <InfoModal :show-modal="showInfoModal" :type="'us_rate_deck'" @close="closeInfoModal" />
+    <InfoModal :show-modal="showInfoModal" :type="'us_comparison'" @close="closeInfoModal" />
   </div>
 </template>
 
@@ -124,7 +124,7 @@ onMounted(async () => {
       // Only load sample decks if no files are already uploaded
       // console.log('[UsView] No files uploaded, loading sample data');
       const sampleDecks = setTimeout(async () => {
-        await loadSampleDecks([DBName.US]);
+        // await loadSampleDecks([DBName.US]);
       }, 1000);
 
       // Clear timeout on component unmount
