@@ -1,6 +1,5 @@
 import Papa from 'papaparse';
-import type { ParseResult } from 'papaparse';
-import { USColumnRole, type USRateSheetEntry, type InvalidUsRow } from '@/types/domains/us-types';
+import { type USRateSheetEntry, type InvalidUsRow } from '@/types/domains/us-types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 import type { DBNameType } from '@/types';
@@ -139,7 +138,8 @@ export class USRateSheetService {
     file: File,
     columnMapping: USRateSheetColumnMapping,
     startLine: number,
-    indeterminateDefinition: string | undefined
+    indeterminateDefinition: string | undefined,
+    effectiveDate?: string // Added effectiveDate parameter
   ): Promise<ProcessFileResult> {
     // --- Add Guard: Ensure LERG data is loaded --- START ---
     if (!this.lergStore.isLoaded) {
@@ -150,6 +150,8 @@ export class USRateSheetService {
       return Promise.reject(new Error(errorMsg));
     }
     // --- Add Guard: Ensure LERG data is loaded --- END ---
+
+    // console.log('[USRateSheetService] processFile received indeterminateDefinition:', indeterminateDefinition); // REMOVE Log 4
 
     // Wrap the entire processing logic in a try/catch to handle promise rejection
     try {
@@ -271,6 +273,8 @@ export class USRateSheetService {
     indeterminateDefinition: string | undefined,
     invalidRows: InvalidUsRow[] // This now expects the imported type
   ): USRateSheetEntry | null {
+    // console.log('[USRateSheetService] processRow received indeterminateDefinition:', indeterminateDefinition); // REMOVE Log 5
+
     // Helper function to safely get data from row using index
     const getData = (index: number): string | undefined => {
       return row && row.length > index ? row[index]?.trim() : undefined;
@@ -342,18 +346,28 @@ export class USRateSheetService {
     let indetermRate: number | null = null;
 
     // Handle indeterminate rate based on definition
-    if (indeterminateDefinition === 'highest') {
-      indetermRate = Math.max(interRate ?? 0, intraRate ?? 0);
-    } else if (indeterminateDefinition === 'provided') {
+    if (indeterminateDefinition === 'intrastate') {
+      // Use the already parsed and validated intraRate
+      indetermRate = intraRate;
+    } else if (indeterminateDefinition === 'interstate') {
+      // Use the already parsed and validated interRate
+      indetermRate = interRate;
+    } else if (indeterminateDefinition === 'column') {
+      // Use the value from the column mapped as Indeterminate
       indetermRate = parseRate(rawIndeterminate);
     } else {
-      // Default: Assume 0 if not provided or definition is unclear
-      indetermRate = parseRate(rawIndeterminate) ?? 0;
+      // Default: If definition is unexpected or column parsing failed, default to 0
+      indetermRate = 0;
     }
 
-    // Check if rates are valid numbers
-    if (interRate === null || intraRate === null || indetermRate === null) {
-      // Add to invalid rows if any rate is invalid
+    // Final null check after applying definition logic (especially for 'column' case)
+    if (indetermRate === null) {
+      indetermRate = 0; // Ensure it defaults to 0 if parseRate failed for the 'column' case
+    }
+
+    // Check if essential rates are valid numbers (inter/intra are needed regardless of indeterm definition)
+    if (interRate === null || intraRate === null) {
+      // Add to invalid rows if inter or intra rate is invalid
       invalidRows.push({
         rowIndex,
         npanxx: npanxx, // NPANXX is valid here

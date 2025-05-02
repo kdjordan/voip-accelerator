@@ -364,311 +364,311 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import {
-  Listbox,
-  ListboxButton,
-  ListboxLabel,
-  ListboxOptions,
-  ListboxOption,
-} from '@headlessui/vue';
-import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import { USColumnRole } from '@/types/domains/us-types';
-import {
-  PREVIEW_MODAL_MESSAGES,
-  PreviewModalSource,
-  JourneyMessage,
-} from '@/types/constants/messages';
-import { BasePreviewModalProps, BasePreviewModalEmits } from '@/types/app-types';
+  import { ref, computed, watch, onMounted } from 'vue';
+  import {
+    Listbox,
+    ListboxButton,
+    ListboxLabel,
+    ListboxOptions,
+    ListboxOption,
+  } from '@headlessui/vue';
+  import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import { USColumnRole } from '@/types/domains/us-types';
+  import {
+    PREVIEW_MODAL_MESSAGES,
+    PreviewModalSource,
+    JourneyMessage,
+  } from '@/types/constants/messages';
+  import { BasePreviewModalProps, BasePreviewModalEmits } from '@/types/app-types';
 
-// Use the base types from app-types.ts
-const props = defineProps<BasePreviewModalProps & { source?: PreviewModalSource }>();
+  // Use the base types from app-types.ts
+  const props = defineProps<BasePreviewModalProps & { source?: PreviewModalSource }>();
 
-// Update emits definition
-const emit = defineEmits<{
-  'update:mappings': [mappings: Record<string, string>];
-  'update:valid': [isValid: boolean];
-  'update:start-line': [startLine: number];
-  'update:indeterminate-definition': [definition: string];
-  // Add optional effectiveDate to confirm payload
-  confirm: [
-    mappings: Record<string, string>,
-    indeterminateDefinition?: string,
-    effectiveDate?: string,
+  // Update emits definition
+  const emit = defineEmits<{
+    'update:mappings': [mappings: Record<string, string>];
+    'update:valid': [isValid: boolean];
+    'update:start-line': [startLine: number];
+    'update:indeterminate-definition': [definition: string];
+    // Add optional effectiveDate to confirm payload
+    confirm: [
+      mappings: Record<string, string>,
+      indeterminateDefinition?: string,
+      effectiveDate?: string,
+    ];
+    cancel: [];
+  }>();
+
+  const startLine = ref(props.startLine);
+  const indeterminateRateDefinition = ref('column');
+  const showValidationErrors = ref(false);
+  const effectiveDate = ref(''); // Add ref for effective date
+
+  // Options for Indeterminate Rate Listbox
+  const indeterminateOptions = [
+    { value: 'column', label: 'Column Role' },
+    { value: 'intrastate', label: 'Use Intrastate Rate' },
+    { value: 'interstate', label: 'Use Interstate Rate' },
   ];
-  cancel: [];
-}>();
 
-const startLine = ref(props.startLine);
-const indeterminateRateDefinition = ref('column');
-const showValidationErrors = ref(false);
-const effectiveDate = ref(''); // Add ref for effective date
-
-// Options for Indeterminate Rate Listbox
-const indeterminateOptions = [
-  { value: 'column', label: 'Column Role' },
-  { value: 'intrastate', label: 'Use Intrastate Rate' },
-  { value: 'interstate', label: 'Use Interstate Rate' },
-];
-
-// Computed property for selected indeterminate rate label
-const selectedIndeterminateLabel = computed(() => {
-  return (
-    indeterminateOptions.find((option) => option.value === indeterminateRateDefinition.value)
-      ?.label || 'Column Role'
-  );
-});
-
-// Add onMounted hook to set default date
-onMounted(() => {
-  const today = new Date();
-  effectiveDate.value = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
-});
-
-// Get the appropriate message based on the source prop
-const modalMessage = computed(() => {
-  if (props.source && props.source in PREVIEW_MODAL_MESSAGES) {
-    return PREVIEW_MODAL_MESSAGES[props.source as PreviewModalSource];
-  }
-  // Default to AZ_RATE_DECK if no source provided or invalid source
-  return PREVIEW_MODAL_MESSAGES.AZ_RATE_DECK;
-});
-
-// Detect if this is a US file by checking for NPA or NPANXX in column options
-const isUSFile = computed(() => {
-  return props.columnOptions.some(
-    (option) => option.value === USColumnRole.NPA || option.value === USColumnRole.NPANXX
-  );
-});
-
-// Check if indeterminate rate column is selected
-const hasIndeterminateColumn = computed(() => {
-  const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
-  return mappedRoles.has(USColumnRole.INDETERMINATE);
-});
-
-// Determine if we should show indeterminate error
-const shouldShowIndeterminateError = computed(() => {
-  return indeterminateRateDefinition.value === 'column' && !hasIndeterminateColumn.value;
-});
-
-// Filter preview data based on start line
-const filteredPreviewData = computed(() => {
-  return props.previewData
-    .map((row, index) => ({
-      rowNumber: index + 1,
-      data: row,
-    }))
-    .slice(startLine.value - 1);
-});
-
-// Watch for start line changes
-watch(startLine, (newValue) => {
-  emit('update:start-line', newValue);
-});
-
-const mappings = ref<Record<string, string>>({});
-
-// Initialize all columns with empty values
-function initializeMappings() {
-  props.columns.forEach((_, index) => {
-    mappings.value[index] = '';
+  // Computed property for selected indeterminate rate label
+  const selectedIndeterminateLabel = computed(() => {
+    return (
+      indeterminateOptions.find((option) => option.value === indeterminateRateDefinition.value)
+        ?.label || 'Column Role'
+    );
   });
-}
 
-// Call initialization when component is created
-initializeMappings();
+  // Add onMounted hook to set default date
+  onMounted(() => {
+    const today = new Date();
+    effectiveDate.value = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
+  });
 
-// Reset mappings when columns change
-watch(
-  () => props.columns,
-  () => {
-    initializeMappings();
-  }
-);
+  // Get the appropriate message based on the source prop
+  const modalMessage = computed(() => {
+    if (props.source && props.source in PREVIEW_MODAL_MESSAGES) {
+      return PREVIEW_MODAL_MESSAGES[props.source as PreviewModalSource];
+    }
+    // Default to AZ_RATE_DECK if no source provided or invalid source
+    return PREVIEW_MODAL_MESSAGES.AZ_RATE_DECK;
+  });
 
-// Update watcher for indeterminate rate definition to handle Listbox v-model changes
-watch(indeterminateRateDefinition, (newValue) => {
-  emit('update:indeterminate-definition', newValue);
-  // Reset validation errors when the selection changes
-  showValidationErrors.value = false;
-  // Update overall validation status
-  emit('update:valid', isValid.value);
-});
+  // Detect if this is a US file by checking for NPA or NPANXX in column options
+  const isUSFile = computed(() => {
+    return props.columnOptions.some(
+      (option) => option.value === USColumnRole.NPA || option.value === USColumnRole.NPANXX
+    );
+  });
 
-// Computed property to get the label for the selected column role
-function selectedColumnRoleLabel(index: number): string {
-  const selectedValue = mappings.value[index];
-  if (selectedValue === '') {
-    return 'Select Column Role';
-  }
-  // Find the option label in the full list (props.columnOptions)
-  return (
-    props.columnOptions.find((option) => option.value === selectedValue)?.label || selectedValue
-  );
-}
+  // Check if indeterminate rate column is selected
+  const hasIndeterminateColumn = computed(() => {
+    const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
+    return mappedRoles.has(USColumnRole.INDETERMINATE);
+  });
 
-function handleIndeterminateListboxClick() {
-  // This function can potentially be used to clear validation errors immediately on click
-  // For now, the watcher handles it on selection change, which is generally sufficient
-  // showValidationErrors.value = false;
-}
+  // Determine if we should show indeterminate error
+  const shouldShowIndeterminateError = computed(() => {
+    return indeterminateRateDefinition.value === 'column' && !hasIndeterminateColumn.value;
+  });
 
-function availableOptions(currentIndex: number) {
-  // Create a set of used roles excluding the current column's role
-  const usedRoles = new Set(
-    Object.entries(mappings.value)
-      .filter(([index, role]) => parseInt(index) !== currentIndex && role !== '')
-      .map(([_, role]) => role)
-  );
+  // Filter preview data based on start line
+  const filteredPreviewData = computed(() => {
+    return props.previewData
+      .map((row, index) => ({
+        rowNumber: index + 1,
+        data: row,
+      }))
+      .slice(startLine.value - 1);
+  });
 
-  // For US files, handle special constraints
-  if (isUSFile.value) {
-    const currentValue = mappings.value[currentIndex];
-    const hasNPA = usedRoles.has(USColumnRole.NPA) || currentValue === USColumnRole.NPA;
-    const hasNXX = usedRoles.has(USColumnRole.NXX) || currentValue === USColumnRole.NXX;
-    const hasNPANXX = usedRoles.has(USColumnRole.NPANXX) || currentValue === USColumnRole.NPANXX;
+  // Watch for start line changes
+  watch(startLine, (newValue) => {
+    emit('update:start-line', newValue);
+  });
 
-    return props.columnOptions.filter((option) => {
-      // If this is the current column's value, always include it
-      if (option.value === currentValue) return true;
+  const mappings = ref<Record<string, string>>({});
 
-      // If the option is already used elsewhere, exclude it
-      if (usedRoles.has(option.value)) return false;
-
-      // Apply US-specific constraints
-      if (option.value === USColumnRole.NPANXX && (hasNPA || hasNXX)) return false;
-      if ((option.value === USColumnRole.NPA || option.value === USColumnRole.NXX) && hasNPANXX)
-        return false;
-
-      // Only show Indeterminate column option when "Column Role" is selected
-      if (option.value === USColumnRole.INDETERMINATE) {
-        return indeterminateRateDefinition.value === 'column';
-      }
-
-      return true;
+  // Initialize all columns with empty values
+  function initializeMappings() {
+    props.columns.forEach((_, index) => {
+      mappings.value[index] = '';
     });
   }
 
-  // For non-US files, just filter out used roles
-  return props.columnOptions.filter((option) => !usedRoles.has(option.value));
-}
+  // Call initialization when component is created
+  initializeMappings();
 
-// Check if all required columns are mapped
-const allColumnsMapped = computed(() => {
-  if (props.validateRequired) {
-    // Only check required columns
-    const requiredOptions = props.columnOptions.filter((option) => option.required);
-    const mappedRoles = new Set(Object.values(mappings.value));
-    return requiredOptions.every((option) => mappedRoles.has(option.value));
-  } else {
-    // For US files, ensure valid column combinations
+  // Reset mappings when columns change
+  watch(
+    () => props.columns,
+    () => {
+      initializeMappings();
+    }
+  );
+
+  // Update watcher for indeterminate rate definition to handle Listbox v-model changes
+  watch(indeterminateRateDefinition, (newValue) => {
+    emit('update:indeterminate-definition', newValue);
+    // Reset validation errors when the selection changes
+    showValidationErrors.value = false;
+    // Update overall validation status
+    emit('update:valid', isValid.value);
+  });
+
+  // Computed property to get the label for the selected column role
+  function selectedColumnRoleLabel(index: number): string {
+    const selectedValue = mappings.value[index];
+    if (selectedValue === '') {
+      return 'Select Column Role';
+    }
+    // Find the option label in the full list (props.columnOptions)
+    return (
+      props.columnOptions.find((option) => option.value === selectedValue)?.label || selectedValue
+    );
+  }
+
+  function handleIndeterminateListboxClick() {
+    // This function can potentially be used to clear validation errors immediately on click
+    // For now, the watcher handles it on selection change, which is generally sufficient
+    // showValidationErrors.value = false;
+  }
+
+  function availableOptions(currentIndex: number) {
+    // Create a set of used roles excluding the current column's role
+    const usedRoles = new Set(
+      Object.entries(mappings.value)
+        .filter(([index, role]) => parseInt(index) !== currentIndex && role !== '')
+        .map(([_, role]) => role)
+    );
+
+    // For US files, handle special constraints
+    if (isUSFile.value) {
+      const currentValue = mappings.value[currentIndex];
+      const hasNPA = usedRoles.has(USColumnRole.NPA) || currentValue === USColumnRole.NPA;
+      const hasNXX = usedRoles.has(USColumnRole.NXX) || currentValue === USColumnRole.NXX;
+      const hasNPANXX = usedRoles.has(USColumnRole.NPANXX) || currentValue === USColumnRole.NPANXX;
+
+      return props.columnOptions.filter((option) => {
+        // If this is the current column's value, always include it
+        if (option.value === currentValue) return true;
+
+        // If the option is already used elsewhere, exclude it
+        if (usedRoles.has(option.value)) return false;
+
+        // Apply US-specific constraints
+        if (option.value === USColumnRole.NPANXX && (hasNPA || hasNXX)) return false;
+        if ((option.value === USColumnRole.NPA || option.value === USColumnRole.NXX) && hasNPANXX)
+          return false;
+
+        // Only show Indeterminate column option when "Column Role" is selected
+        if (option.value === USColumnRole.INDETERMINATE) {
+          return indeterminateRateDefinition.value === 'column';
+        }
+
+        return true;
+      });
+    }
+
+    // For non-US files, just filter out used roles
+    return props.columnOptions.filter((option) => !usedRoles.has(option.value));
+  }
+
+  // Check if all required columns are mapped
+  const allColumnsMapped = computed(() => {
+    if (props.validateRequired) {
+      // Only check required columns
+      const requiredOptions = props.columnOptions.filter((option) => option.required);
+      const mappedRoles = new Set(Object.values(mappings.value));
+      return requiredOptions.every((option) => mappedRoles.has(option.value));
+    } else {
+      // For US files, ensure valid column combinations
+      if (isUSFile.value) {
+        const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
+        const hasNPANXX = mappedRoles.has(USColumnRole.NPANXX);
+        const hasNPA = mappedRoles.has(USColumnRole.NPA);
+        const hasNXX = mappedRoles.has(USColumnRole.NXX);
+        const hasInterstate = mappedRoles.has(USColumnRole.INTERSTATE);
+        const hasIntrastate = mappedRoles.has(USColumnRole.INTRASTATE);
+
+        // Base requirements
+        const hasValidNPANXXCombination = hasNPANXX || (hasNPA && hasNXX);
+        const hasRequiredRates = hasInterstate && hasIntrastate;
+
+        // If using column for indeterminate, don't consider it mapped until selected
+        if (indeterminateRateDefinition.value === 'column') {
+          const hasIndeterminate = mappedRoles.has(USColumnRole.INDETERMINATE);
+          return hasValidNPANXXCombination && hasRequiredRates && hasIndeterminate;
+        }
+
+        return hasValidNPANXXCombination && hasRequiredRates;
+      }
+
+      // Original behavior for non-US files
+      const selectedCount = Object.values(mappings.value).filter((value) => value !== '').length;
+      return selectedCount === props.columnOptions.length;
+    }
+  });
+
+  // Add validation for US files
+  const isValid = computed(() => {
     if (isUSFile.value) {
       const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
+
+      // Check if NPA/NXX or NPANXX are correctly selected
       const hasNPANXX = mappedRoles.has(USColumnRole.NPANXX);
       const hasNPA = mappedRoles.has(USColumnRole.NPA);
       const hasNXX = mappedRoles.has(USColumnRole.NXX);
+
+      // Either NPANXX must be selected, or both NPA and NXX must be selected
+      const hasValidNPANXXCombination = hasNPANXX || (hasNPA && hasNXX);
+
+      // Check if all rate columns are selected
       const hasInterstate = mappedRoles.has(USColumnRole.INTERSTATE);
       const hasIntrastate = mappedRoles.has(USColumnRole.INTRASTATE);
 
-      // Base requirements
-      const hasValidNPANXXCombination = hasNPANXX || (hasNPA && hasNXX);
-      const hasRequiredRates = hasInterstate && hasIntrastate;
+      // Base validation for required columns (NPA/NXX/NPANXX + Interstate/Intrastate)
+      const baseValid = hasValidNPANXXCombination && hasInterstate && hasIntrastate;
 
-      // If using column for indeterminate, don't consider it mapped until selected
+      // When "Column Role" is selected (default), require an Indeterminate column
       if (indeterminateRateDefinition.value === 'column') {
         const hasIndeterminate = mappedRoles.has(USColumnRole.INDETERMINATE);
-        return hasValidNPANXXCombination && hasRequiredRates && hasIndeterminate;
+        return baseValid && hasIndeterminate;
       }
 
-      return hasValidNPANXXCombination && hasRequiredRates;
+      // When using Interstate/Intrastate rates, don't require Indeterminate column
+      return baseValid;
     }
 
-    // Original behavior for non-US files
-    const selectedCount = Object.values(mappings.value).filter((value) => value !== '').length;
-    return selectedCount === props.columnOptions.length;
-  }
-});
+    // Non-US file validation (default behavior)
+    return allColumnsMapped.value;
+  });
 
-// Add validation for US files
-const isValid = computed(() => {
-  if (isUSFile.value) {
-    const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
+  function handleConfirm() {
+    // First ensure all required fields are mapped
+    if (props.validateRequired) {
+      const requiredMapped = props.columnOptions
+        .filter((option) => option.required)
+        .every((option) => Object.values(mappings.value).includes(option.value));
 
-    // Check if NPA/NXX or NPANXX are correctly selected
-    const hasNPANXX = mappedRoles.has(USColumnRole.NPANXX);
-    const hasNPA = mappedRoles.has(USColumnRole.NPA);
-    const hasNXX = mappedRoles.has(USColumnRole.NXX);
+      // For US files with indeterminate rate, check if mapping is required but not mapped
+      // and indeterminate strategy is 'column'
+      const requiresIndeterminateMapping =
+        isUSFile.value &&
+        indeterminateRateDefinition.value === 'column' &&
+        !hasIndeterminateColumn.value;
 
-    // Either NPANXX must be selected, or both NPA and NXX must be selected
-    const hasValidNPANXXCombination = hasNPANXX || (hasNPA && hasNXX);
-
-    // Check if all rate columns are selected
-    const hasInterstate = mappedRoles.has(USColumnRole.INTERSTATE);
-    const hasIntrastate = mappedRoles.has(USColumnRole.INTRASTATE);
-
-    // Base validation for required columns (NPA/NXX/NPANXX + Interstate/Intrastate)
-    const baseValid = hasValidNPANXXCombination && hasInterstate && hasIntrastate;
-
-    // When "Column Role" is selected (default), require an Indeterminate column
-    if (indeterminateRateDefinition.value === 'column') {
-      const hasIndeterminate = mappedRoles.has(USColumnRole.INDETERMINATE);
-      return baseValid && hasIndeterminate;
+      if (!requiredMapped || requiresIndeterminateMapping) {
+        showValidationErrors.value = true;
+        return; // Don't proceed if validation fails
+      }
     }
 
-    // When using Interstate/Intrastate rates, don't require Indeterminate column
-    return baseValid;
-  }
-
-  // Non-US file validation (default behavior)
-  return allColumnsMapped.value;
-});
-
-function handleConfirm() {
-  // First ensure all required fields are mapped
-  if (props.validateRequired) {
-    const requiredMapped = props.columnOptions
-      .filter((option) => option.required)
-      .every((option) => Object.values(mappings.value).includes(option.value));
-
-    // For US files with indeterminate rate, check if mapping is required but not mapped
-    // and indeterminate strategy is 'column'
-    const requiresIndeterminateMapping =
-      isUSFile.value &&
-      indeterminateRateDefinition.value === 'column' &&
-      !hasIndeterminateColumn.value;
-
-    if (!requiredMapped || requiresIndeterminateMapping) {
-      showValidationErrors.value = true;
-      return; // Don't proceed if validation fails
+    // Emit all mappings, indeterminate definition, and effective date for US_RATE_DECK
+    if (props.source && props.source === 'US_RATE_DECK') {
+      emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value);
+    } else {
+      // For non-US_RATE_DECK, exclude the effective date
+      emit('confirm', mappings.value, indeterminateRateDefinition.value);
     }
   }
 
-  // Emit all mappings, indeterminate definition, and effective date for US_RATE_DECK
-  if (props.source && props.source === 'US_RATE_DECK') {
-    emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value);
-  } else {
-    // For non-US_RATE_DECK, exclude the effective date
-    emit('confirm', mappings.value, indeterminateRateDefinition.value);
+  function handleCancel() {
+    emit('cancel');
   }
-}
 
-function handleCancel() {
-  emit('cancel');
-}
+  function handleMappingChange() {
+    emit('update:mappings', mappings.value);
+    emit('update:valid', isValid.value);
+  }
 
-function handleMappingChange() {
-  emit('update:mappings', mappings.value);
-  emit('update:valid', isValid.value);
-}
-
-// Add a watcher to update validation when mappings change
-watch(
-  mappings,
-  () => {
-    handleMappingChange();
-  },
-  { deep: true }
-);
+  // Add a watcher to update validation when mappings change
+  watch(
+    mappings,
+    () => {
+      handleMappingChange();
+    },
+    { deep: true }
+  );
 </script>

@@ -310,9 +310,15 @@
 
   onMounted(async () => {
     // Load initial data state from Dexie via the store
-    // loadRateSheetData now triggers fetchCurrentEffectiveDate internally
-    // The watcher above will handle setting selectedEffectiveDate.value
-    await store.loadRateSheetData();
+    // Only load if the store indicates data might exist from a previous session
+    if (store.getHasUsRateSheetData) {
+      // loadRateSheetData now triggers fetchCurrentEffectiveDate internally
+      // The watcher above will handle setting selectedEffectiveDate.value
+      await store.loadRateSheetData();
+    } else {
+      // Ensure loading state is false if we don't attempt to load
+      store.setLoading(false);
+    }
   });
 
   function handleFileChange(event: Event) {
@@ -371,7 +377,8 @@
 
   async function handleModalConfirm(
     mappings: Record<string, string>,
-    indeterminateDefinition?: string
+    indeterminateDefinition?: string,
+    effectiveDate?: string // Make effectiveDate optional as it's not always passed
   ) {
     if (!selectedFile.value) {
       console.error('No file selected for processing.');
@@ -441,7 +448,8 @@
         fileToProcess,
         mappedColumns,
         startLine.value,
-        indeterminateDefinition
+        indeterminateDefinition,
+        effectiveDate
       );
 
       await store.handleUploadSuccess(processedData);
