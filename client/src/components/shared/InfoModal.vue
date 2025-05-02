@@ -84,11 +84,11 @@ function setContentByType(type: InfoModalContentType) {
       message.value = `<strong>Unlock Effortless US Rate Sheet Management!</strong><br> 
         This intuitive wizard streamlines your workflow, saving you time and ensuring pinpoint accuracy.<br><br>
         Simply drag & drop or click to upload your Rate Deck CSV containing:
-        <ul class="my-2 space-y-1 pl-4 list-disc marker:rounded-full marker:bg-gray-800 marker:text-transparent marker:w-2 marker:h-2 marker:inline-block">
-          <li>NPANXX(or NPA + NXX)</li>
-          <li>Interstate Rate</li>
-          <li>Intrastate Rate</li>
-          <li>Indeterminate Rate</li>
+        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX(or NPA + NXX)</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Indeterminate Rate</code></li>
         </ul>
         <br>
         Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise percentages or fixed amounts.<br> 
@@ -100,24 +100,27 @@ function setContentByType(type: InfoModalContentType) {
       break;
     case 'az_rate_sheet':
       title.value = 'A-Z Rate Sheet Wizard';
-      message.value = `<strong>Effortlessly Manage Global Rates!</strong> This tool simplifies uploading and managing your international A-Z rate decks.<br><br>Upload your CSV file containing at least these columns:
+      message.value = `<strong>Effortlessly Manage Global Rates!</strong><br>This tool simplifies managing changes for your international A-Z rate decks.<br><br>Upload your CSV file containing at least these columns:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (or Prefix)</li>
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code> (or Destination)</li>
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
         </ul>
-        Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>The system automatically parses your file, validates the data, and stores it locally in your browser for fast access and comparison. Simplify your international pricing strategy today!`;
+        Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>
+        The system automatically parses your file, validates the data, and stores it locally in your browser for fast access.<br>
+        From there you can make changes to the rates, set an effective date, and export your new rate sheet for use in your switch provider's portal.<br>
+        Simplify your international pricing strategy today!`;
       break;
     case 'us_comparison':
       title.value = 'US Rate Deck Analyzer';
       message.value = `
-        <strong>Analyze & Compare US Rate Decks Like Never Before!</strong><br> This powerful tool allows you to upload and compare multiple US termination rate decks side-by-side.<br><br>
+        <strong>Analyze & Compare US Rate Decks Like Never Before!</strong><br> This powerful tool allows you to upload and compare multiple US rate decks side-by-side.<br><br>
          Simply drag & drop or click to upload your Rate Decks as CSV containing:
-        <ul class="my-2 space-y-1 pl-4 list-disc marker:rounded-full marker:bg-gray-800 marker:text-transparent marker:w-2 marker:h-2 marker:inline-block">
-          <li>NPANXX(or NPA + NXX)</li>
-          <li>Interstate Rate</li>
-          <li>Intrastate Rate</li>
-          <li>Indeterminate Rate</li>
+       <ul class="list-disc list-inside my-2 space-y-1 pl-4">
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX(or NPA + NXX)</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
+          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Indeterminate Rate</code></li>
         </ul>
         <br>
         During the upload process, you'll map your columns to ensure accuracy. Once uploaded, the analyzer generates two insightful reports:
@@ -130,16 +133,16 @@ function setContentByType(type: InfoModalContentType) {
       `;
       break;
     case 'az_comparison':
-      title.value = 'A-Z Rate Deck Analyzer Info';
+      title.value = 'A-Z Rate Deck Analyzer';
       message.value = `
         <strong>Deep Dive into A-Z Rate Deck Comparisons!</strong> This analyzer empowers you to upload and meticulously compare two international A-Z rate decks.<br><br>
-        Upload your CSV files (up to two). Each file should ideally contain:
+        Upload your CSV files. Each file should contain:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (Prefix)</li>
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code> (Destination)</li>
           <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
         </ul>
-        Map your columns accurately during the upload preview. Once processed, the tool generates two key reports:
+        Map your columns accurately during the upload preview.<br>Once processed, the tool generates two key reports:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
           <li><strong>Code Report:</strong> Pinpoints differences in dial code coverage and destination names between the decks.</li>
           <li><strong>Pricing Report:</strong> Reveals rate discrepancies for matching dial codes across both decks.</li>
