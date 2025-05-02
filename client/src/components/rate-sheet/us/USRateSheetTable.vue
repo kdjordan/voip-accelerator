@@ -8,12 +8,19 @@
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Inter Avg</p>
           <div class="flex items-center justify-center min-h-[28px]">
-            <p class="text-lg font-semibold text-white font-mono mr-2">
-              {{ currentDisplayAverages.inter === null ? 'N/A' : formatRate(animatedInterAvg) }}
+            <!-- Only show rate if NOT calculating AND value is not null -->
+            <p
+              v-if="
+                !(isCalculatingOverall || isCalculatingState) &&
+                currentDisplayAverages.inter !== null
+              "
+              class="text-lg font-semibold text-white font-mono mr-2"
+            >
+              {{ formatRate(animatedInterAvg) }}
             </p>
             <ArrowPathIcon
               v-if="isCalculatingOverall || isCalculatingState"
-              class="w-4 h-4 text-accent animate-spin"
+              class="w-4 h-4 text-gray-500 animate-spin"
             />
           </div>
         </div>
@@ -21,12 +28,19 @@
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Intra Avg</p>
           <div class="flex items-center justify-center min-h-[28px]">
-            <p class="text-lg font-semibold text-white font-mono mr-2">
-              {{ currentDisplayAverages.intra === null ? 'N/A' : formatRate(animatedIntraAvg) }}
+            <!-- Only show rate if NOT calculating AND value is not null -->
+            <p
+              v-if="
+                !(isCalculatingOverall || isCalculatingState) &&
+                currentDisplayAverages.intra !== null
+              "
+              class="text-lg font-semibold text-white font-mono mr-2"
+            >
+              {{ formatRate(animatedIntraAvg) }}
             </p>
             <ArrowPathIcon
               v-if="isCalculatingOverall || isCalculatingState"
-              class="w-4 h-4 text-accent animate-spin"
+              class="w-4 h-4 text-gray-500 animate-spin"
             />
           </div>
         </div>
@@ -34,14 +48,19 @@
         <div class="bg-gray-800/60 p-3 rounded-lg text-center">
           <p class="text-sm text-gray-400 mb-1">Indeterm Avg</p>
           <div class="flex items-center justify-center min-h-[28px]">
-            <p class="text-lg font-semibold text-white font-mono mr-2">
-              {{
-                currentDisplayAverages.indeterm === null ? 'N/A' : formatRate(animatedIndetermAvg)
-              }}
+            <!-- Only show rate if NOT calculating AND value is not null -->
+            <p
+              v-if="
+                !(isCalculatingOverall || isCalculatingState) &&
+                currentDisplayAverages.indeterm !== null
+              "
+              class="text-lg font-semibold text-white font-mono mr-2"
+            >
+              {{ formatRate(animatedIndetermAvg) }}
             </p>
             <ArrowPathIcon
               v-if="isCalculatingOverall || isCalculatingState"
-              class="w-4 h-4 text-accent animate-spin"
+              class="w-4 h-4 text-gray-500 animate-spin"
             />
           </div>
         </div>
@@ -402,6 +421,22 @@
 
     <!-- Table Container -->
     <div class="overflow-y-auto max-h-[60vh] relative min-h-[300px]" ref="scrollContainerRef">
+      <!-- Loading overlay for filter changes -->
+      <transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isFiltering"
+          class="absolute inset-0 bg-gray-900/70 flex items-center justify-center z-20 rounded-lg"
+        >
+          <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
+        </div>
+      </transition>
       <table class="min-w-full divide-y divide-gray-700 text-sm">
         <thead class="bg-gray-800 sticky top-0 z-10">
           <tr>
@@ -487,7 +522,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
   import {
     Listbox,
     ListboxButton,
@@ -519,6 +554,9 @@
   } from '@/types/domains/rate-sheet-types';
   import Dexie from 'dexie';
 
+  // Minimum time (in ms) the filtering overlay should be displayed
+  const MIN_FILTER_DISPLAY_TIME = 400;
+
   // Type for average values
   interface RateAverages {
     inter: number | null;
@@ -533,6 +571,8 @@
   let dbInstance: DexieDBBase | null = null;
   const RATE_SHEET_TABLE_NAME = 'entries';
 
+  // --- Reactive State (Table Loading, Filters, Pagination) ---
+  const isDataLoading = ref(false); // Added: Tracks initial data loading state
   // --- Rate Adjustment Options Data ---
   const adjustmentTypeOptions = [
     { value: 'markup', label: 'Markup' },
@@ -561,6 +601,7 @@
   const adjustmentError = ref<string | null>(null);
   // --- End Rate Adjustment State ---
 
+  // Moved initialization out of hooks/functions
   // Timeout ID for clearing the status message
   let adjustmentStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -568,7 +609,7 @@
   const debouncedSearchQuery = ref('');
   const selectedState = ref<string>('');
 
-  const isDataLoading = ref(true);
+  const isFiltering = ref(false);
   const isExporting = ref(false);
   const dataError = ref<string | null>(null);
 
@@ -805,25 +846,33 @@
     await fetchUniqueStates();
   }
 
-  async function loadMoreData() {
-    if (isLoadingMore.value || !hasMoreData.value || !dbInstance) return;
-
-    isLoadingMore.value = true;
+  async function loadMoreData(currentOffset: number): Promise<{
+    data: USRateSheetEntry[];
+    newOffset: number;
+    newHasMoreData: boolean;
+    newTotalRecords?: number;
+  }> {
+    // Removed isLoadingMore logic as this is now primarily for initial/filter load
     dataError.value = null;
+    let count = 0;
 
     try {
-      const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      const table = dbInstance!.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
       let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
         table;
 
       const filtersApplied: string[] = [];
 
+      // Apply filters based on debouncedSearchQuery and selectedState
       if (debouncedSearchQuery.value) {
         queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
         filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
 
         if (selectedState.value) {
-          queryChain = queryChain.and((record) => record.stateCode === selectedState.value);
+          // IMPORTANT: Dexie's 'and' method is for chaining filters on the same index.
+          // For filtering on multiple properties (npanxx startsWith AND stateCode equals),
+          // we need to apply the second filter after the initial where clause.
+          queryChain = queryChain.filter((record) => record.stateCode === selectedState.value);
           filtersApplied.push(`Region equals ${selectedState.value}`);
         }
       } else if (selectedState.value) {
@@ -831,47 +880,105 @@
         filtersApplied.push(`Region equals ${selectedState.value}`);
       }
 
-      if (filtersApplied.length > 0) {
-      } else {
+      // Calculate total count only on the first load (offset 0)
+      if (currentOffset === 0) {
+        count = await queryChain.count();
       }
 
-      if (offset.value === 0) {
-        totalRecords.value = await queryChain.count();
-      }
+      // Apply pagination and fetch data
+      const newData = await queryChain.offset(currentOffset).limit(PAGE_SIZE).toArray();
 
-      const newData = await queryChain.offset(offset.value).limit(PAGE_SIZE).toArray();
+      const newOffset = currentOffset + newData.length;
+      // Determine hasMoreData based on fetched count and total count if available
+      const newHasMoreData =
+        newData.length === PAGE_SIZE && (currentOffset === 0 ? newOffset < count : true);
 
-      displayedData.value = offset.value === 0 ? newData : [...displayedData.value, ...newData];
-      offset.value += newData.length;
-      hasMoreData.value = newData.length === PAGE_SIZE && offset.value < totalRecords.value;
+      // Return the results instead of updating refs directly
+      return {
+        data: newData,
+        newOffset: newOffset,
+        newHasMoreData: newHasMoreData,
+        newTotalRecords: currentOffset === 0 ? count : undefined, // Only return count on first load
+      };
     } catch (err: any) {
       console.error('[USRateSheetTable] Error loading rate sheet data:', err);
       dataError.value = err.message || 'Failed to load data';
-      hasMoreData.value = false;
+      // Return empty/default state on error
+      return {
+        data: [],
+        newOffset: currentOffset, // Keep original offset on error?
+        newHasMoreData: false,
+        newTotalRecords: currentOffset === 0 ? 0 : undefined,
+      };
     } finally {
-      isLoadingMore.value = false;
-      if (isDataLoading.value) {
-        isDataLoading.value = false;
-      }
+      // Removed isLoadingMore = false
     }
   }
 
   async function resetPaginationAndLoad() {
-    isDataLoading.value = true;
+    const startTime = performance.now(); // Record start time
+    isFiltering.value = true; // Set filtering overlay to true
+    await nextTick(); // Wait for the overlay to render
+
+    isDataLoading.value = true; // Show internal table loading state
+
     if (scrollContainerRef.value) {
       scrollContainerRef.value.scrollTop = 0;
     }
-    offset.value = 0;
-    displayedData.value = [];
+    // Reset state before fetching
+    let currentOffset = 0; // Start from offset 0 for reset
     hasMoreData.value = true;
     dataError.value = null;
-    isLoadingMore.value = false;
+    isLoadingMore.value = false; // Ensure infinite scroll loading is off
+
+    let fetchedResult = {
+      data: [] as USRateSheetEntry[],
+      newOffset: 0,
+      newHasMoreData: false,
+      newTotalRecords: undefined as number | undefined,
+    };
 
     const dbReady = await initializeRateSheetDB();
-    if (dbReady) {
-      await loadMoreData();
+    if (dbReady && dbInstance) {
+      try {
+        // Fetch the first page of data but don't update displayedData yet
+        fetchedResult = await loadMoreData(currentOffset);
+      } catch (fetchError) {
+        console.error('[USRateSheetTable] Error during initial data fetch in reset:', fetchError);
+        dataError.value = (fetchError as Error).message || 'Failed to fetch initial data.';
+        fetchedResult.newHasMoreData = false; // Ensure we stop loading on error
+      }
     } else {
-      isDataLoading.value = false;
+      // Handle DB not ready case
+      totalRecords.value = 0;
+      fetchedResult.newHasMoreData = false;
+      if (!dbReady) {
+        // Keep the error message from initializeRateSheetDB if it failed
+        if (!dataError.value) dataError.value = 'Database not available.';
+      }
+    }
+
+    isDataLoading.value = false; // Hide internal table loading state
+
+    // Minimum display time logic
+    const endTime = performance.now();
+    const elapsedTime = endTime - startTime;
+    const remainingTime = MIN_FILTER_DISPLAY_TIME - elapsedTime;
+
+    const updateUIData = () => {
+      displayedData.value = fetchedResult.data;
+      offset.value = fetchedResult.newOffset;
+      hasMoreData.value = fetchedResult.newHasMoreData;
+      if (fetchedResult.newTotalRecords !== undefined) {
+        totalRecords.value = fetchedResult.newTotalRecords;
+      }
+      isFiltering.value = false; // Set filtering overlay to false
+    };
+
+    if (remainingTime > 0) {
+      setTimeout(updateUIData, remainingTime);
+    } else {
+      updateUIData();
     }
   }
 
@@ -955,9 +1062,9 @@
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
 
-    isDataLoading.value = true;
     const dbReady = await initializeRateSheetDB();
     if (dbReady && store.getHasUsRateSheetData) {
+      isDataLoading.value = true; // Set loading true only if we proceed to load
       await updateAvailableStates();
       await resetPaginationAndLoad();
 
@@ -967,11 +1074,6 @@
         intra: null,
         indeterm: null,
       };
-    } else {
-      totalRecords.value = 0;
-      isDataLoading.value = false;
-      overallAverages.value = null;
-      currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
     }
   });
 
@@ -1001,10 +1103,12 @@
           isDataLoading.value = true;
           const dbReady = await initializeRateSheetDB();
           if (dbReady) {
+            isDataLoading.value = true; // Set loading before fetching
             await updateAvailableStates();
             await resetPaginationAndLoad();
           } else {
-            isDataLoading.value = false;
+            // If DB isn't ready after upload success, something is wrong,
+            // keep loading false, error should be set by initializeRateSheetDB
           }
         }
       }
@@ -1015,8 +1119,25 @@
   useIntersectionObserver(
     loadMoreTriggerRef,
     ([{ isIntersecting }]) => {
-      if (isIntersecting && hasMoreData.value && !isLoadingMore.value && !isDataLoading.value) {
-        loadMoreData();
+      if (isIntersecting && hasMoreData.value && !isLoadingMore.value && !isFiltering.value) {
+        loadMoreData(offset.value)
+          .then((result) => {
+            if (result.data.length > 0) {
+              displayedData.value.push(...result.data);
+              offset.value = result.newOffset;
+              hasMoreData.value = result.newHasMoreData;
+            } else {
+              hasMoreData.value = false;
+            }
+          })
+          .catch((err) => {
+            console.error('[USRateSheetTable] Error during infinite scroll loadMoreData:', err);
+            dataError.value = (err as Error).message || 'Failed to load more data.';
+            hasMoreData.value = false;
+          })
+          .finally(() => {
+            isLoadingMore.value = false;
+          });
       }
     },
     {
