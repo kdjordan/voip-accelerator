@@ -202,10 +202,10 @@
       class="text-center text-gray-500 py-10"
     >
       <div
-        class="flex items-center justify-center space-x-2 text-accent bg-accent/20 border-accent border p-2 rounded-lg w-1/2 mx-auto"
+        class="flex items-center justify-center space-x-2 border border-neutral-700 rounded-lg p-2 w-1/4 mx-auto"
       >
         <ArrowPathIcon class="animate-spin w-6 h-6" />
-        <span>Loading comparison data...</span>
+        
       </div>
     </div>
     <div v-else-if="error" class="text-center text-red-500 py-10">

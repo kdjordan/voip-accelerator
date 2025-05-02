@@ -4,13 +4,13 @@
       :class="[
         'sidebar',
         'border-r border-muted fixed top-0 left-0 bottom-0 bg-neutral-900',
-        isOpen ? 'w-[200px]' : 'w-[80px]',
+        userStore.getSideNavOpen ? 'w-[200px]' : 'w-[80px]',
       ]"
     >
       <!-- Toggle button to close sidebar (visible only when sidebar is open) -->
       <button
-        v-if="isOpen"
-        @click="toggleSidebar"
+        v-if="userStore.getSideNavOpen"
+        @click="userStore.toggleSideNav"
         class="w-full flex items-center justify-end py-3 pr-3 hover:bg-fbHover/20"
       >
         <ArrowLeftEndOnRectangleIcon class="w-4 h-4 text-accent" />
@@ -18,19 +18,24 @@
 
       <!-- Toggle button to open sidebar (visible only when sidebar is closed) -->
       <button
-        v-if="!isOpen"
-        @click="toggleSidebar"
+        v-if="!userStore.getSideNavOpen"
+        @click="userStore.toggleSideNav"
         class="w-full flex items-center justify-center py-3 hover:bg-fbHover/20"
       >
         <ArrowRightStartOnRectangleIcon class="w-4 h-4 text-accent" />
       </button>
 
       <!-- Logo and App Name -->
-      <div :class="['px-3 py-3 flex items-center', isOpen ? 'justify-start' : 'justify-center']">
+      <div
+        :class="[
+          'px-3 py-3 flex items-center',
+          userStore.getSideNavOpen ? 'justify-start' : 'justify-center',
+        ]"
+      >
         <RouterLink to="/home" class="flex items-center text-accent gap-2">
           <BoltIcon class="w-8 h-8 flex-shrink-0" />
           <span
-            v-if="isOpen"
+            v-if="userStore.getSideNavOpen"
             class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter"
             >VoIP Accelerator</span
           >
@@ -45,7 +50,7 @@
               :to="item.href!"
               class="flex items-center py-2 px-3 rounded-md border transition-all overflow-hidden"
               :class="[
-                isOpen ? 'space-x-2' : 'w-full justify-center',
+                userStore.getSideNavOpen ? 'space-x-2' : 'w-full justify-center',
                 route.path === item.href
                   ? 'bg-accent/20 border-accent/50'
                   : 'hover:bg-neutral-700 border-transparent',
@@ -58,7 +63,7 @@
                 :class="[route.path === item.href ? 'text-accent' : 'text-neutral-300']"
               />
               <span
-                v-if="isOpen"
+                v-if="userStore.getSideNavOpen"
                 class="whitespace-nowrap"
                 :class="[route.path === item.href ? 'text-accent' : 'text-neutral-300']"
                 >{{ item.name }}</span
@@ -72,36 +77,38 @@
               @click="toggleSection(index)"
               class="flex items-center w-full py-2 px-3 rounded-md border transition-all"
               :class="[
-                isOpen ? 'justify-between' : 'justify-center',
-                !isOpen && item.children?.some((child) => child.href === route.path)
+                userStore.getSideNavOpen ? 'justify-between' : 'justify-center',
+                !userStore.getSideNavOpen &&
+                item.children?.some((child) => child.href === route.path)
                   ? 'bg-accent/20 border-accent/50'
                   : 'hover:bg-neutral-700 border-transparent',
               ]"
             >
-              <div class="flex items-center" :class="[isOpen ? 'space-x-2' : '']">
+              <div class="flex items-center" :class="[userStore.getSideNavOpen ? 'space-x-2' : '']">
                 <component
                   v-if="item.icon"
                   :is="item.icon"
                   class="w-5 h-5 flex-shrink-0"
                   :class="[
-                    !isOpen && item.children?.some((child) => child.href === route.path)
+                    !userStore.getSideNavOpen &&
+                    item.children?.some((child) => child.href === route.path)
                       ? 'text-accent'
                       : 'text-neutral-300',
                   ]"
                 />
-                <span v-if="isOpen" class="whitespace-nowrap text-neutral-300">{{
+                <span v-if="userStore.getSideNavOpen" class="whitespace-nowrap text-neutral-300">{{
                   item.name
                 }}</span>
               </div>
               <ChevronDownIcon
-                v-if="isOpen"
+                v-if="userStore.getSideNavOpen"
                 :class="[
                   'w-4 h-4 text-neutral-300 transition-transform',
                   expandedSections[index] ? 'rotate-180' : '',
                 ]"
               />
             </button>
-            <ul v-if="isOpen && expandedSections[index]" class="mt-1 ml-4 pl-2">
+            <ul v-if="userStore.getSideNavOpen && expandedSections[index]" class="mt-1 ml-4 pl-2">
               <li v-for="child in item.children" :key="child.name" class="my-1">
                 <RouterLink
                   v-if="child.href"
@@ -131,17 +138,17 @@
     <div
       class="ml-2 fixed top-0 bottom-0 w-[8px] hover:bg-fbHover transition-colors cursor-ew-resize"
       :style="{
-        left: isOpen ? '194px' : '58px',
+        left: userStore.getSideNavOpen ? '194px' : '58px',
         transform: 'translateX(0)',
       }"
-      @click="toggleSidebar"
+      @click="userStore.toggleSideNav"
     ></div>
   </div>
 </template>
 
 <script setup lang="ts">
   import { RouterLink, useRoute } from 'vue-router';
-  import { ref, computed } from 'vue';
+  import { ref } from 'vue';
   import { useSharedStore } from '@/stores/shared-store';
   import {
     ChevronDownIcon,
@@ -154,22 +161,13 @@
 
   const userStore = useSharedStore();
   const route = useRoute();
-  const isOpen = computed(() => userStore.getSideNavOpen);
   const expandedSections = ref<Record<number, boolean>>({});
 
   const items = ref<NavigationItem[]>(appNavigationItems);
 
-  function toggleSidebar() {
-    isOpen.value = !isOpen.value;
-    userStore.setSideNavOpen(isOpen.value);
-    if (!isOpen.value) {
-      expandedSections.value = {};
-    }
-  }
-
   function toggleSection(index: number) {
-    if (!isOpen.value) {
-      toggleSidebar();
+    if (!userStore.getSideNavOpen) {
+      userStore.toggleSideNav();
     }
     expandedSections.value[index] = !expandedSections.value[index];
   }
