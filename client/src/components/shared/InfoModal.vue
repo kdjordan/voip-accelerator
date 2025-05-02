@@ -109,20 +109,22 @@ function setContentByType(type: InfoModalContentType) {
         Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>The system automatically parses your file, validates the data, and stores it locally in your browser for fast access and comparison. Simplify your international pricing strategy today!`;
       break;
     case 'us_comparison':
-      title.value = 'US Rate Deck Analyzer Info';
+      title.value = 'US Rate Deck Analyzer';
       message.value = `
         <strong>Analyze & Compare US Rate Decks Like Never Before!</strong><br> This powerful tool allows you to upload and compare multiple US termination rate decks side-by-side.<br><br>
-        Simply drag and drop your CSV files (up to two) containing columns for:
-        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">OCN</code> (Operating Company Number)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">State</code> (or Jurisdiction)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Tier</code> (or Rate Center)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
+         Simply drag & drop or click to upload your Rate Decks as CSV containing:
+        <ul class="my-2 space-y-1 pl-4 list-disc marker:rounded-full marker:bg-gray-800 marker:text-transparent marker:w-2 marker:h-2 marker:inline-block">
+          <li>NPANXX(or NPA + NXX)</li>
+          <li>Interstate Rate</li>
+          <li>Intrastate Rate</li>
+          <li>Indeterminate Rate</li>
         </ul>
+        <br>
         During the upload process, you'll map your columns to ensure accuracy. Once uploaded, the analyzer generates two insightful reports:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><strong>Code Report:</strong> Identifies differences in OCN coverage between the decks.</li>
-          <li><strong>Pricing Report:</strong> Highlights discrepancies in rates for matching OCNs across the decks.</li>
+          <li><strong>Code Report:</strong> Identifies NPA and NXXs that are present in one deck but not the other.</li>
+          <li><strong>Code Report:</strong> LERG Converage by NPA</li>
+          <li><strong>Pricing Report:</strong> Compare over all jurisdicational rates and filter for NPA, NPANXX, or at the State/Province level.</li>
         </ul>
         Leverage this tool to optimize your US termination strategy, identify cost-saving opportunities, and ensure competitive pricing.
       `;
