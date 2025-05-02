@@ -49,15 +49,16 @@
           <!-- Divider color changed to divide-accent/20 -->
           <div class="-my-6 divide-y divide-accent/20">
             <div class="space-y-2 py-6">
-              <RouterLink
-                v-for="item in items"
-                :key="item.name"
-                :to="item.href"
-                class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-white hover:bg-neutral-800"
-                @click="closeMenu"
-              >
-                {{ item.name }}
-              </RouterLink>
+              <template v-for="item in items" :key="item.name">
+                <RouterLink
+                  v-if="item.href"
+                  :to="item.href"
+                  class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-white hover:bg-neutral-800"
+                  @click="closeMenu"
+                >
+                  {{ item.name }}
+                </RouterLink>
+              </template>
               <!-- Add Login/Signup Buttons Explicitly -->
               <RouterLink
                 to="/dashboard"
