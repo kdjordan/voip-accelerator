@@ -6,6 +6,7 @@ export const useSharedStore = defineStore('shared', {
   state: () => ({
     ui: {
       isSideNavOpen: false,
+      isAppMobileMenuOpen: false,
       isGlobalLoading: false,
     },
     user: {
@@ -15,7 +16,7 @@ export const useSharedStore = defineStore('shared', {
         email: 'c.phillips@v-tell.com',
         planTier: PlanTier.BASIC,
         lastLoggedIn: new Date('2023-11-12T14:30:00'),
-        createdAt: new Date('2022-06-15T09:00:00')
+        createdAt: new Date('2022-06-15T09:00:00'),
       } as UserInfo,
       currentPlan: PlanTier.BASIC as PlanTierType,
       features: {
@@ -36,12 +37,13 @@ export const useSharedStore = defineStore('shared', {
   }),
 
   getters: {
-    getSideNavOpen: state => state.ui.isSideNavOpen,
-    isLoggedIn: state => state.user.info !== null,
-    hasPlanType: state => state.user.currentPlan,
-    userEmail: state => state.user.info?.email ?? '',
-    username: state => state.user.info?.username ?? '',
-    currentPlan: state => state.user.currentPlan,
+    getSideNavOpen: (state) => state.ui.isSideNavOpen,
+    getAppMobileMenuOpen: (state) => state.ui.isAppMobileMenuOpen,
+    isLoggedIn: (state) => state.user.info !== null,
+    hasPlanType: (state) => state.user.currentPlan,
+    userEmail: (state) => state.user.info?.email ?? '',
+    username: (state) => state.user.info?.username ?? '',
+    currentPlan: (state) => state.user.currentPlan,
   },
 
   actions: {
@@ -51,6 +53,14 @@ export const useSharedStore = defineStore('shared', {
 
     toggleSideNav() {
       this.ui.isSideNavOpen = !this.ui.isSideNavOpen;
+    },
+
+    setAppMobileMenuOpen(isOpen: boolean) {
+      this.ui.isAppMobileMenuOpen = isOpen;
+    },
+
+    toggleAppMobileMenu() {
+      this.ui.isAppMobileMenuOpen = !this.ui.isAppMobileMenuOpen;
     },
 
     setUser(userInfo: Omit<UserInfo, 'lastLoggedIn'>) {
