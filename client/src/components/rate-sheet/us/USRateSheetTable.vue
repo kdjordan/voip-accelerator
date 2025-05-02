@@ -931,11 +931,17 @@
     dataError.value = null;
     isLoadingMore.value = false; // Ensure infinite scroll loading is off
 
-    let fetchedResult = {
-      data: [] as USRateSheetEntry[],
+    // Explicitly type fetchedResult to match the return type of loadMoreData
+    let fetchedResult: {
+      data: USRateSheetEntry[];
+      newOffset: number;
+      newHasMoreData: boolean;
+      newTotalRecords?: number; // Mark as optional
+    } = {
+      data: [],
       newOffset: 0,
       newHasMoreData: false,
-      newTotalRecords: undefined as number | undefined,
+      newTotalRecords: undefined, // Keep initialization as undefined
     };
 
     const dbReady = await initializeRateSheetDB();
