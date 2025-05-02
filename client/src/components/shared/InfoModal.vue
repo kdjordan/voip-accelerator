@@ -125,8 +125,7 @@ function setContentByType(type: InfoModalContentType) {
         <br>
         During the upload process, you'll map your columns to ensure accuracy. Once uploaded, the analyzer generates two insightful reports:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><strong>Code Report:</strong> Identifies NPA and NXXs that are present in one deck but not the other.</li>
-          <li><strong>Code Report:</strong> LERG Converage by NPA</li>
+          <li><strong>Code Report:</strong> Identifies NPA and NXXs that are present in one deck but not the other. SHOWS LERG Coverage by NPA and state level</li>
           <li><strong>Pricing Report:</strong> Compare over all jurisdicational rates and filter for NPA, NPANXX, or at the State/Province level.</li>
         </ul>
         Leverage this tool to optimize your US termination strategy, identify cost-saving opportunities, and ensure competitive pricing.
