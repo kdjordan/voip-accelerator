@@ -1,5 +1,5 @@
 <template>
-  <header ref="header" class="z-[100] px-16 mx-auto pb-12 font-secondary">
+  <header ref="header" class="z-[100] px-16 mx-auto pt-8 pb-12 font-secondary">
     <nav class="flex justify-between items-center w-full">
       <RouterLink to="/home" class="flex items-center text-fbBlack">
         <div class="glitch-container">
