@@ -1,9 +1,9 @@
 <template>
-  <div class="relative">
+  <div class="hidden md:block relative">
     <nav
       :class="[
         'sidebar',
-        'border-r border-muted fixed top-0 left-0 bottom-0',
+        'border-r border-muted fixed top-0 left-0 bottom-0 bg-neutral-900',
         isOpen ? 'w-[200px]' : 'w-[80px]',
       ]"
     >
@@ -29,35 +29,38 @@
       <div :class="['px-3 py-3 flex items-center', isOpen ? 'justify-start' : 'justify-center']">
         <RouterLink to="/home" class="flex items-center text-accent gap-2">
           <BoltIcon class="w-8 h-8 flex-shrink-0" />
-          <span v-if="isOpen" class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter"
+          <span
+            v-if="isOpen"
+            class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter"
             >VoIP Accelerator</span
           >
         </RouterLink>
       </div>
 
       <ul class="flex-grow mt-4 font-secondary tracking-tight">
-        <li v-for="(item, index) in items" :key="item.name" class="px-2 my-1 text-sizeSm">
+        <li v-for="(item, index) in items" :key="item.name" class="px-2 my-1 text-sm">
           <!-- Top-level items -->
           <div v-if="!item.children">
             <RouterLink
-              :to="item.to!"
+              :to="item.href!"
               class="flex items-center py-2 px-3 rounded-md border transition-all overflow-hidden"
               :class="[
                 isOpen ? 'space-x-2' : 'w-full justify-center',
-                $route.path === item.to
+                route.path === item.href
                   ? 'bg-accent/20 border-accent/50'
-                  : 'hover:bg-fbHover border-transparent',
+                  : 'hover:bg-neutral-700 border-transparent',
               ]"
             >
               <component
+                v-if="item.icon"
                 :is="item.icon"
                 class="w-5 h-5 flex-shrink-0"
-                :class="[$route.path === item.to ? 'text-accent' : 'text-fbWhite']"
+                :class="[route.path === item.href ? 'text-accent' : 'text-neutral-300']"
               />
               <span
                 v-if="isOpen"
                 class="whitespace-nowrap"
-                :class="[$route.path === item.to ? 'text-accent' : 'text-fbWhite']"
+                :class="[route.path === item.href ? 'text-accent' : 'text-neutral-300']"
                 >{{ item.name }}</span
               >
             </RouterLink>
@@ -70,27 +73,30 @@
               class="flex items-center w-full py-2 px-3 rounded-md border transition-all"
               :class="[
                 isOpen ? 'justify-between' : 'justify-center',
-                !isOpen && item.children?.some((child) => child.to === $route.path)
+                !isOpen && item.children?.some((child) => child.href === route.path)
                   ? 'bg-accent/20 border-accent/50'
-                  : 'hover:bg-fbHover border-transparent',
+                  : 'hover:bg-neutral-700 border-transparent',
               ]"
             >
               <div class="flex items-center" :class="[isOpen ? 'space-x-2' : '']">
                 <component
+                  v-if="item.icon"
                   :is="item.icon"
                   class="w-5 h-5 flex-shrink-0"
                   :class="[
-                    !isOpen && item.children?.some((child) => child.to === $route.path)
+                    !isOpen && item.children?.some((child) => child.href === route.path)
                       ? 'text-accent'
-                      : 'text-fbWhite',
+                      : 'text-neutral-300',
                   ]"
                 />
-                <span v-if="isOpen" class="whitespace-nowrap text-fbWhite">{{ item.name }}</span>
+                <span v-if="isOpen" class="whitespace-nowrap text-neutral-300">{{
+                  item.name
+                }}</span>
               </div>
               <ChevronDownIcon
                 v-if="isOpen"
                 :class="[
-                  'w-4 h-4 text-fbWhite transition-transform',
+                  'w-4 h-4 text-neutral-300 transition-transform',
                   expandedSections[index] ? 'rotate-180' : '',
                 ]"
               />
@@ -98,13 +104,13 @@
             <ul v-if="isOpen && expandedSections[index]" class="mt-1 ml-4 pl-2">
               <li v-for="child in item.children" :key="child.name" class="my-1">
                 <RouterLink
-                  v-if="child.to"
-                  :to="child.to"
+                  v-if="child.href"
+                  :to="child.href"
                   class="flex items-center py-1.5 px-3 rounded-md border transition-all"
                   :class="[
-                    $route.path === child.to
+                    route.path === child.href
                       ? 'bg-accent/10 border-accent/30 text-accent'
-                      : 'hover:bg-fbHover/80 border-transparent text-fbWhite',
+                      : 'hover:bg-neutral-700/80 border-transparent text-neutral-300',
                   ]"
                 >
                   <span class="whitespace-nowrap text-xs">{{ child.name }}</span>
@@ -116,6 +122,9 @@
       </ul>
 
       <!-- User Dropdown -->
+      <div class="mt-auto p-4">
+        <!-- Content for user dropdown -->
+      </div>
     </nav>
 
     <!-- This is the drag handle area -->
@@ -131,116 +140,62 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useSharedStore } from '@/stores/shared-store';
-import {
-  ChevronDownIcon,
-  ArrowLeftEndOnRectangleIcon,
-  ArrowRightStartOnRectangleIcon,
-  BoltIcon,
-  Cog6ToothIcon,
-  GlobeAltIcon,
-  GlobeAmericasIcon,
-  AdjustmentsVerticalIcon,
-  HomeIcon,
-  DocumentChartBarIcon,
-  WrenchScrewdriverIcon,
-} from '@heroicons/vue/24/outline';
+  import { RouterLink, useRoute } from 'vue-router';
+  import { ref, computed } from 'vue';
+  import { useSharedStore } from '@/stores/shared-store';
+  import {
+    ChevronDownIcon,
+    ArrowLeftEndOnRectangleIcon,
+    ArrowRightStartOnRectangleIcon,
+    BoltIcon,
+  } from '@heroicons/vue/24/outline';
+  import { appNavigationItems } from '@/constants/navigation';
+  import type { NavigationItem } from '@/types/nav-types';
 
-interface NavItem {
-  name: string;
-  to?: string;
-  icon: any;
-  children?: NavItem[];
-}
+  const userStore = useSharedStore();
+  const route = useRoute();
+  const isOpen = computed(() => userStore.getSideNavOpen);
+  const expandedSections = ref<Record<number, boolean>>({});
 
-const userStore = useSharedStore();
-const isOpen = ref(userStore.getSideNavOpen);
-const expandedSections = ref<Record<number, boolean>>({});
+  const items = ref<NavigationItem[]>(appNavigationItems);
 
-function toggleSidebar() {
-  isOpen.value = !isOpen.value;
-  userStore.setSideNavOpen(isOpen.value);
-  if (!isOpen.value) {
-    expandedSections.value = {};
+  function toggleSidebar() {
+    isOpen.value = !isOpen.value;
+    userStore.setSideNavOpen(isOpen.value);
+    if (!isOpen.value) {
+      expandedSections.value = {};
+    }
   }
-}
 
-function toggleSection(index: number) {
-  if (!isOpen.value) {
-    toggleSidebar();
+  function toggleSection(index: number) {
+    if (!isOpen.value) {
+      toggleSidebar();
+    }
+    expandedSections.value[index] = !expandedSections.value[index];
   }
-  expandedSections.value[index] = !expandedSections.value[index];
-}
-
-const items = ref<NavItem[]>([
-  {
-    name: 'Dashboard',
-    to: '/dashboard',
-    icon: HomeIcon,
-  },
-  {
-    name: 'Reporting',
-    icon: DocumentChartBarIcon,
-    children: [
-      {
-        name: 'US Reporting',
-        to: '/usview',
-        icon: GlobeAmericasIcon,
-      },
-      {
-        name: 'AZ Reporting',
-        to: '/azview',
-        icon: GlobeAltIcon,
-      },
-    ],
-  },
-  {
-    name: 'Rate Wizard',
-    icon: WrenchScrewdriverIcon,
-    children: [
-      {
-        name: 'US Rate Wizard',
-        to: '/us-rate-sheet',
-        icon: AdjustmentsVerticalIcon,
-      },
-      {
-        name: 'AZ Rate Wizard',
-        to: '/az-rate-sheet',
-        icon: AdjustmentsVerticalIcon,
-      },
-    ],
-  },
-  // {
-  //   name: 'Lerg Admin',
-  //   to: '/admin',
-  //   icon: Cog6ToothIcon,
-  // },
-]);
 </script>
+
 <style scoped>
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    transition: width 0.3s ease-in-out;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10;
+    border-right: none;
+    background-color: theme('colors.gray.900');
+  }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  transition: width 0.3s ease-in-out; /* Smoothed transition */
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 10;
-  border-right: none; /* Ensure no double border */
-  background-color: theme('colors.gray.900'); /* Corrected background color */
-}
+  /* Style adjustments for better visual hierarchy */
+  ul ul {
+    /* Indentation and styling for child items */
+    padding-left: 0.5rem; /* Adjust as needed */
+  }
 
-/* Style adjustments for better visual hierarchy */
-ul ul {
-  /* Indentation and styling for child items */
-  padding-left: 0.5rem; /* Adjust as needed */
-}
-
-/* Ensure icons and text align nicely */
-.flex.items-center {
-  min-height: 2rem; /* Ensure consistent height for clickable areas */
-}
+  /* Ensure icons and text align nicely */
+  .flex.items-center {
+    min-height: 2rem; /* Ensure consistent height for clickable areas */
+  }
 </style>

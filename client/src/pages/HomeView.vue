@@ -1,32 +1,33 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import TopNav from '@/components/shared/TopNav.vue';
-import TheFooter from '@/components/shared/TheFooter.vue';
-import FeatureCards from '@/components/home/FeatureCards.vue';
+  import { RouterLink } from 'vue-router';
+  import TopNav from '@/components/shared/TopNav.vue';
+  import MarketingMobileNav from '@/components/shared/MarketingMobileNav.vue';
+  import TheFooter from '@/components/shared/TheFooter.vue';
+  import FeatureCards from '@/components/home/FeatureCards.vue';
+  import { marketingNavigationItems } from '@/constants/navigation';
 </script>
 
 <template>
   <div class="min-h-screen bg-fbBlack text-white overflow-x-hidden">
-    <!-- Top Navigation Bar -->
-
-    <!-- Hero Section - Simplified to match reference design -->
+    <!-- Hero Section -->
+    <!-- Mobile Nav and Desktop Nav are now both placed inside the section -->
+    <!-- Added pt-0 to section as inner components now handle padding -->
     <section
-      class="mt-4 rounded-3xl mx-4 pb-32 pt-16 bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack"
+      class="mt-4 rounded-3xl mx-4 pb-32 pt-0 bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack relative overflow-hidden"
     >
-      <TopNav />
-      <!-- Colorful gradient background -->
-      <!-- <div class="absolute inset-0 bg-gradient-to-br from-accent/20 via-accent/10 to-fbBlack z-0 border border-fbBorder/20 m-8 rounded-lg"></div> -->
+      <!-- Mobile Navigation (shows on mobile, positioned inside) -->
+      <MarketingMobileNav :items="marketingNavigationItems" class="md:hidden" />
 
-      <!-- Grid pattern overlay -->
-      <!-- <div class="absolute inset-0 bg-grid-pattern opacity-10 z-0"></div> -->
+      <!-- Desktop Navigation (shows on desktop, positioned inside) -->
+      <TopNav class="hidden md:flex" />
 
       <!-- Content container -->
-      <div class="container relative z-10 max-w-7xl mx-auto">
+      <!-- Adjusted padding/margin if needed based on nav component changes -->
+      <div class="container relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="space-y-8">
           <!-- Main headline - Large and prominent -->
           <h1 class="text-6xl md:text-7xl lg:text-7xl font-medium tracking-tighter">
             Instant Rate Deck Insights
-            <!-- <span class="text-accent block mt-2">Instant Rate Deck Insights</span> -->
           </h1>
           <!-- Subheading - Clean and focused -->
           <p class="text-base md:text-2xl text-fbWhite/80 max-w-2xl">

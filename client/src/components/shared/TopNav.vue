@@ -1,13 +1,7 @@
 <template>
-  <header
-    ref="header"
-    class="z-[100] px-16 mx-auto pb-12 font-secondary"
-  >
+  <header ref="header" class="z-[100] px-16 mx-auto pb-12 font-secondary">
     <nav class="flex justify-between items-center w-full">
-      <RouterLink
-        to="/home"
-        class="flex items-center text-fbBlack"
-      >
+      <RouterLink to="/home" class="flex items-center text-fbBlack">
         <div class="glitch-container">
           <BoltIcon class="w-8 h-8 glitch-item" />
         </div>
@@ -44,9 +38,6 @@
       </div>
     </nav>
   </header>
-
-  <!-- Spacer to prevent content from being hidden under the fixed header -->
-  <div class="h-14"></div>
 </template>
 
 <script setup lang="ts">
@@ -151,7 +142,9 @@
     20% {
       transform: translate(2px, -2px);
       opacity: 1;
-      text-shadow: -2px 0 #4b9e85, 2px 0 #8c0040;
+      text-shadow:
+        -2px 0 #4b9e85,
+        2px 0 #8c0040;
     }
     25% {
       transform: translate(-2px, 2px);
@@ -160,7 +153,9 @@
     30% {
       transform: translate(2px, 2px);
       opacity: 1;
-      text-shadow: 2px 0 #4b9e85, -2px 0 #8c0040;
+      text-shadow:
+        2px 0 #4b9e85,
+        -2px 0 #8c0040;
     }
     35% {
       transform: translate(2px, -2px);
