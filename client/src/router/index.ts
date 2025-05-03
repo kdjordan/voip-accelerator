@@ -43,6 +43,16 @@ const router = createRouter({
       name: 'AdminLerg',
       component: () => import('@/pages/AdminView.vue'),
     },
+    {
+      path: '/terms-and-conditions',
+      name: 'termsAndConditions',
+      component: () => import('@/pages/TandCView.vue'),
+    },
+    {
+      path: '/privacy-policy',
+      name: 'privacyPolicy',
+      component: () => import('@/pages/PrivacyView.vue'),
+    },
 
     // Spread the admin routes
     ...adminRoutes,

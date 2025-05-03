@@ -73,10 +73,26 @@
   // TODO: Instantiate other stores if needed
 
   // Public routes where SideNav should not be shown
-  const publicRoutes = ['/', '/home', '/about', '/pricing', '/login', '/signup'];
+  const publicRoutes = [
+    '/',
+    '/home',
+    '/about',
+    '/pricing',
+    '/login',
+    '/signup',
+    '/terms-and-conditions',
+    '/privacy-policy',
+  ];
 
   // Marketing pages that need full width
-  const marketingPages = ['/', '/home', '/about', '/pricing'];
+  const marketingPages = [
+    '/',
+    '/home',
+    '/about',
+    '/pricing',
+    '/terms-and-conditions',
+    '/privacy-policy',
+  ];
 
   // Compute whether to show the SideNav based on the current route
   const shouldShowSideNav = computed(() => {
