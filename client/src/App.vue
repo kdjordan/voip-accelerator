@@ -82,6 +82,7 @@
     '/signup',
     '/terms-and-conditions',
     '/privacy-policy',
+    '/:pathMatch(.*)*', // Add catch-all for 404 page
   ];
 
   // Marketing pages that need full width
@@ -92,6 +93,7 @@
     '/pricing',
     '/terms-and-conditions',
     '/privacy-policy',
+    '/:pathMatch(.*)*', // Add catch-all for 404 page
   ];
 
   // Compute whether to show the SideNav based on the current route
@@ -102,7 +104,8 @@
 
   // Determine if current page is a marketing page that should be full width
   const isMarketingPage = computed(() => {
-    return marketingPages.includes(route.path);
+    // Check if the path is explicitly listed OR if it's the named 404 route
+    return marketingPages.includes(route.path) || route.name === 'notFound';
   });
 
   // Get SideNav expanded state from store

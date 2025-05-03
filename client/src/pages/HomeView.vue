@@ -37,15 +37,16 @@
               to="/dashboard"
               class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-3xl hover:bg-accent/90 transition-colors text-center"
             >
-              Let's Go
+              Find My Margin
             </RouterLink>
 
-            <RouterLink
-              to="/dashboard"
+            <a
+              href="#pricing"
+              @click.prevent="scrollToPricing"
               class="bg-transparent border border-fbWhite/20 text-fbWhite font-medium px-8 py-3 rounded-3xl hover:bg-fbWhite/10 transition-colors text-center"
             >
               See pricing
-            </RouterLink>
+            </a>
           </div>
         </div>
       </div>
@@ -152,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-  import { RouterLink } from 'vue-router';
+  import { RouterLink, useRouter } from 'vue-router';
   import { onMounted, ref } from 'vue';
   import { useGsap } from '@/composables/useGsap';
   import TopNav from '@/components/shared/TopNav.vue';
@@ -164,6 +165,18 @@
 
   // GSAP animations setup
   const { gsap, ScrollTrigger, createAnimation } = useGsap();
+
+  // Get router instance
+  const router = useRouter();
+
+  // Function to handle smooth scroll
+  function scrollToPricing(event: MouseEvent) {
+    // While .prevent should handle this, adding an extra check
+    if (event) {
+      event.preventDefault();
+    }
+    router.push({ hash: '#pricing' });
+  }
 
   // Reference elements for animations
   const mainHeadline = ref<HTMLElement | null>(null);

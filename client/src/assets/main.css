@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+  /* Apply default background if needed, or keep it focused */
+  /* @apply bg-fbBlack; */
+}
+
 @import url('https://fonts.vercel.com/css2?family=Geist+Sans:wght@300;400;500;600;700&display=swap');
-
-
