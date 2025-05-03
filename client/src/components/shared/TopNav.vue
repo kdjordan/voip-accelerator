@@ -31,7 +31,7 @@
         </RouterLink>
         <RouterLink
           to="/dashboard"
-          class="bg-fbWhite text-fbBlack text-sm font-medium px-4 py-1.5 rounded-3xl hover:bg-fbWhite/90 transition-colors"
+          class="bg-accent/20 text-accent border border-accent/50 text-sm font-medium px-4 py-1.5 rounded-3xl hover:bg-accent/30 transition-colors"
         >
           Sign up
         </RouterLink>
