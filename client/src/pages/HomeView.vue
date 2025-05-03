@@ -106,7 +106,7 @@
               <p class="text-fbWhite text-sm mx-auto mb-12 tracking-wider font-secondary">
                 GET STARTED
               </p>
-              <h2 class="text-3xl mb-8 text-white">Ready to optimize your VOIP pricing?</h2>
+              <h2 class="text-3xl mb-8 text-white">Ready to optimize your VOIP operations?</h2>
               <p class="text-fbWhite text-xl mx-auto w-2/3 font-secondary">
                 Get the cheat code for buying and selling in the VOIP market.
               </p>
