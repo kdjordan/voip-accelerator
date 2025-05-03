@@ -125,7 +125,7 @@
         'Unlimited Rate Deck Comparisons',
         'US NPANXX and A-Z formats',
         'Advanced Code & Pricing Reports',
-        'Updated ELRG on a monthly basis',
+        'Updated LERG on a monthly basis',
         'US & A-Z Rate Sheet Wizards',
         'Export Refined Rate Sheets',
         'Local Browser Storage - no data leaks ever',
