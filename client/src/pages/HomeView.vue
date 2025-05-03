@@ -1,13 +1,3 @@
-<script setup lang="ts">
-  import { RouterLink } from 'vue-router';
-  import TopNav from '@/components/shared/TopNav.vue';
-  import MarketingMobileNav from '@/components/shared/MarketingMobileNav.vue';
-  import TheFooter from '@/components/shared/TheFooter.vue';
-  import FeatureCards from '@/components/home/FeatureCards.vue';
-  import PricingSection from '@/components/home/PricingSection.vue';
-  import { marketingNavigationItems } from '@/constants/navigation';
-</script>
-
 <template>
   <div class="min-h-screen bg-fbBlack text-white overflow-x-hidden">
     <!-- Hero Section -->
@@ -27,11 +17,14 @@
       <div class="container relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
         <div class="space-y-8">
           <!-- Main headline - Large and prominent -->
-          <h1 class="text-6xl md:text-7xl lg:text-7xl font-medium tracking-tighter">
+          <h1
+            ref="mainHeadline"
+            class="text-6xl md:text-7xl lg:text-7xl font-medium tracking-tighter opacity-0"
+          >
             Instant Rate Deck Insights
           </h1>
           <!-- Subheading - Clean and focused -->
-          <p class="text-base md:text-2xl text-fbWhite/80 max-w-2xl">
+          <p ref="subheading" class="text-base md:text-2xl text-fbWhite/80 max-w-2xl opacity-0">
             Compare your rates against theirs, leverage LERG lookups, keep everything safe in your
             browser, and export your reports.
             <span class="text-white block mt-4 font-secondary text-xl">Simplify your data.</span>
@@ -39,7 +32,7 @@
           </p>
 
           <!-- Call to action buttons -->
-          <div class="flex flex-wrap gap-4 pt-4">
+          <div ref="ctaButtons" class="flex flex-wrap gap-4 pt-4 opacity-0">
             <RouterLink
               to="/dashboard"
               class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-3xl hover:bg-accent/90 transition-colors text-center"
@@ -58,17 +51,39 @@
       </div>
     </section>
     <!--Pain Points Section-->
-    <section class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
+    <section ref="painPointsSection" class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
       <div class="flex flex-col md:flex-row gap-4">
-        <div class="w-full md:w-1/3 bg-accent/70 rounded-3xl p-8 flex items-center justify-center">
+        <div
+          ref="crushBox"
+          class="w-full md:w-1/3 bg-accent/70 rounded-3xl p-8 flex items-center justify-center opacity-0 translate-x-[-50px]"
+        >
           <div class="text-4xl md:text-5xl lg:text-6xl text-center text-fbBlack leading-none">
-            <span class="font-secondary block font-bold">CRUSH</span>
-            <span class="font-secondary block font-bold">YOUR</span>
-            <span class="font-secondary block font-bold">BUSINESS</span>
-            <span class="font-secondary block font-bold">CASES</span>
+            <span
+              ref="crushTextLine1"
+              class="font-secondary block font-bold opacity-0 translate-y-[20px]"
+              >CRUSH</span
+            >
+            <span
+              ref="crushTextLine2"
+              class="font-secondary block font-bold opacity-0 translate-y-[20px]"
+              >YOUR</span
+            >
+            <span
+              ref="crushTextLine3"
+              class="font-secondary block font-bold opacity-0 translate-y-[20px]"
+              >BUSINESS</span
+            >
+            <span
+              ref="crushTextLine4"
+              class="font-secondary block font-bold opacity-0 translate-y-[20px]"
+              >CASES</span
+            >
           </div>
         </div>
-        <div class="w-full md:w-2/3 bg-fbWhite rounded-3xl p-8">
+        <div
+          ref="painPointsText"
+          class="w-full md:w-2/3 bg-fbWhite rounded-3xl p-8 opacity-0 translate-x-[50px]"
+        >
           <p
             class="text-4xl max-w-4xl text-center md:text-right mx-auto text-fbBlack leading-normal uppercase"
           >
@@ -82,7 +97,10 @@
 
     <!-- Features Section -->
     <section id="features" class="pt-8 pb-8 relative z-10 bg-fbBlack">
-      <div class="container mx-auto mb-2 font-secondary w-full">
+      <div
+        ref="featuresHeading"
+        class="container mx-auto mb-2 font-secondary w-full opacity-0 translate-y-[50px]"
+      >
         <h2 class="text-3xl md:text-5xl text-center mx-auto mb-4 text-accent uppercase font-">
           Why You'll Love VOIP Accelerator
         </h2>
@@ -93,14 +111,19 @@
           All Without Excel...
         </h3>
       </div>
+
       <FeatureCards />
-    </section>
-    <section id="pricing">
-      <PricingSection />
     </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="py-24 bg-fbBlack">
+    <section id="pricing">
+      <div ref="pricingSection" class="opacity-0 translate-y-[50px]">
+        <PricingSection />
+      </div>
+    </section>
+
+    <!-- Footer Section -->
+    <section class="py-24 bg-fbBlack">
       <div class="container mx-auto px-4">
         <div class="flex flex-col items-center justify-center text-center max-w-3xl mx-auto">
           <div class="mb-12">
@@ -126,3 +149,182 @@
     </section>
   </div>
 </template>
+
+<script setup lang="ts">
+  import { RouterLink } from 'vue-router';
+  import { onMounted, ref } from 'vue';
+  import { useGsap } from '@/composables/useGsap';
+  import TopNav from '@/components/shared/TopNav.vue';
+  import MarketingMobileNav from '@/components/shared/MarketingMobileNav.vue';
+  import TheFooter from '@/components/shared/TheFooter.vue';
+  import FeatureCards from '@/components/home/FeatureCards.vue';
+  import PricingSection from '@/components/home/PricingSection.vue';
+  import { marketingNavigationItems } from '@/constants/navigation';
+
+  // GSAP animations setup
+  const { gsap, ScrollTrigger, createAnimation } = useGsap();
+
+  // Reference elements for animations
+  const mainHeadline = ref<HTMLElement | null>(null);
+  const subheading = ref<HTMLElement | null>(null);
+  const ctaButtons = ref<HTMLElement | null>(null);
+
+  const painPointsSection = ref<HTMLElement | null>(null); // Ref for the parent section
+  const crushBox = ref<HTMLElement | null>(null);
+  const crushTextLine1 = ref<HTMLElement | null>(null);
+  const crushTextLine2 = ref<HTMLElement | null>(null);
+  const crushTextLine3 = ref<HTMLElement | null>(null);
+  const crushTextLine4 = ref<HTMLElement | null>(null);
+  const painPointsText = ref<HTMLElement | null>(null);
+
+  const featuresHeading = ref<HTMLElement | null>(null);
+  const pricingSection = ref<HTMLElement | null>(null);
+
+  onMounted(() => {
+    // Hero section animations - Animate from initial state
+    const heroTl = gsap.timeline();
+
+    heroTl
+      .fromTo(
+        mainHeadline.value,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+        }
+      )
+      .fromTo(
+        subheading.value,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+        },
+        '-=0.6'
+      ) // Overlap slightly more
+      .fromTo(
+        ctaButtons.value,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+        },
+        '-=0.6'
+      ); // Overlap slightly more
+
+    // --- Pain points section animations ---
+    if (painPointsSection.value) {
+      // Animate crushBox based on parent section trigger
+      gsap.fromTo(
+        crushBox.value,
+        { opacity: 0, x: -50 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: painPointsSection.value, // Use parent section as trigger
+            start: 'top 70%', // Trigger when top of section is 70% down viewport
+            toggleActions: 'play none none reverse',
+          },
+        }
+      );
+
+      // Staggered text animation for CRUSH YOUR BUSINESS CASES
+      const crushTextElements = [
+        crushTextLine1.value,
+        crushTextLine2.value,
+        crushTextLine3.value,
+        crushTextLine4.value,
+      ].filter((el) => el); // Ensure elements exist
+
+      if (crushTextElements.length > 0) {
+        gsap.fromTo(
+          crushTextElements,
+          { opacity: 0, y: 20 }, // Start from below
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.5,
+            stagger: 0.15,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: painPointsSection.value, // Use parent section as trigger
+              start: 'top 65%', // Trigger slightly earlier than the box
+              toggleActions: 'play none none reverse',
+            },
+          }
+        );
+      }
+
+      // Animate painPointsText based on parent section trigger
+      gsap.fromTo(
+        painPointsText.value,
+        { opacity: 0, x: 50 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+          delay: 0.2, // Keep the slight delay relative to crushBox *start*
+          scrollTrigger: {
+            trigger: painPointsSection.value, // Use parent section as trigger
+            start: 'top 70%', // Trigger same time as crushBox
+            toggleActions: 'play none none reverse',
+          },
+        }
+      );
+    }
+    // --- End Pain points section ---
+
+    // --- Features section heading animation ---
+    if (featuresHeading.value) {
+      gsap.fromTo(
+        featuresHeading.value,
+        { opacity: 0, y: 50 }, // Initial state handled by CSS, but good to define here too
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'back.out(1.2)',
+          scrollTrigger: {
+            trigger: featuresHeading.value,
+            start: 'top 85%',
+            toggleActions: 'play none none reverse',
+          },
+        }
+      );
+    }
+    // --- End Features section ---
+
+    // --- Pricing section animation ---
+    if (pricingSection.value) {
+      gsap.fromTo(
+        pricingSection.value,
+        { opacity: 0, y: 50 }, // Initial state handled by CSS
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: pricingSection.value, // Trigger based on the wrapper div itself
+            start: 'top 85%', // Start when top is 85% down viewport
+            toggleActions: 'play none none reverse',
+          },
+        }
+      );
+    }
+    // --- End Pricing section ---
+
+    // --- Footer Section (currently has CTA content, might need renaming/refactoring later) ---
+    // Note: No animation applied to this section currently
+  });
+</script>

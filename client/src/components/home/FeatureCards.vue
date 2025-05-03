@@ -4,7 +4,10 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 max-w-7xl mx-auto">
       <div v-for="card in featureCards" :key="card.id" class="card">
         <div
-          class="p-5 md:p-8 rounded-xl bg-fbBlack border border-accent/20 hover:border-accent/30 transition-all relative overflow-hidden h-full group hover:scale-[1.02] hover:z-10"
+          :ref="(el) => (cardRefs[card.id] = el as HTMLElement | null)"
+          @mouseenter="animateGlow(card.id, true)"
+          @mouseleave="animateGlow(card.id, false)"
+          class="p-5 md:p-8 rounded-xl bg-fbBlack border border-accent/20 transition-colors relative overflow-hidden h-full group hover:scale-[1.02] hover:z-10"
         >
           <!-- Spotlight effect for card -->
           <div
@@ -28,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-  import { type Component } from 'vue';
+  import { type Component, ref, onBeforeUpdate } from 'vue';
   import {
     ChartBarSquareIcon,
     GlobeAltIcon,
@@ -39,7 +42,10 @@
     PaperAirplaneIcon,
     LockClosedIcon,
   } from '@heroicons/vue/24/outline';
-  import { ref } from 'vue';
+  import { useGsap } from '@/composables/useGsap'; // Adjust path if needed
+
+  // GSAP setup
+  const { gsap } = useGsap();
 
   // Define the interface for our feature card objects
   interface FeatureCard {
@@ -50,7 +56,7 @@
     priority: number;
   }
 
-  // Define feature data with priorities
+  // Feature data (assuming it remains the same)
   const featureData = [
     {
       priority: 8,
@@ -117,17 +123,37 @@
     },
   ];
 
-  // Generate sorted cards based on priority
+  // Manage refs for dynamic elements
+  const cardRefs = ref<{ [key: number]: HTMLElement | null }>({});
+
+  // Ensure refs object is cleared before each update cycle to avoid stale refs
+  onBeforeUpdate(() => {
+    cardRefs.value = {};
+  });
+
+  // Generate sorted cards (assuming this remains the same)
   const generateSortedCards = (): FeatureCard[] => {
-    // Sort features by priority
     const sortedFeatures = [...featureData].sort((a, b) => a.priority - b.priority);
-
-    // Map to the FeatureCard interface
-    return sortedFeatures.map((feature, index) => ({
-      ...feature,
-      id: index,
-    }));
+    return sortedFeatures.map((feature, index) => ({ ...feature, id: index }));
   };
-
   const featureCards = ref<FeatureCard[]>(generateSortedCards());
+
+  // Animation function
+  // Using approximate hex/rgba values for theme colors. Adjust if needed.
+  const accentColor = '#4ADE80'; // theme('colors.accent')
+  const accentBorderDefault = 'rgba(74, 222, 128, 0.2)'; // theme('colors.accent.DEFAULT/20')
+  const accentGlow = 'rgba(74, 222, 128, 0.3)'; // Glow color, slightly transparent accent
+
+  function animateGlow(cardId: number, isEntering: boolean) {
+    const target = cardRefs.value[cardId];
+    if (!target) return;
+
+    gsap.to(target, {
+      borderColor: isEntering ? accentColor : accentBorderDefault,
+      boxShadow: isEntering ? `0 0 15px ${accentGlow}` : '0 0 0px rgba(0,0,0,0)',
+      duration: 0.3,
+      ease: 'power2.out',
+      overwrite: true, // Prevents animation conflicts on rapid hover in/out
+    });
+  }
 </script>
