@@ -98,17 +98,17 @@
   const pricingPlans = ref<PricingPlan[]>([
     {
       id: 'pro',
-      name: 'Pro Plan',
+      name: 'The Plan',
       description: 'Unlock advanced features and unlimited comparisons.',
       priceMonthly: 25,
       features: [
         'Unlimited Rate Deck Comparisons',
         'US NPANXX and A-Z formats',
-        'Advanced Code & Pricing Reports (LERG, Margin Analysis)',
+        'Advanced Code & Pricing Reports',
+        'Updated ELRG on a monthly basis',
         'US & A-Z Rate Sheet Wizards',
-        'Export Updated Rate Sheets (.xlsx, .csv)',
-        'Priority Support',
-        'Local Browser Storage',
+        'Export Refined Rate Sheets',
+        'Local Browser Storage - no data leaks ever',
       ],
       ctaText: 'Get Started Now',
     },
