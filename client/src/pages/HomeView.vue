@@ -5,6 +5,7 @@
     <!-- Added pt-0 to section as inner components now handle padding -->
     <section
       class="mt-4 rounded-3xl mx-4 pb-32 pt-0 bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack relative overflow-hidden"
+      id="hero"
     >
       <!-- Mobile Navigation (shows on mobile, positioned inside) -->
       <MarketingMobileNav :items="marketingNavigationItems" class="md:hidden" />
