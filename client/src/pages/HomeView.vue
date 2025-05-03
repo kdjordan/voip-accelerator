@@ -19,7 +19,7 @@
           <!-- Main headline - Large and prominent -->
           <h1
             ref="mainHeadline"
-            class="text-6xl md:text-7xl lg:text-7xl font-medium tracking-tighter opacity-0"
+            class="text-4xl md:text-7xl lg:text-7xl font-medium tracking-tighter opacity-0"
           >
             Instant Rate Deck Insights
           </h1>
@@ -238,88 +238,74 @@
 
     // --- Pain points section animations ---
     if (painPointsSection.value) {
-      // Animate crushBox based on parent section trigger
-      gsap.fromTo(
+      const painPointsTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: painPointsSection.value, // Trigger based on parent section
+          start: 'top 70%',
+          toggleActions: 'play none none none', // Keep animations played once
+        },
+      });
+
+      // 1. Animate crushBox container
+      painPointsTl.fromTo(
         crushBox.value,
-        { opacity: 0, x: -100 },
+        { opacity: 0, x: -50 },
         {
           opacity: 1,
           x: 0,
-          duration: 0.8,
+          duration: 0.7, // Slightly faster
           ease: 'power2.out',
-          scrollTrigger: {
-            trigger: painPointsSection.value, // Use parent section as trigger
-            start: 'top 70%', // Trigger when top of section is 70% down viewport
-            toggleActions: 'play none none none',
-          },
-        }
+        },
+        0 // Start at the beginning of the timeline
       );
 
-      // Staggered text animation for CRUSH YOUR BUSINESS CASES
+      // 2. Animate crushTextElements slightly after crushBox starts
       const crushTextElements = [
         crushTextLine1.value,
         crushTextLine2.value,
         crushTextLine3.value,
         crushTextLine4.value,
-      ].filter((el) => el); // Ensure elements exist
-
+      ].filter((el) => el);
       if (crushTextElements.length > 0) {
-        gsap.fromTo(
+        painPointsTl.fromTo(
           crushTextElements,
-          { opacity: 0, y: 20 }, // Start from below
+          { opacity: 0, y: 20 },
           {
             opacity: 1,
             y: 0,
             duration: 0.5,
-            stagger: 0.15,
+            stagger: 0.1,
             ease: 'power2.out',
-            scrollTrigger: {
-              trigger: painPointsSection.value, // Use parent section as trigger
-              start: 'top 65%', // Trigger slightly earlier than the box
-              toggleActions: 'play none none none',
-            },
-          }
+          },
+          '>-0.4' // Start 0.4s before the previous animation ends
         );
       }
 
-      // Animate painPointsText container (white box)
-      if (painPointsText.value) {
-        gsap.fromTo(
-          painPointsText.value,
-          { opacity: 0, x: 50 }, // Start invisible, shifted right
-          {
-            opacity: 1,
-            x: 0, // Slide to original position
-            duration: 0.8,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: painPointsSection.value, // Trigger based on parent section
-              start: 'top 70%',
-              toggleActions: 'play none none none',
-            },
-          }
-        );
-      }
+      // 3. Animate painPointsText container (concurrently or slightly after crushBox)
+      painPointsTl.fromTo(
+        painPointsText.value,
+        { opacity: 0, x: 50 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.7, // Slightly faster
+          ease: 'power2.out',
+        },
+        0.1 // Start 0.1s after the timeline begins
+      );
 
-      // Animate painPointsParagraph (the text inside)
-      if (painPointsParagraph.value) {
-        gsap.fromTo(
-          painPointsParagraph.value,
-          { opacity: 0, y: 30 }, // Start from bottom, invisible
-          {
-            opacity: 1,
-            y: 0, // Move to original position
-            duration: 0.8,
-            ease: 'power2.out',
-            delay: 0.2, // Delay slightly after container starts animating
-            scrollTrigger: {
-              trigger: painPointsSection.value, // Trigger based on parent section
-              start: 'top 70%', // Start at the same time as container
-              toggleActions: 'play none none none',
-            },
-          }
-        );
-      }
+      // 4. Animate painPointsParagraph after its container starts
+      painPointsTl.fromTo(
+        painPointsParagraph.value,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+        },
+        '>-0.4' // Start 0.4s before the previous animation (painPointsText) ends
+      );
     }
     // --- End Pain points section ---
 
