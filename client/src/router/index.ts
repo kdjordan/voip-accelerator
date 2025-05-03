@@ -56,7 +56,34 @@ const router = createRouter({
 
     // Spread the admin routes
     ...adminRoutes,
+    {
+      path: '/:pathMatch(.*)*', // Catch-all route
+      name: 'notFound',
+      component: () => import('@/pages/NotFoundView.vue'),
+    },
   ],
+  scrollBehavior(to, from, savedPosition) {
+    console.log('scrollBehavior triggered:', { to, from, savedPosition });
+    // If there's a hash, scroll to it smoothly
+    if (to.hash) {
+      console.log('Hash found:', to.hash);
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+      };
+    }
+
+    // If there's a saved position (from browser back/forward),
+    // return it to restore the previous scroll position
+    if (savedPosition) {
+      console.log('Using saved position:', savedPosition);
+      return savedPosition;
+    }
+
+    // Otherwise, scroll to the top of the page
+    console.log('Scrolling to top');
+    return { top: 0 };
+  },
 });
 
 export default router;
