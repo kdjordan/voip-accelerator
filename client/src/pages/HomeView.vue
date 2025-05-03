@@ -4,6 +4,7 @@
   import MarketingMobileNav from '@/components/shared/MarketingMobileNav.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
   import FeatureCards from '@/components/home/FeatureCards.vue';
+  import PricingSection from '@/components/home/PricingSection.vue';
   import { marketingNavigationItems } from '@/constants/navigation';
 </script>
 
@@ -59,8 +60,8 @@
     <!--Pain Points Section-->
     <section class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
       <div class="flex flex-col md:flex-row gap-4">
-        <div class="w-full md:w-1/3 bg-accent/70 rounded-3xl p-8">
-          <div class="text-4xl md:text-6xl max-w-4xl text-center mx-auto text-fbBlack leading-none">
+        <div class="w-full md:w-1/3 bg-accent/70 rounded-3xl p-8 flex items-center justify-center">
+          <div class="text-4xl md:text-5xl lg:text-6xl text-center text-fbBlack leading-none">
             <span class="font-secondary block font-bold">CRUSH</span>
             <span class="font-secondary block font-bold">YOUR</span>
             <span class="font-secondary block font-bold">BUSINESS</span>
@@ -96,35 +97,34 @@
       <!-- Import the Feature Cards component -->
       <FeatureCards />
     </section>
-
-    <!-- CTA Section -->
-    <section class="p-[5px] bg-gradient-to-br from-accent/80 via-accent/30 to-fbBlack">
-      <div class="border border-accent/20 pt-24 pb-8 bg-fbBlack rounded-3xl">
-        <div class="container mx-auto px-4">
-          <div class="flex flex-col items-center justify-center text-center max-w-3xl mx-auto">
-            <div class="mb-12">
-              <p class="text-fbWhite text-sm mx-auto mb-12 tracking-wider font-secondary">
-                GET STARTED
-              </p>
-              <h2 class="text-3xl mb-8 text-white">Ready to optimize your VOIP operations?</h2>
-              <p class="text-fbWhite text-xl mx-auto w-2/3 font-secondary">
-                Get the cheat code for buying and selling in the VOIP market.
-              </p>
-            </div>
-            <RouterLink
-              to="/dashboard"
-              class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-3xl hover:bg-accent/90 transition-colors whitespace-nowrap"
-            >
-              Get Started — It's Free
-            </RouterLink>
-          </div>
-        </div>
-        <div class="pt-12">
-          <TheFooter />
-        </div>
-      </div>
+    <section>
+      <PricingSection />
     </section>
 
-    <!-- Footer -->
+    <!-- CTA Section -->
+    <section class="py-24 bg-fbBlack">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col items-center justify-center text-center max-w-3xl mx-auto">
+          <div class="mb-12">
+            <p class="text-accent text-sm mx-auto mb-12 tracking-wider font-secondary">
+              GET STARTED
+            </p>
+            <h2 class="text-3xl mb-8 text-gray-300">Ready to optimize your VOIP operations?</h2>
+            <p class="text-xl mx-auto w-2/3 font-secondary text-accent">
+              Get the cheat code for buying and selling in the VOIP market.
+            </p>
+          </div>
+          <RouterLink
+            to="/dashboard"
+            class="bg-accent text-fbBlack font-medium px-8 py-3 rounded-3xl hover:bg-accent/90 transition-colors whitespace-nowrap"
+          >
+            Get Started — It's Free
+          </RouterLink>
+        </div>
+      </div>
+      <div class="pt-12">
+        <TheFooter />
+      </div>
+    </section>
   </div>
 </template>
