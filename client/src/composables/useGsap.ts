@@ -1,9 +1,10 @@
 import { onMounted, onBeforeUnmount } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 
-// Register the ScrollTrigger plugin
-gsap.registerPlugin(ScrollTrigger);
+// Register the ScrollTrigger and ScrambleText plugins
+gsap.registerPlugin(ScrollTrigger, ScrambleTextPlugin);
 
 export function useGsap() {
   const animations: gsap.core.Tween[] = [];
@@ -41,6 +42,7 @@ export function useGsap() {
   return {
     gsap,
     ScrollTrigger,
+    ScrambleTextPlugin,
     createAnimation,
   };
 }

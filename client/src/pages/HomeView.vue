@@ -85,7 +85,8 @@
           class="w-full md:w-2/3 bg-fbWhite rounded-3xl p-8 opacity-0 translate-x-[50px]"
         >
           <p
-            class="text-4xl max-w-4xl text-center md:text-right mx-auto text-fbBlack leading-normal uppercase"
+            ref="painPointsParagraph"
+            class="text-4xl max-w-4xl text-center md:text-right mx-auto text-fbBlack leading-normal uppercase opacity-0 translate-y-[30px]"
           >
             No more wasted time staring at Excel only to learn nothing actionable. Upload your
             decks, get pricing and code insights, and find your opportunities - all before your
@@ -176,6 +177,7 @@
   const crushTextLine3 = ref<HTMLElement | null>(null);
   const crushTextLine4 = ref<HTMLElement | null>(null);
   const painPointsText = ref<HTMLElement | null>(null);
+  const painPointsParagraph = ref<HTMLElement | null>(null); // Ref for the text paragraph
 
   const featuresHeading = ref<HTMLElement | null>(null);
   const pricingSection = ref<HTMLElement | null>(null);
@@ -183,6 +185,7 @@
   onMounted(() => {
     // Hero section animations - Animate from initial state
     const heroTl = gsap.timeline();
+    const headlineText = mainHeadline.value?.textContent || 'Instant Rate Deck Insights'; // Get original text
 
     heroTl
       .fromTo(
@@ -195,6 +198,21 @@
           ease: 'power3.out',
         }
       )
+      // Add scramble text animation slightly after the fade-in starts
+      .to(
+        mainHeadline.value,
+        {
+          duration: 1.2, // Duration of the scramble effect
+          scrambleText: {
+            text: headlineText, // Scramble towards the final text
+            chars: 'upperCase', // Characters to use for scrambling
+            revealDelay: 0.2, // Delay before characters start revealing
+            speed: 0.5, // Speed of scrambling
+            ease: 'none',
+          },
+        },
+        '-=0.6'
+      ) // Start scramble shortly after the fade/slide begins
       .fromTo(
         subheading.value,
         { opacity: 0, y: 30 },
@@ -204,8 +222,8 @@
           duration: 0.8,
           ease: 'power3.out',
         },
-        '-=0.6'
-      ) // Overlap slightly more
+        '-=1.0'
+      ) // Adjust timing relative to scramble
       .fromTo(
         ctaButtons.value,
         { opacity: 0, y: 30 },
@@ -216,14 +234,14 @@
           ease: 'power3.out',
         },
         '-=0.6'
-      ); // Overlap slightly more
+      ); // Adjust timing relative to scramble
 
     // --- Pain points section animations ---
     if (painPointsSection.value) {
       // Animate crushBox based on parent section trigger
       gsap.fromTo(
         crushBox.value,
-        { opacity: 0, x: -50 },
+        { opacity: 0, x: -100 },
         {
           opacity: 1,
           x: 0,
@@ -232,7 +250,7 @@
           scrollTrigger: {
             trigger: painPointsSection.value, // Use parent section as trigger
             start: 'top 70%', // Trigger when top of section is 70% down viewport
-            toggleActions: 'play none none reverse',
+            toggleActions: 'play none none none',
           },
         }
       );
@@ -258,29 +276,50 @@
             scrollTrigger: {
               trigger: painPointsSection.value, // Use parent section as trigger
               start: 'top 65%', // Trigger slightly earlier than the box
-              toggleActions: 'play none none reverse',
+              toggleActions: 'play none none none',
             },
           }
         );
       }
 
-      // Animate painPointsText based on parent section trigger
-      gsap.fromTo(
-        painPointsText.value,
-        { opacity: 0, x: 50 },
-        {
-          opacity: 1,
-          x: 0,
-          duration: 0.8,
-          ease: 'power2.out',
-          delay: 0.2, // Keep the slight delay relative to crushBox *start*
-          scrollTrigger: {
-            trigger: painPointsSection.value, // Use parent section as trigger
-            start: 'top 70%', // Trigger same time as crushBox
-            toggleActions: 'play none none reverse',
-          },
-        }
-      );
+      // Animate painPointsText container (white box)
+      if (painPointsText.value) {
+        gsap.fromTo(
+          painPointsText.value,
+          { opacity: 0, x: 50 }, // Start invisible, shifted right
+          {
+            opacity: 1,
+            x: 0, // Slide to original position
+            duration: 0.8,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: painPointsSection.value, // Trigger based on parent section
+              start: 'top 70%',
+              toggleActions: 'play none none none',
+            },
+          }
+        );
+      }
+
+      // Animate painPointsParagraph (the text inside)
+      if (painPointsParagraph.value) {
+        gsap.fromTo(
+          painPointsParagraph.value,
+          { opacity: 0, y: 30 }, // Start from bottom, invisible
+          {
+            opacity: 1,
+            y: 0, // Move to original position
+            duration: 0.8,
+            ease: 'power2.out',
+            delay: 0.2, // Delay slightly after container starts animating
+            scrollTrigger: {
+              trigger: painPointsSection.value, // Trigger based on parent section
+              start: 'top 70%', // Start at the same time as container
+              toggleActions: 'play none none none',
+            },
+          }
+        );
+      }
     }
     // --- End Pain points section ---
 
