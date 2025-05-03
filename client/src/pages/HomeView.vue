@@ -80,8 +80,8 @@
       </div>
     </section>
 
-    <!-- Features Section with Infinite Scroll -->
-    <section class="pt-8 pb-8 relative z-10 bg-fbBlack">
+    <!-- Features Section -->
+    <section id="features" class="pt-8 pb-8 relative z-10 bg-fbBlack">
       <div class="container mx-auto mb-2 font-secondary w-full">
         <h2 class="text-3xl md:text-5xl text-center mx-auto mb-4 text-accent uppercase font-">
           Why You'll Love VOIP Accelerator
@@ -93,16 +93,14 @@
           All Without Excel...
         </h3>
       </div>
-
-      <!-- Import the Feature Cards component -->
       <FeatureCards />
     </section>
-    <section>
+    <section id="pricing">
       <PricingSection />
     </section>
 
-    <!-- CTA Section -->
-    <section class="py-24 bg-fbBlack">
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-24 bg-fbBlack">
       <div class="container mx-auto px-4">
         <div class="flex flex-col items-center justify-center text-center max-w-3xl mx-auto">
           <div class="mb-12">
