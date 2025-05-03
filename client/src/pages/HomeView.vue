@@ -202,14 +202,14 @@
       .to(
         mainHeadline.value,
         {
-          duration: 1.2, // Duration of the scramble effect
+          duration: 1.2, // Duration of the overall tween
           scrambleText: {
             text: headlineText, // Scramble towards the final text
             chars: 'upperCase', // Characters to use for scrambling
             revealDelay: 0.2, // Delay before characters start revealing
             speed: 0.5, // Speed of scrambling
-            ease: 'none',
           },
+          ease: 'none', // Apply ease to the overall tween
         },
         '-=0.6'
       ) // Start scramble shortly after the fade/slide begins
