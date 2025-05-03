@@ -17,10 +17,13 @@
       ></div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div class="text-center mb-12 md:mb-16">
-          <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white sm:text-5xl">
+        <div class="text-center mb-12 md:mb-12">
+          <h2 class="text-3xl md:text-4xl text-fbWhite sm:text-5xl font-secondary">
             Simple, Transparent Pricing
           </h2>
+          <p class="text-xl md:text-2xl text-fbWhite/90 mt-4">
+            Upload Decks. Unlock Profits. Repeat.
+          </p>
         </div>
 
         <!-- Pricing Toggle -->
