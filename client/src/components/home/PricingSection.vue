@@ -23,6 +23,11 @@
           </h2>
         </div>
 
+        <!-- Pricing Toggle -->
+        <!-- <div class="flex justify-center mb-8 md:mb-12">
+          <PricingToggle v-model="isMonthly" />
+        </div> -->
+
         <!-- Pricing card with bento box styling -->
         <div class="flex justify-center">
           <div
@@ -32,24 +37,31 @@
           >
             <!-- Card content with enhanced styling -->
             <div class="p-8 md:p-10 flex-grow">
-              <!-- Price highlight section -->
-              <div class="mb-8 flex items-center justify-between">
-                <h3 class="text-2xl md:text-3xl font-semibold text-white">{{ plan.name }}</h3>
-                <div class="bg-accent/20 rounded-full px-4 py-1 text-sm text-accent font-medium">
-                  Most Popular
-                </div>
+              <!-- Pricing Toggle -->
+              <div class="flex justify-center mb-6">
+                <PricingToggle v-model="isMonthly" />
               </div>
-              <p class="mt-2 text-fbWhite/70 text-sm md:text-base">{{ plan.description }}</p>
 
-              <div class="mt-6 mb-8 flex items-baseline">
-                <span class="text-5xl md:text-6xl font-bold text-accent">
-                  {{
-                    typeof plan.priceMonthly === 'number'
-                      ? `$${plan.priceMonthly}`
-                      : plan.priceMonthly
-                  }}
-                </span>
-                <span class="text-base font-medium text-fbWhite/60 ml-1">/month</span>
+              <!-- Price highlight section -->
+              <div class="mb-8 flex items-end justify-between">
+                <!-- Container for price and period -->
+                <div class="flex items-baseline">
+                  <span class="text-5xl md:text-6xl font-bold text-accent">
+                    {{ displayPrice(plan) }}
+                  </span>
+                  <span class="text-base font-medium text-fbWhite/60 ml-2">
+                    {{ isMonthly ? '/month' : '/year' }}
+                  </span>
+                </div>
+                <!-- Animated Savings Circle -->
+                <div
+                  ref="savingsCircleRef"
+                  v-show="!isMonthly && yearlySavings > 0"
+                  class="ml-3 w-24 h-24 flex flex-col items-center justify-center rounded-full bg-blue-900/30 border border-blue-700/50 text-blue-300 font-semibold opacity-0 transform scale-0"
+                >
+                  <span>Save</span>
+                  <span>${{ yearlySavings }}/yr!</span>
+                </div>
               </div>
 
               <div
@@ -79,7 +91,7 @@
             <div class="p-8 md:p-10 rounded-b-3xl mt-auto">
               <a
                 href="#"
-                class="block w-full rounded-3xl px-6 py-4 text-center text-base md:text-lg font-semibold transition-all duration-300 bg-accent text-fbBlack hover:bg-accent/90"
+                class="block w-full rounded-3xl px-6 py-4 text-center text-base md:text-lg font-semibold transition-all duration-300 bg-accent/20 text-accent border border-accent/50 hover:bg-accent/30"
               >
                 {{ plan.ctaText }}
               </a>
@@ -92,8 +104,15 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref, computed, watch } from 'vue';
   import type { PricingPlan } from '@/types/pricing-types';
+  import PricingToggle from './PricingToggle.vue'; // Import the toggle component
+  import { useGsap } from '@/composables/useGsap'; // Import useGsap
+  import { useTransition } from '@vueuse/core';
+
+  const isMonthly = ref(true); // Default to monthly view
+  const savingsCircleRef = ref<HTMLElement | null>(null);
+  const { gsap } = useGsap();
 
   const pricingPlans = ref<PricingPlan[]>([
     {
@@ -101,6 +120,7 @@
       name: 'The Plan',
       description: 'Unlock advanced features and unlimited comparisons.',
       priceMonthly: 25,
+      priceYearly: 250, // Added yearly price
       features: [
         'Unlimited Rate Deck Comparisons',
         'US NPANXX and A-Z formats',
@@ -113,6 +133,73 @@
       ctaText: 'Get Started Now',
     },
   ]);
+
+  // --- Price Animation ---
+  const transitionConfig = { duration: 500 };
+  const priceSource = computed(() => {
+    const plan = pricingPlans.value[0]; // Assuming only one plan for now
+    const price = isMonthly.value ? plan.priceMonthly : plan.priceYearly;
+    return typeof price === 'number' ? price : 0; // Return 0 if price is not a number
+  });
+  const animatedPrice = useTransition(priceSource, transitionConfig);
+
+  // Calculate Yearly Savings
+  const yearlyFullPrice = computed(() => {
+    const monthlyPrice = pricingPlans.value[0]?.priceMonthly;
+    return typeof monthlyPrice === 'number' ? monthlyPrice * 12 : 0;
+  });
+
+  const yearlyDiscountedPrice = computed(() => {
+    const yearlyPrice = pricingPlans.value[0]?.priceYearly;
+    return typeof yearlyPrice === 'number' ? yearlyPrice : 0;
+  });
+
+  const yearlySavings = computed(() => {
+    return yearlyFullPrice.value - yearlyDiscountedPrice.value;
+  });
+
+  // Computed function to display the correct price
+  function displayPrice(plan: PricingPlan): string {
+    const price = isMonthly.value ? plan.priceMonthly : plan.priceYearly;
+    // Display animated price if it's a number, otherwise the original string
+    return typeof price === 'number' ? `$${Math.round(animatedPrice.value)}` : String(price);
+  }
+
+  // Watch for changes in billing cycle to animate savings circle
+  watch(isMonthly, (newVal, oldVal) => {
+    if (savingsCircleRef.value && newVal !== oldVal) {
+      if (!newVal) {
+        // Switched to Yearly
+        // Delay animation slightly to sync with price transition
+        gsap.to(savingsCircleRef.value, { clearProps: 'all' }); // Reset previous state
+        setTimeout(() => {
+          if (savingsCircleRef.value) {
+            // Check ref again inside timeout
+            gsap.fromTo(
+              savingsCircleRef.value,
+              { scale: 0, opacity: 0 },
+              {
+                scale: 1,
+                opacity: 1,
+                duration: 0.6,
+                ease: 'elastic.out(1, 0.6)',
+                display: 'flex', // Ensure it becomes visible
+              }
+            );
+          }
+        }, 400); // Delay slightly less than price animation (500ms)
+      } else {
+        // Switched back to Monthly
+        gsap.to(savingsCircleRef.value, {
+          scale: 0,
+          opacity: 0,
+          duration: 0.2,
+          ease: 'power2.in',
+          display: 'none', // Hide it completely
+        });
+      }
+    }
+  });
 </script>
 
 <!-- No <style> block needed as we are using Tailwind -->

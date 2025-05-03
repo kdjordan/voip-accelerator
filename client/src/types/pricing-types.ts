@@ -4,8 +4,8 @@ export interface PricingPlan {
   id: string;
   name: string;
   description: string;
-  priceMonthly: number | string; // Can be a number or 'Contact Us'
-  priceYearly?: number;
+  priceMonthly: number | string; // Allow string for 'Custom'
+  priceYearly: number | string; // Add yearly price
   features: string[];
   isPopular?: boolean;
   ctaText: string;
