@@ -25,10 +25,6 @@
                 </h2>
                 <p class="text-gray-400 mt-1">{{ userStore.auth.user?.email }}</p>
               </div>
-
-              <div class="mt-3 md:mt-0">
-                <BaseBadge variant="accent" uppercase> {{ currentPlan }} Plan </BaseBadge>
-              </div>
             </div>
           </div>
         </div>
@@ -75,78 +71,80 @@
 
       <!-- Account Settings -->
       <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-        <h2 class="text-lg font-semibold mb-4">Account Settings</h2>
+        <h2 class="text-lg font-semibold mb-6">Account Settings</h2>
 
-        <!-- Trial Status -->
-        <div class="mb-6 pb-6 border-b border-gray-700/50">
-          <h3 class="text-md font-medium mb-2">Trial Information</h3>
-          <p v-if="trialEndsAt && trialEndsAt > new Date()" class="text-sm text-gray-300">
-            Your trial ends on:
-            <span class="font-semibold text-accent">{{ formattedTrialEndsAt }}</span>
-          </p>
-          <p v-else-if="trialEndsAt && trialEndsAt <= new Date()" class="text-sm text-yellow-400">
-            Your trial has ended.
-          </p>
-          <p v-else class="text-sm text-gray-400">No trial information available.</p>
-          <!-- Add upgrade button/info here later -->
-        </div>
-
-        <!-- Email Display -->
-        <div class="mb-4">
-          <h4 class="text-lg font-semibold text-primary mb-1">Current Email</h4>
-          <p>
-            Your login email is:
-            <span class="font-medium">{{ displayEmail }}</span>
-          </p>
-        </div>
-
-        <!-- Update Email Form -->
-        <div class="mb-6">
-          <h4 class="text-lg font-semibold text-primary mb-2">Update Email</h4>
-          <form @submit.prevent="updateEmail" class="flex flex-col sm:flex-row sm:items-end gap-3">
-            <div class="flex-grow">
-              <label for="new-email" class="block text-sm font-medium text-fbGray4 mb-1"
-                >New Email Address</label
-              >
-              <input
-                id="new-email"
-                v-model="newEmail"
-                type="email"
-                placeholder="Enter new email"
-                :disabled="isUpdatingEmail"
-                class="block w-full rounded-md border-fbGray2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-white/5 py-2 px-3"
-                required
-              />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-900/40 rounded-lg p-4">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-md font-medium mb-1 text-gray-300">Subscription Plan</h3>
+                <p class="text-sm text-gray-300">
+                  Your current plan is: <span class="font-medium">{{ currentPlan }}</span>
+                </p>
+              </div>
+              <BaseBadge variant="accent" uppercase> {{ currentPlan }} Plan </BaseBadge>
             </div>
-            <button
-              type="submit"
-              :disabled="isUpdatingEmail || !newEmail || newEmail === userStore.auth.user?.email"
-              class="btn btn-primary w-full sm:w-auto whitespace-nowrap"
+          </div>
+          <!-- Trial Status Box -->
+          <div class="bg-gray-900/40 rounded-lg p-4">
+            <h3 class="text-md font-medium mb-2 text-gray-300">Billing Information</h3>
+            <p v-if="trialEndsAt && trialEndsAt > new Date()" class="text-sm text-gray-300">
+              Your trial ends on:
+              <span class="font-semibold text-accent">{{ formattedTrialEndsAt }}</span>
+            </p>
+            <p v-else-if="trialEndsAt && trialEndsAt <= new Date()" class="text-sm text-yellow-400">
+              Your trial has ended.
+            </p>
+            <p v-else class="text-sm text-gray-400">No trial information available.</p>
+          </div>
+
+          <!-- Subscription Plan Box -->
+
+          <!-- Update Email Form Box -->
+          <div class="bg-gray-900/40 rounded-lg p-4">
+            <h3 class="text-md font-medium text-gray-300 mb-2">Update Email</h3>
+            <form
+              @submit.prevent="updateEmail"
+              class="flex flex-col sm:flex-row sm:items-end gap-3"
             >
-              <span v-if="isUpdatingEmail">Updating...</span>
-              <span v-else>Update Email</span>
+              <div class="flex-grow">
+                <label for="new-email" class="block text-sm font-medium text-gray-400 mb-1"
+                  >New Email Address</label
+                >
+                <input
+                  id="new-email"
+                  v-model="newEmail"
+                  type="email"
+                  placeholder="Enter new email"
+                  :disabled="isUpdatingEmail"
+                  class="block w-full rounded-md border-gray-600 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-gray-700/50 py-2 px-3 text-white placeholder-gray-500"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                :disabled="isUpdatingEmail || !newEmail || newEmail === userStore.auth.user?.email"
+                class="btn btn-primary w-full sm:w-auto whitespace-nowrap"
+              >
+                <span v-if="isUpdatingEmail">Updating...</span>
+                <span v-else>Update Email</span>
+              </button>
+            </form>
+            <p v-if="emailErrorMessage" class="mt-2 text-sm text-error">{{ emailErrorMessage }}</p>
+            <p v-if="emailSuccessMessage" class="mt-2 text-sm text-success">
+              {{ emailSuccessMessage }}
+            </p>
+          </div>
+
+          <!-- Manage Subscription Button Box -->
+          <div class="bg-gray-900/40 rounded-lg p-4">
+            <h3 class="text-md font-medium text-gray-300 mb-2">Manage Subscription</h3>
+            <button @click="manageSubscription" class="btn btn-outline" :disabled="isUpdatingEmail">
+              Manage Billing & Subscription
             </button>
-          </form>
-          <p v-if="emailErrorMessage" class="mt-2 text-sm text-error">{{ emailErrorMessage }}</p>
-          <p v-if="emailSuccessMessage" class="mt-2 text-sm text-success">
-            {{ emailSuccessMessage }}
-          </p>
-        </div>
-
-        <!-- Subscription Info -->
-        <div class="mb-6">
-          <h4 class="text-lg font-semibold text-primary mb-1">Subscription Plan</h4>
-          <p>
-            Your current plan is: <span class="font-medium">{{ currentPlan }}</span>
-          </p>
-        </div>
-
-        <!-- Manage Subscription Button -->
-        <div>
-          <h4 class="text-lg font-semibold text-primary mb-2">Manage Subscription</h4>
-          <button @click="manageSubscription" class="btn btn-outline" :disabled="isUpdatingEmail">
-            Manage Billing & Subscription
-          </button>
+            <p class="text-xs text-gray-400 mt-2">Redirects to external billing portal.</p>
+            <!-- Placeholder for potential errors or status messages -->
+          </div>
         </div>
       </div>
 
@@ -249,6 +247,7 @@
   // const userProfile = computed(() => userStore.profile);
   // const authUser = computed(() => userStore.user);
 
+  // Adjusted: Fetch plan directly, badge moved below
   const currentPlan = computed(() => userStore.auth.profile?.subscription_status ?? 'Free');
   const userUsage = computed(() => ({ uploadsToday: 0 }));
 
@@ -402,10 +401,11 @@
     (newUser) => {
       if (!newEmail.value) {
         // Pre-fill email field if empty and user data is available
-        newEmail.value = newUser?.email ?? '';
+        // Let's not prefill automatically anymore, user might want to type fresh
+        // newEmail.value = newUser?.email ?? '';
       }
     },
-    { immediate: true }
+    { immediate: true } // Keep immediate true if needed for other init logic
   );
 
   // DexieDB instance
