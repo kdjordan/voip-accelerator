@@ -132,7 +132,7 @@
               </div>
               <BaseButton
                 type="submit"
-                :variant="isEmailInputValid ? 'primary' : 'neutral'"
+                :variant="isEmailInputValid ? 'primary' : 'secondary'"
                 :disabled="!isEmailInputValid || isUpdatingEmail"
                 :loading="isUpdatingEmail"
                 class="sm:flex-shrink-0 sm:w-auto sm:min-w-[120px]"
