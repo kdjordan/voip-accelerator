@@ -4,12 +4,12 @@
       :class="[
         'sidebar',
         'border-r border-muted fixed top-0 left-0 bottom-0 bg-neutral-900',
-        userStore.getSideNavOpen ? 'w-[200px]' : 'w-[80px]',
+        userStore.ui.isSideNavOpen ? 'w-[200px]' : 'w-[80px]',
       ]"
     >
       <!-- Toggle button to close sidebar (visible only when sidebar is open) -->
       <button
-        v-if="userStore.getSideNavOpen"
+        v-if="userStore.ui.isSideNavOpen"
         @click="userStore.toggleSideNav"
         class="w-full flex items-center justify-end py-3 pr-3 hover:bg-fbHover/20"
       >
@@ -18,7 +18,7 @@
 
       <!-- Toggle button to open sidebar (visible only when sidebar is closed) -->
       <button
-        v-if="!userStore.getSideNavOpen"
+        v-if="!userStore.ui.isSideNavOpen"
         @click="userStore.toggleSideNav"
         class="w-full flex items-center justify-center py-3 hover:bg-fbHover/20"
       >
@@ -29,13 +29,13 @@
       <div
         :class="[
           'px-3 py-3 flex items-center',
-          userStore.getSideNavOpen ? 'justify-start' : 'justify-center',
+          userStore.ui.isSideNavOpen ? 'justify-start' : 'justify-center',
         ]"
       >
         <RouterLink to="/home" class="flex items-center text-accent gap-2">
           <BoltIcon class="w-8 h-8 flex-shrink-0" />
           <span
-            v-if="userStore.getSideNavOpen"
+            v-if="userStore.ui.isSideNavOpen"
             class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter"
             >VoIP Accelerator</span
           >
@@ -43,14 +43,14 @@
       </div>
 
       <ul class="flex-grow mt-4 font-secondary tracking-tight">
-        <li v-for="(item, index) in items" :key="item.name" class="px-2 my-1 text-sm">
+        <li v-for="(item, index) in filteredItems" :key="item.name" class="px-2 my-1 text-sm">
           <!-- Top-level items -->
           <div v-if="!item.children">
             <RouterLink
               :to="item.href!"
               class="flex items-center py-2 px-3 rounded-md border transition-all overflow-hidden"
               :class="[
-                userStore.getSideNavOpen ? 'space-x-2' : 'w-full justify-center',
+                userStore.ui.isSideNavOpen ? 'space-x-2' : 'w-full justify-center',
                 route.path === item.href
                   ? 'bg-accent/20 border-accent/50'
                   : 'hover:bg-neutral-700 border-transparent',
@@ -63,7 +63,7 @@
                 :class="[route.path === item.href ? 'text-accent' : 'text-neutral-300']"
               />
               <span
-                v-if="userStore.getSideNavOpen"
+                v-if="userStore.ui.isSideNavOpen"
                 class="whitespace-nowrap"
                 :class="[route.path === item.href ? 'text-accent' : 'text-neutral-300']"
                 >{{ item.name }}</span
@@ -77,38 +77,43 @@
               @click="toggleSection(index)"
               class="flex items-center w-full py-2 px-3 rounded-md border transition-all"
               :class="[
-                userStore.getSideNavOpen ? 'justify-between' : 'justify-center',
-                !userStore.getSideNavOpen &&
+                userStore.ui.isSideNavOpen ? 'justify-between' : 'justify-center',
+                !userStore.ui.isSideNavOpen &&
                 item.children?.some((child) => child.href === route.path)
                   ? 'bg-accent/20 border-accent/50'
                   : 'hover:bg-neutral-700 border-transparent',
               ]"
             >
-              <div class="flex items-center" :class="[userStore.getSideNavOpen ? 'space-x-2' : '']">
+              <div
+                class="flex items-center"
+                :class="[userStore.ui.isSideNavOpen ? 'space-x-2' : '']"
+              >
                 <component
                   v-if="item.icon"
                   :is="item.icon"
                   class="w-5 h-5 flex-shrink-0"
                   :class="[
-                    !userStore.getSideNavOpen &&
+                    !userStore.ui.isSideNavOpen &&
                     item.children?.some((child) => child.href === route.path)
                       ? 'text-accent'
                       : 'text-neutral-300',
                   ]"
                 />
-                <span v-if="userStore.getSideNavOpen" class="whitespace-nowrap text-neutral-300">{{
-                  item.name
-                }}</span>
+                <span
+                  v-if="userStore.ui.isSideNavOpen"
+                  class="whitespace-nowrap text-neutral-300"
+                  >{{ item.name }}</span
+                >
               </div>
               <ChevronDownIcon
-                v-if="userStore.getSideNavOpen"
+                v-if="userStore.ui.isSideNavOpen"
                 :class="[
                   'w-4 h-4 text-neutral-300 transition-transform',
                   expandedSections[index] ? 'rotate-180' : '',
                 ]"
               />
             </button>
-            <ul v-if="userStore.getSideNavOpen && expandedSections[index]" class="mt-1 ml-4 pl-2">
+            <ul v-if="userStore.ui.isSideNavOpen && expandedSections[index]" class="mt-1 ml-4 pl-2">
               <li v-for="child in item.children" :key="child.name" class="my-1">
                 <RouterLink
                   v-if="child.href"
@@ -129,8 +134,29 @@
       </ul>
 
       <!-- User Dropdown -->
-      <div class="mt-auto p-4">
-        <!-- Content for user dropdown -->
+      <div class="mt-auto p-3">
+        <button
+          v-if="isAuthenticated"
+          @click="handleLogout"
+          class="flex items-center w-full py-2 px-3 rounded-md border border-transparent hover:bg-red-600/20 hover:border-red-600/50 transition-colors"
+          :class="[userStore.ui.isSideNavOpen ? 'space-x-2' : 'justify-center']"
+        >
+          <ArrowRightOnRectangleIcon class="w-5 h-5 text-red-400 flex-shrink-0" />
+          <span v-if="userStore.ui.isSideNavOpen" class="text-red-400 whitespace-nowrap text-sm">
+            Logout
+          </span>
+        </button>
+        <RouterLink
+          v-else
+          to="/login"
+          class="flex items-center w-full py-2 px-3 rounded-md border border-transparent hover:bg-accent/20 hover:border-accent/50 transition-colors"
+          :class="[userStore.ui.isSideNavOpen ? 'space-x-2' : 'justify-center']"
+        >
+          <ArrowLeftOnRectangleIcon class="w-5 h-5 text-accent flex-shrink-0" />
+          <span v-if="userStore.ui.isSideNavOpen" class="text-accent whitespace-nowrap text-sm">
+            Login
+          </span>
+        </RouterLink>
       </div>
     </nav>
 
@@ -138,7 +164,7 @@
     <div
       class="ml-2 fixed top-0 bottom-0 w-[8px] hover:bg-fbHover transition-colors cursor-ew-resize"
       :style="{
-        left: userStore.getSideNavOpen ? '194px' : '58px',
+        left: userStore.ui.isSideNavOpen ? '194px' : '58px',
         transform: 'translateX(0)',
       }"
       @click="userStore.toggleSideNav"
@@ -147,26 +173,90 @@
 </template>
 
 <script setup lang="ts">
-  import { RouterLink, useRoute } from 'vue-router';
-  import { ref } from 'vue';
-  import { useSharedStore } from '@/stores/shared-store';
+  import { RouterLink, useRoute, useRouter } from 'vue-router';
+  import { ref, computed } from 'vue';
+  import { useUserStore } from '@/stores/user-store';
   import {
     ChevronDownIcon,
     ArrowLeftEndOnRectangleIcon,
     ArrowRightStartOnRectangleIcon,
+    ArrowRightOnRectangleIcon,
+    ArrowLeftOnRectangleIcon,
     BoltIcon,
   } from '@heroicons/vue/24/outline';
   import { appNavigationItems } from '@/constants/navigation';
   import type { NavigationItem } from '@/types/nav-types';
 
-  const userStore = useSharedStore();
+  const userStore = useUserStore();
   const route = useRoute();
   const expandedSections = ref<Record<number, boolean>>({});
 
-  const items = ref<NavigationItem[]>(appNavigationItems);
+  // Auth State
+  const isAuthenticated = computed(() => userStore.isAuthenticated);
+  const isAdmin = computed(() => userStore.profile?.role === 'admin');
+
+  // Filtered navigation items based on auth status and role
+  const filteredItems = computed(() => {
+    return appNavigationItems
+      .filter((item) => {
+        const requiresAuth = item.meta?.requiresAuth;
+        const requiresAdmin = item.meta?.requiresAdmin;
+        const hideWhenAuthed = item.meta?.hideWhenAuthed;
+
+        if (hideWhenAuthed && isAuthenticated.value) {
+          return false; // Hide if user is authenticated (e.g., Login/Signup links)
+        }
+        if (requiresAuth && !isAuthenticated.value) {
+          return false; // Hide if auth is required but user is not authenticated
+        }
+        if (requiresAdmin && !isAdmin.value) {
+          return false; // Hide if admin role is required but user is not admin
+        }
+        return true; // Show item otherwise
+      })
+      .map((item) => {
+        // Recursively filter children if they exist
+        if (item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              const childRequiresAuth = child.meta?.requiresAuth;
+              const childRequiresAdmin = child.meta?.requiresAdmin;
+              const childHideWhenAuthed = child.meta?.hideWhenAuthed;
+
+              if (childHideWhenAuthed && isAuthenticated.value) {
+                return false;
+              }
+              if (childRequiresAuth && !isAuthenticated.value) {
+                return false;
+              }
+              if (childRequiresAdmin && !isAdmin.value) {
+                return false;
+              }
+              return true;
+            }),
+          };
+        }
+        return item;
+      })
+      .filter((item) => !(item.children && item.children.length === 0)); // Remove parent if all children are filtered out
+  });
+
+  const router = useRouter();
+
+  // Logout Handler
+  async function handleLogout() {
+    try {
+      await userStore.logout(); // Assuming logout is an action in userStore
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Handle error display if needed
+    }
+  }
 
   function toggleSection(index: number) {
-    if (!userStore.getSideNavOpen) {
+    if (!userStore.ui.isSideNavOpen) {
       userStore.toggleSideNav();
     }
     expandedSections.value[index] = !expandedSections.value[index];

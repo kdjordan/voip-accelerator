@@ -24,7 +24,7 @@
         <div
           class="flex-1 flex flex-col transition-all duration-300 pt-16 md:pt-0"
           :class="[
-            shouldShowSideNav && sharedStore.getSideNavOpen
+            shouldShowSideNav && userStore.ui.isSideNavOpen
               ? 'md:ml-[200px]' // Apply margin only on md+ screens
               : shouldShowSideNav
                 ? 'md:ml-[64px]' // Apply margin only on md+ screens
@@ -55,7 +55,7 @@
   import AppMobileNav from '@/components/shared/AppMobileNav.vue'; // Import AppMobileNav
   import TheFooter from '@/components/shared/TheFooter.vue';
   import { onMounted, onBeforeUnmount, ref } from 'vue';
-  import { useSharedStore } from '@/stores/shared-store';
+  import { useUserStore } from '@/stores/user-store';
   import { clearApplicationDatabases } from '@/utils/cleanup';
   import { RouterView, useRoute } from 'vue-router';
   import { computed } from 'vue';
@@ -66,7 +66,7 @@
   // TODO: Add imports for other stores if needed (e.g., rate sheets)
 
   const route = useRoute();
-  const sharedStore = useSharedStore();
+  const userStore = useUserStore();
   // Instantiate stores
   const azStore = useAzStore();
   const usStore = useUsStore();
@@ -132,8 +132,21 @@
     }
     // --------------------------
 
+    // --- Initialize Auth Listener ---
+    // Call this AFTER resetting stores but BEFORE needing auth state
     try {
-      console.log('Starting application initialization AFTER cleanup and store reset...');
+      console.log('[App Mount] Initializing authentication listener...');
+      await userStore.initializeAuthListener();
+      console.log('[App Mount] Authentication listener initialized.');
+    } catch (authInitError) {
+      console.error('[App Mount] Error initializing auth listener:', authInitError);
+    }
+    // --------------------------
+
+    try {
+      console.log(
+        'Starting application initialization AFTER cleanup, store reset, and auth init...'
+      );
       // Rest of your initialization logic can go here
     } catch (error) {
       console.error('Error during initialization:', error);
@@ -147,19 +160,6 @@
   });
 </script>
 <style>
-  .rborder {
-    border: 1px solid red;
-  }
-  .gborder {
-    border: 1px solid green;
-  }
-  .bborder {
-    border: 1px solid blue;
-  }
-  .wborder {
-    border: 10px solid white;
-  }
-
   /* Add these transition classes */
   .fade-enter-active,
   .fade-leave-active {

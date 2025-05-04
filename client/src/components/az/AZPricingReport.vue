@@ -44,11 +44,11 @@ import { storeToRefs } from 'pinia';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/vue/24/solid';
 import AZDetailedComparisonTable from './AZDetailedComparisonTable.vue';
 import { ReportTypes } from '@/types/app-types';
-import { useSharedStore } from '@/stores/shared-store';
+import { useUserStore } from '@/stores/user-store';
 import { DBName } from '@/types/app-types';
 
 const azStore = useAzStore();
-const sharedStore = useSharedStore();
+const userStore = useUserStore();
 const { pricingReport: report, getFileNames } = storeToRefs(azStore);
 
 const hasTwoFiles = computed(() => getFileNames.value.length === 2);
