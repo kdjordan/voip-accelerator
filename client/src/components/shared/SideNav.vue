@@ -227,7 +227,7 @@
     transition: width 0.3s ease-in-out;
     overflow-y: auto;
     overflow-x: hidden;
-    z-index: 10;
+    z-index: 30;
     border-right: none;
     background-color: theme('colors.gray.900');
   }
