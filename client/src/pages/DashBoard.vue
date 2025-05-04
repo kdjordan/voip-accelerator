@@ -25,6 +25,15 @@
                 </h2>
                 <p class="text-gray-400 mt-1">{{ userStore.auth.user?.email }}</p>
               </div>
+              <!-- Add Logout Button Here -->
+              <BaseButton
+                @click="handleLogout"
+                variant="destructive"
+                size="small"
+                :is-loading="isLoggingOut"
+              >
+                <span>Logout</span>
+              </BaseButton>
             </div>
           </div>
         </div>
@@ -238,7 +247,9 @@
     InformationCircleIcon,
     ArrowUpTrayIcon,
     CalendarDaysIcon,
+    ArrowRightOnRectangleIcon,
   } from '@heroicons/vue/24/solid';
+  import { useRouter } from 'vue-router';
 
   // User store for user info
   const userStore = useUserStore();
@@ -568,6 +579,22 @@
       }
     }
   );
+
+  const router = useRouter();
+  const isLoggingOut = ref(false);
+
+  async function handleLogout() {
+    isLoggingOut.value = true;
+    try {
+      await userStore.signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      emailErrorMessage.value = 'Logout failed. Please try again.';
+    } finally {
+      isLoggingOut.value = false;
+    }
+  }
 </script>
 
 <style scoped>

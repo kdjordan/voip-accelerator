@@ -134,30 +134,7 @@
       </ul>
 
       <!-- User Dropdown -->
-      <div class="mt-auto p-3">
-        <button
-          v-if="isAuthenticated"
-          @click="handleLogout"
-          class="flex items-center w-full py-2 px-3 rounded-md border border-transparent hover:bg-red-600/20 hover:border-red-600/50 transition-colors"
-          :class="[userStore.ui.isSideNavOpen ? 'space-x-2' : 'justify-center']"
-        >
-          <ArrowRightOnRectangleIcon class="w-5 h-5 text-red-400 flex-shrink-0" />
-          <span v-if="userStore.ui.isSideNavOpen" class="text-red-400 whitespace-nowrap text-sm">
-            Logout
-          </span>
-        </button>
-        <RouterLink
-          v-else
-          to="/login"
-          class="flex items-center w-full py-2 px-3 rounded-md border border-transparent hover:bg-accent/20 hover:border-accent/50 transition-colors"
-          :class="[userStore.ui.isSideNavOpen ? 'space-x-2' : 'justify-center']"
-        >
-          <ArrowLeftOnRectangleIcon class="w-5 h-5 text-accent flex-shrink-0" />
-          <span v-if="userStore.ui.isSideNavOpen" class="text-accent whitespace-nowrap text-sm">
-            Login
-          </span>
-        </RouterLink>
-      </div>
+      <div class="mt-auto p-3"></div>
     </nav>
 
     <!-- This is the drag handle area -->
@@ -238,17 +215,6 @@
     // If the sidebar is currently closed, open it when expanding a section
     if (!userStore.ui.isSideNavOpen) {
       userStore.toggleSideNav();
-    }
-  }
-
-  async function handleLogout() {
-    try {
-      // Corrected method name
-      await userStore.signOut();
-      router.push('/login'); // Redirect to login page after logout
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Handle logout error (e.g., show notification)
     }
   }
 </script>
