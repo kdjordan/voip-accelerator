@@ -137,16 +137,22 @@
     // --------------------------
 
     // --- Initialize Auth Listener ---
-    // Call this AFTER resetting stores but BEFORE needing auth state
+    // Await the initialization before proceeding. Router guards will wait.
     try {
       console.log('[App Mount] Initializing authentication listener...');
-      await userStore.initializeAuthListener();
-      console.log('[App Mount] Authentication listener initialized.');
+      await userStore.initializeAuthListener(); // This now returns a Promise
+      console.log('[App Mount] Authentication listener initialized and ready.');
     } catch (authInitError) {
       console.error('[App Mount] Error initializing auth listener:', authInitError);
+      // Handle error appropriately - maybe show an error message or redirect
     }
     // --------------------------
 
+    console.log('[App Mount] Initialization complete. App is ready.');
+    // Rest of your initialization logic can go here if needed
+
+    // REMOVE: This logic is no longer needed here as auth is initialized first
+    /* 
     try {
       console.log(
         'Starting application initialization AFTER cleanup, store reset, and auth init...'
@@ -155,6 +161,7 @@
     } catch (error) {
       console.error('Error during initialization:', error);
     }
+    */
   });
 
   onBeforeUnmount(() => {

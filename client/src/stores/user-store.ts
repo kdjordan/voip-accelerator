@@ -15,7 +15,7 @@ interface SharedState {
     user: User | null;
     profile: Profile | null;
     error: Error | null;
-    isStateInitialized: boolean;
+    isInitialized: boolean;
   };
   usage: {
     uploadsToday: number;
@@ -35,7 +35,7 @@ export const useUserStore = defineStore('user', {
       user: null,
       profile: null,
       error: null,
-      isStateInitialized: false,
+      isInitialized: false,
     },
     usage: {
       uploadsToday: 0,
@@ -51,6 +51,7 @@ export const useUserStore = defineStore('user', {
     getIsAuthenticated: (state) => state.auth.isAuthenticated,
     getAuthIsLoading: (state) => state.auth.isLoading,
     getAuthError: (state) => state.auth.error,
+    getAuthIsInitialized: (state) => state.auth.isInitialized,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
     getUploadsToday: (state) => state.usage.uploadsToday,
     isTrialActive: (state) => {
@@ -134,48 +135,89 @@ export const useUserStore = defineStore('user', {
       this.ui.isAppMobileMenuOpen = false;
     },
 
-    initializeAuthListener() {
-      this.auth.isLoading = true;
-      supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-        this.auth.error = null;
-        const currentUser = session?.user ?? null;
-        this.auth.user = currentUser;
-        this.auth.isAuthenticated = !!currentUser;
+    initializeAuthListener(): Promise<void> {
+      return new Promise((resolve, reject) => {
+        this.auth.isLoading = true;
 
-        if (currentUser) {
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-            await this.fetchProfile(currentUser.id);
-          }
-        } else {
-          this.clearAuthData();
-        }
-
-        if (this.auth.isLoading) {
-          this.auth.isLoading = false;
-        }
-      });
-
-      supabase.auth
-        .getSession()
-        .then(({ data: { session } }) => {
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('[Auth Listener] Event:', event, 'Session:', !!session);
+          this.auth.error = null;
           const currentUser = session?.user ?? null;
+
           this.auth.user = currentUser;
           this.auth.isAuthenticated = !!currentUser;
+
           if (currentUser) {
-            return this.fetchProfile(currentUser.id)
-              .then(() => {})
-              .catch((err) => {
-                console.error(
-                  '[AuthListener] Error calling fetchProfile from getSession.then:',
-                  err
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+              try {
+                console.log(
+                  `[Auth Listener] Fetching profile for user ${currentUser.id} on event ${event}`
                 );
-              });
+                await this.fetchProfile(currentUser.id);
+              } catch (profileError) {
+                console.error('[Auth Listener] Error fetching profile on event:', profileError);
+              }
+            }
+          } else {
+            this.clearAuthData();
           }
-        })
-        .catch((err) => {
-          console.error('Error getting initial session:', err);
-          this.auth.error = err;
+
+          if (!this.auth.isInitialized) {
+            console.log('[Auth Listener] State determined, marking as initialized.');
+            this.auth.isInitialized = true;
+            this.auth.isLoading = false;
+            resolve();
+          } else {
+            this.auth.isLoading = false;
+          }
         });
+
+        supabase.auth
+          .getSession()
+          .then(async ({ data: { session }, error }) => {
+            if (error) {
+              console.error('[Auth Listener] Error getting initial session:', error);
+              this.auth.error = error;
+              this.clearAuthData();
+            } else {
+              const currentUser = session?.user ?? null;
+              this.auth.user = currentUser;
+              this.auth.isAuthenticated = !!currentUser;
+              if (currentUser && !this.auth.profile) {
+                try {
+                  console.log(
+                    `[Auth Listener] Initial check found user ${currentUser.id}, fetching profile.`
+                  );
+                  await this.fetchProfile(currentUser.id);
+                } catch (profileError) {
+                  console.error(
+                    '[Auth Listener] Error fetching profile on initial check:',
+                    profileError
+                  );
+                }
+              } else if (!currentUser) {
+                this.clearAuthData();
+              }
+            }
+          })
+          .catch((err) => {
+            console.error('[Auth Listener] Critical error during initial getSession():', err);
+            this.auth.error = err;
+            this.clearAuthData();
+          })
+          .finally(() => {
+            if (!this.auth.isInitialized) {
+              console.log('[Auth Listener] Initial getSession complete, marking as initialized.');
+              this.auth.isInitialized = true;
+              this.auth.isLoading = false;
+              resolve();
+            } else {
+              this.auth.isLoading = false;
+            }
+          });
+      });
     },
 
     async signUp(email: string, password: string, userAgent: string) {
