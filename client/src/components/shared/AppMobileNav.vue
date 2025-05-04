@@ -52,7 +52,7 @@
           <div class="-my-6 divide-y divide-neutral-700">
             <div class="space-y-1 py-6">
               <!-- Loop through navigation items -->
-              <div v-for="(item, index) in items" :key="item.name">
+              <div v-for="(item, index) in filteredItems" :key="item.name">
                 <!-- Regular Link Item -->
                 <RouterLink
                   v-if="!item.children"
@@ -105,7 +105,7 @@
   import { ref, computed } from 'vue';
   import { RouterLink } from 'vue-router';
   import { Bars3Icon, XMarkIcon, BoltIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
-  import { useSharedStore } from '@/stores/shared-store';
+  import { useUserStore } from '@/stores/user-store';
   import type { NavigationItem } from '@/types/nav-types';
 
   // Props
@@ -115,19 +115,68 @@
   const props = defineProps<Props>();
 
   // Store
-  const sharedStore = useSharedStore();
-  const isAppMobileMenuOpen = computed(() => sharedStore.getAppMobileMenuOpen);
+  const userStore = useUserStore();
+  const isAppMobileMenuOpen = computed(() => userStore.ui.isAppMobileMenuOpen);
+  const isAuthenticated = computed(() => userStore.isAuthenticated);
+  const isAdmin = computed(() => userStore.profile?.role === 'admin');
+
+  // Filtered navigation items based on auth status and role
+  const filteredItems = computed(() => {
+    return props.items
+      .filter((item) => {
+        const requiresAuth = item.meta?.requiresAuth;
+        const requiresAdmin = item.meta?.requiresAdmin;
+        const hideWhenAuthed = item.meta?.hideWhenAuthed;
+
+        if (hideWhenAuthed && isAuthenticated.value) {
+          return false; // Hide if user is authenticated (e.g., Login/Signup links)
+        }
+        if (requiresAuth && !isAuthenticated.value) {
+          return false; // Hide if auth is required but user is not authenticated
+        }
+        if (requiresAdmin && !isAdmin.value) {
+          return false; // Hide if admin role is required but user is not admin
+        }
+        return true; // Show item otherwise
+      })
+      .map((item) => {
+        // Recursively filter children if they exist
+        if (item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              const childRequiresAuth = child.meta?.requiresAuth;
+              const childRequiresAdmin = child.meta?.requiresAdmin;
+              const childHideWhenAuthed = child.meta?.hideWhenAuthed;
+
+              if (childHideWhenAuthed && isAuthenticated.value) {
+                return false;
+              }
+              if (childRequiresAuth && !isAuthenticated.value) {
+                return false;
+              }
+              if (childRequiresAdmin && !isAdmin.value) {
+                return false;
+              }
+              return true;
+            }),
+          };
+        }
+        return item;
+      })
+      .filter((item) => !(item.children && item.children.length === 0)); // Remove parent if all children are filtered out
+  });
 
   // Local state for expanded sections
   const expandedSections = ref<Record<number, boolean>>({});
 
   // Methods
   function toggleMenu(): void {
-    sharedStore.toggleAppMobileMenu();
+    userStore.toggleAppMobileMenu();
   }
 
   function closeMenu(): void {
-    sharedStore.setAppMobileMenuOpen(false);
+    userStore.setAppMobileMenuOpen(false);
     expandedSections.value = {}; // Collapse sections when menu closes
   }
 
