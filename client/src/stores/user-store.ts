@@ -17,6 +17,9 @@ interface SharedState {
     error: Error | null;
     isStateInitialized: boolean;
   };
+  usage: {
+    uploadsToday: number;
+  };
 }
 
 export const useUserStore = defineStore('user', {
@@ -34,6 +37,9 @@ export const useUserStore = defineStore('user', {
       error: null,
       isStateInitialized: false,
     },
+    usage: {
+      uploadsToday: 0,
+    },
   }),
 
   getters: {
@@ -46,6 +52,7 @@ export const useUserStore = defineStore('user', {
     getAuthIsLoading: (state) => state.auth.isLoading,
     getAuthError: (state) => state.auth.error,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
+    getUploadsToday: (state) => state.usage.uploadsToday,
     isTrialActive: (state) => {
       if (!state.auth.profile?.trial_ends_at) {
         return false;
@@ -78,6 +85,14 @@ export const useUserStore = defineStore('user', {
 
     setGlobalLoading(isLoading: boolean) {
       this.ui.isGlobalLoading = isLoading;
+    },
+
+    incrementUploadsToday() {
+      this.usage.uploadsToday += 1;
+    },
+
+    resetUploadsToday() {
+      this.usage.uploadsToday = 0;
     },
 
     async fetchProfile(userId: string): Promise<void> {

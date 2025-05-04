@@ -56,7 +56,7 @@
             <div class="flex justify-between items-start">
               <div>
                 <p class="text-gray-400 text-sm">Uploads Today</p>
-                <p class="text-lg font-medium mt-1">{{ userUsage?.uploadsToday ?? 0 }}</p>
+                <p class="text-lg font-medium mt-1">{{ userStore.getUploadsToday }}</p>
               </div>
               <div class="p-2 bg-yellow-900/30 rounded-lg border border-yellow-400/50">
                 <ArrowUpTrayIcon class="h-5 w-5 text-yellow-400" />

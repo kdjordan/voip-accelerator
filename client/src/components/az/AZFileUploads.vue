@@ -22,13 +22,13 @@
                   isDraggingAz1
                     ? 'border-accent bg-fbWhite/10 border-solid'
                     : !azStore.isComponentDisabled('az1')
-                    ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
-                    : '',
+                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+                      : '',
                   azStore.isComponentUploading('az1')
                     ? 'cursor-not-allowed'
                     : !azStore.isComponentDisabled('az1')
-                    ? 'cursor-pointer'
-                    : '',
+                      ? 'cursor-pointer'
+                      : '',
                   uploadError.az1 ? 'border-red-500 border-solid border-2' : '',
                 ]"
                 @dragenter.prevent="handleDragEnterAz1"
@@ -109,13 +109,13 @@
                   isDraggingAz2
                     ? 'border-accent bg-fbWhite/10 border-solid'
                     : !azStore.isComponentDisabled('az2')
-                    ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
-                    : '',
+                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+                      : '',
                   azStore.isComponentUploading('az2')
                     ? 'cursor-not-allowed'
                     : !azStore.isComponentDisabled('az2')
-                    ? 'cursor-pointer'
-                    : '',
+                      ? 'cursor-pointer'
+                      : '',
                   uploadError.az2 ? 'border-red-500 border-solid border-2' : '',
                 ]"
                 @dragenter.prevent="handleDragEnterAz2"
@@ -223,277 +223,282 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
-import {
-  ArrowUpTrayIcon,
-  DocumentIcon,
-  TrashIcon,
-  ArrowRightIcon,
-  ArrowPathIcon,
-} from '@heroicons/vue/24/outline';
-import PreviewModal from '@/components/shared/PreviewModal.vue';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import { useAzStore } from '@/stores/az-store';
-import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
-import type {
-  AzPricingReport,
-  AzCodeReport,
-  AZReportsInput,
-  AZStandardizedData,
-} from '@/types/domains/az-types';
-import { AZ_COLUMN_ROLE_OPTIONS } from '@/types/domains/az-types';
-import { DBName } from '@/types/app-types';
-import { AZColumnRole } from '@/types/domains/az-types';
-import Papa from 'papaparse';
-import { AZService } from '@/services/az.service';
-import { ReportTypes } from '@/types';
-import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
-import { useDragDrop } from '@/composables/useDragDrop';
+  import { ref, reactive, onMounted, computed } from 'vue';
+  import {
+    ArrowUpTrayIcon,
+    DocumentIcon,
+    TrashIcon,
+    ArrowRightIcon,
+    ArrowPathIcon,
+  } from '@heroicons/vue/24/outline';
+  import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import { useAzStore } from '@/stores/az-store';
+  import { useUserStore } from '@/stores/user-store';
+  import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
+  import type {
+    AzPricingReport,
+    AzCodeReport,
+    AZReportsInput,
+    AZStandardizedData,
+  } from '@/types/domains/az-types';
+  import { AZ_COLUMN_ROLE_OPTIONS } from '@/types/domains/az-types';
+  import { DBName } from '@/types/app-types';
+  import { AZColumnRole } from '@/types/domains/az-types';
+  import Papa from 'papaparse';
+  import { AZService } from '@/services/az.service';
+  import { ReportTypes } from '@/types';
+  import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
+  import { useDragDrop } from '@/composables/useDragDrop';
 
-// Define the component ID type to avoid TypeScript errors
-type ComponentId = 'az1' | 'az2';
+  // Define the component ID type to avoid TypeScript errors
+  type ComponentId = 'az1' | 'az2';
 
-const azStore = useAzStore();
-const azService = new AZService();
+  const azStore = useAzStore();
+  const azService = new AZService();
+  const userStore = useUserStore();
 
-// Computed property for button text
-const reportsButtonText = computed(() => {
-  return isGeneratingReports.value ? 'GENERATING REPORTS' : 'Get Reports';
-});
+  // Computed property for button text
+  const reportsButtonText = computed(() => {
+    return isGeneratingReports.value ? 'GENERATING REPORTS' : 'Get Reports';
+  });
 
-const isGeneratingReports = ref(false);
+  const isGeneratingReports = ref(false);
 
-// Preview state
-const showPreviewModal = ref(false);
-const previewData = ref<string[][]>([]);
-const columns = ref<string[]>([]);
-const startLine = ref(1);
-const activeComponent = ref<ComponentId>('az1');
+  // Preview state
+  const showPreviewModal = ref(false);
+  const previewData = ref<string[][]>([]);
+  const columns = ref<string[]>([]);
+  const startLine = ref(1);
+  const activeComponent = ref<ComponentId>('az1');
 
-// Preview state
-const isModalValid = ref(false);
-const columnMappings = ref<Record<string, string>>({});
+  // Preview state
+  const isModalValid = ref(false);
+  const columnMappings = ref<Record<string, string>>({});
 
-// Add new ref with proper typing
-const uploadError = reactive<Record<ComponentId, string | null>>({
-  az1: null,
-  az2: null,
-});
+  // Add new ref with proper typing
+  const uploadError = reactive<Record<ComponentId, string | null>>({
+    az1: null,
+    az2: null,
+  });
 
-// Update the useDragDrop implementation with custom validator for AZ
-const validateAzFile = (
-  file: File,
-  componentId: ComponentId
-): { valid: boolean; errorMessage?: string } => {
-  // Check file extension
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    return { valid: false, errorMessage: 'Only CSV files are accepted' };
-  }
-
-  // Check if OTHER component is uploading (not this one)
-  const otherComponent = componentId === 'az1' ? 'az2' : 'az1';
-  if (azStore.isComponentUploading(otherComponent)) {
-    return { valid: false, errorMessage: 'Please wait for the other file to finish uploading' };
-  }
-
-  // Check for duplicate filename
-  if (azStore.hasExistingFile(file.name)) {
-    return {
-      valid: false,
-      errorMessage: `A file with name "${file.name}" has already been uploaded`,
-    };
-  }
-
-  return { valid: true };
-};
-
-// Component 1 drag handlers
-const {
-  isDragging: isDraggingAz1,
-  handleDragEnter: handleDragEnterAz1,
-  handleDragLeave: handleDragLeaveAz1,
-  handleDragOver: handleDragOverAz1,
-  handleDrop: handleDropAz1,
-} = useDragDrop({
-  fileValidator: (file) => validateAzFile(file, 'az1'),
-  onDropCallback: (file) => handleFileSelected(file, 'az1'),
-  onError: (message) => (uploadError['az1'] = message),
-});
-
-// Component 2 drag handlers
-const {
-  isDragging: isDraggingAz2,
-  handleDragEnter: handleDragEnterAz2,
-  handleDragLeave: handleDragLeaveAz2,
-  handleDragOver: handleDragOverAz2,
-  handleDrop: handleDropAz2,
-} = useDragDrop({
-  fileValidator: (file) => validateAzFile(file, 'az2'),
-  onDropCallback: (file) => handleFileSelected(file, 'az2'),
-  onError: (message) => (uploadError['az2'] = message),
-});
-
-// Now update the handleFileSelected function to work with our composable
-async function handleFileSelected(file: File, componentId: ComponentId) {
-  if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId)) return;
-
-  // Clear any previous errors
-  uploadError[componentId] = null;
-
-  azStore.setComponentUploading(componentId, true);
-  try {
-    await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
-  } catch (error) {
-    console.error('Error handling file:', error);
-    uploadError[componentId] = 'Error processing file. Please try again.';
-  } finally {
-    azStore.setComponentUploading(componentId, false);
-  }
-}
-
-async function handleFileUploaded(componentName: ComponentId, fileName: string) {
-  console.log('adding file to store', componentName, fileName);
-  azStore.addFileUploaded(componentName, fileName);
-  console.log(`File uploaded for ${componentName}: ${fileName}`);
-}
-
-async function handleRemoveFile(componentName: ComponentId) {
-  try {
-    const fileName = azStore.getFileNameByComponent(componentName);
-    if (!fileName) return;
-
-    const tableName = fileName.toLowerCase().replace('.csv', '');
-
-    // First, remove the data from the appropriate storage
-    await azService.removeTable(tableName);
-
-    // Then, remove the file from the store
-    // Note: The removeFile method in the store now handles clearing fileStats
-    azStore.removeFile(fileName);
-
-    console.log(`File ${fileName} removed successfully from component ${componentName}`);
-  } catch (error) {
-    console.error('Error removing file:', error);
-  }
-}
-
-async function handleReportsAction() {
-  if (!azStore.isFull || isGeneratingReports.value) return;
-
-  isGeneratingReports.value = true;
-  try {
-    const [fileName1, fileName2] = azStore.getFileNames;
-    if (!fileName1 || !fileName2) {
-      throw new Error('Two filenames are required to generate reports.');
+  // Update the useDragDrop implementation with custom validator for AZ
+  const validateAzFile = (
+    file: File,
+    componentId: ComponentId
+  ): { valid: boolean; errorMessage?: string } => {
+    // Check file extension
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      return { valid: false, errorMessage: 'Only CSV files are accepted' };
     }
 
-    console.log(`[AZFileUploads] Calling makeAzCombinedReport for ${fileName1} and ${fileName2}`);
-    await azService.makeAzCombinedReport(fileName1, fileName2);
-    console.log(`[AZFileUploads] Combined report generation complete (or started).`);
-  } catch (error: unknown) {
-    console.error('[AZFileUploads] Error generating reports:', error);
-    // TODO: Maybe show a user-facing error notification
-  } finally {
-    isGeneratingReports.value = false;
-  }
-}
+    // Check if OTHER component is uploading (not this one)
+    const otherComponent = componentId === 'az1' ? 'az2' : 'az1';
+    if (azStore.isComponentUploading(otherComponent)) {
+      return { valid: false, errorMessage: 'Please wait for the other file to finish uploading' };
+    }
 
-// Update the handleFileInput function to use our validation
-async function handleFileInput(event: Event, componentId: ComponentId) {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) return;
+    // Check for duplicate filename
+    if (azStore.hasExistingFile(file.name)) {
+      return {
+        valid: false,
+        errorMessage: `A file with name "${file.name}" has already been uploaded`,
+      };
+    }
 
-  // Clear any previous errors
-  uploadError[componentId] = null;
+    return { valid: true };
+  };
 
-  // Use our validation logic
-  const validationResult = validateAzFile(file, componentId);
-  if (!validationResult.valid) {
-    uploadError[componentId] = validationResult.errorMessage || 'Invalid file';
-    return;
-  }
-
-  azStore.setTempFile(componentId, file);
-
-  Papa.parse(file, {
-    preview: 5,
-    complete: (results) => {
-      previewData.value = results.data.slice(1) as string[][];
-      columns.value = results.data[0] as string[];
-      activeComponent.value = componentId;
-      showPreviewModal.value = true;
-    },
-    error: (error) => {
-      console.error('Error parsing CSV:', error);
-      azStore.clearTempFile(componentId);
-      uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
-    },
+  // Component 1 drag handlers
+  const {
+    isDragging: isDraggingAz1,
+    handleDragEnter: handleDragEnterAz1,
+    handleDragLeave: handleDragLeaveAz1,
+    handleDragOver: handleDragOverAz1,
+    handleDrop: handleDropAz1,
+  } = useDragDrop({
+    fileValidator: (file) => validateAzFile(file, 'az1'),
+    onDropCallback: (file) => handleFileSelected(file, 'az1'),
+    onError: (message) => (uploadError['az1'] = message),
   });
-}
 
-// Modal handlers
-async function handleModalConfirm(mappings: Record<string, string>) {
-  const file = azStore.getTempFile(activeComponent.value);
-  if (!file) return;
+  // Component 2 drag handlers
+  const {
+    isDragging: isDraggingAz2,
+    handleDragEnter: handleDragEnterAz2,
+    handleDragLeave: handleDragLeaveAz2,
+    handleDragOver: handleDragOverAz2,
+    handleDrop: handleDropAz2,
+  } = useDragDrop({
+    fileValidator: (file) => validateAzFile(file, 'az2'),
+    onDropCallback: (file) => handleFileSelected(file, 'az2'),
+    onError: (message) => (uploadError['az2'] = message),
+  });
 
-  showPreviewModal.value = false;
-  azStore.setComponentUploading(activeComponent.value, true);
+  // Now update the handleFileSelected function to work with our composable
+  async function handleFileSelected(file: File, componentId: ComponentId) {
+    if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId))
+      return;
 
-  try {
-    // Convert mappings to column indices (correct property names)
-    const columnMapping = {
-      destName: Number(
-        Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DESTINATION)?.[0] ?? -1
-      ),
-      code: Number(
-        Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DIALCODE)?.[0] ?? -1
-      ),
-      rate: Number(
-        Object.entries(mappings).find(([_, value]) => value === AZColumnRole.RATE)?.[0] ?? -1
-      ),
-    };
+    // Clear any previous errors
+    uploadError[componentId] = null;
 
-    console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
-
-    const result = await azService.processFile(
-      file,
-      columnMapping,
-      startLine.value,
-      activeComponent.value
-    );
-
-    // Calculate stats AFTER processing is complete
-    await azService.calculateFileStats(activeComponent.value, result.fileName);
-
-    await handleFileUploaded(activeComponent.value, result.fileName);
-  } catch (error) {
-    console.error('Error processing file:', error);
-    uploadError[activeComponent.value] = 'Error processing file. Please try again.';
-  } finally {
-    azStore.setComponentUploading(activeComponent.value, false);
-    azStore.clearTempFile(activeComponent.value);
+    azStore.setComponentUploading(componentId, true);
+    try {
+      await handleFileInput({ target: { files: [file] } } as unknown as Event, componentId);
+    } catch (error) {
+      console.error('Error handling file:', error);
+      uploadError[componentId] = 'Error processing file. Please try again.';
+    } finally {
+      azStore.setComponentUploading(componentId, false);
+    }
   }
-}
 
-function handleModalCancel() {
-  showPreviewModal.value = false;
-  azStore.clearTempFile(activeComponent.value);
-  activeComponent.value = 'az1';
-}
+  async function handleFileUploaded(componentName: ComponentId, fileName: string) {
+    console.log('adding file to store', componentName, fileName);
+    azStore.addFileUploaded(componentName, fileName);
+    console.log(`File uploaded for ${componentName}: ${fileName}`);
+  }
 
-function handleMappingUpdate(newMappings: Record<string, string>) {
-  columnMappings.value = newMappings;
-}
+  async function handleRemoveFile(componentName: ComponentId) {
+    try {
+      const fileName = azStore.getFileNameByComponent(componentName);
+      if (!fileName) return;
 
-// Add this debugging function after the existing handleDragEnter function
-function setTestError(componentId: ComponentId, message: string) {
-  // For testing error states
-  uploadError[componentId] = message;
-  console.log(`Set error for ${componentId}: ${message}`);
-}
+      const tableName = fileName.toLowerCase().replace('.csv', '');
 
-// Function to view the single file report
-function viewSingleFileReport() {
-  azStore.setActiveReportType(ReportTypes.CODE);
-}
+      // First, remove the data from the appropriate storage
+      await azService.removeTable(tableName);
+
+      // Then, remove the file from the store
+      // Note: The removeFile method in the store now handles clearing fileStats
+      azStore.removeFile(fileName);
+
+      console.log(`File ${fileName} removed successfully from component ${componentName}`);
+    } catch (error) {
+      console.error('Error removing file:', error);
+    }
+  }
+
+  async function handleReportsAction() {
+    if (!azStore.isFull || isGeneratingReports.value) return;
+
+    isGeneratingReports.value = true;
+    try {
+      const [fileName1, fileName2] = azStore.getFileNames;
+      if (!fileName1 || !fileName2) {
+        throw new Error('Two filenames are required to generate reports.');
+      }
+
+      console.log(`[AZFileUploads] Calling makeAzCombinedReport for ${fileName1} and ${fileName2}`);
+      await azService.makeAzCombinedReport(fileName1, fileName2);
+      console.log(`[AZFileUploads] Combined report generation complete (or started).`);
+    } catch (error: unknown) {
+      console.error('[AZFileUploads] Error generating reports:', error);
+      // TODO: Maybe show a user-facing error notification
+    } finally {
+      isGeneratingReports.value = false;
+    }
+  }
+
+  // Update the handleFileInput function to use our validation
+  async function handleFileInput(event: Event, componentId: ComponentId) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    // Clear any previous errors
+    uploadError[componentId] = null;
+
+    // Use our validation logic
+    const validationResult = validateAzFile(file, componentId);
+    if (!validationResult.valid) {
+      uploadError[componentId] = validationResult.errorMessage || 'Invalid file';
+      return;
+    }
+
+    azStore.setTempFile(componentId, file);
+
+    Papa.parse(file, {
+      preview: 5,
+      complete: (results) => {
+        previewData.value = results.data.slice(1) as string[][];
+        columns.value = results.data[0] as string[];
+        activeComponent.value = componentId;
+        showPreviewModal.value = true;
+      },
+      error: (error) => {
+        console.error('Error parsing CSV:', error);
+        azStore.clearTempFile(componentId);
+        uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
+      },
+    });
+  }
+
+  // Modal handlers
+  async function handleModalConfirm(mappings: Record<string, string>) {
+    const file = azStore.getTempFile(activeComponent.value);
+    if (!file) return;
+
+    showPreviewModal.value = false;
+    azStore.setComponentUploading(activeComponent.value, true);
+
+    try {
+      // Convert mappings to column indices (correct property names)
+      const columnMapping = {
+        destName: Number(
+          Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DESTINATION)?.[0] ??
+            -1
+        ),
+        code: Number(
+          Object.entries(mappings).find(([_, value]) => value === AZColumnRole.DIALCODE)?.[0] ?? -1
+        ),
+        rate: Number(
+          Object.entries(mappings).find(([_, value]) => value === AZColumnRole.RATE)?.[0] ?? -1
+        ),
+      };
+
+      console.log(`[DEBUG] Column mappings prepared:`, columnMapping);
+
+      const result = await azService.processFile(
+        file,
+        columnMapping,
+        startLine.value,
+        activeComponent.value
+      );
+
+      // Calculate stats AFTER processing is complete
+      await azService.calculateFileStats(activeComponent.value, result.fileName);
+
+      userStore.incrementUploadsToday();
+      await handleFileUploaded(activeComponent.value, result.fileName);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      uploadError[activeComponent.value] = 'Error processing file. Please try again.';
+    } finally {
+      azStore.setComponentUploading(activeComponent.value, false);
+      azStore.clearTempFile(activeComponent.value);
+    }
+  }
+
+  function handleModalCancel() {
+    showPreviewModal.value = false;
+    azStore.clearTempFile(activeComponent.value);
+    activeComponent.value = 'az1';
+  }
+
+  function handleMappingUpdate(newMappings: Record<string, string>) {
+    columnMappings.value = newMappings;
+  }
+
+  // Add this debugging function after the existing handleDragEnter function
+  function setTestError(componentId: ComponentId, message: string) {
+    // For testing error states
+    uploadError[componentId] = message;
+    console.log(`Set error for ${componentId}: ${message}`);
+  }
+
+  // Function to view the single file report
+  function viewSingleFileReport() {
+    azStore.setActiveReportType(ReportTypes.CODE);
+  }
 </script>

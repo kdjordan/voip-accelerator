@@ -302,6 +302,7 @@
   import InfoModal from '@/components/shared/InfoModal.vue'; // Import InfoModal
 
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
+  import { useUserStore } from '@/stores/user-store'; // Import user store
   import {
     ArrowUpTrayIcon,
     TrashIcon,
@@ -318,6 +319,7 @@
   import { RateSheetService } from '@/services/az-rate-sheet.service';
 
   const store = useAzRateSheetStore();
+  const userStore = useUserStore(); // Initialize user store
   const rateSheetService = new RateSheetService();
   const isLocallyStored = computed(() => store.hasStoredData);
   const isDragging = ref(false);
@@ -457,6 +459,7 @@
           store.setOptionalFields(mappings);
           console.log(`File processed successfully on attempt ${attempts}`);
           rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
+          userStore.incrementUploadsToday(); // Increment upload count
           return;
         } catch (error) {
           console.error(`Attempt ${attempts} failed:`, error);
