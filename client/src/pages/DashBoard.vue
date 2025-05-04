@@ -116,7 +116,7 @@
               @submit.prevent="updateEmail"
               class="flex flex-col sm:flex-row sm:items-end gap-3"
             >
-              <div class="flex-grow">
+              <div class="flex-grow min-w-0">
                 <label for="new-email" class="block text-sm font-medium text-gray-400 mb-1"
                   >New Email Address</label
                 >
@@ -135,7 +135,7 @@
                 :variant="isEmailInputValid ? 'primary' : 'neutral'"
                 :disabled="!isEmailInputValid || isUpdatingEmail"
                 :loading="isUpdatingEmail"
-                class="w-full sm:w-auto whitespace-nowrap"
+                class="sm:flex-shrink-0 sm:w-auto sm:min-w-[120px]"
               >
                 Update Email
               </BaseButton>
