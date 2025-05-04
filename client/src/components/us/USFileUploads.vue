@@ -288,10 +288,12 @@
   import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
   import { ComponentId, DBName } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
+  import { useUserStore } from '@/stores/user-store';
 
   const usStore = useUsStore();
   const service = new USService();
   const lergStore = useLergStore();
+  const userStore = useUserStore();
 
   // Computed property for the reports button text
   const reportsButtonText = computed(() => {
@@ -437,6 +439,8 @@
       console.log(
         `[USFileUploads] File ${fileName} processed and registered for component ${componentName}.`
       );
+
+      userStore.incrementUploadsToday();
     } catch (error) {
       // Updated error message context
       console.error(`[Main] Error during post-upload processing for ${fileName}:`, error);

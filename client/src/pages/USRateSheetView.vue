@@ -244,8 +244,10 @@
   import { USColumnRole } from '@/types/domains/us-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import { useDragDrop } from '@/composables/useDragDrop';
+  import { useUserStore } from '@/stores/user-store';
 
   const store = useUsRateSheetStore();
+  const userStore = useUserStore();
   const usRateSheetService = new USRateSheetService();
   const isLocallyStored = computed(() => store.getHasUsRateSheetData);
   const isRFUploading = ref(false);
@@ -453,6 +455,7 @@
       );
 
       await store.handleUploadSuccess(processedData);
+      userStore.incrementUploadsToday();
 
       selectedFile.value = null; // Clear selected file after processing
       rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
