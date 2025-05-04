@@ -130,14 +130,15 @@
                   required
                 />
               </div>
-              <button
+              <BaseButton
                 type="submit"
-                :disabled="isUpdatingEmail || !newEmail || newEmail === userStore.auth.user?.email"
-                class="btn btn-primary w-full sm:w-auto whitespace-nowrap"
+                :variant="isEmailInputValid ? 'primary' : 'neutral'"
+                :disabled="!isEmailInputValid || isUpdatingEmail"
+                :loading="isUpdatingEmail"
+                class="w-full sm:w-auto whitespace-nowrap"
               >
-                <span v-if="isUpdatingEmail">Updating...</span>
-                <span v-else>Update Email</span>
-              </button>
+                Update Email
+              </BaseButton>
             </form>
             <p v-if="emailErrorMessage" class="mt-2 text-sm text-error">{{ emailErrorMessage }}</p>
             <p v-if="emailSuccessMessage" class="mt-2 text-sm text-success">
@@ -348,6 +349,8 @@
   const isUpdatingEmail = ref(false);
   const emailErrorMessage = ref<string | null>(null);
   const emailSuccessMessage = ref<string | null>(null);
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@\.]{2,}$/; // Stricter email regex
 
   async function updateEmail() {
     // Corrected: Only check against user.email
@@ -595,6 +598,21 @@
       isLoggingOut.value = false;
     }
   }
+
+  // Corrected: Only use user.email for display
+  // Computed property to determine if the button should be enabled and primary
+  const isEmailInputValid = computed(() => {
+    const currentEmail = userStore.auth.user?.email;
+    console.log(`[Debug Email] Input: "${newEmail.value}"`);
+    console.log(`[Debug Email] Current: "${currentEmail}"`);
+    const isNotEmpty = newEmail.value.trim() !== '';
+    const isDifferent = newEmail.value !== currentEmail;
+    const isValidFormat = emailRegex.test(newEmail.value);
+    console.log(
+      `[Debug Email] Checks -> NotEmpty: ${isNotEmpty}, Different: ${isDifferent}, ValidFormat: ${isValidFormat}`
+    );
+    return isNotEmpty && isDifferent && isValidFormat;
+  });
 </script>
 
 <style scoped>
