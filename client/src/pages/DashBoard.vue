@@ -149,9 +149,14 @@
           <!-- Manage Subscription Button Box -->
           <div class="bg-gray-900/40 rounded-lg p-4">
             <h3 class="text-md font-medium text-gray-300 mb-2">Manage Subscription</h3>
-            <button @click="manageSubscription" class="btn btn-outline" :disabled="isUpdatingEmail">
+            <BaseButton
+              variant="secondary-outline"
+              size="standard"
+              @click="manageSubscription"
+              :disabled="isUpdatingEmail"
+            >
               Manage Billing & Subscription
-            </button>
+            </BaseButton>
             <p class="text-xs text-gray-400 mt-2">Redirects to external billing portal.</p>
             <!-- Placeholder for potential errors or status messages -->
           </div>

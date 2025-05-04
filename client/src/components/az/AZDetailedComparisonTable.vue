@@ -154,7 +154,7 @@
     <!-- 1. Loading Spinner (show whenever isLoading is true) -->
     <div v-if="isLoading" class="text-center text-gray-500 py-10">
       <div class="flex items-center justify-center space-x-2">
-        <ArrowPathIcon class="animate-spin w-5 h-5" />
+        <ArrowPathIcon class="animate-spin w-8 h-8" />
         <span>Loading comparison data...</span>
       </div>
     </div>
@@ -167,11 +167,8 @@
     <!-- 3. No Data Message Block (Now contains spinner instead of text) -->
     <div v-else-if="comparisonData.length === 0" class="text-center text-gray-500 py-10">
       <!-- Spinner content moved here -->
-      <div
-        class="flex items-center justify-center space-x-2 text-accent bg-accent/10 border border-accent/50 rounded-lg p-2 w-1/2 mx-auto"
-      >
-        <ArrowPathIcon class="animate-spin w-5 h-5" />
-        <span>Loading comparison data...</span>
+      <div class="flex items-center justify-center space-x-2">
+        <span>No matching records found.</span>
       </div>
     </div>
 
@@ -307,296 +304,296 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
-import { useIntersectionObserver } from '@vueuse/core';
-import { useAzStore } from '@/stores/az-store';
-import { AZService } from '@/services/az.service';
-import Papa from 'papaparse';
-import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
-import BaseBadge from '@/components/shared/BaseBadge.vue';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import type {
-  AZDetailedComparisonEntry,
-  AZDetailedComparisonFilters,
-} from '@/types/domains/az-types';
-import {
-  Listbox,
-  ListboxButton,
-  ListboxLabel,
-  ListboxOptions,
-  ListboxOption,
-} from '@headlessui/vue';
-import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
+  import { ref, watch, computed } from 'vue';
+  import { useIntersectionObserver } from '@vueuse/core';
+  import { useAzStore } from '@/stores/az-store';
+  import { AZService } from '@/services/az.service';
+  import Papa from 'papaparse';
+  import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
+  import BaseBadge from '@/components/shared/BaseBadge.vue';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import type {
+    AZDetailedComparisonEntry,
+    AZDetailedComparisonFilters,
+  } from '@/types/domains/az-types';
+  import {
+    Listbox,
+    ListboxButton,
+    ListboxLabel,
+    ListboxOptions,
+    ListboxOption,
+  } from '@headlessui/vue';
+  import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
 
-const azStore = useAzStore();
-const azService = new AZService();
+  const azStore = useAzStore();
+  const azService = new AZService();
 
-const comparisonData = ref<AZDetailedComparisonEntry[]>([]);
-const isLoading = ref<boolean>(false); // Initial loading
-const isLoadingMore = ref<boolean>(false); // Subsequent page loading
-const error = ref<string | null>(null);
-const isExporting = ref(false);
+  const comparisonData = ref<AZDetailedComparisonEntry[]>([]);
+  const isLoading = ref<boolean>(false); // Initial loading
+  const isLoadingMore = ref<boolean>(false); // Subsequent page loading
+  const error = ref<string | null>(null);
+  const isExporting = ref(false);
 
-// Filter State
-const searchTerm = ref<string>('');
-const selectedCheaper = ref<'' | 'file1' | 'file2' | 'same'>('');
-const selectedMatchStatus = ref<'' | 'both' | 'file1_only' | 'file2_only'>('');
+  // Filter State
+  const searchTerm = ref<string>('');
+  const selectedCheaper = ref<'' | 'file1' | 'file2' | 'same'>('');
+  const selectedMatchStatus = ref<'' | 'both' | 'file1_only' | 'file2_only'>('');
 
-// Pagination State
-const offset = ref<number>(0);
-const pageSize = 50; // Items per page
-const hasMoreData = ref<boolean>(true);
-const currentTableName = ref<string | null>(null);
+  // Pagination State
+  const offset = ref<number>(0);
+  const pageSize = 50; // Items per page
+  const hasMoreData = ref<boolean>(true);
+  const currentTableName = ref<string | null>(null);
 
-// Infinite Scroll Elements
-const loadMoreTriggerRef = ref<HTMLElement | null>(null);
-const scrollContainerRef = ref<HTMLElement | null>(null);
+  // Infinite Scroll Elements
+  const loadMoreTriggerRef = ref<HTMLElement | null>(null);
+  const scrollContainerRef = ref<HTMLElement | null>(null);
 
-// --- Get Filenames for Headers ---
-const fileName1 = computed(() => {
-  const names = azStore.getFileNames;
-  return names.length > 0 ? names[0].replace(/\.csv$/i, '') : 'File 1';
-});
+  // --- Get Filenames for Headers ---
+  const fileName1 = computed(() => {
+    const names = azStore.getFileNames;
+    return names.length > 0 ? names[0].replace(/\.csv$/i, '') : 'File 1';
+  });
 
-const fileName2 = computed(() => {
-  const names = azStore.getFileNames;
-  return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
-});
+  const fileName2 = computed(() => {
+    const names = azStore.getFileNames;
+    return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
+  });
 
-// --- Dynamic Filter Options ---
-const rateComparisonOptions = computed(() => [
-  { value: '', label: 'All Comparisons' },
-  { value: 'file1', label: `${fileName1.value} Cheaper` },
-  { value: 'file2', label: `${fileName2.value} Cheaper` },
-  { value: 'same', label: 'Same Rate' },
-]);
+  // --- Dynamic Filter Options ---
+  const rateComparisonOptions = computed(() => [
+    { value: '', label: 'All Comparisons' },
+    { value: 'file1', label: `${fileName1.value} Cheaper` },
+    { value: 'file2', label: `${fileName2.value} Cheaper` },
+    { value: 'same', label: 'Same Rate' },
+  ]);
 
-const matchStatusOptions = computed(() => [
-  { value: '', label: 'All Statuses' },
-  { value: 'both', label: 'Matched in Both' },
-  { value: 'file1_only', label: `${fileName1.value} Only` },
-  { value: 'file2_only', label: `${fileName2.value} Only` },
-]);
+  const matchStatusOptions = computed(() => [
+    { value: '', label: 'All Statuses' },
+    { value: 'both', label: 'Matched in Both' },
+    { value: 'file1_only', label: `${fileName1.value} Only` },
+    { value: 'file2_only', label: `${fileName2.value} Only` },
+  ]);
 
-// --- Helper function to format match status (Updated Again) ---
-function formatMatchStatus(status: 'both' | 'file1_only' | 'file2_only'): string {
-  switch (status) {
-    case 'both':
-      return 'BOTH';
-    case 'file1_only':
+  // --- Helper function to format match status (Updated Again) ---
+  function formatMatchStatus(status: 'both' | 'file1_only' | 'file2_only'): string {
+    switch (status) {
+      case 'both':
+        return 'BOTH';
+      case 'file1_only':
+        return fileName1.value;
+      case 'file2_only':
+        return fileName2.value;
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // --- Helper function to format Cheaper File (New) ---
+  function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
+    if (cheaper === 'file1') {
       return fileName1.value;
-    case 'file2_only':
+    } else if (cheaper === 'file2') {
       return fileName2.value;
-    default:
-      return 'Unknown';
-  }
-}
-
-// --- Helper function to format Cheaper File (New) ---
-function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
-  if (cheaper === 'file1') {
-    return fileName1.value;
-  } else if (cheaper === 'file2') {
-    return fileName2.value;
-  } else if (cheaper === 'same') {
-    return 'Same Rate';
-  } else {
-    return 'N/A'; // Handle undefined/null case
-  }
-}
-
-async function fetchData(tableName: string | null, reset = false) {
-  if (!tableName || isLoadingMore.value || (!hasMoreData.value && !reset)) {
-    if (!tableName && reset) comparisonData.value = []; // Clear data if no table name during reset
-    return;
-  }
-
-  const initialLoad = reset || comparisonData.value.length === 0;
-  if (initialLoad) isLoading.value = true;
-  else isLoadingMore.value = true;
-
-  error.value = null;
-
-  try {
-    const filters: AZDetailedComparisonFilters = {};
-    if (searchTerm.value) filters.search = searchTerm.value;
-    if (selectedCheaper.value) filters.cheaper = selectedCheaper.value;
-    if (selectedMatchStatus.value) filters.matchStatus = selectedMatchStatus.value;
-
-    const newData = await azService.getPagedDetailedComparisonData(
-      tableName,
-      pageSize,
-      offset.value,
-      filters
-    );
-
-    console.log(
-      `[AZDetailedComparisonTable] Loaded ${newData.length} records from ${tableName} (offset: ${offset.value})`
-    );
-
-    if (reset) {
-      comparisonData.value = newData;
+    } else if (cheaper === 'same') {
+      return 'Same Rate';
     } else {
-      comparisonData.value.push(...newData);
+      return 'N/A'; // Handle undefined/null case
+    }
+  }
+
+  async function fetchData(tableName: string | null, reset = false) {
+    if (!tableName || isLoadingMore.value || (!hasMoreData.value && !reset)) {
+      if (!tableName && reset) comparisonData.value = []; // Clear data if no table name during reset
+      return;
     }
 
-    offset.value += newData.length;
-    hasMoreData.value = newData.length === pageSize;
-  } catch (err: any) {
-    console.error('Error loading detailed AZ comparison data:', err);
-    error.value = err.message || 'Failed to load data';
-    hasMoreData.value = false;
-  } finally {
-    if (initialLoad) isLoading.value = false;
-    isLoadingMore.value = false;
-  }
-}
+    const initialLoad = reset || comparisonData.value.length === 0;
+    if (initialLoad) isLoading.value = true;
+    else isLoadingMore.value = true;
 
-async function resetAndFetchData() {
-  console.log('[AZDetailedComparisonTable] Resetting and fetching data...');
-  if (scrollContainerRef.value) {
-    scrollContainerRef.value.scrollTop = 0;
-  }
-  offset.value = 0;
-  hasMoreData.value = true;
-  error.value = null;
-  isLoadingMore.value = false;
-  isLoading.value = true; // Ensure loading state is active
+    error.value = null;
 
-  // Explicitly clear the data array *before* fetching new data on reset
-  comparisonData.value = [];
+    try {
+      const filters: AZDetailedComparisonFilters = {};
+      if (searchTerm.value) filters.search = searchTerm.value;
+      if (selectedCheaper.value) filters.cheaper = selectedCheaper.value;
+      if (selectedMatchStatus.value) filters.matchStatus = selectedMatchStatus.value;
 
-  await fetchData(currentTableName.value, true); // Pass reset = true
-}
-
-watch(
-  () => azStore.getDetailedComparisonTableName,
-  (newTableName) => {
-    console.log(`[AZDetailedComparisonTable] Table name changed to: ${newTableName}`);
-    if (newTableName !== currentTableName.value) {
-      currentTableName.value = newTableName;
-      resetAndFetchData();
-    }
-  },
-  { immediate: true }
-);
-
-watch([searchTerm, selectedCheaper, selectedMatchStatus], () => {
-  resetAndFetchData();
-});
-
-useIntersectionObserver(
-  loadMoreTriggerRef,
-  ([{ isIntersecting }]) => {
-    if (
-      isIntersecting &&
-      hasMoreData.value &&
-      !isLoadingMore.value &&
-      !isLoading.value &&
-      currentTableName.value
-    ) {
-      console.log(
-        '[AZDetailedComparisonTable] Load more trigger intersecting, loading next page...'
+      const newData = await azService.getPagedDetailedComparisonData(
+        tableName,
+        pageSize,
+        offset.value,
+        filters
       );
-      fetchData(currentTableName.value);
-    }
-  },
-  {
-    root: scrollContainerRef.value,
-    threshold: 0.1,
-  }
-);
 
-function getDiffClass(value: number | null | undefined): string {
-  if (value === null || value === undefined || value === 0) return 'text-gray-400';
-  return value > 0 ? 'text-red-400' : 'text-green-400';
-}
+      console.log(
+        `[AZDetailedComparisonTable] Loaded ${newData.length} records from ${tableName} (offset: ${offset.value})`
+      );
 
-function getDiffPercentClass(value: number | null | undefined): string {
-  if (value === null || value === undefined || value === 0) return 'text-gray-400';
-  return value > 0 ? 'text-red-400' : 'text-green-400';
-}
-
-function getCheaperClass(cheaper?: 'file1' | 'file2' | 'same'): string {
-  const baseStyle = 'font-medium px-2 py-0.5 rounded-md text-xs'; // Base button style
-  if (cheaper === 'file1') {
-    // File 1 is cheaper - Green style
-    return `${baseStyle} text-green-300 bg-green-900/50 border border-green-700`;
-  } else if (cheaper === 'file2') {
-    // File 2 is cheaper - Blue style (matching header)
-    return `${baseStyle} text-blue-300 bg-blue-900/50 border border-blue-700`;
-  } else if (cheaper === 'same') {
-    // Same Rate - Neutral/Gray style (similar to orange but gray)
-    return `${baseStyle} text-gray-300 bg-gray-700/50 border border-gray-600`;
-  } else {
-    // N/A or undefined - Plain text style
-    return 'text-gray-500';
-  }
-}
-
-// --- CSV Download Function ---
-function downloadCsv(): void {
-  // Use comparisonData.value which reflects the current UI view (filtered + paginated)
-  if (!comparisonData.value || comparisonData.value.length === 0) {
-    console.warn('No data currently displayed to download.');
-    // Optionally show a user notification
-    return;
-  }
-
-  try {
-    const headers = [
-      'Dial Code',
-      'Match Status',
-      `Dest Name ${fileName1.value}`,
-      `Dest Name ${fileName2.value}`,
-      `Rate ${fileName1.value}`,
-      `Rate ${fileName2.value}`,
-      'Diff',
-      'Diff %',
-      'Cheaper File',
-    ];
-
-    // Map the currently displayed data (comparisonData) for export
-    const dataToExport = comparisonData.value.map((record) => ({
-      'Dial Code': record.dialCode,
-      'Match Status': formatMatchStatus(record.matchStatus),
-      [`Dest Name ${fileName1.value}`]: record.destName1 ?? 'n/a',
-      [`Dest Name ${fileName2.value}`]: record.destName2 ?? 'n/a',
-      [`Rate ${fileName1.value}`]: record.rate1?.toFixed(6) ?? 'n/a',
-      [`Rate ${fileName2.value}`]: record.rate2?.toFixed(6) ?? 'n/a',
-      Diff: record.diff?.toFixed(6) ?? 'n/a',
-      'Diff %': record.diffPercent ? `${record.diffPercent.toFixed(2)}%` : 'n/a',
-      'Cheaper File': formatCheaperFile(record.cheaperFile),
-    }));
-
-    const csv = Papa.unparse(
-      {
-        fields: headers,
-        data: dataToExport.map((row) => headers.map((header) => row[header])),
-      },
-      {
-        header: true,
-        quotes: true, // Ensure fields with commas or quotes are properly quoted
+      if (reset) {
+        comparisonData.value = newData;
+      } else {
+        comparisonData.value.push(...newData);
       }
-    );
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `az-compare-${timestamp}.csv`;
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (csvError) {
-    console.error('Error generating or downloading CSV:', csvError);
-    // Optionally show a user notification about the error
-    error.value = 'Failed to generate CSV file.';
+      offset.value += newData.length;
+      hasMoreData.value = newData.length === pageSize;
+    } catch (err: any) {
+      console.error('Error loading detailed AZ comparison data:', err);
+      error.value = err.message || 'Failed to load data';
+      hasMoreData.value = false;
+    } finally {
+      if (initialLoad) isLoading.value = false;
+      isLoadingMore.value = false;
+    }
   }
-}
+
+  async function resetAndFetchData() {
+    console.log('[AZDetailedComparisonTable] Resetting and fetching data...');
+    if (scrollContainerRef.value) {
+      scrollContainerRef.value.scrollTop = 0;
+    }
+    offset.value = 0;
+    hasMoreData.value = true;
+    error.value = null;
+    isLoadingMore.value = false;
+    isLoading.value = true; // Ensure loading state is active
+
+    // Explicitly clear the data array *before* fetching new data on reset
+    comparisonData.value = [];
+
+    await fetchData(currentTableName.value, true); // Pass reset = true
+  }
+
+  watch(
+    () => azStore.getDetailedComparisonTableName,
+    (newTableName) => {
+      console.log(`[AZDetailedComparisonTable] Table name changed to: ${newTableName}`);
+      if (newTableName !== currentTableName.value) {
+        currentTableName.value = newTableName;
+        resetAndFetchData();
+      }
+    },
+    { immediate: true }
+  );
+
+  watch([searchTerm, selectedCheaper, selectedMatchStatus], () => {
+    resetAndFetchData();
+  });
+
+  useIntersectionObserver(
+    loadMoreTriggerRef,
+    ([{ isIntersecting }]) => {
+      if (
+        isIntersecting &&
+        hasMoreData.value &&
+        !isLoadingMore.value &&
+        !isLoading.value &&
+        currentTableName.value
+      ) {
+        console.log(
+          '[AZDetailedComparisonTable] Load more trigger intersecting, loading next page...'
+        );
+        fetchData(currentTableName.value);
+      }
+    },
+    {
+      root: scrollContainerRef.value,
+      threshold: 0.1,
+    }
+  );
+
+  function getDiffClass(value: number | null | undefined): string {
+    if (value === null || value === undefined || value === 0) return 'text-gray-400';
+    return value > 0 ? 'text-red-400' : 'text-green-400';
+  }
+
+  function getDiffPercentClass(value: number | null | undefined): string {
+    if (value === null || value === undefined || value === 0) return 'text-gray-400';
+    return value > 0 ? 'text-red-400' : 'text-green-400';
+  }
+
+  function getCheaperClass(cheaper?: 'file1' | 'file2' | 'same'): string {
+    const baseStyle = 'font-medium px-2 py-0.5 rounded-md text-xs'; // Base button style
+    if (cheaper === 'file1') {
+      // File 1 is cheaper - Green style
+      return `${baseStyle} text-green-300 bg-green-900/50 border border-green-700`;
+    } else if (cheaper === 'file2') {
+      // File 2 is cheaper - Blue style (matching header)
+      return `${baseStyle} text-blue-300 bg-blue-900/50 border border-blue-700`;
+    } else if (cheaper === 'same') {
+      // Same Rate - Neutral/Gray style (similar to orange but gray)
+      return `${baseStyle} text-gray-300 bg-gray-700/50 border border-gray-600`;
+    } else {
+      // N/A or undefined - Plain text style
+      return 'text-gray-500';
+    }
+  }
+
+  // --- CSV Download Function ---
+  function downloadCsv(): void {
+    // Use comparisonData.value which reflects the current UI view (filtered + paginated)
+    if (!comparisonData.value || comparisonData.value.length === 0) {
+      console.warn('No data currently displayed to download.');
+      // Optionally show a user notification
+      return;
+    }
+
+    try {
+      const headers = [
+        'Dial Code',
+        'Match Status',
+        `Dest Name ${fileName1.value}`,
+        `Dest Name ${fileName2.value}`,
+        `Rate ${fileName1.value}`,
+        `Rate ${fileName2.value}`,
+        'Diff',
+        'Diff %',
+        'Cheaper File',
+      ];
+
+      // Map the currently displayed data (comparisonData) for export
+      const dataToExport = comparisonData.value.map((record) => ({
+        'Dial Code': record.dialCode,
+        'Match Status': formatMatchStatus(record.matchStatus),
+        [`Dest Name ${fileName1.value}`]: record.destName1 ?? 'n/a',
+        [`Dest Name ${fileName2.value}`]: record.destName2 ?? 'n/a',
+        [`Rate ${fileName1.value}`]: record.rate1?.toFixed(6) ?? 'n/a',
+        [`Rate ${fileName2.value}`]: record.rate2?.toFixed(6) ?? 'n/a',
+        Diff: record.diff?.toFixed(6) ?? 'n/a',
+        'Diff %': record.diffPercent ? `${record.diffPercent.toFixed(2)}%` : 'n/a',
+        'Cheaper File': formatCheaperFile(record.cheaperFile),
+      }));
+
+      const csv = Papa.unparse(
+        {
+          fields: headers,
+          data: dataToExport.map((row) => headers.map((header) => row[header])),
+        },
+        {
+          header: true,
+          quotes: true, // Ensure fields with commas or quotes are properly quoted
+        }
+      );
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `az-compare-${timestamp}.csv`;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (csvError) {
+      console.error('Error generating or downloading CSV:', csvError);
+      // Optionally show a user notification about the error
+      error.value = 'Failed to generate CSV file.';
+    }
+  }
 </script>
