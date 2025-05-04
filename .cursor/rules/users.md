@@ -11,9 +11,10 @@ This document outlines the plan and considerations for implementing user authent
 - Components (`DashBoard.vue`, `App.vue`, `AppMobileNav.vue`, `SideNav.vue`) updated to use `user-store.ts`.
 - Redundant `client/src/stores/shared-store.ts` file deleted.
 - Step 9: Route Guards implemented in `client/src/router/index.ts`. [COMPLETED]
-- Step 10 (Integrate Auth State in UI): [COMPLETED]
+- Step 10 (Integrate Auth State in UI): [MOSTLY COMPLETED]
   - Navigation components (`AppMobileNav.vue`, `SideNav.vue`) updated to filter items based on auth state (using `userStore`) and added Logout/Login buttons. [COMPLETED]
-  - `DashboardView.vue` updated to display user info (email, last login, account created), trial status, and includes an email change form (using `userStore`). [COMPLETED]
+  - `DashboardView.vue` updated to display user info (email, last login, account created), trial status, and includes an email change form (using `userStore`). **The email change form now uses `BaseButton` and includes validation.** [COMPLETED]
+  - `DashboardView.vue` now displays the `uploadsToday` count from `user-store.ts`. [COMPLETED]
 - Auth Pages/Components created: [COMPLETED]
   - `client/src/pages/auth/LoginPage.vue`
   - `client/src/components/auth/SignInForm.vue` (with calls to `userStore.loginWithPassword`, `userStore.loginWithGoogle`)
@@ -21,22 +22,25 @@ This document outlines the plan and considerations for implementing user authent
   - `client/src/components/auth/SignUpForm.vue` (with calls to `userStore.signUp`, `userStore.loginWithGoogle`, passing `user_agent`)
 - Router (`client/src/router/index.ts`) updated with `/login` and `/signup` routes. [COMPLETED]
 - Step 11: `userStore` actions implemented. Listener (`initializeAuthListener`) added to `App.vue` and confirmed to fetch profile data on load/refresh. [COMPLETED]
+  - **Added `uploadsToday` counter and increment action to `user-store.ts`.** [COMPLETED]
+  - **Integrated `uploadsToday` increment call into relevant upload components (`AZFileUploads.vue`, `USFileUploads.vue`, `AZRateSheetView.vue`, `USRateSheetView.vue`).** [COMPLETED]
 - Step 12: `AuthCallbackPage.vue` implemented and handles redirects. [COMPLETED]
 
-- **Next Steps:**
+- **Next Steps / Remaining Issues:**
   1.  **Test Full Auth Flow:** [PRIORITY] Systematically test all remaining authentication flows:
       - Google Sign-In (initial login & linking)
       - Email/Password Sign Up (including email confirmation if enabled)
       - Email/Password Sign In
       - Logout
-      - Email Change (confirmation flow)
+      - Email Change (confirmation flow - _test needed_)
       - Password Reset Request (email sending)
       - Password Update (via link - requires Step 4 below)
       - Route Guard Protection (verify redirects for protected/auth pages)
-  2.  **Refine Auth UI/UX:** Implement user feedback (e.g., toasts/notifications for success/error messages during sign-in, sign-up, email/password changes), loading states on buttons/forms, and handle edge cases gracefully.
+  2.  **Refine Auth UI/UX:** Implement user feedback (e.g., toasts/notifications for success/error messages during sign-in, sign-up, email/password changes - _especially for email update_), loading states on buttons/forms, and handle edge cases gracefully.
   3.  **Implement Password Update Page/Logic:** Create the page/component (`UpdatePasswordPage.vue` / `PasswordUpdateForm.vue`) and associated route (`/update-password`) for users to set a new password after clicking the reset link. Implement the Supabase `updateUser` call for password changes within the `userStore`.
   4.  **Review Navigation Item `meta`:** Check `@/constants/navigation` for correct conditional rendering logic based on auth state, user role (`userStore.getUserRole`), or trial status (`userStore.isTrialActive`).
-  5.  **Admin User Management (Deferred):** Building an in-app admin interface (`AdminView.vue`) remains a future task.
+  5.  **`uploadsToday` Reset:** Decide if/when the `uploadsToday` counter should be reset (e.g., daily via a scheduled task or server logic, or simply on logout/login - currently it persists across sessions).
+  6.  **Admin User Management (Deferred):** Building an in-app admin interface (`AdminView.vue`) remains a future task.
 
 ## 1. Integration Steps
 
@@ -128,36 +132,39 @@ This document outlines the plan and considerations for implementing user authent
 
     - Utilize the existing `user-store.ts` Pinia store (refactored from `shared-store.ts`).
     - Add state properties for current auth status (`isAuthenticated`, `isLoading`), Supabase user object (`user`), and profile data (`profile`).
+    - **Added state for `uploadsToday`.** [COMPLETED]
     - Use `onAuthStateChange` to:
       - Update auth status.
       - On `SIGNED_IN`, fetch the user's profile using `getUser()` and a query to the `profiles` table (respecting RLS). Store the profile data.
       - On `SIGNED_OUT` or `USER_DELETED`, clear user and profile data.
       - On `USER_UPDATED`, re-fetch user and profile data.
 
-9.  **Route Guards (Vue Router - `src/router/index.ts`):** [COMPLETED - Requires verification after state loading fix]
+9.  **Route Guards (Vue Router - `src/router/index.ts`):** [COMPLETED - Requires verification]
 
     - Implement `router.beforeEach`:
       - Check auth status.
       - Redirect unauthenticated users from protected routes (e.g., `/dashboard`) to `/login`.
       - Redirect authenticated users from `/login`, `/signup` to `/dashboard`.
-      - Protect `/admin` routes (pending profile loading fix).
-      - _Future:_ Check trial status (pending profile loading fix).
+      - Protect `/admin` routes (pending profile loading check).
+      - _Future:_ Check trial status (pending profile loading check).
 
-10. **Integrate Auth State in UI:** [IN PROGRESS - Blocked by refresh issues]
+10. **Integrate Auth State in UI:** [MOSTLY COMPLETED]
 
     - Use the `userStore` (from `user-store.ts`) (`isAuthenticated`, `profile`) in components:
       - Conditionally show Login/Sign Up vs. Dashboard/Logout links in navigation (`AppMobileNav.vue`, `SideNav.vue`). [COMPLETED]
       - Show user information (e.g., email) in the dashboard (`DashboardView.vue`). [COMPLETED]
-      - Implement email change functionality within `DashboardView.vue` using `updateUser`. [COMPLETED]
-      - Show trial status in `DashboardView.vue` (pending profile loading fix).
-      - Enable/disable features based on trial status (pending profile loading fix).
-      - Conditionally show Admin links/sections based on `profile.role === 'admin'` in navigation (pending profile loading fix).
+      - Implement email change functionality within `DashboardView.vue` using `updateUser`, **with BaseButton and validation.** [COMPLETED]
+      - Display `uploadsToday` count in `DashboardView.vue`. [COMPLETED]
+      - Show trial status in `DashboardView.vue` (pending profile loading check).
+      - Enable/disable features based on trial status (pending profile loading check).
+      - Conditionally show Admin links/sections based on `profile.role === 'admin'` in navigation (pending profile loading check).
     - Create core authentication pages/components (`LoginPage.vue`, `SignInForm.vue`, `SignUpPage.vue`, `SignUpForm.vue`). [COMPLETED]
 
-11. **Implement `userStore` Actions & Listener:** [COMPLETED - Profile fetch on refresh needs fix]
+11. **Implement `userStore` Actions & Listener:** [COMPLETED - Profile fetch on refresh needs verification]
 
     - Implement actions in `user-store.ts`.
-    - Ensure `onAuthStateChange` listener correctly updates state and fetches profile (issue on initial load/refresh).
+    - **Added `incrementUploadsToday` action.** [COMPLETED]
+    - Ensure `onAuthStateChange` listener correctly updates state and fetches profile (issue on initial load/refresh needs verification).
 
 12. **Implement Auth Callback Page:** [COMPLETED]
 

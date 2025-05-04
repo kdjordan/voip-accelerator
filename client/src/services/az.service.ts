@@ -66,8 +66,8 @@ export class AZService {
                   reason: isNaN(rate)
                     ? 'Invalid rate'
                     : !destName
-                    ? 'Missing destination name'
-                    : 'Missing dial code',
+                      ? 'Missing destination name'
+                      : 'Missing dial code',
                 };
                 this.store.addInvalidRow(file.name, invalidRow);
               } else {
@@ -527,7 +527,7 @@ export class AZService {
           const searchTermLower = filters.search.toLowerCase();
           // Use filter for more complex search logic
           collection = collection.filter((item) => {
-            const dialCodeMatch = item.dialCode.toLowerCase().includes(searchTermLower);
+            const dialCodeMatch = item.dialCode.toLowerCase().startsWith(searchTermLower);
             // Ensure null/undefined destNames don't cause errors
             const destName1Match = item.destName1?.toLowerCase().includes(searchTermLower) ?? false;
             const destName2Match = item.destName2?.toLowerCase().includes(searchTermLower) ?? false;
