@@ -131,69 +131,45 @@ const publicOnlyRoutes = [
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-  let currentSession: Session | null = null;
 
-  // Attempt to get the current session status directly
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    currentSession = session;
-    // Update store state based on this check if it hasn't initialized yet
-    // (This slightly duplicates listener logic but ensures guard has fresh data)
-    if (!userStore.auth.isStateInitialized) {
-      userStore.auth.user = session?.user ?? null;
-      userStore.auth.isAuthenticated = !!session;
-      if (session?.user && !userStore.auth.profile) {
-        // Fetch profile only if needed and session exists
-        // Avoid fetching if profile might already be loading from listener
-        if (!userStore.auth.isLoading) {
-          console.log(
-            '[NavGuard] Initializing state & profile null. Calling fetchProfile for user:',
-            session.user.id
-          );
-          await userStore.fetchProfile(session.user.id);
-        } else {
-          console.log(
-            '[NavGuard] Initializing state & profile null, but store is already loading. Skipping fetchProfile call.'
-          );
-        }
-      } else if (!session) {
-        console.log('[NavGuard] Initializing state: No session found, clearing auth data.');
-        userStore.clearAuthData();
-      }
-      userStore.auth.isStateInitialized = true; // Mark initialized *after* potential update
-    }
-  } catch (e) {
-    console.error('Error fetching session in router guard:', e);
-    // Decide how to handle error - maybe allow navigation or redirect to error page/login?
-    // For now, let's clear auth data just in case
-    userStore.clearAuthData();
-    // Ensure isAuthenticated reflects the error state
-    currentSession = null;
+  // Ensure the store is initialized before proceeding.
+  // This should be guaranteed by awaiting initializeAuthListener in App.vue's onMounted.
+  if (!userStore.getAuthIsInitialized) {
+    console.warn(
+      '[NavGuard] Auth store not initialized yet. Waiting for initialization. This might indicate an issue if it repeats.'
+    );
+    // Optionally, wait for initialization here, though ideally it's done before mount.
+    // Example (requires adding a watcher or event bus):
+    // await new Promise(resolve => { /* wait for store.isInitialized to be true */ });
+    // For now, we assume App.vue's await handles this.
   }
 
-  // Use the freshly checked session status for the guard logic
-  // Also check the store's state as a fallback/confirmation, as listener might have updated it
-  const isAuthenticated = !!currentSession || userStore.auth.isAuthenticated;
+  const isAuthenticated = userStore.getIsAuthenticated;
   const requiresAuth = authRequiredRoutes.some((route) => to.path.startsWith(route));
   const isPublicOnly = publicOnlyRoutes.includes(to.path);
+  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
+  const isAdmin = userStore.getUserRole === 'admin'; // Use the getter for role
 
   console.log(
-    `NavGuard Check: To: ${to.path}, RequiresAuth: ${requiresAuth}, PublicOnly: ${isPublicOnly}, Authenticated: ${isAuthenticated} (Session: ${!!currentSession}, Store: ${userStore.auth.isAuthenticated})`
+    `NavGuard Check: To: ${to.path}, RequiresAuth: ${requiresAuth}, PublicOnly: ${isPublicOnly}, IsAuth: ${isAuthenticated}, RequiresAdmin: ${requiresAdmin}, IsAdmin: ${isAdmin}`
   );
 
   if (requiresAuth && !isAuthenticated) {
     // Redirect unauthenticated users from protected routes to login
-    console.log('Redirecting to login (requires auth, not authenticated)');
+    console.log('[NavGuard] Redirecting to login (requires auth, not authenticated)');
     next({ path: '/login', query: { redirect: to.fullPath } }); // Store intended path
   } else if (isPublicOnly && isAuthenticated) {
     // Redirect authenticated users from public-only routes to dashboard
-    console.log('Redirecting to dashboard (public only, authenticated)');
+    console.log('[NavGuard] Redirecting to dashboard (public only, authenticated)');
+    next({ path: '/dashboard' });
+  } else if (requiresAdmin && !isAdmin) {
+    // Redirect non-admin users from admin routes
+    console.log('[NavGuard] Redirecting to dashboard (requires admin, not admin)');
+    // Or redirect to an 'unauthorized' page: next({ name: 'Unauthorized' });
     next({ path: '/dashboard' });
   } else {
     // Allow navigation
-    console.log('Allowing navigation');
+    console.log('[NavGuard] Allowing navigation');
     next();
   }
 });
