@@ -100,7 +100,7 @@
       if (error) throw error;
       // Login successful, onAuthStateChange in store should handle profile loading
       // Redirect logic is handled by the router guard
-      // router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
+      router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
     } catch (error: any) {
       console.error('Sign in error:', error);
       errorMessage.value = error.message || 'Invalid email or password.';

@@ -234,6 +234,11 @@
 
   function toggleSection(index: number): void {
     expandedSections.value[index] = !expandedSections.value[index];
+
+    // If the sidebar is currently closed, open it when expanding a section
+    if (!userStore.ui.isSideNavOpen) {
+      userStore.toggleSideNav();
+    }
   }
 
   async function handleLogout() {
