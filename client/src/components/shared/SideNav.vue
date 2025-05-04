@@ -43,7 +43,7 @@
       </div>
 
       <ul class="flex-grow mt-4 font-secondary tracking-tight">
-        <li v-for="(item, index) in filteredItems" :key="item.name" class="px-2 my-1 text-sm">
+        <li v-for="(item, index) in filteredNavigation" :key="item.name" class="px-2 my-1 text-sm">
           <!-- Top-level items -->
           <div v-if="!item.children">
             <RouterLink
@@ -79,7 +79,7 @@
               :class="[
                 userStore.ui.isSideNavOpen ? 'justify-between' : 'justify-center',
                 !userStore.ui.isSideNavOpen &&
-                item.children?.some((child) => child.href === route.path)
+                item.children?.some((child: NavigationItem) => child.href === route.path)
                   ? 'bg-accent/20 border-accent/50'
                   : 'hover:bg-neutral-700 border-transparent',
               ]"
@@ -94,7 +94,7 @@
                   class="w-5 h-5 flex-shrink-0"
                   :class="[
                     !userStore.ui.isSideNavOpen &&
-                    item.children?.some((child) => child.href === route.path)
+                    item.children?.some((child: NavigationItem) => child.href === route.path)
                       ? 'text-accent'
                       : 'text-neutral-300',
                   ]"
@@ -189,77 +189,62 @@
 
   const userStore = useUserStore();
   const route = useRoute();
-  const expandedSections = ref<Record<number, boolean>>({});
-
-  // Auth State
-  const isAuthenticated = computed(() => userStore.isAuthenticated);
-  const isAdmin = computed(() => userStore.profile?.role === 'admin');
-
-  // Filtered navigation items based on auth status and role
-  const filteredItems = computed(() => {
-    return appNavigationItems
-      .filter((item) => {
-        const requiresAuth = item.meta?.requiresAuth;
-        const requiresAdmin = item.meta?.requiresAdmin;
-        const hideWhenAuthed = item.meta?.hideWhenAuthed;
-
-        if (hideWhenAuthed && isAuthenticated.value) {
-          return false; // Hide if user is authenticated (e.g., Login/Signup links)
-        }
-        if (requiresAuth && !isAuthenticated.value) {
-          return false; // Hide if auth is required but user is not authenticated
-        }
-        if (requiresAdmin && !isAdmin.value) {
-          return false; // Hide if admin role is required but user is not admin
-        }
-        return true; // Show item otherwise
-      })
-      .map((item) => {
-        // Recursively filter children if they exist
-        if (item.children) {
-          return {
-            ...item,
-            children: item.children.filter((child) => {
-              const childRequiresAuth = child.meta?.requiresAuth;
-              const childRequiresAdmin = child.meta?.requiresAdmin;
-              const childHideWhenAuthed = child.meta?.hideWhenAuthed;
-
-              if (childHideWhenAuthed && isAuthenticated.value) {
-                return false;
-              }
-              if (childRequiresAuth && !isAuthenticated.value) {
-                return false;
-              }
-              if (childRequiresAdmin && !isAdmin.value) {
-                return false;
-              }
-              return true;
-            }),
-          };
-        }
-        return item;
-      })
-      .filter((item) => !(item.children && item.children.length === 0)); // Remove parent if all children are filtered out
-  });
-
   const router = useRouter();
 
-  // Logout Handler
-  async function handleLogout() {
-    try {
-      await userStore.logout(); // Assuming logout is an action in userStore
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Handle error display if needed
-    }
+  // Corrected: Use getter for isAuthenticated
+  const isAuthenticated = computed(() => userStore.getIsAuthenticated);
+  // Corrected: Access profile via auth state
+  const isAdmin = computed(() => userStore.auth.profile?.role === 'admin');
+
+  const props = defineProps<{ navigation: NavigationItem[] }>();
+
+  // Filter navigation based on auth state and roles
+  const filteredNavigation = computed(() => {
+    return props.navigation.filter((item) => {
+      // Added optional chaining for meta, matching updated type
+      const requiresAuth = item.meta?.requiresAuth;
+      const requiresAdmin = item.meta?.requiresAdmin;
+      const hideWhenAuthed = item.meta?.hideWhenAuthed;
+
+      if (hideWhenAuthed && isAuthenticated.value) return false;
+      if (requiresAuth && !isAuthenticated.value) return false;
+      if (requiresAdmin && !isAdmin.value) return false;
+
+      // Filter children recursively if needed
+      if (item.children) {
+        item.children = item.children.filter((child) => {
+          const childRequiresAuth = child.meta?.requiresAuth;
+          const childRequiresAdmin = child.meta?.requiresAdmin;
+          const childHideWhenAuthed = child.meta?.hideWhenAuthed;
+
+          if (childHideWhenAuthed && isAuthenticated.value) return false;
+          if (childRequiresAuth && !isAuthenticated.value) return false;
+          if (childRequiresAdmin && !isAdmin.value) return false;
+          return true;
+        });
+        // Hide parent if all children are filtered out
+        return item.children.length > 0;
+      }
+
+      return true;
+    });
+  });
+
+  const expandedSections = ref<Record<number, boolean>>({});
+
+  function toggleSection(index: number): void {
+    expandedSections.value[index] = !expandedSections.value[index];
   }
 
-  function toggleSection(index: number) {
-    if (!userStore.ui.isSideNavOpen) {
-      userStore.toggleSideNav();
+  async function handleLogout() {
+    try {
+      // Corrected method name
+      await userStore.signOut();
+      router.push('/login'); // Redirect to login page after logout
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Handle logout error (e.g., show notification)
     }
-    expandedSections.value[index] = !expandedSections.value[index];
   }
 </script>
 
