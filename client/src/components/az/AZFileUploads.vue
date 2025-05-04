@@ -1,206 +1,212 @@
 <template>
   <div class="flex flex-col gap-8 w-full">
     <!-- Upload Zones Box -->
-    <div class="bg-gray-800 rounded-b-lg p-6">
-      <!-- Single File Analysis Section (Only visible when one file is uploaded) -->
-      <div
-        v-if="azStore.hasSingleFileReport && !azStore.isFull && !azStore.reportsGenerated"
-        class="mb-6"
-      ></div>
+    <div class="overflow-x-auto">
+      <div class="bg-gray-800 rounded-b-lg p-6">
+        <!-- Single File Analysis Section (Only visible when one file is uploaded) -->
+        <div
+          v-if="azStore.hasSingleFileReport && !azStore.isFull && !azStore.reportsGenerated"
+          class="mb-6"
+        ></div>
 
-      <div class="pb-4 mb-6">
-        <!-- Horizontal Layout for Upload Zones -->
-        <div class="flex">
-          <!-- Left Side: First Upload Zone and Single File Report -->
-          <div class="w-1/2 pr-6">
-            <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
-            <template v-if="!azStore.isComponentDisabled('az1')">
-              <!-- First Upload Zone (Only visible when no file is uploaded) -->
-              <div
-                class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
-                :class="[
-                  isDraggingAz1
-                    ? 'border-accent bg-fbWhite/10 border-solid'
-                    : !azStore.isComponentDisabled('az1')
-                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
-                      : '',
-                  azStore.isComponentUploading('az1')
-                    ? 'cursor-not-allowed'
-                    : !azStore.isComponentDisabled('az1')
-                      ? 'cursor-pointer'
-                      : '',
-                  uploadError.az1 ? 'border-red-500 border-solid border-2' : '',
-                ]"
-                @dragenter.prevent="handleDragEnterAz1"
-                @dragleave.prevent="handleDragLeaveAz1"
-                @dragover.prevent="handleDragOverAz1"
-                @drop.prevent="handleDropAz1"
-              >
-                <input
-                  type="file"
-                  accept=".csv"
-                  class="absolute inset-0 opacity-0"
-                  :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
-                  :disabled="
-                    azStore.isComponentUploading('az1') || azStore.isComponentUploading('az2')
-                  "
-                  @change="(e) => handleFileInput(e, 'az1')"
-                />
+        <div class="pb-4 mb-6">
+          <!-- Horizontal Layout for Upload Zones -->
+          <div class="flex min-w-max gap-6">
+            <!-- Left Side: First Upload Zone and Single File Report -->
+            <div class="">
+              <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
+              <template v-if="!azStore.isComponentDisabled('az1')">
+                <!-- First Upload Zone (Only visible when no file is uploaded) -->
+                <div
+                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
+                  :class="[
+                    isDraggingAz1
+                      ? 'border-accent bg-fbWhite/10 border-solid'
+                      : !azStore.isComponentDisabled('az1')
+                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+                        : '',
+                    azStore.isComponentUploading('az1')
+                      ? 'cursor-not-allowed'
+                      : !azStore.isComponentDisabled('az1')
+                        ? 'cursor-pointer'
+                        : '',
+                    uploadError.az1 ? 'border-red-500 border-solid border-2' : '',
+                  ]"
+                  @dragenter.prevent="handleDragEnterAz1"
+                  @dragleave.prevent="handleDragLeaveAz1"
+                  @dragover.prevent="handleDragOverAz1"
+                  @drop.prevent="handleDropAz1"
+                >
+                  <input
+                    type="file"
+                    accept=".csv"
+                    class="absolute inset-0 opacity-0"
+                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
+                    :disabled="
+                      azStore.isComponentUploading('az1') || azStore.isComponentUploading('az2')
+                    "
+                    @change="(e) => handleFileInput(e, 'az1')"
+                  />
 
-                <div class="flex flex-col h-full w-full">
-                  <!-- Empty/Processing States -->
-                  <template v-if="!azStore.isComponentUploading('az1')">
-                    <div class="flex items-center justify-center w-full h-full">
-                      <div class="text-center w-full">
-                        <!-- Error notification when there is an error -->
-                        <div
-                          v-if="uploadError.az1"
-                          class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full"
-                        >
-                          <p class="text-red-500 font-medium">{{ uploadError.az1 }}</p>
+                  <div class="flex flex-col h-full w-full">
+                    <!-- Empty/Processing States -->
+                    <template v-if="!azStore.isComponentUploading('az1')">
+                      <div class="flex items-center justify-center w-full h-full">
+                        <div class="text-center w-full">
+                          <!-- Error notification when there is an error -->
+                          <div
+                            v-if="uploadError.az1"
+                            class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full"
+                          >
+                            <p class="text-red-500 font-medium">{{ uploadError.az1 }}</p>
+                          </div>
+
+                          <ArrowUpTrayIcon
+                            v-if="!uploadError.az1"
+                            class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
+                          />
+                          <p
+                            class="mt-2 text-base"
+                            :class="uploadError.az1 ? 'text-red-500' : 'text-accent'"
+                          >
+                            {{
+                              uploadError.az1
+                                ? 'Please try again'
+                                : 'DRAG & DROP or CLICK to upload'
+                            }}
+                          </p>
                         </div>
-
-                        <ArrowUpTrayIcon
-                          v-if="!uploadError.az1"
-                          class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
-                        />
-                        <p
-                          class="mt-2 text-base"
-                          :class="uploadError.az1 ? 'text-red-500' : 'text-accent'"
-                        >
-                          {{
-                            uploadError.az1
-                              ? 'Please try again'
-                              : 'DRAG & DROP to upload or CLICK to select file'
-                          }}
-                        </p>
                       </div>
-                    </div>
-                  </template>
+                    </template>
 
-                  <template v-if="azStore.isComponentUploading('az1')">
-                    <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
-                      <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                      <p class="text-sm text-accent">Processing your file...</p>
-                    </div>
-                  </template>
+                    <template v-if="azStore.isComponentUploading('az1')">
+                      <div
+                        class="flex-1 flex flex-col items-center justify-center w-full space-y-2"
+                      >
+                        <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                        <p class="text-sm text-accent">Processing your file...</p>
+                      </div>
+                    </template>
+                  </div>
                 </div>
-              </div>
-            </template>
+              </template>
 
-            <!-- Show Code Summary and Remove Button when file IS uploaded -->
-            <template v-else>
-              <!-- Single File Report Section - Pass remove handler -->
-              <AZCodeSummary :componentId="'az1'" :on-remove="() => handleRemoveFile('az1')" />
-            </template>
-          </div>
+              <!-- Show Code Summary and Remove Button when file IS uploaded -->
+              <template v-else>
+                <!-- Single File Report Section - Pass remove handler -->
+                <AZCodeSummary :componentId="'az1'" :on-remove="() => handleRemoveFile('az1')" />
+              </template>
+            </div>
 
-          <!-- Vertical Divider -->
-          <div class="mx-4 border-l border-gray-700/50"></div>
+            <!-- Vertical Divider -->
+            <div class="mx-4 border-l border-gray-700/50"></div>
 
-          <!-- Right Side: Second Upload Zone -->
-          <div class="w-1/2 pl-6">
-            <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
-            <template v-if="!azStore.isComponentDisabled('az2')">
-              <!-- Second Upload Zone (Only visible when no file is uploaded) -->
-              <div
-                class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
-                :class="[
-                  isDraggingAz2
-                    ? 'border-accent bg-fbWhite/10 border-solid'
-                    : !azStore.isComponentDisabled('az2')
-                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
-                      : '',
-                  azStore.isComponentUploading('az2')
-                    ? 'cursor-not-allowed'
-                    : !azStore.isComponentDisabled('az2')
-                      ? 'cursor-pointer'
-                      : '',
-                  uploadError.az2 ? 'border-red-500 border-solid border-2' : '',
-                ]"
-                @dragenter.prevent="handleDragEnterAz2"
-                @dragleave.prevent="handleDragLeaveAz2"
-                @dragover.prevent="handleDragOverAz2"
-                @drop.prevent="handleDropAz2"
-              >
-                <input
-                  type="file"
-                  accept=".csv"
-                  class="absolute inset-0 opacity-0"
-                  :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
-                  :disabled="
-                    azStore.isComponentUploading('az2') || azStore.isComponentUploading('az1')
-                  "
-                  @change="(e) => handleFileInput(e, 'az2')"
-                />
+            <!-- Right Side: Second Upload Zone -->
+            <div class="">
+              <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
+              <template v-if="!azStore.isComponentDisabled('az2')">
+                <!-- Second Upload Zone (Only visible when no file is uploaded) -->
+                <div
+                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
+                  :class="[
+                    isDraggingAz2
+                      ? 'border-accent bg-fbWhite/10 border-solid'
+                      : !azStore.isComponentDisabled('az2')
+                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+                        : '',
+                    azStore.isComponentUploading('az2')
+                      ? 'cursor-not-allowed'
+                      : !azStore.isComponentDisabled('az2')
+                        ? 'cursor-pointer'
+                        : '',
+                    uploadError.az2 ? 'border-red-500 border-solid border-2' : '',
+                  ]"
+                  @dragenter.prevent="handleDragEnterAz2"
+                  @dragleave.prevent="handleDragLeaveAz2"
+                  @dragover.prevent="handleDragOverAz2"
+                  @drop.prevent="handleDropAz2"
+                >
+                  <input
+                    type="file"
+                    accept=".csv"
+                    class="absolute inset-0 opacity-0"
+                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
+                    :disabled="
+                      azStore.isComponentUploading('az2') || azStore.isComponentUploading('az1')
+                    "
+                    @change="(e) => handleFileInput(e, 'az2')"
+                  />
 
-                <div class="flex flex-col h-full w-full">
-                  <!-- Empty/Processing States -->
-                  <template v-if="!azStore.isComponentUploading('az2')">
-                    <div class="flex items-center justify-center w-full h-full">
-                      <div class="text-center w-full">
-                        <!-- Error notification when there is an error -->
-                        <div
-                          v-if="uploadError.az2"
-                          class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full"
-                        >
-                          <p class="text-red-500 font-medium">{{ uploadError.az2 }}</p>
+                  <div class="flex flex-col h-full w-full">
+                    <!-- Empty/Processing States -->
+                    <template v-if="!azStore.isComponentUploading('az2')">
+                      <div class="flex items-center justify-center w-full h-full">
+                        <div class="text-center w-full">
+                          <!-- Error notification when there is an error -->
+                          <div
+                            v-if="uploadError.az2"
+                            class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full"
+                          >
+                            <p class="text-red-500 font-medium">{{ uploadError.az2 }}</p>
+                          </div>
+
+                          <ArrowUpTrayIcon
+                            v-if="!uploadError.az2"
+                            class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
+                          />
+                          <p
+                            class="mt-2 text-base"
+                            :class="uploadError.az2 ? 'text-red-500' : 'text-accent'"
+                          >
+                            {{
+                              uploadError.az2
+                                ? 'Please try again'
+                                : 'DRAG & DROP or CLICK to upload'
+                            }}
+                          </p>
                         </div>
-
-                        <ArrowUpTrayIcon
-                          v-if="!uploadError.az2"
-                          class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
-                        />
-                        <p
-                          class="mt-2 text-base"
-                          :class="uploadError.az2 ? 'text-red-500' : 'text-accent'"
-                        >
-                          {{
-                            uploadError.az2
-                              ? 'Please try again'
-                              : 'DRAG & DROP to upload or CLICK to select file'
-                          }}
-                        </p>
                       </div>
-                    </div>
-                  </template>
+                    </template>
 
-                  <template v-if="azStore.isComponentUploading('az2')">
-                    <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
-                      <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                      <p class="text-sm text-accent">Processing your file...</p>
-                    </div>
-                  </template>
+                    <template v-if="azStore.isComponentUploading('az2')">
+                      <div
+                        class="flex-1 flex flex-col items-center justify-center w-full space-y-2"
+                      >
+                        <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
+                        <p class="text-sm text-accent">Processing your file...</p>
+                      </div>
+                    </template>
+                  </div>
                 </div>
-              </div>
-            </template>
+              </template>
 
-            <!-- Show Code Summary and Remove Button when file IS uploaded -->
-            <template v-else>
-              <!-- Single File Report Section - Pass remove handler -->
-              <AZCodeSummary :componentId="'az2'" :on-remove="() => handleRemoveFile('az2')" />
-            </template>
+              <!-- Show Code Summary and Remove Button when file IS uploaded -->
+              <template v-else>
+                <!-- Single File Report Section - Pass remove handler -->
+                <AZCodeSummary :componentId="'az2'" :on-remove="() => handleRemoveFile('az2')" />
+              </template>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Reports Button Section -->
-      <div
-        class="border-t border-gray-700/50 mt-8"
-        v-if="azStore.isFull && !azStore.reportsGenerated"
-      >
-        <!-- Reports Button -->
-        <div class="flex justify-end mt-8">
-          <!-- Use BaseButton for Get Reports -->
-          <BaseButton
-            variant="primary"
-            size="standard"
-            :icon="ArrowRightIcon"
-            @click="handleReportsAction"
-            :loading="isGeneratingReports"
-          >
-            {{ reportsButtonText }}
-          </BaseButton>
+        <!-- Reports Button Section -->
+        <div
+          class="border-t border-gray-700/50 mt-8"
+          v-if="azStore.isFull && !azStore.reportsGenerated"
+        >
+          <!-- Reports Button -->
+          <div class="flex justify-end mt-8">
+            <!-- Use BaseButton for Get Reports -->
+            <BaseButton
+              variant="primary"
+              size="standard"
+              :icon="ArrowRightIcon"
+              @click="handleReportsAction"
+              :loading="isGeneratingReports"
+            >
+              {{ reportsButtonText }}
+            </BaseButton>
+          </div>
         </div>
       </div>
     </div>

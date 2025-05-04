@@ -1,5 +1,5 @@
 <template>
-  <div v-if="usStore.getFileNameByComponent(componentId) !== ''" class="">
+  <div v-if="usStore.getFileNameByComponent(componentId) !== ''" class="space-y-6">
     <!-- Code Report heading with file name pill and remove button -->
     <div class="mb-4 flex items-center justify-between">
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
