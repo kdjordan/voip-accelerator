@@ -110,16 +110,22 @@
   }
 
   async function handleGoogleSignIn() {
-    isLoadingGoogle.value = true;
-    errorMessage.value = null;
     try {
-      const { error } = await userStore.signInWithGoogle();
-      if (error) throw error;
-      // Redirect/state change will be handled by Supabase callback and onAuthStateChange listener
-    } catch (error: any) {
-      console.error('Google sign in error:', error);
-      errorMessage.value = error.message || 'Could not sign in with Google.';
-      isLoadingGoogle.value = false; // Only stop loading on error here, success is handled by redirect
+      isLoadingGoogle.value = true;
+      // Ensure the result is handled, even if the function doesn't return anything on success
+      const result = await userStore.signInWithGoogle();
+      // Check specifically for an error property if the result is an object
+      if (result && result.error) {
+        throw result.error; // Throw if the store method returned an error object
+      }
+      // Success: Redirect or update UI
+      const redirectPath = router.currentRoute.value.query.redirect || '/dashboard';
+      router.push(redirectPath as string);
+    } catch (err: any) {
+      errorMessage.value = err.message || 'Google Sign-In failed. Please try again.';
+      console.error('Google Sign-In Error:', err);
+    } finally {
+      isLoadingGoogle.value = false;
     }
   }
 </script>

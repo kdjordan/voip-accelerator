@@ -17,7 +17,11 @@
         <AppMobileNav :items="appNavigationItems" class="md:hidden" />
 
         <!-- Side Nav (only on medium screens and up) -->
-        <SideNav v-if="shouldShowSideNav" class="hidden md:block" />
+        <SideNav
+          v-if="shouldShowSideNav"
+          :navigation="appNavigationItems"
+          class="hidden md:block"
+        />
 
         <!-- Main Content Area -->
         <!-- Added pt-16 md:pt-0 for mobile header space -->

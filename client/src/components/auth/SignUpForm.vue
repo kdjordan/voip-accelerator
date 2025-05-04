@@ -125,32 +125,25 @@
   const router = useRouter();
 
   async function handleSignUp() {
-    if (password.value !== confirmPassword.value || password.value.length < minPasswordLength) {
-      errorMessage.value = 'Please ensure passwords match and meet the length requirement.';
-      return;
-    }
+    errorMessage.value = null;
+    if (!validateForm()) return;
 
     isLoading.value = true;
-    errorMessage.value = null;
-    successMessage.value = null;
+    const userAgent = navigator.userAgent || 'Unknown User Agent';
 
     try {
-      // Pass user agent for trial abuse monitoring, as per users.md
-      const userAgent = navigator.userAgent;
-      await userStore.signUp(email.value, password.value, {
-        data: { user_agent: userAgent }, // Pass as options.data for raw_user_meta_data
-      });
-      successMessage.value =
-        'Account created successfully! Please check your email to confirm your account.';
-      // Clear form on success
-      email.value = '';
-      password.value = '';
-      confirmPassword.value = '';
-      // Optionally redirect to login or show message
-      // router.push({ name: 'Login' });
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      errorMessage.value = error.message || 'Could not create account. Please try again.';
+      // Pass userAgent as the third argument directly
+      const { error } = await userStore.signUp(email.value, password.value, userAgent);
+      if (error) {
+        throw error;
+      }
+      // Handle success (e.g., show confirmation message, redirect)
+      console.log('Signup process initiated. Check email if confirmation is needed.');
+      // Optionally redirect or show a success message
+      // Example: router.push('/check-email');
+    } catch (err: any) {
+      console.error('Sign up error:', err);
+      errorMessage.value = err.message || 'Sign up failed. Please try again.';
     } finally {
       isLoading.value = false;
     }
@@ -159,14 +152,25 @@
   async function handleGoogleSignUp() {
     isLoadingGoogle.value = true;
     errorMessage.value = null;
-    successMessage.value = null;
     try {
-      await userStore.loginWithGoogle(); // Same function handles sign-up via Google OAuth
-      // Redirect/state change will be handled by Supabase callback and onAuthStateChange listener
-    } catch (error: any) {
-      console.error('Google sign up error:', error);
-      errorMessage.value = error.message || 'Could not sign up with Google.';
-      isLoadingGoogle.value = false; // Only stop loading on error here, success is handled by redirect
+      //signInWithGoogle throws on error or redirects on success
+      await userStore.signInWithGoogle();
+      // If it doesn't throw or redirect, something unexpected happened, but we often don't reach here on success.
+      // The redirect/state change is primarily handled by the Supabase callback and onAuthStateChange listener.
+    } catch (err: any) {
+      console.error('Google sign up error:', err);
+      errorMessage.value = err.message || 'Could not sign up with Google.';
+    } finally {
+      // Reset loading state regardless of success or failure
+      isLoadingGoogle.value = false;
     }
+  }
+
+  function validateForm() {
+    if (password.value !== confirmPassword.value || password.value.length < minPasswordLength) {
+      errorMessage.value = 'Please ensure passwords match and meet the length requirement.';
+      return false;
+    }
+    return true;
   }
 </script>

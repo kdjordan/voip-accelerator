@@ -91,50 +91,62 @@
           <!-- Add upgrade button/info here later -->
         </div>
 
-        <!-- Email Change -->
-        <div>
-          <h3 class="text-md font-medium mb-3">Update Email Address</h3>
-          <p class="text-sm text-gray-400 mb-4">
-            Current email:
-            <span class="font-medium">{{ userStore.profile?.email || userStore.user?.email }}</span>
-            <br />
-            Changing your email will require you to confirm the new address.
+        <!-- Email Display -->
+        <div class="mb-4">
+          <h4 class="text-lg font-semibold text-primary mb-1">Current Email</h4>
+          <p>
+            Your login email is:
+            <span class="font-medium">{{ displayEmail }}</span>
           </p>
-          <form
-            @submit.prevent="handleEmailUpdate"
-            class="flex flex-col sm:flex-row items-start sm:items-end gap-3"
-          >
-            <div class="flex-grow w-full sm:w-auto">
-              <label for="new-email" class="block text-sm font-medium text-gray-300 mb-1"
-                >New Email</label
+        </div>
+
+        <!-- Update Email Form -->
+        <div class="mb-6">
+          <h4 class="text-lg font-semibold text-primary mb-2">Update Email</h4>
+          <form @submit.prevent="updateEmail" class="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div class="flex-grow">
+              <label for="new-email" class="block text-sm font-medium text-fbGray4 mb-1"
+                >New Email Address</label
               >
               <input
                 id="new-email"
                 v-model="newEmail"
                 type="email"
+                placeholder="Enter new email"
+                :disabled="isUpdatingEmail"
+                class="block w-full rounded-md border-fbGray2 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-white/5 py-2 px-3"
                 required
-                placeholder="Enter new email address"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-sm"
               />
             </div>
-            <BaseButton
+            <button
               type="submit"
-              :is-loading="isUpdatingEmail"
-              :disabled="
-                isUpdatingEmail ||
-                !newEmail ||
-                newEmail === (userStore.profile?.email || userStore.user?.email)
-              "
+              :disabled="isUpdatingEmail || !newEmail || newEmail === userStore.auth.user?.email"
+              class="btn btn-primary w-full sm:w-auto whitespace-nowrap"
             >
-              {{ isUpdatingEmail ? 'Updating...' : 'Update Email' }}
-            </BaseButton>
+              <span v-if="isUpdatingEmail">Updating...</span>
+              <span v-else>Update Email</span>
+            </button>
           </form>
-          <p
-            v-if="emailUpdateMessage"
-            :class="['mt-3 text-sm', emailUpdateError ? 'text-red-400' : 'text-green-400']"
-          >
-            {{ emailUpdateMessage }}
+          <p v-if="emailErrorMessage" class="mt-2 text-sm text-error">{{ emailErrorMessage }}</p>
+          <p v-if="emailSuccessMessage" class="mt-2 text-sm text-success">
+            {{ emailSuccessMessage }}
           </p>
+        </div>
+
+        <!-- Subscription Info -->
+        <div class="mb-6">
+          <h4 class="text-lg font-semibold text-primary mb-1">Subscription Plan</h4>
+          <p>
+            Your current plan is: <span class="font-medium">{{ currentPlan }}</span>
+          </p>
+        </div>
+
+        <!-- Manage Subscription Button -->
+        <div>
+          <h4 class="text-lg font-semibold text-primary mb-2">Manage Subscription</h4>
+          <button @click="manageSubscription" class="btn btn-outline" :disabled="isUpdatingEmail">
+            Manage Billing & Subscription
+          </button>
         </div>
       </div>
 
@@ -237,7 +249,7 @@
   // const userProfile = computed(() => userStore.profile);
   // const authUser = computed(() => userStore.user);
 
-  const currentPlan = computed(() => userStore.profile?.subscription_status ?? 'Free');
+  const currentPlan = computed(() => userStore.auth.profile?.subscription_status ?? 'Free');
   const userUsage = computed(() => ({ uploadsToday: 0 }));
 
   // Trial Information
@@ -265,7 +277,7 @@
 
   // Computed properties for user display
   const userInitials = computed(() => {
-    const email = userStore.user?.email;
+    const email = userStore.auth.user?.email;
     if (!email) return '?';
     const nameSource = email;
     return nameSource
@@ -276,7 +288,7 @@
   });
 
   const formattedLastLogin = computed(() => {
-    const lastSignIn = userStore.getUser?.last_sign_in_at;
+    const lastSignIn = userStore.auth.user?.last_sign_in_at;
     if (!lastSignIn) {
       return 'Never';
     }
@@ -298,7 +310,7 @@
   });
 
   const formattedCreatedAt = computed(() => {
-    const createdAt = userStore.getUserProfile?.created_at;
+    const createdAt = userStore.auth.user?.created_at;
     if (!createdAt) {
       return 'Never';
     }
@@ -316,35 +328,85 @@
     }
   });
 
-  // Email Update State
+  // Corrected: Only use user.email for display
+  const displayEmail = computed(() => {
+    return userStore.auth.user?.email || 'Loading...';
+  });
+
+  // Email Update State & Logic
   const newEmail = ref('');
   const isUpdatingEmail = ref(false);
-  const emailUpdateMessage = ref('');
-  const emailUpdateError = ref(false);
+  const emailErrorMessage = ref<string | null>(null);
+  const emailSuccessMessage = ref<string | null>(null);
 
-  async function handleEmailUpdate() {
-    if (!newEmail.value || newEmail.value === userStore.user?.email || isUpdatingEmail.value) {
+  async function updateEmail() {
+    // Corrected: Only check against user.email
+    const currentEmail = userStore.auth.user?.email;
+    if (!newEmail.value || newEmail.value === currentEmail || isUpdatingEmail.value) {
+      emailErrorMessage.value =
+        'Please enter a new, valid email address different from the current one.';
       return;
     }
 
     isUpdatingEmail.value = true;
-    emailUpdateMessage.value = '';
-    emailUpdateError.value = false;
+    emailErrorMessage.value = null;
+    emailSuccessMessage.value = null;
 
     try {
-      // Assuming userStore has an action like updateUserEmail
       await userStore.updateUserEmail(newEmail.value);
-      emailUpdateMessage.value =
-        'Confirmation email sent to your new address. Please check your inbox.';
+      emailSuccessMessage.value =
+        'Email update initiated. Check both email inboxes for confirmation.';
       newEmail.value = ''; // Clear input on success
     } catch (error: any) {
-      console.error('Email update failed:', error);
-      emailUpdateMessage.value = error.message || 'Failed to update email. Please try again.';
-      emailUpdateError.value = true;
+      console.error('Update email error:', error);
+      emailErrorMessage.value = error.message || 'Failed to update email. Please try again.';
     } finally {
       isUpdatingEmail.value = false;
     }
   }
+
+  // Plan management logic
+  async function manageSubscription() {
+    isUpdatingEmail.value = true; // Reuse loading state for simplicity, or add a new one
+    try {
+      // Corrected: Access user via auth state
+      const email = userStore.auth.user?.email;
+      if (!email) {
+        throw new Error('User email not found.');
+      }
+      // Call your backend/Stripe service to create a portal session
+      // const response = await fetch('/api/create-customer-portal', { // Example endpoint
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ customerEmail: email }), // Pass user email or ID
+      // });
+      // const { url } = await response.json();
+      // if (url) {
+      //   window.location.href = url; // Redirect to Stripe Portal
+      // } else {
+      //   throw new Error('Could not create portal session.');
+      // }
+      console.log('Manage subscription clicked - Placeholder for Stripe Portal integration');
+      // Replace console.log with actual API call and redirect
+    } catch (error: any) {
+      console.error('Manage subscription error:', error);
+      // Show error message to user
+    } finally {
+      isUpdatingEmail.value = false;
+    }
+  }
+
+  // Watch for user/profile changes if needed
+  watch(
+    () => userStore.auth.user,
+    (newUser) => {
+      if (!newEmail.value) {
+        // Pre-fill email field if empty and user data is available
+        newEmail.value = newUser?.email ?? '';
+      }
+    },
+    { immediate: true }
+  );
 
   // DexieDB instance
   const dexieDB = useDexieDB();
