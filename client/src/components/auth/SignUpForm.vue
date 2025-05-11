@@ -1,85 +1,85 @@
 <template>
   <form class="space-y-6" @submit.prevent="handleSignUp">
     <div>
-      <label for="email" class="block text-sm font-medium leading-6 text-gray-300"
+      <label for="email" class="block text-sm font-medium leading-6 text-text-primary"
         >Email address</label
       >
       <div class="mt-2">
         <input
-          v-model="email"
           id="email"
+          v-model="email"
           name="email"
           type="email"
           autocomplete="email"
           required
-          class="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6"
+          class="form-input block w-full rounded-md border-0 py-2.5 shadow-sm ring-1 ring-inset ring-border focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6 bg-background-secondary text-text-primary placeholder-text-secondary"
+          placeholder="you@example.com"
+          @input="clearMessages"
         />
       </div>
     </div>
 
     <div>
-      <label for="password" class="block text-sm font-medium leading-6 text-gray-300"
+      <label for="password" class="block text-sm font-medium leading-6 text-text-primary"
         >Password</label
       >
       <div class="mt-2">
         <input
-          v-model="password"
           id="password"
+          v-model="password"
           name="password"
           type="password"
           autocomplete="new-password"
           required
-          :minlength="minPasswordLength"
-          class="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6"
+          class="form-input block w-full rounded-md border-0 py-2.5 shadow-sm ring-1 ring-inset ring-border focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6 bg-background-secondary text-text-primary placeholder-text-secondary"
+          placeholder="••••••••"
+          @input="clearMessages"
         />
-        <p
-          v-if="password && password.length < minPasswordLength"
-          class="mt-1 text-xs text-yellow-400"
-        >
-          Password must be at least {{ minPasswordLength }} characters long.
-        </p>
       </div>
     </div>
 
     <div>
-      <label for="confirm-password" class="block text-sm font-medium leading-6 text-gray-300"
+      <label for="confirmPassword" class="block text-sm font-medium leading-6 text-text-primary"
         >Confirm Password</label
       >
       <div class="mt-2">
         <input
+          id="confirmPassword"
           v-model="confirmPassword"
-          id="confirm-password"
-          name="confirm-password"
+          name="confirmPassword"
           type="password"
           autocomplete="new-password"
           required
-          class="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6"
+          class="form-input block w-full rounded-md border-0 py-2.5 shadow-sm ring-1 ring-inset ring-border focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6 bg-background-secondary text-text-primary placeholder-text-secondary"
+          placeholder="••••••••"
+          @input="clearMessages"
         />
-        <p
-          v-if="password && confirmPassword && password !== confirmPassword"
-          class="mt-1 text-xs text-red-400"
-        >
-          Passwords do not match.
-        </p>
       </div>
     </div>
 
-    <div v-if="errorMessage" class="mt-4 text-center text-sm text-red-400">
+    <div
+      v-if="errorMessage"
+      class="mt-4 p-3 bg-red-500/10 border border-red-500/30 text-red-300 rounded-md text-sm"
+    >
       {{ errorMessage }}
     </div>
-    <div v-if="successMessage" class="mt-4 text-center text-sm text-green-400">
-      {{ successMessage }}
+
+    <div
+      v-if="signupSuccessMessage"
+      class="mt-6 p-4 bg-green-500/10 border border-green-500/30 text-green-300 rounded-md text-sm"
+    >
+      {{ signupSuccessMessage }}
     </div>
 
     <div>
-      <BaseButton
+      <button
         type="submit"
-        :is-loading="isLoading"
-        :disabled="isLoading || password !== confirmPassword || password.length < minPasswordLength"
-        class="w-full"
+        :disabled="isLoading || isSignupFormSuccessfullySubmitted"
+        class="flex w-full justify-center rounded-md bg-accent px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {{ isLoading ? 'Creating account...' : 'Create Account' }}
-      </BaseButton>
+        <span v-if="isLoading">Processing...</span>
+        <span v-else>Create Account</span>
+      </button>
     </div>
 
     <!-- Optional: Add Social Logins 
@@ -113,48 +113,52 @@
   import { useUserStore } from '@/stores/user-store';
   import BaseButton from '@/components/shared/BaseButton.vue';
 
+  const userStore = useUserStore();
+  const router = useRouter();
   const email = ref('');
   const password = ref('');
   const confirmPassword = ref('');
+  const errorMessage = ref<string | null>(null);
+  const signupSuccessMessage = ref<string | null>(null);
   const isLoading = ref(false);
   const isLoadingGoogle = ref(false);
-  const errorMessage = ref<string | null>(null);
-  const successMessage = ref<string | null>(null);
-  const minPasswordLength = 6; // Supabase default minimum password length
-
-  const userStore = useUserStore();
-  const router = useRouter();
+  const isSignupFormSuccessfullySubmitted = ref(false);
 
   async function handleSignUp() {
-    errorMessage.value = null;
-    successMessage.value = null; // Clear previous success messages
-    if (!validateForm()) return;
+    clearMessages(); // Clear messages at the start of a new attempt
+
+    if (password.value !== confirmPassword.value) {
+      errorMessage.value = 'Passwords do not match.';
+      return;
+    }
+
+    if (password.value.length < 8) {
+      errorMessage.value = 'Password must be at least 8 characters long.';
+      return;
+    }
 
     isLoading.value = true;
-    const userAgent = navigator.userAgent || 'Unknown User Agent';
+    const userAgent = navigator.userAgent;
 
     try {
-      // Pass userAgent as the third argument directly
-      const { error } = await userStore.signUp(email.value, password.value, userAgent);
-      if (error) {
-        successMessage.value = null; // Clear success message if there was an error
-        throw error;
+      const { error: signUpError } = await userStore.signUp(email.value, password.value, userAgent);
+
+      if (signUpError) {
+        console.error('Sign up error object:', signUpError);
+        errorMessage.value = signUpError.message || 'Failed to create account. Please try again.';
+      } else {
+        // Success
+        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your account.`;
+        isSignupFormSuccessfullySubmitted.value = true; // Disable button on success
+        // Optionally clear form fields, though user might want to see the email they used
+        // email.value = '';
+        // password.value = '';
+        // confirmPassword.value = '';
       }
-      // Handle success (e.g., show confirmation message, redirect)
-      // console.log('Signup process initiated. Check email if confirmation is needed.');
-      errorMessage.value = null; // Clear any previous errors
-      successMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your account.`;
-
-      // Optional: Reset form fields after a delay or leave them for user reference
-      // email.value = '';
-      // password.value = '';
-      // confirmPassword.value = '';
-
-      // Consider disabling the form or button further if needed, though isLoading handles the button.
-    } catch (err: any) {
-      console.error('Sign up error:', err);
-      successMessage.value = null; // Clear success message if there was an error
-      errorMessage.value = err.message || 'Sign up failed. Please try again.';
+    } catch (error) {
+      // Catch any unexpected errors from the signUp action itself
+      console.error('Unexpected error during sign up:', error);
+      errorMessage.value = 'An unexpected error occurred. Please try again.';
     } finally {
       isLoading.value = false;
     }
@@ -177,11 +181,9 @@
     }
   }
 
-  function validateForm() {
-    if (password.value !== confirmPassword.value || password.value.length < minPasswordLength) {
-      errorMessage.value = 'Please ensure passwords match and meet the length requirement.';
-      return false;
-    }
-    return true;
+  function clearMessages() {
+    errorMessage.value = null;
+    signupSuccessMessage.value = null;
+    isSignupFormSuccessfullySubmitted.value = false;
   }
 </script>

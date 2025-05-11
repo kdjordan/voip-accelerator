@@ -129,48 +129,57 @@ const publicOnlyRoutes = [
   // Add password reset, etc. if they exist and should be public only
 ];
 
+// Transitional or non-content pages for authenticated users to be redirected from
+const transitionalAuthRoutes = ['/login', '/signup', '/auth/callback', '/']; // Added root '/' and '/auth/callback'
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
 
-  // Ensure the store is initialized before proceeding.
-  // This should be guaranteed by awaiting initializeAuthListener in App.vue's onMounted.
+  // It's crucial that the user store, especially auth state, is initialized.
+  // Assuming App.vue or a similar entry point awaits userStore.initializeAuthListener()
   if (!userStore.getAuthIsInitialized) {
     console.warn(
-      '[NavGuard] Auth store not initialized yet. Waiting for initialization. This might indicate an issue if it repeats.'
+      '[NavGuard] Auth store not fully initialized. Navigation might be based on incomplete state. Waiting for initialization is recommended.'
     );
-    // Optionally, wait for initialization here, though ideally it's done before mount.
-    // Example (requires adding a watcher or event bus):
-    // await new Promise(resolve => { /* wait for store.isInitialized to be true */ });
-    // For now, we assume App.vue's await handles this.
+    // In a real-world scenario, you might want to implement a more robust waiting mechanism
+    // or ensure initializeAuthListener always completes before any navigation.
   }
 
   const isAuthenticated = userStore.getIsAuthenticated;
   const requiresAuth = authRequiredRoutes.some((route) => to.path.startsWith(route));
-  const isPublicOnly = publicOnlyRoutes.includes(to.path);
+  // const isPublicOnly = publicOnlyRoutes.includes(to.path); // Replaced by transitionalAuthRoutes logic
+  const isTransitionalRoute = transitionalAuthRoutes.includes(to.path);
   const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
-  const isAdmin = userStore.getUserRole === 'admin'; // Use the getter for role
+  const isAdmin = userStore.getUserRole === 'admin';
 
   console.log(
-    `NavGuard Check: To: ${to.path}, RequiresAuth: ${requiresAuth}, PublicOnly: ${isPublicOnly}, IsAuth: ${isAuthenticated}, RequiresAdmin: ${requiresAdmin}, IsAdmin: ${isAdmin}`
+    `NavGuard Check: To: ${to.path}, IsAuth: ${isAuthenticated}, RequiresAuth: ${requiresAuth}, IsTransitional: ${isTransitionalRoute}, RequiresAdmin: ${requiresAdmin}, IsAdmin: ${isAdmin}`
   );
 
-  if (requiresAuth && !isAuthenticated) {
-    // Redirect unauthenticated users from protected routes to login
-    console.log('[NavGuard] Redirecting to login (requires auth, not authenticated)');
-    next({ path: '/login', query: { redirect: to.fullPath } }); // Store intended path
-  } else if (isPublicOnly && isAuthenticated) {
-    // Redirect authenticated users from public-only routes to dashboard
-    console.log('[NavGuard] Redirecting to dashboard (public only, authenticated)');
-    next({ path: '/dashboard' });
-  } else if (requiresAdmin && !isAdmin) {
-    // Redirect non-admin users from admin routes
-    console.log('[NavGuard] Redirecting to dashboard (requires admin, not admin)');
-    // Or redirect to an 'unauthorized' page: next({ name: 'Unauthorized' });
-    next({ path: '/dashboard' });
+  if (isAuthenticated) {
+    if (isTransitionalRoute) {
+      console.log(
+        '[NavGuard] Authenticated user on a transitional route. Redirecting to dashboard.'
+      );
+      next({ name: 'dashboard' }); // Use name for clarity, assuming 'dashboard' is defined
+    } else if (requiresAdmin && !isAdmin) {
+      console.log(
+        '[NavGuard] Authenticated user lacks admin rights for admin route. Redirecting to dashboard.'
+      );
+      next({ name: 'dashboard' }); // Or an 'Unauthorized' page
+    } else {
+      console.log('[NavGuard] Authenticated user. Allowing navigation.');
+      next();
+    }
   } else {
-    // Allow navigation
-    console.log('[NavGuard] Allowing navigation');
-    next();
+    // Not authenticated
+    if (requiresAuth) {
+      console.log('[NavGuard] Unauthenticated user on a protected route. Redirecting to login.');
+      next({ name: 'Login', query: { redirect: to.fullPath } });
+    } else {
+      console.log('[NavGuard] Unauthenticated user. Allowing navigation to public route.');
+      next();
+    }
   }
 });
 
