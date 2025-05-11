@@ -127,6 +127,7 @@
 
   async function handleSignUp() {
     errorMessage.value = null;
+    successMessage.value = null; // Clear previous success messages
     if (!validateForm()) return;
 
     isLoading.value = true;
@@ -136,14 +137,23 @@
       // Pass userAgent as the third argument directly
       const { error } = await userStore.signUp(email.value, password.value, userAgent);
       if (error) {
+        successMessage.value = null; // Clear success message if there was an error
         throw error;
       }
       // Handle success (e.g., show confirmation message, redirect)
-      console.log('Signup process initiated. Check email if confirmation is needed.');
-      // Optionally redirect or show a success message
-      // Example: router.push('/check-email');
+      // console.log('Signup process initiated. Check email if confirmation is needed.');
+      errorMessage.value = null; // Clear any previous errors
+      successMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your account.`;
+
+      // Optional: Reset form fields after a delay or leave them for user reference
+      // email.value = '';
+      // password.value = '';
+      // confirmPassword.value = '';
+
+      // Consider disabling the form or button further if needed, though isLoading handles the button.
     } catch (err: any) {
       console.error('Sign up error:', err);
+      successMessage.value = null; // Clear success message if there was an error
       errorMessage.value = err.message || 'Sign up failed. Please try again.';
     } finally {
       isLoading.value = false;
