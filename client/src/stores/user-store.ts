@@ -241,10 +241,12 @@ export const useUserStore = defineStore('user', {
       this.auth.isLoading = true;
       this.auth.error = null;
       try {
+        const callbackUrl = `${import.meta.env.VITE_SITE_URL}/auth/callback`;
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: callbackUrl,
             data: {
               user_agent: userAgent,
             },
