@@ -172,7 +172,7 @@ export const useUsStore = defineStore('us', {
       this.filesUploaded.set(componentName, { fileName });
     },
 
-    resetFiles() {
+    async resetFiles() {
       this.filesUploaded.clear();
       this.isCodeReportReady = false;
       this.isPricingReportReady = false;

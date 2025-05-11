@@ -1,16 +1,16 @@
 <template>
   <div id="app" class="min-h-screen bg-fbBlack text-fbWhite font-sans">
-    <!-- Global Loading State -->
+    <!-- Full-screen Loading Overlay -->
     <div
       v-if="!userStore.getAuthIsInitialized"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-fbBlack/80 backdrop-blur-sm"
+      class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-fbBlack"
     >
-      <div class="text-xl text-accent">Loading Application...</div>
-      <!-- Optional: Add a spinner icon here -->
+      <ArrowPathIcon class="animate-spin h-10 w-10 text-accent mb-4" />
+      <p class="text-xl text-fbWhite">Loading Application...</p>
     </div>
 
     <!-- Main Application Content (rendered once auth is initialized) -->
-    <template v-if="userStore.getAuthIsInitialized">
+    <template v-else>
       <!-- Different layout for marketing pages -->
       <template v-if="isMarketingPage">
         <router-view v-slot="{ Component }">
@@ -67,11 +67,12 @@
   import SideNav from '@/components/shared/SideNav.vue';
   import AppMobileNav from '@/components/shared/AppMobileNav.vue'; // Import AppMobileNav
   import TheFooter from '@/components/shared/TheFooter.vue';
-  import { onMounted, onBeforeUnmount, ref } from 'vue';
+  import { onMounted, onBeforeUnmount } from 'vue'; // Removed ref as showLoginToast is removed
   import { useUserStore } from '@/stores/user-store';
   import { clearApplicationDatabases } from '@/utils/cleanup';
   import { RouterView, useRoute, useRouter } from 'vue-router';
   import { computed, watchEffect, nextTick } from 'vue';
+  import { ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Heroicon
   // Import relevant stores
   import { useAzStore } from '@/stores/az-store';
   import { useUsStore } from '@/stores/us-store';
@@ -122,61 +123,56 @@
     return marketingPages.includes(route.path) || route.name === 'notFound';
   });
 
-  // Get SideNav expanded state from store
-  // const sideNavExpanded = computed(() => {
-  //   return sharedStore.getSideNavOpen;
-  // });
+  onMounted(() => {
+    // Removed async as we are not awaiting inside directly
+    // --- Run cleanup first (non-blocking) ---
+    clearApplicationDatabases().catch((err) =>
+      console.error('[App Mount] Error clearing databases:', err)
+    );
+    // ---------------------------------------
 
-  onMounted(async () => {
-    // --- Run cleanup first ---
-    await clearApplicationDatabases();
-    // -------------------------
+    // --- Reset Store States (non-blocking) ---
+    console.log('[App Mount] Resetting store states (non-blocking)...');
+    azStore
+      .resetFiles()
+      .catch((err) => console.error('[App Mount] Error resetting AZ store:', err));
+    usStore
+      .resetFiles()
+      .catch((err) => console.error('[App Mount] Error resetting US store:', err));
+    // TODO: Add resets for other stores if they manage data in cleared DBs
+    // e.g., rateSheetStore.resetState().catch(err => console.error('Error resetting rate sheet store:', err));
+    console.log('[App Mount] Store state reset initiated.');
+    // -----------------------------------------
 
-    // --- Reset Store States ---
-    console.log('[App Mount] Resetting store states...');
-    try {
-      // Call reset actions for stores managing data related to cleared DBs
-      await azStore.resetFiles(); // Resets AZ files, reports, comparison table name
-      await usStore.resetFiles(); // Resets US files, reports, etc.
-      // TODO: Add resets for other stores if they manage data in cleared DBs
-      // e.g., await rateSheetStore.resetState();
-      console.log('[App Mount] Store states reset.');
-    } catch (storeResetError) {
-      console.error('[App Mount] Error resetting store states:', storeResetError);
-    }
-    // --------------------------
+    // --- Initialize Auth Listener (non-blocking) ---
+    console.log('[App Mount] Initializing authentication listener (non-blocking)...');
+    userStore
+      .initializeAuthListener()
+      .then(() => {
+        console.log(
+          '[App Mount] Authentication listener initialization process completed (from non-blocking call).'
+        );
+      })
+      .catch((authInitError) => {
+        console.error(
+          '[App Mount] Error initializing auth listener (from non-blocking call):',
+          authInitError
+        );
+        // Potentially set a global error state if auth listener fails critically even in non-blocking mode
+      });
+    // ---------------------------------------------
 
-    // --- Initialize Auth Listener ---
-    // Await the initialization before proceeding. Router guards will wait.
-    try {
-      console.log('[App Mount] Initializing authentication listener...');
-      await userStore.initializeAuthListener(); // This now returns a Promise
-      console.log('[App Mount] Authentication listener initialized and ready.');
-    } catch (authInitError) {
-      console.error('[App Mount] Error initializing auth listener:', authInitError);
-      // Handle error appropriately - maybe show an error message or redirect
-    }
-    // --------------------------
-
-    console.log('[App Mount] Initialization complete. App is ready.');
-    // Rest of your initialization logic can go here if needed
-
-    // REMOVE: This logic is no longer needed here as auth is initialized first
-    /* 
-    try {
-      console.log(
-        'Starting application initialization AFTER cleanup, store reset, and auth init...'
-      );
-      // Rest of your initialization logic can go here
-    } catch (error) {
-      console.error('Error during initialization:', error);
-    }
-    */
+    console.log(
+      '[App Mount] Non-blocking initializations complete. App shell is ready. Auth is initializing.'
+    );
   });
 
+  // This watchEffect handles redirection AFTER auth is initialized.
+  // The router guard should ideally handle the *initial* redirection before any component renders.
+  // This can serve as a fallback or for handling changes post-initial load.
   watchEffect(async () => {
-    const isInitialized = userStore.getAuthIsInitialized;
-    const isAuthenticated = userStore.getIsAuthenticated;
+    const isInitialized = userStore.getAuthIsInitialized; // Reactive getter
+    const isAuthenticated = userStore.getIsAuthenticated; // Reactive getter
     const currentPath = route.path;
 
     // Routes from which an authenticated user should be redirected
@@ -184,14 +180,15 @@
 
     if (isInitialized && isAuthenticated && transitionalAuthRoutes.includes(currentPath)) {
       console.log(
-        `[App WatchEffect] Conditions met for redirect. Path: "${currentPath}". Queuing redirect to /dashboard.`
+        `[App WatchEffect] Conditions met for redirect. Path: "${currentPath}". User is authenticated and on a transitional route. Queuing redirect to /dashboard.`
       );
-      await nextTick();
+      await nextTick(); // Wait for DOM updates if any are pending from isInitialized changing
 
+      // Double-check conditions after nextTick, as state might change rapidly
       if (
-        userStore.getAuthIsInitialized &&
-        userStore.getIsAuthenticated &&
-        transitionalAuthRoutes.includes(route.path)
+        userStore.getAuthIsInitialized && // Re-check reactive getter
+        userStore.getIsAuthenticated && // Re-check reactive getter
+        transitionalAuthRoutes.includes(route.path) // Re-check current route path
       ) {
         console.log(
           `[App WatchEffect] Executing redirect from "${route.path}" to /dashboard after nextTick.`
@@ -199,11 +196,9 @@
         router.push({ name: 'dashboard' });
       } else {
         console.log(
-          `[App WatchEffect] Redirect from "${currentPath}" aborted after nextTick. Conditions no longer met. Current path: ${route.path}, IsAuth: ${userStore.getIsAuthenticated}`
+          `[App WatchEffect] Redirect from "${currentPath}" aborted after nextTick. Conditions no longer met. Current path: ${route.path}, IsAuth: ${userStore.getIsAuthenticated}, IsInitialized: ${userStore.getAuthIsInitialized}`
         );
       }
-    } else if (isInitialized && !transitionalAuthRoutes.includes(currentPath)) {
-      // This log helps confirm the effect runs when initialized but not on a transitional route.
     }
   });
 
@@ -224,6 +219,8 @@
   .fade-leave-to {
     opacity: 0;
   }
+
+  /* Toast Transition - Can be removed if no other toasts use it, or kept for other potential uses */
 
   /* Ensure body has proper scroll behavior */
 </style>

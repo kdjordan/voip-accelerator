@@ -97,108 +97,99 @@ export const useUserStore = defineStore('user', {
     },
 
     async fetchProfile(userId: string): Promise<void> {
-      console.log(`[UserStore] fetchProfile INVOKED for userId: ${userId}.`);
+      console.log(
+        `[UserStore] fetchProfile (AbortController + Promise.race v2) INVOKED for userId: ${userId}.`
+      );
+      this.auth.error = null;
 
-      const PROFILE_FETCH_TIMEOUT = 10000; // 10 seconds
-      let profileData: Profile | null = null;
-      let fetchError: Error | null = null;
-      let timeoutHandle: NodeJS.Timeout | number | undefined = undefined; // For browser/Node.js compatibility
+      const controller = new AbortController();
+      // const signal = controller.signal; // Signal not directly used on Supabase query due to type issues / complexity
+      let timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
 
-      try {
-        console.log(
-          `[UserStore] TRY block in fetchProfile for ${userId}. Setting up Promise.race.`
-        );
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutHandle = setTimeout(() => {
-            console.warn(
-              `[UserStore] Profile fetch for userId: ${userId} timed out after ${PROFILE_FETCH_TIMEOUT / 1000}s via Promise.race.`
-            );
-            reject(new Error('Profile fetch timed out.')); // This error will be caught by the .catch in Promise.race
-          }, PROFILE_FETCH_TIMEOUT);
-        });
-
-        const supabaseQueryPromise = supabase
+      // Wrap the Supabase query in a new Promise to ensure it's a standard Promise for Promise.race
+      const supabaseQueryPromise = new Promise<{
+        data: Profile | null;
+        error: any;
+        status: number;
+        count: number | null;
+        statusText: string;
+      }>((resolve, reject) => {
+        supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
-          .single();
-
-        // Define clearly typed outcomes for Promise.race
-        type SupabaseRaceOutcome = {
-          type: 'supabase';
-          response: Awaited<typeof supabaseQueryPromise>;
-        };
-        type TimeoutRaceOutcome = { type: 'timeout'; error: Error };
-        type RaceOutcome = SupabaseRaceOutcome | TimeoutRaceOutcome;
-
-        // Race the Supabase query against the timeout
-        const raceResult = await Promise.race<RaceOutcome>([
-          supabaseQueryPromise.then(
-            (response) => ({ type: 'supabase', response }) as SupabaseRaceOutcome
-          ),
-          timeoutPromise.catch((error) => {
-            throw error;
-          }), // Let timeoutPromise reject, Promise.race will catch it.
-        ]).catch((error) => {
-          // This catch is specifically for if timeoutPromise rejected (won the race with a rejection)
-          // or if supabaseQueryPromise itself rejected before being wrapped by .then()
-          if (error.message === 'Profile fetch timed out.') {
-            return { type: 'timeout', error } as TimeoutRaceOutcome;
-          }
-          // For other errors (e.g. supabase query rejected directly)
-          throw error; // Re-throw to be caught by the outer try-catch
-        });
-
-        clearTimeout(timeoutHandle as any); // Clear the timeout regardless of outcome
-
-        if (raceResult.type === 'timeout') {
-          console.error(`[UserStore] Timeout won the race for userId: ${userId}.`);
-          fetchError = raceResult.error;
-        } else if (raceResult.type === 'supabase') {
-          // Typescript should now know raceResult is SupabaseRaceOutcome
-          const { data, error: supabaseError, status } = raceResult.response;
-          console.log(
-            `[UserStore] Supabase query completed for ${userId}. Status: ${status}, Error: ${JSON.stringify(supabaseError)}, Data: ${!!data}`
+          .single()
+          .then(
+            (response) => {
+              // The response from .single() is directly { data, error, status, etc. }
+              resolve(
+                response as {
+                  data: Profile | null;
+                  error: any;
+                  status: number;
+                  count: number | null;
+                  statusText: string;
+                }
+              );
+            },
+            (error) => {
+              // Handle potential rejection of the Supabase query itself
+              reject(error);
+            }
           );
+      });
 
-          if (supabaseError && status !== 406) {
-            console.error(
-              `[UserStore] Supabase error fetching profile for ${userId}:`,
-              supabaseError
-            );
-            fetchError = supabaseError;
-          } else if (data) {
-            profileData = data as Profile;
-          } else {
-            console.warn(`[UserStore] No profile data found for user ID: ${userId}`);
-            // Not an error, profile will be null, which is handled by the caller.
-          }
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          console.warn(
+            `[UserStore] Profile fetch for ${userId} timing out (10s). Aborting controller (for potential internal SDK use) and rejecting.`
+          );
+          controller.abort(); // Signal abortion - Supabase might pick this up if its global fetch is configured with this signal
+          reject(new Error('Profile fetch timed out.'));
+        }, 10000);
+      });
+
+      try {
+        const response = await Promise.race([supabaseQueryPromise, timeoutPromise]);
+
+        clearTimeout(timeoutId);
+
+        const { data, error: supabaseError, status } = response; // response is now correctly typed from supabaseQueryPromise
+
+        if (supabaseError) {
+          console.error(
+            `[UserStore] Supabase error fetching profile for ${userId} (Status: ${status}):`,
+            supabaseError
+          );
+          this.auth.error = supabaseError;
+          this.auth.profile = null;
+        } else if (data) {
+          this.auth.profile = data as Profile;
+        } else {
+          console.warn(
+            `[UserStore] No profile data found for user ID: ${userId}. (Status: ${status})`
+          );
+          this.auth.profile = null;
         }
       } catch (err: any) {
-        // This catch block would handle errors not originating from supabaseQueryPromise or timeoutPromise directly,
-        // or if the .then/.catch transformations in Promise.race failed, which is unlikely.
-        clearTimeout(timeoutHandle as any); // Ensure timeout is cleared
-        console.error(
-          `[UserStore] CATCH block in fetchProfile for ${userId} (unexpected error):`,
-          err
-        );
-        fetchError = err as Error;
+        clearTimeout(timeoutId);
+
+        if (err.message === 'Profile fetch timed out.' || err.name === 'AbortError') {
+          console.warn(
+            `[UserStore] Profile fetch for ${userId} was aborted or timed out: ${err.message}`
+          );
+          this.auth.error = new Error('Profile fetch timed out.');
+        } else {
+          console.error(
+            `[UserStore] CATCH block in fetchProfile for ${userId} (unexpected error):`,
+            err
+          );
+          this.auth.error = err instanceof Error ? err : new Error(String(err));
+        }
+        this.auth.profile = null;
       } finally {
         console.log(
-          `[UserStore] FINALLY block in fetchProfile for ${userId}. Setting profile and error.`
-        );
-        this.auth.profile = profileData;
-        if (fetchError) {
-          this.auth.error = fetchError;
-        } else {
-          // If there was no fetchError, ensure any previous error related to auth is cleared for this successful fetch context.
-          // However, be cautious if other operations might have set an error that shouldn't be cleared here.
-          // For now, only set if fetchError is present, or explicitly clear if design dictates.
-          // this.auth.error = null; // Potentially clear error if fetch was successful
-        }
-        console.log(
-          `[UserStore] fetchProfile EXECUTION FINISHED for ${userId}. Profile: ${!!this.auth.profile}, Error: ${this.auth.error?.message || 'none'}`
+          `[UserStore] fetchProfile (AbortController + Promise.race v2) EXECUTION FINISHED for ${userId}. Profile: ${!!this.auth.profile}, Error: ${this.auth.error?.message || 'none'}`
         );
       }
     },
@@ -216,216 +207,138 @@ export const useUserStore = defineStore('user', {
       this.auth.isLoading = true;
       this.auth.isInitialized = false; // Explicitly set at start
       console.log(
-        '[Auth Store] initializeAuthListener started. isLoading: true, isInitialized: false'
+        '[Auth Store] initializeAuthListener (v2) started. isLoading: true, isInitialized: false'
       );
 
-      try {
-        // Set up the onAuthStateChange listener first.
-        // This listener handles ongoing auth events.
-        const {
-          data: { subscription },
-        } = supabase.auth.onAuthStateChange(
-          async (event: AuthChangeEvent, session: Session | null) => {
-            console.log('[Auth Listener] Event:', event, 'Session:', !!session);
+      // Setup onAuthStateChange listener. This handles ongoing events and can update profile.
+      // It runs independently of the initial getSession flow below for setting isInitialized.
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(
+        async (event: AuthChangeEvent, session: Session | null) => {
+          console.log('[Auth Listener] Event:', event, 'Session:', !!session);
 
-            const currentUser = session?.user ?? null;
+          const currentUser = session?.user ?? null;
+          // Update user and isAuthenticated based on the event immediately
+          this.auth.user = currentUser;
+          this.auth.isAuthenticated = !!currentUser;
 
-            if (currentUser) {
-              this.auth.user = currentUser;
-              this.auth.isAuthenticated = true;
-
-              if (
-                event === 'SIGNED_IN' ||
-                event === 'TOKEN_REFRESHED' ||
-                event === 'USER_UPDATED'
-              ) {
-                console.log(
-                  `[Auth Listener] Event ${event} for user ${currentUser.id}. Triggering profile fetch.`
-                );
-                // Let initializeAuthListener handle the primary isLoading state.
-                // The fetchProfile call here is a consequence of an event.
-                await this.fetchProfile(currentUser.id); // Call fetchProfile
-
-                if (!this.auth.profile && this.auth.isAuthenticated) {
-                  console.warn(
-                    `[Auth Listener] User ${currentUser.id} is authenticated (event: ${event}) but no profile found. Signing out.`
+          if (currentUser) {
+            if (
+              event === 'SIGNED_IN' ||
+              event === 'TOKEN_REFRESHED' ||
+              event === 'USER_UPDATED' ||
+              event === 'INITIAL_SESSION' // Treat INITIAL_SESSION here as well for profile consistency
+            ) {
+              console.log(
+                `[Auth Listener] Event ${event} for user ${currentUser.id}. Triggering profile fetch.`
+              );
+              try {
+                // Don't make the entire onAuthStateChange handler wait for fetchProfile if it's not INITIAL_SESSION
+                // For INITIAL_SESSION, it might be okay, but generally, let it be async.
+                this.fetchProfile(currentUser.id).catch((profileError) => {
+                  console.error(
+                    `[Auth Listener] Background profile fetch for user ${currentUser.id} (event ${event}) failed:`,
+                    profileError
                   );
-                  try {
-                    await supabase.auth.signOut(); // This will trigger another SIGNED_OUT event
-                  } catch (signOutError) {
-                    console.error(
-                      '[Auth Listener] Error during signOut in onAuthStateChange:',
-                      signOutError
+                  // If profile fetch fails for an authenticated user, consider sign out
+                  if (this.auth.isAuthenticated && this.auth.user?.id === currentUser.id) {
+                    console.warn(
+                      `[Auth Listener] Signing out user ${currentUser.id} due to profile fetch failure after ${event}.`
                     );
-                    this.auth.error =
-                      signOutError instanceof Error
-                        ? signOutError
-                        : new Error('Sign out failed in listener');
+                    supabase.auth
+                      .signOut()
+                      .catch((e) =>
+                        console.error(
+                          '[Auth Listener] Error signing out after profile fetch failure:',
+                          e
+                        )
+                      );
+                    // clearAuthData() will be handled by the SIGNED_OUT event
                   }
-                }
+                });
+              } catch (profileError) {
+                // This catch might be redundant if fetchProfile itself handles its errors and doesn't throw to here.
+                console.error(
+                  `[Auth Listener] Error directly from fetchProfile call for user ${currentUser.id} (event ${event}):`,
+                  profileError
+                );
               }
-            } else if (event === 'SIGNED_OUT') {
-              console.log('[Auth Listener] Event SIGNED_OUT. Clearing auth data.');
-              this.clearAuthData();
             }
-            // Note: INITIAL_SESSION is primarily handled by the getSession() call below.
+          } else if (event === 'SIGNED_OUT') {
+            console.log('[Auth Listener] User signed out. Clearing auth data.');
+            this.clearAuthData();
           }
+          console.log(
+            `[Auth Listener] Event processed. Current state: isAuth: ${this.auth.isAuthenticated}, User: ${this.auth.user?.id}`
+          );
+        }
+      );
+      // TODO: Store and manage 'subscription' if unsubscription is needed on store disposal.
+
+      try {
+        console.log(
+          '[Auth Store] Attempting to get initial session via supabase.auth.getSession()...'
+        );
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        console.log(
+          `[Auth Store] getSession() responded. Session: ${!!session}, Error: ${JSON.stringify(sessionError)}`
         );
 
-        if (subscription) {
-          console.log('[Auth Store] onAuthStateChange subscription established.');
-        }
-
-        // Then, get the initial session state, with a timeout
-        console.log('[Auth Store] Attempting to get initial session with timeout.');
-        const GET_SESSION_TIMEOUT = 10000; // 10 seconds for getSession
-        let sessionTimeoutHandle: NodeJS.Timeout | number | undefined = undefined;
-
-        let initialSessionData: { session: Session | null; error: Error | null } = {
-          session: null,
-          error: null,
-        };
-
-        try {
-          const sessionPromise = supabase.auth.getSession();
-          const sessionTimeoutPromise = new Promise<never>((_, reject) => {
-            sessionTimeoutHandle = setTimeout(() => {
-              console.warn(
-                `[Auth Store] supabase.auth.getSession() timed out after ${GET_SESSION_TIMEOUT / 1000}s.`
-              );
-              reject(new Error('Get session timed out.'));
-            }, GET_SESSION_TIMEOUT);
-          });
-
-          // Define types for the race outcome
-          type GetSessionSuccess = {
-            type: 'session';
-            data: Awaited<ReturnType<typeof supabase.auth.getSession>>['data'];
-            error: Awaited<ReturnType<typeof supabase.auth.getSession>>['error'];
-          };
-          type GetSessionTimeout = { type: 'timeout'; error: Error };
-          type GetSessionRaceOutcome = GetSessionSuccess | GetSessionTimeout;
-
-          const raceResult = await Promise.race<GetSessionRaceOutcome>([
-            sessionPromise.then(
-              (response) =>
-                ({
-                  type: 'session',
-                  data: response.data,
-                  error: response.error,
-                }) as GetSessionSuccess
-            ),
-            sessionTimeoutPromise.catch((error) => {
-              throw error;
-            }), // Let timeoutPromise reject for Promise.race to catch
-          ]).catch((error) => {
-            // This catch is for rejections from Promise.race itself (e.g., timeout, or direct supabase error if not .then'd)
-            if (error.message === 'Get session timed out.') {
-              return { type: 'timeout', error } as GetSessionTimeout;
-            }
-            // For other errors (e.g. supabase query rejected directly and wasn't caught by its .then)
-            console.error(
-              '[Auth Store] Error during getSession promise race, possibly direct Supabase error:',
-              error
-            );
-            return { type: 'session', data: { session: null }, error } as GetSessionSuccess; // Treat as session error
-          });
-
-          clearTimeout(sessionTimeoutHandle as any);
-
-          if (raceResult.type === 'timeout') {
-            initialSessionData.error = raceResult.error;
-          } else if (raceResult.type === 'session') {
-            initialSessionData.session = raceResult.data.session;
-            initialSessionData.error = raceResult.error;
-          }
-        } catch (e: any) {
-          // Catch for errors specifically within the getSession attempt (e.g. if raceResult itself throws an error)
-          console.error('[Auth Store] Outer catch for getSession attempt failed:', e);
-          initialSessionData.error =
-            e instanceof Error ? e : new Error('Failed to process session retrieval.');
-        }
-
-        const initialErrorFromGetSession = initialSessionData.error;
-        const initialSession = initialSessionData.session;
-        const initialUser = initialSession?.user ?? null;
-
-        if (initialErrorFromGetSession) {
-          console.error(
-            '[Auth Store] Error getting initial session (processed):',
-            initialErrorFromGetSession
-          );
-          this.auth.error = initialErrorFromGetSession; // Persist getSession error
-          this.clearAuthData();
-        } else if (initialUser) {
-          this.auth.user = initialUser; // May be redundant if onAuthStateChange already set it, but ensures consistency
+        if (sessionError) {
+          console.error('[Auth Store] Error getting initial session:', sessionError);
+          this.auth.error = sessionError;
+          this.clearAuthData(); // Ensure clean state
+        } else if (session) {
+          this.auth.user = session.user;
           this.auth.isAuthenticated = true;
-
-          // Determine if a profile fetch is needed by the main initializeAuthListener flow
-          const profileIsMissingOrForDifferentUser =
-            !this.auth.profile || this.auth.profile.id !== initialUser.id;
-          // Check if there was a specific timeout error from a previous fetch attempt (likely by onAuthStateChange)
-          const previousFetchAttemptTimedOut =
-            this.auth.error?.message === 'Profile fetch timed out.';
-
-          if (profileIsMissingOrForDifferentUser || previousFetchAttemptTimedOut) {
-            if (previousFetchAttemptTimedOut) {
-              console.warn(
-                `[Auth Store] Previous profile fetch for user ${initialUser.id} timed out. Attempting fetch again.`
-              );
-              this.auth.error = null; // Clear the timeout error before retrying
-            } else {
-              console.log(
-                `[Auth Store] Profile for user ${initialUser.id} is missing or for a different user. Fetching profile.`
-              );
-            }
-            await this.fetchProfile(initialUser.id);
-          } else {
-            console.log(
-              `[Auth Store] Profile for user ${initialUser.id} already available and no recent timeout. Skipping main fetch.`
-            );
-          }
-
-          // After all attempts, if profile is still missing for an authenticated user, sign them out.
-          if (!this.auth.profile && this.auth.isAuthenticated) {
-            console.warn(
-              `[Auth Store] Post-initialization: User ${initialUser.id} is authenticated but no profile found. Attempting sign out.`
-            );
-            try {
-              await supabase.auth.signOut();
-              // onAuthStateChange should handle clearAuthData upon SIGNED_OUT event
-            } catch (signOutError) {
-              console.error(
-                '[Auth Store] Error during sign out attempt in initializeAuthListener:',
-                signOutError
-              );
-              this.auth.error =
-                signOutError instanceof Error ? signOutError : new Error('Sign out failed');
-              this.clearAuthData(); // Fallback
-            }
-          }
-        } else {
-          // No initial user from getSession, and no error from getSession itself
           console.log(
-            '[Auth Store] No initial user session found (processed clean). Clearing auth data.'
+            `[Auth Store] Initial session found for user ${session.user.id}. Triggering profile fetch (non-blocking for isInitialized).`
           );
-          this.clearAuthData();
+          // Fetch profile in the background. Don't await it here.
+          // The UI should react to profile changes when fetchProfile completes.
+          this.fetchProfile(session.user.id).catch((profileError) => {
+            console.error(
+              `[Auth Store] Background fetchProfile for initial session user ${session.user.id} failed:`,
+              profileError
+            );
+            // If still authenticated as this user, and profile fetch failed, sign out.
+            if (this.auth.user?.id === session.user.id && this.auth.isAuthenticated) {
+              console.warn(
+                `[Auth Store] Signing out user ${session.user.id} due to background profile fetch failure after initial session.`
+              );
+              supabase.auth
+                .signOut()
+                .catch((e) =>
+                  console.error(
+                    '[Auth Store] Error signing out on background profile fetch failure:',
+                    e
+                  )
+                );
+              // clearAuthData() will be triggered by the SIGNED_OUT event from onAuthStateChange
+            }
+          });
+        } else {
+          console.log('[Auth Store] No initial session found or session is invalid.');
+          this.clearAuthData(); // Ensure clean state
         }
       } catch (error) {
-        // Catch any UNEXPECTED errors from the main try block of initializeAuthListener
-        // (e.g., if a re-thrown error from Promise.race for getSession was not handled)
         console.error(
-          '[Auth Store] Uncaught critical error in initializeAuthListener main try block:',
+          '[Auth Store] Critical error during getSession() call or its processing:',
           error
         );
-        this.auth.error =
-          error instanceof Error ? error : new Error('Critical initialization failure');
-        this.clearAuthData();
+        this.auth.error = error as Error;
+        this.clearAuthData(); // Ensure clean state on critical failure
       } finally {
+        // This is the crucial part: isInitialized is set true after initial session check attempt.
         this.auth.isInitialized = true;
-        this.auth.isLoading = false; // This is now correctly set after all async ops
+        this.auth.isLoading = false;
         console.log(
-          `[Auth Store] initializeAuthListener finished. isInitialized: ${this.auth.isInitialized}, isLoading: ${this.auth.isLoading}, isAuthenticated: ${this.auth.isAuthenticated}, User: ${!!this.auth.user}, Profile: ${!!this.auth.profile}, Error: ${this.auth.error?.message || 'none'}`
+          `[Auth Store] initializeAuthListener (v2) MAIN FINALLY. isInitialized: ${this.auth.isInitialized}, isLoading: ${this.auth.isLoading}, isAuthenticated: ${this.auth.isAuthenticated}`
         );
       }
     },
