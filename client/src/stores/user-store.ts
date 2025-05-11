@@ -156,8 +156,18 @@ export const useUserStore = defineStore('user', {
                   `[Auth Listener] Fetching profile for user ${currentUser.id} on event ${event}`
                 );
                 await this.fetchProfile(currentUser.id);
+                if (!this.auth.profile && this.auth.isAuthenticated) {
+                  console.warn(
+                    `[Auth Listener] User ${currentUser.id} is authenticated but no profile found after event ${event}. Signing out.`
+                  );
+                  await supabase.auth.signOut();
+                }
               } catch (profileError) {
-                console.error('[Auth Listener] Error fetching profile on event:', profileError);
+                console.error(
+                  '[Auth Listener] Error fetching profile on event, signing out:',
+                  profileError
+                );
+                await supabase.auth.signOut();
               }
             }
           } else {
@@ -185,17 +195,24 @@ export const useUserStore = defineStore('user', {
               const currentUser = session?.user ?? null;
               this.auth.user = currentUser;
               this.auth.isAuthenticated = !!currentUser;
-              if (currentUser && !this.auth.profile) {
+              if (currentUser) {
                 try {
                   console.log(
                     `[Auth Listener] Initial check found user ${currentUser.id}, fetching profile.`
                   );
                   await this.fetchProfile(currentUser.id);
+                  if (!this.auth.profile && this.auth.isAuthenticated) {
+                    console.warn(
+                      `[Auth Listener] Initial check: User ${currentUser.id} authenticated but no profile. Signing out.`
+                    );
+                    supabase.auth.signOut();
+                  }
                 } catch (profileError) {
                   console.error(
-                    '[Auth Listener] Error fetching profile on initial check:',
+                    '[Auth Listener] Error fetching profile on initial check, signing out:',
                     profileError
                   );
+                  supabase.auth.signOut();
                 }
               } else if (!currentUser) {
                 this.clearAuthData();
