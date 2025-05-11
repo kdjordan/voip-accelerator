@@ -24,13 +24,13 @@
           About
         </RouterLink> -->
         <RouterLink
-          to="/dashboard"
+          to="/login"
           class="text-fbWhite/90 hover:text-fbWhite transition-colors text-sm"
         >
           Log in
         </RouterLink>
         <RouterLink
-          to="/dashboard"
+          to="/signup"
           class="bg-accent/20 text-accent border border-accent/50 text-sm font-medium px-4 py-1.5 rounded-3xl hover:bg-accent/30 transition-colors"
         >
           Sign up

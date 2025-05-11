@@ -18,6 +18,12 @@
   const errorMessage = ref<string | null>(null);
 
   onMounted(() => {
+    console.log(
+      '[AuthCallbackPage] Mounted. Current URL:',
+      window.location.href,
+      'Current hash:',
+      window.location.hash
+    );
     const hash = window.location.hash;
 
     if (hash.includes('error=')) {
