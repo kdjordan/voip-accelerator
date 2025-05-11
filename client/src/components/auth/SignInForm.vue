@@ -52,17 +52,17 @@
     </div>
 
     <!-- Optional: Add Divider -->
-    <div class="relative mt-10">
+    <!-- <div class="relative mt-10">
       <div class="absolute inset-0 flex items-center" aria-hidden="true">
         <div class="w-full border-t border-white/10" />
       </div>
       <div class="relative flex justify-center text-sm font-medium leading-6">
         <span class="bg-gray-800 px-6 text-gray-400">Or continue with</span>
       </div>
-    </div>
+    </div> 
 
-    <!-- Optional: Add Social Logins (e.g., Google) -->
-    <div class="mt-6">
+    
+     <div class="mt-6">
       <BaseButton
         @click="handleGoogleSignIn"
         :is-loading="isLoadingGoogle"
@@ -70,10 +70,10 @@
         class="w-full"
       >
         <span class="sr-only">Sign in with Google</span>
-        <!-- Add Google Icon here -->
+        
         Sign in with Google
       </BaseButton>
-    </div>
+    </div> -->
   </form>
 </template>
 

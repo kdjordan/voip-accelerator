@@ -82,7 +82,7 @@
       </BaseButton>
     </div>
 
-    <!-- Optional: Add Social Logins -->
+    <!-- Optional: Add Social Logins 
     <div class="relative mt-10">
       <div class="absolute inset-0 flex items-center" aria-hidden="true">
         <div class="w-full border-t border-white/10" />
@@ -99,10 +99,11 @@
         class="w-full"
       >
         <span class="sr-only">Sign up with Google</span>
-        <!-- Add Google Icon here -->
+        
         Sign up with Google
       </BaseButton>
     </div>
+    -->
   </form>
 </template>
 
