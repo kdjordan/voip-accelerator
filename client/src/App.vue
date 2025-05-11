@@ -1,55 +1,64 @@
 <template>
   <div id="app" class="min-h-screen bg-fbBlack text-fbWhite font-sans">
-    <!-- Different layout for marketing pages -->
-    <template v-if="isMarketingPage">
-      <!-- MarketingMobileNav will be added within specific marketing page layouts (e.g., HomeView) -->
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in" appear>
-          <component :is="Component" />
-        </transition>
-      </router-view>
-    </template>
+    <!-- Global Loading State -->
+    <div
+      v-if="!userStore.getAuthIsInitialized"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-fbBlack/80 backdrop-blur-sm"
+    >
+      <div class="text-xl text-accent">Loading Application...</div>
+      <!-- Optional: Add a spinner icon here -->
+    </div>
 
-    <!-- App layout with sidebar/mobile nav for non-marketing pages -->
-    <template v-else>
-      <div class="flex min-h-screen">
-        <!-- Mobile Nav (only on small screens) -->
-        <AppMobileNav :items="appNavigationItems" class="md:hidden" />
+    <!-- Main Application Content (rendered once auth is initialized) -->
+    <template v-if="userStore.getAuthIsInitialized">
+      <!-- Different layout for marketing pages -->
+      <template v-if="isMarketingPage">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in" appear>
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </template>
 
-        <!-- Side Nav (only on medium screens and up) -->
-        <SideNav
-          v-if="shouldShowSideNav"
-          :navigation="appNavigationItems"
-          class="hidden md:block"
-        />
+      <!-- App layout with sidebar/mobile nav for non-marketing pages -->
+      <template v-else>
+        <div class="flex min-h-screen">
+          <!-- Mobile Nav (only on small screens) -->
+          <AppMobileNav :items="appNavigationItems" class="md:hidden" />
 
-        <!-- Main Content Area -->
-        <!-- Added pt-16 md:pt-0 for mobile header space -->
-        <div
-          class="flex-1 flex flex-col transition-all duration-300 pt-16 md:pt-0"
-          :class="[
-            shouldShowSideNav && userStore.ui.isSideNavOpen
-              ? 'md:ml-[200px]' // Apply margin only on md+ screens
-              : shouldShowSideNav
-                ? 'md:ml-[64px]' // Apply margin only on md+ screens
-                : '',
-          ]"
-        >
-          <main class="flex-1">
-            <!-- Added padding for content -->
-            <div
-              class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8"
-            >
-              <router-view v-slot="{ Component }">
-                <transition name="fade" mode="out-in" appear>
-                  <component :is="Component" />
-                </transition>
-              </router-view>
-            </div>
-          </main>
-          <TheFooter />
+          <!-- Side Nav (only on medium screens and up) -->
+          <SideNav
+            v-if="shouldShowSideNav"
+            :navigation="appNavigationItems"
+            class="hidden md:block"
+          />
+
+          <!-- Main Content Area -->
+          <div
+            class="flex-1 flex flex-col transition-all duration-300 pt-16 md:pt-0"
+            :class="[
+              shouldShowSideNav && userStore.ui.isSideNavOpen
+                ? 'md:ml-[200px]'
+                : shouldShowSideNav
+                  ? 'md:ml-[64px]'
+                  : '',
+            ]"
+          >
+            <main class="flex-1">
+              <div
+                class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8"
+              >
+                <router-view v-slot="{ Component }">
+                  <transition name="fade" mode="out-in" appear>
+                    <component :is="Component" />
+                  </transition>
+                </router-view>
+              </div>
+            </main>
+            <TheFooter />
+          </div>
         </div>
-      </div>
+      </template>
     </template>
   </div>
 </template>
@@ -61,8 +70,8 @@
   import { onMounted, onBeforeUnmount, ref } from 'vue';
   import { useUserStore } from '@/stores/user-store';
   import { clearApplicationDatabases } from '@/utils/cleanup';
-  import { RouterView, useRoute } from 'vue-router';
-  import { computed } from 'vue';
+  import { RouterView, useRoute, useRouter } from 'vue-router';
+  import { computed, watchEffect, nextTick } from 'vue';
   // Import relevant stores
   import { useAzStore } from '@/stores/az-store';
   import { useUsStore } from '@/stores/us-store';
@@ -70,6 +79,7 @@
   // TODO: Add imports for other stores if needed (e.g., rate sheets)
 
   const route = useRoute();
+  const router = useRouter(); // Added router instance
   const userStore = useUserStore();
   // Instantiate stores
   const azStore = useAzStore();
@@ -162,6 +172,39 @@
       console.error('Error during initialization:', error);
     }
     */
+  });
+
+  watchEffect(async () => {
+    const isInitialized = userStore.getAuthIsInitialized;
+    const isAuthenticated = userStore.getIsAuthenticated;
+    const currentPath = route.path;
+
+    // Routes from which an authenticated user should be redirected
+    const transitionalAuthRoutes = ['/', '/home', '/login', '/signup', '/auth/callback'];
+
+    if (isInitialized && isAuthenticated && transitionalAuthRoutes.includes(currentPath)) {
+      console.log(
+        `[App WatchEffect] Conditions met for redirect. Path: "${currentPath}". Queuing redirect to /dashboard.`
+      );
+      await nextTick();
+
+      if (
+        userStore.getAuthIsInitialized &&
+        userStore.getIsAuthenticated &&
+        transitionalAuthRoutes.includes(route.path)
+      ) {
+        console.log(
+          `[App WatchEffect] Executing redirect from "${route.path}" to /dashboard after nextTick.`
+        );
+        router.push({ name: 'dashboard' });
+      } else {
+        console.log(
+          `[App WatchEffect] Redirect from "${currentPath}" aborted after nextTick. Conditions no longer met. Current path: ${route.path}, IsAuth: ${userStore.getIsAuthenticated}`
+        );
+      }
+    } else if (isInitialized && !transitionalAuthRoutes.includes(currentPath)) {
+      // This log helps confirm the effect runs when initialized but not on a transitional route.
+    }
   });
 
   onBeforeUnmount(() => {

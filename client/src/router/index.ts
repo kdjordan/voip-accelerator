@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { nextTick } from 'vue';
 import { adminRoutes } from './admin-routes';
 import { useUserStore } from '@/stores/user-store';
 import { supabase } from '@/services/supabase.service';
@@ -132,53 +133,101 @@ const publicOnlyRoutes = [
 // Transitional or non-content pages for authenticated users to be redirected from
 const transitionalAuthRoutes = ['/login', '/signup', '/auth/callback', '/']; // Added root '/' and '/auth/callback'
 
+// Helper function to wait for auth initialization
+async function waitForAuthInitialization(
+  userStoreInstance: ReturnType<typeof useUserStore>
+): Promise<void> {
+  if (userStoreInstance.getAuthIsInitialized) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const unwatch = userStoreInstance.$subscribe((_mutation, state) => {
+      // Using state from $subscribe to check the new value of isInitialized
+      if (state.auth.isInitialized) {
+        console.log('[NavGuard Wait] Auth initialized via $subscribe. Resolving wait.');
+        unwatch(); // Stop watching
+        resolve();
+      }
+    });
+    // Fallback check in case the state was already updated when $subscribe was called
+    // or if a direct action was too quick for $subscribe to catch the change before initial check.
+    if (userStoreInstance.getAuthIsInitialized) {
+      console.log('[NavGuard Wait] Auth was already initialized (fallback check). Resolving wait.');
+      unwatch();
+      resolve();
+    }
+  });
+}
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
 
-  // It's crucial that the user store, especially auth state, is initialized.
-  // Assuming App.vue or a similar entry point awaits userStore.initializeAuthListener()
+  console.log(
+    `[NavGuard ENTRY] Path: ${to.path}, Store isInitialized (getter): ${userStore.getAuthIsInitialized}, Store isAuthenticated (getter): ${userStore.getIsAuthenticated}`
+  );
+
   if (!userStore.getAuthIsInitialized) {
-    console.warn(
-      '[NavGuard] Auth store not fully initialized. Navigation might be based on incomplete state. Waiting for initialization is recommended.'
+    console.warn('[NavGuard] Auth store not yet initialized. Waiting for initialization...');
+    await waitForAuthInitialization(userStore);
+    // After waiting for isInitialized, wait for one more tick for related reactive updates
+    // like isAuthenticated potentially being set by onAuthStateChange if a session was found.
+    console.log('[NavGuard] isInitialized is true. Waiting for nextTick before final auth check.');
+    await nextTick();
+    console.log(
+      `[NavGuard POST-WAIT & POST-nextTick] Path: ${to.path}, Store isInitialized (getter): ${userStore.getAuthIsInitialized}, Store isAuthenticated (getter): ${userStore.getIsAuthenticated}`
     );
-    // In a real-world scenario, you might want to implement a more robust waiting mechanism
-    // or ensure initializeAuthListener always completes before any navigation.
   }
 
   const isAuthenticated = userStore.getIsAuthenticated;
+  const authIsInitialized = userStore.getAuthIsInitialized; // Should be true here
   const requiresAuth = authRequiredRoutes.some((route) => to.path.startsWith(route));
-  // const isPublicOnly = publicOnlyRoutes.includes(to.path); // Replaced by transitionalAuthRoutes logic
   const isTransitionalRoute = transitionalAuthRoutes.includes(to.path);
   const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
   const isAdmin = userStore.getUserRole === 'admin';
 
   console.log(
-    `NavGuard Check: To: ${to.path}, IsAuth: ${isAuthenticated}, RequiresAuth: ${requiresAuth}, IsTransitional: ${isTransitionalRoute}, RequiresAdmin: ${requiresAdmin}, IsAdmin: ${isAdmin}`
+    `[NavGuard DECISION_CHECK] To: ${to.path}, Initialized: ${authIsInitialized}, IsAuth: ${isAuthenticated}, RequiresAuth: ${requiresAuth}, IsTransitional: ${isTransitionalRoute}, RequiresAdmin: ${requiresAdmin}, IsAdmin: ${isAdmin}`
   );
 
   if (isAuthenticated) {
     if (isTransitionalRoute) {
-      console.log(
-        '[NavGuard] Authenticated user on a transitional route. Redirecting to dashboard.'
-      );
-      next({ name: 'dashboard' }); // Use name for clarity, assuming 'dashboard' is defined
+      console.log('[NavGuard] Authenticated user on transitional route. Redirecting to dashboard.');
+      next({ name: 'dashboard' });
     } else if (requiresAdmin && !isAdmin) {
       console.log(
         '[NavGuard] Authenticated user lacks admin rights for admin route. Redirecting to dashboard.'
       );
-      next({ name: 'dashboard' }); // Or an 'Unauthorized' page
+      next({ name: 'dashboard' });
     } else {
-      console.log('[NavGuard] Authenticated user. Allowing navigation.');
+      console.log('[NavGuard] Authenticated user. Allowing navigation to:', to.path);
       next();
     }
   } else {
     // Not authenticated
-    if (requiresAuth) {
-      console.log('[NavGuard] Unauthenticated user on a protected route. Redirecting to login.');
-      next({ name: 'Login', query: { redirect: to.fullPath } });
+    if (authIsInitialized) {
+      // Only act if store initialization has confirmed not authenticated
+      if (requiresAuth) {
+        console.log(
+          '[NavGuard] Unauthenticated (initialized) user on protected route. Redirecting to login. Target:',
+          to.fullPath
+        );
+        next({ name: 'Login', query: { redirect: to.fullPath } });
+      } else {
+        console.log(
+          '[NavGuard] Unauthenticated (initialized) user. Allowing navigation to public route:',
+          to.path
+        );
+        next();
+      }
     } else {
-      console.log('[NavGuard] Unauthenticated user. Allowing navigation to public route.');
-      next();
+      // Auth not yet initialized, could be a protected or public route.
+      // If App.vue handles a loading screen until initialized, this path might be okay for initial load.
+      // If direct access to protected route before init, it might flash then redirect.
+      console.log(
+        '[NavGuard] Auth not yet initialized (but should have waited). Allowing navigation for now. Path:',
+        to.path
+      );
+      next(); // This case should ideally not be hit if waitForAuthInitialization works as expected.
     }
   }
 });

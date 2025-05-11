@@ -46,7 +46,7 @@
     </div>
 
     <div>
-      <BaseButton type="submit" :is-loading="isLoading" class="w-full">
+      <BaseButton type="submit" :is-loading="isLoading" variant="primary" class="w-full">
         {{ isLoading ? 'Signing in...' : 'Sign in' }}
       </BaseButton>
     </div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-background text-foreground">
+  <div class="flex items-center justify-center min-h-screen bg-background text-accent bg-green-900/10 border border-green-900/30 p-4 rounded-md">
     <div class="text-center">
       <p v-if="errorMessage" class="text-lg font-semibold text-red-500">{{ errorMessage }}</p>
       <p v-else class="text-lg font-semibold animate-pulse">Processing authentication...</p>
@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { onMounted, ref, watchEffect } from 'vue';
   import { useRouter } from 'vue-router';
   import { useUserStore } from '@/stores/user-store'; // Assuming this path
 
@@ -36,36 +36,55 @@
 
       // Redirect to login after a delay to allow the user to see the message
       setTimeout(() => {
-        router.push({ name: 'Login' });
-      }, 4000); // 4-second delay
-      return;
-    }
-
-    // If no access_token and hash is minimal (e.g., just '#' or empty)
-    // and user is not authenticated after a brief moment, redirect to login.
-    // This handles cases where user lands here directly without an auth flow.
-    if (!hash.includes('access_token=') && (hash === '#' || hash === '')) {
-      console.warn('[AuthCallbackPage] Loaded without expected auth tokens in hash.');
-      setTimeout(() => {
-        // Re-check authentication state before redirecting
-        // The onAuthStateChange might have just kicked in for a valid persistent session
-        if (!userStore.getIsAuthenticated && router.currentRoute.value.name === 'AuthCallback') {
-          errorMessage.value = 'Invalid authentication attempt. Redirecting to login...';
-          console.log('[AuthCallbackPage] Redirecting to login due to missing auth context.');
-          setTimeout(() => {
-            router.push({ name: 'Login' });
-          }, 2000);
+        // Check if still on AuthCallback before redirecting, in case another redirect happened
+        if (router.currentRoute.value.name === 'AuthCallback') {
+          router.replace({ name: 'Login' });
         }
-      }, 1500); // Wait a bit for onAuthStateChange to potentially resolve
-      return;
+      }, 4000); // 4-second delay
+      return; // Important: return if there's an error from hash
     }
 
-    // If access_token is present or other relevant hash (not an error),
-    // the onAuthStateChange listener in user-store.ts and router guards
-    // are expected to handle successful authentication and redirection.
+    // If no error in hash, watchEffect will handle redirection based on store state.
+    // The old logic for "missing auth context" or timeouts if no access_token is present
+    // is removed as the watchEffect is more robust.
     console.log(
-      '[AuthCallbackPage] Processing authentication via onAuthStateChange and router guards.'
+      '[AuthCallbackPage] No immediate error in hash. Awaiting store state changes via watchEffect.'
     );
+  });
+
+  watchEffect(() => {
+    console.log(
+      '[AuthCallbackPage] watchEffect triggered. isAuthenticated:',
+      userStore.getIsAuthenticated,
+      'isInitialized:',
+      userStore.getAuthIsInitialized,
+      'Current route:',
+      router.currentRoute.value.name,
+      'Error message ref:',
+      errorMessage.value
+    );
+
+    // Only proceed if we are still on the AuthCallback page AND no error message was set from the URL hash
+    if (router.currentRoute.value.name === 'AuthCallback' && !errorMessage.value) {
+      if (userStore.getAuthIsInitialized) {
+        if (userStore.getIsAuthenticated) {
+          console.log(
+            '[AuthCallbackPage] User authenticated and store initialized. Redirecting to dashboard.'
+          );
+          router.replace({ name: 'dashboard' }); // Use replace to avoid callback page in history
+        } else {
+          // Store is initialized, but user is not authenticated.
+          // This implies the authentication process (e.g., profile fetch) might have failed
+          // and led to a sign-out within the store, or an explicit sign-out happened.
+          console.log(
+            '[AuthCallbackPage] Store initialized, but user not authenticated. Redirecting to Login.'
+          );
+          router.replace({ name: 'Login' });
+        }
+      }
+      // If not yet initialized, watchEffect will run again when userStore.getAuthIsInitialized changes.
+      // No explicit action needed here; the component will continue to show "Processing...".
+    }
   });
 
   // No specific script logic needed here initially beyond the onMounted hook.
