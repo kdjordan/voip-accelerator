@@ -37,6 +37,8 @@ coverage
 .env
 .env.local
 .env.*.local
+.env.development
+.env.staging
 
 # Server logs
 ../server/logs/*

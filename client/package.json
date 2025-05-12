@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check build-only",
+    "build": "vite build",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --noEmit",
-    "test": "vitest",
+    "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
+    "test": "vitest --mode test",
+    "test:unit": "vitest --environment jsdom --mode test",
+    "build:staging": "vite build --mode staging",
     "prepare": "husky install"
   },
   "dependencies": {
