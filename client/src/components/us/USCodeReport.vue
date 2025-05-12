@@ -62,17 +62,19 @@
         </div>
 
         <!-- Grid for Individual File Summaries -->
-        <div class="flex gap-8 min-w-max">
+        <div class="flex flex-col md:flex-row gap-4 md:gap-8 w-full overflow-hidden">
           <!-- Display USCodeSummary for file1 if available -->
           <USCodeSummary
             v-if="report.file1 && report.file1.fileName"
             :componentId="getComponentIdForFile(report.file1.fileName)"
+            class="flex-1 min-w-0"
           />
 
           <!-- Display USCodeSummary for file2 if available -->
           <USCodeSummary
             v-if="report.file2 && report.file2.fileName"
             :componentId="getComponentIdForFile(report.file2.fileName)"
+            class="flex-1 min-w-0"
           />
         </div>
       </div>
