@@ -122,8 +122,8 @@
       id: 'pro',
       name: 'The Plan',
       description: 'Unlock advanced features and unlimited comparisons.',
-      priceMonthly: 25,
-      priceYearly: 250, // Added yearly price
+      priceMonthly: 50,
+      priceYearly: 500, // Added yearly price
       features: [
         'Unlimited Rate Deck Comparisons',
         'US NPANXX and A-Z formats',
