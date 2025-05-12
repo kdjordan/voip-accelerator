@@ -1415,10 +1415,10 @@
       // --- End refresh ---
 
       // --- Reset adjustment form ---
-      adjustmentType.value = adjustmentTypeOptions[0].value;
-      adjustmentValueType.value = adjustmentValueTypeOptions[0].value;
-      adjustmentValue.value = null;
-      adjustmentTargetRate.value = adjustmentTargetRateOptions[0].value;
+      // adjustmentType.value = adjustmentTypeOptions[0].value; // Keep selection
+      // adjustmentValueType.value = adjustmentValueTypeOptions[0].value; // Keep selection
+      adjustmentValue.value = null; // Only reset the value input
+      // adjustmentTargetRate.value = adjustmentTargetRateOptions[0].value; // Keep selection
       // --- End reset form ---
 
       adjustmentStatusTimeoutId = setTimeout(() => {
