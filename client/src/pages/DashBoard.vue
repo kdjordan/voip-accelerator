@@ -88,26 +88,29 @@
               <div>
                 <h3 class="text-md font-medium mb-1 text-gray-300">Subscription Plan</h3>
                 <p class="text-sm text-gray-300">
-                  Your current plan is: <span class="font-medium">{{ currentPlan }}</span>
+                  Your current plan is: <span class="font-medium">{{ currentPlanName }}</span>
                 </p>
               </div>
-              <BaseBadge variant="accent" uppercase> {{ currentPlan }} Plan </BaseBadge>
+              <BaseBadge :variant="currentPlanBadgeVariant" uppercase>
+                {{ currentPlanName }} Plan
+              </BaseBadge>
             </div>
           </div>
-          <!-- Trial Status Box -->
+          <!-- Plan Expiration Box -->
           <div class="bg-gray-900/40 rounded-lg p-4">
             <h3 class="text-md font-medium mb-2 text-gray-300">Billing Information</h3>
-            <p v-if="trialEndsAt && trialEndsAt > new Date()" class="text-sm text-gray-300">
-              Your trial ends on:
-              <span class="font-semibold text-accent">{{ formattedTrialEndsAt }}</span>
+            <p v-if="planExpiresAt && planExpiresAt > new Date()" class="text-sm text-gray-300">
+              Your plan ends on:
+              <span class="font-semibold text-accent">{{ formattedPlanExpiresAt }}</span>
             </p>
-            <p v-else-if="trialEndsAt && trialEndsAt <= new Date()" class="text-sm text-yellow-400">
-              Your trial has ended.
+            <p
+              v-else-if="planExpiresAt && planExpiresAt <= new Date()"
+              class="text-sm text-yellow-400"
+            >
+              Your plan has expired.
             </p>
-            <p v-else class="text-sm text-gray-400">No trial information available.</p>
+            <p v-else class="text-sm text-gray-400">No plan expiration information available.</p>
           </div>
-
-          <!-- Subscription Plan Box -->
 
           <!-- Update Email Form Box -->
           <div class="bg-gray-900/40 rounded-lg p-4">
@@ -256,6 +259,7 @@
     ArrowRightOnRectangleIcon,
   } from '@heroicons/vue/24/solid';
   import { useRouter } from 'vue-router';
+  import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
 
   // User store for user info
   const userStore = useUserStore();
@@ -265,17 +269,32 @@
   // const authUser = computed(() => userStore.user);
 
   // Adjusted: Fetch plan directly, badge moved below
-  const currentPlan = computed(() => userStore.auth.profile?.subscription_status ?? 'Free');
+  const currentPlanTier = computed<PlanTierType | null>(() => userStore.getCurrentPlanTier);
+
+  const currentPlanName = computed(() => {
+    const tier = currentPlanTier.value;
+    if (!tier) return 'Unknown';
+    return tier.charAt(0).toUpperCase() + tier.slice(1);
+  });
+
+  const currentPlanBadgeVariant = computed<BaseBadgeProps['variant']>(() => {
+    const tier = currentPlanTier.value;
+    if (tier === 'trial') {
+      return 'warning';
+    }
+    return 'accent'; // Default for monthly, annual, or unknown
+  });
+
   const userUsage = computed(() => ({ uploadsToday: 0 }));
 
-  // Trial Information
-  const trialEndsAt = computed(() => {
-    const endsAt = userStore.getUserProfile?.trial_ends_at;
+  // Plan Expiration Information
+  const planExpiresAt = computed(() => {
+    const endsAt = userStore.getUserProfile?.plan_expires_at;
     return endsAt ? new Date(endsAt) : null;
   });
 
-  const formattedTrialEndsAt = computed(() => {
-    if (!trialEndsAt.value) return 'N/A';
+  const formattedPlanExpiresAt = computed(() => {
+    if (!planExpiresAt.value) return 'N/A';
     try {
       return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
@@ -284,9 +303,9 @@
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-      }).format(trialEndsAt.value);
+      }).format(planExpiresAt.value);
     } catch (e) {
-      console.error('Error formatting trial end date:', trialEndsAt.value, e);
+      console.error('Error formatting plan_expires_at date:', planExpiresAt.value, e);
       return 'Invalid Date';
     }
   });

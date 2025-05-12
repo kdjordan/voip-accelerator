@@ -244,9 +244,7 @@ Below are suggested templates for each email type. These aim for a clean, profes
         </p>
       </div>
       <div class="footer">
-        <p>
-          &copy; {{ "now" | date: "%Y" }} VOIP Accelerator. All rights reserved.
-        </p>
+        <p>&copy; VOIP Accelerator. All rights reserved.</p>
       </div>
     </div>
   </body>
@@ -362,9 +360,7 @@ Below are suggested templates for each email type. These aim for a clean, profes
         </p>
       </div>
       <div class="footer">
-        <p>
-          &copy; {{ "now" | date: "%Y" }} VOIP Accelerator. All rights reserved.
-        </p>
+        <p>&copy; VOIP Accelerator. All rights reserved.</p>
       </div>
     </div>
   </body>
@@ -482,9 +478,7 @@ Below are suggested templates for each email type. These aim for a clean, profes
         </p>
       </div>
       <div class="footer">
-        <p>
-          &copy; {{ "now" | date: "%Y" }} VOIP Accelerator. All rights reserved.
-        </p>
+        <p>&copy; VOIP Accelerator. All rights reserved.</p>
       </div>
     </div>
   </body>
@@ -610,9 +604,7 @@ Below are suggested templates for each email type. These aim for a clean, profes
         </p>
       </div>
       <div class="footer">
-        <p>
-          &copy; {{ "now" | date: "%Y" }} VOIP Accelerator. All rights reserved.
-        </p>
+        <p>&copy; VOIP Accelerator. All rights reserved.</p>
       </div>
     </div>
   </body>
@@ -731,9 +723,7 @@ Below are suggested templates for each email type. These aim for a clean, profes
         </p>
       </div>
       <div class="footer">
-        <p>
-          &copy; {{ "now" | date: "%Y" }} VOIP Accelerator. All rights reserved.
-        </p>
+        <p>&copy; VOIP Accelerator. All rights reserved.</p>
       </div>
     </div>
   </body>
@@ -841,9 +831,7 @@ Below are suggested templates for each email type. These aim for a clean, profes
         </p>
       </div>
       <div class="footer">
-        <p>
-          &copy; {{ "now" | date: "%Y" }} VOIP Accelerator. All rights reserved.
-        </p>
+        <p>&copy; VOIP Accelerator. All rights reserved.</p>
       </div>
     </div>
   </body>

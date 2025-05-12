@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { User, Profile } from '../types/user-types';
+import type { User, Profile, PlanTierType } from '../types/user-types';
 import { supabase } from '@/services/supabase.service';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
@@ -54,16 +54,19 @@ export const useUserStore = defineStore('user', {
     getAuthIsInitialized: (state) => state.auth.isInitialized,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
     getUploadsToday: (state) => state.usage.uploadsToday,
-    isTrialActive: (state) => {
-      if (!state.auth.profile?.trial_ends_at) {
+    isPlanActive: (state) => {
+      if (!state.auth.profile?.plan_expires_at) {
         return false;
       }
       try {
-        return new Date(state.auth.profile.trial_ends_at) > new Date();
+        return new Date(state.auth.profile.plan_expires_at) > new Date();
       } catch (e) {
-        console.error('Error parsing trial_ends_at date:', state.auth.profile.trial_ends_at, e);
+        console.error('Error parsing plan_expires_at date:', state.auth.profile.plan_expires_at, e);
         return false;
       }
+    },
+    getCurrentPlanTier: (state): PlanTierType | null => {
+      return (state.auth.profile?.subscription_status as PlanTierType | null) ?? null;
     },
   },
 
