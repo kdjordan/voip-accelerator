@@ -4,6 +4,10 @@ import type { SupabaseClient, Session } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
+// Log the key for debugging in production
+console.log('[DEBUG] VITE_SUPABASE_ANON_KEY from import.meta.env:', supabaseAnonKey);
+console.log('[DEBUG] VITE_SUPABASE_URL from import.meta.env:', supabaseUrl);
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check your .env file.');
 }
