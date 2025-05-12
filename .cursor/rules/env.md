@@ -15,7 +15,6 @@ Using separate environments is crucial for a stable development lifecycle. It al
 Common environments include:
 
 - **Development**: For local development and daily work.
-- **Testing**: For running automated tests (unit, integration, E2E).
 - **Staging**: (Optional) A pre-production environment that mimics production as closely as possible.
 - **Production**: The live environment accessible to end-users.
 
@@ -334,3 +333,96 @@ AWS Amplify can be used for hosting your frontend application, setting up a CI/C
     Amplify Hosting makes it easy to create new environments based on Git branches. Each branch can have its own environment variable configurations, backend environment (if using Amplify backend features), and custom domain.
 
 By integrating AWS Amplify, you can streamline your deployment process and leverage its scalable infrastructure for hosting your Vue/Vite application.
+
+---
+
+## 10. Current State & Database Setup
+
+### Current State & Migration Summary
+
+- **Edge Functions:** Assumed to be managed as previously stated.
+- **Database Migrations:** A series of migrations have been applied to set up core tables, functions, and RLS policies. These include:
+  - `profiles_migration`: Created the `public.profiles` table and initial RLS policies.
+  - `lerg_migration`: Created the `public.get_my_role()` SQL function, the `public.lerg_codes` table, and its RLS policies.
+  - `add_admin_rls_to_profiles`: Added admin-specific RLS policies to the `public.profiles` table.
+  - `create_profile_on_signup_trigger`: Intended to create the `public.handle_new_user()` SQL function and the trigger on `auth.users` to populate profiles. Due to permissions, the trigger part of this migration required manual application via the Supabase SQL Editor.
+- **Manual Steps:** The trigger `on_auth_user_created` on `auth.users` (executing `public.handle_new_user`) was set up manually via the Supabase SQL Editor due to migration permission constraints.
+
+### Key Database Objects Implemented
+
+The following core database objects have been set up in the `public` schema (unless otherwise specified):
+
+1.  **`profiles` Table:**
+
+    - Stores user-specific information, linked to `auth.users.id`.
+    - Columns include `id`, `created_at`, `updated_at`, `role`, `trial_ends_at`, `user_agent`, `signup_method`, `stripe_customer_id`, `subscription_status`.
+    - **RLS Policies:**
+      - Users can read their own profile.
+      - Users can update their own profile.
+      - Admins (via `get_my_role()`) can select any profile.
+      - Admins (via `get_my_role()`) can update any profile.
+
+2.  **`lerg_codes` Table:**
+
+    - Stores LERG (Local Exchange Routing Guide) data.
+    - Columns include `id` (serial), `npa`, `state`, `country`, `last_updated`.
+    - Includes indexes on `country` and `state`, and a unique constraint on `npa`.
+    - **RLS Policies:**
+      - Authenticated users can select records.
+      - Admins (via `get_my_role()`) can update records.
+      - Admins (via `get_my_role()`) can delete records.
+
+3.  **SQL Functions:**
+
+    - **`public.get_my_role()`**:
+      - Retrieves the `role` for the currently authenticated user from their `public.profiles` record.
+      - Used in RLS policies for admin-level access.
+    - **`public.handle_new_user()`**:
+      - Triggered after a new user is inserted into `auth.users`.
+      - Creates a corresponding record in `public.profiles`.
+      - Sets a default `role` ('user').
+      - Sets a fixed `trial_ends_at` date to `'2025-05-23 23:59:59+00'`.
+      - Populates `user_agent` and `signup_method` from the new user's metadata.
+
+4.  **Triggers:**
+    - **`on_auth_user_created` on `auth.users` Table:**
+      - Fires `AFTER INSERT` on `auth.users`.
+      - Executes the `public.handle_new_user()` function.
+      - _Note: This trigger was applied manually via the Supabase SQL Editor._
+
+### Manual Table Schema Copy (Supabase Portal) - Legacy/Fallback
+
+If, for any reason, schemas are out of sync and not covered by migrations (which should be the primary method for schema changes), the following manual copy process can be used as a fallback. However, all new schema changes should ideally be managed via migration files.
+
+1. **Open Staging Project:**
+
+   - Go to [app.supabase.com](https://app.supabase.com) and select your **staging** project.
+   - Navigate to the **Table Editor** in the sidebar.
+   - For each table you want to copy (e.g., `profiles`):
+     - Click the table name.
+     - Note down all columns, data types, default values, primary keys, unique constraints, and foreign keys.
+     - Also note any Row Level Security (RLS) policies under **Authentication > Policies** for that table.
+
+2. **Open Production Project:**
+
+   - In a new tab, open your **production** project in the Supabase dashboard.
+   - Go to the **Table Editor**.
+   - Click **"New Table"** (or similar) to create a new table.
+   - Enter the table name and add columns, types, defaults, and constraints to match the staging table exactly.
+   - Save the table.
+
+3. **Add Constraints and Relationships:**
+
+   - If your table has foreign keys or unique constraints, add them as needed (either in the Table Editor or via the SQL Editor for more complex constraints).
+
+4. **Copy RLS Policies:**
+
+   - Go to **Authentication > Policies** in production.
+   - Select your new table and add any RLS policies to match those in staging. Copy the `USING` and `WITH CHECK` expressions as needed.
+
+5. **Test:**
+   - After creating the tables and policies, test your production app to ensure the schema matches and everything works as expected.
+
+**Tip:** For complex tables, you can use the SQL Editor in staging to generate a `CREATE TABLE` statement (right-click table > "Generate CREATE statement" if available), then copy and run it in the production SQL Editor, adjusting as needed.
+
+---
