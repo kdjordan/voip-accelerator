@@ -1,3 +1,27 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+server/logs/*
+../server/logs/*
+
+# OS files
+.DS_Store
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
 # Dependencies
 node_modules
 .pnp
@@ -5,12 +29,24 @@ node_modules
 
 # Build outputs
 dist
+dist-ssr
 build
+coverage
 
-# Environment
+# JavaScript artifacts
+*.js
+!*.config.js
+*.js.map
+
+# TypeScript artifacts
+*.tsbuildinfo
+
+# Environment variables
 .env
 .env.local
+.env.*.local
 .env.development
+.env.staging
 .env.production
 !.env.example
 client/.env
@@ -18,28 +54,19 @@ client/.env.local
 client/.env.development
 client/.env.production
 !client/.env.example
-client/src/data/
+
 # Supabase
 /supabase/.env
 /supabase/.env.*
 !/supabase/.env.example
 
-server/logs/*
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Sample Data
+/data/sample/
 
-# Editor directories
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Miscellaneous
+client/src/data/
 .cursor/mcp.json
-# OS files
-.DS_Store 
-

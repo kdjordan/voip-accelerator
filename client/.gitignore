@@ -6,16 +6,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+server/logs/*
+../server/logs/*
 
-node_modules
+# OS files
 .DS_Store
-dist
-dist-ssr
-coverage
-*.local
-
-/cypress/videos/
-/cypress/screenshots/
 
 # Editor directories and files
 .vscode/*
@@ -27,10 +22,23 @@ coverage
 *.sln
 *.sw?
 
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+dist-ssr
+build
+coverage
+
+# JavaScript artifacts
 *.js
 !*.config.js
 *.js.map
 
+# TypeScript artifacts
 *.tsbuildinfo
 
 # Environment variables
@@ -39,9 +47,26 @@ coverage
 .env.*.local
 .env.development
 .env.staging
+.env.production
+!.env.example
+client/.env
+client/.env.local
+client/.env.development
+client/.env.production
+!client/.env.example
 
-# Server logs
-../server/logs/*
+# Supabase
+/supabase/.env
+/supabase/.env.*
+!/supabase/.env.example
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
 
 # Sample Data
 /data/sample/
+
+# Miscellaneous
+client/src/data/
+.cursor/mcp.json
