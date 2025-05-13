@@ -44,6 +44,7 @@ const router = createRouter({
       path: '/admin/lerg',
       name: 'AdminLerg',
       component: () => import('@/pages/AdminView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
       path: '/terms-and-conditions',
@@ -165,35 +166,35 @@ router.beforeEach(async (to, from, next) => {
 
   const isAuthenticated = userStore.getIsAuthenticated;
   const authIsInitialized = userStore.getAuthIsInitialized; // Should be true here
-  const requiresAuth = authRequiredRoutes.some((route) => to.path.startsWith(route));
+  const requiresAuth =
+    authRequiredRoutes.some((route) => to.path.startsWith(route)) ||
+    to.matched.some((record) => record.meta.requiresAuth);
   const isTransitionalRoute = transitionalAuthRoutes.includes(to.path);
   const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
-  const isAdmin = userStore.getUserRole === 'admin';
+  const isAdmin = userStore.isAdmin; // Use the isAdmin getter
 
   if (isAuthenticated) {
-    if (isTransitionalRoute) {
+    if (isTransitionalRoute && to.name !== 'dashboard') {
+      // Avoid redirect loop
       next({ name: 'dashboard' });
     } else if (requiresAdmin && !isAdmin) {
-      next({ name: 'dashboard' });
+      next({ name: 'dashboard' }); // Or a specific 'Not Authorized' page
     } else {
       next();
     }
   } else {
     // Not authenticated
-    if (authIsInitialized) {
-      // Only act if store initialization has confirmed not authenticated
-      if (requiresAuth) {
-        next({ name: 'Login', query: { redirect: to.fullPath } });
-      } else {
-        next();
-      }
+    // if (authIsInitialized) { // This check might be redundant due to waitForAuthInitialization
+    if (requiresAuth || requiresAdmin) {
+      // If route requires auth or specifically admin and user is not logged in
+      next({ name: 'Login', query: { redirect: to.fullPath } });
     } else {
-      // Auth not yet initialized, could be a protected or public route.
-      // If App.vue handles a loading screen until initialized, this path might be okay for initial load.
-      // If direct access to protected route before init, it might flash then redirect.
-
-      next(); // This case should ideally not be hit if waitForAuthInitialization works as expected.
+      next();
     }
+    // } else {
+    // Auth not yet initialized - this block should ideally not be hit if waitForAuthInitialization works as expected.
+    // next();
+    // }
   }
 });
 

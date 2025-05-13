@@ -47,6 +47,12 @@ export const appNavigationItems: NavigationItem[] = [
       },
     ],
   },
+  {
+    name: 'Admin',
+    href: '/admin/lerg',
+    icon: AdjustmentsVerticalIcon,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
   // {
   //   name: 'Lerg Admin',
   //   href: '/admin',

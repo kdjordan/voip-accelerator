@@ -53,6 +53,7 @@ export const useUserStore = defineStore('user', {
     getAuthError: (state) => state.auth.error,
     getAuthIsInitialized: (state) => state.auth.isInitialized,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
+    isAdmin: (state) => state.auth.profile?.role === 'admin',
     getUploadsToday: (state) => state.usage.uploadsToday,
     isPlanActive: (state) => {
       if (!state.auth.profile?.plan_expires_at) {
