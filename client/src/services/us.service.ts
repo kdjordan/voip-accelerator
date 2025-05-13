@@ -54,7 +54,6 @@ export class USService {
 
   constructor() {
     this.store = useUsStore() as unknown as UsStore;
-    console.log('[USService] Initializing US service');
   }
 
   // Helper to extract the table name from a Dexie schema string
@@ -153,11 +152,6 @@ export class USService {
               // --- DEBUGGING STEP 1 START ---
               // Log parsed rates for the first 5 rows
               if (index < 5) {
-                console.log(
-                  `[DEBUG][us.service] Row ${
-                    startLine + index
-                  }: Parsed Rates -> inter: ${interRate}, intra: ${intraRate}, indeterm: ${indetermRate}`
-                );
               }
               // --- DEBUGGING STEP 1 END ---
 
@@ -172,12 +166,12 @@ export class USService {
                 const reason = !npanxx
                   ? 'NPANXX is empty'
                   : npanxx.length !== 6
-                  ? `NPANXX length (${npanxx.length}) is not 6 digits`
-                  : isNaN(interRate)
-                  ? 'Invalid interstate rate'
-                  : isNaN(intraRate)
-                  ? 'Invalid intrastate rate'
-                  : 'Invalid indeterminate rate';
+                    ? `NPANXX length (${npanxx.length}) is not 6 digits`
+                    : isNaN(interRate)
+                      ? 'Invalid interstate rate'
+                      : isNaN(intraRate)
+                        ? 'Invalid intrastate rate'
+                        : 'Invalid indeterminate rate';
 
                 const invalidRow: InvalidUsRow = {
                   rowIndex: startLine + index,
@@ -208,9 +202,6 @@ export class USService {
                 sourceFile: file.name,
                 replaceExisting: false, // Append to existing data
               });
-              console.log(
-                `[USService] Stored ${validRecords.length} records in Dexie for table: ${tableName}`
-              );
             }
 
             // Determine component ID for file registration
@@ -229,17 +220,11 @@ export class USService {
               componentId = !currentUs1File ? 'us1' : 'us2';
             }
 
-            console.log(`[USService] Registering file ${file.name} with component ${componentId}`);
-
             // Register file with component
             this.store.addFileUploaded(componentId, file.name);
 
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
-
-            console.log(`[USService] Table ${tableName} removed.`);
-
-            resolve({ fileName: file.name, records: validRecords });
           } catch (error) {
             reject(error);
           }
@@ -260,14 +245,10 @@ export class USService {
           DBName.US,
           tableName
         );
-        console.log(`[USService] Retrieved ${data.length} records from Dexie table: ${tableName}`);
 
         // If fileName is provided, filter the results to only include records from that file
         if (fileName) {
           const filteredData = data.filter((record) => record.sourceFile === fileName);
-          console.log(
-            `[USService] Filtered to ${filteredData.length} records from file: ${fileName}`
-          );
           return filteredData;
         }
 
@@ -291,20 +272,6 @@ export class USService {
       // Pass fileName to getData to filter records by source file
       const data = await this.getData(tableName, fileName);
 
-      // --- DEBUGGING START ---
-      // console.log(
-      //   `[DEBUG][USService][calculateFileStats] Retrieved ${
-      //     data?.length || 0
-      //   } records for ${fileName}`
-      // );
-      // if (data && data.length > 0) {
-      //   console.log(
-      //     `[DEBUG][USService][calculateFileStats] First 5 records: `,
-      //     JSON.stringify(data.slice(0, 5))
-      //   );
-      // }
-      // --- DEBUGGING END ---
-
       if (!data || data.length === 0) return;
 
       // Calculate stats
@@ -326,20 +293,12 @@ export class USService {
 
       // Count how many valid US NPAs are in our file (those that exist in LERG data)
       let validUSNPAsInFile = 0;
-
-      // Get all US NPAs from LERG data
-      const lergUSNPAs = new Set<string>();
-      Object.entries(this.lergStore.stateNPAs)
-        .filter(([code]) => (!COUNTRY_CODES[code] && code !== 'CA') || code === 'US')
-        .forEach(([_, npas]) => {
-          npas.forEach((npa) => {
-            lergUSNPAs.add(npa);
-            // Count if this NPA is also in our file
-            if (allFileNPAs.has(npa)) {
-              validUSNPAsInFile++;
-            }
-          });
-        });
+      for (const npaFromFile of allFileNPAs) {
+        const location = this.lergStore.getOptimizedLocationByNPA(npaFromFile);
+        if (location && location.country === 'US') {
+          validUSNPAsInFile++;
+        }
+      }
 
       // Calculate coverage based on valid US NPAs found in the file against total US NPAs
       const totalUSNPAs = this.lergStore.getTotalUSNPAs;
@@ -355,12 +314,6 @@ export class USService {
       const formattedAvgInterRate = parseFloat(avgInterRate.toFixed(4));
       const formattedAvgIntraRate = parseFloat(avgIntraRate.toFixed(4));
       const formattedAvgIndetermRate = parseFloat(avgIndetermRate.toFixed(4));
-
-      // --- DEBUGGING START ---
-      // console.log(
-      //   `[DEBUG][USService][calculateFileStats] Calculated Averages -> inter: ${formattedAvgInterRate}, intra: ${formattedAvgIntraRate}, indeterm: ${formattedAvgIndetermRate}`
-      // );
-      // --- DEBUGGING END ---
 
       // Update store
       this.store.setFileStats(componentId, {
@@ -400,12 +353,7 @@ export class USService {
       if (db.tables.some((table) => table.name === tableName)) {
         // Use deleteTableStore from the composable
         await deleteTableStore(DBName.US, tableName);
-        console.log(`[USService] Table ${tableName} removed successfully from ${DBName.US}`);
-      } else {
-        console.log(`[USService] Table ${tableName} not found in ${DBName.US}, skipping delete.`);
       }
-
-      console.log(`[USService] Table ${tableName} removed.`);
     } catch (error) {
       console.error(`[USService] Failed to remove table ${tableName}:`, error);
       throw error;
@@ -425,11 +373,7 @@ export class USService {
         for (const tableName of tableNames) {
           // Use deleteTableStore from the composable
           await deleteTableStore(DBName.US, tableName);
-          console.log(`[USService] Deleted table ${tableName} from ${DBName.US}`);
         }
-        console.log(`[USService] Cleared all tables from ${DBName.US}`);
-      } else {
-        console.log(`[USService] No tables found to clear in ${DBName.US}`);
       }
 
       // Also clear any associated comparison data
@@ -437,7 +381,6 @@ export class USService {
 
       // Reset the store state as well
       this.store.resetFiles();
-      console.log('[USService] Cleared all US data and reset store.');
     } catch (error) {
       console.error('[USService] Failed to clear US data:', error);
       throw error;
@@ -456,7 +399,6 @@ export class USService {
         return 0;
       }
       const count = await db.table(tableName).count();
-      console.log(`[USService] Count for Dexie table ${tableName}: ${count}`);
       return count;
     } catch (error) {
       console.error(`[USService] Failed to get record count for table ${tableName}:`, error);
@@ -480,7 +422,6 @@ export class USService {
           tableCounts[name] = 0; // Should not happen if getAllStoreNamesForDB is accurate
         }
       }
-      console.log('[USService] Listed tables:', tableCounts);
       return tableCounts;
     } catch (error) {
       console.error('[USService] Failed to list tables:', error);
@@ -524,21 +465,12 @@ export class USService {
       );
     }
 
-    console.log(`[USService] Starting comparison: ${table1Name} vs ${table2Name}`);
-    console.log(
-      `[USService] Results -> DB: ${DBName.US_PRICING_COMPARISON}, Table: ${comparisonTableName}`
-    );
     this.store.setPricingReportProcessing(true);
 
     try {
       // 1. Load source data from the US rate deck database
-      console.log(`[USService] Loading source data from ${DBName.US}/${table1Name}...`);
       const data1 = await loadFromDexieDB<USStandardizedData>(DBName.US, table1Name);
-      console.log(`[USService] Loading source data from ${DBName.US}/${table2Name}...`);
       const data2 = await loadFromDexieDB<USStandardizedData>(DBName.US, table2Name);
-      console.log(
-        `[USService] Loaded ${data1.length} from ${table1Name}, ${data2.length} from ${table2Name}`
-      );
 
       if (data1.length === 0 || data2.length === 0) {
         console.warn('[USService] One or both source tables are empty. Skipping comparison.');
@@ -567,15 +499,11 @@ export class USService {
       const comparisonTable = comparisonDb.table<USPricingComparisonRecord>(comparisonTableName);
 
       // 4. Clear existing comparison data
-      console.log(
-        `[USService] Clearing existing data in ${comparisonDb.name}/${comparisonTableName}...`
-      );
       await comparisonTable.clear();
 
       // 5. Create lookup map for faster processing
       const table2Map = new Map<string, USStandardizedData>();
       data2.forEach((record) => table2Map.set(record.npanxx, record));
-      console.log(`[USService] Built lookup map for ${table2Name} (${table2Map.size} entries).`);
 
       const comparisonResults: USPricingComparisonRecord[] = [];
       let matchCount = 0;
@@ -583,9 +511,6 @@ export class USService {
       const processedNpanxx = new Set<string>(); // Add a Set to track processed NPANXX
 
       // 6. Iterate through file1, find matches in file2, calculate results
-      console.log(
-        `[USService] Comparing records from ${table1Name} against map of ${table2Name}...`
-      );
       for (const record1 of data1) {
         processedCount++;
 
@@ -601,8 +526,8 @@ export class USService {
           matchCount++;
           processedNpanxx.add(record1.npanxx); // Mark NPANXX as processed
           try {
-            // LERG Lookup
-            const location = lergStore.getLocationByNPA(record1.npa);
+            // LERG Lookup - USE OPTIMIZED GETTER
+            const location = lergStore.getOptimizedLocationByNPA(record1.npa);
             const stateCode =
               location?.country === 'US' || location?.country === 'CA' ? location.region : '';
             const countryCode = location?.country || 'Unknown';
@@ -623,20 +548,20 @@ export class USService {
               rates1.inter < rates2.inter
                 ? 'file1'
                 : rates1.inter > rates2.inter
-                ? 'file2'
-                : 'same';
+                  ? 'file2'
+                  : 'same';
             const cheaper_intra =
               rates1.intra < rates2.intra
                 ? 'file1'
                 : rates1.intra > rates2.intra
-                ? 'file2'
-                : 'same';
+                  ? 'file2'
+                  : 'same';
             const cheaper_indeterm =
               rates1.indeterm < rates2.indeterm
                 ? 'file1'
                 : rates1.indeterm > rates2.indeterm
-                ? 'file2'
-                : 'same';
+                  ? 'file2'
+                  : 'same';
 
             // Percentage Differences (relative to cheaper rate)
             const calculatePctDiff = (
@@ -691,34 +616,18 @@ export class USService {
 
         // Log progress
         if (processedCount % 10000 === 0) {
-          console.log(
-            `[USService] Processed ${processedCount}/${data1.length} records from ${table1Name}... (${matchCount} matches)`
-          );
         }
       } // End for loop
 
-      console.log(
-        `[USService] Finished processing ${processedCount} records. Found ${matchCount} total matching NPANXX.`
-      );
-
       // 7. Bulk insert results into the comparison table
       if (comparisonResults.length > 0) {
-        console.log(
-          `[USService] Storing ${comparisonResults.length} comparison results in ${comparisonDb.name}/${comparisonTableName}...`
-        );
         await comparisonTable.bulkPut(comparisonResults);
-        console.log(
-          `[USService] Successfully stored ${comparisonResults.length} comparison results.`
-        );
       }
-
-      console.log('[USService] Comparison process completed successfully.');
     } catch (error) {
       console.error('[USService] Critical error during US pricing comparison process:', error);
       // Update store or notify user of failure
     } finally {
       this.store.setPricingReportProcessing(false); // Ensure processing state is always reset
-      console.log('[USService] Comparison processing state set to false.');
     }
   }
 
@@ -753,8 +662,6 @@ export class USService {
 
   async makeUsCodeReport(file1Name: string, file2Name: string): Promise<USCodeReport> {
     try {
-      console.log('[USService] Starting code report generation');
-
       const table1Name = file1Name.toLowerCase().replace('.csv', '');
       const table2Name = file2Name.toLowerCase().replace('.csv', '');
 
@@ -775,13 +682,9 @@ export class USService {
       if (!comparisonDb.isOpen()) await comparisonDb.open();
 
       // --- Fetch Data for Rate Calculations ---
-      console.log(`[USService] Fetching full data for ${table1Name}...`);
       const file1Data = await usDb.table<USStandardizedData>(table1Name).toArray(); // Use usDb
-      console.log(`[USService] Fetched ${file1Data.length} records from ${table1Name}`);
 
-      console.log(`[USService] Fetching full data for ${table2Name}...`);
       const file2Data = await usDb.table<USStandardizedData>(table2Name).toArray(); // Use usDb
-      console.log(`[USService] Fetched ${file2Data.length} records from ${table2Name}`);
 
       // --- Calculate Summary Stats ---
       const file1Stats = {
@@ -797,9 +700,6 @@ export class USService {
       };
 
       // --- Fetch Comparison Data ---
-      console.log(
-        `[USService] Fetching comparison data from ${DBName.US_PRICING_COMPARISON}/${comparisonTableName}...`
-      );
       // Check if table exists before querying
       if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
         console.warn(
@@ -816,33 +716,6 @@ export class USService {
       const comparisonData = comparisonDb.tables.some((t) => t.name === comparisonTableName)
         ? await comparisonDb.table<USPricingComparisonRecord>(comparisonTableName).toArray()
         : []; // Fetch data only if table exists, otherwise empty array
-
-      console.log(
-        `[USService] Fetched ${comparisonData.length} comparison records from ${comparisonTableName}.`
-      );
-
-      // --- Calculate Comparison Stats --- Needed? ---
-      // The USCodeReport interface doesn't seem to include these direct comparison stats.
-      // Let's comment them out for now unless they are intended for a different purpose.
-      /*
-      const comparisonStats = {
-        inter: {
-          cheaperFile1: comparisonData.filter((r) => r.cheaper_inter === 'file1').length,
-          cheaperFile2: comparisonData.filter((r) => r.cheaper_inter === 'file2').length,
-          same: comparisonData.filter((r) => r.cheaper_inter === 'same').length,
-        },
-        intra: {
-          cheaperFile1: comparisonData.filter((r) => r.cheaper_intra === 'file1').length,
-          cheaperFile2: comparisonData.filter((r) => r.cheaper_intra === 'file2').length,
-          same: comparisonData.filter((r) => r.cheaper_intra === 'same').length,
-        },
-        indeterm: {
-          cheaperFile1: comparisonData.filter((r) => r.cheaper_indeterm === 'file1').length,
-          cheaperFile2: comparisonData.filter((r) => r.cheaper_indeterm === 'file2').length,
-          same: comparisonData.filter((r) => r.cheaper_indeterm === 'same').length,
-        },
-      };
-      */
 
       // --- Calculate Matching and NPA Stats ---
       const file1NPAs = new Set<string>();
@@ -913,7 +786,6 @@ export class USService {
         totalUniqueNPAs: allUniqueNPAsSet.size,
       };
 
-      console.log('[USService] Code report generated successfully.');
       return report;
     } catch (error) {
       console.error('[USService] Error generating US code report:', error);
@@ -942,15 +814,7 @@ export class USService {
       // Check if the table exists before trying to clear
       if (comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
         const comparisonTable = comparisonDb.table(comparisonTableName);
-        console.log(
-          `[USService] Clearing data from table ${comparisonTableName} in ${DBName.US_PRICING_COMPARISON}`
-        );
         await comparisonTable.clear(); // Use clear() instead of deleteTableStore
-        console.log(`[USService] Cleared data from ${comparisonTableName}.`);
-      } else {
-        console.log(
-          `[USService] Table ${comparisonTableName} not found in ${DBName.US_PRICING_COMPARISON}. No data to clear.`
-        );
       }
     } catch (error) {
       console.error('[USService] Failed to clear US pricing comparison data:', error);

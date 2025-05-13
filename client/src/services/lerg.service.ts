@@ -88,9 +88,7 @@ export class LergService {
    * Private constructor to prevent direct instantiation
    * Use LergService.getInstance() instead
    */
-  private constructor() {
-    console.log('Initializing LERG service singleton instance');
-  }
+  private constructor() {}
 
   /**
    * Get the singleton instance of LergService
@@ -177,7 +175,6 @@ export class LergService {
         try {
           await this.executeWithRetry(async () => await this.db!.open(), 'Database open');
           this.connectionError = null;
-          console.log('LERG database connection opened');
         } catch (error) {
           const connectionError = error instanceof Error ? error : new Error(String(error));
           this.connectionError = new LergConnectionError(
@@ -213,7 +210,6 @@ export class LergService {
     if (this.connectionCount === 0 && this.db.isOpen() && !this.isConnecting) {
       try {
         await this.executeWithRetry(async () => await this.db!.close(), 'Database close');
-        console.log('LERG database connection closed');
       } catch (error) {
         console.error('Error closing LERG database connection:', error);
       }
@@ -290,7 +286,6 @@ export class LergService {
       timestamp: 0,
       recordCount: 0,
     };
-    console.log('LERG processed data cache invalidated');
   }
 
   /**
@@ -352,7 +347,6 @@ export class LergService {
 
       // Close any existing connection first
       if (db.isOpen()) {
-        console.log('Closing existing LERG database before schema modification');
         await db.close();
         this.connectionCount = 0; // Reset connection count since we closed the DB
       }
@@ -360,7 +354,6 @@ export class LergService {
       // Check if the schema already exists and initialize if needed
       const hasLergTable = db.tables.some((t: Table) => t.name === 'lerg');
       if (!hasLergTable) {
-        console.log('Creating new schema for LERG database');
         try {
           // Create a new version with the lerg table
           const newVersion = (db.verno || 0) + 1;
@@ -380,12 +373,9 @@ export class LergService {
         async () => await db.open(),
         'Database open after schema modification'
       );
-      console.log('LERG database opened with schema version:', db.verno);
 
       // Clear and populate the table
-      console.log(`Clearing LERG table before inserting ${lergData.length} records`);
       await db.table('lerg').clear();
-      console.log('LERG table cleared successfully');
 
       // Insert the data in smaller batches to avoid transaction limits
       const BATCH_SIZE = 1000;
@@ -400,17 +390,10 @@ export class LergService {
 
         processedCount += batch.length;
         const progressPercent = Math.round((processedCount / lergData.length) * 100);
-        console.log(
-          `Added batch ${i / BATCH_SIZE + 1} of LERG data: ${
-            batch.length
-          } records (${progressPercent}% complete)`
-        );
       }
 
       // Invalidate cache since data has changed
       this.invalidateCache();
-
-      console.log('LERG data initialization completed successfully');
     } catch (error) {
       const dataError = error instanceof Error ? error : new Error(String(error));
       throw new LergDataError('Failed to initialize LERG data', dataError);
@@ -455,17 +438,12 @@ export class LergService {
 
       // Clear IndexedDB table if it exists
       if (db.tables.some((t) => t.name === 'lerg')) {
-        console.log('Clearing LERG data from IndexedDB');
         await this.executeWithRetry(async () => await db.table('lerg').clear(), 'Clear LERG table');
-        console.log('IndexedDB LERG data cleared');
-      } else {
-        console.log('No LERG table found in IndexedDB to clear');
       }
 
       // Clear store using the new clearLergData method
       const store = useLergStore();
       store.clearLergData();
-      console.log('LERG store cleared');
 
       // Invalidate cache
       this.invalidateCache();
@@ -489,7 +467,6 @@ export class LergService {
     count: number;
   }> {
     if (!forceRefresh && this.isCacheValid()) {
-      console.log('Using cached LERG processed data');
       return {
         stateMapping: this.processedDataCache.stateMapping!,
         canadaProvinces: this.processedDataCache.canadaProvinces!,
@@ -537,7 +514,6 @@ export class LergService {
 
       // Check if lerg table exists
       if (!db.tables.some((t) => t.name === 'lerg')) {
-        console.log('No LERG table found, returning empty data');
         return {
           stateMapping: {},
           canadaProvinces: {},
@@ -547,7 +523,6 @@ export class LergService {
 
       // Get the total count first
       const totalCount = await db.table('lerg').count();
-      console.log(`Processing ${totalCount} LERG records from IndexedDB`);
 
       // Process data in chunks for better memory usage with large datasets
       const CHUNK_SIZE = 5000;
@@ -559,8 +534,6 @@ export class LergService {
       let offset = 0;
       while (offset < totalCount) {
         const records = await db.table('lerg').offset(offset).limit(CHUNK_SIZE).toArray();
-
-        console.log(`Processing LERG chunk ${offset}-${offset + records.length} of ${totalCount}`);
 
         // Process this chunk
         this.processDataChunk(records, stateMapping, canadaProvinces, countryMap);
@@ -617,12 +590,6 @@ export class LergService {
     // Second pass - identify true Canadian records
     const canadianRecords = records.filter((record) => record.country === 'CA');
 
-    // DEBUG: Log Canadian records
-    // console.log(`[LERG Debug] Found ${canadianRecords.length} Canadian records`);
-    // if (canadianRecords.length > 0) {
-    //   console.log('[LERG Debug] Canadian records sample:', canadianRecords.slice(0, 5));
-    // }
-
     // Third pass - other countries
     const otherRecords = records.filter(
       (record) => record.country !== 'US' && record.country !== 'CA'
@@ -649,19 +616,8 @@ export class LergService {
       // Use the record's state code or map to a valid province if needed
       let provinceCode = record.state;
 
-      // DEBUG: Log province validation
-      const isValidProvince = this.isCanadianProvince(provinceCode);
-      // console.log(
-      //   `[LERG Debug] Canadian record - NPA: ${record.npa}, Province: ${provinceCode}, Valid: ${isValidProvince}`
-      // );
-
       // If not a valid province code, see if we can infer it (some datasets use numeric codes)
-      if (!isValidProvince) {
-        // Check if it's a CA record with a non-standard province code
-        // console.log(
-        //   `[LERG Debug] Non-standard province code: ${provinceCode} for NPA ${record.npa}`
-        // );
-
+      if (!this.isCanadianProvince(provinceCode)) {
         // For now, associate all unrecognized Canadian NPAs with a special "UNKNOWN" code
         // This ensures they at least show up in the UI
         provinceCode = 'XX'; // Special code for unknown provinces
@@ -696,11 +652,6 @@ export class LergService {
           countryMap.set(record.country, new Set());
         }
         countryMap.get(record.country)!.add(record.npa);
-      } else {
-        // Optionally log skipped records with invalid country codes
-        // console.warn(
-        //   `[LERG Debug] Skipping record with invalid/empty country code: ${JSON.stringify(record)}`
-        // );
       }
     }
   }
@@ -720,8 +671,6 @@ export class LergService {
       const timestamp = firstRecord?.last_updated
         ? new Date(firstRecord.last_updated).toISOString()
         : null;
-
-      console.log('Last updated timestamp from database:', timestamp);
 
       return {
         lastUpdated: timestamp,
@@ -747,7 +696,6 @@ export class LergService {
       const MAX_RECORDS = 50000; // Adjust based on your expected dataset size
       const records = await lergTable.limit(MAX_RECORDS).toArray();
 
-      console.log(`Retrieved ${records.length} LERG records from database`);
       return records;
     } catch (error) {
       console.error('Error getting all LERG records:', error);

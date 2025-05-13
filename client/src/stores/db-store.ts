@@ -10,7 +10,6 @@ export const useDBStore = defineStore('db', {
 
   actions: {
     registerConnection(dbName: DBNameType, connection: Dexie) {
-      console.log(`Registering connection for ${dbName}`);
       this.activeConnections[dbName] = connection;
     },
 
@@ -19,7 +18,6 @@ export const useDBStore = defineStore('db', {
       if (connection) {
         await connection.close();
         delete this.activeConnections[dbName];
-        console.log(`Closed connection for ${dbName}`);
       }
     },
 

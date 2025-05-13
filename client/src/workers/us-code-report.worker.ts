@@ -13,8 +13,6 @@ import { PROVINCE_CODES } from '@/types/constants/province-codes';
 
 self.addEventListener('message', (event) => {
   try {
-    console.log('[Worker] Received message event:', event);
-
     if (!event.data) {
       console.error('[Worker] No data received in worker');
       self.postMessage({ error: 'No data received in worker' });
@@ -25,39 +23,8 @@ self.addEventListener('message', (event) => {
     const { fileName, fileData, lergData } = event.data;
 
     // Log the received data for debugging
-    console.log(`[Worker] Received fileName: ${fileName}`);
-    console.log(
-      `[Worker] Received fileData: ${
-        Array.isArray(fileData) ? `${fileData.length} records` : typeof fileData
-      }`
-    );
+
     // Log LERG data structure details
-    if (lergData) {
-      console.log('[Worker] Received lergData:');
-      console.log(
-        `  - validNpas: ${Array.isArray(lergData.validNpas) ? lergData.validNpas.length : 'N/A'}`
-      );
-      console.log(
-        `  - npaMappings keys: ${
-          lergData.npaMappings ? Object.keys(lergData.npaMappings).length : 'N/A'
-        }`
-      );
-      console.log(
-        `  - countryGroups keys: ${
-          lergData.countryGroups ? Object.keys(lergData.countryGroups).length : 'N/A'
-        }`
-      );
-      console.log(
-        `  - countryData length: ${
-          Array.isArray(lergData.countryData) ? lergData.countryData.length : 'N/A'
-        }`
-      );
-      console.log(
-        `  - stateNPAs keys: ${lergData.stateNPAs ? Object.keys(lergData.stateNPAs).length : 'N/A'}`
-      );
-    } else {
-      console.log('[Worker] Received lergData: null or undefined');
-    }
 
     // Validate required inputs
     if (!fileName || !fileData) {
@@ -75,14 +42,9 @@ self.addEventListener('message', (event) => {
       return;
     }
 
-    console.log(
-      `[Worker] Processing file ${fileName} with ${fileData.length} records and LERG data.`
-    );
-
     // Proceed with generating the full report
     try {
       const report = generateEnhancedCodeReport(event.data);
-      console.log(`[Worker] Report generated successfully for ${fileName}.`);
       self.postMessage(report);
     } catch (error) {
       console.error(`[Worker] Error during generateEnhancedCodeReport for ${fileName}:`, error);
@@ -178,11 +140,6 @@ function processFileData(
     // Using setTimeout with 0 delay inside a worker won't block the main thread
     // but will allow the worker's message queue to process other messages
     if (i + chunkSize < fileData.length) {
-      console.log(
-        `[Worker] Processed chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(
-          fileData.length / chunkSize
-        )}`
-      );
     }
   }
 
@@ -217,9 +174,9 @@ function processFileData(
   }
 
   // --- Calculate OVERALL rate statistics for the entire file --- //
-  console.log(`[Worker] Calculating overall rate stats for ${fileName}`);
+
   const overallRateStats = calculateRateStats(fileData);
-  console.log(`[Worker] Overall Rate Stats for ${fileName}:`, JSON.stringify(overallRateStats));
+
   // --- END Overall Rate Stats Calculation --- //
 
   return {
@@ -345,18 +302,6 @@ function calculateRateStats(entries: USStandardizedData[]): {
       const intraRateNum = parseFloat(String(entry.intraRate));
       const indetermRateNum = parseFloat(String(entry.indetermRate));
 
-      // --- DEBUGGING STEP 3 START ---
-      // Log the rates of the first 5 entries in the first chunk
-      if (i === 0 && entryIndex < 5) {
-        console.log(
-          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Original Rates -> inter: ${entry.interRate}, intra: ${entry.intraRate}, indeterm: ${entry.indetermRate}`
-        );
-        console.log(
-          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Parsed Rates -> inter: ${interRateNum}, intra: ${intraRateNum}, indeterm: ${indetermRateNum}`
-        );
-      }
-      // --- DEBUGGING STEP 3 END ---
-
       if (!isNaN(interRateNum)) {
         interSum += interRateNum;
         interCount++;
@@ -371,46 +316,13 @@ function calculateRateStats(entries: USStandardizedData[]): {
         indetermSum += indetermRateNum;
         indetermCount++;
       }
-
-      // --- DEBUGGING STEP 3 START ---
-      // Log accumulating sums/counts for the first 5 entries in the first chunk
-      if (i === 0 && entryIndex < 5) {
-        console.log(
-          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Sums -> inter: ${interSum.toFixed(
-            6
-          )}, intra: ${intraSum.toFixed(6)}, indeterm: ${indetermSum.toFixed(6)}`
-        );
-        console.log(
-          `[DEBUG][Worker][Stats] Chunk 0, Entry ${entryIndex}: Counts -> inter: ${interCount}, intra: ${intraCount}, indeterm: ${indetermCount}`
-        );
-      }
-      // --- DEBUGGING STEP 3 END ---
     });
   }
-
-  // --- DEBUGGING STEP 3 START ---
-  console.log(
-    `[DEBUG][Worker][Stats] Final Sums -> inter: ${interSum.toFixed(6)}, intra: ${intraSum.toFixed(
-      6
-    )}, indeterm: ${indetermSum.toFixed(6)}`
-  );
-  console.log(
-    `[DEBUG][Worker][Stats] Final Counts -> inter: ${interCount}, intra: ${intraCount}, indeterm: ${indetermCount}`
-  );
-  // --- DEBUGGING STEP 3 END ---
 
   // Calculate averages
   const interAvg = interCount > 0 ? interSum / interCount : 0;
   const intraAvg = intraCount > 0 ? intraSum / intraCount : 0;
   const indetermAvg = indetermCount > 0 ? indetermSum / indetermCount : 0;
-
-  // --- DEBUGGING STEP 3 START ---
-  console.log(
-    `[DEBUG][Worker][Stats] Calculated Averages -> inter: ${interAvg.toFixed(
-      6
-    )}, intra: ${intraAvg.toFixed(6)}, indeterm: ${indetermAvg.toFixed(6)}`
-  );
-  // --- DEBUGGING STEP 3 END ---
 
   return {
     interstate: {

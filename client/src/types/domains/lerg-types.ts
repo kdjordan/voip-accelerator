@@ -184,4 +184,7 @@ export interface LERGStateInterface {
   countryStateMap?: CountryStateNpaMap;
   stateNPAs: StateNPAMapping;
   countryData: CountryLergData[];
+
+  // Reverse lookup map for performance
+  npaToLocationMap: Map<string, { country: string; region: string }>;
 }

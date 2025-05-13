@@ -34,19 +34,20 @@
           FlatBrim
           <ArrowTopRightOnSquareIcon class="w-3 h-3 ml-1" />
         </a>
-        <span class="text-fbWhite/50">|</span>
-         <RouterLink
-          to="#hero"
-          class="hover:text-fbWhite/90 transition-colors"
-        >
-          Top
-        </RouterLink>
+        <template v-if="isHomePage">
+          <span class="text-fbWhite/50">|</span>
+          <RouterLink to="#hero" class="hover:text-fbWhite/90 transition-colors"> Top </RouterLink>
+        </template>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
-  import { RouterLink } from 'vue-router';
+  import { computed } from 'vue';
+  import { RouterLink, useRoute } from 'vue-router';
   import { ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline';
+
+  const route = useRoute();
+  const isHomePage = computed(() => route.name === 'home');
 </script>

@@ -132,7 +132,7 @@
     // ---------------------------------------
 
     // --- Reset Store States (non-blocking) ---
-    console.log('[App Mount] Resetting store states (non-blocking)...');
+
     azStore
       .resetFiles()
       .catch((err) => console.error('[App Mount] Error resetting AZ store:', err));
@@ -141,18 +141,14 @@
       .catch((err) => console.error('[App Mount] Error resetting US store:', err));
     // TODO: Add resets for other stores if they manage data in cleared DBs
     // e.g., rateSheetStore.resetState().catch(err => console.error('Error resetting rate sheet store:', err));
-    console.log('[App Mount] Store state reset initiated.');
+
     // -----------------------------------------
 
     // --- Initialize Auth Listener (non-blocking) ---
-    console.log('[App Mount] Initializing authentication listener (non-blocking)...');
+
     userStore
       .initializeAuthListener()
-      .then(() => {
-        console.log(
-          '[App Mount] Authentication listener initialization process completed (from non-blocking call).'
-        );
-      })
+      .then(() => {})
       .catch((authInitError) => {
         console.error(
           '[App Mount] Error initializing auth listener (from non-blocking call):',
@@ -161,10 +157,6 @@
         // Potentially set a global error state if auth listener fails critically even in non-blocking mode
       });
     // ---------------------------------------------
-
-    console.log(
-      '[App Mount] Non-blocking initializations complete. App shell is ready. Auth is initializing.'
-    );
   });
 
   // This watchEffect handles redirection AFTER auth is initialized.
@@ -179,9 +171,6 @@
     const transitionalAuthRoutes = ['/', '/home', '/login', '/signup', '/auth/callback'];
 
     if (isInitialized && isAuthenticated && transitionalAuthRoutes.includes(currentPath)) {
-      console.log(
-        `[App WatchEffect] Conditions met for redirect. Path: "${currentPath}". User is authenticated and on a transitional route. Queuing redirect to /dashboard.`
-      );
       await nextTick(); // Wait for DOM updates if any are pending from isInitialized changing
 
       // Double-check conditions after nextTick, as state might change rapidly
@@ -190,14 +179,8 @@
         userStore.getIsAuthenticated && // Re-check reactive getter
         transitionalAuthRoutes.includes(route.path) // Re-check current route path
       ) {
-        console.log(
-          `[App WatchEffect] Executing redirect from "${route.path}" to /dashboard after nextTick.`
-        );
         router.push({ name: 'dashboard' });
       } else {
-        console.log(
-          `[App WatchEffect] Redirect from "${currentPath}" aborted after nextTick. Conditions no longer met. Current path: ${route.path}, IsAuth: ${userStore.getIsAuthenticated}, IsInitialized: ${userStore.getAuthIsInitialized}`
-        );
       }
     }
   });

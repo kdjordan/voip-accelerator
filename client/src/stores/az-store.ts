@@ -3,11 +3,9 @@ import type {
   AzPricingReport,
   AzCodeReport,
   InvalidAzRow,
-  AZStandardizedData,
   AZEnhancedCodeReport,
 } from '@/types/domains/az-types';
-import type { DomainStore, ReportType } from '@/types';
-import { ReportTypes } from '@/types';
+import type { ReportType } from '@/types';
 import { AZService } from '@/services/az.service';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types';
@@ -136,10 +134,10 @@ export const useAzStore = defineStore('az', {
       const { deleteDatabase } = useDexieDB();
 
       try {
-        console.log('[az-store] Deleting AZ Dexie databases...');
+    
         await deleteDatabase(DBName.AZ);
         await deleteDatabase(DBName.AZ_PRICING_COMPARISON);
-        console.log('[az-store] AZ Dexie databases deleted successfully.');
+    
       } catch (dbError) {
         console.error('[az-store] Error deleting AZ Dexie databases:', dbError);
       }
@@ -175,9 +173,7 @@ export const useAzStore = defineStore('az', {
       azService
         .removeTable(tableName)
         .then(() => {
-          console.log(
-            `[az-store] Dexie table ${tableName} and related comparison tables removed successfully.`
-          );
+      
         })
         .catch((error) => {
           console.error(`[az-store] Error removing Dexie table ${tableName}:`, error);
@@ -204,7 +200,6 @@ export const useAzStore = defineStore('az', {
         // Clear enhanced code report for this file
         this.enhancedCodeReports.delete(fileName);
 
-        console.log(`[AzStore] Removed file ${fileName} from component ${componentId}`);
       } else {
         console.warn(`[AzStore] Could not find component ID for file ${fileName}`);
       }
@@ -298,7 +293,6 @@ export const useAzStore = defineStore('az', {
     // Action to set enhanced code report
     setEnhancedCodeReport(fileName: string, report: AZEnhancedCodeReport) {
       this.enhancedCodeReports.set(fileName, report);
-      console.log(`[az-store] Enhanced code report set for ${fileName}`);
     },
   },
 });

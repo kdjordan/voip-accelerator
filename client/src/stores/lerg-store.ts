@@ -42,6 +42,9 @@ export const useLergStore = defineStore('lerg', {
     countryStateMap: new Map(),
     stateNPAs: {},
     countryData: [],
+
+    // Reverse lookup map for performance
+    npaToLocationMap: new Map<string, { country: string; region: string }>(),
   }),
 
   actions: {
@@ -52,6 +55,7 @@ export const useLergStore = defineStore('lerg', {
       this.usStates = usStates;
       // Update stats when setting US data
       this.stats.usTotalNPAs = this.calculateUSTotalNPAs();
+      this._populateNpaToLocationMap(); // Populate reverse map
     },
 
     /**
@@ -61,6 +65,7 @@ export const useLergStore = defineStore('lerg', {
       this.canadaProvinces = canadaProvinces;
       // Update stats when setting Canada data
       this.stats.canadaTotalNPAs = this.calculateCanadaTotalNPAs();
+      this._populateNpaToLocationMap(); // Populate reverse map
     },
 
     /**
@@ -70,6 +75,7 @@ export const useLergStore = defineStore('lerg', {
       this.otherCountries = otherCountries;
       // Update stats when setting other countries data
       this.stats.countriesCount = this.otherCountries.size;
+      this._populateNpaToLocationMap(); // Populate reverse map
     },
 
     /**
@@ -145,7 +151,11 @@ export const useLergStore = defineStore('lerg', {
     },
 
     calculateTotalLergCodes(): number {
-      return this.calculateUSTotalNPAs() + this.calculateCanadaTotalNPAs() + this.calculateOtherCountriesTotalNPAs();
+      return (
+        this.calculateUSTotalNPAs() +
+        this.calculateCanadaTotalNPAs() +
+        this.calculateOtherCountriesTotalNPAs()
+      );
     },
 
     /**
@@ -174,6 +184,42 @@ export const useLergStore = defineStore('lerg', {
         canadaTotalNPAs: 0,
         lastUpdated: null,
       };
+    },
+
+    /**
+     * Internal action to rebuild the npaToLocationMap from the primary data sources.
+     * Should be called whenever usStates, canadaProvinces, or otherCountries are updated.
+     */
+    _populateNpaToLocationMap() {
+      this.npaToLocationMap.clear();
+
+      // Populate from US states
+      for (const [stateCode, npas] of this.usStates.entries()) {
+        for (const entry of npas) {
+          if (!this.npaToLocationMap.has(entry.npa)) {
+            this.npaToLocationMap.set(entry.npa, { country: 'US', region: stateCode });
+          }
+        }
+      }
+
+      // Populate from Canadian provinces
+      for (const [provinceCode, npas] of this.canadaProvinces.entries()) {
+        for (const entry of npas) {
+          if (!this.npaToLocationMap.has(entry.npa)) {
+            this.npaToLocationMap.set(entry.npa, { country: 'CA', region: provinceCode });
+          }
+        }
+      }
+
+      // Populate from other countries
+      for (const [countryCode, npas] of this.otherCountries.entries()) {
+        for (const entry of npas) {
+          if (!this.npaToLocationMap.has(entry.npa)) {
+            // For other countries, region might be empty or could be standardized if needed
+            this.npaToLocationMap.set(entry.npa, { country: countryCode, region: '' });
+          }
+        }
+      }
     },
   },
 
@@ -542,5 +588,14 @@ export const useLergStore = defineStore('lerg', {
 
       return npas;
     },
+
+    /**
+     * Optimized getter to get location by NPA using the reverse map.
+     */
+    getOptimizedLocationByNPA:
+      (state) =>
+      (npa: string): { country: string; region: string } | null => {
+        return state.npaToLocationMap.get(npa) || null;
+      },
   },
 });

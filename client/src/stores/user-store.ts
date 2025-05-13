@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import type { User, Profile, PlanTierType } from '../types/user-types';
-import { supabase } from '@/services/supabase.service';
+import { supabase } from '@/utils/supabase';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 interface SharedState {
@@ -100,9 +100,6 @@ export const useUserStore = defineStore('user', {
     },
 
     async fetchProfile(userId: string): Promise<void> {
-      console.log(
-        `[UserStore] fetchProfile (AbortController + Promise.race v2) INVOKED for userId: ${userId}.`
-      );
       this.auth.error = null;
 
       const controller = new AbortController();
@@ -191,9 +188,6 @@ export const useUserStore = defineStore('user', {
         }
         this.auth.profile = null;
       } finally {
-        console.log(
-          `[UserStore] fetchProfile (AbortController + Promise.race v2) EXECUTION FINISHED for ${userId}. Profile: ${!!this.auth.profile}, Error: ${this.auth.error?.message || 'none'}`
-        );
       }
     },
 
@@ -209,9 +203,6 @@ export const useUserStore = defineStore('user', {
     async initializeAuthListener(): Promise<void> {
       this.auth.isLoading = true;
       this.auth.isInitialized = false; // Explicitly set at start
-      console.log(
-        '[Auth Store] initializeAuthListener (v2) started. isLoading: true, isInitialized: false'
-      );
 
       // Setup onAuthStateChange listener. This handles ongoing events and can update profile.
       // It runs independently of the initial getSession flow below for setting isInitialized.
@@ -219,8 +210,6 @@ export const useUserStore = defineStore('user', {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
         async (event: AuthChangeEvent, session: Session | null) => {
-          console.log('[Auth Listener] Event:', event, 'Session:', !!session);
-
           const currentUser = session?.user ?? null;
           // Update user and isAuthenticated based on the event immediately
           this.auth.user = currentUser;
@@ -233,9 +222,6 @@ export const useUserStore = defineStore('user', {
               event === 'USER_UPDATED' ||
               event === 'INITIAL_SESSION' // Treat INITIAL_SESSION here as well for profile consistency
             ) {
-              console.log(
-                `[Auth Listener] Event ${event} for user ${currentUser.id}. Triggering profile fetch.`
-              );
               try {
                 // Don't make the entire onAuthStateChange handler wait for fetchProfile if it's not INITIAL_SESSION
                 // For INITIAL_SESSION, it might be okay, but generally, let it be async.
@@ -269,28 +255,17 @@ export const useUserStore = defineStore('user', {
               }
             }
           } else if (event === 'SIGNED_OUT') {
-            console.log('[Auth Listener] User signed out. Clearing auth data.');
             this.clearAuthData();
           }
-          console.log(
-            `[Auth Listener] Event processed. Current state: isAuth: ${this.auth.isAuthenticated}, User: ${this.auth.user?.id}`
-          );
         }
       );
       // TODO: Store and manage 'subscription' if unsubscription is needed on store disposal.
 
       try {
-        console.log(
-          '[Auth Store] Attempting to get initial session via supabase.auth.getSession()...'
-        );
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
-
-        console.log(
-          `[Auth Store] getSession() responded. Session: ${!!session}, Error: ${JSON.stringify(sessionError)}`
-        );
 
         if (sessionError) {
           console.error('[Auth Store] Error getting initial session:', sessionError);
@@ -299,9 +274,7 @@ export const useUserStore = defineStore('user', {
         } else if (session) {
           this.auth.user = session.user;
           this.auth.isAuthenticated = true;
-          console.log(
-            `[Auth Store] Initial session found for user ${session.user.id}. Triggering profile fetch (non-blocking for isInitialized).`
-          );
+
           // Fetch profile in the background. Don't await it here.
           // The UI should react to profile changes when fetchProfile completes.
           this.fetchProfile(session.user.id).catch((profileError) => {
@@ -326,7 +299,6 @@ export const useUserStore = defineStore('user', {
             }
           });
         } else {
-          console.log('[Auth Store] No initial session found or session is invalid.');
           this.clearAuthData(); // Ensure clean state
         }
       } catch (error) {
@@ -340,9 +312,6 @@ export const useUserStore = defineStore('user', {
         // This is the crucial part: isInitialized is set true after initial session check attempt.
         this.auth.isInitialized = true;
         this.auth.isLoading = false;
-        console.log(
-          `[Auth Store] initializeAuthListener (v2) MAIN FINALLY. isInitialized: ${this.auth.isInitialized}, isLoading: ${this.auth.isLoading}, isAuthenticated: ${this.auth.isAuthenticated}`
-        );
       }
     },
 

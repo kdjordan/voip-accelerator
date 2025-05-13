@@ -1,4 +1,4 @@
-import Dexie, { Table,  type IndexSpec } from 'dexie';
+import Dexie, { Table, type IndexSpec } from 'dexie';
 import { type DBNameType } from '@/types';
 import { useDBStore } from '@/stores/db-store';
 import { DBSchemas, DynamicTableSchemas } from '@/types/app-types';
@@ -20,9 +20,6 @@ async function defineSchema(
     } else if (initialSchemaDefinition.trim() !== '') {
       // Handle simple schema string, assume default table name 'data'
       // (Adjust 'data' if a different convention is preferred)
-      console.log(
-        `[useDexieDB] Schema string for ${dbName} lacks explicit table name. Assuming default table 'data'.`
-      );
       schemaToDefine = { data: initialSchemaDefinition };
     } else {
       // Handle empty string case
@@ -40,7 +37,6 @@ async function defineSchema(
     schemaToDefine = {};
   }
 
-  console.log(`[useDexieDB] Defining Version 1 for ${dbName} with schema:`, schemaToDefine);
   if (Object.keys(schemaToDefine).length > 0) {
     db.version(1).stores(schemaToDefine);
   } else {
@@ -65,7 +61,6 @@ async function addStore(db: Dexie, storeName: string): Promise<boolean> {
   if (!db.isOpen()) {
     try {
       await db.open();
-      console.log(`[useDexieDB: ${db.name}] Opened DB before addStore check.`);
     } catch (e) {
       console.error(`[useDexieDB: ${db.name}] Failed to open DB in addStore:`, e);
       return false; // Cannot proceed if DB won't open
@@ -73,7 +68,6 @@ async function addStore(db: Dexie, storeName: string): Promise<boolean> {
   }
 
   if (db.tables.some((table) => table.name === storeName)) {
-    console.log(`[useDexieDB] Store '${storeName}' already exists in ${db.name}.`);
     return true; // Indicate store already exists or no action needed
   }
 
@@ -94,19 +88,11 @@ async function addStore(db: Dexie, storeName: string): Promise<boolean> {
     [storeName]: dynamicSchemaDefinition,
   };
 
-  console.log(
-    `[useDexieDB] Adding store '${storeName}' to ${dbName} (v${db.verno + 1}) with schema:`,
-    newSchema
-  );
-
   db.close(); // Close before upgrading
 
   try {
     db.version(db.verno + 1).stores(newSchema);
     await db.open(); // Reopen after upgrade
-    console.log(
-      `[useDexieDB] Successfully added/updated store '${storeName}' in ${dbName} and reopened DB.`
-    );
     return true;
   } catch (e) {
     console.error(
@@ -122,11 +108,9 @@ async function addStore(db: Dexie, storeName: string): Promise<boolean> {
 
 async function deleteStore(db: Dexie, storeName: string): Promise<boolean> {
   if (!db.tables.some((table) => table.name === storeName)) {
-    console.log(`[useDexieDB] Store '${storeName}' does not exist in ${db.name}.`);
     return true; // Indicate store doesn't exist or no action needed
   }
 
-  console.log(`[useDexieDB] Deleting store '${storeName}' from ${db.name}...`);
   const currentVersion = db.verno;
   const currentSchema = getSchemaDefinitionForVersion(db, currentVersion);
 
@@ -138,7 +122,6 @@ async function deleteStore(db: Dexie, storeName: string): Promise<boolean> {
   try {
     db.version(currentVersion + 1).stores(nextSchema);
     await db.open(); // Reopen after schema change
-    console.log(`[useDexieDB] Successfully deleted store '${storeName}' and reopened ${db.name}.`);
     return true;
   } catch (error) {
     console.error(`[useDexieDB] Error deleting store '${storeName}' from ${db.name}:`, error);
@@ -181,11 +164,6 @@ function getSchemaDefinitionForVersion(
     schemaDefinition[table.name] = schemaString;
   });
 
-  console.log(
-    `[useDexieDB: ${db.name}] Schema for existing stores at v${versionNumber} (derived):`,
-    schemaDefinition
-  );
-
   return schemaDefinition;
 }
 
@@ -198,7 +176,6 @@ export default function useDexieDB() {
 
     // Check if DB is already being created
     while (creatingDB.has(dbName)) {
-      console.log(`[useDexieDB] Waiting for creation of ${dbName} to complete...`);
       await new Promise((resolve) => setTimeout(resolve, 50)); // Wait briefly
       db = dbStore.activeConnections[dbName]; // Re-check if it exists now
       if (db) break; // Exit loop if found
@@ -207,7 +184,6 @@ export default function useDexieDB() {
     if (!db) {
       // Mark this DB name as being created
       creatingDB.add(dbName);
-      console.log(`[useDexieDB] No active connection for ${dbName}. Creating new instance.`);
       db = new Dexie(dbName);
       const initialSchema = DBSchemas[dbName as keyof typeof DBSchemas];
       // Define initial schema for brand new DB
@@ -215,10 +191,6 @@ export default function useDexieDB() {
 
       try {
         await db.open();
-        console.log(
-          `[useDexieDB] Opened new DB ${dbName}. Version: ${db.verno}. Tables:`,
-          db.tables.map((t) => t.name)
-        );
         dbStore.registerConnection(dbName, db); // Register the new connection
       } catch (error) {
         console.error(`[useDexieDB] Failed to open database ${dbName}:`, error);
@@ -227,7 +199,6 @@ export default function useDexieDB() {
       } finally {
         // Ensure the flag is removed whether creation succeeded or failed
         creatingDB.delete(dbName);
-        console.log(`[useDexieDB] Creation flag removed for ${dbName}`);
       }
     } else {
       // DB instance exists, ensure it's open
@@ -235,15 +206,10 @@ export default function useDexieDB() {
         console.warn(`[useDexieDB] Connection for ${dbName} was closed. Attempting to reopen...`);
         try {
           await db.open(); // Dexie handles reopening correctly
-          console.log(`[useDexieDB] Successfully reopened ${dbName}. Version: ${db.verno}`);
         } catch (reopenError) {
           console.error(`[useDexieDB] Failed to reopen database ${dbName}:`, reopenError);
           throw reopenError;
         }
-      } else {
-        console.log(
-          `[useDexieDB] Using existing active connection for ${dbName}. Version: ${db.verno}`
-        );
       }
     }
 
@@ -267,9 +233,6 @@ export default function useDexieDB() {
       return; // Stop if store couldn't be added/ensured
     }
 
-    // Wait a moment for schema changes potentially? Might not be needed.
-    // await new Promise((resolve) => setTimeout(resolve, 50));
-
     const table = db.table(storeName);
 
     // Enrich data if sourceFile is provided
@@ -280,18 +243,11 @@ export default function useDexieDB() {
     try {
       // Clear existing data if requested
       if (options?.replaceExisting) {
-        console.log(`[useDexieDB: ${dbName}/${storeName}] Clearing existing data before bulkPut.`);
         await table.clear();
       }
 
-      console.log(
-        `[useDexieDB: ${dbName}/${storeName}] Starting bulkPut for ${enrichedData.length} records...`
-      );
       // Store the data
       await table.bulkPut(enrichedData);
-      console.log(
-        `[useDexieDB: ${dbName}/${storeName}] Successfully stored ${enrichedData.length} records.`
-      );
     } catch (error) {
       console.error(`[useDexieDB: ${dbName}/${storeName}] Error during bulkPut:`, error);
       // Consider more specific error handling or recovery here
@@ -310,10 +266,8 @@ export default function useDexieDB() {
     }
 
     const table: Table<T> = db.table(storeName);
-    console.log(`[useDexieDB: ${dbName}/${storeName}] Loading all records...`);
     try {
       const results = await table.toArray();
-      console.log(`[useDexieDB: ${dbName}/${storeName}] Loaded ${results.length} records.`);
       return results;
     } catch (error) {
       console.error(`[useDexieDB: ${dbName}/${storeName}] Error loading data:`, error);
@@ -337,12 +291,8 @@ export default function useDexieDB() {
     }
 
     const table: Table<T> = db.table(storeName);
-    console.log(
-      `[useDexieDB: ${dbName}/${storeName}] Loading ${limit} records starting from offset ${offset}...`
-    );
     try {
       const results = await table.offset(offset).limit(limit).toArray();
-      console.log(`[useDexieDB: ${dbName}/${storeName}] Loaded ${results.length} records (paged).`);
       return results;
     } catch (error) {
       console.error(`[useDexieDB: ${dbName}/${storeName}] Error loading paged data:`, error);
@@ -356,11 +306,9 @@ export default function useDexieDB() {
   }
 
   async function deleteDatabase(dbName: DBNameType): Promise<void> {
-    console.log(`[useDexieDB] Attempting to delete database: ${dbName}`);
     await dbStore.closeConnection(dbName); // Ensure connection is closed first
     try {
       await Dexie.delete(dbName);
-      console.log(`[useDexieDB] Successfully deleted database: ${dbName}`);
     } catch (error) {
       console.error(`[useDexieDB] Error deleting database ${dbName}:`, error);
       // Might want to notify the user or attempt recovery
@@ -369,12 +317,10 @@ export default function useDexieDB() {
   }
 
   async function closeAllConnections(): Promise<void> {
-    console.log('[useDexieDB] Closing all active Dexie connections...');
     const activeDBNames = Object.keys(dbStore.activeConnections) as DBNameType[];
     for (const dbName of activeDBNames) {
       await dbStore.closeConnection(dbName);
     }
-    console.log('[useDexieDB] All connections closed.');
   }
 
   async function getAllStoreNamesForDB(dbName: DBNameType): Promise<string[]> {

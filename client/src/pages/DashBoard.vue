@@ -521,28 +521,23 @@
   async function loadDatabaseInfo() {
     isLoadingDatabaseInfo.value = true;
     allDatabaseTables.value = [];
-    console.log('[DashBoard] Loading database info...');
 
     try {
       // 1. Get names of all IndexedDB databases present in the browser
       const existingDbNames = await Dexie.getDatabaseNames();
-      console.log('[DashBoard] Found existing databases:', existingDbNames);
 
       // 2. Filter to get only our application's known databases that currently exist
       const knownAppDbNames = Object.values(DBName) as DBNameType[];
       const relevantExistingDbNames = existingDbNames.filter((name) =>
         knownAppDbNames.includes(name as DBNameType)
       );
-      console.log('[DashBoard] Relevant existing app databases:', relevantExistingDbNames);
 
       // 3. Iterate only over the databases that actually exist
       for (const dbName of relevantExistingDbNames) {
-        console.log(`[DashBoard] Checking existing DB: ${dbName}`);
         // We still need getDB to get table names/counts, but now only for existing DBs
         // getDB ensures the connection is open if needed
         const dbInstance = await dexieDB.getDB(dbName as DBNameType); // Cast to DBNameType
         const storeNames = await dexieDB.getAllStoreNamesForDB(dbName as DBNameType); // Cast to DBNameType
-        console.log(`[DashBoard] Stores found in ${dbName}:`, storeNames);
 
         for (const storeName of storeNames) {
           try {
@@ -553,7 +548,6 @@
               storage: 'indexeddb',
               count: count,
             });
-            console.log(`[DashBoard] Added table: ${dbName}/${storeName} (${count} records)`);
           } catch (loadError) {
             console.error(
               `[DashBoard] Failed to load count for ${dbName}/${storeName}:`,
@@ -568,7 +562,6 @@
           }
         }
       }
-      console.log('[DashBoard] Finished loading database info. Tables:', allDatabaseTables.value);
     } catch (error) {
       console.error('[DashBoard] Error loading database info:', error);
     } finally {
@@ -591,7 +584,6 @@
     () => azStore.filesUploaded.size,
     async (newSize, oldSize) => {
       if (newSize !== oldSize) {
-        console.log('[DashBoard] AZ Store uploads changed, reloading DB info...');
         await loadDatabaseInfo();
       }
     }
@@ -601,7 +593,6 @@
     () => usStore.filesUploaded.size,
     async (newSize, oldSize) => {
       if (newSize !== oldSize) {
-        console.log('[DashBoard] US Store uploads changed, reloading DB info...');
         await loadDatabaseInfo();
       }
     }
@@ -627,14 +618,9 @@
   // Computed property to determine if the button should be enabled and primary
   const isEmailInputValid = computed(() => {
     const currentEmail = userStore.auth.user?.email;
-    console.log(`[Debug Email] Input: "${newEmail.value}"`);
-    console.log(`[Debug Email] Current: "${currentEmail}"`);
     const isNotEmpty = newEmail.value.trim() !== '';
     const isDifferent = newEmail.value !== currentEmail;
     const isValidFormat = emailRegex.test(newEmail.value);
-    console.log(
-      `[Debug Email] Checks -> NotEmpty: ${isNotEmpty}, Different: ${isDifferent}, ValidFormat: ${isValidFormat}`
-    );
     return isNotEmpty && isDifferent && isValidFormat;
   });
 </script>

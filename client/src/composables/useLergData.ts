@@ -44,7 +44,6 @@ export function useLergData() {
 
     try {
       if (lergStore.stats?.totalNPAs > 0 && isInitialized.value) {
-        console.log('LERG data already initialized. Skipping fetch.');
         isLoading.value = false;
         isInitializing.value = false;
         return;
@@ -53,15 +52,16 @@ export function useLergData() {
       await checkEdgeFunctionStatus();
 
       if (isEdgeFunctionAvailable.value) {
-        console.log('Initializing/Refreshing LERG data from Supabase...');
         await uploadLerg(null);
         isInitialized.value = true;
-        console.log('LERG data initialization/refresh complete.');
       } else {
+        console.warn(
+          '[useLergData] Edge functions are not available for LERG data initialization.'
+        );
         throw new Error('Edge functions are not available for LERG data initialization.');
       }
     } catch (err) {
-      console.error('Error during LERG data initialization:', err);
+      console.error('[useLergData] Error during LERG data initialization:', err);
       error.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
       isInitialized.value = false;
     } finally {
@@ -84,24 +84,20 @@ export function useLergData() {
       }
 
       if (!file) {
-        console.log('uploadLerg called with null file, proceeding with data fetch/refresh.');
         const { data: pingData, error: pingError } = await supabase.functions.invoke('ping-status');
         if (pingError) throw new Error(pingError.message);
 
         if (!pingData?.hasLergTable) {
-          console.log('No LERG table found in Supabase. Clearing local data.');
           await lergService.clearLergData();
           await updateStoreData();
           return null;
         }
 
-        console.log('Fetching LERG data from Supabase via get-lerg-data function...');
         const { data: lergData, error: lergError } =
           await supabase.functions.invoke('get-lerg-data');
         if (lergError) throw new Error(lergError.message);
 
         if (lergData?.data?.length > 0) {
-          console.log(`Fetched ${lergData.data.length} LERG records. Initializing local table...`);
           const lastUpdated = lergData.data[0]?.last_updated
             ? new Date(lergData.data[0].last_updated)
             : new Date();
@@ -112,18 +108,16 @@ export function useLergData() {
           }));
 
           await lergService.initializeLergTable(recordsWithTimestamp);
-          console.log('Local LERG table initialized. Updating store data...');
+
           await updateStoreData();
-          console.log('LERG store data updated.');
         } else {
-          console.log('No LERG data found in Supabase. Clearing local data.');
+          console.warn('[useLergData] No LERG data found in Supabase. Clearing local data.');
           await lergService.clearLergData();
           await updateStoreData();
         }
         return lergData;
       }
 
-      console.log(`Processing uploaded LERG file: ${file.name}`);
       const fileText = await file.text();
 
       const { data: csvData, errors } = Papa.parse<string[]>(fileText, {
@@ -314,12 +308,7 @@ export function useLergData() {
         throw new Error('Failed to get processed data for store update.');
       }
 
-      const {
-        stateMapping,
-        canadaProvinces,
-        countryData,
-        count
-      } = processedData;
+      const { stateMapping, canadaProvinces, countryData, count } = processedData;
 
       const lastUpdatedResult = await lergService.getLastUpdatedTimestamp();
 
@@ -410,7 +399,8 @@ export function useLergData() {
     } catch (err) {
       console.error('Error in addAndRefreshLergRecord:', err);
       if (!didFunctionFail) {
-        error.value = err instanceof Error ? err.message : 'An unexpected error occurred during refresh.';
+        error.value =
+          err instanceof Error ? err.message : 'An unexpected error occurred during refresh.';
       }
     } finally {
       isLoading.value = false;
