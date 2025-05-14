@@ -35,7 +35,7 @@
           <!-- Call to action buttons -->
           <div ref="ctaButtons" class="flex flex-wrap gap-4 pt-4 opacity-0">
             <RouterLink
-              to="/dashboard"
+              to="/signup"
               class="bg-accent/20 text-accent font-medium px-8 py-3 rounded-3xl hover:bg-accent/30 transition-colors text-center border border-accent/50"
             >
               Find My Margin
