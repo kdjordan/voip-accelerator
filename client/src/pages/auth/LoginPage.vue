@@ -21,6 +21,13 @@
           >Sign up for a free trial</RouterLink
         >
       </p>
+      <div class="mt-10 text-center text-sm text-gray-400">
+        <RouterLink
+          :to="{ path: '/' }"
+          class="font-semibold leading-6 text-accent hover:text-accent-hover"
+          >Home</RouterLink
+        >
+      </div>
     </div>
   </div>
 </template>

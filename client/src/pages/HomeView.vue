@@ -118,13 +118,13 @@
       <FeatureCards />
     </section>
 
-    <!-- Pricing Section -->
+    <!-- Pricing Section 
     <section id="pricing">
       <div ref="pricingSection" class="opacity-0 translate-y-[50px]">
         <PricingSection />
       </div>
     </section>
-
+-->
     <!-- Footer Section -->
     <section class="py-24 bg-fbBlack">
       <div class="container mx-auto px-4">
