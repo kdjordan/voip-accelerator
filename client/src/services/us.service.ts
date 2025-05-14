@@ -74,7 +74,7 @@ export class USService {
     columnMapping: Record<string, number>,
     startLine: number,
     indeterminateDefinition?: string
-  ): Promise<{ fileName: string; records: USStandardizedData[] }> {
+  ): Promise<{ fileName: string; records: USStandardizedData[]; tableName: string }> {
     // Derive table name from file name (removing .csv extension)
     const tableName = file.name.toLowerCase().replace('.csv', '');
     const { storeInDexieDB } = this.dexieDB;
@@ -225,6 +225,9 @@ export class USService {
 
             // Calculate and store file stats
             await this.calculateFileStats(componentId, file.name);
+
+            // Resolve with fileName, records, and tableName
+            resolve({ fileName: file.name, records: validRecords, tableName });
           } catch (error) {
             reject(error);
           }
@@ -820,6 +823,66 @@ export class USService {
       console.error('[USService] Failed to clear US pricing comparison data:', error);
       // Decide if error should be thrown or just logged
       // throw error;
+    }
+  }
+
+  async generateAndStoreEnhancedReport(componentId: string, fileName: string): Promise<void> {
+    if (!fileName) {
+      console.error('[USService] Cannot generate enhanced report: file name is missing.');
+      return;
+    }
+
+    try {
+      // We are generating a report for a single file here.
+      // makeUsCodeReport can accept two filenames, for the second one we'll pass an empty string or null
+      // if it expects a string, and handle null/undefined cases within makeUsCodeReport or its data processing.
+      // For now, assuming it can handle one filename and an empty/null second one.
+      const rawReportData = await this.makeUsCodeReport(fileName, ''); // Pass empty for file2Name
+
+      if (!rawReportData || !rawReportData.file1Report) {
+        console.error(
+          `[USService] Failed to generate raw data for enhanced report for file: ${fileName}`
+        );
+        return;
+      }
+
+      // Transform rawReportData (USCodeReport) into USEnhancedCodeReport format
+      const enhancedReport: USEnhancedCodeReport = {
+        file1: {
+          fileName: rawReportData.file1Report.fileName || fileName,
+          totalCodes: rawReportData.file1Report.totalCodes,
+          npaCount: rawReportData.file1Report.npaCount,
+          uniqueNpaCount: rawReportData.file1Report.uniqueNpaCount,
+          npaCoverage: rawReportData.file1Report.npaCoverage,
+          avgInterRate: rawReportData.file1Report.avgInterRate,
+          avgIntraRate: rawReportData.file1Report.avgIntraRate,
+          avgIndetermRate: rawReportData.file1Report.avgIndetermRate,
+          countries: rawReportData.file1Report.countries.map((country) => ({
+            countryCode: country.countryCode,
+            countryName: country.countryName,
+            npaCount: country.npaCount,
+            npaCoverage: country.npaCoverage,
+            states: country.states.map((state) => ({
+              stateCode: state.stateCode,
+              stateName: state.stateName, // Ensure stateName is populated if available
+              coverage: state.coverage,
+              npas: state.npas,
+              rateStats: state.rateStats,
+            })),
+          })),
+        },
+        file2: null, // No second file for this operation
+        comparisonSummary: null, // No comparison for a single file report
+      };
+
+      this.store.setEnhancedCodeReport(enhancedReport);
+      console.log(`[USService] Successfully generated and stored enhanced report for ${fileName}`);
+    } catch (error) {
+      console.error(
+        `[USService] Error generating or storing enhanced report for ${fileName}:`,
+        error
+      );
+      // Optionally, re-throw or handle the error further if needed
     }
   }
 }
