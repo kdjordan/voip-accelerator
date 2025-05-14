@@ -40,7 +40,7 @@
             >
               Find My Margin
             </RouterLink>
-
+<!--
             <a
               href="#pricing"
               @click.prevent="scrollToPricing"
@@ -48,6 +48,7 @@
             >
               See pricing
             </a>
+-->
           </div>
         </div>
       </div>
