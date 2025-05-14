@@ -440,18 +440,37 @@
       <table class="min-w-full divide-y divide-gray-700 text-sm">
         <thead class="bg-gray-800 sticky top-0 z-10">
           <tr>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">NPANXX</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">State</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Country</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Interstate Rate</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Intrastate Rate</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Indeterminate Rate</th>
-            <th scope="col" class="px-4 py-2 text-gray-300 text-center">Effective Date</th>
+            <th
+              v-for="header in tableHeaders"
+              :key="header.key"
+              scope="col"
+              class="px-4 py-2 text-gray-300"
+              :class="[header.textAlign, { 'cursor-pointer hover:bg-gray-700': header.sortable }]"
+              @click="header.sortable ? handleSort(header.key) : null"
+            >
+              <div class="flex items-center justify-center">
+                <span>{{ header.label }}</span>
+                <template v-if="header.sortable">
+                  <ArrowUpIcon
+                    v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
+                    class="w-3 h-3 ml-1 text-accent"
+                  />
+                  <ArrowDownIcon
+                    v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'"
+                    class="w-3 h-3 ml-1 text-accent"
+                  />
+                  <ChevronUpDownIcon
+                    v-else
+                    class="w-4 h-4 ml-1 text-gray-500 hover:text-gray-200"
+                  />
+                </template>
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
           <!-- Loading State -->
-          <tr v-if="isDataLoading">
+          <tr v-if="isDataLoading && !isFiltering">
             <td colspan="7" class="text-center py-10">
               <div class="flex items-center justify-center space-x-2 text-accent">
                 <ArrowPathIcon class="animate-spin w-6 h-6" />
@@ -537,6 +556,8 @@
     CheckIcon,
     ChevronUpDownIcon,
     ArrowRightIcon,
+    ArrowUpIcon,
+    ArrowDownIcon,
   } from '@heroicons/vue/20/solid';
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
@@ -694,6 +715,27 @@
     'YT',
   ];
 
+  // --- Sorting State ---
+  const currentSortKey = ref<string>('npanxx'); // Default sort column
+  const currentSortDirection = ref<'asc' | 'desc'>('asc'); // Default sort direction
+
+  // Define table headers for dynamic rendering and sorting
+  const tableHeaders = ref([
+    { key: 'npanxx', label: 'NPANXX', sortable: true, textAlign: 'text-center' },
+    { key: 'stateCode', label: 'State', sortable: true, textAlign: 'text-center' }, // Sort by stateCode
+    { key: 'countryCode', label: 'Country', sortable: true, textAlign: 'text-center' }, // Sort by countryCode (assuming field exists)
+    { key: 'interRate', label: 'Interstate Rate', sortable: true, textAlign: 'text-center' },
+    { key: 'intraRate', label: 'Intrastate Rate', sortable: true, textAlign: 'text-center' },
+    { key: 'indetermRate', label: 'Indeterminate Rate', sortable: true, textAlign: 'text-center' },
+    {
+      key: 'effectiveDateGlobal',
+      label: 'Effective Date',
+      sortable: false,
+      textAlign: 'text-center',
+    }, // Global date, not sortable per row
+  ]);
+  // --- End Sorting State ---
+
   // Computed property to structure states for the dropdown with optgroup
   const groupedAvailableStates = computed(() => {
     const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
@@ -729,6 +771,9 @@
 
   const debouncedSearch = useDebounceFn(() => {
     debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
+    // Reset sorting when search query changes
+    currentSortKey.value = 'npanxx';
+    currentSortDirection.value = 'asc';
     resetPaginationAndLoad();
   }, 300);
 
@@ -736,6 +781,10 @@
 
   // Watcher for state filter changes - handles table reload AND average calculation
   const stopStateWatcher = watch(selectedState, async (newStateCode) => {
+    // Reset sorting when state filter changes
+    currentSortKey.value = 'npanxx';
+    currentSortDirection.value = 'asc';
+
     // 1. Reset table data and pagination
     await resetPaginationAndLoad();
 
@@ -779,9 +828,6 @@
       const targetDbName = DBName.US_RATE_SHEET;
       dbInstance = await getDB(targetDbName);
       if (!dbInstance || !dbInstance.tables.some((t) => t.name === RATE_SHEET_TABLE_NAME)) {
-        console.warn(
-          `[USRateSheetTable] Table '${RATE_SHEET_TABLE_NAME}' not found in DB '${targetDbName}'. Checking store...`
-        );
         if (!store.getHasUsRateSheetData) {
           dataError.value = null;
         } else {
@@ -795,7 +841,6 @@
       dataError.value = null;
       return true;
     } catch (err: any) {
-      console.error('[USRateSheetTable] Error initializing Dexie DB:', err);
       dataError.value = err.message || 'Failed to connect to the rate sheet database';
       hasMoreData.value = false;
       totalRecords.value = 0;
@@ -806,7 +851,6 @@
 
   async function fetchUniqueStates() {
     if (!(await initializeRateSheetDB()) || !dbInstance) {
-      console.warn('[USRateSheetTable] Cannot fetch states, DB not ready.');
       availableStates.value = [];
       return;
     }
@@ -836,7 +880,6 @@
         return a.localeCompare(b);
       });
     } catch (err: any) {
-      console.error('[USRateSheetTable] Error fetching unique states/provinces from Dexie:', err);
       availableStates.value = [];
       dataError.value = 'Could not load state/province filter options.';
     }
@@ -852,66 +895,88 @@
     newHasMoreData: boolean;
     newTotalRecords?: number;
   }> {
-    // Removed isLoadingMore logic as this is now primarily for initial/filter load
     dataError.value = null;
     let count = 0;
 
     try {
       const table = dbInstance!.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
+      let query: Dexie.Table<USRateSheetEntry, any> | Dexie.Collection<USRateSheetEntry, any> =
         table;
 
       const filtersApplied: string[] = [];
 
-      // Apply filters based on debouncedSearchQuery and selectedState
+      // Apply main indexed filters first
       if (debouncedSearchQuery.value) {
-        queryChain = table.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
+        query = query.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
         filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
-
-        if (selectedState.value) {
-          // IMPORTANT: Dexie's 'and' method is for chaining filters on the same index.
-          // For filtering on multiple properties (npanxx startsWith AND stateCode equals),
-          // we need to apply the second filter after the initial where clause.
-          queryChain = queryChain.filter((record) => record.stateCode === selectedState.value);
-          filtersApplied.push(`Region equals ${selectedState.value}`);
-        }
       } else if (selectedState.value) {
-        queryChain = table.where('stateCode').equals(selectedState.value);
+        query = query.where('stateCode').equals(selectedState.value);
         filtersApplied.push(`Region equals ${selectedState.value}`);
       }
 
-      // Calculate total count only on the first load (offset 0)
-      if (currentOffset === 0) {
-        count = await queryChain.count();
+      let dbSortApplied = false;
+
+      if (typeof (query as any).orderBy === 'function') {
+        if (currentSortKey.value) {
+          try {
+            query = (query as any).orderBy(currentSortKey.value);
+            if (currentSortDirection.value === 'desc') {
+              query = (query as any).reverse();
+            }
+            dbSortApplied = true;
+          } catch (sortError) {}
+        }
       }
 
-      // Apply pagination and fetch data
-      const newData = await queryChain.offset(currentOffset).limit(PAGE_SIZE).toArray();
+      // Apply client-side state filter if NPANXX was also searched (making query a Collection)
+      if (debouncedSearchQuery.value && selectedState.value) {
+        query = query.filter((record) => record.stateCode === selectedState.value);
+        filtersApplied.push(`Region equals ${selectedState.value} (client-side)`);
+      }
+
+      if (currentOffset === 0) {
+        const countQuery = query.clone();
+        count = await countQuery.count();
+      }
+
+      let newData = await query.offset(currentOffset).limit(PAGE_SIZE).toArray();
+
+      // If DB sorting was not applied (e.g., query became a Collection before orderBy could be called, or orderBy failed)
+      // and a sort key is active, perform client-side sort.
+      if (!dbSortApplied && currentSortKey.value) {
+        newData.sort((a, b) => {
+          const valA = (a as any)[currentSortKey.value!];
+          const valB = (b as any)[currentSortKey.value!];
+          let comparison = 0;
+          if (valA === null || valA === undefined)
+            return currentSortDirection.value === 'asc' ? -1 : 1; // handle nulls/undefined
+          if (valB === null || valB === undefined)
+            return currentSortDirection.value === 'asc' ? 1 : -1;
+
+          if (valA > valB) comparison = 1;
+          else if (valA < valB) comparison = -1;
+          return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
+        });
+      }
 
       const newOffset = currentOffset + newData.length;
-      // Determine hasMoreData based on fetched count and total count if available
       const newHasMoreData =
         newData.length === PAGE_SIZE && (currentOffset === 0 ? newOffset < count : true);
 
-      // Return the results instead of updating refs directly
       return {
         data: newData,
         newOffset: newOffset,
         newHasMoreData: newHasMoreData,
-        newTotalRecords: currentOffset === 0 ? count : undefined, // Only return count on first load
+        newTotalRecords: currentOffset === 0 ? count : undefined,
       };
     } catch (err: any) {
-      console.error('[USRateSheetTable] Error loading rate sheet data:', err);
       dataError.value = err.message || 'Failed to load data';
-      // Return empty/default state on error
       return {
         data: [],
-        newOffset: currentOffset, // Keep original offset on error?
+        newOffset: currentOffset,
         newHasMoreData: false,
         newTotalRecords: currentOffset === 0 ? 0 : undefined,
       };
-    } finally {
-      // Removed isLoadingMore = false
     }
   }
 
@@ -930,6 +995,7 @@
     hasMoreData.value = true;
     dataError.value = null;
     isLoadingMore.value = false; // Ensure infinite scroll loading is off
+    // Do NOT reset sort key/direction here, so it persists across filter changes
 
     // Explicitly type fetchedResult to match the return type of loadMoreData
     let fetchedResult: {
@@ -947,10 +1013,8 @@
     const dbReady = await initializeRateSheetDB();
     if (dbReady && dbInstance) {
       try {
-        // Fetch the first page of data but don't update displayedData yet
         fetchedResult = await loadMoreData(currentOffset);
       } catch (fetchError) {
-        console.error('[USRateSheetTable] Error during initial data fetch in reset:', fetchError);
         dataError.value = (fetchError as Error).message || 'Failed to fetch initial data.';
         fetchedResult.newHasMoreData = false; // Ensure we stop loading on error
       }
@@ -1004,7 +1068,6 @@
 
     const dbReady = await initializeRateSheetDB();
     if (!dbReady || !dbInstance) {
-      console.error('[USRateSheetTable] Cannot calculate averages, DB not ready.');
       if (isLoadingOverall) isCalculatingOverall.value = false;
       else isCalculatingState.value = false;
       return null;
@@ -1051,7 +1114,6 @@
 
       return averages;
     } catch (err: any) {
-      console.error('[USRateSheetTable] Error calculating averages:', err);
       dataError.value = err.message || 'Failed to calculate averages';
       return null;
     } finally {
@@ -1137,7 +1199,6 @@
             }
           })
           .catch((err) => {
-            console.error('[USRateSheetTable] Error during infinite scroll loadMoreData:', err);
             dataError.value = (err as Error).message || 'Failed to load more data.';
             hasMoreData.value = false;
           })
@@ -1178,7 +1239,6 @@
     const dbReady = await initializeRateSheetDB();
     if (!dbReady || !dbInstance) {
       alert('Database is not ready. Cannot export.');
-      console.error('[USRateSheetTable] Export failed: DB instance not available.');
       return;
     }
 
@@ -1249,7 +1309,6 @@
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (exportError: any) {
-      console.error('[USRateSheetTable] Error during export:', exportError);
       dataError.value = exportError.message || 'An error occurred during export.';
       alert(`Export failed: ${dataError.value}`);
     } finally {
@@ -1278,7 +1337,6 @@
 
   async function handleApplyAdjustment() {
     if (isApplyingAdjustment.value || !dbInstance) {
-      console.warn('[USRateSheetTable] Adjustment already in progress or DB not ready.');
       return;
     }
     if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
@@ -1415,10 +1473,7 @@
       // --- End refresh ---
 
       // --- Reset adjustment form ---
-      // adjustmentType.value = adjustmentTypeOptions[0].value; // Keep selection
-      // adjustmentValueType.value = adjustmentValueTypeOptions[0].value; // Keep selection
       adjustmentValue.value = null; // Only reset the value input
-      // adjustmentTargetRate.value = adjustmentTargetRateOptions[0].value; // Keep selection
       // --- End reset form ---
 
       adjustmentStatusTimeoutId = setTimeout(() => {
@@ -1428,7 +1483,6 @@
 
       store.lastDbUpdateTime = Date.now();
     } catch (err: any) {
-      console.error('[USRateSheetTable] Error applying rate adjustments:', err);
       adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
       adjustmentStatusMessage.value = null;
     } finally {
@@ -1456,6 +1510,24 @@
     const provinceName = lergStore.getProvinceNameByCode(code);
     return provinceName;
   }
+
+  // --- Sorting Handler ---
+  async function handleSort(key: string) {
+    const header = tableHeaders.value.find((h) => h.key === key);
+    if (!header || !header.sortable) {
+      return;
+    }
+
+    if (currentSortKey.value === key) {
+      currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortKey.value = key;
+      currentSortDirection.value = 'asc';
+    }
+    // After updating sort state, reload data from the beginning
+    await resetPaginationAndLoad();
+  }
+  // --- End Sorting Handler ---
 </script>
 
 <style scoped>
