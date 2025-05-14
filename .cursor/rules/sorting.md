@@ -248,3 +248,60 @@ The approach will be very similar to `USRateSheetTable.vue`.
     - When implementing a custom JavaScript `array.sort((a,b) => ...)` comparator, explicitly handle `null` or `undefined` values for the sort key to prevent errors and ensure consistent sorting (e.g., always place them at the beginning or end).
 
 This refined understanding will guide the implementation of sorting in `USDetailedComparisonTable.vue`, which also uses Dexie and has its own set of filters.
+
+**V. Troubleshooting File Upload & Data Processing Issues (US Rate Deck Analyzer)**
+
+This section documents the attempts made to resolve issues encountered with file uploads, `stateCode` processing, `USCodeSummary.vue` display, and the inability to upload multiple files in the US Rate Deck Analyzer.
+
+1.  **Initial Error & Symptom:**
+
+    - Error in UI: `this.lergStore.getRegionCodeByNPA is not a function`.
+    - Prevents file processing.
+
+2.  **Troubleshooting `getRegionCodeByNPA` Error:**
+
+    - **Investigation:**
+      - Confirmed `getRegionCodeByNPA` was not a valid method on `lergStore`.
+      - Identified the call was being made in `client/src/services/us.service.ts`.
+      - Found that `lergStore` provides `getOptimizedLocationByNPA()` which returns `{ country: string; region: string } | null`.
+    - **Attempted Fix (Applied):**
+      - Modified `client/src/services/us.service.ts` to use `this.lergStore.getOptimizedLocationByNPA(npa)`.
+      - Updated logic to extract `stateCode` from `locationInfo.region`, defaulting to `'XX'` if `locationInfo` or `locationInfo.region` was null/empty.
+    - **Outcome:** The "is not a function" error was resolved. However, this led to new symptoms.
+
+3.  **New Symptoms After Initial Fix:**
+
+    - `stateCode` in DexieJS (`us_rate_deck_db` -> `us-1` table) was often empty or `'XX'`.
+    - `USCodeSummary.vue` displayed incorrect/broken data (e.g., 0% coverage, incorrect NPA counts).
+    - Unable to upload a second file after the first one was processed (UI stuck).
+    - Persistent console warning: `[UseDexieDB] Received empty schema string for us_rate_deck_db. Defining no stores.`
+
+4.  **Troubleshooting Empty/Incorrect `stateCode` and Dexie Schema:**
+
+    - **Investigation (Dexie Schema):**
+      - Found `DBSchemas[DBName.US]` in `client/src/types/app-types.ts` was an empty string (`''`).
+      - This caused `useDexieDB.ts` to initialize `us_rate_deck_db` with no tables defined initially.
+      - The `addStore` function in `useDexieDB.ts` was falling back to a default `'++id'` schema for dynamically created tables (e.g., `us-1`), as `DynamicTableSchemas` was not yet defined or correctly referenced for `DBName.US`.
+    - **Attempted Fix (Dexie Schema - Applied):**
+      - Defined `DynamicTableSchemas` in `client/src/types/app-types.ts`.
+      - Provided a full schema string for `DynamicTableSchemas[DBName.US]` (e.g., `'++id, &npanxx, npa, nxx, stateCode, ...'`).
+    - **Outcome (Dexie Schema):** Tables like `us-1` were created with more appropriate indexes. `stateCode` started appearing in Dexie (e.g., "AK"). The "Defining no stores" warning for the DB itself persisted. `stateCode` for some NPAs (like `939` for Puerto Rico) was still `'XX'`. Issues with `USCodeSummary.vue` and uploading a second file remained.
+
+5.  **Troubleshooting `stateCode: 'XX'` for specific NPAs (e.g., Puerto Rico 'PR' - NPA 939):**
+    - **Investigation (LERG Processing):**
+      - Confirmed `lergStore._populateNpaToLocationMap()` sets `region: ''` for NPAs classified under "otherCountries".
+      - The logic `locationInfo && locationInfo.region ? locationInfo.region : 'XX'` in `us.service.ts` correctly defaults to `'XX'` if the LERG data provides an empty region.
+      - Traced the issue to `client/src/types/constants/state-codes.ts` not including `'PR'` (Puerto Rico) and other US territories.
+      - This caused `lergService.isUSState('PR')` to return `false`.
+      - In `useLergData.ts` (function `updateStoreData`), NPAs for states/territories not in `STATE_CODES` were filtered out before being set into `lergStore.usStates`.
+    - **Attempted Fix (LERG - Applied):**
+      - Added `'PR': { name: 'Puerto Rico', region: 'Territory' }` to `STATE_CODES` in `client/src/types/constants/state-codes.ts`.
+      - Instructed to clear site data to ensure `lergStore` repopulates correctly.
+    - **Outcome (LERG):** User reported this did not resolve the remaining issues (`USCodeSummary.vue` still broken, unable to upload a second file).
+
+**Summary of Unresolved Issues (as of last interaction):**
+
+- `USCodeSummary.vue` remains broken or inaccurate.
+- Inability to upload a second file (UI state likely not resetting).
+- The console warning `[UseDexieDB] Received empty schema string for us_rate_deck_db. Defining no stores.` might still indicate an underlying issue with initial DB setup, even if dynamic tables are now better schemed.
+- The root cause for `stateCode` being `'XX'` for NPAs like `939` needs re-verification in LERG data flow post-`STATE_CODES` update, including clearing site data by the user.
