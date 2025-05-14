@@ -139,7 +139,7 @@
             </p>
           </div>
           <RouterLink
-            to="/dashboard"
+            to="/signup"
             class="bg-accent/20 text-accent border border-accent/50 font-medium px-8 py-3 rounded-3xl hover:bg-accent/30 transition-colors whitespace-nowrap"
           >
             Get Started — It's Free
