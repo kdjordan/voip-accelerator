@@ -258,35 +258,51 @@
         <thead class="bg-gray-900/50 sticky top-0 z-10">
           <tr>
             <th scope="col" class="w-8 px-3 py-3"></th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Destination
-            </th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Codes
-            </th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Rate
-            </th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Change
-            </th>
-            <th scope="col" class="px-3 py-3 text-left text-sm font-semibold text-gray-300">
-              Effective
-            </th>
+            <!-- Spacer for expand icon -->
             <th
-              v-if="store.hasMinDuration"
+              v-for="header in tableHeaders"
+              :key="header.key"
               scope="col"
-              class="px-3 py-3 text-left text-sm font-semibold text-gray-300"
+              class="px-3 py-3 text-sm font-semibold text-gray-300"
+              :class="[
+                header.textAlign || 'text-left',
+                { 'cursor-pointer hover:bg-gray-700/50': header.sortable },
+              ]"
+              @click="header.sortable ? handleSort(header) : undefined"
+              :aria-sort="
+                header.sortable && sortColumnKey === header.key
+                  ? sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
             >
-              Duration
+              <div
+                class="flex items-center"
+                :class="{
+                  'justify-center': header.textAlign === 'text-center',
+                  'justify-end': header.textAlign === 'text-right',
+                  'justify-start': header.textAlign === 'text-left' || !header.textAlign, // Default to justify-start
+                }"
+              >
+                <span>{{ header.label }}</span>
+                <template v-if="header.sortable">
+                  <ArrowUpIcon
+                    v-if="sortColumnKey === header.key && sortDirection === 'asc'"
+                    class="w-4 h-4 ml-1.5 text-accent"
+                  />
+                  <ArrowDownIcon
+                    v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
+                    class="w-4 h-4 ml-1.5 text-accent"
+                  />
+                  <ChevronUpDownIcon
+                    v-else
+                    class="w-4 h-4 ml-1.5 text-gray-400 hover:text-gray-200"
+                  />
+                </template>
+              </div>
             </th>
-            <th
-              v-if="store.hasIncrements"
-              scope="col"
-              class="px-3 py-3 text-left text-sm font-semibold text-gray-300"
-            >
-              Increments
-            </th>
+            <!-- Static headers removed, now dynamically generated -->
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
@@ -366,7 +382,10 @@
             <!-- Expanded Details -->
             <tr v-if="expandedRows.includes(group.destinationName)">
               <td
-                :colspan="6 + (store.hasMinDuration ? 1 : 0) + (store.hasIncrements ? 1 : 0)"
+                :colspan="
+                  1 + // expand icon
+                  tableHeaders.length // all dynamic headers
+                "
                 class="px-3 py-4 bg-gray-900/30"
               >
                 <div class="pl-8">
@@ -711,1634 +730,1807 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
-import {
-  ChevronRightIcon,
-  TrashIcon,
-  ArrowDownTrayIcon,
-  CalendarDaysIcon,
-  ChevronDownIcon,
-  ArrowRightIcon,
-  ArrowPathIcon,
-  CheckIcon,
-  ChevronUpDownIcon,
-} from '@heroicons/vue/24/outline';
-import {
-  Listbox,
-  ListboxButton,
-  ListboxLabel,
-  ListboxOptions,
-  ListboxOption,
-} from '@headlessui/vue';
-import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
-import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
-import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
-import { RateSheetService } from '@/services/az-rate-sheet.service';
-import type {
-  EffectiveDateSettings,
-  EffectiveDateStoreSettings,
-  AdjustmentType,
-  AdjustmentValueType,
-} from '@/types/domains/rate-sheet-types';
-import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
+  import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount, type Ref } from 'vue';
+  import {
+    ChevronRightIcon,
+    TrashIcon,
+    ArrowDownTrayIcon,
+    CalendarDaysIcon,
+    ChevronDownIcon,
+    ArrowRightIcon,
+    ArrowPathIcon,
+    CheckIcon,
+    ChevronUpDownIcon,
+    ArrowUpIcon, // Added
+    ArrowDownIcon, // Added
+  } from '@heroicons/vue/24/outline';
+  import {
+    Listbox,
+    ListboxButton,
+    ListboxLabel,
+    ListboxOptions,
+    ListboxOption,
+  } from '@headlessui/vue';
+  import type { GroupedRateData } from '@/types/domains/rate-sheet-types';
+  import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
+  import { ChangeCode, type ChangeCodeType } from '@/types/domains/rate-sheet-types';
+  import { RateSheetService } from '@/services/az-rate-sheet.service';
+  import type {
+    EffectiveDateSettings,
+    EffectiveDateStoreSettings,
+    AdjustmentType,
+    AdjustmentValueType,
+  } from '@/types/domains/rate-sheet-types';
+  import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
 
-// Define emits
-const emit = defineEmits(['update:discrepancy-count']);
+  // Define emits
+  const emit = defineEmits(['update:discrepancy-count']);
 
-// Initialize store and service
-const store = useAzRateSheetStore();
-const rateSheetService = new RateSheetService();
-const groupedData = computed(() => store.getGroupedData);
+  // Initialize store and service
+  const store = useAzRateSheetStore();
+  const rateSheetService = new RateSheetService();
+  const groupedData = computed(() => store.getGroupedData);
 
-// Computed property to check if date settings have changed from defaults
-const hasDateSettingsChanged = computed(() => {
-  // Get default values to compare with current settings
-  const today = new Date().toISOString().split('T')[0];
+  // --- Sorting State ---
+  const sortColumnKey = ref<string | null>('destinationName');
+  const sortDirection = ref<'asc' | 'desc'>('asc');
 
-  // Get 7 days from now (default for INCREASE dates)
-  const sevenDays = new Date();
-  sevenDays.setDate(sevenDays.getDate() + 7);
-  const sevenDaysStr = sevenDays.toISOString().split('T')[0];
+  interface SortableAZColumn {
+    key: string;
+    label: string;
+    sortable: boolean;
+    textAlign?: string;
+    getValue?: (group: GroupedRateData, selectedRatesRef: Ref<Record<string, number>>) => any;
+  }
 
-  // Get defaults for each type
-  const defaultSameDate = today;
-  const defaultDecreaseDate = today;
-  const defaultIncreaseDate = sevenDaysStr;
+  const tableHeaders = computed<SortableAZColumn[]>(() => {
+    const headers: SortableAZColumn[] = [
+      {
+        key: 'destinationName',
+        label: 'Destination',
+        sortable: true,
+        textAlign: 'text-left',
+      },
+      {
+        key: 'codesCount',
+        label: 'Codes',
+        sortable: true,
+        textAlign: 'text-left',
+        getValue: (group) => group.codes.length,
+      },
+      {
+        key: 'displayRate',
+        label: 'Rate',
+        sortable: true,
+        textAlign: 'text-left',
+        getValue: (group, selectedRatesRef) => {
+          if (group.hasDiscrepancy) {
+            if (selectedRatesRef.value[group.destinationName] !== undefined) {
+              return selectedRatesRef.value[group.destinationName];
+            }
+            const commonRate = group.rates.find((r) => r.isCommon)?.rate;
+            if (commonRate !== undefined) return commonRate;
+            return group.rates[0]?.rate ?? -Infinity;
+          }
+          return group.rates[0]?.rate ?? -Infinity;
+        },
+      },
+      {
+        key: 'changeCode',
+        label: 'Change',
+        sortable: true,
+        textAlign: 'text-center',
+      },
+      {
+        key: 'effectiveDate',
+        label: 'Effective',
+        sortable: true,
+        textAlign: 'text-left',
+      },
+    ];
 
-  // Current values from the ref
-  const currentSame = effectiveDateSettings.value.sameCustomDate;
-  const currentDecrease = effectiveDateSettings.value.decreaseCustomDate;
-  const currentIncrease = effectiveDateSettings.value.increaseCustomDate;
-
-  // Check if any date is different from its default value
-  const sameDateChanged = currentSame !== defaultSameDate;
-  const decreaseDateChanged = currentDecrease !== defaultDecreaseDate;
-  const increaseDateChanged = currentIncrease !== defaultIncreaseDate;
-
-  // Log the comparison for debugging
-  console.log('Date Settings Change Check:', {
-    defaults: {
-      same: defaultSameDate,
-      decrease: defaultDecreaseDate,
-      increase: defaultIncreaseDate,
-    },
-    current: {
-      same: currentSame,
-      decrease: currentDecrease,
-      increase: currentIncrease,
-    },
-    changed: {
-      same: sameDateChanged,
-      decrease: decreaseDateChanged,
-      increase: increaseDateChanged,
-    },
-    result: sameDateChanged || decreaseDateChanged || increaseDateChanged,
+    if (store.hasMinDuration) {
+      headers.push({
+        key: 'minDuration',
+        label: 'Duration',
+        sortable: true,
+        textAlign: 'text-left',
+      });
+    }
+    if (store.hasIncrements) {
+      headers.push({
+        key: 'increments',
+        label: 'Increments',
+        sortable: true,
+        textAlign: 'text-left',
+      });
+    }
+    return headers;
   });
 
-  // Return true if any date has changed
-  return sameDateChanged || decreaseDateChanged || increaseDateChanged;
-});
+  // --- End Sorting State ---
 
-const expandedRows = ref<string[]>([]);
-const filterStatus = ref<
-  'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'
->('all');
-const searchQuery = ref('');
-const debouncedSearchQuery = ref('');
-const isSearching = ref(false);
-const searchProgress = ref(0);
-const searchTotal = ref(0);
-const isSavingChanges = ref<string | null>(null); // Track saving state per destination
+  // Computed property to check if date settings have changed from defaults
+  const hasDateSettingsChanged = computed(() => {
+    // Get default values to compare with current settings
+    const today = new Date().toISOString().split('T')[0];
 
-// State for multi-rate (discrepancy) destinations
-const selectedRates = ref<Record<string, number>>({});
-const originalRates = ref<Record<string, number>>({}); // Store original selected/single rate
-
-// State for single-rate (no discrepancy) destinations
-const singleRateAdjustments = ref<
-  Record<
-    string,
-    {
-      adjustmentType: AdjustmentType;
-      adjustmentValueType: AdjustmentValueType;
-      adjustmentValue: number | null;
-    }
-  >
->({});
-const directSetRates = ref<Record<string, number | null>>({});
-const userExplicitlySelectedRate = ref<Record<string, boolean>>({}); // <-- Add state tracker
-
-// Options for adjustment dropdowns
-const adjustmentTypeOptions = [
-  { value: 'markup', label: 'Markup' },
-  { value: 'markdown', label: 'Markdown' },
-];
-const adjustmentValueTypeOptions = [
-  { value: 'percentage', label: 'Percentage (%)' },
-  { value: 'fixed', label: 'Fixed Amount ($)' },
-];
-
-// Add new refs for processing state
-const isBulkProcessing = ref(false);
-const bulkMode = ref<'highest' | 'lowest' | 'mostCommon' | null>(null);
-const processedCount = ref(0);
-const totalToProcess = ref(0);
-const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
-
-// Track which rate's codes are expanded (only for multi-rate)
-const expandedRateCodes = ref<{ [key: string]: number[] }>({});
-
-// Cache for codes by destination and rate to improve performance
-const codesCache = ref<{ [key: string]: { [rate: number]: string[] } }>({});
-
-// Track which codes match the current search query
-const matchingCodes = ref<{ [destinationName: string]: { [rate: number]: string[] } }>({});
-
-// Effective Date Settings
-const effectiveDateSettings = ref<EffectiveDateSettings>({
-  same: 'today',
-  increase: 'week',
-  decrease: 'today',
-  sameCustomDate: new Date().toISOString().split('T')[0],
-  increaseCustomDate: (() => {
+    // Get 7 days from now (default for INCREASE dates)
     const sevenDays = new Date();
     sevenDays.setDate(sevenDays.getDate() + 7);
-    return sevenDays.toISOString().split('T')[0];
-  })(),
-  decreaseCustomDate: new Date().toISOString().split('T')[0],
-});
+    const sevenDaysStr = sevenDays.toISOString().split('T')[0];
 
-// Controls visibility of effective date settings section
-const showEffectiveDateSettings = ref(true);
-// Track when settings are being applied
-const isApplyingSettings = ref(false);
-// Track the current processing phase
-const processingPhase = ref<'idle' | 'preparing' | 'processing' | 'updating' | 'finalizing'>(
-  'idle'
-);
-const processingStatus = ref('');
-const processingStartTime = ref(0);
+    // Get defaults for each type
+    const defaultSameDate = today;
+    const defaultDecreaseDate = today;
+    const defaultIncreaseDate = sevenDaysStr;
 
-// Worker setup
-let effectiveDateWorker: Worker | null = null;
-const progressPercentage = ref(0);
+    // Current values from the ref
+    const currentSame = effectiveDateSettings.value.sameCustomDate;
+    const currentDecrease = effectiveDateSettings.value.decreaseCustomDate;
+    const currentIncrease = effectiveDateSettings.value.increaseCustomDate;
 
-// Further enhance the status message with more detail
-const currentDestination = ref('');
-const recordsUpdatedSoFar = ref(0);
-const estimatedTimeRemaining = ref<number | undefined>(undefined);
+    // Check if any date is different from its default value
+    const sameDateChanged = currentSame !== defaultSameDate;
+    const decreaseDateChanged = currentDecrease !== defaultDecreaseDate;
+    const increaseDateChanged = currentIncrease !== defaultIncreaseDate;
 
-// Add throttling mechanism for UI updates (minimal throttling for better performance)
-const lastUIUpdateTime = ref(0);
-const uiUpdateThrottle = 50; // increased from 10ms to 50ms for proper UI updates
-const pendingUIUpdates = ref<{ [key: string]: any }>({});
+    // Log the comparison for debugging
+    console.log('Date Settings Change Check:', {
+      defaults: {
+        same: defaultSameDate,
+        decrease: defaultDecreaseDate,
+        increase: defaultIncreaseDate,
+      },
+      current: {
+        same: currentSame,
+        decrease: currentDecrease,
+        increase: currentIncrease,
+      },
+      changed: {
+        same: sameDateChanged,
+        decrease: decreaseDateChanged,
+        increase: increaseDateChanged,
+      },
+      result: sameDateChanged || decreaseDateChanged || increaseDateChanged,
+    });
 
-// Add detailed log tracking
-const processingLogs = ref<{ time: number; message: string }[]>([]);
-const showProcessingLogs = ref(false);
+    // Return true if any date has changed
+    return sameDateChanged || decreaseDateChanged || increaseDateChanged;
+  });
 
-// Add separate timer for elapsed time that won't get blocked
-const displayedElapsedTime = ref(0);
-let elapsedTimeInterval: number | null = null;
+  const expandedRows = ref<string[]>([]);
+  const filterStatus = ref<
+    'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'
+  >('all');
+  const searchQuery = ref('');
+  const debouncedSearchQuery = ref('');
+  const isSearching = ref(false);
+  const searchProgress = ref(0);
+  const searchTotal = ref(0);
+  const isSavingChanges = ref<string | null>(null); // Track saving state per destination
 
-// Add these properties to handle search state
-let searchDebounceTimeout: NodeJS.Timeout | null = null;
+  // State for multi-rate (discrepancy) destinations
+  const selectedRates = ref<Record<string, number>>({});
+  const originalRates = ref<Record<string, number>>({}); // Store original selected/single rate
 
-// Load saved effective date settings from store if available
-onMounted(() => {
-  console.log('today', new Date().toISOString().split('T')[0]);
-  const savedSettings = store.getEffectiveDateSettings;
-
-  if (savedSettings) {
-    console.log('Loading saved settings:', savedSettings);
-    // Apply saved modes and custom dates first
-    effectiveDateSettings.value = {
-      same: savedSettings.same as 'today' | 'tomorrow' | 'custom',
-      increase: savedSettings.increase as 'today' | 'tomorrow' | 'week' | 'custom',
-      decrease: savedSettings.decrease as 'today' | 'tomorrow' | 'custom',
-      sameCustomDate: savedSettings.sameCustomDate,
-      increaseCustomDate: savedSettings.increaseCustomDate, // Temporarily assign saved date
-      decreaseCustomDate: savedSettings.decreaseCustomDate,
-    };
-
-    // *** Crucial Fix: Recalculate increaseCustomDate if mode is 'week' ***
-    if (effectiveDateSettings.value.increase === 'week') {
-      const sevenDaysDate = new Date();
-      sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
-      const correctWeekDate = sevenDaysDate.toISOString().split('T')[0];
-      // Only update if the saved date doesn't match the correct 'week' date
-      if (effectiveDateSettings.value.increaseCustomDate !== correctWeekDate) {
-        console.log(
-          `Correcting increaseCustomDate for 'week' mode. Was: ${effectiveDateSettings.value.increaseCustomDate}, Should be: ${correctWeekDate}`
-        );
-        effectiveDateSettings.value.increaseCustomDate = correctWeekDate;
+  // State for single-rate (no discrepancy) destinations
+  const singleRateAdjustments = ref<
+    Record<
+      string,
+      {
+        adjustmentType: AdjustmentType;
+        adjustmentValueType: AdjustmentValueType;
+        adjustmentValue: number | null;
       }
-    }
-    // Similarly, ensure 'today' and 'tomorrow' modes reflect the current date
-    else if (effectiveDateSettings.value.increase === 'today') {
-      effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
-    } else if (effectiveDateSettings.value.increase === 'tomorrow') {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
-    }
-    // If mode is 'custom', we keep the loaded increaseCustomDate
-  } else {
-    // Defaults are now set during ref initialization, log the initial state
-    console.log('Using default settings (set during ref init):', effectiveDateSettings.value);
-  }
+    >
+  >({});
+  const directSetRates = ref<Record<string, number | null>>({});
+  const userExplicitlySelectedRate = ref<Record<string, boolean>>({}); // <-- Add state tracker
 
-  // Log the final effective date settings after potential load/init and correction
-  console.log('Final effective date settings after init:', {
-    same: effectiveDateSettings.value.same,
-    sameCustomDate: effectiveDateSettings.value.sameCustomDate,
-    increase: effectiveDateSettings.value.increase,
-    increaseCustomDate: effectiveDateSettings.value.increaseCustomDate,
-    decrease: effectiveDateSettings.value.decrease,
-    decreaseCustomDate: effectiveDateSettings.value.decreaseCustomDate,
+  // Options for adjustment dropdowns
+  const adjustmentTypeOptions = [
+    { value: 'markup', label: 'Markup' },
+    { value: 'markdown', label: 'Markdown' },
+  ];
+  const adjustmentValueTypeOptions = [
+    { value: 'percentage', label: 'Percentage (%)' },
+    { value: 'fixed', label: 'Fixed Amount ($)' },
+  ];
+
+  // Add new refs for processing state
+  const isBulkProcessing = ref(false);
+  const bulkMode = ref<'highest' | 'lowest' | 'mostCommon' | null>(null);
+  const processedCount = ref(0);
+  const totalToProcess = ref(0);
+  const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
+
+  // Track which rate's codes are expanded (only for multi-rate)
+  const expandedRateCodes = ref<{ [key: string]: number[] }>({});
+
+  // Cache for codes by destination and rate to improve performance
+  const codesCache = ref<{ [key: string]: { [rate: number]: string[] } }>({});
+
+  // Track which codes match the current search query
+  const matchingCodes = ref<{ [destinationName: string]: { [rate: number]: string[] } }>({});
+
+  // Effective Date Settings
+  const effectiveDateSettings = ref<EffectiveDateSettings>({
+    same: 'today',
+    increase: 'week',
+    decrease: 'today',
+    sameCustomDate: new Date().toISOString().split('T')[0],
+    increaseCustomDate: (() => {
+      const sevenDays = new Date();
+      sevenDays.setDate(sevenDays.getDate() + 7);
+      return sevenDays.toISOString().split('T')[0];
+    })(),
+    decreaseCustomDate: new Date().toISOString().split('T')[0],
   });
 
-  initWorker();
-
-  // Setup a watcher with debounce for search
-  watch(searchQuery, (newValue) => {
-    // Cancel any existing debounce timer
-    if (searchDebounceTimeout) {
-      clearTimeout(searchDebounceTimeout);
-    }
-
-    // Set a new timeout
-    searchDebounceTimeout = setTimeout(() => {
-      debouncedSearchQuery.value = newValue;
-      performAsyncSearch(newValue.toLowerCase());
-    }, 300); // 300ms debounce
-  });
-});
-
-const filteredData = computed(() => {
-  let filtered = groupedData.value;
-
-  // Apply status filter
-  if (filterStatus.value === 'conflicts') {
-    filtered = filtered.filter((group) => group.hasDiscrepancy);
-  } else if (filterStatus.value === 'no-conflicts') {
-    filtered = filtered.filter((group) => !group.hasDiscrepancy);
-  } else if (filterStatus.value === 'change-same') {
-    filtered = filtered.filter((group) => group.changeCode === ChangeCode.SAME);
-  } else if (filterStatus.value === 'change-increase') {
-    filtered = filtered.filter((group) => group.changeCode === ChangeCode.INCREASE);
-  } else if (filterStatus.value === 'change-decrease') {
-    filtered = filtered.filter((group) => group.changeCode === ChangeCode.DECREASE);
-  }
-
-  // If no search query, return filtered data without additional processing
-  if (!debouncedSearchQuery.value) {
-    // Clear matching codes when search is empty
-    matchingCodes.value = {};
-    return filtered;
-  }
-
-  const query = debouncedSearchQuery.value.toLowerCase();
-
-  // Fast path: filter by destination name first (this is very quick)
-  const nameMatches = filtered.filter((group) =>
-    group.destinationName.toLowerCase().includes(query)
+  // Controls visibility of effective date settings section
+  const showEffectiveDateSettings = ref(true);
+  // Track when settings are being applied
+  const isApplyingSettings = ref(false);
+  // Track the current processing phase
+  const processingPhase = ref<'idle' | 'preparing' | 'processing' | 'updating' | 'finalizing'>(
+    'idle'
   );
+  const processingStatus = ref('');
+  const processingStartTime = ref(0);
 
-  // If we have name matches, don't need to do expensive code search
-  if (nameMatches.length > 0) {
-    return nameMatches;
-  }
+  // Worker setup
+  let effectiveDateWorker: Worker | null = null;
+  const progressPercentage = ref(0);
 
-  // Only search codes if no name matches were found
-  // For code matching, we return the precomputed results from the async search
-  return filtered.filter((group) => !!matchingCodes.value[group.destinationName]);
-});
+  // Further enhance the status message with more detail
+  const currentDestination = ref('');
+  const recordsUpdatedSoFar = ref(0);
+  const estimatedTimeRemaining = ref<number | undefined>(undefined);
 
-// Add a new function to perform the search asynchronously
-async function performAsyncSearch(query: string) {
-  if (!query) {
-    matchingCodes.value = {};
-    isSearching.value = false;
-    return;
-  }
+  // Add throttling mechanism for UI updates (minimal throttling for better performance)
+  const lastUIUpdateTime = ref(0);
+  const uiUpdateThrottle = 50; // increased from 10ms to 50ms for proper UI updates
+  const pendingUIUpdates = ref<{ [key: string]: any }>({});
 
-  isSearching.value = true;
-  matchingCodes.value = {};
+  // Add detailed log tracking
+  const processingLogs = ref<{ time: number; message: string }[]>([]);
+  const showProcessingLogs = ref(false);
 
-  const searchGroups = groupedData.value;
+  // Add separate timer for elapsed time that won't get blocked
+  const displayedElapsedTime = ref(0);
+  let elapsedTimeInterval: number | null = null;
 
-  // Process in smaller batches to keep UI responsive
-  const batchSize = 5; // Process 5 destinations at a time
+  // Add these properties to handle search state
+  let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
-  for (let i = 0; i < searchGroups.length; i += batchSize) {
-    // Give UI thread a chance to update
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+  // Load saved effective date settings from store if available
+  onMounted(() => {
+    console.log('today', new Date().toISOString().split('T')[0]);
+    const savedSettings = store.getEffectiveDateSettings;
 
-    const endIndex = Math.min(i + batchSize, searchGroups.length);
-    const batch = searchGroups.slice(i, endIndex);
+    if (savedSettings) {
+      console.log('Loading saved settings:', savedSettings);
+      // Apply saved modes and custom dates first
+      effectiveDateSettings.value = {
+        same: savedSettings.same as 'today' | 'tomorrow' | 'custom',
+        increase: savedSettings.increase as 'today' | 'tomorrow' | 'week' | 'custom',
+        decrease: savedSettings.decrease as 'today' | 'tomorrow' | 'custom',
+        sameCustomDate: savedSettings.sameCustomDate,
+        increaseCustomDate: savedSettings.increaseCustomDate, // Temporarily assign saved date
+        decreaseCustomDate: savedSettings.decreaseCustomDate,
+      };
 
-    for (const group of batch) {
-      const matchingCodesByRate: { [rate: number]: string[] } = {};
+      // *** Crucial Fix: Recalculate increaseCustomDate if mode is 'week' ***
+      if (effectiveDateSettings.value.increase === 'week') {
+        const sevenDaysDate = new Date();
+        sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
+        const correctWeekDate = sevenDaysDate.toISOString().split('T')[0];
+        // Only update if the saved date doesn't match the correct 'week' date
+        if (effectiveDateSettings.value.increaseCustomDate !== correctWeekDate) {
+          console.log(
+            `Correcting increaseCustomDate for 'week' mode. Was: ${effectiveDateSettings.value.increaseCustomDate}, Should be: ${correctWeekDate}`
+          );
+          effectiveDateSettings.value.increaseCustomDate = correctWeekDate;
+        }
+      }
+      // Similarly, ensure 'today' and 'tomorrow' modes reflect the current date
+      else if (effectiveDateSettings.value.increase === 'today') {
+        effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
+      } else if (effectiveDateSettings.value.increase === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
+      }
+      // If mode is 'custom', we keep the loaded increaseCustomDate
+    } else {
+      // Defaults are now set during ref initialization, log the initial state
+      console.log('Using default settings (set during ref init):', effectiveDateSettings.value);
+    }
 
-      // Only process rates if we haven't already found a match for this destination
-      // This optimization stops searching once we find any match
-      let foundMatch = false;
+    // Log the final effective date settings after potential load/init and correction
+    console.log('Final effective date settings after init:', {
+      same: effectiveDateSettings.value.same,
+      sameCustomDate: effectiveDateSettings.value.sameCustomDate,
+      increase: effectiveDateSettings.value.increase,
+      increaseCustomDate: effectiveDateSettings.value.increaseCustomDate,
+      decrease: effectiveDateSettings.value.decrease,
+      decreaseCustomDate: effectiveDateSettings.value.decreaseCustomDate,
+    });
 
-      for (const rate of group.rates) {
-        // Skip long lists if we already found a match for this destination
-        if (foundMatch) break;
+    initWorker();
 
-        const codesForRate = getCodesForRate(group, rate.rate);
+    // Setup a watcher with debounce for search
+    watch(searchQuery, (newValue) => {
+      // Cancel any existing debounce timer
+      if (searchDebounceTimeout) {
+        clearTimeout(searchDebounceTimeout);
+      }
 
-        // Early exit for large code lists - first check if any code starts with query
-        // This avoids scanning the entire array if there's no match
-        if (codesForRate.length > 50) {
-          // Quick check with a for loop is faster than filter for large arrays
-          let hasMatch = false;
-          for (let j = 0; j < Math.min(50, codesForRate.length); j++) {
-            if (codesForRate[j].toLowerCase().startsWith(query)) {
-              hasMatch = true;
-              break;
-            }
+      // Set a new timeout
+      searchDebounceTimeout = setTimeout(() => {
+        debouncedSearchQuery.value = newValue;
+        performAsyncSearch(newValue.toLowerCase());
+      }, 300); // 300ms debounce
+    });
+  });
+
+  const filteredData = computed(() => {
+    let filtered = groupedData.value;
+
+    // Apply status filter
+    if (filterStatus.value === 'conflicts') {
+      filtered = filtered.filter((group) => group.hasDiscrepancy);
+    } else if (filterStatus.value === 'no-conflicts') {
+      filtered = filtered.filter((group) => !group.hasDiscrepancy);
+    } else if (filterStatus.value === 'change-same') {
+      filtered = filtered.filter((group) => group.changeCode === ChangeCode.SAME);
+    } else if (filterStatus.value === 'change-increase') {
+      filtered = filtered.filter((group) => group.changeCode === ChangeCode.INCREASE);
+    } else if (filterStatus.value === 'change-decrease') {
+      filtered = filtered.filter((group) => group.changeCode === ChangeCode.DECREASE);
+    }
+
+    // If no search query, return filtered data without additional processing
+    if (!debouncedSearchQuery.value) {
+      // Clear matching codes when search is empty
+      matchingCodes.value = {};
+      // Apply sorting to nameMatches or the original filtered list if no search
+      if (sortColumnKey.value && filtered.length > 0) {
+        const sortKey = sortColumnKey.value;
+        const direction = sortDirection.value === 'asc' ? 1 : -1;
+        const headerConfig = tableHeaders.value.find((h) => h.key === sortKey);
+
+        filtered.sort((a, b) => {
+          let valA, valB;
+          if (headerConfig?.getValue) {
+            valA = headerConfig.getValue(a, selectedRates);
+            valB = headerConfig.getValue(b, selectedRates);
+          } else {
+            valA = (a as any)[sortKey];
+            valB = (b as any)[sortKey];
           }
 
-          // If no match found in our quick check of the first 50 items, skip this rate
-          if (!hasMatch) continue;
-        }
+          const isInvalidA =
+            valA === null || valA === undefined || valA === -Infinity || valA === Infinity;
+          const isInvalidB =
+            valB === null || valB === undefined || valB === -Infinity || valB === Infinity;
 
-        // Only do full scan if necessary
-        const matches = codesForRate.filter((code) => code.toLowerCase().startsWith(query));
+          if (isInvalidA && isInvalidB) return 0;
+          if (isInvalidA) return direction; // Push invalid to end for asc
+          if (isInvalidB) return -direction; // Push invalid to end for asc (B comes before A)
 
-        if (matches.length > 0) {
-          matchingCodesByRate[rate.rate] = matches;
-          foundMatch = true; // Set flag to skip processing other rates
-        }
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return valA.localeCompare(valB) * direction;
+          }
+          if (typeof valA === 'number' && typeof valB === 'number') {
+            return (valA - valB) * direction;
+          }
+          if (valA < valB) return -1 * direction;
+          if (valA > valB) return 1 * direction;
+          return 0;
+        });
       }
+      return filtered;
+    }
 
-      // Store matches for this destination if any were found
-      if (Object.keys(matchingCodesByRate).length > 0) {
-        matchingCodes.value[group.destinationName] = matchingCodesByRate;
+    const query = debouncedSearchQuery.value.toLowerCase();
+
+    // Fast path: filter by destination name first (this is very quick)
+    let result = filtered.filter((group) => group.destinationName.toLowerCase().includes(query));
+
+    // If no name matches, search codes (precomputed results from async search)
+    if (result.length === 0) {
+      result = filtered.filter((group) => !!matchingCodes.value[group.destinationName]);
+    }
+
+    // Apply sorting to the final result list
+    if (sortColumnKey.value && result.length > 0) {
+      const sortKey = sortColumnKey.value;
+      const direction = sortDirection.value === 'asc' ? 1 : -1;
+      const headerConfig = tableHeaders.value.find((h) => h.key === sortKey);
+
+      result.sort((a, b) => {
+        let valA, valB;
+        if (headerConfig?.getValue) {
+          valA = headerConfig.getValue(a, selectedRates);
+          valB = headerConfig.getValue(b, selectedRates);
+        } else {
+          valA = (a as any)[sortKey];
+          valB = (b as any)[sortKey];
+        }
+
+        const isInvalidA =
+          valA === null || valA === undefined || valA === -Infinity || valA === Infinity;
+        const isInvalidB =
+          valB === null || valB === undefined || valB === -Infinity || valB === Infinity;
+
+        if (isInvalidA && isInvalidB) return 0;
+        if (isInvalidA) return direction;
+        if (isInvalidB) return -direction;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return valA.localeCompare(valB) * direction;
+        }
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return (valA - valB) * direction;
+        }
+        if (valA < valB) return -1 * direction;
+        if (valA > valB) return 1 * direction;
+        return 0;
+      });
+    }
+    return result;
+  });
+
+  // Add a new function to perform the search asynchronously
+  async function performAsyncSearch(query: string) {
+    if (!query) {
+      matchingCodes.value = {};
+      isSearching.value = false;
+      return;
+    }
+
+    isSearching.value = true;
+    matchingCodes.value = {};
+
+    const searchGroups = groupedData.value;
+
+    // Process in smaller batches to keep UI responsive
+    const batchSize = 5; // Process 5 destinations at a time
+
+    for (let i = 0; i < searchGroups.length; i += batchSize) {
+      // Give UI thread a chance to update
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      const endIndex = Math.min(i + batchSize, searchGroups.length);
+      const batch = searchGroups.slice(i, endIndex);
+
+      for (const group of batch) {
+        const matchingCodesByRate: { [rate: number]: string[] } = {};
+
+        // Only process rates if we haven't already found a match for this destination
+        // This optimization stops searching once we find any match
+        let foundMatch = false;
+
+        for (const rate of group.rates) {
+          // Skip long lists if we already found a match for this destination
+          if (foundMatch) break;
+
+          const codesForRate = getCodesForRate(group, rate.rate);
+
+          // Early exit for large code lists - first check if any code starts with query
+          // This avoids scanning the entire array if there's no match
+          if (codesForRate.length > 50) {
+            // Quick check with a for loop is faster than filter for large arrays
+            let hasMatch = false;
+            for (let j = 0; j < Math.min(50, codesForRate.length); j++) {
+              if (codesForRate[j].toLowerCase().startsWith(query)) {
+                hasMatch = true;
+                break;
+              }
+            }
+
+            // If no match found in our quick check of the first 50 items, skip this rate
+            if (!hasMatch) continue;
+          }
+
+          // Only do full scan if necessary
+          const matches = codesForRate.filter((code) => code.toLowerCase().startsWith(query));
+
+          if (matches.length > 0) {
+            matchingCodesByRate[rate.rate] = matches;
+            foundMatch = true; // Set flag to skip processing other rates
+          }
+        }
+
+        // Store matches for this destination if any were found
+        if (Object.keys(matchingCodesByRate).length > 0) {
+          matchingCodes.value[group.destinationName] = matchingCodesByRate;
+        }
       }
     }
+
+    isSearching.value = false;
   }
 
-  isSearching.value = false;
-}
+  function isCodeMatchingSearch(destinationName: string, rate: number, code: string): boolean {
+    return !!searchQuery.value && !!matchingCodes.value[destinationName]?.[rate]?.includes(code);
+  }
 
-function isCodeMatchingSearch(destinationName: string, rate: number, code: string): boolean {
-  return !!searchQuery.value && !!matchingCodes.value[destinationName]?.[rate]?.includes(code);
-}
+  // --- Toggle Expand Row Logic ---
+  function handleToggleExpandRow(destinationName: string) {
+    const index = expandedRows.value.indexOf(destinationName);
+    if (index > -1) {
+      expandedRows.value.splice(index, 1);
+    } else {
+      const group = groupedData.value.find((g) => g.destinationName === destinationName);
+      if (group) {
+        // Initialize state *before* adding to expandedRows for both single and multi-rate
+        initializeSingleRateState(destinationName);
 
-// --- Toggle Expand Row Logic ---
-function handleToggleExpandRow(destinationName: string) {
-  const index = expandedRows.value.indexOf(destinationName);
-  if (index > -1) {
-    expandedRows.value.splice(index, 1);
-  } else {
-    const group = groupedData.value.find((g) => g.destinationName === destinationName);
-    if (group) {
-      // Initialize state *before* adding to expandedRows for both single and multi-rate
-      initializeSingleRateState(destinationName);
+        // Add to expandedRows *after* state initialization
+        expandedRows.value.push(destinationName);
 
-      // Add to expandedRows *after* state initialization
-      expandedRows.value.push(destinationName);
+        // Store the original rate when expanding, regardless of discrepancy
+        if (originalRates.value[destinationName] === undefined) {
+          if (!group.hasDiscrepancy) {
+            originalRates.value[destinationName] = group.rates[0].rate;
+          } else {
+            userExplicitlySelectedRate.value[destinationName] = false; // <-- Initialize tracker
+            const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
+            if (mostCommonRate !== undefined) {
+              originalRates.value[destinationName] = mostCommonRate;
+              if (selectedRates.value[destinationName] === undefined) {
+                selectedRates.value[destinationName] = mostCommonRate;
+              }
+            }
+          }
+        }
 
-      // Store the original rate when expanding, regardless of discrepancy
-      if (originalRates.value[destinationName] === undefined) {
-        if (!group.hasDiscrepancy) {
-          originalRates.value[destinationName] = group.rates[0].rate;
-        } else {
-          userExplicitlySelectedRate.value[destinationName] = false; // <-- Initialize tracker
+        // Initialize multi-rate selected rate if it wasn't set by original rate logic above
+        if (group.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
           const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
           if (mostCommonRate !== undefined) {
-            originalRates.value[destinationName] = mostCommonRate;
-            if (selectedRates.value[destinationName] === undefined) {
-              selectedRates.value[destinationName] = mostCommonRate;
-            }
+            selectedRates.value[destinationName] = mostCommonRate;
           }
         }
       }
+    }
+  }
+  // --- End Toggle Expand Row Logic ---
 
-      // Initialize multi-rate selected rate if it wasn't set by original rate logic above
-      if (group.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
-        const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
-        if (mostCommonRate !== undefined) {
-          selectedRates.value[destinationName] = mostCommonRate;
-        }
+  function formatRate(rate: number): string {
+    if (typeof rate !== 'number' || isNaN(rate)) {
+      return 'N/A'; // Handle invalid input
+    }
+    return rate.toFixed(6);
+  }
+
+  // --- Multi-Rate Logic ---
+  function isSelectedRate(destinationName: string, rate: number): boolean {
+    return selectedRates.value[destinationName] === rate;
+  }
+
+  function selectRate(destinationName: string, rate: number) {
+    selectedRates.value[destinationName] = rate;
+    userExplicitlySelectedRate.value[destinationName] = true; // <-- Set tracker on explicit click
+
+    // When a new rate is selected, clear both the adjustment value and direct set rate
+    if (singleRateAdjustments.value[destinationName]) {
+      singleRateAdjustments.value[destinationName].adjustmentValue = null;
+    }
+    directSetRates.value[destinationName] = null;
+  }
+  // --- End Multi-Rate Logic ---
+
+  // --- Single-Rate Calculation Helper ---
+  function calculateAdjustedRate(currentRate: number, adjustment: any): number {
+    if (!adjustment || adjustment.adjustmentValue === null || adjustment.adjustmentValue <= 0) {
+      return currentRate;
+    }
+
+    let adjustedRate: number;
+    const value = adjustment.adjustmentValue!;
+
+    if (adjustment.adjustmentValueType === 'percentage') {
+      const percentage = value / 100;
+      adjustedRate =
+        currentRate * (adjustment.adjustmentType === 'markup' ? 1 + percentage : 1 - percentage);
+    } else {
+      // fixed amount
+      adjustedRate = currentRate + (adjustment.adjustmentType === 'markup' ? value : -value);
+    }
+    // Ensure rate doesn't go below 0 and format to 6 decimals
+    return Math.max(0, parseFloat(adjustedRate.toFixed(6)));
+  }
+  // --- End Single-Rate Calculation Helper ---
+
+  // --- Change Detection ---
+  function hasUnsavedChanges(destinationName: string): boolean {
+    const group = groupedData.value.find((g) => g.destinationName === destinationName);
+    if (!group) return false;
+
+    const originalRate = originalRates.value[destinationName];
+    // No original rate? Can't determine changes.
+    if (originalRate === undefined) return false;
+
+    const directRate = directSetRates.value[destinationName];
+    const adjustment = singleRateAdjustments.value[destinationName];
+    const selectedRate = selectedRates.value[destinationName]; // Base rate for multi-rate
+    const userMadeExplicitSelection = userExplicitlySelectedRate.value[destinationName] === true;
+
+    // 1. Check for changes via direct rate input
+    const hasDirectRateChange =
+      directRate !== null && directRate !== undefined && directRate !== originalRate;
+    if (hasDirectRateChange) {
+      return true;
+    }
+
+    // 2. Check for changes via adjustment calculation
+    let hasAdjustmentChange = false;
+    if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+      // Determine the base rate for adjustment calculation
+      const baseRateForAdjustment = group.hasDiscrepancy ? selectedRate : originalRate;
+      // Ensure we have a valid base rate to calculate from
+      if (baseRateForAdjustment !== undefined) {
+        const calculatedRate = calculateAdjustedRate(baseRateForAdjustment, adjustment);
+        // Change detected if calculated rate differs from the original stored rate
+        hasAdjustmentChange = calculatedRate !== originalRate;
       }
     }
-  }
-}
-// --- End Toggle Expand Row Logic ---
-
-function formatRate(rate: number): string {
-  if (typeof rate !== 'number' || isNaN(rate)) {
-    return 'N/A'; // Handle invalid input
-  }
-  return rate.toFixed(6);
-}
-
-// --- Multi-Rate Logic ---
-function isSelectedRate(destinationName: string, rate: number): boolean {
-  return selectedRates.value[destinationName] === rate;
-}
-
-function selectRate(destinationName: string, rate: number) {
-  selectedRates.value[destinationName] = rate;
-  userExplicitlySelectedRate.value[destinationName] = true; // <-- Set tracker on explicit click
-
-  // When a new rate is selected, clear both the adjustment value and direct set rate
-  if (singleRateAdjustments.value[destinationName]) {
-    singleRateAdjustments.value[destinationName].adjustmentValue = null;
-  }
-  directSetRates.value[destinationName] = null;
-}
-// --- End Multi-Rate Logic ---
-
-// --- Single-Rate Calculation Helper ---
-function calculateAdjustedRate(currentRate: number, adjustment: any): number {
-  if (!adjustment || adjustment.adjustmentValue === null || adjustment.adjustmentValue <= 0) {
-    return currentRate;
-  }
-
-  let adjustedRate: number;
-  const value = adjustment.adjustmentValue!;
-
-  if (adjustment.adjustmentValueType === 'percentage') {
-    const percentage = value / 100;
-    adjustedRate =
-      currentRate * (adjustment.adjustmentType === 'markup' ? 1 + percentage : 1 - percentage);
-  } else {
-    // fixed amount
-    adjustedRate = currentRate + (adjustment.adjustmentType === 'markup' ? value : -value);
-  }
-  // Ensure rate doesn't go below 0 and format to 6 decimals
-  return Math.max(0, parseFloat(adjustedRate.toFixed(6)));
-}
-// --- End Single-Rate Calculation Helper ---
-
-// --- Change Detection ---
-function hasUnsavedChanges(destinationName: string): boolean {
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
-  if (!group) return false;
-
-  const originalRate = originalRates.value[destinationName];
-  // No original rate? Can't determine changes.
-  if (originalRate === undefined) return false;
-
-  const directRate = directSetRates.value[destinationName];
-  const adjustment = singleRateAdjustments.value[destinationName];
-  const selectedRate = selectedRates.value[destinationName]; // Base rate for multi-rate
-  const userMadeExplicitSelection = userExplicitlySelectedRate.value[destinationName] === true;
-
-  // 1. Check for changes via direct rate input
-  const hasDirectRateChange =
-    directRate !== null && directRate !== undefined && directRate !== originalRate;
-  if (hasDirectRateChange) {
-    return true;
-  }
-
-  // 2. Check for changes via adjustment calculation
-  let hasAdjustmentChange = false;
-  if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
-    // Determine the base rate for adjustment calculation
-    const baseRateForAdjustment = group.hasDiscrepancy ? selectedRate : originalRate;
-    // Ensure we have a valid base rate to calculate from
-    if (baseRateForAdjustment !== undefined) {
-      const calculatedRate = calculateAdjustedRate(baseRateForAdjustment, adjustment);
-      // Change detected if calculated rate differs from the original stored rate
-      hasAdjustmentChange = calculatedRate !== originalRate;
+    if (hasAdjustmentChange) {
+      return true;
     }
+
+    // 3. For multi-rate conflicts, check if the user explicitly clicked ANY rate button.
+    // This enables saving even if the user clicks the button corresponding to the original default rate.
+    if (group.hasDiscrepancy && userMadeExplicitSelection) {
+      return true;
+    }
+
+    // 4. If none of the above conditions are met, there are no unsaved changes.
+    return false;
   }
-  if (hasAdjustmentChange) {
-    return true;
-  }
+  // --- End Change Detection ---
 
-  // 3. For multi-rate conflicts, check if the user explicitly clicked ANY rate button.
-  // This enables saving even if the user clicks the button corresponding to the original default rate.
-  if (group.hasDiscrepancy && userMadeExplicitSelection) {
-    return true;
-  }
+  // --- Save Logic ---
+  async function saveRateSelection(group: GroupedRateData) {
+    if (isSavingChanges.value === group.destinationName) return; // Prevent double-clicks
 
-  // 4. If none of the above conditions are met, there are no unsaved changes.
-  return false;
-}
-// --- End Change Detection ---
+    let rateToSave: number | undefined;
+    const originalRate = originalRates.value[group.destinationName];
 
-// --- Save Logic ---
-async function saveRateSelection(group: GroupedRateData) {
-  if (isSavingChanges.value === group.destinationName) return; // Prevent double-clicks
+    if (originalRate === undefined) {
+      console.error(`Cannot save changes for ${group.destinationName}: Original rate unknown.`);
+      return;
+    }
 
-  let rateToSave: number | undefined;
-  const originalRate = originalRates.value[group.destinationName];
+    isSavingChanges.value = group.destinationName; // Set loading state
 
-  if (originalRate === undefined) {
-    console.error(`Cannot save changes for ${group.destinationName}: Original rate unknown.`);
-    return;
-  }
+    try {
+      if (!group.hasDiscrepancy) {
+        // Single-rate destination logic (unchanged)
+        const directRate = directSetRates.value[group.destinationName];
+        const adjustment = singleRateAdjustments.value[group.destinationName];
 
-  isSavingChanges.value = group.destinationName; // Set loading state
+        if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
+          rateToSave = directRate;
+          console.log(`Saving direct rate for ${group.destinationName}: ${rateToSave}`);
+        } else if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+          const calculatedRate = calculateAdjustedRate(originalRate, adjustment);
+          if (calculatedRate !== originalRate) {
+            rateToSave = calculatedRate;
+            console.log(`Saving adjusted rate for ${group.destinationName}: ${rateToSave}`);
+          } else {
+            console.log(
+              `No effective change from adjustment for ${group.destinationName}, not saving.`
+            );
+          }
+        } else {
+          console.log(`No changes detected to save for single-rate ${group.destinationName}`);
+          // No need to save if no changes. Collapse the row.
+          const index = expandedRows.value.indexOf(group.destinationName);
+          if (index > -1) expandedRows.value.splice(index, 1);
+          isSavingChanges.value = null; // Reset loading state
+          return;
+        }
+      } else {
+        // Multi-rate destination logic - unified approach with priority:
+        // 1. Direct Rate Input (if set)
+        // 2. Calculated Adjustment on selected base rate (if configured)
+        // 3. Selected Base Rate (if different from original)
 
-  try {
-    if (!group.hasDiscrepancy) {
-      // Single-rate destination logic (unchanged)
-      const directRate = directSetRates.value[group.destinationName];
-      const adjustment = singleRateAdjustments.value[group.destinationName];
+        const selectedRate = selectedRates.value[group.destinationName];
+        const directRate = directSetRates.value[group.destinationName];
+        const adjustment = singleRateAdjustments.value[group.destinationName];
 
-      if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
-        rateToSave = directRate;
-        console.log(`Saving direct rate for ${group.destinationName}: ${rateToSave}`);
-      } else if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
-        const calculatedRate = calculateAdjustedRate(originalRate, adjustment);
-        if (calculatedRate !== originalRate) {
-          rateToSave = calculatedRate;
-          console.log(`Saving adjusted rate for ${group.destinationName}: ${rateToSave}`);
+        // Priority 1: Check direct rate
+        if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
+          rateToSave = directRate;
+          console.log(`Saving direct rate for multi-rate ${group.destinationName}: ${rateToSave}`);
+        }
+        // Priority 2: Check adjustment if selected rate is set
+        else if (
+          selectedRate !== undefined &&
+          adjustment?.adjustmentValue !== null &&
+          adjustment?.adjustmentValue > 0
+        ) {
+          const calculatedRate = calculateAdjustedRate(selectedRate, adjustment);
+          if (calculatedRate !== originalRate) {
+            rateToSave = calculatedRate;
+            console.log(
+              `Saving adjusted rate for multi-rate ${group.destinationName}: ${rateToSave}`
+            );
+          }
+        }
+        // Priority 3: Use selected rate if different
+        else if (selectedRate !== undefined && selectedRate !== originalRate) {
+          rateToSave = selectedRate;
+          console.log(
+            `Saving selected rate for multi-rate ${group.destinationName}: ${rateToSave}`
+          );
         } else {
           console.log(
-            `No effective change from adjustment for ${group.destinationName}, not saving.`
+            `No change in selection for multi-rate ${group.destinationName}, not saving.`
           );
-        }
-      } else {
-        console.log(`No changes detected to save for single-rate ${group.destinationName}`);
-        // No need to save if no changes. Collapse the row.
-        const index = expandedRows.value.indexOf(group.destinationName);
-        if (index > -1) expandedRows.value.splice(index, 1);
-        isSavingChanges.value = null; // Reset loading state
-        return;
-      }
-    } else {
-      // Multi-rate destination logic - unified approach with priority:
-      // 1. Direct Rate Input (if set)
-      // 2. Calculated Adjustment on selected base rate (if configured)
-      // 3. Selected Base Rate (if different from original)
-
-      const selectedRate = selectedRates.value[group.destinationName];
-      const directRate = directSetRates.value[group.destinationName];
-      const adjustment = singleRateAdjustments.value[group.destinationName];
-
-      // Priority 1: Check direct rate
-      if (directRate !== null && directRate !== undefined && directRate !== originalRate) {
-        rateToSave = directRate;
-        console.log(`Saving direct rate for multi-rate ${group.destinationName}: ${rateToSave}`);
-      }
-      // Priority 2: Check adjustment if selected rate is set
-      else if (
-        selectedRate !== undefined &&
-        adjustment?.adjustmentValue !== null &&
-        adjustment?.adjustmentValue > 0
-      ) {
-        const calculatedRate = calculateAdjustedRate(selectedRate, adjustment);
-        if (calculatedRate !== originalRate) {
-          rateToSave = calculatedRate;
-          console.log(
-            `Saving adjusted rate for multi-rate ${group.destinationName}: ${rateToSave}`
-          );
+          // No need to save if no changes. Collapse the row.
+          const index = expandedRows.value.indexOf(group.destinationName);
+          if (index > -1) expandedRows.value.splice(index, 1);
+          isSavingChanges.value = null; // Reset loading state
+          return;
         }
       }
-      // Priority 3: Use selected rate if different
-      else if (selectedRate !== undefined && selectedRate !== originalRate) {
-        rateToSave = selectedRate;
-        console.log(`Saving selected rate for multi-rate ${group.destinationName}: ${rateToSave}`);
+
+      if (rateToSave !== undefined) {
+        await store.updateDestinationRate(group.destinationName, rateToSave);
+        originalRates.value[group.destinationName] = rateToSave; // Update original rate after save
+
+        // Reset local state after successful save
+        directSetRates.value[group.destinationName] = null;
+        if (singleRateAdjustments.value[group.destinationName]) {
+          singleRateAdjustments.value[group.destinationName].adjustmentValue = null;
+        }
+
+        // Collapse the row after saving
+        const index = expandedRows.value.indexOf(group.destinationName);
+        if (index > -1) {
+          expandedRows.value.splice(index, 1);
+        }
       } else {
-        console.log(`No change in selection for multi-rate ${group.destinationName}, not saving.`);
-        // No need to save if no changes. Collapse the row.
+        console.warn(`Rate to save for ${group.destinationName} was undefined or unchanged.`);
+        // Collapse the row if nothing was saved
         const index = expandedRows.value.indexOf(group.destinationName);
         if (index > -1) expandedRows.value.splice(index, 1);
-        isSavingChanges.value = null; // Reset loading state
-        return;
       }
-    }
-
-    if (rateToSave !== undefined) {
-      await store.updateDestinationRate(group.destinationName, rateToSave);
-      originalRates.value[group.destinationName] = rateToSave; // Update original rate after save
-
-      // Reset local state after successful save
-      directSetRates.value[group.destinationName] = null;
-      if (singleRateAdjustments.value[group.destinationName]) {
-        singleRateAdjustments.value[group.destinationName].adjustmentValue = null;
-      }
-
-      // Collapse the row after saving
-      const index = expandedRows.value.indexOf(group.destinationName);
-      if (index > -1) {
-        expandedRows.value.splice(index, 1);
-      }
-    } else {
-      console.warn(`Rate to save for ${group.destinationName} was undefined or unchanged.`);
-      // Collapse the row if nothing was saved
-      const index = expandedRows.value.indexOf(group.destinationName);
-      if (index > -1) expandedRows.value.splice(index, 1);
-    }
-  } catch (error) {
-    console.error(`Failed to save rate for ${group.destinationName}:`, error);
-    // Optionally show an error message to the user
-  } finally {
-    isSavingChanges.value = null; // Reset loading state
-  }
-}
-// --- End Save Logic ---
-
-// --- Bulk Update ---
-async function handleBulkUpdate(mode: 'highest' | 'lowest') {
-  isBulkProcessing.value = true;
-  processedCount.value = 0;
-  bulkMode.value = mode;
-
-  // Give the browser a chance to update the UI and show the animation
-  // by using requestAnimationFrame and a small setTimeout
-  await new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      setTimeout(resolve, 50);
-    });
-  });
-
-  // Get all destinations with discrepancies
-  const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
-  totalToProcess.value = destinationsToFix.length;
-
-  if (destinationsToFix.length === 0) {
-    isBulkProcessing.value = false;
-    bulkMode.value = null;
-    return;
-  }
-
-  // Initialize current discrepancy count
-  currentDiscrepancyCount.value = store.getDiscrepancyCount;
-
-  try {
-    console.time('bulkUpdate');
-
-    // Create an array to hold all update operations
-    const updates = destinationsToFix.map((group) => {
-      const rates = group.rates.map((r) => r.rate);
-      const newRate = mode === 'highest' ? Math.max(...rates) : Math.min(...rates);
-      return { name: group.destinationName, rate: newRate };
-    });
-
-    // Use a single operation to update all rates at once for maximum performance
-    await store.bulkUpdateDestinationRates(updates);
-
-    // Single UI update when complete
-    processedCount.value = totalToProcess.value;
-    currentDiscrepancyCount.value = 0;
-
-    // Force a final update of the grouped data
-    store.setGroupedData(store.getGroupedData);
-    console.timeEnd('bulkUpdate');
-
-    // Add a small delay to show the button animation
-    // since the operation is now so fast users might miss the feedback
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  } finally {
-    isBulkProcessing.value = false;
-    bulkMode.value = null;
-  }
-}
-// --- End Bulk Update ---
-
-// --- Bulk Update Most Common ---
-async function handleBulkUpdateMostCommon() {
-  isBulkProcessing.value = true;
-  bulkMode.value = 'mostCommon';
-  processedCount.value = 0;
-
-  // Give the browser a chance to update the UI
-  await new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      setTimeout(resolve, 50);
-    });
-  });
-
-  // Get all destinations with discrepancies
-  const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
-
-  if (destinationsToFix.length === 0) {
-    isBulkProcessing.value = false;
-    bulkMode.value = null;
-    return;
-  }
-
-  const updates: { name: string; rate: number }[] = [];
-
-  for (const group of destinationsToFix) {
-    const sortedRatesInfo = getSortedRates(group);
-
-    // Find rates marked as highest percentage (could be multiple if equal distribution)
-    const highestPercentageRates = sortedRatesInfo.filter((r) => r.isHighestPercentage);
-
-    // Only proceed if there's exactly one rate with the highest percentage
-    if (highestPercentageRates.length === 1) {
-      const mostCommonRate = highestPercentageRates[0].rate;
-      updates.push({ name: group.destinationName, rate: mostCommonRate });
-    }
-    // Skip destinations with equal distribution (highestPercentageRates.length > 1 or 0)
-  }
-
-  totalToProcess.value = updates.length;
-
-  if (updates.length > 0) {
-    try {
-      console.time('bulkUpdateMostCommon');
-      await store.bulkUpdateDestinationRates(updates);
-      processedCount.value = updates.length;
-      // Force a final update of the grouped data
-      store.setGroupedData(store.getGroupedData);
-      console.timeEnd('bulkUpdateMostCommon');
-      await new Promise((resolve) => setTimeout(resolve, 300)); // Show feedback
     } catch (error) {
-      console.error('Bulk update with most common rate failed:', error);
-      // Optionally show an error to the user
+      console.error(`Failed to save rate for ${group.destinationName}:`, error);
+      // Optionally show an error message to the user
     } finally {
-      isBulkProcessing.value = false;
-      bulkMode.value = null;
-    }
-  } else {
-    console.log('No destinations found with a single most common rate to apply for bulk update.');
-    // Optionally provide feedback to the user (e.g., via a toast message)
-    isBulkProcessing.value = false;
-    bulkMode.value = null;
-  }
-}
-// --- End Bulk Update Most Common ---
-
-function handleClearData() {
-  if (confirm('Are you sure you want to clear all rate sheet data?')) {
-    store.clearData();
-  }
-}
-
-function handleExport() {
-  // Convert data to CSV format
-  const headers = [
-    'name',
-    'prefix',
-    'rate',
-    'change_code',
-    'effective',
-    'min duration',
-    'increments',
-  ];
-  const rows = store.originalData.map((record) => [
-    record.name,
-    record.prefix,
-    record.rate.toFixed(6),
-    record.changeCode,
-    record.effective,
-    record.minDuration,
-    record.increments,
-  ]);
-
-  // Create CSV content
-  const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
-
-  // Create and trigger download
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', 'rate_sheet_formalized.csv');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function formatDate(date: string): string {
-  // Parse the date and force it to noon UTC to avoid timezone issues
-  const [year, month, day] = date.split('-').map(Number);
-  const formattedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  return formattedDate.toLocaleDateString();
-}
-
-// --- Multi-Rate Code Expansion Logic ---
-function toggleRateCodes(destinationName: string, rate: number) {
-  if (!expandedRateCodes.value[destinationName]) {
-    expandedRateCodes.value[destinationName] = [];
-  }
-
-  const index = expandedRateCodes.value[destinationName].indexOf(rate);
-  if (index === -1) {
-    expandedRateCodes.value[destinationName].push(rate);
-  } else {
-    expandedRateCodes.value[destinationName].splice(index, 1);
-  }
-}
-
-function isRateCodesExpanded(destinationName: string, rate: number): boolean {
-  return expandedRateCodes.value[destinationName]?.includes(rate) || false;
-}
-
-function getCodesForRate(group: GroupedRateData, rate: number): string[] {
-  const cacheKey = group.destinationName;
-
-  // Initialize cache structure if needed
-  if (!codesCache.value[cacheKey]) {
-    codesCache.value[cacheKey] = {};
-  }
-
-  // Return cached result if available
-  if (codesCache.value[cacheKey][rate]) {
-    return codesCache.value[cacheKey][rate];
-  }
-
-  // Get codes and store in cache
-  const destinationRecords = store.originalData.filter(
-    (record) => record.name === group.destinationName && record.rate === rate
-  );
-
-  const codes = destinationRecords.map((record) => record.prefix);
-  codesCache.value[cacheKey][rate] = codes;
-
-  return codes;
-}
-// --- End Multi-Rate Code Expansion Logic ---
-
-// --- Watchers ---
-watch(currentDiscrepancyCount, (newCount) => {
-  emit('update:discrepancy-count', newCount);
-});
-
-watch(
-  () => store.getDiscrepancyCount,
-  (newCount) => {
-    if (!isBulkProcessing.value) {
-      currentDiscrepancyCount.value = newCount;
-      emit('update:discrepancy-count', newCount);
-    }
-  },
-  { immediate: true }
-);
-// --- End Watchers ---
-
-// --- Effective Date Logic ---
-function getEffectiveDate(changeCode: ChangeCodeType): string {
-  const today = new Date();
-  let effectiveDate = today;
-
-  if (changeCode === ChangeCode.SAME) {
-    if (effectiveDateSettings.value.same === 'today') {
-      effectiveDate = today;
-    } else if (effectiveDateSettings.value.same === 'tomorrow') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 1);
-    } else if (effectiveDateSettings.value.same === 'custom') {
-      return effectiveDateSettings.value.sameCustomDate;
-    }
-  } else if (changeCode === ChangeCode.INCREASE) {
-    if (effectiveDateSettings.value.increase === 'today') {
-      effectiveDate = today;
-    } else if (effectiveDateSettings.value.increase === 'tomorrow') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 1);
-    } else if (effectiveDateSettings.value.increase === 'week') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 7);
-    } else if (effectiveDateSettings.value.increase === 'custom') {
-      return effectiveDateSettings.value.increaseCustomDate;
-    }
-  } else if (changeCode === ChangeCode.DECREASE) {
-    if (effectiveDateSettings.value.decrease === 'today') {
-      effectiveDate = today;
-    } else if (effectiveDateSettings.value.decrease === 'tomorrow') {
-      effectiveDate = new Date(today);
-      effectiveDate.setDate(today.getDate() + 1);
-    } else if (effectiveDateSettings.value.decrease === 'custom') {
-      return effectiveDateSettings.value.decreaseCustomDate;
+      isSavingChanges.value = null; // Reset loading state
     }
   }
+  // --- End Save Logic ---
 
-  return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-}
+  // --- Bulk Update ---
+  async function handleBulkUpdate(mode: 'highest' | 'lowest') {
+    isBulkProcessing.value = true;
+    processedCount.value = 0;
+    bulkMode.value = mode;
 
-function initWorker() {
-  console.log('Initializing effective date worker');
-
-  // Cleanup any existing worker
-  if (effectiveDateWorker) {
-    console.log('Terminating existing worker');
-    effectiveDateWorker.terminate();
-    effectiveDateWorker = null;
-  }
-
-  try {
-    // Create new worker
-    console.log('Creating new effective date worker');
-    effectiveDateWorker = new EffectiveDateUpdaterWorker();
-
-    // Set up message handler with throttling
-    effectiveDateWorker.onmessage = (event) => {
-      const message = event.data;
-
-      // Log all worker messages for debugging
-      console.log('Worker message received:', 'type' in message ? message.type : 'result');
-
-      // Add to processing logs
-      const logTime = new Date();
-      const logTimeStr = `${logTime.getHours()}:${logTime.getMinutes()}:${logTime.getSeconds()}.${logTime.getMilliseconds()}`;
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `[${logTimeStr}] Received ${
-          'type' in message ? message.type : 'result'
-        } from worker`,
-      });
-
-      // Queue UI updates instead of applying them immediately
-      queueUIUpdate(message);
-    };
-
-    effectiveDateWorker.onerror = (error) => {
-      console.error('Worker error event:', error);
-      processingStatus.value = `Worker error: ${error.message}`;
-      alert(`Error in effective date worker: ${error.message}`);
-      isApplyingSettings.value = false;
-      processingPhase.value = 'idle';
-    };
-
-    console.log('Worker initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize worker:', error);
-    alert(`Failed to initialize worker: ${error instanceof Error ? error.message : String(error)}`);
-    effectiveDateWorker = null;
-  }
-}
-
-// Queue UI updates and apply them throttled to prevent UI freezing
-function queueUIUpdate(message: any) {
-  // Store updates in pending queue
-  if ('type' in message && message.type === 'progress') {
-    pendingUIUpdates.value.progress = message;
-  } else if ('type' in message && message.type === 'error') {
-    pendingUIUpdates.value.error = message;
-    // Apply error updates immediately
-    applyUIUpdates();
-  } else {
-    pendingUIUpdates.value.result = message;
-  }
-
-  // Check if we should apply updates now
-  const now = Date.now();
-  if (now - lastUIUpdateTime.value >= uiUpdateThrottle) {
-    applyUIUpdates();
-  } else {
-    // Schedule update for later if not already scheduled
-    if (!pendingUIUpdates.value.scheduled) {
-      pendingUIUpdates.value.scheduled = true;
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          applyUIUpdates();
-        });
-      }, uiUpdateThrottle);
-    }
-  }
-}
-
-// Apply queued UI updates
-function applyUIUpdates() {
-  const updates = pendingUIUpdates.value;
-  pendingUIUpdates.value = {};
-  lastUIUpdateTime.value = Date.now();
-
-  // Process error messages first
-  if (updates.error) {
-    console.error('Worker error:', updates.error.message);
-    processingStatus.value = `Error: ${updates.error.message}`;
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Error in ${updates.error.phase || 'unknown'} phase: ${updates.error.message}`,
-    });
-    alert(`Error updating effective dates: ${updates.error.message}`);
-    isApplyingSettings.value = false;
-    processingPhase.value = 'idle';
-
-    // Clear the elapsed time interval
-    if (elapsedTimeInterval) {
-      clearInterval(elapsedTimeInterval);
-      elapsedTimeInterval = null;
-    }
-    return;
-  }
-
-  // Process progress updates
-  if (updates.progress) {
-    const message = updates.progress;
-    // Update progress
-    progressPercentage.value = message.percentage;
-
-    // Update phase if it's changing
-    if (processingPhase.value !== message.phase) {
-      processingPhase.value = message.phase;
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Phase changed to: ${message.phase}`,
-      });
-    }
-
-    // Update detailed status message if available
-    if (message.detail) {
-      processingStatus.value = message.detail;
-
-      // Log significant progress updates
-      if (message.percentage % 10 === 0 || message.phase === 'finalizing') {
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `${message.phase} (${message.percentage}%): ${message.detail}`,
-        });
-      }
-    }
-
-    // Update additional progress information
-    if (message.phase === 'processing') {
-      currentDestination.value = message.currentDestination || '';
-      recordsUpdatedSoFar.value = message.recordsUpdatedCount;
-      estimatedTimeRemaining.value = message.estimatedTimeRemaining;
-    }
-  }
-
-  // Process final result
-  if (updates.result) {
-    console.log('Worker completed successfully');
-    processingPhase.value = 'updating';
-    processingStatus.value = 'Processing complete. Updating store...';
-
-    // Use microtask to allow UI to update before proceeding with heavy store operations
-    queueMicrotask(() => {
-      const { updatedRecords, recordsUpdatedCount, updatedGroupedData } = updates.result;
-      // Handle worker result with UI breathing room
-      handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData);
-    });
-  }
-}
-
-// Modified handle worker result that gives the UI time to breathe
-async function handleWorkerResultWithBreathing(
-  updatedRecords: { name: string; prefix: string; effective: string }[],
-  recordsUpdatedCount: number,
-  updatedGroupedData: {
-    destinationName: string;
-    effectiveDate: string;
-    changeCode: ChangeCodeType;
-  }[]
-) {
-  try {
-    console.log(`Handling worker result: ${updatedRecords.length} records to update`);
-    processingStatus.value = `Saving ${updatedRecords.length} updated records to store...`;
-
-    // Add to processing logs
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Received final results: ${recordsUpdatedCount} records updated`,
-    });
-
-    // Allow UI to update (minimal delay)
+    // Give the browser a chance to update the UI and show the animation
+    // by using requestAnimationFrame and a small setTimeout
     await new Promise((resolve) => {
       requestAnimationFrame(() => {
         setTimeout(resolve, 50);
       });
     });
 
-    // Only update if changes were made
-    if (updatedRecords.length > 0) {
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Starting store update for ${updatedRecords.length} records`,
+    // Get all destinations with discrepancies
+    const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
+    totalToProcess.value = destinationsToFix.length;
+
+    if (destinationsToFix.length === 0) {
+      isBulkProcessing.value = false;
+      bulkMode.value = null;
+      return;
+    }
+
+    // Initialize current discrepancy count
+    currentDiscrepancyCount.value = store.getDiscrepancyCount;
+
+    try {
+      console.time('bulkUpdate');
+
+      // Create an array to hold all update operations
+      const updates = destinationsToFix.map((group) => {
+        const rates = group.rates.map((r) => r.rate);
+        const newRate = mode === 'highest' ? Math.max(...rates) : Math.min(...rates);
+        return { name: group.destinationName, rate: newRate };
       });
 
-      console.log('Updating store with worker results');
-      processingPhase.value = 'updating';
-      processingStatus.value = 'Updating application state...';
+      // Use a single operation to update all rates at once for maximum performance
+      await store.bulkUpdateDestinationRates(updates);
 
-      // Update the store directly with the records from the worker
-      store.updateEffectiveDatesWithRecords(updatedRecords);
+      // Single UI update when complete
+      processedCount.value = totalToProcess.value;
+      currentDiscrepancyCount.value = 0;
 
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Store update completed`,
+      // Force a final update of the grouped data
+      store.setGroupedData(store.getGroupedData);
+      console.timeEnd('bulkUpdate');
+
+      // Add a small delay to show the button animation
+      // since the operation is now so fast users might miss the feedback
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    } finally {
+      isBulkProcessing.value = false;
+      bulkMode.value = null;
+    }
+  }
+  // --- End Bulk Update ---
+
+  // --- Bulk Update Most Common ---
+  async function handleBulkUpdateMostCommon() {
+    isBulkProcessing.value = true;
+    bulkMode.value = 'mostCommon';
+    processedCount.value = 0;
+
+    // Give the browser a chance to update the UI
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 50);
       });
+    });
 
-      // Update the grouped data with the results from the worker
-      if (updatedGroupedData && updatedGroupedData.length > 0) {
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `Updating grouped data with ${updatedGroupedData.length} groups from worker`,
-        });
+    // Get all destinations with discrepancies
+    const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
 
-        // Update grouped data with the results from the worker
-        store.updateGroupedDataEffectiveDates(updatedGroupedData);
+    if (destinationsToFix.length === 0) {
+      isBulkProcessing.value = false;
+      bulkMode.value = null;
+      return;
+    }
+
+    const updates: { name: string; rate: number }[] = [];
+
+    for (const group of destinationsToFix) {
+      const sortedRatesInfo = getSortedRates(group);
+
+      // Find rates marked as highest percentage (could be multiple if equal distribution)
+      const highestPercentageRates = sortedRatesInfo.filter((r) => r.isHighestPercentage);
+
+      // Only proceed if there's exactly one rate with the highest percentage
+      if (highestPercentageRates.length === 1) {
+        const mostCommonRate = highestPercentageRates[0].rate;
+        updates.push({ name: group.destinationName, rate: mostCommonRate });
       }
+      // Skip destinations with equal distribution (highestPercentageRates.length > 1 or 0)
+    }
 
-      // Calculate the time spent
-      const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
-      processingStatus.value = `Complete! ${recordsUpdatedCount} records updated in ${processingTime}s`;
-      processingPhase.value = 'finalizing';
+    totalToProcess.value = updates.length;
 
-      // Allow a brief moment to show completion status
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // No alert needed - we're showing the completion status in the UI
+    if (updates.length > 0) {
+      try {
+        console.time('bulkUpdateMostCommon');
+        await store.bulkUpdateDestinationRates(updates);
+        processedCount.value = updates.length;
+        // Force a final update of the grouped data
+        store.setGroupedData(store.getGroupedData);
+        console.timeEnd('bulkUpdateMostCommon');
+        await new Promise((resolve) => setTimeout(resolve, 300)); // Show feedback
+      } catch (error) {
+        console.error('Bulk update with most common rate failed:', error);
+        // Optionally show an error to the user
+      } finally {
+        isBulkProcessing.value = false;
+        bulkMode.value = null;
+      }
     } else {
-      console.log('No records needed updating, just saving settings');
-      processingPhase.value = 'finalizing';
-      processingStatus.value = 'Saving settings...';
-
-      // Still save the settings even if no dates needed updating
-      store.setEffectiveDateSettings({ ...effectiveDateSettings.value });
-
-      const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
-      processingStatus.value = `Complete! Settings saved in ${processingTime}s`;
-
-      // Allow a moment to see the completion status
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // No alert needed
+      console.log('No destinations found with a single most common rate to apply for bulk update.');
+      // Optionally provide feedback to the user (e.g., via a toast message)
+      isBulkProcessing.value = false;
+      bulkMode.value = null;
     }
-  } catch (error) {
-    console.error('Failed to finalize updates:', error);
-    processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
-    alert(
-      'Failed to complete updates: ' + (error instanceof Error ? error.message : String(error))
+  }
+  // --- End Bulk Update Most Common ---
+
+  function handleClearData() {
+    if (confirm('Are you sure you want to clear all rate sheet data?')) {
+      store.clearData();
+    }
+  }
+
+  function handleExport() {
+    // Convert data to CSV format
+    const headers = [
+      'name',
+      'prefix',
+      'rate',
+      'change_code',
+      'effective',
+      'min duration',
+      'increments',
+    ];
+    const rows = store.originalData.map((record) => [
+      record.name,
+      record.prefix,
+      record.rate.toFixed(6),
+      record.changeCode,
+      record.effective,
+      record.minDuration,
+      record.increments,
+    ]);
+
+    // Create CSV content
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'rate_sheet_formalized.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function formatDate(date: string): string {
+    // Parse the date and force it to noon UTC to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    const formattedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    return formattedDate.toLocaleDateString();
+  }
+
+  // --- Multi-Rate Code Expansion Logic ---
+  function toggleRateCodes(destinationName: string, rate: number) {
+    if (!expandedRateCodes.value[destinationName]) {
+      expandedRateCodes.value[destinationName] = [];
+    }
+
+    const index = expandedRateCodes.value[destinationName].indexOf(rate);
+    if (index === -1) {
+      expandedRateCodes.value[destinationName].push(rate);
+    } else {
+      expandedRateCodes.value[destinationName].splice(index, 1);
+    }
+  }
+
+  function isRateCodesExpanded(destinationName: string, rate: number): boolean {
+    return expandedRateCodes.value[destinationName]?.includes(rate) || false;
+  }
+
+  function getCodesForRate(group: GroupedRateData, rate: number): string[] {
+    const cacheKey = group.destinationName;
+
+    // Initialize cache structure if needed
+    if (!codesCache.value[cacheKey]) {
+      codesCache.value[cacheKey] = {};
+    }
+
+    // Return cached result if available
+    if (codesCache.value[cacheKey][rate]) {
+      return codesCache.value[cacheKey][rate];
+    }
+
+    // Get codes and store in cache
+    const destinationRecords = store.originalData.filter(
+      (record) => record.name === group.destinationName && record.rate === rate
     );
-  } finally {
-    isApplyingSettings.value = false;
-    progressPercentage.value = 0;
-    processingPhase.value = 'idle';
 
-    // Clear the elapsed time interval
-    if (elapsedTimeInterval) {
-      clearInterval(elapsedTimeInterval);
-      elapsedTimeInterval = null;
-    }
+    const codes = destinationRecords.map((record) => record.prefix);
+    codesCache.value[cacheKey][rate] = codes;
+
+    return codes;
   }
-}
+  // --- End Multi-Rate Code Expansion Logic ---
 
-// Cleanup worker on component unmount
-onBeforeUnmount(() => {
-  if (effectiveDateWorker) {
-    console.log('Cleaning up worker on component unmount');
-    effectiveDateWorker.terminate();
-    effectiveDateWorker = null;
-  }
-
-  // Clean up timer interval
-  if (elapsedTimeInterval) {
-    clearInterval(elapsedTimeInterval);
-    elapsedTimeInterval = null;
-  }
-
-  // Clean up search debounce
-  if (searchDebounceTimeout) {
-    clearTimeout(searchDebounceTimeout);
-    searchDebounceTimeout = null;
-  }
-});
-
-// Update the applyEffectiveDateSettings function to use the worker
-async function applyEffectiveDateSettings() {
-  if (isApplyingSettings.value || !effectiveDateWorker) return;
-
-  // Clear previous logs when starting a new operation
-  processingLogs.value = [];
-  processingLogs.value.push({
-    time: Date.now(),
-    message: 'Starting effective date update process',
+  // --- Watchers ---
+  watch(currentDiscrepancyCount, (newCount) => {
+    emit('update:discrepancy-count', newCount);
   });
 
-  // Check if there are any conflicts before proceeding
-  const conflictCount = store.getDiscrepancyCount;
-  if (conflictCount > 0) {
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Cannot proceed: ${conflictCount} rate conflicts detected`,
-    });
-    alert(
-      `Cannot apply effective dates while ${conflictCount} rate conflicts exist. Please resolve all conflicts first.`
-    );
-    return;
-  }
+  watch(
+    () => store.getDiscrepancyCount,
+    (newCount) => {
+      if (!isBulkProcessing.value) {
+        currentDiscrepancyCount.value = newCount;
+        emit('update:discrepancy-count', newCount);
+      }
+    },
+    { immediate: true }
+  );
 
-  isApplyingSettings.value = true;
-  progressPercentage.value = 0;
-  processingPhase.value = 'preparing';
-  processingStatus.value = 'Initializing worker...';
-  processingStartTime.value = Date.now();
-  displayedElapsedTime.value = 0;
+  watch([filterStatus, debouncedSearchQuery], () => {
+    sortColumnKey.value = 'destinationName';
+    sortDirection.value = 'asc';
+  });
+  // --- End Watchers ---
 
-  // Start separate timer for UI updates
-  if (elapsedTimeInterval) {
-    clearInterval(elapsedTimeInterval);
-  }
-  elapsedTimeInterval = window.setInterval(() => {
-    if (processingStartTime.value > 0) {
-      displayedElapsedTime.value = Math.floor((Date.now() - processingStartTime.value) / 1000);
+  // --- Effective Date Logic ---
+  function getEffectiveDate(changeCode: ChangeCodeType): string {
+    const today = new Date();
+    let effectiveDate = today;
+
+    if (changeCode === ChangeCode.SAME) {
+      if (effectiveDateSettings.value.same === 'today') {
+        effectiveDate = today;
+      } else if (effectiveDateSettings.value.same === 'tomorrow') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 1);
+      } else if (effectiveDateSettings.value.same === 'custom') {
+        return effectiveDateSettings.value.sameCustomDate;
+      }
+    } else if (changeCode === ChangeCode.INCREASE) {
+      if (effectiveDateSettings.value.increase === 'today') {
+        effectiveDate = today;
+      } else if (effectiveDateSettings.value.increase === 'tomorrow') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 1);
+      } else if (effectiveDateSettings.value.increase === 'week') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 7);
+      } else if (effectiveDateSettings.value.increase === 'custom') {
+        return effectiveDateSettings.value.increaseCustomDate;
+      }
+    } else if (changeCode === ChangeCode.DECREASE) {
+      if (effectiveDateSettings.value.decrease === 'today') {
+        effectiveDate = today;
+      } else if (effectiveDateSettings.value.decrease === 'tomorrow') {
+        effectiveDate = new Date(today);
+        effectiveDate.setDate(today.getDate() + 1);
+      } else if (effectiveDateSettings.value.decrease === 'custom') {
+        return effectiveDateSettings.value.decreaseCustomDate;
+      }
     }
-  }, 100);
 
-  // Show logs automatically when applying settings
-  showProcessingLogs.value = true;
+    return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+  }
 
-  try {
-    console.log('Starting effective date update process');
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Preparing data for worker',
-    });
+  function initWorker() {
+    console.log('Initializing effective date worker');
 
-    // Create simplified versions of the data to send to the worker
-    // Extract only the properties we need to ensure everything is serializable
+    // Cleanup any existing worker
+    if (effectiveDateWorker) {
+      console.log('Terminating existing worker');
+      effectiveDateWorker.terminate();
+      effectiveDateWorker = null;
+    }
 
-    // Get the raw data
-    const rawGroupedData = store.groupedData.map((group) => ({
-      destinationName: group.destinationName,
-      changeCode: group.changeCode,
-      effectiveDate: group.effectiveDate,
-    }));
+    try {
+      // Create new worker
+      console.log('Creating new effective date worker');
+      effectiveDateWorker = new EffectiveDateUpdaterWorker();
 
-    // Simplify records too - only send what's needed
-    const simplifiedRecords = store.originalData.map((record) => ({
-      name: record.name,
-      prefix: record.prefix,
-      effective: record.effective,
-    }));
+      // Set up message handler with throttling
+      effectiveDateWorker.onmessage = (event) => {
+        const message = event.data;
 
-    processingStatus.value = 'Sending data to worker...';
+        // Log all worker messages for debugging
+        console.log('Worker message received:', 'type' in message ? message.type : 'result');
 
-    console.log(
-      `Sending ${rawGroupedData.length} simplified groups and ${simplifiedRecords.length} simplified records to worker`
-    );
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Sending ${rawGroupedData.length} groups and ${simplifiedRecords.length} records to worker`,
-    });
+        // Add to processing logs
+        const logTime = new Date();
+        const logTimeStr = `${logTime.getHours()}:${logTime.getMinutes()}:${logTime.getSeconds()}.${logTime.getMilliseconds()}`;
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `[${logTimeStr}] Received ${
+            'type' in message ? message.type : 'result'
+          } from worker`,
+        });
 
-    // Send to worker with only the required data
-    effectiveDateWorker.postMessage({
-      rawGroupedData,
-      allRecords: simplifiedRecords,
-      effectiveDateSettings: { ...effectiveDateSettings.value },
-    });
+        // Queue UI updates instead of applying them immediately
+        queueUIUpdate(message);
+      };
 
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Data sent to worker, awaiting results',
-    });
-  } catch (error) {
-    console.error('Error starting effective date update:', error);
-    processingLogs.value.push({
-      time: Date.now(),
-      message: `Error: ${error instanceof Error ? error.message : String(error)}`,
-    });
-    processingStatus.value = `Error starting update: ${
-      error instanceof Error ? error.message : String(error)
-    }`;
-    alert('Error starting update: ' + (error instanceof Error ? error.message : String(error)));
-    isApplyingSettings.value = false;
-    processingPhase.value = 'idle';
+      effectiveDateWorker.onerror = (error) => {
+        console.error('Worker error event:', error);
+        processingStatus.value = `Worker error: ${error.message}`;
+        alert(`Error in effective date worker: ${error.message}`);
+        isApplyingSettings.value = false;
+        processingPhase.value = 'idle';
+      };
 
-    // Clear the elapsed time interval
+      console.log('Worker initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize worker:', error);
+      alert(
+        `Failed to initialize worker: ${error instanceof Error ? error.message : String(error)}`
+      );
+      effectiveDateWorker = null;
+    }
+  }
+
+  // Queue UI updates and apply them throttled to prevent UI freezing
+  function queueUIUpdate(message: any) {
+    // Store updates in pending queue
+    if ('type' in message && message.type === 'progress') {
+      pendingUIUpdates.value.progress = message;
+    } else if ('type' in message && message.type === 'error') {
+      pendingUIUpdates.value.error = message;
+      // Apply error updates immediately
+      applyUIUpdates();
+    } else {
+      pendingUIUpdates.value.result = message;
+    }
+
+    // Check if we should apply updates now
+    const now = Date.now();
+    if (now - lastUIUpdateTime.value >= uiUpdateThrottle) {
+      applyUIUpdates();
+    } else {
+      // Schedule update for later if not already scheduled
+      if (!pendingUIUpdates.value.scheduled) {
+        pendingUIUpdates.value.scheduled = true;
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            applyUIUpdates();
+          });
+        }, uiUpdateThrottle);
+      }
+    }
+  }
+
+  // Apply queued UI updates
+  function applyUIUpdates() {
+    const updates = pendingUIUpdates.value;
+    pendingUIUpdates.value = {};
+    lastUIUpdateTime.value = Date.now();
+
+    // Process error messages first
+    if (updates.error) {
+      console.error('Worker error:', updates.error.message);
+      processingStatus.value = `Error: ${updates.error.message}`;
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Error in ${updates.error.phase || 'unknown'} phase: ${updates.error.message}`,
+      });
+      alert(`Error updating effective dates: ${updates.error.message}`);
+      isApplyingSettings.value = false;
+      processingPhase.value = 'idle';
+
+      // Clear the elapsed time interval
+      if (elapsedTimeInterval) {
+        clearInterval(elapsedTimeInterval);
+        elapsedTimeInterval = null;
+      }
+      return;
+    }
+
+    // Process progress updates
+    if (updates.progress) {
+      const message = updates.progress;
+      // Update progress
+      progressPercentage.value = message.percentage;
+
+      // Update phase if it's changing
+      if (processingPhase.value !== message.phase) {
+        processingPhase.value = message.phase;
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Phase changed to: ${message.phase}`,
+        });
+      }
+
+      // Update detailed status message if available
+      if (message.detail) {
+        processingStatus.value = message.detail;
+
+        // Log significant progress updates
+        if (message.percentage % 10 === 0 || message.phase === 'finalizing') {
+          processingLogs.value.push({
+            time: Date.now(),
+            message: `${message.phase} (${message.percentage}%): ${message.detail}`,
+          });
+        }
+      }
+
+      // Update additional progress information
+      if (message.phase === 'processing') {
+        currentDestination.value = message.currentDestination || '';
+        recordsUpdatedSoFar.value = message.recordsUpdatedCount;
+        estimatedTimeRemaining.value = message.estimatedTimeRemaining;
+      }
+    }
+
+    // Process final result
+    if (updates.result) {
+      console.log('Worker completed successfully');
+      processingPhase.value = 'updating';
+      processingStatus.value = 'Processing complete. Updating store...';
+
+      // Use microtask to allow UI to update before proceeding with heavy store operations
+      queueMicrotask(() => {
+        const { updatedRecords, recordsUpdatedCount, updatedGroupedData } = updates.result;
+        // Handle worker result with UI breathing room
+        handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData);
+      });
+    }
+  }
+
+  // Modified handle worker result that gives the UI time to breathe
+  async function handleWorkerResultWithBreathing(
+    updatedRecords: { name: string; prefix: string; effective: string }[],
+    recordsUpdatedCount: number,
+    updatedGroupedData: {
+      destinationName: string;
+      effectiveDate: string;
+      changeCode: ChangeCodeType;
+    }[]
+  ) {
+    try {
+      console.log(`Handling worker result: ${updatedRecords.length} records to update`);
+      processingStatus.value = `Saving ${updatedRecords.length} updated records to store...`;
+
+      // Add to processing logs
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Received final results: ${recordsUpdatedCount} records updated`,
+      });
+
+      // Allow UI to update (minimal delay)
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 50);
+        });
+      });
+
+      // Only update if changes were made
+      if (updatedRecords.length > 0) {
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Starting store update for ${updatedRecords.length} records`,
+        });
+
+        console.log('Updating store with worker results');
+        processingPhase.value = 'updating';
+        processingStatus.value = 'Updating application state...';
+
+        // Update the store directly with the records from the worker
+        store.updateEffectiveDatesWithRecords(updatedRecords);
+
+        processingLogs.value.push({
+          time: Date.now(),
+          message: `Store update completed`,
+        });
+
+        // Update the grouped data with the results from the worker
+        if (updatedGroupedData && updatedGroupedData.length > 0) {
+          processingLogs.value.push({
+            time: Date.now(),
+            message: `Updating grouped data with ${updatedGroupedData.length} groups from worker`,
+          });
+
+          // Update grouped data with the results from the worker
+          store.updateGroupedDataEffectiveDates(updatedGroupedData);
+        }
+
+        // Calculate the time spent
+        const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
+        processingStatus.value = `Complete! ${recordsUpdatedCount} records updated in ${processingTime}s`;
+        processingPhase.value = 'finalizing';
+
+        // Allow a brief moment to show completion status
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // No alert needed - we're showing the completion status in the UI
+      } else {
+        console.log('No records needed updating, just saving settings');
+        processingPhase.value = 'finalizing';
+        processingStatus.value = 'Saving settings...';
+
+        // Still save the settings even if no dates needed updating
+        store.setEffectiveDateSettings({ ...effectiveDateSettings.value });
+
+        const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
+        processingStatus.value = `Complete! Settings saved in ${processingTime}s`;
+
+        // Allow a moment to see the completion status
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // No alert needed
+      }
+    } catch (error) {
+      console.error('Failed to finalize updates:', error);
+      processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
+      alert(
+        'Failed to complete updates: ' + (error instanceof Error ? error.message : String(error))
+      );
+    } finally {
+      isApplyingSettings.value = false;
+      progressPercentage.value = 0;
+      processingPhase.value = 'idle';
+
+      // Clear the elapsed time interval
+      if (elapsedTimeInterval) {
+        clearInterval(elapsedTimeInterval);
+        elapsedTimeInterval = null;
+      }
+    }
+  }
+
+  // Cleanup worker on component unmount
+  onBeforeUnmount(() => {
+    if (effectiveDateWorker) {
+      console.log('Cleaning up worker on component unmount');
+      effectiveDateWorker.terminate();
+      effectiveDateWorker = null;
+    }
+
+    // Clean up timer interval
     if (elapsedTimeInterval) {
       clearInterval(elapsedTimeInterval);
       elapsedTimeInterval = null;
     }
+
+    // Clean up search debounce
+    if (searchDebounceTimeout) {
+      clearTimeout(searchDebounceTimeout);
+      searchDebounceTimeout = null;
+    }
+  });
+
+  // Update the applyEffectiveDateSettings function to use the worker
+  async function applyEffectiveDateSettings() {
+    if (isApplyingSettings.value || !effectiveDateWorker) return;
+
+    // Clear previous logs when starting a new operation
+    processingLogs.value = [];
+    processingLogs.value.push({
+      time: Date.now(),
+      message: 'Starting effective date update process',
+    });
+
+    // Check if there are any conflicts before proceeding
+    const conflictCount = store.getDiscrepancyCount;
+    if (conflictCount > 0) {
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Cannot proceed: ${conflictCount} rate conflicts detected`,
+      });
+      alert(
+        `Cannot apply effective dates while ${conflictCount} rate conflicts exist. Please resolve all conflicts first.`
+      );
+      return;
+    }
+
+    isApplyingSettings.value = true;
+    progressPercentage.value = 0;
+    processingPhase.value = 'preparing';
+    processingStatus.value = 'Initializing worker...';
+    processingStartTime.value = Date.now();
+    displayedElapsedTime.value = 0;
+
+    // Start separate timer for UI updates
+    if (elapsedTimeInterval) {
+      clearInterval(elapsedTimeInterval);
+    }
+    elapsedTimeInterval = window.setInterval(() => {
+      if (processingStartTime.value > 0) {
+        displayedElapsedTime.value = Math.floor((Date.now() - processingStartTime.value) / 1000);
+      }
+    }, 100);
+
+    // Show logs automatically when applying settings
+    showProcessingLogs.value = true;
+
+    try {
+      console.log('Starting effective date update process');
+      processingLogs.value.push({
+        time: Date.now(),
+        message: 'Preparing data for worker',
+      });
+
+      // Create simplified versions of the data to send to the worker
+      // Extract only the properties we need to ensure everything is serializable
+
+      // Get the raw data
+      const rawGroupedData = store.groupedData.map((group) => ({
+        destinationName: group.destinationName,
+        changeCode: group.changeCode,
+        effectiveDate: group.effectiveDate,
+      }));
+
+      // Simplify records too - only send what's needed
+      const simplifiedRecords = store.originalData.map((record) => ({
+        name: record.name,
+        prefix: record.prefix,
+        effective: record.effective,
+      }));
+
+      processingStatus.value = 'Sending data to worker...';
+
+      console.log(
+        `Sending ${rawGroupedData.length} simplified groups and ${simplifiedRecords.length} simplified records to worker`
+      );
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Sending ${rawGroupedData.length} groups and ${simplifiedRecords.length} records to worker`,
+      });
+
+      // Send to worker with only the required data
+      effectiveDateWorker.postMessage({
+        rawGroupedData,
+        allRecords: simplifiedRecords,
+        effectiveDateSettings: { ...effectiveDateSettings.value },
+      });
+
+      processingLogs.value.push({
+        time: Date.now(),
+        message: 'Data sent to worker, awaiting results',
+      });
+    } catch (error) {
+      console.error('Error starting effective date update:', error);
+      processingLogs.value.push({
+        time: Date.now(),
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      });
+      processingStatus.value = `Error starting update: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      alert('Error starting update: ' + (error instanceof Error ? error.message : String(error)));
+      isApplyingSettings.value = false;
+      processingPhase.value = 'idle';
+
+      // Clear the elapsed time interval
+      if (elapsedTimeInterval) {
+        clearInterval(elapsedTimeInterval);
+        elapsedTimeInterval = null;
+      }
+    }
   }
-}
 
-function getEffectiveDateLabel(setting: string): string {
-  if (setting === 'today') {
-    return 'Today';
-  } else if (setting === 'tomorrow') {
-    return 'Tomorrow';
-  } else if (setting === 'week') {
-    return '7 Days';
-  } else if (setting === 'custom') {
-    return 'Custom';
+  function getEffectiveDateLabel(setting: string): string {
+    if (setting === 'today') {
+      return 'Today';
+    } else if (setting === 'tomorrow') {
+      return 'Tomorrow';
+    } else if (setting === 'week') {
+      return '7 Days';
+    } else if (setting === 'custom') {
+      return 'Custom';
+    }
+    return setting;
   }
-  return setting;
-}
 
-// Watch for debounced search query changes to handle expansion
-watch(debouncedSearchQuery, (newValue, oldValue) => {
-  if (newValue) {
-    // When search results are available, expand matching destinations
-    nextTick(() => {
-      // When searching, expand matching destinations and their matching rates
-      Object.keys(matchingCodes.value).forEach((destinationName) => {
-        // Expand the destination row
-        if (!expandedRows.value.includes(destinationName)) {
-          expandedRows.value.push(destinationName);
-        }
+  // Watch for debounced search query changes to handle expansion
+  watch(debouncedSearchQuery, (newValue, oldValue) => {
+    if (newValue) {
+      // When search results are available, expand matching destinations
+      nextTick(() => {
+        // When searching, expand matching destinations and their matching rates
+        Object.keys(matchingCodes.value).forEach((destinationName) => {
+          // Expand the destination row
+          if (!expandedRows.value.includes(destinationName)) {
+            expandedRows.value.push(destinationName);
+          }
 
-        // Expand the matching rates
-        if (!expandedRateCodes.value[destinationName]) {
-          expandedRateCodes.value[destinationName] = [];
-        }
+          // Expand the matching rates
+          if (!expandedRateCodes.value[destinationName]) {
+            expandedRateCodes.value[destinationName] = [];
+          }
 
-        // For each matching rate, expand the rate codes section
-        Object.keys(matchingCodes.value[destinationName]).forEach((rateStr) => {
-          const rate = parseFloat(rateStr);
-          if (!expandedRateCodes.value[destinationName].includes(rate)) {
-            expandedRateCodes.value[destinationName].push(rate);
+          // For each matching rate, expand the rate codes section
+          Object.keys(matchingCodes.value[destinationName]).forEach((rateStr) => {
+            const rate = parseFloat(rateStr);
+            if (!expandedRateCodes.value[destinationName].includes(rate)) {
+              expandedRateCodes.value[destinationName].push(rate);
+            }
+          });
+        });
+
+        // Wait for DOM to update, then scroll to the first match
+        nextTick(() => {
+          const firstMatchElement = document.querySelector('.bg-accent\\/20');
+          if (firstMatchElement) {
+            firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         });
       });
+    } else if (oldValue) {
+      // When clearing a search, collapse all expanded rows and rate codes
+      expandedRows.value = [];
+      expandedRateCodes.value = {};
+    }
+  });
 
-      // Wait for DOM to update, then scroll to the first match
-      nextTick(() => {
-        const firstMatchElement = document.querySelector('.bg-accent\\/20');
-        if (firstMatchElement) {
-          firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  function toggleEffectiveDateSettings() {
+    showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
+
+    // If opening the settings panel, ensure date fields have the proper defaults
+    if (showEffectiveDateSettings.value) {
+      // Make sure INCREASE date is 7 days from now if the mode is 'week'
+      if (effectiveDateSettings.value.increase === 'week') {
+        const sevenDaysDate = new Date();
+        sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
+        effectiveDateSettings.value.increaseCustomDate = sevenDaysDate.toISOString().split('T')[0];
+        console.log('Set increase date to 7 days:', effectiveDateSettings.value.increaseCustomDate);
+      }
+    }
+  }
+
+  // Date selection helper methods
+  function setSameDate(value: 'today' | 'tomorrow' | 'custom') {
+    effectiveDateSettings.value.same = value;
+  }
+
+  function setIncreaseDate(value: 'today' | 'tomorrow' | 'week' | 'custom') {
+    effectiveDateSettings.value.increase = value;
+
+    // Update the date field based on the selected value
+    if (value === 'today') {
+      effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
+    } else if (value === 'tomorrow') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
+    } else if (value === 'week') {
+      const sevenDays = new Date();
+      sevenDays.setDate(sevenDays.getDate() + 7);
+      effectiveDateSettings.value.increaseCustomDate = sevenDays.toISOString().split('T')[0];
+    }
+    // For 'custom', we keep whatever date the user selected
+  }
+
+  function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') {
+    effectiveDateSettings.value.decrease = value;
+  }
+
+  // --- Multi-Rate Sorting & Display ---
+  function getSortedRates(group: GroupedRateData): {
+    rate: number;
+    count: number;
+    percentage: number;
+    isCommon?: boolean;
+    isHighestPercentage?: boolean;
+    hasEqualDistribution?: boolean;
+  }[] {
+    // First map the rates
+    const rates = group.rates.map((r) => ({
+      rate: r.rate,
+      count: r.count,
+      percentage: r.percentage,
+      isCommon: r.isCommon,
+      isHighestPercentage: false, // Initialize to false
+      hasEqualDistribution: false, // Initialize to false
+    }));
+
+    // Sort rates by value (lowest to highest)
+    rates.sort((a, b) => a.rate - b.rate);
+
+    // Find the highest percentage
+    let highestPercentage = 0;
+    for (const rate of rates) {
+      if (rate.percentage > highestPercentage) {
+        highestPercentage = rate.percentage;
+      }
+    }
+
+    // Find rates with highest percentage
+    const highestRates = rates.filter((rate) => rate.percentage === highestPercentage);
+
+    // Check if we have equal distribution (multiple rates with same highest percentage)
+    if (highestRates.length > 1) {
+      // Mark all rates with the highest percentage as having equal distribution
+      highestRates.forEach((highestRate) => {
+        const rateIndex = rates.findIndex((r) => r.rate === highestRate.rate);
+        if (rateIndex >= 0) {
+          rates[rateIndex].hasEqualDistribution = true;
         }
       });
-    });
-  } else if (oldValue) {
-    // When clearing a search, collapse all expanded rows and rate codes
-    expandedRows.value = [];
-    expandedRateCodes.value = {};
-  }
-});
-
-function toggleEffectiveDateSettings() {
-  showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
-
-  // If opening the settings panel, ensure date fields have the proper defaults
-  if (showEffectiveDateSettings.value) {
-    // Make sure INCREASE date is 7 days from now if the mode is 'week'
-    if (effectiveDateSettings.value.increase === 'week') {
-      const sevenDaysDate = new Date();
-      sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
-      effectiveDateSettings.value.increaseCustomDate = sevenDaysDate.toISOString().split('T')[0];
-      console.log('Set increase date to 7 days:', effectiveDateSettings.value.increaseCustomDate);
-    }
-  }
-}
-
-// Date selection helper methods
-function setSameDate(value: 'today' | 'tomorrow' | 'custom') {
-  effectiveDateSettings.value.same = value;
-}
-
-function setIncreaseDate(value: 'today' | 'tomorrow' | 'week' | 'custom') {
-  effectiveDateSettings.value.increase = value;
-
-  // Update the date field based on the selected value
-  if (value === 'today') {
-    effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
-  } else if (value === 'tomorrow') {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
-  } else if (value === 'week') {
-    const sevenDays = new Date();
-    sevenDays.setDate(sevenDays.getDate() + 7);
-    effectiveDateSettings.value.increaseCustomDate = sevenDays.toISOString().split('T')[0];
-  }
-  // For 'custom', we keep whatever date the user selected
-}
-
-function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') {
-  effectiveDateSettings.value.decrease = value;
-}
-
-// --- Multi-Rate Sorting & Display ---
-function getSortedRates(group: GroupedRateData): {
-  rate: number;
-  count: number;
-  percentage: number;
-  isCommon?: boolean;
-  isHighestPercentage?: boolean;
-  hasEqualDistribution?: boolean;
-}[] {
-  // First map the rates
-  const rates = group.rates.map((r) => ({
-    rate: r.rate,
-    count: r.count,
-    percentage: r.percentage,
-    isCommon: r.isCommon,
-    isHighestPercentage: false, // Initialize to false
-    hasEqualDistribution: false, // Initialize to false
-  }));
-
-  // Sort rates by value (lowest to highest)
-  rates.sort((a, b) => a.rate - b.rate);
-
-  // Find the highest percentage
-  let highestPercentage = 0;
-  for (const rate of rates) {
-    if (rate.percentage > highestPercentage) {
-      highestPercentage = rate.percentage;
-    }
-  }
-
-  // Find rates with highest percentage
-  const highestRates = rates.filter((rate) => rate.percentage === highestPercentage);
-
-  // Check if we have equal distribution (multiple rates with same highest percentage)
-  if (highestRates.length > 1) {
-    // Mark all rates with the highest percentage as having equal distribution
-    highestRates.forEach((highestRate) => {
-      const rateIndex = rates.findIndex((r) => r.rate === highestRate.rate);
-      if (rateIndex >= 0) {
-        rates[rateIndex].hasEqualDistribution = true;
+    } else if (highestRates.length === 1) {
+      // If only one rate has the highest percentage, mark it as the highest
+      const lowestRateIndex = rates.findIndex((r) => r.rate === highestRates[0].rate);
+      if (lowestRateIndex >= 0) {
+        rates[lowestRateIndex].isHighestPercentage = true;
       }
-    });
-  } else if (highestRates.length === 1) {
-    // If only one rate has the highest percentage, mark it as the highest
-    const lowestRateIndex = rates.findIndex((r) => r.rate === highestRates[0].rate);
-    if (lowestRateIndex >= 0) {
-      rates[lowestRateIndex].isHighestPercentage = true;
     }
+
+    return rates;
   }
+  // --- End Multi-Rate Sorting & Display ---
 
-  return rates;
-}
-// --- End Multi-Rate Sorting & Display ---
-
-watch(
-  () => store.hasStoredData,
-  (newValue, oldValue) => {
-    if (newValue && !oldValue) {
-      // This means the data was just loaded, so open the settings panel
-      showEffectiveDateSettings.value = true;
-      console.log('Auto-opening effective date settings after file upload');
+  watch(
+    () => store.hasStoredData,
+    (newValue, oldValue) => {
+      if (newValue && !oldValue) {
+        // This means the data was just loaded, so open the settings panel
+        showEffectiveDateSettings.value = true;
+        console.log('Auto-opening effective date settings after file upload');
+      }
     }
-  }
-);
-
-// --- Filter Options & Label ---
-const filterOptions = [
-  { value: 'all', label: 'All Destinations' },
-  { value: 'conflicts', label: 'Rate Conflicts' },
-  { value: 'no-conflicts', label: 'No Conflicts' },
-  { value: 'change-same', label: 'Same Rate' },
-  { value: 'change-increase', label: 'Rate Increase' },
-  { value: 'change-decrease', label: 'Rate Decrease' },
-];
-
-const selectedFilterLabel = computed(() => {
-  return (
-    filterOptions.find((option) => option.value === filterStatus.value)?.label || 'All Destinations'
   );
-});
-// --- End Filter Options & Label ---
 
-// --- Helper Functions for Adjustment Dropdowns ---
-function getAdjustmentTypeLabel(value: AdjustmentType | undefined): string {
-  return adjustmentTypeOptions.find((opt) => opt.value === value)?.label || 'N/A';
-}
+  // --- Filter Options & Label ---
+  const filterOptions = [
+    { value: 'all', label: 'All Destinations' },
+    { value: 'conflicts', label: 'Rate Conflicts' },
+    { value: 'no-conflicts', label: 'No Conflicts' },
+    { value: 'change-same', label: 'Same Rate' },
+    { value: 'change-increase', label: 'Rate Increase' },
+    { value: 'change-decrease', label: 'Rate Decrease' },
+  ];
 
-function getAdjustmentValueTypeLabel(value: AdjustmentValueType | undefined): string {
-  return adjustmentValueTypeOptions.find((opt) => opt.value === value)?.label || 'N/A';
-}
-// --- End Helper Functions ---
+  const selectedFilterLabel = computed(() => {
+    return (
+      filterOptions.find((option) => option.value === filterStatus.value)?.label ||
+      'All Destinations'
+    );
+  });
+  // --- End Filter Options & Label ---
 
-// --- Helper Functions ---
-
-// Helper to initialize state for single-rate destinations when expanded
-function initializeSingleRateState(destinationName: string) {
-  console.log(`Initializing state for single-rate: ${destinationName}`);
-  if (!singleRateAdjustments.value[destinationName]) {
-    singleRateAdjustments.value[destinationName] = {
-      adjustmentType: 'markup',
-      adjustmentValueType: 'percentage',
-      adjustmentValue: null,
-    };
+  // --- Helper Functions for Adjustment Dropdowns ---
+  function getAdjustmentTypeLabel(value: AdjustmentType | undefined): string {
+    return adjustmentTypeOptions.find((opt) => opt.value === value)?.label || 'N/A';
   }
-  if (directSetRates.value[destinationName] === undefined) {
-    directSetRates.value[destinationName] = null;
+
+  function getAdjustmentValueTypeLabel(value: AdjustmentValueType | undefined): string {
+    return adjustmentValueTypeOptions.find((opt) => opt.value === value)?.label || 'N/A';
   }
-}
+  // --- End Helper Functions ---
 
-// ... other helper functions (formatRate, calculateAdjustedRate, etc.) ...
+  // --- Helper Functions ---
 
-// Keep the original toggleExpand function here
-function toggleExpand(destinationName: string) {
-  const index = expandedRows.value.indexOf(destinationName);
-  if (index > -1) {
-    expandedRows.value.splice(index, 1);
-  } else {
-    const group = groupedData.value.find((g) => g.destinationName === destinationName);
-    if (group) {
-      // Initialize state *before* adding to expandedRows to ensure it exists before render attempt
-      if (!group.hasDiscrepancy) {
-        initializeSingleRateState(destinationName); // Call the function
-      }
+  // Helper to initialize state for single-rate destinations when expanded
+  function initializeSingleRateState(destinationName: string) {
+    console.log(`Initializing state for single-rate: ${destinationName}`);
+    if (!singleRateAdjustments.value[destinationName]) {
+      singleRateAdjustments.value[destinationName] = {
+        adjustmentType: 'markup',
+        adjustmentValueType: 'percentage',
+        adjustmentValue: null,
+      };
+    }
+    if (directSetRates.value[destinationName] === undefined) {
+      directSetRates.value[destinationName] = null;
+    }
+  }
 
-      // Add to expandedRows *after* potential state initialization
-      expandedRows.value.push(destinationName);
+  // ... other helper functions (formatRate, calculateAdjustedRate, etc.) ...
 
-      // Store the original rate when expanding, regardless of discrepancy
-      if (originalRates.value[destinationName] === undefined) {
+  // Keep the original toggleExpand function here
+  function toggleExpand(destinationName: string) {
+    const index = expandedRows.value.indexOf(destinationName);
+    if (index > -1) {
+      expandedRows.value.splice(index, 1);
+    } else {
+      const group = groupedData.value.find((g) => g.destinationName === destinationName);
+      if (group) {
+        // Initialize state *before* adding to expandedRows to ensure it exists before render attempt
         if (!group.hasDiscrepancy) {
-          originalRates.value[destinationName] = group.rates[0].rate;
-        } else {
-          // For discrepancies, find the most common rate initially selected
-          const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
-          if (mostCommonRate !== undefined) {
-            originalRates.value[destinationName] = mostCommonRate;
-            // Set the initial selection if not already set
-            if (selectedRates.value[destinationName] === undefined) {
-              selectedRates.value[destinationName] = mostCommonRate;
+          initializeSingleRateState(destinationName); // Call the function
+        }
+
+        // Add to expandedRows *after* potential state initialization
+        expandedRows.value.push(destinationName);
+
+        // Store the original rate when expanding, regardless of discrepancy
+        if (originalRates.value[destinationName] === undefined) {
+          if (!group.hasDiscrepancy) {
+            originalRates.value[destinationName] = group.rates[0].rate;
+          } else {
+            // For discrepancies, find the most common rate initially selected
+            const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
+            if (mostCommonRate !== undefined) {
+              originalRates.value[destinationName] = mostCommonRate;
+              // Set the initial selection if not already set
+              if (selectedRates.value[destinationName] === undefined) {
+                selectedRates.value[destinationName] = mostCommonRate;
+              }
             }
           }
         }
-      }
 
-      // Initialize multi-rate selected rate if it wasn't set by original rate logic above
-      if (group.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
-        const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
-        if (mostCommonRate !== undefined) {
-          selectedRates.value[destinationName] = mostCommonRate;
+        // Initialize multi-rate selected rate if it wasn't set by original rate logic above
+        if (group.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
+          const mostCommonRate = group.rates.find((r) => r.isCommon)?.rate;
+          if (mostCommonRate !== undefined) {
+            selectedRates.value[destinationName] = mostCommonRate;
+          }
         }
       }
     }
   }
-}
 
-// --- Real-time Update Calculation Logic ---
+  // --- Real-time Update Calculation Logic ---
 
-// Function to check if there are pending, uncommitted changes
-function hasPendingChanges(destinationName: string): boolean {
-  const directRate = directSetRates.value[destinationName];
-  const adjustment = singleRateAdjustments.value[destinationName];
+  // Function to check if there are pending, uncommitted changes
+  function hasPendingChanges(destinationName: string): boolean {
+    const directRate = directSetRates.value[destinationName];
+    const adjustment = singleRateAdjustments.value[destinationName];
 
-  // Check if direct rate input has a value
-  if (directRate !== null && directRate !== undefined) {
-    return true;
-  }
+    // Check if direct rate input has a value
+    if (directRate !== null && directRate !== undefined) {
+      return true;
+    }
 
-  // Check if adjustment inputs have a value
-  if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
-    // Additional check for multi-rate: ensure a base rate is selected
+    // Check if adjustment inputs have a value
+    if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+      // Additional check for multi-rate: ensure a base rate is selected
+      const group = groupedData.value.find((g) => g.destinationName === destinationName);
+      if (group?.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
+        return false; // Cannot calculate adjustment without a selected base rate
+      }
+      return true;
+    }
+
+    // Check if user explicitly selected a rate in a multi-rate scenario
     const group = groupedData.value.find((g) => g.destinationName === destinationName);
-    if (group?.hasDiscrepancy && selectedRates.value[destinationName] === undefined) {
-      return false; // Cannot calculate adjustment without a selected base rate
+    if (group?.hasDiscrepancy && userExplicitlySelectedRate.value[destinationName] === true) {
+      return true;
     }
-    return true;
+
+    return false;
   }
 
-  // Check if user explicitly selected a rate in a multi-rate scenario
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
-  if (group?.hasDiscrepancy && userExplicitlySelectedRate.value[destinationName] === true) {
-    return true;
+  // Function to get the calculated rate based on pending inputs
+  function getPendingUpdatedRate(destinationName: string): number | null {
+    const group = groupedData.value.find((g) => g.destinationName === destinationName);
+    if (!group) return null;
+
+    const directRate = directSetRates.value[destinationName];
+    const adjustment = singleRateAdjustments.value[destinationName];
+    const selectedRate = selectedRates.value[destinationName]; // Get the selected base rate
+
+    // Priority 1: Direct Rate Input
+    if (directRate !== null && directRate !== undefined) {
+      return directRate;
+    }
+
+    // Priority 2: Adjustment Calculation
+    if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
+      let baseRate: number | undefined;
+
+      if (group.hasDiscrepancy) {
+        // Use the currently selected rate for multi-rate destinations
+        baseRate = selectedRate;
+      } else {
+        // Use the original rate for single-rate destinations
+        baseRate = originalRates.value[destinationName] ?? group.rates[0].rate;
+      }
+
+      // Cannot calculate if base rate is missing (e.g., multi-rate not selected yet)
+      if (baseRate === undefined) {
+        return null;
+      }
+
+      return calculateAdjustedRate(baseRate, adjustment);
+    }
+
+    // Priority 3: Show the explicitly selected base rate for multi-rate conflicts
+    // if no direct rate or adjustment is pending
+    if (
+      group.hasDiscrepancy &&
+      userExplicitlySelectedRate.value[destinationName] === true &&
+      selectedRate !== undefined
+    ) {
+      return selectedRate;
+    }
+
+    // No pending changes that result in a new rate preview
+    return null;
   }
 
-  return false;
-}
+  // --- End Real-time Calculation Logic ---
 
-// Function to get the calculated rate based on pending inputs
-function getPendingUpdatedRate(destinationName: string): number | null {
-  const group = groupedData.value.find((g) => g.destinationName === destinationName);
-  if (!group) return null;
-
-  const directRate = directSetRates.value[destinationName];
-  const adjustment = singleRateAdjustments.value[destinationName];
-  const selectedRate = selectedRates.value[destinationName]; // Get the selected base rate
-
-  // Priority 1: Direct Rate Input
-  if (directRate !== null && directRate !== undefined) {
-    return directRate;
-  }
-
-  // Priority 2: Adjustment Calculation
-  if (adjustment?.adjustmentValue !== null && adjustment?.adjustmentValue > 0) {
-    let baseRate: number | undefined;
-
-    if (group.hasDiscrepancy) {
-      // Use the currently selected rate for multi-rate destinations
-      baseRate = selectedRate;
+  // --- Sorting Handler ---
+  function handleSort(column: SortableAZColumn) {
+    if (!column.sortable) return;
+    if (sortColumnKey.value === column.key) {
+      sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
-      // Use the original rate for single-rate destinations
-      baseRate = originalRates.value[destinationName] ?? group.rates[0].rate;
+      sortColumnKey.value = column.key;
+      sortDirection.value = 'asc';
     }
-
-    // Cannot calculate if base rate is missing (e.g., multi-rate not selected yet)
-    if (baseRate === undefined) {
-      return null;
-    }
-
-    return calculateAdjustedRate(baseRate, adjustment);
   }
+  // --- End Sorting Handler ---
 
-  // Priority 3: Show the explicitly selected base rate for multi-rate conflicts
-  // if no direct rate or adjustment is pending
-  if (
-    group.hasDiscrepancy &&
-    userExplicitlySelectedRate.value[destinationName] === true &&
-    selectedRate !== undefined
-  ) {
-    return selectedRate;
-  }
-
-  // No pending changes that result in a new rate preview
-  return null;
-}
-
-// --- End Real-time Calculation Logic ---
-
-// ... rest of the script setup ...
+  // ... rest of the script setup ...
 </script>
 
 <style scoped>
-/* ... styles ... */
+  /* ... styles ... */
 </style>
