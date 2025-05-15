@@ -205,7 +205,6 @@
         class="flex items-center justify-center space-x-2 border border-neutral-700 rounded-lg p-2 w-1/4 mx-auto"
       >
         <ArrowPathIcon class="animate-spin w-6 h-6" />
-        
       </div>
     </div>
     <div v-else-if="error" class="text-center text-red-500 py-10">
@@ -230,78 +229,59 @@
         <table class="min-w-full divide-y divide-gray-700 text-sm">
           <thead class="bg-gray-800 sticky top-0 z-10">
             <tr>
-              <!-- Define table headers based on USPricingComparisonRecord -->
-              <th class="px-4 py-2 text-left text-gray-300 align-bottom">NPANXX</th>
-              <!-- <th class="px-4 py-2 text-left text-gray-300">NPA</th> -->
-              <!-- <th class="px-4 py-2 text-left text-gray-300">NXX</th> -->
-              <th class="px-4 py-2 text-left text-gray-300 align-bottom">State</th>
-              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Country</th>
-              <!-- File 1 Inter -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <BaseBadge
-                  size="small"
-                  variant="success"
-                  class="mb-1 max-w-[100px] truncate"
-                  :title="fileName1"
-                  >{{ fileName1 }}</BaseBadge
-                ><br />Inter
+              <!-- Dynamically render table headers -->
+              <th
+                v-for="header in tableHeaders"
+                :key="header.key"
+                scope="col"
+                class="px-4 py-2 text-gray-300 align-bottom"
+                :class="[
+                  header.textAlign, // This might be redundant if inner div controls all alignment
+                  { 'cursor-pointer hover:bg-gray-700': header.sortable },
+                ]"
+                @click="header.sortable ? handleSort(header.key) : null"
+              >
+                <div
+                  class="flex"
+                  :class="[
+                    header.customRender ? 'flex-col' : 'items-center', // Default for non-customRender is row, so items-center for vertical alignment
+                    header.customRender && header.textAlign === 'text-center' ? 'items-center' : '',
+                    header.customRender && header.textAlign === 'text-left' ? 'items-start' : '',
+                    !header.customRender && header.textAlign === 'text-center'
+                      ? 'justify-center'
+                      : '',
+                    !header.customRender && header.textAlign === 'text-left' ? 'justify-start' : '',
+                  ]"
+                >
+                  <template v-if="header.customRender">
+                    <BaseBadge
+                      size="small"
+                      :variant="header.fileBadge === 'file1' ? 'success' : 'info'"
+                      class="max-w-[100px] truncate"
+                      :title="header.fileBadge === 'file1' ? fileName1 : fileName2"
+                      >{{ header.fileBadge === 'file1' ? fileName1 : fileName2 }}</BaseBadge
+                    >
+                  </template>
+
+                  <div class="flex items-center" :class="{ 'mt-0.5': header.customRender }">
+                    <span>{{ header.label }}</span>
+                    <template v-if="header.sortable">
+                      <ArrowUpIcon
+                        v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
+                        class="w-3 h-3 ml-1 text-accent"
+                      />
+                      <ArrowDownIcon
+                        v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'"
+                        class="w-3 h-3 ml-1 text-accent"
+                      />
+                      <ChevronUpDownIcon
+                        v-else
+                        class="w-4 h-4 ml-1 text-gray-500 hover:text-gray-200"
+                      />
+                    </template>
+                  </div>
+                </div>
               </th>
-              <!-- File 2 Inter -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <BaseBadge
-                  size="small"
-                  variant="info"
-                  class="mb-1 max-w-[100px] truncate"
-                  :title="fileName2"
-                  >{{ fileName2 }}</BaseBadge
-                ><br />Inter
-              </th>
-              <!-- Diff Inter % Header -->
-              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
-              <!-- File 1 Intra -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <BaseBadge
-                  size="small"
-                  variant="success"
-                  class="mb-1 max-w-[100px] truncate"
-                  :title="fileName1"
-                  >{{ fileName1 }}</BaseBadge
-                ><br />Intra
-              </th>
-              <!-- File 2 Intra -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <BaseBadge
-                  size="small"
-                  variant="info"
-                  class="mb-1 max-w-[100px] truncate"
-                  :title="fileName2"
-                  >{{ fileName2 }}</BaseBadge
-                ><br />Intra
-              </th>
-              <!-- Diff Intra % Header -->
-              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
-              <!-- File 1 Indeterm -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <BaseBadge
-                  size="small"
-                  variant="success"
-                  class="mb-1 max-w-[100px] truncate"
-                  :title="fileName1"
-                  >{{ fileName1 }}</BaseBadge
-                ><br />Indeterm
-              </th>
-              <!-- File 2 Indeterm -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center">
-                <BaseBadge
-                  size="small"
-                  variant="info"
-                  class="mb-1 max-w-[100px] truncate"
-                  :title="fileName2"
-                  >{{ fileName2 }}</BaseBadge
-                ><br />Indeterm
-              </th>
-              <!-- Diff Indeterm % Header -->
-              <th class="px-4 py-2 text-left text-gray-300 align-bottom">Diff %</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-800">
@@ -385,6 +365,22 @@
   import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Icons
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
   import BaseButton from '@/components/shared/BaseButton.vue'; // Import BaseButton
+  import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/20/solid';
+
+  // Type for sortable column definition
+  interface SortableUSComparisonColumn {
+    key:
+      | keyof USPricingComparisonRecord
+      | 'diff_inter_pct'
+      | 'diff_intra_pct'
+      | 'diff_indeterm_pct'; // Allow diff keys
+    label: string;
+    sortable: boolean;
+    textAlign?: string; // e.g., 'text-center', 'text-left'
+    customRender?: boolean; // For headers that need complex rendering like badges
+    fileBadge?: 'file1' | 'file2'; // To associate with fileName1 or fileName2
+    rateType?: 'Inter' | 'Intra' | 'Indeterm'; // For rate columns
+  }
 
   const usStore = useUsStore(); // Instantiate usStore
   const lergStore = useLergStore(); // Instantiate lergStore
@@ -396,6 +392,11 @@
   const isExporting = ref<boolean>(false); // Export loading state
   const error = ref<string | null>(null);
   const availableStates = ref<string[]>([]); // For state filter dropdown
+
+  // --- Sorting State ---
+  const currentSortKey = ref<SortableUSComparisonColumn['key']>('npanxx'); // Default sort key
+  const currentSortDirection = ref<'asc' | 'desc'>('asc'); // Default sort direction
+  // --- End Sorting State ---
 
   // Filter State Variables
   const searchTerm = ref<string>('');
@@ -437,6 +438,71 @@
   const animatedFile2IntraAvg = useTransition(file2IntraAvgSource, transitionConfig);
   const animatedFile2IndetermAvg = useTransition(file2IndetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
+
+  // --- Table Headers ---
+  const tableHeaders = computed<SortableUSComparisonColumn[]>(() => [
+    { key: 'npanxx', label: 'NPANXX', sortable: true, textAlign: 'text-left' },
+    { key: 'stateCode', label: 'State', sortable: true, textAlign: 'text-left' },
+    { key: 'countryCode', label: 'Country', sortable: true, textAlign: 'text-left' },
+    {
+      key: 'file1_inter',
+      label: 'Inter',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file1',
+      rateType: 'Inter',
+    },
+    {
+      key: 'file2_inter',
+      label: 'Inter',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file2',
+      rateType: 'Inter',
+    },
+    { key: 'diff_inter_pct', label: 'Diff %', sortable: true, textAlign: 'text-left' }, // Sort by actual diff % key
+    {
+      key: 'file1_intra',
+      label: 'Intra',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file1',
+      rateType: 'Intra',
+    },
+    {
+      key: 'file2_intra',
+      label: 'Intra',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file2',
+      rateType: 'Intra',
+    },
+    { key: 'diff_intra_pct', label: 'Diff %', sortable: true, textAlign: 'text-left' }, // Sort by actual diff % key
+    {
+      key: 'file1_indeterm',
+      label: 'Indeterm',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file1',
+      rateType: 'Indeterm',
+    },
+    {
+      key: 'file2_indeterm',
+      label: 'Indeterm',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file2',
+      rateType: 'Indeterm',
+    },
+    { key: 'diff_indeterm_pct', label: 'Diff %', sortable: true, textAlign: 'text-left' }, // Sort by actual diff % key
+  ]);
+  // --- End Table Headers ---
 
   // Use the fixed table name for comparison results
   const COMPARISON_TABLE_NAME = 'comparison_results';
@@ -779,18 +845,44 @@
 
     try {
       // Build the query dynamically
-      let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+      let query: any = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+      let dbSortApplied = false;
 
-      // Apply filters
+      // Apply main indexed filters first (if any become primarily indexed and directly queriable)
+      // For now, we assume most filtering might be client-side due to complexity or NPANXX search
+
+      // Attempt DB-Level Sorting (on the potentially filtered Table/WhereClause)
+      // This needs to happen BEFORE any .filter(fn) calls if possible.
+      if (typeof query.orderBy === 'function' && currentSortKey.value) {
+        try {
+          query = query.orderBy(currentSortKey.value);
+          if (currentSortDirection.value === 'desc') {
+            query = query.reverse();
+          }
+          dbSortApplied = true;
+          console.log(
+            '[USDetailedComparisonTable] DB sort applied on:',
+            currentSortKey.value,
+            currentSortDirection.value
+          );
+        } catch (dbSortError) {
+          console.warn(
+            '[USDetailedComparisonTable] DB Sort error, falling back to client sort:',
+            dbSortError
+          );
+          dbSortApplied = false; // Ensure fallback if DB sort fails
+        }
+      }
+
+      // Apply client-side filters
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
       if (searchTerm.value) {
         const term = searchTerm.value.trim();
-        if (term.length === 6) {
-          // Exact match for 6 digits
+        const lowerSearch = term.toLowerCase();
+        if (term.length === 6 && !isNaN(Number(term))) {
+          // NPANXX is 6 digits
           currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
-        } else {
-          // StartsWith for shorter terms
-          const lowerSearch = term.toLowerCase();
+        } else if (term.length > 0) {
           currentFilters.push((record: USPricingComparisonRecord) =>
             record.npanxx.toLowerCase().startsWith(lowerSearch)
           );
@@ -802,35 +894,82 @@
         );
       }
 
-      // Explicitly type as Collection or apply chain differently
-      let finalQueryChain;
       if (currentFilters.length > 0) {
-        // Start with the filtered collection
-        finalQueryChain = query
-          .filter((record) => currentFilters.every((fn) => fn(record)))
-          .offset(offset.value)
-          .limit(pageSize);
-      } else {
-        // Start with the original table
-        finalQueryChain = query.offset(offset.value).limit(pageSize);
+        query = query.filter((record: USPricingComparisonRecord) =>
+          currentFilters.every((fn) => fn(record))
+        );
+        // If client-side filters were applied AFTER an attempt at DB sort,
+        // the dbSortApplied flag might be true but the sort is on a pre-filtered set.
+        // For simplicity here, if client filters run, we might lose the full DB sort efficiency
+        // and client-side sort (if !dbSortApplied or if sort key changes) becomes more important.
+        // A more complex setup could try to re-apply orderBy if the collection supports it.
+        console.log('[USDetailedComparisonTable] Client-side filters applied.');
+      }
+
+      // Count total records matching filters (only for first page load of a new filter/sort set)
+      let totalFilteredRecords = 0;
+      if (offset.value === 0) {
+        // This condition means it's the first fetch for current filters/sort
+        try {
+          totalFilteredRecords = await query.clone().count();
+          // console.log("[USDetailedComparisonTable] Total records after filters (and potential DB sort):", totalFilteredRecords);
+        } catch (countError) {
+          console.error('[USDetailedComparisonTable] Error counting records:', countError);
+          // If count fails, proceed without it, but pagination might be less accurate.
+        }
       }
 
       // Apply pagination and fetch data
-      const newData = await finalQueryChain.toArray();
+      let newData = await query.offset(offset.value).limit(pageSize).toArray();
 
-      console.log(
-        `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`
-      );
+      // Fallback to Client-Side Sorting if DB Sort wasn't applied (or wasn't on the final filtered set)
+      // and a sort key is active.
+      if (!dbSortApplied && currentSortKey.value) {
+        console.log(
+          '[USDetailedComparisonTable] Applying client-side sort on:',
+          currentSortKey.value,
+          currentSortDirection.value
+        );
+        newData.sort((a, b) => {
+          const valA = (a as any)[currentSortKey.value!];
+          const valB = (b as any)[currentSortKey.value!];
+          let comparison = 0;
+
+          // Handle nulls/undefined to sort them consistently (e.g., at the end for asc, beginning for desc)
+          if (valA === null || valA === undefined) comparison = 1;
+          else if (valB === null || valB === undefined) comparison = -1;
+          else if (typeof valA === 'string' && typeof valB === 'string') {
+            comparison = valA.localeCompare(valB);
+          } else if (valA > valB) comparison = 1;
+          else if (valA < valB) comparison = -1;
+
+          return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
+        });
+      }
+
+      // console.log(
+      //   `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`
+      // );
 
       // Replace data if it's the first page load (offset 0), otherwise append
       if (offset.value === 0) {
         filteredComparisonData.value = newData;
+        // Update total records count used for display/logic if available from new count method
+        // This part is tricky because totalRecords isn't a defined ref in this component yet.
+        // For now, we rely on hasMoreData for pagination control.
       } else {
         filteredComparisonData.value.push(...newData); // Append new data
       }
 
       offset.value += newData.length; // Increment offset
-      hasMoreData.value = newData.length === pageSize; // Check if there might be more data
+      // Adjust hasMoreData based on whether a full count was possible and if offset < totalFilteredRecords
+      if (offset.value === 0 && totalFilteredRecords > 0) {
+        // First page load with a count
+        hasMoreData.value = offset.value < totalFilteredRecords;
+      } else {
+        // Subsequent pages or no count available
+        hasMoreData.value = newData.length === pageSize;
+      }
     } catch (err: any) {
       console.error('Error loading more comparison data:', err);
       error.value = err.message || 'Failed to load data';
@@ -947,25 +1086,23 @@
     if (scrollContainerRef.value) {
       scrollContainerRef.value.scrollTop = 0;
     }
-    // Reset state before fetching - DO NOT CLEAR filteredComparisonData here
-    offset.value = 0;
+    // Reset state before fetching
+    offset.value = 0; // Crucial: reset offset for new filter/sort context
+    // Do NOT clear filteredComparisonData.value here. The loading overlay will cover the stale data,
+    // and loadMoreData (when offset is 0) will replace it with the new data.
     hasMoreData.value = true; // Assume there's data until proven otherwise
     error.value = null;
     isLoadingMore.value = false; // Ensure this is reset
 
     // Trigger both table data fetch and full average calculation
-    // We pass 0 for offset to loadMoreData to signal it should replace the data
-    const dataFetchPromise = loadMoreData(); // Load the first page of table data
+    const dataFetchPromise = loadMoreData(); // Load the first page of table data (uses currentSortKey/Direction)
     const averageCalcPromise = calculateFullFilteredAverages(); // Calculate averages for all filtered data
 
     try {
-      // Wait for both to complete (or handle errors appropriately)
       await Promise.all([dataFetchPromise, averageCalcPromise]);
     } catch (err) {
-      // Error handling is done within the individual functions, but catch here just in case
       console.error('[USDetailedComparisonTable] Error during resetAndFetchData:', err);
     } finally {
-      // Reset loading states after fetching is complete
       isLoading.value = false;
       isFiltering.value = false;
     }
@@ -1058,4 +1195,22 @@
     const provinceName = lergStore.getProvinceNameByCode(code);
     return provinceName; // Returns the code itself if not found here either
   }
+
+  // --- Sorting Handler ---
+  async function handleSort(key: SortableUSComparisonColumn['key']) {
+    const header = tableHeaders.value.find((h) => h.key === key);
+    if (!header || !header.sortable) {
+      return;
+    }
+
+    if (currentSortKey.value === key) {
+      currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortKey.value = key;
+      currentSortDirection.value = 'asc';
+    }
+    // After updating sort state, reload data from the beginning
+    await resetAndFetchData();
+  }
+  // --- End Sorting Handler ---
 </script>
