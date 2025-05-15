@@ -178,57 +178,75 @@
         <table class="min-w-full divide-y divide-gray-700 text-sm">
           <thead class="bg-gray-800 sticky top-0 z-10">
             <tr>
-              <!-- Headers based on AZDetailedComparisonEntry -->
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">
-                Dial Code
-              </th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">
-                Match Status
-              </th>
-              <!-- Updated Dest Name Header for File 1 -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[250px]">
-                <BaseBadge
-                  size="small"
-                  variant="success"
-                  class="mb-1 max-w-[150px] truncate"
-                  :title="fileName1"
-                  >{{ fileName1 }}</BaseBadge
-                ><br />Dest Name
-              </th>
-              <!-- Updated Dest Name Header for File 2 -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[250px]">
-                <BaseBadge
-                  size="small"
-                  variant="info"
-                  class="mb-1 max-w-[150px] truncate"
-                  :title="fileName2"
-                  >{{ fileName2 }}</BaseBadge
-                ><br />Dest Name
-              </th>
-              <!-- Updated Rate Header for File 1 -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[200px]">
-                <BaseBadge
-                  size="small"
-                  variant="success"
-                  class="mb-1 max-w-[150px] truncate"
-                  :title="fileName1"
-                  >{{ fileName1 }}</BaseBadge
-                ><br />Rate
-              </th>
-              <!-- Updated Rate Header for File 2 -->
-              <th class="px-4 py-2 text-gray-300 align-bottom text-center min-w-[200px]">
-                <BaseBadge
-                  size="small"
-                  variant="info"
-                  class="mb-1 max-w-[150px] truncate"
-                  :title="fileName2"
-                  >{{ fileName2 }}</BaseBadge
-                ><br />Rate
-              </th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">Diff</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[100px] align-bottom">Diff %</th>
-              <th class="px-4 py-2 text-left text-gray-300 min-w-[120px] align-bottom">
-                Cheaper File
+              <th
+                v-for="header in tableHeaders"
+                :key="header.key"
+                scope="col"
+                class="px-4 py-2 text-gray-300 align-bottom whitespace-nowrap"
+                :class="[
+                  header.textAlign || 'text-left',
+                  {
+                    'cursor-pointer hover:bg-gray-700/50': header.sortable,
+                    'min-w-[120px]': ['dialCode', 'matchStatus', 'diff', 'cheaperFile'].includes(
+                      header.key as string
+                    ),
+                    'min-w-[250px]': ['destName1', 'destName2'].includes(header.key as string),
+                    'min-w-[200px]': ['rate1', 'rate2'].includes(header.key as string),
+                    'min-w-[100px]': header.key === 'diffPercent',
+                  },
+                ]"
+                @click="header.sortable ? handleSort(header.key) : undefined"
+                :aria-sort="
+                  header.sortable && sortColumnKey === header.key
+                    ? sortDirection === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                "
+              >
+                <div
+                  class="flex items-center"
+                  :class="{
+                    'justify-center': header.textAlign === 'text-center',
+                    'justify-start': header.textAlign === 'text-left' || !header.textAlign,
+                  }"
+                >
+                  <BaseBadge
+                    v-if="header.key === 'destName1' || header.key === 'rate1'"
+                    size="small"
+                    variant="success"
+                    class="mb-1 max-w-[150px] truncate inline-block mr-1"
+                    :title="fileName1"
+                    >{{ fileName1 }}</BaseBadge
+                  >
+                  <BaseBadge
+                    v-if="header.key === 'destName2' || header.key === 'rate2'"
+                    size="small"
+                    variant="info"
+                    class="mb-1 max-w-[150px] truncate inline-block mr-1"
+                    :title="fileName2"
+                    >{{ fileName2 }}</BaseBadge
+                  >
+                  <span>{{
+                    header.label.includes(fileName1) || header.label.includes(fileName2)
+                      ? header.label.split(' (')[0]
+                      : header.label
+                  }}</span>
+                  <template v-if="header.sortable">
+                    <ArrowUpIcon
+                      v-if="sortColumnKey === header.key && sortDirection === 'asc'"
+                      class="w-4 h-4 ml-1.5 text-accent shrink-0"
+                    />
+                    <ArrowDownIcon
+                      v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
+                      class="w-4 h-4 ml-1.5 text-accent shrink-0"
+                    />
+                    <ChevronUpDownIcon
+                      v-else
+                      class="w-4 h-4 ml-1.5 text-gray-400 hover:text-gray-200 shrink-0"
+                    />
+                  </template>
+                </div>
               </th>
             </tr>
           </thead>
@@ -309,7 +327,12 @@
   import { useAzStore } from '@/stores/az-store';
   import { AZService } from '@/services/az.service';
   import Papa from 'papaparse';
-  import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
+  import {
+    ArrowDownTrayIcon,
+    ArrowPathIcon,
+    ArrowUpIcon,
+    ArrowDownIcon,
+  } from '@heroicons/vue/20/solid';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import type {
@@ -348,6 +371,41 @@
   // Infinite Scroll Elements
   const loadMoreTriggerRef = ref<HTMLElement | null>(null);
   const scrollContainerRef = ref<HTMLElement | null>(null);
+
+  // --- Sorting State ---
+  const sortColumnKey = ref<keyof AZDetailedComparisonEntry | string | null>(null);
+  const sortDirection = ref<'asc' | 'desc'>('asc');
+
+  interface SortableAZCompColumn {
+    key: keyof AZDetailedComparisonEntry | string;
+    label: string;
+    sortable: boolean;
+    textAlign?: string;
+    getValue?: (record: AZDetailedComparisonEntry) => any;
+  }
+
+  const tableHeaders = computed<SortableAZCompColumn[]>(() => [
+    { key: 'dialCode', label: 'Dial Code', sortable: true, textAlign: 'center' },
+    { key: 'matchStatus', label: 'Match Status', sortable: true, textAlign: 'center' },
+    {
+      key: 'destName1',
+      label: `Dest Name (${fileName1.value})`,
+      sortable: true,
+      textAlign: 'center',
+    },
+    {
+      key: 'destName2',
+      label: `Dest Name (${fileName2.value})`,
+      sortable: true,
+      textAlign: 'center',
+    },
+    { key: 'rate1', label: `Rate (${fileName1.value})`, sortable: true, textAlign: 'center' },
+    { key: 'rate2', label: `Rate (${fileName2.value})`, sortable: true, textAlign: 'center' },
+    { key: 'diff', label: 'Diff', sortable: true, textAlign: 'center' },
+    { key: 'diffPercent', label: 'Diff %', sortable: true, textAlign: 'center' },
+    { key: 'cheaperFile', label: 'Cheaper File', sortable: true, textAlign: 'center' },
+  ]);
+  // --- End Sorting State ---
 
   // --- Get Filenames for Headers ---
   const fileName1 = computed(() => {
@@ -419,6 +477,9 @@
       if (searchTerm.value) filters.search = searchTerm.value;
       if (selectedCheaper.value) filters.cheaper = selectedCheaper.value;
       if (selectedMatchStatus.value) filters.matchStatus = selectedMatchStatus.value;
+      // Add sort parameters to filters
+      if (sortColumnKey.value) filters.sortKey = sortColumnKey.value as string; // Cast needed if keyof AZDetailedComparisonEntry
+      if (sortColumnKey.value && sortDirection.value) filters.sortDir = sortDirection.value;
 
       const newData = await azService.getPagedDetailedComparisonData(
         tableName,
@@ -472,6 +533,8 @@
       console.log(`[AZDetailedComparisonTable] Table name changed to: ${newTableName}`);
       if (newTableName !== currentTableName.value) {
         currentTableName.value = newTableName;
+        // Reset sort when table changes, or decide if it should persist
+        // sortColumnKey.value = null;
         resetAndFetchData();
       }
     },
@@ -479,6 +542,9 @@
   );
 
   watch([searchTerm, selectedCheaper, selectedMatchStatus], () => {
+    // Reset sort to default when primary filters change
+    sortColumnKey.value = null; // Or set to a default like 'dialCode'
+    sortDirection.value = 'asc';
     resetAndFetchData();
   });
 
@@ -596,4 +662,19 @@
       error.value = 'Failed to generate CSV file.';
     }
   }
+
+  // --- Sorting Handler ---
+  function handleSort(columnKey: keyof AZDetailedComparisonEntry | string) {
+    const header = tableHeaders.value.find((h) => h.key === columnKey);
+    if (!header || !header.sortable) return;
+
+    if (sortColumnKey.value === columnKey) {
+      sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortColumnKey.value = columnKey;
+      sortDirection.value = 'asc';
+    }
+    resetAndFetchData(); // Refetch data with new sort parameters
+  }
+  // --- End Sorting Handler ---
 </script>

@@ -306,276 +306,183 @@ This section documents the attempts made to resolve issues encountered with file
 - The console warning `[UseDexieDB] Received empty schema string for us_rate_deck_db. Defining no stores.` might still indicate an underlying issue with initial DB setup, even if dynamic tables are now better schemed.
 - The root cause for `stateCode` being `'XX'` for NPAs like `939` needs re-verification in LERG data flow post-`STATE_CODES` update, including clearing site data by the user.
 
-**VI. AZRateSheetTable.vue - Attempt 1: Issues & Learnings (Session dd/mm/yyyy)**
+**VI. AZRateSheetTable.vue - Implemented Sorting Functionality (Session dd/mm/yyyy)**
 
-This section documents the challenges encountered during the first attempt to implement sorting functionality in `AZRateSheetTable.vue`. These points should be reviewed before the next attempt.
-
-1.  **Deviation from Established Debounce Pattern:**
-
-    - An external dependency (`lodash-es`) was introduced for debounce functionality in `AZRateSheetTable.vue`.
-    - **Learning:** The project prefers a manual debounce implementation (using `setTimeout`/`clearTimeout`) as likely established in `USRateSheetTable.vue` to avoid unnecessary external dependencies for common utilities. Future implementations should adhere to this pattern.
-
-2.  **Edit Application Inconsistencies:**
-
-    - Applying code changes to `AZRateSheetTable.vue` and `client/src/types/app-types.ts` sometimes resulted in partial applications or required the use of reapplication tools.
-    - **Learning:** Edits should be carefully reviewed to ensure they are fully and correctly applied. Smaller, more targeted edits might be beneficial.
-
-3.  **Build/Runtime Issues & User Feedback:**
-
-    - The introduction of `lodash-es` led to a Vite import analysis error, as the package was not previously part of the project.
-    - User reported that the cumulative changes led to a state perceived as detrimental to the codebase, necessitating a branch reset.
-    - **Learning:** Ensure all necessary dependencies are declared or that new dependencies are intentionally added and justified. Greater care must be taken to align with existing codebase standards and avoid introducing instability.
-
-4.  **Contextual Distractions:**
-    - Discussion around a TypeScript error in `useDexieDB.ts` occurred, though this file was marked as off-limits for direct modification by the assistant during this session.
-    - **Learning:** Focus strictly on the files and tasks within the defined scope to avoid confusion and ensure efforts are concentrated on the primary objectives.
-
-**VII. `AZRateSheetTable.vue` - Plan for Sorting Functionality (Session dd/mm/yyyy - New Plan)**
-
-This plan outlines the steps to implement sortable columns in `AZRateSheetTable.vue`, drawing inspiration from the `USRateSheetTable.vue` implementation but adapting for client-side sorting of in-memory data.
+This section outlines how sortable columns were implemented in `AZRateSheetTable.vue`, drawing inspiration from the `USRateSheetTable.vue` implementation and adapting for client-side sorting of in-memory data.
 
 1.  **UI Enhancements for Table Headers:**
 
-    - The existing `<thead>` in `AZRateSheetTable.vue` will be modified.
-    - Sortable columns: Destination, Codes, Rate, Change, Effective.
-    - Conditionally sortable columns (if visible based on `store.hasMinDuration` and `store.hasIncrements`): Duration, Increments.
-    - Column headers will be made interactive (clickable for sortable columns).
-    - Visual cues (e.g., `ArrowUpIcon`, `ArrowDownIcon`, `ChevronUpDownIcon` from Heroicons) will be added next to sortable column titles to indicate:
-      - The currently sorted column.
-      - The sort direction (ascending/descending).
-      - Columns that are sortable but not currently sorted.
-    - Ensure `cursor-pointer` and appropriate hover styles for sortable headers.
-    - The `aria-sort` attribute should be used for accessibility.
+    - The `<thead>` in `AZRateSheetTable.vue` was modified.
+    - Sortable columns implemented: Destination, Codes, Rate, Change, Effective. Conditionally sortable columns (if visible based on `store.hasMinDuration` and `store.hasIncrements`): Duration, Increments.
+    - Column headers were made interactive.
+    - Visual cues (`ArrowUpIcon`, `ArrowDownIcon`, `ChevronUpDownIcon`) were added to indicate sort status.
+    - `cursor-pointer`, hover styles, and `aria-sort` attribute were applied for accessibility and UX.
 
 2.  **State Management for Sorting (within `<script setup>`):**
 
-    - Introduce reactive state variables:
+    - Reactive state variables were introduced:
       ```typescript
-      const sortColumnKey = ref<string | null>("destinationName"); // Default sort: keyof GroupedRateData | 'codesCount' | 'displayRate'
-      const sortDirection = ref<"asc" | "desc">("asc"); // Default sort direction
+      const sortColumnKey = ref<string | null>("destinationName");
+      const sortDirection = ref<"asc" | "desc">("asc");
       ```
-    - Create a `computed` property `tableHeaders` to define column properties, including sortability and how to get their values. This will also drive the header rendering.
-
+    - A `computed` property `tableHeaders` was created using the `SortableAZColumn` interface to define column properties (key, label, sortable, textAlign, and `getValue` for complex data extraction, e.g., `group.codes.length` or dynamic rate display).
       ```typescript
       interface SortableAZColumn {
-        key: string; // Corresponds to GroupedRateData property or a special key like 'codesCount', 'displayRate'
+        key: string;
         label: string;
         sortable: boolean;
-        textAlign?: string; // e.g., 'text-left', 'text-center', 'text-right'
-        // Custom function to extract value for sorting and display if the key isn't a direct property
-        // or needs special handling (like 'codes.length' or the complex rate logic).
-        // `selectedRates` (Ref<Record<string, number>>) will be passed if needed.
+        textAlign?: string;
         getValue?: (
           group: GroupedRateData,
           selectedRatesRef: Ref<Record<string, number>>
         ) => any;
       }
-
-      const tableHeaders = computed<SortableAZColumn[]>(() => {
-        const headers: SortableAZColumn[] = [
-          {
-            key: "destinationName",
-            label: "Destination",
-            sortable: true,
-            textAlign: "text-left",
-          },
-          {
-            key: "codesCount",
-            label: "Codes",
-            sortable: true,
-            textAlign: "text-left",
-            getValue: (group) => group.codes.length,
-          },
-          {
-            key: "displayRate",
-            label: "Rate",
-            sortable: true,
-            textAlign: "text-left",
-            getValue: (group, selectedRatesRef) => {
-              if (group.hasDiscrepancy) {
-                if (
-                  selectedRatesRef.value[group.destinationName] !== undefined
-                ) {
-                  return selectedRatesRef.value[group.destinationName]; // User-selected rate for resolved discrepancy
-                }
-                const commonRate = group.rates.find((r) => r.isCommon)?.rate;
-                if (commonRate !== undefined) return commonRate; // Most common rate
-                return group.rates[0]?.rate ?? -Infinity; // Fallback for unresolved discrepancy
-              }
-              return group.rates[0]?.rate ?? -Infinity; // Single rate
-            },
-          },
-          {
-            key: "changeCode",
-            label: "Change",
-            sortable: true,
-            textAlign: "text-center",
-          },
-          {
-            key: "effectiveDate",
-            label: "Effective",
-            sortable: true,
-            textAlign: "text-left",
-          },
-        ];
-
-        if (store.hasMinDuration) {
-          headers.push({
-            key: "minDuration",
-            label: "Duration",
-            sortable: true,
-            textAlign: "text-left",
-          });
-        }
-        if (store.hasIncrements) {
-          headers.push({
-            key: "increments",
-            label: "Increments",
-            sortable: true,
-            textAlign: "text-left",
-          });
-        }
-        return headers;
-      });
+      // ... (implementation of tableHeaders computed property as added in AZRateSheetTable.vue)
       ```
 
 3.  **Sorting Logic and Click Handler:**
 
-    - Create a `handleSort(column: SortableAZColumn)` function. This function will be called when a sortable header is clicked.
-      ```typescript
-      function handleSort(column: SortableAZColumn) {
-        if (!column.sortable) return;
-        if (sortColumnKey.value === column.key) {
-          sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
-        } else {
-          sortColumnKey.value = column.key;
-          sortDirection.value = "asc";
-        }
-        // The `filteredData` computed property will automatically re-evaluate.
-      }
-      ```
+    - A `handleSort(column: SortableAZColumn)` function was implemented. It updates `sortColumnKey` and `sortDirection` when a sortable header is clicked, which triggers re-computation of `filteredData`.
 
 4.  **`filteredData` Computed Property Modification:**
 
-    - The existing `filteredData` computed property in `AZRateSheetTable.vue` applies status filters and search queries. Sorting will be the final step before returning the data.
-    - The sorting logic will operate on the array of `GroupedRateData` objects produced by the filtering steps.
-    - Example of sorting logic to be integrated at the end of the `filteredData` computed property:
+    - The `filteredData` computed property was modified to include sorting as the final step after filtering.
+    - The sorting logic operates on the `GroupedRateData` array, using the `getValue` function from the `tableHeaders` configuration where necessary.
+    - It correctly handles string, number, null, and undefined comparisons, and respects the `sortDirection`.
+
+5.  **Table Header Rendering:**
+
+    - The `<thead>` section in the template was refactored to loop through `tableHeaders.value`.
+    - Each `<th>` dynamically renders its label, binds click events to `handleSort`, and displays sort icons based on current sort state.
+
+6.  **Reset Sorting on Filter/Search Changes:**
+
+    - A `watch` effect was added for `filterStatus` and `debouncedSearchQuery` to reset `sortColumnKey` to 'destinationName' and `sortDirection` to 'asc' when these filters change.
+
+7.  **Adherence to Best Practices:**
+    - The implementation uses existing project patterns and avoids new external dependencies.
+
+This implementation provides robust client-side sorting for the `AZRateSheetTable.vue` component.
+
+**VII. `AZDetailedComparisonTable.vue` - Plan for Sorting Functionality (New Plan)**
+
+This plan outlines the steps to implement sortable columns in `AZDetailedComparisonTable.vue`. It considers that data fetching is paginated via an API call (`azService.getPagedDetailedComparisonData`) and aims for server-side sorting as the primary approach, with client-side sorting as a fallback if necessary for the initially loaded page or if server-side is not immediately feasible.
+
+1.  **UI Enhancements for Table Headers:**
+
+    - Modify the existing `<thead>` in `AZDetailedComparisonTable.vue`.
+    - Identify sortable columns based on `AZDetailedComparisonEntry` properties: Dial Code (`dialCode`), Match Status (`matchStatus`), File 1 Dest Name (`destName1`), File 2 Dest Name (`destName2`), File 1 Rate (`rate1`), File 2 Rate (`rate2`), Diff (`diff`), Diff % (`diffPercent`), Cheaper File (`cheaperFile`).
+    - Make column headers interactive with click handlers for sortable columns.
+    - Add visual cues (e.g., `ArrowUpIcon`, `ArrowDownIcon`, `ChevronUpDownIcon`) for sort status.
+    - Apply `cursor-pointer`, hover styles, and `aria-sort` attributes.
+
+2.  **State Management for Sorting (within `<script setup>`):**
+
+    - Introduce reactive state variables:
+      ```typescript
+      const sortColumnKey = ref<keyof AZDetailedComparisonEntry | null>(null); // Or a string if using custom keys
+      const sortDirection = ref<"asc" | "desc">("asc");
+      ```
+    - Define a `tableHeaders` computed property (similar to `AZRateSheetTable.vue`) to manage header definitions, labels, sortability, and data extraction logic (if needed).
 
       ```typescript
-      // ... (inside filteredData computed, after current filtering logic)
-      // let result = ... result of current filtering ...
-
-      if (sortColumnKey.value && result.length > 0) {
-        const sortKey = sortColumnKey.value;
-        const direction = sortDirection.value === "asc" ? 1 : -1;
-        const headerConfig = tableHeaders.value.find((h) => h.key === sortKey);
-
-        result.sort((a, b) => {
-          let valA, valB;
-
-          if (headerConfig?.getValue) {
-            // Pass the selectedRates ref if the getValue function needs it (e.g., for 'displayRate')
-            valA = headerConfig.getValue(a, selectedRates);
-            valB = headerConfig.getValue(b, selectedRates);
-          } else {
-            // Type assertion needed if sortKey is a direct key of GroupedRateData
-            valA = (a as any)[sortKey];
-            valB = (b as any)[sortKey];
-          }
-
-          // Consistent handling for null, undefined, or potentially -Infinity from displayRate
-          const isInvalidA =
-            valA === null ||
-            valA === undefined ||
-            valA === -Infinity ||
-            valA === Infinity;
-          const isInvalidB =
-            valB === null ||
-            valB === undefined ||
-            valB === -Infinity ||
-            valB === Infinity;
-
-          if (isInvalidA && isInvalidB) return 0;
-          if (isInvalidA) return direction; // Invalid values go to the end when ascending
-          if (isInvalidB) return -direction; // Invalid values go to the end when ascending
-
-          if (typeof valA === "string" && typeof valB === "string") {
-            return valA.localeCompare(valB) * direction;
-          }
-          if (typeof valA === "number" && typeof valB === "number") {
-            return (valA - valB) * direction;
-          }
-          // Fallback for other types or mixed types (basic comparison)
-          if (valA < valB) return -1 * direction;
-          if (valA > valB) return 1 * direction;
-          return 0;
-        });
+      interface SortableAZCompColumn {
+        key: keyof AZDetailedComparisonEntry | string; // Allow string for potentially derived keys
+        label: string;
+        sortable: boolean;
+        textAlign?: string;
+        // Optional getValue for complex cases, though most might be direct keys
+        getValue?: (record: AZDetailedComparisonEntry) => any;
       }
-      return result; // Return the filtered AND sorted data
+
+      const tableHeaders = computed<SortableAZCompColumn[]>(() => [
+        {
+          key: "dialCode",
+          label: "Dial Code",
+          sortable: true,
+          textAlign: "center",
+        },
+        {
+          key: "matchStatus",
+          label: "Match Status",
+          sortable: true,
+          textAlign: "center",
+        },
+        {
+          key: "destName1",
+          label: `Dest Name (${fileName1.value})`,
+          sortable: true,
+          textAlign: "center",
+        }, // fileName1 is already a computed prop
+        {
+          key: "destName2",
+          label: `Dest Name (${fileName2.value})`,
+          sortable: true,
+          textAlign: "center",
+        }, // fileName2 is already a computed prop
+        {
+          key: "rate1",
+          label: `Rate (${fileName1.value})`,
+          sortable: true,
+          textAlign: "center",
+        },
+        {
+          key: "rate2",
+          label: `Rate (${fileName2.value})`,
+          sortable: true,
+          textAlign: "center",
+        },
+        { key: "diff", label: "Diff", sortable: true, textAlign: "center" },
+        {
+          key: "diffPercent",
+          label: "Diff %",
+          sortable: true,
+          textAlign: "center",
+        },
+        {
+          key: "cheaperFile",
+          label: "Cheaper File",
+          sortable: true,
+          textAlign: "center",
+        },
+      ]);
       ```
 
-5.  **Updating Table Header Rendering:**
+3.  **Sorting Logic and Click Handler:**
 
-    - The `<thead>` section in the template will be refactored to loop through the `tableHeaders.value` computed property.
-    - Each `<th>` will use `header.label`, bind `@click="handleSort(header)"`, and conditionally display sort icons based on `sortColumnKey.value`, `sortDirection.value`, and `header.key`.
-    - Example for a header cell:
-      ```html
-      <th
-        v-for="header in tableHeaders.value"
-        :key="header.key"
-        scope="col"
-        class="px-3 py-3 text-sm font-semibold text-gray-300"
-        <!--
-        Base
-        classes
-        --
-      >
-        :class="[ header.textAlign || 'text-left',
-        <!-- Apply text alignment -->
-        { 'cursor-pointer hover:bg-gray-700/50': header.sortable }
-        <!-- Sortable styles -->
-        ]" @click="header.sortable ? handleSort(header) : undefined"
-        :aria-sort="header.sortable && sortColumnKey === header.key ?
-        (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
-        <div
-          class="flex items-center"
-          :class="{ 'justify-center': header.textAlign === 'text-center', 'justify-end': header.textAlign === 'text-right' }"
-        >
-          <span>{{ header.label }}</span>
-          <template v-if="header.sortable">
-            <ArrowUpIcon
-              v-if="sortColumnKey === header.key && sortDirection === 'asc'"
-              class="w-4 h-4 ml-1.5 text-accent"
-            />
-            <ArrowDownIcon
-              v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
-              class="w-4 h-4 ml-1.5 text-accent"
-            />
-            <ChevronUpDownIcon
-              v-else
-              class="w-4 h-4 ml-1.5 text-gray-400 group-hover:text-gray-200"
-            />
-            <!-- Example of group hover effect if th is a group -->
-          </template>
-        </div>
-      </th>
-      ```
+    - Create a `handleSort(columnKey: keyof AZDetailedComparisonEntry | string)` function.
+    - When a column header is clicked:
+      - If `columnKey` is the same as `sortColumnKey.value`, toggle `sortDirection.value`.
+      - Otherwise, set `sortColumnKey.value` to `columnKey` and `sortDirection.value` to 'asc'.
+    - After updating sort state, call `resetAndFetchData()` to reload data with new sort parameters.
 
-6.  **Reset Sorting on Filter/Search Changes (Consistency):**
+4.  **Data Fetching Modifications (`fetchData` and `resetAndFetchData`):**
 
-    - To maintain consistency with `USRateSheetTable.vue`, when `filterStatus.value` or `debouncedSearchQuery.value` changes, the sort order should reset to its default ('destinationName', 'asc').
-    - This can be achieved by adding `watch`ers for these reactive properties:
-      ```typescript
-      watch([filterStatus, debouncedSearchQuery], () => {
-        sortColumnKey.value = "destinationName";
-        sortDirection.value = "asc";
-      });
-      ```
+    - **Primary Goal: Server-Side Sorting.**
 
-7.  **Adherence to Learnings from Previous Attempt:**
-    - **No External Debounce Library:** Sorting is a direct result of reactive changes; existing debounce for search query is manual.
-    - **Targeted Edits:** Changes are confined to `AZRateSheetTable.vue`.
-    - **No New Dependencies:** All icons and logic utilize existing project patterns.
-    - **Focused Scope:** The plan addresses only sorting within `AZRateSheetTable.vue`.
+      - The `AZDetailedComparisonFilters` interface (in `az-types.ts`) will be extended to include optional `sortKey?: string;` and `sortDir?: 'asc' | 'desc';`.
+      - The `azService.getPagedDetailedComparisonData` method will be updated to accept these new sort parameters.
+      - The backend (NestJS service `AZService` method `getPagedDetailedComparisonData`) will need to be modified to use these parameters in its database query (likely for a Dexie table query on the backend if it mirrors the US comparison structure).
+      - In `AZDetailedComparisonTable.vue`, the `fetchData` function will pass `sortColumnKey.value` and `sortDirection.value` to `azService.getPagedDetailedComparisonData` if they are set.
+      - `resetAndFetchData` will ensure these sort parameters are also passed.
 
-This plan should provide a clear path to implementing the desired sorting functionality.
+    - **Client-Side Sorting (as a lesser fallback, if server-side is complex or delayed):**
+      - If server-side sorting cannot be immediately implemented, sorting would be applied to `comparisonData.value` _after_ data is fetched. This is less ideal for pagination as it only sorts the currently accumulated data.
+      - The sorting logic would resemble that in `AZRateSheetTable.vue`, applied directly to the `comparisonData.value` array. This might be triggered within a `watch` on `comparisonData` or after `fetchData` completes.
+      - This approach means sorting is only fully effective once all data is loaded, or it re-sorts the visible dataset with each new page, which can be jarring.
+
+5.  **Backend Modifications (if pursuing server-side sorting):**
+
+    - The NestJS `AZService` (`az.service.ts` on the server) method `getPagedDetailedComparisonData` (or equivalent that queries the AZ comparison data, potentially from a Dexie instance on the server if that's the architecture) needs to:
+      - Accept `sortKey` and `sortDir` as parameters.
+      - Dynamically apply `.orderBy(sortKey)` and potentially `.reverse()` to its Dexie query based on these parameters before pagination (`.offset().limit()`).
+      - Handle potential errors if an invalid `sortKey` is provided.
+
+6.  **General Considerations (from Section III):**
+    - **Accessibility:** Use `aria-sort` on `<th>`.
+    - **Initial Load:** Decide on a default sort order (e.g., by `dialCode` ascending) and apply it on initial load.
+    - **Reset Sorting on Filter Changes**: Similar to `AZRateSheetTable.vue`, watch other filters (`searchTerm`, `selectedCheaper`, `selectedMatchStatus`) and reset sort to default if they change.
+    - **Performance:** Server-side sorting is generally more performant for large datasets with pagination. Ensure any backend Dexie tables used for comparison results have appropriate indices on sortable columns.
+    - **Testing:** Thoroughly test with various filter combinations and sort orders.
+
+This plan prioritizes server-side sorting for a better user experience with paginated data. If this proves too complex for initial implementation, a client-side sort of the currently loaded `comparisonData.value` can be a temporary measure, with the understanding of its limitations.

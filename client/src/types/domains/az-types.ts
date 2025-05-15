@@ -215,9 +215,11 @@ export interface AZDetailedComparisonEntry {
  * Defines the available filters for the paged detailed comparison view.
  */
 export interface AZDetailedComparisonFilters {
-  search?: string; // For searching dialCode or destName
-  cheaper?: 'file1' | 'file2' | 'same'; // Filter by which file has the cheaper rate
-  matchStatus?: 'both' | 'file1_only' | 'file2_only'; // Filter by match status
+  search?: string;
+  cheaper?: 'file1' | 'file2' | 'same' | '';
+  matchStatus?: 'both' | 'file1_only' | 'file2_only' | '';
+  sortKey?: string; // Added for sorting
+  sortDir?: 'asc' | 'desc'; // Added for sorting
 }
 
 /**
@@ -282,4 +284,8 @@ export interface AZEnhancedCodeReport {
   codeStats: AZCodeStats;
   destinationStats: AZDestinationStats;
   countries: AZCountryBreakdown[];
+}
+
+export interface AZDetailedComparisonResult {
+  // ... existing code ...
 }

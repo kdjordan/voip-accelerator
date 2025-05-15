@@ -502,13 +502,12 @@ export class AZService {
     tableName: string,
     limit: number,
     offset: number,
-    filters?: AZDetailedComparisonFilters
+    filters: AZDetailedComparisonFilters
   ): Promise<AZDetailedComparisonEntry[]> {
     try {
       const { getDB } = this.dexieDB;
       const db = await getDB(DBName.AZ_PRICING_COMPARISON);
 
-      // Use standard Dexie check
       if (!db.tables.some((table) => table.name === tableName)) {
         console.warn(
           `[AZService] Table ${tableName} does not exist in ${DBName.AZ_PRICING_COMPARISON} for paged data.`
@@ -516,44 +515,64 @@ export class AZService {
         return [];
       }
 
-      const table: Dexie.Table<AZDetailedComparisonEntry, number> = db.table(tableName);
+      let collection:
+        | Dexie.Collection<AZDetailedComparisonEntry, number>
+        | Dexie.Table<AZDetailedComparisonEntry, number> = db.table(tableName);
 
-      // --- Start Filtering Logic ---
-      let collection = table.offset(offset); // Apply offset first
-
+      // Apply filtering
       if (filters) {
-        // Apply search filter (if provided) - searches dialCode or destName1/2
         if (filters.search) {
           const searchTermLower = filters.search.toLowerCase();
-          // Use filter for more complex search logic
           collection = collection.filter((item) => {
             const dialCodeMatch = item.dialCode.toLowerCase().startsWith(searchTermLower);
-            // Ensure null/undefined destNames don't cause errors
             const destName1Match = item.destName1?.toLowerCase().includes(searchTermLower) ?? false;
             const destName2Match = item.destName2?.toLowerCase().includes(searchTermLower) ?? false;
             return dialCodeMatch || destName1Match || destName2Match;
           });
         }
-
-        // Apply cheaper file filter (if provided)
         if (filters.cheaper) {
-          // Assuming 'cheaperFile' is indexed or filter is acceptable
           collection = collection.filter((item) => item.cheaperFile === filters.cheaper);
         }
-
-        // Apply match status filter (if provided)
         if (filters.matchStatus) {
-          // Assuming 'matchStatus' is indexed or filter is acceptable
           collection = collection.filter((item) => item.matchStatus === filters.matchStatus);
         }
       }
-      // --- End Filtering Logic ---
 
-      // Apply limit *after* filtering
-      const results = await collection.limit(limit).toArray();
+      // Apply sorting before pagination (offset and limit)
+      if (
+        filters.sortKey &&
+        db.tables.some(
+          (t) =>
+            t.name === tableName && t.schema.indexes.some((idx) => idx.name === filters.sortKey)
+        )
+      ) {
+        // Only apply orderBy if the sortKey is an actual index on the table
+        // This is a basic check; more robust validation might be needed depending on schema complexity
+        try {
+          collection = (collection as Dexie.Table<AZDetailedComparisonEntry, number>).orderBy(
+            filters.sortKey as string
+          );
+          if (filters.sortDir === 'desc') {
+            collection = collection.reverse();
+          }
+        } catch (e) {
+          console.warn(
+            `[AZService] Failed to apply DB sort for key "${filters.sortKey}". It might not be an index.`,
+            e
+          );
+          // Potentially fall back to client-side sorting later if this happens, or ensure keys are always valid indices.
+        }
+      } else if (filters.sortKey) {
+        console.warn(
+          `[AZService] Sort key "${filters.sortKey}" is not an index on table "${tableName}". Cannot apply DB sort.`
+        );
+      }
+
+      // Apply offset and limit for pagination
+      const results = await collection.offset(offset).limit(limit).toArray();
 
       console.log(
-        `[AZService] Loaded ${results.length} paged comparison records from ${tableName} (offset: ${offset}, limit: ${limit})`
+        `[AZService] Loaded ${results.length} paged comparison records from ${tableName} (offset: ${offset}, limit: ${limit}, sortKey: ${filters.sortKey}, sortDir: ${filters.sortDir})`
       );
       return results;
     } catch (error) {
