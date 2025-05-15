@@ -402,7 +402,8 @@ export class AZService {
 
           // Define expected schema (matching DBSchemas)
           const schemaDefinition = {
-            [fixedTableName]: '++id, &dialCode, rate1, rate2, diff, destName1, destName2',
+            [fixedTableName]:
+              '++id, &dialCode, rate1, rate2, diff, destName1, destName2, matchStatus, diffPercent, cheaperFile',
           };
 
           // Check if table exists and upgrade schema if necessary (mirroring us.service)
