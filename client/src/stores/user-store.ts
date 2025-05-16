@@ -444,24 +444,82 @@ export const useUserStore = defineStore('user', {
     },
 
     async updateUserEmail(newEmail: string) {
-      this.auth.isLoading = true;
+      this.setGlobalLoading(true);
       this.auth.error = null;
       try {
-        // Email change confirmation links usually go to the Supabase default or Site URL.
-        // You *can* specify redirectTo here too if needed, but often not necessary for email change.
         const { data, error } = await supabase.auth.updateUser({ email: newEmail });
         if (error) throw error;
-        console.info(
-          'Email update initiated. Check both old and new email addresses for confirmation.'
-        );
-        return { user: data.user, error: null };
-      } catch (err) {
-        console.error('Error updating user email:', err);
-        this.auth.error = err as Error;
-        return { user: null, error: err as Error };
+        if (data.user) {
+          this.auth.user = data.user;
+          // Optionally re-fetch profile if email change affects it, or wait for user to re-verify.
+          // For now, Supabase handles email change flow with verification emails.
+        }
+        return { success: true, user: data.user };
+      } catch (err: any) {
+        console.error('[UserStore] Error updating email:', err);
+        this.auth.error = err;
+        return { success: false, error: err };
       } finally {
-        this.auth.isLoading = false;
+        this.setGlobalLoading(false);
       }
+    },
+
+    async deleteCurrentUserAccount(): Promise<{
+      success: boolean;
+      message?: string;
+      error?: Error | null;
+    }> {
+      this.setGlobalLoading(true);
+      this.auth.error = null;
+      let result: { success: boolean; message?: string; error?: Error | null } = {
+        success: false,
+        error: null,
+      };
+
+      if (!this.auth.isAuthenticated || !this.auth.user) {
+        this.auth.error = new Error('User not authenticated. Cannot delete account.');
+        this.setGlobalLoading(false);
+        result = { success: false, error: this.auth.error };
+        return result;
+      }
+
+      try {
+        console.log(
+          `[UserStore] Attempting to invoke delete-user-account function for user: ${this.auth.user.id}`
+        );
+        const { data, error: functionError } = await supabase.functions.invoke(
+          'delete-user-account',
+          {
+            method: 'POST', // Ensure this matches Edge Function
+            // JWT is automatically included by supabase-js client
+          }
+        );
+
+        if (functionError) {
+          console.error('[UserStore] Error invoking delete-user-account function:', functionError);
+          throw functionError;
+        }
+
+        console.log('[UserStore] delete-user-account function returned successfully:', data);
+        // If function is successful, it means user is deleted on backend.
+        // Now, sign out locally.
+        await this.signOut(); // Reuse existing signOut to clear local state and session
+
+        result = { success: true, message: data?.message || 'Account deleted successfully.' };
+      } catch (err: any) {
+        console.error('[UserStore] Error during account deletion process:', err);
+        // Differentiate between Supabase function error and other errors
+        if (err.context && err.context.json) {
+          // Likely a Supabase Function error response
+          this.auth.error = new Error(err.context.json.error || 'Failed to delete account.');
+        } else {
+          this.auth.error = err instanceof Error ? err : new Error(String(err));
+        }
+        result = { success: false, error: this.auth.error };
+      } finally {
+        this.setGlobalLoading(false);
+      }
+      return result;
     },
   },
 });

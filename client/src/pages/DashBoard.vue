@@ -164,6 +164,25 @@
             <!-- Placeholder for potential errors or status messages -->
           </div>
         </div>
+
+        <!-- Delete Account Section -->
+        <div class="mt-8 border-t border-gray-700/50 pt-6">
+          <h3 class="text-md font-medium text-destructive mb-2">Delete Account</h3>
+          <p class="text-sm text-slate-400 mb-4">
+            Permanently delete your account and all associated data. This action is irreversible.
+          </p>
+          <BaseButton
+            variant="destructive"
+            @click="openDeleteConfirmModal"
+            :is-loading="isDeletingAccount"
+          >
+            <span v-if="isDeletingAccount">Deleting...</span>
+            <span v-else>Delete My Account</span>
+          </BaseButton>
+          <p v-if="deleteAccountError" class="mt-2 text-sm text-destructive">
+            {{ deleteAccountError }}
+          </p>
+        </div>
       </div>
 
       <!-- Database Tables Info -->
@@ -235,6 +254,17 @@
         </div>
       </div>
     </div>
+
+    <ConfirmationModal
+      v-model="showDeleteConfirmModal"
+      title="Delete Account Confirmation"
+      message="Are you sure you want to permanently delete your account? This action is irreversible and all your data, including call history, settings, and personal information, will be removed."
+      confirm-button-text="Yes, Delete My Account"
+      cancel-button-text="Cancel"
+      :requires-confirmation-phrase="true"
+      confirmation-phrase="DELETE"
+      @confirm="handleDeleteAccountConfirm"
+    />
   </div>
 </template>
 
@@ -260,6 +290,7 @@
   } from '@heroicons/vue/24/solid';
   import { useRouter } from 'vue-router';
   import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
   // User store for user info
   const userStore = useUserStore();
@@ -623,6 +654,53 @@
     const isValidFormat = emailRegex.test(newEmail.value);
     return isNotEmpty && isDifferent && isValidFormat;
   });
+
+  // Delete Account Modal State
+  const showDeleteConfirmModal = ref(false);
+  const isDeletingAccount = ref(false); // Added for loading state
+  const deleteAccountError = ref<string | null>(null); // Added for error message
+
+  // Functions for Delete Account Modal
+  function openDeleteConfirmModal() {
+    deleteAccountError.value = null; // Clear previous errors
+    showDeleteConfirmModal.value = true;
+  }
+
+  async function handleDeleteAccountConfirm() {
+    if (isDeletingAccount.value) return;
+
+    isDeletingAccount.value = true;
+    deleteAccountError.value = null;
+    console.log('[DashBoard] Attempting to delete account via userStore...');
+
+    try {
+      const result = await userStore.deleteCurrentUserAccount();
+
+      if (result.success) {
+        console.log('[DashBoard] Account deleted successfully. Navigating to login.');
+        // Display a success toast/notification (implementation depends on a global notification system)
+        // Example: toast.success(result.message || 'Your account has been successfully deleted.');
+        router.push({ name: 'Login' }); // Assuming 'Login' is the name of your login route
+      } else {
+        console.error('[DashBoard] Failed to delete account:', result.error);
+        deleteAccountError.value =
+          result.error?.message ||
+          'An unexpected error occurred while deleting your account. Please try again.';
+        // Keep modal open to show error, or close and show toast
+        // For now, error will be shown if modal is adapted or a separate notification is used.
+        // If modal closes automatically, an alternative error display is needed.
+        showDeleteConfirmModal.value = false; // Close modal on error for now, or keep open and show error within modal
+        // Example: toast.error(deleteAccountError.value);
+      }
+    } catch (e: any) {
+      console.error('[DashBoard] Unexpected error during handleDeleteAccountConfirm:', e);
+      deleteAccountError.value = 'A critical error occurred. Please contact support.';
+      showDeleteConfirmModal.value = false;
+      // Example: toast.error(deleteAccountError.value);
+    } finally {
+      isDeletingAccount.value = false;
+    }
+  }
 </script>
 
 <style scoped>
