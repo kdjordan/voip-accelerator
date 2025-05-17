@@ -1,89 +1,6 @@
 <template>
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
-    <div class="mb-4">
-      <div class="bg-gray-900/30 p-2 rounded-t-md">
-        <div class="flex items-center gap-2 w-full justify-between">
-          <h3 class="text-sm font-medium text-gray-300">Effective Date Settings</h3>
-          <!-- Removed ChevronDownIcon button -->
-        </div>
-      </div>
-
-      <div class="mt-4">
-        <!-- v-if removed, section always visible -->
-        <!-- Date settings UI - Very minimal three date pickers in a row -->
-        <div class="grid grid-cols-3 gap-4 mb-4">
-          <!-- SAME Rate Effective Date -->
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-gray-400">SAME Rate</span>
-            </div>
-            <input
-              type="date"
-              v-model="effectiveDateSettings.sameCustomDate"
-              @change="setSameDate('custom')"
-              class="w-full bg-gray-800 border border-gray-700 rounded text-sm px-3 py-2"
-              :class="effectiveDateSettings.same === 'custom' ? 'text-white' : 'text-gray-400'"
-            />
-          </div>
-
-          <!-- DECREASE Rate Effective Date -->
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-gray-400">DECREASE Rate</span>
-            </div>
-            <input
-              type="date"
-              v-model="effectiveDateSettings.decreaseCustomDate"
-              @change="setDecreaseDate('custom')"
-              class="w-full bg-gray-800 border border-gray-700 rounded text-sm px-3 py-2"
-              :class="effectiveDateSettings.decrease === 'custom' ? 'text-white' : 'text-gray-400'"
-            />
-          </div>
-
-          <!-- INCREASE Rate Effective Date -->
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-gray-400">INCREASE Rate</span>
-            </div>
-            <input
-              type="date"
-              v-model="effectiveDateSettings.increaseCustomDate"
-              @change="setIncreaseDate('custom')"
-              class="w-full bg-gray-800 border border-gray-700 rounded text-sm px-3 py-2"
-              :class="effectiveDateSettings.increase === 'custom' ? 'text-white' : 'text-gray-400'"
-            />
-          </div>
-        </div>
-
-        <!-- Progress and apply button -->
-        <div class="space-y-4">
-          <!-- Simplified progress indicator -->
-          <div v-if="isApplyingSettings" class="mb-4">
-            <div class="text-sm text-gray-300 mb-2">{{ processingStatus }}</div>
-            <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-              <div
-                class="h-2 rounded-full bg-accent transition-all duration-300"
-                :style="{ width: `${progressPercentage}%` }"
-              ></div>
-            </div>
-          </div>
-
-          <div class="flex justify-end w-full">
-            <BaseButton
-              variant="primary"
-              size="small"
-              :loading="isApplyingSettings"
-              :disabled="!hasDateSettingsChanged"
-              :icon="ArrowRightIcon"
-              @click="applyEffectiveDateSettings"
-              title="Apply effective date settings to all records"
-            >
-              Apply
-            </BaseButton>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AZEffectiveDates />
 
     <!-- Filters -->
     <div class="mb-4" :class="{ 'min-h-[16rem]': filteredData.length === 0 }">
@@ -755,9 +672,10 @@
     AdjustmentType,
     AdjustmentValueType,
   } from '@/types/domains/rate-sheet-types';
-  import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
+  // import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker'; // Moved to AZEffectiveDates
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
+  import AZEffectiveDates from './AZEffectiveDates.vue'; // Import the new component
 
   // Define emits
   const emit = defineEmits(['update:discrepancy-count']);
@@ -950,111 +868,16 @@
   // Track which codes match the current search query
   const matchingCodes = ref<{ [destinationName: string]: { [rate: number]: string[] } }>({});
 
-  // Effective Date Settings
-  const effectiveDateSettings = ref<EffectiveDateSettings>({
-    same: 'today',
-    increase: 'week',
-    decrease: 'today',
-    sameCustomDate: new Date().toISOString().split('T')[0],
-    increaseCustomDate: (() => {
-      const sevenDays = new Date();
-      sevenDays.setDate(sevenDays.getDate() + 7);
-      return sevenDays.toISOString().split('T')[0];
-    })(),
-    decreaseCustomDate: new Date().toISOString().split('T')[0],
-  });
-
-  // Controls visibility of effective date settings section
-  const showEffectiveDateSettings = ref(true);
-  // Track when settings are being applied
-  const isApplyingSettings = ref(false);
-  // Track the current processing phase
-  const processingPhase = ref<'idle' | 'preparing' | 'processing' | 'updating' | 'finalizing'>(
-    'idle'
-  );
-  const processingStatus = ref('');
-  const processingStartTime = ref(0);
-
-  // Worker setup
-  let effectiveDateWorker: Worker | null = null;
-  const progressPercentage = ref(0);
-
-  // Further enhance the status message with more detail
-  const currentDestination = ref('');
-  const recordsUpdatedSoFar = ref(0);
-  const estimatedTimeRemaining = ref<number | undefined>(undefined);
-
-  // Add throttling mechanism for UI updates (minimal throttling for better performance)
-  const lastUIUpdateTime = ref(0);
-  const uiUpdateThrottle = 50; // increased from 10ms to 50ms for proper UI updates
-  const pendingUIUpdates = ref<{ [key: string]: any }>({});
-
-  // Add detailed log tracking
-  const processingLogs = ref<{ time: number; message: string }[]>([]);
-  const showProcessingLogs = ref(false);
-
-  // Add separate timer for elapsed time that won't get blocked
-  const displayedElapsedTime = ref(0);
-  let elapsedTimeInterval: number | null = null;
-
+  
   // Add these properties to handle search state
   let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
-  // Load saved effective date settings from store if available
+  // Load saved effective date settings from store if available - MOVED TO AZEffectiveDates.vue
   onMounted(() => {
-    console.log('today', new Date().toISOString().split('T')[0]);
-    const savedSettings = store.getEffectiveDateSettings;
-
-    if (savedSettings) {
-      console.log('Loading saved settings:', savedSettings);
-      // Apply saved modes and custom dates first
-      effectiveDateSettings.value = {
-        same: savedSettings.same as 'today' | 'tomorrow' | 'custom',
-        increase: savedSettings.increase as 'today' | 'tomorrow' | 'week' | 'custom',
-        decrease: savedSettings.decrease as 'today' | 'tomorrow' | 'custom',
-        sameCustomDate: savedSettings.sameCustomDate,
-        increaseCustomDate: savedSettings.increaseCustomDate, // Temporarily assign saved date
-        decreaseCustomDate: savedSettings.decreaseCustomDate,
-      };
-
-      // *** Crucial Fix: Recalculate increaseCustomDate if mode is 'week' ***
-      if (effectiveDateSettings.value.increase === 'week') {
-        const sevenDaysDate = new Date();
-        sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
-        const correctWeekDate = sevenDaysDate.toISOString().split('T')[0];
-        // Only update if the saved date doesn't match the correct 'week' date
-        if (effectiveDateSettings.value.increaseCustomDate !== correctWeekDate) {
-          console.log(
-            `Correcting increaseCustomDate for 'week' mode. Was: ${effectiveDateSettings.value.increaseCustomDate}, Should be: ${correctWeekDate}`
-          );
-          effectiveDateSettings.value.increaseCustomDate = correctWeekDate;
-        }
-      }
-      // Similarly, ensure 'today' and 'tomorrow' modes reflect the current date
-      else if (effectiveDateSettings.value.increase === 'today') {
-        effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
-      } else if (effectiveDateSettings.value.increase === 'tomorrow') {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
-      }
-      // If mode is 'custom', we keep the loaded increaseCustomDate
-    } else {
-      // Defaults are now set during ref initialization, log the initial state
-      console.log('Using default settings (set during ref init):', effectiveDateSettings.value);
-    }
-
-    // Log the final effective date settings after potential load/init and correction
-    console.log('Final effective date settings after init:', {
-      same: effectiveDateSettings.value.same,
-      sameCustomDate: effectiveDateSettings.value.sameCustomDate,
-      increase: effectiveDateSettings.value.increase,
-      increaseCustomDate: effectiveDateSettings.value.increaseCustomDate,
-      decrease: effectiveDateSettings.value.decrease,
-      decreaseCustomDate: effectiveDateSettings.value.decreaseCustomDate,
-    });
-
-    initWorker();
+    // console.log('today', new Date().toISOString().split('T')[0]); // MOVED
+    // const savedSettings = store.getEffectiveDateSettings; // MOVED
+    // MOVED ALL LOGIC TO AZEffectiveDates.vue
+    // initWorker(); // MOVED
 
     // Setup a watcher with debounce for search
     watch(searchQuery, (newValue) => {
@@ -1738,327 +1561,23 @@
     { immediate: true }
   );
 
-  watch([filterStatus, debouncedSearchQuery], () => {
-    sortColumnKey.value = 'destinationName';
-    sortDirection.value = 'asc';
-  });
+  // watch([filterStatus, debouncedSearchQuery], () => { // This watcher might still be relevant for table sorting/filtering
+  //   sortColumnKey.value = 'destinationName';
+  //   sortDirection.value = 'asc';
+  // });
   // --- End Watchers ---
 
-  // --- Effective Date Logic ---
-  function getEffectiveDate(changeCode: ChangeCodeType): string {
-    const today = new Date();
-    let effectiveDate = today;
+  // Effective Date Logic - MOVED TO AZEffectiveDates.vue
+  // function getEffectiveDate(changeCode: ChangeCodeType): string { ... }
+  // function initWorker() { ... } // MOVED
+  // function queueUIUpdate(message: any) { ... } // MOVED
+  // function applyUIUpdates() { ... } // MOVED
+  // function handleWorkerResultWithBreathing(...) { ... } // MOVED
 
-    if (changeCode === ChangeCode.SAME) {
-      if (effectiveDateSettings.value.same === 'today') {
-        effectiveDate = today;
-      } else if (effectiveDateSettings.value.same === 'tomorrow') {
-        effectiveDate = new Date(today);
-        effectiveDate.setDate(today.getDate() + 1);
-      } else if (effectiveDateSettings.value.same === 'custom') {
-        return effectiveDateSettings.value.sameCustomDate;
-      }
-    } else if (changeCode === ChangeCode.INCREASE) {
-      if (effectiveDateSettings.value.increase === 'today') {
-        effectiveDate = today;
-      } else if (effectiveDateSettings.value.increase === 'tomorrow') {
-        effectiveDate = new Date(today);
-        effectiveDate.setDate(today.getDate() + 1);
-      } else if (effectiveDateSettings.value.increase === 'week') {
-        effectiveDate = new Date(today);
-        effectiveDate.setDate(today.getDate() + 7);
-      } else if (effectiveDateSettings.value.increase === 'custom') {
-        return effectiveDateSettings.value.increaseCustomDate;
-      }
-    } else if (changeCode === ChangeCode.DECREASE) {
-      if (effectiveDateSettings.value.decrease === 'today') {
-        effectiveDate = today;
-      } else if (effectiveDateSettings.value.decrease === 'tomorrow') {
-        effectiveDate = new Date(today);
-        effectiveDate.setDate(today.getDate() + 1);
-      } else if (effectiveDateSettings.value.decrease === 'custom') {
-        return effectiveDateSettings.value.decreaseCustomDate;
-      }
-    }
-
-    return effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-  }
-
-  function initWorker() {
-    console.log('Initializing effective date worker');
-
-    // Cleanup any existing worker
-    if (effectiveDateWorker) {
-      console.log('Terminating existing worker');
-      effectiveDateWorker.terminate();
-      effectiveDateWorker = null;
-    }
-
-    try {
-      // Create new worker
-      console.log('Creating new effective date worker');
-      effectiveDateWorker = new EffectiveDateUpdaterWorker();
-
-      // Set up message handler with throttling
-      effectiveDateWorker.onmessage = (event) => {
-        const message = event.data;
-
-        // Log all worker messages for debugging
-        console.log('Worker message received:', 'type' in message ? message.type : 'result');
-
-        // Add to processing logs
-        const logTime = new Date();
-        const logTimeStr = `${logTime.getHours()}:${logTime.getMinutes()}:${logTime.getSeconds()}.${logTime.getMilliseconds()}`;
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `[${logTimeStr}] Received ${
-            'type' in message ? message.type : 'result'
-          } from worker`,
-        });
-
-        // Queue UI updates instead of applying them immediately
-        queueUIUpdate(message);
-      };
-
-      effectiveDateWorker.onerror = (error) => {
-        console.error('Worker error event:', error);
-        processingStatus.value = `Worker error: ${error.message}`;
-        alert(`Error in effective date worker: ${error.message}`);
-        isApplyingSettings.value = false;
-        processingPhase.value = 'idle';
-      };
-
-      console.log('Worker initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize worker:', error);
-      alert(
-        `Failed to initialize worker: ${error instanceof Error ? error.message : String(error)}`
-      );
-      effectiveDateWorker = null;
-    }
-  }
-
-  // Queue UI updates and apply them throttled to prevent UI freezing
-  function queueUIUpdate(message: any) {
-    // Store updates in pending queue
-    if ('type' in message && message.type === 'progress') {
-      pendingUIUpdates.value.progress = message;
-    } else if ('type' in message && message.type === 'error') {
-      pendingUIUpdates.value.error = message;
-      // Apply error updates immediately
-      applyUIUpdates();
-    } else {
-      pendingUIUpdates.value.result = message;
-    }
-
-    // Check if we should apply updates now
-    const now = Date.now();
-    if (now - lastUIUpdateTime.value >= uiUpdateThrottle) {
-      applyUIUpdates();
-    } else {
-      // Schedule update for later if not already scheduled
-      if (!pendingUIUpdates.value.scheduled) {
-        pendingUIUpdates.value.scheduled = true;
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            applyUIUpdates();
-          });
-        }, uiUpdateThrottle);
-      }
-    }
-  }
-
-  // Apply queued UI updates
-  function applyUIUpdates() {
-    const updates = pendingUIUpdates.value;
-    pendingUIUpdates.value = {};
-    lastUIUpdateTime.value = Date.now();
-
-    // Process error messages first
-    if (updates.error) {
-      console.error('Worker error:', updates.error.message);
-      processingStatus.value = `Error: ${updates.error.message}`;
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Error in ${updates.error.phase || 'unknown'} phase: ${updates.error.message}`,
-      });
-      alert(`Error updating effective dates: ${updates.error.message}`);
-      isApplyingSettings.value = false;
-      processingPhase.value = 'idle';
-
-      // Clear the elapsed time interval
-      if (elapsedTimeInterval) {
-        clearInterval(elapsedTimeInterval);
-        elapsedTimeInterval = null;
-      }
-      return;
-    }
-
-    // Process progress updates
-    if (updates.progress) {
-      const message = updates.progress;
-      // Update progress
-      progressPercentage.value = message.percentage;
-
-      // Update phase if it's changing
-      if (processingPhase.value !== message.phase) {
-        processingPhase.value = message.phase;
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `Phase changed to: ${message.phase}`,
-        });
-      }
-
-      // Update detailed status message if available
-      if (message.detail) {
-        processingStatus.value = message.detail;
-
-        // Log significant progress updates
-        if (message.percentage % 10 === 0 || message.phase === 'finalizing') {
-          processingLogs.value.push({
-            time: Date.now(),
-            message: `${message.phase} (${message.percentage}%): ${message.detail}`,
-          });
-        }
-      }
-
-      // Update additional progress information
-      if (message.phase === 'processing') {
-        currentDestination.value = message.currentDestination || '';
-        recordsUpdatedSoFar.value = message.recordsUpdatedCount;
-        estimatedTimeRemaining.value = message.estimatedTimeRemaining;
-      }
-    }
-
-    // Process final result
-    if (updates.result) {
-      console.log('Worker completed successfully');
-      processingPhase.value = 'updating';
-      processingStatus.value = 'Processing complete. Updating store...';
-
-      // Use microtask to allow UI to update before proceeding with heavy store operations
-      queueMicrotask(() => {
-        const { updatedRecords, recordsUpdatedCount, updatedGroupedData } = updates.result;
-        // Handle worker result with UI breathing room
-        handleWorkerResultWithBreathing(updatedRecords, recordsUpdatedCount, updatedGroupedData);
-      });
-    }
-  }
-
-  // Modified handle worker result that gives the UI time to breathe
-  async function handleWorkerResultWithBreathing(
-    updatedRecords: { name: string; prefix: string; effective: string }[],
-    recordsUpdatedCount: number,
-    updatedGroupedData: {
-      destinationName: string;
-      effectiveDate: string;
-      changeCode: ChangeCodeType;
-    }[]
-  ) {
-    try {
-      console.log(`Handling worker result: ${updatedRecords.length} records to update`);
-      processingStatus.value = `Saving ${updatedRecords.length} updated records to store...`;
-
-      // Add to processing logs
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Received final results: ${recordsUpdatedCount} records updated`,
-      });
-
-      // Allow UI to update (minimal delay)
-      await new Promise((resolve) => {
-        requestAnimationFrame(() => {
-          setTimeout(resolve, 50);
-        });
-      });
-
-      // Only update if changes were made
-      if (updatedRecords.length > 0) {
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `Starting store update for ${updatedRecords.length} records`,
-        });
-
-        console.log('Updating store with worker results');
-        processingPhase.value = 'updating';
-        processingStatus.value = 'Updating application state...';
-
-        // Update the store directly with the records from the worker
-        store.updateEffectiveDatesWithRecords(updatedRecords);
-
-        processingLogs.value.push({
-          time: Date.now(),
-          message: `Store update completed`,
-        });
-
-        // Update the grouped data with the results from the worker
-        if (updatedGroupedData && updatedGroupedData.length > 0) {
-          processingLogs.value.push({
-            time: Date.now(),
-            message: `Updating grouped data with ${updatedGroupedData.length} groups from worker`,
-          });
-
-          // Update grouped data with the results from the worker
-          store.updateGroupedDataEffectiveDates(updatedGroupedData);
-        }
-
-        // Calculate the time spent
-        const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
-        processingStatus.value = `Complete! ${recordsUpdatedCount} records updated in ${processingTime}s`;
-        processingPhase.value = 'finalizing';
-
-        // Allow a brief moment to show completion status
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        // No alert needed - we're showing the completion status in the UI
-      } else {
-        console.log('No records needed updating, just saving settings');
-        processingPhase.value = 'finalizing';
-        processingStatus.value = 'Saving settings...';
-
-        // Still save the settings even if no dates needed updating
-        store.setEffectiveDateSettings({ ...effectiveDateSettings.value });
-
-        const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
-        processingStatus.value = `Complete! Settings saved in ${processingTime}s`;
-
-        // Allow a moment to see the completion status
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        // No alert needed
-      }
-    } catch (error) {
-      console.error('Failed to finalize updates:', error);
-      processingStatus.value = `Error: ${error instanceof Error ? error.message : String(error)}`;
-      alert(
-        'Failed to complete updates: ' + (error instanceof Error ? error.message : String(error))
-      );
-    } finally {
-      isApplyingSettings.value = false;
-      progressPercentage.value = 0;
-      processingPhase.value = 'idle';
-
-      // Clear the elapsed time interval
-      if (elapsedTimeInterval) {
-        clearInterval(elapsedTimeInterval);
-        elapsedTimeInterval = null;
-      }
-    }
-  }
-
-  // Cleanup worker on component unmount
+  // Cleanup worker on component unmount - MOVED TO AZEffectiveDates.vue
   onBeforeUnmount(() => {
-    if (effectiveDateWorker) {
-      console.log('Cleaning up worker on component unmount');
-      effectiveDateWorker.terminate();
-      effectiveDateWorker = null;
-    }
-
-    // Clean up timer interval
-    if (elapsedTimeInterval) {
-      clearInterval(elapsedTimeInterval);
-      elapsedTimeInterval = null;
-    }
+    // if (effectiveDateWorker) { ... } // MOVED
+    // if (elapsedTimeInterval) { ... } // MOVED
 
     // Clean up search debounce
     if (searchDebounceTimeout) {
@@ -2067,128 +1586,10 @@
     }
   });
 
-  // Update the applyEffectiveDateSettings function to use the worker
-  async function applyEffectiveDateSettings() {
-    if (isApplyingSettings.value || !effectiveDateWorker) return;
+  // Update the applyEffectiveDateSettings function to use the worker - MOVED TO AZEffectiveDates.vue
+  // async function applyEffectiveDateSettings() { ... }
 
-    // Clear previous logs when starting a new operation
-    processingLogs.value = [];
-    processingLogs.value.push({
-      time: Date.now(),
-      message: 'Starting effective date update process',
-    });
-
-    // Check if there are any conflicts before proceeding
-    const conflictCount = store.getDiscrepancyCount;
-    if (conflictCount > 0) {
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Cannot proceed: ${conflictCount} rate conflicts detected`,
-      });
-      alert(
-        `Cannot apply effective dates while ${conflictCount} rate conflicts exist. Please resolve all conflicts first.`
-      );
-      return;
-    }
-
-    isApplyingSettings.value = true;
-    progressPercentage.value = 0;
-    processingPhase.value = 'preparing';
-    processingStatus.value = 'Initializing worker...';
-    processingStartTime.value = Date.now();
-    displayedElapsedTime.value = 0;
-
-    // Start separate timer for UI updates
-    if (elapsedTimeInterval) {
-      clearInterval(elapsedTimeInterval);
-    }
-    elapsedTimeInterval = window.setInterval(() => {
-      if (processingStartTime.value > 0) {
-        displayedElapsedTime.value = Math.floor((Date.now() - processingStartTime.value) / 1000);
-      }
-    }, 100);
-
-    // Show logs automatically when applying settings
-    showProcessingLogs.value = true;
-
-    try {
-      console.log('Starting effective date update process');
-      processingLogs.value.push({
-        time: Date.now(),
-        message: 'Preparing data for worker',
-      });
-
-      // Create simplified versions of the data to send to the worker
-      // Extract only the properties we need to ensure everything is serializable
-
-      // Get the raw data
-      const rawGroupedData = store.groupedData.map((group) => ({
-        destinationName: group.destinationName,
-        changeCode: group.changeCode,
-        effectiveDate: group.effectiveDate,
-      }));
-
-      // Simplify records too - only send what's needed
-      const simplifiedRecords = store.originalData.map((record) => ({
-        name: record.name,
-        prefix: record.prefix,
-        effective: record.effective,
-      }));
-
-      processingStatus.value = 'Sending data to worker...';
-
-      console.log(
-        `Sending ${rawGroupedData.length} simplified groups and ${simplifiedRecords.length} simplified records to worker`
-      );
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Sending ${rawGroupedData.length} groups and ${simplifiedRecords.length} records to worker`,
-      });
-
-      // Send to worker with only the required data
-      effectiveDateWorker.postMessage({
-        rawGroupedData,
-        allRecords: simplifiedRecords,
-        effectiveDateSettings: { ...effectiveDateSettings.value },
-      });
-
-      processingLogs.value.push({
-        time: Date.now(),
-        message: 'Data sent to worker, awaiting results',
-      });
-    } catch (error) {
-      console.error('Error starting effective date update:', error);
-      processingLogs.value.push({
-        time: Date.now(),
-        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
-      });
-      processingStatus.value = `Error starting update: ${
-        error instanceof Error ? error.message : String(error)
-      }`;
-      alert('Error starting update: ' + (error instanceof Error ? error.message : String(error)));
-      isApplyingSettings.value = false;
-      processingPhase.value = 'idle';
-
-      // Clear the elapsed time interval
-      if (elapsedTimeInterval) {
-        clearInterval(elapsedTimeInterval);
-        elapsedTimeInterval = null;
-      }
-    }
-  }
-
-  function getEffectiveDateLabel(setting: string): string {
-    if (setting === 'today') {
-      return 'Today';
-    } else if (setting === 'tomorrow') {
-      return 'Tomorrow';
-    } else if (setting === 'week') {
-      return '7 Days';
-    } else if (setting === 'custom') {
-      return 'Custom';
-    }
-    return setting;
-  }
+  // function getEffectiveDateLabel(setting: string): string { ... } // MOVED
 
   // Watch for debounced search query changes to handle expansion
   watch(debouncedSearchQuery, (newValue, oldValue) => {
@@ -2230,48 +1631,15 @@
       expandedRateCodes.value = {};
     }
   });
+  // --- End Watchers ---
 
-  function toggleEffectiveDateSettings() {
-    showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
+  // Effective Date Logic - MOVED
+  // function toggleEffectiveDateSettings() { ... } // MOVED
 
-    // If opening the settings panel, ensure date fields have the proper defaults
-    if (showEffectiveDateSettings.value) {
-      // Make sure INCREASE date is 7 days from now if the mode is 'week'
-      if (effectiveDateSettings.value.increase === 'week') {
-        const sevenDaysDate = new Date();
-        sevenDaysDate.setDate(sevenDaysDate.getDate() + 7);
-        effectiveDateSettings.value.increaseCustomDate = sevenDaysDate.toISOString().split('T')[0];
-        console.log('Set increase date to 7 days:', effectiveDateSettings.value.increaseCustomDate);
-      }
-    }
-  }
-
-  // Date selection helper methods
-  function setSameDate(value: 'today' | 'tomorrow' | 'custom') {
-    effectiveDateSettings.value.same = value;
-  }
-
-  function setIncreaseDate(value: 'today' | 'tomorrow' | 'week' | 'custom') {
-    effectiveDateSettings.value.increase = value;
-
-    // Update the date field based on the selected value
-    if (value === 'today') {
-      effectiveDateSettings.value.increaseCustomDate = new Date().toISOString().split('T')[0];
-    } else if (value === 'tomorrow') {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      effectiveDateSettings.value.increaseCustomDate = tomorrow.toISOString().split('T')[0];
-    } else if (value === 'week') {
-      const sevenDays = new Date();
-      sevenDays.setDate(sevenDays.getDate() + 7);
-      effectiveDateSettings.value.increaseCustomDate = sevenDays.toISOString().split('T')[0];
-    }
-    // For 'custom', we keep whatever date the user selected
-  }
-
-  function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') {
-    effectiveDateSettings.value.decrease = value;
-  }
+  // Date selection helper methods - MOVED
+  // function setSameDate(value: 'today' | 'tomorrow' | 'custom') { ... }
+  // function setIncreaseDate(value: 'today' | 'tomorrow' | 'week' | 'custom') { ... }
+  // function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') { ... }
 
   // --- Multi-Rate Sorting & Display ---
   function getSortedRates(group: GroupedRateData): {

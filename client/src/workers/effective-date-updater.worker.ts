@@ -68,6 +68,14 @@ function calculateEffectiveDate(
   const today = new Date();
   let effectiveDate = today;
 
+  // --- BEGIN DEBUG LOGGING ---
+  if (changeCode === ChangeCode.DECREASE) {
+    console.log(`[Worker] calculateEffectiveDate for DECREASE:`);
+    console.log(`  Input settings.decrease: ${settings.decrease}`);
+    console.log(`  Input settings.decreaseCustomDate: ${settings.decreaseCustomDate}`);
+  }
+  // --- END DEBUG LOGGING ---
+
   if (changeCode === ChangeCode.SAME) {
     if (settings.same === 'today') {
       effectiveDate = today;
@@ -106,6 +114,17 @@ function calculateEffectiveDate(
   const month = String(effectiveDate.getMonth() + 1).padStart(2, '0');
   const day = String(effectiveDate.getDate()).padStart(2, '0');
 
+  // --- BEGIN DEBUG LOGGING ---
+  if (changeCode === ChangeCode.DECREASE) {
+    const calculated = `${year}-${month}-${day}`;
+    if (settings.decrease === 'custom') {
+      console.log(`  For DECREASE (custom), returning directly: ${settings.decreaseCustomDate}`);
+      // No change needed here as it already returns settings.decreaseCustomDate
+    } else {
+      console.log(`  For DECREASE (non-custom), calculated and formatted: ${calculated}`);
+    }
+  }
+  // --- END DEBUG LOGGING ---
   return `${year}-${month}-${day}`;
 }
 
@@ -145,23 +164,10 @@ self.addEventListener('message', async (event) => {
 
     // STEP 1: PREPARE THE DATA
     // First, consolidate data by destination to ensure consistent change codes
-    const destinationChangeCodeMap = new Map<string, ChangeCodeType>();
+    // const destinationChangeCodeMap = new Map<string, ChangeCodeType>();
 
     // First pass: collect all destination names and determine the primary change code for each
-    for (const group of input.rawGroupedData) {
-      const { destinationName, changeCode } = group;
-
-      // Use a priority system for change codes when there are conflicts
-      // Priority: INCREASE > DECREASE > SAME
-      if (
-        !destinationChangeCodeMap.has(destinationName) ||
-        changeCode === ChangeCode.INCREASE ||
-        (changeCode === ChangeCode.DECREASE &&
-          destinationChangeCodeMap.get(destinationName) === ChangeCode.SAME)
-      ) {
-        destinationChangeCodeMap.set(destinationName, changeCode);
-      }
-    }
+    // for (const group of input.rawGroupedData) { ... }
 
     // Apply effective dates based on consolidated change codes
     let preparedGroupedData: {
@@ -184,30 +190,33 @@ self.addEventListener('message', async (event) => {
       const chunk = input.rawGroupedData.slice(i, endIndex);
 
       for (const group of chunk) {
-        const { destinationName } = group;
+        const { destinationName, changeCode } = group;
 
         // Only process each destination once to ensure consistency
         if (!processedDestinations.has(destinationName)) {
-          // Use the consolidated change code for this destination
-          const consolidatedChangeCode =
-            destinationChangeCodeMap.get(destinationName) || group.changeCode;
-          const newEffectiveDate = calculateEffectiveDate(
-            consolidatedChangeCode,
-            input.effectiveDateSettings
-          );
+          // Use the ORIGINAL change code for this destination
+          const newEffectiveDate = calculateEffectiveDate(changeCode, input.effectiveDateSettings);
+
+          // --- BEGIN DEBUG LOGGING ---
+          if (changeCode === ChangeCode.DECREASE) {
+            console.log(
+              `[Worker STEP 1 - POPULATE PREP] Destination: "${group.destinationName}", ChangeCode: ${group.changeCode}, CalculatedDateForMap: ${newEffectiveDate}, OriginalDateFromGroup: ${group.effectiveDate}`
+            );
+          }
+          // --- END DEBUG LOGGING ---
 
           preparedGroupedData.push({
             destinationName,
             effectiveDate: newEffectiveDate,
-            changeCode: consolidatedChangeCode,
+            changeCode: changeCode,
           });
 
           processedDestinations.add(destinationName);
 
           // Verbose logging for debugging
-          console.log(
-            `Destination: ${destinationName}, ChangeCode: ${consolidatedChangeCode}, EffectiveDate: ${newEffectiveDate}`
-          );
+          // console.log( // Intentionally commented out, as per plan, only DECREASE items are focused for STEP 1 logging.
+          //   `Destination: ${destinationName}, ChangeCode: ${changeCode}, EffectiveDate: ${newEffectiveDate}`
+          // );
         }
       }
 
@@ -233,6 +242,13 @@ self.addEventListener('message', async (event) => {
     const changeCodeMap = new Map<string, ChangeCodeType>();
 
     for (const group of preparedGroupedData) {
+      // --- BEGIN DEBUG LOGGING from effectivedate.md STEP 1 ---
+      // Inside: for (const group of preparedGroupedData) { ... }
+      // This loop populates effectiveDateMap and changeCodeMap
+      console.log(
+        `[Worker STEP 1 - POPULATE MAPS] Destination: "${group.destinationName}", ChangeCode: ${group.changeCode}, DateForMap: ${group.effectiveDate}`
+      );
+      // --- END DEBUG LOGGING from effectivedate.md STEP 1 ---
       effectiveDateMap.set(group.destinationName, group.effectiveDate);
       changeCodeMap.set(group.destinationName, group.changeCode);
     }
@@ -281,13 +297,50 @@ self.addEventListener('message', async (event) => {
       for (const destinationName of destinationBatch) {
         const records = recordsByDestination.get(destinationName) || [];
         const newEffectiveDate = effectiveDateMap.get(destinationName);
-        const consolidatedChangeCode = changeCodeMap.get(destinationName);
+        const originalChangeCodeForDest = changeCodeMap.get(destinationName);
+
+        // --- BEGIN DEBUG LOGGING for STEP 2 ---
+        // Enhanced logging for STEP 2 as per effectivedate.md
+        if (
+          destinationName === 'Afghanistan- Fixed - Other' ||
+          originalChangeCodeForDest === ChangeCode.DECREASE
+        ) {
+          console.log(
+            `[Worker STEP 2 - QUERY] Attempting to query maps for Destination: "${destinationName}"`
+          );
+          console.log(
+            `[Worker STEP 2 - QUERY RESULT] For "${destinationName}": newEffectiveDate from map: ${newEffectiveDate}, originalChangeCodeForDest from map: ${originalChangeCodeForDest}`
+          );
+        }
+        // --- END DEBUG LOGGING for STEP 2 ---
 
         if (newEffectiveDate) {
           // Update all records for this destination with the same effective date
           let updatedAnyForDestination = false;
 
           for (const record of records) {
+            // --- BEGIN DEBUG LOGGING for record comparison ---
+            if (
+              record.name === 'Afghanistan- Fixed - Other' ||
+              originalChangeCodeForDest === ChangeCode.DECREASE
+            ) {
+              console.log(
+                `  [Worker STEP 2 - APPLY PREP] Record for "${record.name}", Prefix ${record.prefix}:`
+              );
+              console.log(
+                `    record.effective (current in store.originalData): '${record.effective}' (type: ${typeof record.effective})`
+              );
+              console.log(
+                `    newEffectiveDate (calculated for group): '${newEffectiveDate}' (type: ${typeof newEffectiveDate})`
+              );
+              console.log(
+                `    Comparison (record.effective !== newEffectiveDate): ${record.effective !== newEffectiveDate}`
+              );
+              console.log(
+                `    Original Change Code for this destination: ${originalChangeCodeForDest}`
+              );
+            }
+            // --- END DEBUG LOGGING for record comparison ---
             if (record.effective !== newEffectiveDate) {
               updatedRecords.push({
                 name: record.name,
@@ -302,7 +355,7 @@ self.addEventListener('message', async (event) => {
           // Log detailed updates for debugging
           if (updatedAnyForDestination) {
             console.log(
-              `Updated ${records.length} records for destination "${destinationName}" with effective date ${newEffectiveDate} and change code ${consolidatedChangeCode}`
+              `Updated ${records.length} records for destination "${destinationName}" with effective date ${newEffectiveDate} and original change code ${originalChangeCodeForDest}`
             );
           }
         }

@@ -73,19 +73,15 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     },
 
     async updateDestinationRate(destinationName: string, newRate: number) {
-      const today = new Date().toISOString().split('T')[0];
+      // const today = new Date().toISOString().split('T')[0]; // Not needed as a local default here
 
       // Get all records for this destination to determine the appropriate change code
       const records = this.originalData.filter((record) => record.name === destinationName);
       if (records.length === 0) return false;
 
       // Determine the most appropriate change code based on rate comparison
-      // If ANY records show an increase, use INCREASE
-      // Otherwise, if ANY records show a decrease, use DECREASE
-      // Otherwise, use SAME
       let hasIncrease = false;
       let hasDecrease = false;
-
       for (const record of records) {
         if (newRate > record.rate) {
           hasIncrease = true;
@@ -95,18 +91,16 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         }
       }
 
-      // Determine the single change code and effective date for all records of this destination
-      let changeCode: ChangeCodeType = ChangeCode.SAME;
-      let effectiveDate = today;
-
+      let changeCode: ChangeCodeType = ChangeCode.SAME; // Default
       if (hasIncrease) {
         changeCode = ChangeCode.INCREASE;
-        const sevenDaysLater = new Date();
-        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-        effectiveDate = sevenDaysLater.toISOString().split('T')[0];
       } else if (hasDecrease) {
         changeCode = ChangeCode.DECREASE;
       }
+      // If neither, changeCode remains SAME, which is the default initial value.
+
+      // Calculate effectiveDate using the determined changeCode and current store settings
+      const effectiveDate = this.calculateEffectiveDateForChangeCode(changeCode);
 
       console.log(
         `Updating destination: ${destinationName}, ChangeCode: ${changeCode}, EffectiveDate: ${effectiveDate}`
@@ -146,6 +140,8 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
             ...group,
             rates,
             hasDiscrepancy: false,
+            changeCode: changeCode,
+            effectiveDate: effectiveDate,
           };
         }
         return group;
@@ -199,24 +195,27 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
           }
         }
 
-        let changeCode: ChangeCodeType = ChangeCode.SAME;
-        let effectiveDate = today;
+        let determinedChangeCode: ChangeCodeType = ChangeCode.SAME;
+        let determinedEffectiveDate = today;
 
+        // Use effectiveDateSettings from the store to determine the date
         if (hasIncrease) {
-          changeCode = ChangeCode.INCREASE;
-          const sevenDaysLater = new Date();
-          sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-          effectiveDate = sevenDaysLater.toISOString().split('T')[0];
+          determinedChangeCode = ChangeCode.INCREASE;
+          determinedEffectiveDate = this.calculateEffectiveDateForChangeCode(ChangeCode.INCREASE);
         } else if (hasDecrease) {
-          changeCode = ChangeCode.DECREASE;
+          determinedChangeCode = ChangeCode.DECREASE;
+          determinedEffectiveDate = this.calculateEffectiveDateForChangeCode(ChangeCode.DECREASE);
+        } else {
+          determinedChangeCode = ChangeCode.SAME;
+          determinedEffectiveDate = this.calculateEffectiveDateForChangeCode(ChangeCode.SAME);
         }
 
         // Store the consistent values for this destination
-        changeCodeByDestination.set(destination, changeCode);
-        effectiveDateByDestination.set(destination, effectiveDate);
+        changeCodeByDestination.set(destination, determinedChangeCode);
+        effectiveDateByDestination.set(destination, determinedEffectiveDate);
 
         console.log(
-          `Destination: ${destination}, ChangeCode: ${changeCode}, EffectiveDate: ${effectiveDate}`
+          `Bulk Prep Destination: ${destination}, ChangeCode: ${determinedChangeCode}, EffectiveDate: ${determinedEffectiveDate}`
         );
       }
 
@@ -249,42 +248,89 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
           destinationsToUpdate.has(group.destinationName) &&
           !processedDestinations.has(group.destinationName)
         ) {
-          const newRate = updateMap.get(group.destinationName);
-          if (newRate !== undefined) {
-            const recordsForDestination = this.originalData.filter(
-              (r) => r.name === group.destinationName
-            );
-            const totalRecords = recordsForDestination.length;
-
-            // Since we're unifying the rate, there will be only one rate with 100% usage
-            const rates: RateStatistics[] = [
-              {
-                rate: newRate,
-                count: totalRecords,
-                percentage: 100,
-                isCommon: true,
-              },
-            ];
-
-            updatedGroupedData.push({
-              ...group,
-              rates,
-              hasDiscrepancy: false,
-            });
-
+          const newRateForGroup = updateMap.get(group.destinationName);
+          if (newRateForGroup === undefined) {
+            updatedGroupedData.push(group); // Should not happen if destinationsToUpdate is accurate
             processedDestinations.add(group.destinationName);
-          } else {
-            updatedGroupedData.push(group);
+            continue;
           }
+
+          const recordsForDestination = this.originalData.filter(
+            (r) => r.name === group.destinationName
+          );
+          const totalRecords = recordsForDestination.length;
+
+          // New rates statistics
+          const rates: RateStatistics[] = [
+            {
+              rate: newRateForGroup,
+              count: totalRecords,
+              percentage: 100,
+              isCommon: true,
+            },
+          ];
+
+          updatedGroupedData.push({
+            ...group,
+            rates,
+            hasDiscrepancy: false,
+            changeCode: changeCodeByDestination.get(group.destinationName) || ChangeCode.SAME,
+            effectiveDate: effectiveDateByDestination.get(group.destinationName) || today,
+          });
+          processedDestinations.add(group.destinationName);
         } else if (!processedDestinations.has(group.destinationName)) {
           updatedGroupedData.push(group);
+          processedDestinations.add(group.destinationName);
         }
       }
-
       this.groupedData = updatedGroupedData;
       this.saveToLocalStorage();
 
       return true;
+    },
+
+    // Helper to calculate effective date based on current store settings
+    calculateEffectiveDateForChangeCode(changeCode: ChangeCodeType): string {
+      const settings = this.effectiveDateSettings;
+      const today = new Date();
+      let effectiveDate = new Date(today); // Create a new Date object to avoid modifying 'today'
+
+      // Helper to format date as YYYY-MM-DD
+      const formatDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      if (changeCode === ChangeCode.SAME) {
+        if (settings.same === 'today') {
+          // effectiveDate is already today
+        } else if (settings.same === 'tomorrow') {
+          effectiveDate.setDate(today.getDate() + 1);
+        } else if (settings.same === 'custom') {
+          return settings.sameCustomDate; // Return directly as it's already formatted
+        }
+      } else if (changeCode === ChangeCode.INCREASE) {
+        if (settings.increase === 'today') {
+          // effectiveDate is already today
+        } else if (settings.increase === 'tomorrow') {
+          effectiveDate.setDate(today.getDate() + 1);
+        } else if (settings.increase === 'week') {
+          effectiveDate.setDate(today.getDate() + 7);
+        } else if (settings.increase === 'custom') {
+          return settings.increaseCustomDate; // Return directly
+        }
+      } else if (changeCode === ChangeCode.DECREASE) {
+        if (settings.decrease === 'today') {
+          // effectiveDate is already today
+        } else if (settings.decrease === 'tomorrow') {
+          effectiveDate.setDate(today.getDate() + 1);
+        } else if (settings.decrease === 'custom') {
+          return settings.decreaseCustomDate; // Return directly
+        }
+      }
+      return formatDate(effectiveDate);
     },
 
     clearData() {
