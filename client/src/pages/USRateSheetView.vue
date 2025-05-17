@@ -50,40 +50,12 @@
               </div>
             </div>
           </div>
-              <!-- Invalid Rows Section (NEW) -->
-        <div v-if="store.hasInvalidRateSheetRows" class="my-4">
-          <details class="overflow-hidden group">
-            <summary
-              class="cursor-pointer list-none flex justify-between items-center group-open:bg-red-900/50 transition-colors duration-150 hover:bg-red-900/25"
-            >
-              <span class="font-medium text-red-400">
-                Invalid Rows Not Uploaded : {{ store.invalidRateSheetRows.length }} rows
-              </span>
-              <!-- Chevron icon for visual cue -->
-              <ChevronDownIcon
-                class="w-5 h-5 text-destructive transition-transform duration-150 group-open:rotate-180"
-              />
-            </summary>
-            <div class="p-4 bg-gray-900/30 text-xs">
-              <div class="max-h-60 overflow-y-auto pr-2 space-y-2">
-                <div
-                  v-for="(row, index) in store.invalidRateSheetRows"
-                  :key="index"
-                  class="bg-gray-800/50 p-2 rounded"
-                >
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="font-semibold text-gray-300">Row {{ row.rowIndex }}</span>
-                    <span class="text-red-400 text-xxs italic">{{ row.reason }}</span>
-                  </div>
-                  <div class="text-gray-400 break-all">
-                    NPANXX: {{ row.npanxx || 'N/A' }}, Inter: {{ row.interRate ?? 'N/A' }}, Intra:
-                    {{ row.intraRate ?? 'N/A' }}, Indeterm: {{ row.indetermRate ?? 'N/A' }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </details>
-        </div>
+          <!-- Invalid Rows Section (NEW) -->
+          <InvalidRows
+            v-if="store.hasInvalidRateSheetRows"
+            :items="usInvalidRowEntries"
+            title="Invalid Rows Not Uploaded"
+          />
 
           <!-- Effective Date - Integrated Picker -->
           <div>
@@ -113,8 +85,6 @@
             </div>
           </div>
         </div>
-
-    
 
         <!-- File Upload Section -->
         <div v-if="!isLocallyStored" class="mt-6">
@@ -226,6 +196,8 @@
   import { computed, ref, onMounted, watch } from 'vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
+  import InvalidRows from '@/components/shared/InvalidRows.vue';
+  import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   import {
     ArrowUpTrayIcon,
@@ -511,4 +483,37 @@
     showInfoModal.value = false;
   }
   // --- End Info Modal Functions ---
+
+  const usInvalidRowEntries = computed((): InvalidRowEntry[] => {
+    if (!store.invalidRateSheetRows) return [];
+    return store.invalidRateSheetRows.map((row: any) => {
+      let problemValue = 'N/A'; // Default problem value
+
+      // Attempt to find a specific problematic rate to display
+      // This is an adaptation for the US data to fit the AZ-style "RATE" column
+      if (typeof row.interRate === 'string' && isNaN(parseFloat(row.interRate)))
+        problemValue = row.interRate;
+      else if (typeof row.intraRate === 'string' && isNaN(parseFloat(row.intraRate)))
+        problemValue = row.intraRate;
+      else if (typeof row.indetermRate === 'string' && isNaN(parseFloat(row.indetermRate)))
+        problemValue = row.indetermRate;
+      else if (row.interRate !== undefined && row.interRate !== null)
+        problemValue = String(row.interRate);
+      else if (row.intraRate !== undefined && row.intraRate !== null)
+        problemValue = String(row.intraRate);
+      else if (row.indetermRate !== undefined && row.indetermRate !== null)
+        problemValue = String(row.indetermRate);
+      // If a specific rate isn't obviously the single "problemValue", use the reason if it's concise, or a generic indicator.
+      // The `name` field already holds `row.reason`.
+      // The `problemValue` field is for the right-most column, styled like a rate.
+      // If it cannot be a rate, it might look odd. Let's prioritize numbers.
+
+      return {
+        rowNumber: row.rowIndex,
+        name: row.reason || 'No reason provided',
+        identifier: row.npanxx || 'N/A',
+        problemValue: problemValue,
+      };
+    });
+  });
 </script>

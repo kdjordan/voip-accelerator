@@ -46,68 +46,11 @@
               <div class="text-xl">{{ store.getTotalRecords }}</div>
             </div>
             <!-- Invalid Rows Status -->
-            <div v-if="store.hasInvalidRows" class="-mx-6 px-6">
-              <div
-                @click="toggleInvalidRowsDetails"
-                class="w-full py-3 cursor-pointer flex items-center justify-between rounded-md"
-              >
-                <div class="flex items-center space-x-2">
-                  <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                  <span class="text-sm font-medium text-red-400"
-                    >({{ store.getGroupedInvalidRows.length }})</span
-                  >
-                </div>
-                <component
-                  :is="showInvalidRowsDetails ? ChevronUpIcon : ChevronDownIcon"
-                  class="w-4 h-4 text-red-400"
-                />
-              </div>
-
-              <!-- Invalid Rows Content -->
-              <div
-                v-if="showInvalidRowsDetails"
-                class="transition-all duration-300 ease-in-out rounded-b-md mt-1"
-              >
-                <div class="px-2 py-4">
-                  <table class="w-full min-w-full border-separate border-spacing-0">
-                    <thead class="bg-gray-800/80">
-                      <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">NAME</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                          PREFIX
-                        </th>
-                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">RATE</th>
-                      </tr>
-                    </thead>
-                    <tbody class="bg-gray-900/80">
-                      <tr
-                        v-for="(row, index) in store.invalidRows"
-                        :key="index + row.prefix"
-                        class="hover:bg-gray-800/50"
-                      >
-                        <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                          {{ row.rowNumber }}
-                        </td>
-                        <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                          {{ row.destinationName }}
-                        </td>
-                        <td
-                          class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50"
-                        >
-                          {{ row.prefix }}
-                        </td>
-                        <td
-                          class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50"
-                        >
-                          {{ row.invalidRate }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <InvalidRows
+              v-if="store.hasInvalidRows"
+              :items="azInvalidRowEntries"
+              title="Invalid Rows Not Uploaded"
+            />
             <div>
               <div class="flex justify-between items-center mt-2">
                 <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
@@ -303,6 +246,8 @@
 <script setup lang="ts">
   import { computed, ref, onMounted } from 'vue';
   import InfoModal from '@/components/shared/InfoModal.vue'; // Import InfoModal
+  import InvalidRows from '@/components/shared/InvalidRows.vue';
+  import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
   import { useUserStore } from '@/stores/user-store'; // Import user store
@@ -354,6 +299,16 @@
 
   // Info Modal state
   const showInfoModal = ref(false);
+
+  const azInvalidRowEntries = computed((): InvalidRowEntry[] => {
+    if (!store.invalidRows) return [];
+    return store.invalidRows.map((row: any) => ({
+      rowNumber: row.rowNumber,
+      name: row.destinationName,
+      identifier: row.prefix,
+      problemValue: row.invalidRate,
+    }));
+  });
 
   onMounted(() => {
     // Check if data is already stored in localStorage via the store
