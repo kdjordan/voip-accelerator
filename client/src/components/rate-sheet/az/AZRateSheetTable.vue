@@ -87,7 +87,7 @@
 
     <!-- Filters -->
     <div class="mb-4" :class="{ 'min-h-[16rem]': filteredData.length === 0 }">
-      <div class="flex items-center justify-between mb-4 ">
+      <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-4">
           <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
           <span class="text-sm text-gray-400">
@@ -109,7 +109,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <!-- Filter -->
-        <div class="w-full ">
+        <div class="w-full">
           <Listbox v-model="filterStatus" as="div">
             <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
               >View Filter</ListboxLabel
