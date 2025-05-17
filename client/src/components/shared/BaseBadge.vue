@@ -22,17 +22,17 @@
   const variantClasses = computed(() => {
     switch (props.variant) {
       case 'accent':
-        return 'bg-accent/10 border-accent/50 text-accent border rounded-full';
+        return 'bg-accent/10 border-accent/50 text-accent border rounded-md';
       case 'info':
-        return 'bg-blue-900/30 border-blue-700/50 text-blue-300 border rounded-full';
+        return 'bg-blue-900/30 border-blue-700/50 text-blue-300 border rounded-md';
       case 'success':
-        return 'bg-green-900/30 border-green-700/50 text-green-300 border rounded-full';
+        return 'bg-green-900/30 border-green-700/50 text-green-300 border rounded-md';
       case 'warning':
-        return 'bg-yellow-900/30 border-yellow-700/50 text-yellow-300 border rounded-full';
+        return 'bg-yellow-900/30 border-yellow-700/50 text-yellow-300 border rounded-md';
       case 'destructive':
-        return 'bg-red-950/50 border-red-500/50 text-red-400 border rounded-full';
+        return 'bg-red-950/50 border-red-500/50 text-red-400 border rounded-md';
       case 'violet': // For memory storage example
-        return 'bg-violet-900/30 border-violet-700/50 text-violet-300 border rounded-full';
+        return 'bg-violet-900/30 border-violet-700/50 text-violet-300 border rounded-md';
       case 'neutral':
       default:
         return 'bg-gray-700 text-gray-200 ring-1 ring-inset ring-gray-600 rounded-md';
