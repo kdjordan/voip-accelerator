@@ -68,12 +68,25 @@
     </div>
 
     <!-- Header Row -->
-    <div class="mb-4 flex items-center gap-4">
-      <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
-      <span v-if="!isDataLoading" class="text-sm text-gray-400">
-        Showing {{ displayedData.length }} of {{ totalRecords }} NPANXX entries
-      </span>
-      <span v-else class="text-sm text-gray-400">Loading data...</span>
+    <div class="mb-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
+        <span v-if="!isDataLoading" class="text-sm text-gray-400">
+          Showing {{ displayedData.length }} of {{ totalFilteredItems }} NPANXX entries
+        </span>
+        <span v-else class="text-sm text-gray-400">Loading data...</span>
+      </div>
+      <BaseButton
+        variant="destructive"
+        size="small"
+        :icon="TrashIcon"
+        :loading="store.isLoading"
+        :disabled="store.isLoading"
+        @click="handleClearData"
+        title="Clear all rate sheet data"
+      >
+        Clear Data
+      </BaseButton>
     </div>
 
     <!-- Filters and Actions Row -->
@@ -91,6 +104,119 @@
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
           />
         </div>
+
+        <!-- Metro Area Filter Dropdown -->
+        <div class="relative w-64">
+          <Menu as="div" class="relative inline-block text-left w-full">
+            <div>
+              <MenuButton
+                class="inline-flex w-full justify-between items-center rounded-lg bg-gray-800 py-2.5 pl-3 pr-2 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700 text-white"
+                :disabled="isDataLoading"
+              >
+                <span class="block truncate">{{ metroButtonLabel }}</span>
+                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </MenuButton>
+            </div>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <MenuItems
+                class="absolute z-30 mt-1 max-h-96 w-full origin-top-right overflow-hidden rounded-md bg-gray-800 shadow-lg ring-1 ring-black/5 focus:outline-none flex flex-col"
+              >
+                <div class="p-2 border-b border-gray-700">
+                  <div class="relative">
+                    <div
+                      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                    >
+                      <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      v-model="metroSearchQuery"
+                      type="text"
+                      placeholder="Search metro areas..."
+                      class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <button
+                      v-if="metroSearchQuery"
+                      @click="clearMetroSearch"
+                      class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
+                      aria-label="Clear search"
+                    >
+                      <XCircleIcon class="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div class="p-2 border-b border-gray-700 flex justify-between items-center">
+                  <button
+                    @click="handleSelectAllMetros"
+                    class="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
+                    :disabled="filteredMetroOptions.length === 0"
+                  >
+                    {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select Visible' }}
+                  </button>
+                  <button
+                    v-if="selectedMetros.length > 0"
+                    @click="clearAllSelectedMetros"
+                    class="text-xs text-gray-400 hover:text-gray-200"
+                  >
+                    Clear All Selected ({{ selectedMetros.length }})
+                  </button>
+                </div>
+                <div class="overflow-y-auto flex-grow p-1 max-h-60">
+                  <MenuItem
+                    v-for="metro in filteredMetroOptions"
+                    :key="metro.key"
+                    v-slot="{ active }"
+                    as="template"
+                  >
+                    <li
+                      @click="() => toggleMetroSelection(metro)"
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4 flex justify-between items-center',
+                      ]"
+                    >
+                      <div class="flex items-center">
+                        <span
+                          :class="[
+                            isMetroSelected(metro) ? 'text-primary-400' : 'text-gray-500',
+                            'absolute inset-y-0 left-0 flex items-center pl-3',
+                          ]"
+                        >
+                          <CheckIcon
+                            class="h-5 w-5"
+                            :class="isMetroSelected(metro) ? 'opacity-100' : 'opacity-0'"
+                            aria-hidden="true"
+                          />
+                        </span>
+                        <span
+                          :class="[
+                            isMetroSelected(metro) ? 'font-semibold' : 'font-normal',
+                            'block truncate',
+                          ]"
+                        >
+                          {{ metro.displayName }}
+                        </span>
+                      </div>
+                      <span class="text-xs text-gray-500">{{
+                        formatPopulation(metro.population)
+                      }}</span>
+                    </li>
+                  </MenuItem>
+                  <div
+                    v-if="filteredMetroOptions.length === 0 && metroSearchQuery"
+                    class="px-4 py-2 text-sm text-gray-500 text-center"
+                  >
+                    No metro areas match your search.
+                  </div>
+                </div>
+              </MenuItems>
+            </transition>
+          </Menu>
+        </div>
+
         <!-- State Filter Dropdown -->
         <div class="relative w-52">
           <Listbox v-model="selectedState" as="div">
@@ -175,32 +301,76 @@
             </div>
           </Listbox>
         </div>
+        <BaseButton
+          variant="primary"
+          size="small"
+          :icon="XMarkIcon"
+          @click="handleClearAllFilters"
+          title="Clear all active filters"
+          class="ml-1"
+        >
+          Clear Filters
+        </BaseButton>
       </div>
 
       <!-- Right Side: Actions -->
       <div class="flex items-center gap-4 flex-wrap">
         <BaseButton
-          variant="destructive"
-          size="standard"
-          :icon="TrashIcon"
-          :loading="store.isLoading"
-          :disabled="store.isLoading"
-          @click="handleClearData"
-          title="Clear all rate sheet data"
-        >
-          Clear Data
-        </BaseButton>
-        <BaseButton
           variant="primary"
           size="standard"
           :icon="ArrowDownTrayIcon"
           :loading="isExporting"
-          :disabled="totalRecords === 0 || isExporting"
+          :disabled="totalFilteredItems === 0 || isExporting"
           @click="handleExport"
           title="Export all loaded data"
         >
           Export All
         </BaseButton>
+      </div>
+    </div>
+
+    <!-- Selected Metros Chips Display -->
+    <div v-if="selectedMetros.length > 0" class="my-3 flex flex-wrap gap-2 items-center px-1">
+      <span class="text-xs text-gray-400 mr-1">Selected Metros:</span>
+      <span
+        v-for="metro in selectedMetros"
+        :key="metro.key"
+        class="inline-flex items-center gap-x-1.5 rounded-md bg-gray-700 px-2 py-1 text-xs font-medium text-gray-200 ring-1 ring-inset ring-gray-600"
+      >
+        {{ metro.displayName }}
+        <button
+          @click="removeSelectedMetro(metro)"
+          type="button"
+          class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+        >
+          <span class="sr-only">Remove</span>
+          <XCircleIcon
+            class="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-200"
+            aria-hidden="true"
+          />
+        </button>
+      </span>
+    </div>
+
+    <!-- Metro Filter Summary -->
+    <div v-if="selectedMetros.length > 0" class="bg-gray-800/60 p-3 rounded-lg text-sm mb-4">
+      <div class="flex justify-between items-center mb-2">
+        <p class="text-gray-300">
+          <span class="font-semibold">{{ selectedMetros.length }}</span> metro area(s) selected.
+        </p>
+        <p class="text-gray-300">
+          Total Affected Population:
+          <span class="font-semibold text-white">{{
+            totalSelectedPopulation.toLocaleString()
+          }}</span>
+        </p>
+      </div>
+      <div
+        v-if="targetedNPAsDisplay.summary"
+        class="text-xs text-gray-400 pt-2 border-t border-gray-700/50"
+        :title="targetedNPAsDisplay.fullList"
+      >
+        {{ targetedNPAsDisplay.summary }}
       </div>
     </div>
 
@@ -518,23 +688,123 @@
       </table>
 
       <!-- Trigger for loading more (only shown when there's data) -->
+      <!-- REMOVE THIS BLOCK -->
+      <!--
       <div
         v-if="displayedData.length > 0 && hasMoreData"
         ref="loadMoreTriggerRef"
         class="h-10"
       ></div>
+      -->
 
       <!-- Loading more indicator (only shown when there's data and loading more) -->
+      <!-- REMOVE THIS BLOCK -->
+      <!--
       <div v-if="isLoadingMore && displayedData.length > 0" class="text-center text-gray-500 py-4">
         Loading more...
       </div>
+      -->
 
       <!-- End of results message (only shown when there's data and no more to load) -->
+      <!-- UPDATED/SIMPLIFIED (or could be removed if pagination implies end) -->
       <div
-        v-if="!hasMoreData && displayedData.length > 0 && totalRecords > 0"
+        v-if="displayedData.length > 0 && currentPage === totalPages && totalFilteredItems > 0"
         class="text-center text-gray-600 py-4"
       >
         End of results.
+      </div>
+      <div
+        v-else-if="
+          displayedData.length === 0 && totalFilteredItems > 0 && !isDataLoading && !isFiltering
+        "
+        class="text-center text-gray-600 py-4"
+      >
+        No results on this page. Try adjusting filters or page number.
+      </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div
+      class="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400"
+    >
+      <!-- Items per page selector -->
+      <div class="flex items-center gap-2">
+        <span>Show:</span>
+        <select
+          v-model="itemsPerPage"
+          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-1.5"
+          :disabled="isDataLoading || isFiltering"
+        >
+          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+        <span>entries per page</span>
+      </div>
+
+      <!-- Page Info and Navigation -->
+      <div class="flex items-center gap-2 flex-wrap justify-center">
+        <BaseButton
+          @click="goToFirstPage"
+          :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="First Page"
+        >
+          &laquo; First
+        </BaseButton>
+        <BaseButton
+          @click="goToPreviousPage"
+          :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="Previous Page"
+        >
+          &lsaquo; Prev
+        </BaseButton>
+
+        <span class="flex items-center gap-1.5">
+          Page
+          <input
+            type="number"
+            v-model.number="directPageInput"
+            @change="handleDirectPageInput"
+            @keyup.enter="handleDirectPageInput"
+            min="1"
+            :max="totalPages"
+            class="bg-gray-800 border border-gray-700 text-white w-14 text-center sm:text-sm rounded-md p-1.5 focus:ring-primary-500 focus:border-primary-500"
+            :disabled="isDataLoading || isFiltering"
+          />
+          of {{ totalPages.toLocaleString() }}
+        </span>
+
+        <BaseButton
+          @click="goToNextPage"
+          :disabled="!canGoToNextPage || isDataLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="Next Page"
+        >
+          Next &rsaquo;
+        </BaseButton>
+        <BaseButton
+          @click="goToLastPage"
+          :disabled="!canGoToNextPage || currentPage === totalPages || isDataLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="Last Page"
+        >
+          Last &raquo;
+        </BaseButton>
+      </div>
+
+      <!-- Total Records Display -->
+      <div class="min-w-[150px] text-right md:text-left">
+        <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
       </div>
     </div>
   </div>
@@ -548,6 +818,10 @@
     ListboxLabel,
     ListboxOptions,
     ListboxOption,
+    Menu,
+    MenuButton,
+    MenuItems,
+    MenuItem,
   } from '@headlessui/vue';
   import {
     TrashIcon,
@@ -558,6 +832,9 @@
     ArrowRightIcon,
     ArrowUpIcon,
     ArrowDownIcon,
+    MagnifyingGlassIcon,
+    XCircleIcon,
+    XMarkIcon,
   } from '@heroicons/vue/20/solid';
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
@@ -574,6 +851,7 @@
     type TargetRateType,
   } from '@/types/domains/rate-sheet-types';
   import Dexie from 'dexie';
+  import { metroAreaOptions, type MetroAreaOption } from '@/types/constants/metro-population';
 
   // Minimum time (in ms) the filtering overlay should be displayed
   const MIN_FILTER_DISPLAY_TIME = 400;
@@ -630,19 +908,18 @@
   const debouncedSearchQuery = ref('');
   const selectedState = ref<string>('');
 
+  // --- Metro Filter State ---
+  const selectedMetros = ref<MetroAreaOption[]>([]);
+  const metroSearchQuery = ref('');
+  // --- End Metro Filter State ---
+
   const isFiltering = ref(false);
   const isExporting = ref(false);
   const dataError = ref<string | null>(null);
 
-  const totalRecords = ref<number>(0);
+  const totalRecords = ref<number>(0); // This might become redundant if totalFilteredItems is always up-to-date
 
   const displayedData = ref<USRateSheetEntry[]>([]);
-  const isLoadingMore = ref(false);
-  const scrollContainerRef = ref<HTMLElement | null>(null);
-  const loadMoreTriggerRef = ref<HTMLElement | null>(null);
-  const PAGE_SIZE = 100;
-  const offset = ref<number>(0);
-  const hasMoreData = ref<boolean>(true);
   const availableStates = ref<string[]>([]);
 
   // Define US States and Canadian Provinces for sorting
@@ -779,6 +1056,92 @@
 
   const stopSearchWatcher = watch(searchQuery, debouncedSearch);
 
+  // --- Metro Filter Computed Properties ---
+  const metroButtonLabel = computed(() => {
+    if (selectedMetros.value.length === 0) return 'All Metro Areas';
+    if (selectedMetros.value.length === 1) return selectedMetros.value[0].displayName;
+    return `${selectedMetros.value.length} Metro Areas Selected`;
+  });
+
+  const filteredMetroOptions = computed(() => {
+    if (!metroSearchQuery.value) {
+      return metroAreaOptions;
+    }
+    return metroAreaOptions.filter((metro) =>
+      metro.displayName.toLowerCase().includes(metroSearchQuery.value.toLowerCase())
+    );
+  });
+
+  const totalSelectedPopulation = computed(() => {
+    return selectedMetros.value.reduce((sum, metro) => sum + metro.population, 0);
+  });
+
+  const targetedNPAsDisplay = computed(() => {
+    if (selectedMetros.value.length === 0) {
+      return { summary: '', fullList: '' };
+    }
+
+    const allNPAs = [...new Set(selectedMetros.value.flatMap((metro) => metro.areaCodes))].sort();
+
+    const npaListString = allNPAs.join(', ');
+
+    if (allNPAs.length === 0) {
+      return { summary: '', fullList: '' }; // No NPAs to display
+    }
+
+    // The summary will now always show the full list along with the count.
+    const summaryText = `Targeting ${allNPAs.length} NPAs: ${npaListString}`;
+
+    // fullList for the title attribute (tooltip) remains the raw comma-separated list.
+    return { summary: summaryText, fullList: npaListString };
+  });
+
+  const areAllMetrosSelected = computed(() => {
+    // Considers if all *currently filtered* metros are selected, or all metros if no search query
+    const optionsToConsider = filteredMetroOptions.value;
+    if (optionsToConsider.length === 0) return false;
+    return optionsToConsider.every((metro) => isMetroSelected(metro));
+  });
+
+  // This will be used later to get area codes for filtering the actual data
+  const metroAreaCodesToFilter = computed(() => {
+    return selectedMetros.value.flatMap((metro) => metro.areaCodes);
+  });
+  // --- End Metro Filter Computed Properties ---
+
+  // --- Sorting UI State ---
+  const isPerformingPageLevelSort = ref(false);
+  // --- End Sorting UI State ---
+
+  // --- Pagination State ---
+  const currentPage = ref(1);
+  const itemsPerPage = ref(100); // Default items per page
+  const totalFilteredItems = ref(0);
+  const itemsPerPageOptions = ref([25, 50, 100, 250, 500]);
+  // --- End Pagination State ---
+
+  // --- Pagination Computed Properties ---
+  const totalPages = computed(() => {
+    if (totalFilteredItems.value === 0) return 1; // Avoid division by zero, show at least 1 page
+    return Math.ceil(totalFilteredItems.value / itemsPerPage.value);
+  });
+
+  const canGoToPreviousPage = computed(() => currentPage.value > 1);
+  const canGoToNextPage = computed(() => currentPage.value < totalPages.value);
+
+  // For direct page input
+  const directPageInput = ref<string | number>(currentPage.value);
+  watch(currentPage, (newPage) => {
+    directPageInput.value = newPage;
+  });
+  // --- End Pagination Computed Properties ---
+
+  // Watcher for itemsPerPage changes
+  const stopItemsPerPageWatcher = watch(itemsPerPage, async () => {
+    currentPage.value = 1; // Reset to first page when items per page changes
+    await resetPaginationAndLoad(); // Correctly calls the updated reset function
+  });
+
   // Watcher for state filter changes - handles table reload AND average calculation
   const stopStateWatcher = watch(selectedState, async (newStateCode) => {
     // Reset sorting when state filter changes
@@ -820,6 +1183,20 @@
       }
     }
   });
+
+  // Watcher for metro filter changes
+  const stopMetroWatcher = watch(
+    selectedMetros,
+    async () => {
+      // Reset sorting when metro filter changes (if desired, or keep current sort)
+      // currentSortKey.value = 'npanxx';
+      // currentSortDirection.value = 'asc';
+      await resetPaginationAndLoad();
+      // Note: Average calculations will need to be updated to consider metro filters if we want metro-specific averages.
+      // For now, averages remain based on state or overall.
+    },
+    { deep: true }
+  );
 
   async function initializeRateSheetDB(): Promise<boolean> {
     if (dbInstance) return true;
@@ -889,166 +1266,146 @@
     await fetchUniqueStates();
   }
 
-  async function loadMoreData(currentOffset: number): Promise<{
+  async function fetchPageData(pageNumber: number): Promise<{
     data: USRateSheetEntry[];
-    newOffset: number;
-    newHasMoreData: boolean;
-    newTotalRecords?: number;
+    totalMatchingRecords: number;
   }> {
     dataError.value = null;
-    let count = 0;
+    isDataLoading.value = true; // Indicate loading for the current page fetch
+    // DO NOT clear displayedData.value here, let the old data persist while new loads
 
     try {
       const table = dbInstance!.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      let query: Dexie.Table<USRateSheetEntry, any> | Dexie.Collection<USRateSheetEntry, any> =
-        table;
+      let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
 
-      const filtersApplied: string[] = [];
-
-      // Apply main indexed filters first
+      // Apply NPANXX Search Filter (if active)
       if (debouncedSearchQuery.value) {
-        query = query.where('npanxx').startsWithIgnoreCase(debouncedSearchQuery.value);
-        filtersApplied.push(`NPANXX starts with ${debouncedSearchQuery.value}`);
-      } else if (selectedState.value) {
-        query = query.where('stateCode').equals(selectedState.value);
-        filtersApplied.push(`Region equals ${selectedState.value}`);
+        query = query.filter((record) =>
+          record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
+        );
       }
 
-      let dbSortApplied = false;
+      // Apply State Filter (if active)
+      if (selectedState.value) {
+        query = query.filter((record) => record.stateCode === selectedState.value);
+      }
 
-      if (typeof (query as any).orderBy === 'function') {
-        if (currentSortKey.value) {
-          try {
-            query = (query as any).orderBy(currentSortKey.value);
-            if (currentSortDirection.value === 'desc') {
-              query = (query as any).reverse();
-            }
-            dbSortApplied = true;
-          } catch (sortError) {}
+      // Apply Metro Area Filter (if active)
+      if (metroAreaCodesToFilter.value.length > 0) {
+        const npaSet = new Set(metroAreaCodesToFilter.value);
+        query = query.filter((record) => npaSet.has(record.npa));
+      }
+
+      // Get total count of matching records *before* pagination and sorting
+      const totalMatchingRecords = await query.count();
+
+      // Apply Sorting (DB-Level if possible, otherwise client-side later)
+      let dbSortApplied = false;
+      const filtersAppliedCount = [
+        debouncedSearchQuery.value,
+        selectedState.value,
+        metroAreaCodesToFilter.value.length > 0,
+      ].filter(Boolean).length;
+      const hasComplexFilters =
+        filtersAppliedCount > 1 ||
+        (metroAreaCodesToFilter.value.length > 0 && filtersAppliedCount > 0); // Simplified complexity check
+
+      if (currentSortKey.value && !hasComplexFilters && typeof query.orderBy === 'function') {
+        try {
+          query = query.orderBy(currentSortKey.value);
+          if (currentSortDirection.value === 'desc') {
+            query = query.reverse();
+          }
+          dbSortApplied = true;
+        } catch (sortError) {
+          console.warn('Dexie orderBy failed, fallback to client sort', sortError);
+          dbSortApplied = false;
         }
       }
 
-      // Apply client-side state filter if NPANXX was also searched (making query a Collection)
-      if (debouncedSearchQuery.value && selectedState.value) {
-        query = query.filter((record) => record.stateCode === selectedState.value);
-        filtersApplied.push(`Region equals ${selectedState.value} (client-side)`);
-      }
+      // Apply Pagination
+      const dexieOffset = (pageNumber - 1) * itemsPerPage.value;
+      let pageData = await query.offset(dexieOffset).limit(itemsPerPage.value).toArray();
 
-      if (currentOffset === 0) {
-        const countQuery = query.clone();
-        count = await countQuery.count();
-      }
-
-      let newData = await query.offset(currentOffset).limit(PAGE_SIZE).toArray();
-
-      // If DB sorting was not applied (e.g., query became a Collection before orderBy could be called, or orderBy failed)
-      // and a sort key is active, perform client-side sort.
+      // Client-side sort as a fallback or primary if complex filters are applied or DB sort failed
       if (!dbSortApplied && currentSortKey.value) {
-        newData.sort((a, b) => {
+        pageData.sort((a, b) => {
           const valA = (a as any)[currentSortKey.value!];
           const valB = (b as any)[currentSortKey.value!];
           let comparison = 0;
           if (valA === null || valA === undefined)
-            return currentSortDirection.value === 'asc' ? -1 : 1; // handle nulls/undefined
+            return currentSortDirection.value === 'asc' ? -1 : 1;
           if (valB === null || valB === undefined)
             return currentSortDirection.value === 'asc' ? 1 : -1;
-
-          if (valA > valB) comparison = 1;
-          else if (valA < valB) comparison = -1;
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            comparison = valA.localeCompare(valB);
+          } else if (valA > valB) {
+            comparison = 1;
+          } else if (valA < valB) {
+            comparison = -1;
+          }
           return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
         });
       }
 
-      const newOffset = currentOffset + newData.length;
-      const newHasMoreData =
-        newData.length === PAGE_SIZE && (currentOffset === 0 ? newOffset < count : true);
+      // Successfully fetched and processed data
+      displayedData.value = pageData; // Update displayed data for the current page
+      totalFilteredItems.value = totalMatchingRecords; // Update total for pagination UI
+      isDataLoading.value = false; // Loading finished
 
       return {
-        data: newData,
-        newOffset: newOffset,
-        newHasMoreData: newHasMoreData,
-        newTotalRecords: currentOffset === 0 ? count : undefined,
+        data: pageData,
+        totalMatchingRecords: totalMatchingRecords,
       };
     } catch (err: any) {
-      dataError.value = err.message || 'Failed to load data';
+      console.error('Error in fetchPageData:', err);
+      dataError.value = err.message || 'Failed to load data for the page';
+      // DO NOT set displayedData.value = []; here. Keep old data on error.
+      totalFilteredItems.value = 0; // Or consider keeping the old count if that's desired UX on error
+      isDataLoading.value = false; // Loading finished (with error)
       return {
         data: [],
-        newOffset: currentOffset,
-        newHasMoreData: false,
-        newTotalRecords: currentOffset === 0 ? 0 : undefined,
+        totalMatchingRecords: 0,
       };
     }
   }
 
   async function resetPaginationAndLoad() {
-    const startTime = performance.now(); // Record start time
-    isFiltering.value = true; // Set filtering overlay to true
-    await nextTick(); // Wait for the overlay to render
+    const startTime = performance.now();
+    isFiltering.value = true;
+    await nextTick();
 
-    isDataLoading.value = true; // Show internal table loading state
+    // isDataLoading.value = true; // fetchPageData will set this
 
-    if (scrollContainerRef.value) {
-      scrollContainerRef.value.scrollTop = 0;
-    }
-    // Reset state before fetching
-    let currentOffset = 0; // Start from offset 0 for reset
-    hasMoreData.value = true;
+    // scrollContainerRef.value?.scrollTop = 0; // No longer needed
+    currentPage.value = 1; // Ensure we are on the first page for a full reset
     dataError.value = null;
-    isLoadingMore.value = false; // Ensure infinite scroll loading is off
-    // Do NOT reset sort key/direction here, so it persists across filter changes
-
-    // Explicitly type fetchedResult to match the return type of loadMoreData
-    let fetchedResult: {
-      data: USRateSheetEntry[];
-      newOffset: number;
-      newHasMoreData: boolean;
-      newTotalRecords?: number; // Mark as optional
-    } = {
-      data: [],
-      newOffset: 0,
-      newHasMoreData: false,
-      newTotalRecords: undefined, // Keep initialization as undefined
-    };
 
     const dbReady = await initializeRateSheetDB();
     if (dbReady && dbInstance) {
       try {
-        fetchedResult = await loadMoreData(currentOffset);
+        await fetchPageData(1); // Fetch the first page
       } catch (fetchError) {
         dataError.value = (fetchError as Error).message || 'Failed to fetch initial data.';
-        fetchedResult.newHasMoreData = false; // Ensure we stop loading on error
       }
     } else {
-      // Handle DB not ready case
-      totalRecords.value = 0;
-      fetchedResult.newHasMoreData = false;
-      if (!dbReady) {
-        // Keep the error message from initializeRateSheetDB if it failed
-        if (!dataError.value) dataError.value = 'Database not available.';
-      }
+      totalFilteredItems.value = 0;
+      displayedData.value = [];
+      if (!dbReady && !dataError.value) dataError.value = 'Database not available.';
     }
 
-    isDataLoading.value = false; // Hide internal table loading state
+    // isDataLoading.value = false; // fetchPageData will set this
 
-    // Minimum display time logic
     const endTime = performance.now();
     const elapsedTime = endTime - startTime;
     const remainingTime = MIN_FILTER_DISPLAY_TIME - elapsedTime;
 
-    const updateUIData = () => {
-      displayedData.value = fetchedResult.data;
-      offset.value = fetchedResult.newOffset;
-      hasMoreData.value = fetchedResult.newHasMoreData;
-      if (fetchedResult.newTotalRecords !== undefined) {
-        totalRecords.value = fetchedResult.newTotalRecords;
-      }
-      isFiltering.value = false; // Set filtering overlay to false
-    };
-
     if (remainingTime > 0) {
-      setTimeout(updateUIData, remainingTime);
+      setTimeout(() => {
+        isFiltering.value = false;
+      }, remainingTime);
     } else {
-      updateUIData();
+      isFiltering.value = false;
     }
   }
 
@@ -1148,6 +1505,10 @@
   onBeforeUnmount(() => {
     stopSearchWatcher();
     stopStateWatcher();
+    stopMetroWatcher(); // Stop metro watcher
+    stopItemsPerPageWatcher(); // Stop itemsPerPage watcher
+    // REMOVE: Intersection Observer cleanup if it was here
+    // Ensure no references to loadMoreTriggerRef remain implicitly if part of a larger object
   });
 
   watch(
@@ -1182,35 +1543,6 @@
       }
     },
     { immediate: false }
-  );
-
-  useIntersectionObserver(
-    loadMoreTriggerRef,
-    ([{ isIntersecting }]) => {
-      if (isIntersecting && hasMoreData.value && !isLoadingMore.value && !isFiltering.value) {
-        loadMoreData(offset.value)
-          .then((result) => {
-            if (result.data.length > 0) {
-              displayedData.value.push(...result.data);
-              offset.value = result.newOffset;
-              hasMoreData.value = result.newHasMoreData;
-            } else {
-              hasMoreData.value = false;
-            }
-          })
-          .catch((err) => {
-            dataError.value = (err as Error).message || 'Failed to load more data.';
-            hasMoreData.value = false;
-          })
-          .finally(() => {
-            isLoadingMore.value = false;
-          });
-      }
-    },
-    {
-      root: scrollContainerRef.value,
-      threshold: 0.1,
-    }
   );
 
   /**
@@ -1528,6 +1860,145 @@
     await resetPaginationAndLoad();
   }
   // --- End Sorting Handler ---
+
+  // --- Metro Filter Functions ---
+  function toggleMetroSelection(metro: MetroAreaOption) {
+    const index = selectedMetros.value.findIndex((m) => m.key === metro.key);
+    if (index > -1) {
+      selectedMetros.value.splice(index, 1);
+    } else {
+      selectedMetros.value.push(metro);
+    }
+  }
+
+  function isMetroSelected(metro: MetroAreaOption): boolean {
+    return selectedMetros.value.some((m) => m.key === metro.key);
+  }
+
+  function handleSelectAllMetros() {
+    const currentFilteredAreSelected = areAllMetrosSelected.value;
+    const optionsToConsider = filteredMetroOptions.value; // Select/deselect based on current search results
+
+    if (currentFilteredAreSelected) {
+      // Deselect all currently visible/filtered metros
+      selectedMetros.value = selectedMetros.value.filter(
+        (sm) => !optionsToConsider.find((fm) => fm.key === sm.key)
+      );
+    } else {
+      // Select all currently visible/filtered metros that aren't already selected
+      optionsToConsider.forEach((metro) => {
+        if (!isMetroSelected(metro)) {
+          selectedMetros.value.push(metro);
+        }
+      });
+    }
+  }
+
+  function removeSelectedMetro(metro: MetroAreaOption) {
+    const index = selectedMetros.value.findIndex((m) => m.key === metro.key);
+    if (index > -1) {
+      selectedMetros.value.splice(index, 1);
+    }
+  }
+
+  function clearMetroSearch() {
+    metroSearchQuery.value = '';
+  }
+
+  function clearAllSelectedMetros() {
+    selectedMetros.value = [];
+    metroSearchQuery.value = ''; // Also clear search
+  }
+
+  function formatPopulation(population: number): string {
+    if (population >= 1000000) {
+      return `${(population / 1000000).toFixed(1)}M`;
+    }
+    if (population >= 1000) {
+      return `${(population / 1000).toFixed(1)}K`;
+    }
+    return population.toString();
+  }
+
+  // --- Pagination Navigation Functions ---
+  async function goToPage(page: number) {
+    // Make async
+    const startTime = performance.now();
+    isFiltering.value = true;
+    await nextTick();
+
+    const targetPage = Math.max(1, Math.min(page, totalPages.value || 1));
+    if (currentPage.value !== targetPage) {
+      currentPage.value = targetPage;
+      await fetchPageData(currentPage.value); // Fetch data for the new page
+    } else {
+      // If already on the target page (e.g., invalid input reset), still need to manage isFiltering
+      // Or if fetchPageData wasn't called because page didn't change, ensure isFiltering is handled
+    }
+    directPageInput.value = currentPage.value; // Sync input
+
+    const endTime = performance.now();
+    const elapsedTime = endTime - startTime;
+    const remainingTime = MIN_FILTER_DISPLAY_TIME - elapsedTime;
+
+    if (remainingTime > 0) {
+      setTimeout(() => {
+        isFiltering.value = false;
+      }, remainingTime);
+    } else {
+      isFiltering.value = false;
+    }
+  }
+
+  async function goToFirstPage() {
+    // Make async
+    await goToPage(1);
+  }
+
+  async function goToPreviousPage() {
+    // Make async
+    if (canGoToPreviousPage.value) {
+      await goToPage(currentPage.value - 1);
+    }
+  }
+
+  async function goToNextPage() {
+    // Make async
+    if (canGoToNextPage.value) {
+      await goToPage(currentPage.value + 1);
+    }
+  }
+
+  async function goToLastPage() {
+    // Make async
+    await goToPage(totalPages.value);
+  }
+
+  async function handleDirectPageInput() {
+    // Make async
+    const pageNum = parseInt(String(directPageInput.value), 10);
+    if (!isNaN(pageNum)) {
+      await goToPage(pageNum);
+    } else {
+      directPageInput.value = currentPage.value;
+    }
+  }
+  // --- End Pagination Navigation Functions ---
+
+  async function handleClearAllFilters() {
+    searchQuery.value = '';
+    // debouncedSearchQuery will be updated by its watcher or debouncedSearch function indirectly
+    selectedState.value = '';
+    selectedMetros.value = [];
+    // Metro search query should also be cleared if it's part of the "filters"
+    metroSearchQuery.value = '';
+
+    // Reset sorting to default when clearing all filters might be a good UX
+    currentSortKey.value = 'npanxx';
+    currentSortDirection.value = 'asc';
+
+    await resetPaginationAndLoad();
+  }
 </script>
 
 <style scoped>

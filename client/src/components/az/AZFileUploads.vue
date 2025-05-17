@@ -13,7 +13,7 @@
           <!-- Horizontal Layout for Upload Zones -->
           <div class="flex min-w-max gap-6">
             <!-- Left Side: First Upload Zone and Single File Report -->
-            <div class="">
+            <div class="flex-1">
               <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
               <template v-if="!azStore.isComponentDisabled('az1')">
                 <!-- First Upload Zone (Only visible when no file is uploaded) -->
@@ -102,7 +102,7 @@
             <div class="mx-4 border-l border-gray-700/50"></div>
 
             <!-- Right Side: Second Upload Zone -->
-            <div class="">
+            <div class="flex-1">
               <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
               <template v-if="!azStore.isComponentDisabled('az2')">
                 <!-- Second Upload Zone (Only visible when no file is uploaded) -->
