@@ -8,7 +8,7 @@
       <div class="grid grid-cols-2 gap-6">
         <!-- File 1 Stats - Use enhancedReport1 -->
         <div v-if="enhancedReport1" class="bg-gray-900/50 p-4 rounded-lg">
-          <h3 class="text-lg text-accent mb-3">
+          <h3 class="text-lg text-fbWhite mb-3">
             {{ enhancedReport1?.file1?.fileName }}
           </h3>
           <div class="grid grid-cols-3 gap-4">
@@ -44,7 +44,7 @@
 
         <!-- File 2 Stats - Use enhancedReport2 -->
         <div v-if="enhancedReport2" class="bg-gray-900/50 p-4 rounded-lg">
-          <h3 class="text-lg text-accent mb-3">
+          <h3 class="text-lg text-fbWhite mb-3">
             {{ enhancedReport2?.file1?.fileName }}
           </h3>
           <div class="grid grid-cols-3 gap-4">
@@ -82,7 +82,7 @@
 
     <!-- Placeholder for the NEW Detailed NPANXX Comparison Table -->
     <div class="bg-gray-800 p-6 rounded-lg">
-      <h3 class="text-lg text-accent mb-3">Detailed NPA-NXX Comparison</h3>
+      <h3 class="text-lg text-white mb-3">Detailed NPANXX Comparison</h3>
       <!-- Replace placeholder with the actual component -->
       <USDetailedComparisonTable />
     </div>

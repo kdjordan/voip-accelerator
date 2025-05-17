@@ -2,7 +2,7 @@
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
     <!-- Filtered Data Average Rates Summary - Moved Up -->
     <div
-      v-if="filteredComparisonData.length > 0 || isLoading || isCalculatingAverages"
+      v-if="displayedData.length > 0 || isLoading || isPageLoading || isCalculatingAverages"
       class="mb-6 space-y-3"
     >
       <!-- File 1 Averages -->
@@ -179,9 +179,7 @@
           variant="primary"
           size="small"
           @click="downloadCsv"
-          :disabled="
-            isLoading || isLoadingMore || filteredComparisonData.length === 0 || isExporting
-          "
+          :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
           title="Download Filtered Data"
           class="min-w-[180px]"
         >
@@ -197,10 +195,7 @@
       </div>
     </div>
 
-    <div
-      v-if="isLoading && filteredComparisonData.length === 0"
-      class="text-center text-gray-500 py-10"
-    >
+    <div v-if="isLoading && displayedData.length === 0" class="text-center text-gray-500 py-10">
       <div
         class="flex items-center justify-center space-x-2 border border-neutral-700 rounded-lg p-2 w-1/4 mx-auto"
       >
@@ -211,7 +206,7 @@
       Error loading data: {{ error }}
     </div>
     <div
-      v-else-if="filteredComparisonData.length === 0 && !isLoading"
+      v-else-if="displayedData.length === 0 && !isLoading"
       class="text-center text-gray-500 py-10"
     >
       No matching comparison data found. Ensure reports have been generated or adjust filters.
@@ -219,7 +214,7 @@
     <div v-else class="overflow-x-auto relative">
       <!-- Loading overlay for filter changes -->
       <div
-        v-if="isFiltering"
+        v-if="isFiltering || (isPageLoading && displayedData.length === 0)"
         class="absolute inset-0 bg-gray-900/70 flex items-center justify-center z-20 rounded-lg"
       >
         <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
@@ -236,8 +231,21 @@
                 scope="col"
                 class="px-4 py-2 text-gray-300 align-bottom"
                 :class="[
-                  header.textAlign, // This might be redundant if inner div controls all alignment
+                  header.textAlign,
                   { 'cursor-pointer hover:bg-gray-700': header.sortable },
+                  {
+                    'min-w-28': [
+                      'file1_inter',
+                      'file2_inter',
+                      'diff_inter_pct',
+                      'file1_intra',
+                      'file2_intra',
+                      'diff_intra_pct',
+                      'file1_indeterm',
+                      'file2_indeterm',
+                      'diff_indeterm_pct',
+                    ].includes(header.key),
+                  },
                 ]"
                 @click="header.sortable ? handleSort(header.key) : null"
               >
@@ -285,11 +293,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-800">
-            <tr
-              v-for="record in filteredComparisonData"
-              :key="record.npanxx"
-              class="hover:bg-gray-700/50"
-            >
+            <tr v-for="record in displayedData" :key="record.npanxx" class="hover:bg-gray-700/50">
               <!-- Populate table cells -->
               <td class="px-4 py-2 text-gray-400">{{ record.npanxx }}</td>
               <!-- <td class="px-4 py-2 text-gray-400">{{ record.npa }}</td> -->
@@ -329,16 +333,117 @@
             </tr>
           </tbody>
         </table>
-        <!-- Trigger for loading more -->
-        <div ref="loadMoreTriggerRef" class="h-10"></div>
-        <!-- Loading indicator -->
-        <div v-if="isLoadingMore" class="text-center text-gray-500 py-4">Loading more...</div>
+        <!-- REMOVED: Trigger for loading more (loadMoreTriggerRef) -->
+        <!-- REMOVED: Loading indicator (isLoadingMore) -->
+
         <div
-          v-if="!hasMoreData && filteredComparisonData.length > 0"
+          v-if="!isPageLoading && displayedData.length === 0 && totalFilteredItems > 0"
+          class="text-center text-gray-600 py-4"
+        >
+          No results on this page. Try adjusting filters or page number.
+        </div>
+        <div
+          v-else-if="
+            !isPageLoading &&
+            displayedData.length > 0 &&
+            currentPage === totalPages &&
+            totalFilteredItems > 0
+          "
           class="text-center text-gray-600 py-4"
         >
           End of results.
         </div>
+      </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div
+      v-if="totalFilteredItems > 0 || isPageLoading"
+      class="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400"
+    >
+      <!-- Items per page selector -->
+      <div class="flex items-center gap-2">
+        <span>Show:</span>
+        <select
+          v-model="itemsPerPage"
+          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-1.5"
+          :disabled="isPageLoading || isFiltering"
+        >
+          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+        <span>entries per page</span>
+      </div>
+
+      <!-- Page Info and Navigation -->
+      <div class="flex items-center gap-2 flex-wrap justify-center">
+        <BaseButton
+          @click="goToFirstPage"
+          :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="First Page"
+        >
+          &laquo; First
+        </BaseButton>
+        <BaseButton
+          @click="goToPreviousPage"
+          :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="Previous Page"
+        >
+          &lsaquo; Prev
+        </BaseButton>
+
+        <span class="flex items-center gap-1.5">
+          Page
+          <input
+            type="number"
+            v-model.number="directPageInput"
+            @change="handleDirectPageInput"
+            @keyup.enter="handleDirectPageInput"
+            min="1"
+            :max="totalPages"
+            class="bg-gray-800 border border-gray-700 text-white w-14 text-center sm:text-sm rounded-md p-1.5 focus:ring-primary-500 focus:border-primary-500"
+            :disabled="isPageLoading || isFiltering || totalPages === 1"
+          />
+          of {{ totalPages.toLocaleString() }}
+        </span>
+
+        <BaseButton
+          @click="goToNextPage"
+          :disabled="!canGoToNextPage || isPageLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="Next Page"
+        >
+          Next &rsaquo;
+        </BaseButton>
+        <BaseButton
+          @click="goToLastPage"
+          :disabled="!canGoToNextPage || currentPage === totalPages || isPageLoading || isFiltering"
+          size="small"
+          variant="secondary"
+          class="px-2.5 py-1.5"
+          title="Last Page"
+        >
+          Last &raquo;
+        </BaseButton>
+      </div>
+
+      <!-- Total Records Display -->
+      <div class="min-w-[150px] text-right md:text-left">
+        <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
+        <span
+          v-if="isPerformingPageLevelSort && totalFilteredItems > itemsPerPage"
+          class="block text-xs text-yellow-400/70"
+          >(Sorted current page)</span
+        >
       </div>
     </div>
   </div>
@@ -346,7 +451,7 @@
 
 <script setup lang="ts">
   import { ref, onMounted, watch, nextTick, computed } from 'vue';
-  import { useIntersectionObserver, useDebounceFn, useTransition } from '@vueuse/core';
+  import { useDebounceFn, useTransition } from '@vueuse/core';
   import {
     Listbox,
     ListboxButton,
@@ -385,10 +490,10 @@
   const usStore = useUsStore(); // Instantiate usStore
   const lergStore = useLergStore(); // Instantiate lergStore
   const { getDB } = useDexieDB(); // Only need getDB now
-  const filteredComparisonData = ref<USPricingComparisonRecord[]>([]);
-  const isLoading = ref<boolean>(false); // Initial loading state
-  const isLoadingMore = ref<boolean>(false); // Loading state for subsequent pages
-  const isFiltering = ref<boolean>(false); // State for loading during filter changes
+  const displayedData = ref<USPricingComparisonRecord[]>([]);
+  const isLoading = ref<boolean>(false); // Initial loading state (for component mount)
+  const isPageLoading = ref<boolean>(false); // Loading state for page changes and initial data load for a filter set
+  const isFiltering = ref<boolean>(false); // State for loading during filter changes (visual overlay)
   const isExporting = ref<boolean>(false); // Export loading state
   const error = ref<string | null>(null);
   const availableStates = ref<string[]>([]); // For state filter dropdown
@@ -396,20 +501,21 @@
   // --- Sorting State ---
   const currentSortKey = ref<SortableUSComparisonColumn['key']>('npanxx'); // Default sort key
   const currentSortDirection = ref<'asc' | 'desc'>('asc'); // Default sort direction
+  const isPerformingPageLevelSort = ref<boolean>(false); // True if sorting is done on the current page data only
   // --- End Sorting State ---
 
   // Filter State Variables
   const searchTerm = ref<string>('');
   const selectedState = ref<string>('');
 
-  // Pagination State
-  const offset = ref<number>(0);
-  const pageSize = 50; // Number of items to load per page
-  const hasMoreData = ref<boolean>(true);
+  // --- Pagination State ---
+  const currentPage = ref(1);
+  const itemsPerPage = ref(50); // Default items per page, matches original pageSize
+  const totalFilteredItems = ref(0);
+  const itemsPerPageOptions = ref([25, 50, 100, 250]);
+  // --- End Pagination State ---
 
-  // Infinite Scroll Trigger Element
-  const loadMoreTriggerRef = ref<HTMLElement | null>(null);
-  const scrollContainerRef = ref<HTMLElement | null>(null); // Ref for the scrollable div
+  const scrollContainerRef = ref<HTMLElement | null>(null); // Ref for the scrollable div (still needed for scroll to top)
 
   // State for accurately calculated averages based on full filtered dataset
   const fullFilteredAverages = ref({
@@ -439,6 +545,21 @@
   const animatedFile2IndetermAvg = useTransition(file2IndetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
 
+  // --- Pagination Computed Properties ---
+  const totalPages = computed(() => {
+    if (totalFilteredItems.value === 0) return 1;
+    return Math.ceil(totalFilteredItems.value / itemsPerPage.value);
+  });
+
+  const canGoToPreviousPage = computed(() => currentPage.value > 1);
+  const canGoToNextPage = computed(() => currentPage.value < totalPages.value);
+
+  const directPageInput = ref<string | number>(currentPage.value);
+  watch(currentPage, (newPage) => {
+    directPageInput.value = newPage;
+  });
+  // --- End Pagination Computed Properties ---
+
   // --- Table Headers ---
   const tableHeaders = computed<SortableUSComparisonColumn[]>(() => [
     { key: 'npanxx', label: 'NPANXX', sortable: true, textAlign: 'text-left' },
@@ -462,7 +583,7 @@
       fileBadge: 'file2',
       rateType: 'Inter',
     },
-    { key: 'diff_inter_pct', label: 'Diff %', sortable: true, textAlign: 'text-left' }, // Sort by actual diff % key
+    { key: 'diff_inter_pct', label: 'Diff %', sortable: true, textAlign: 'text-center' },
     {
       key: 'file1_intra',
       label: 'Intra',
@@ -481,7 +602,7 @@
       fileBadge: 'file2',
       rateType: 'Intra',
     },
-    { key: 'diff_intra_pct', label: 'Diff %', sortable: true, textAlign: 'text-left' }, // Sort by actual diff % key
+    { key: 'diff_intra_pct', label: 'Diff %', sortable: true, textAlign: 'text-center' },
     {
       key: 'file1_indeterm',
       label: 'Indeterm',
@@ -500,7 +621,7 @@
       fileBadge: 'file2',
       rateType: 'Indeterm',
     },
-    { key: 'diff_indeterm_pct', label: 'Diff %', sortable: true, textAlign: 'text-left' }, // Sort by actual diff % key
+    { key: 'diff_indeterm_pct', label: 'Diff %', sortable: true, textAlign: 'text-center' },
   ]);
   // --- End Table Headers ---
 
@@ -520,8 +641,12 @@
     return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
   });
 
-  // --- Computed property for average rates of filtered data ---
-  const filteredAverageRates = computed(() => {
+  // --- Computed property for average rates of filtered data (uses displayedData, which is current page) ---
+  // This computed will now reflect averages of the *current page* if used directly.
+  // The `fullFilteredAverages` ref holds the averages for the *entire filtered dataset*.
+  // The UI for averages already uses `fullFilteredAverages` (via animatedXxxAvg), so this is fine.
+  const averageRatesOfCurrentPage = computed(() => {
+    // Renamed for clarity
     const totals = {
       file1_inter: { sum: 0, count: 0 },
       file1_intra: { sum: 0, count: 0 },
@@ -531,7 +656,8 @@
       file2_indeterm: { sum: 0, count: 0 },
     };
 
-    for (const record of filteredComparisonData.value) {
+    for (const record of displayedData.value) {
+      // Iterate over current page data
       // Helper to safely add to sum and count
       const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
         if (value !== null && value !== undefined && !isNaN(value)) {
@@ -688,14 +814,14 @@
             `[USDetailedComparisonTable] Table '${COMPARISON_TABLE_NAME}' not found in DB '${DBName.US_PRICING_COMPARISON}'. Cannot load data.`
           );
           error.value = `Comparison table '${COMPARISON_TABLE_NAME}' not found. Please generate reports first.`;
-          hasMoreData.value = false; // Stop loading if table doesn't exist
+          totalFilteredItems.value = 0; // No items if table doesn't exist
           return false; // Indicate failure
         }
         return true; // Indicate success
       } catch (err: any) {
         console.error('Error initializing database:', err);
         error.value = err.message || 'Failed to connect to the comparison database';
-        hasMoreData.value = false; // Stop loading on DB error
+        totalFilteredItems.value = 0; // No items on DB error
         return false; // Indicate failure
       }
     }
@@ -833,54 +959,29 @@
     return groups;
   });
 
-  async function loadMoreData() {
-    if (isLoadingMore.value || !hasMoreData.value) return; // Don't load if already loading or no more data
+  // --- New Pagination Data Fetching Logic ---
+  async function fetchPageData(page: number) {
     if (!(await initializeDB()) || !dbInstance) {
-      isLoadingMore.value = false; // Ensure loading state is reset if DB fails
-      return; // Stop if DB init failed
+      isPageLoading.value = false;
+      return;
     }
 
-    isLoadingMore.value = true;
-    error.value = null; // Clear previous errors
+    isPageLoading.value = true;
+    isPerformingPageLevelSort.value = false; // Reset sort status
+    error.value = null;
 
     try {
-      // Build the query dynamically
+      currentPage.value = page;
+      const calculatedOffset = (page - 1) * itemsPerPage.value;
+
       let query: any = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
-      let dbSortApplied = false;
 
-      // Apply main indexed filters first (if any become primarily indexed and directly queriable)
-      // For now, we assume most filtering might be client-side due to complexity or NPANXX search
-
-      // Attempt DB-Level Sorting (on the potentially filtered Table/WhereClause)
-      // This needs to happen BEFORE any .filter(fn) calls if possible.
-      if (typeof query.orderBy === 'function' && currentSortKey.value) {
-        try {
-          query = query.orderBy(currentSortKey.value);
-          if (currentSortDirection.value === 'desc') {
-            query = query.reverse();
-          }
-          dbSortApplied = true;
-          console.log(
-            '[USDetailedComparisonTable] DB sort applied on:',
-            currentSortKey.value,
-            currentSortDirection.value
-          );
-        } catch (dbSortError) {
-          console.warn(
-            '[USDetailedComparisonTable] DB Sort error, falling back to client sort:',
-            dbSortError
-          );
-          dbSortApplied = false; // Ensure fallback if DB sort fails
-        }
-      }
-
-      // Apply client-side filters
+      // Apply client-side filters (as per original logic in loadMoreData)
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
       if (searchTerm.value) {
         const term = searchTerm.value.trim();
         const lowerSearch = term.toLowerCase();
         if (term.length === 6 && !isNaN(Number(term))) {
-          // NPANXX is 6 digits
           currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
         } else if (term.length > 0) {
           currentFilters.push((record: USPricingComparisonRecord) =>
@@ -894,52 +995,75 @@
         );
       }
 
+      let queryForCount = query;
+      if (currentFilters.length > 0) {
+        queryForCount = query.filter((record: USPricingComparisonRecord) =>
+          currentFilters.every((fn) => fn(record))
+        );
+      }
+
+      // Crucially, fetch totalFilteredItems BEFORE pagination and specific sorting for display
+      totalFilteredItems.value = await queryForCount.count();
+
+      // Apply filters to the main query for data fetching
       if (currentFilters.length > 0) {
         query = query.filter((record: USPricingComparisonRecord) =>
           currentFilters.every((fn) => fn(record))
         );
-        // If client-side filters were applied AFTER an attempt at DB sort,
-        // the dbSortApplied flag might be true but the sort is on a pre-filtered set.
-        // For simplicity here, if client filters run, we might lose the full DB sort efficiency
-        // and client-side sort (if !dbSortApplied or if sort key changes) becomes more important.
-        // A more complex setup could try to re-apply orderBy if the collection supports it.
-        console.log('[USDetailedComparisonTable] Client-side filters applied.');
       }
 
-      // Count total records matching filters (only for first page load of a new filter/sort set)
-      let totalFilteredRecords = 0;
-      if (offset.value === 0) {
-        // This condition means it's the first fetch for current filters/sort
+      // Attempt DB-Level Sorting
+      // Diff columns (e.g., diff_inter_pct) are computed client-side and not in Dexie, so DB sort won't work for them.
+      let dbSortApplied = false;
+      const sortKeyIsDirectDBField = ![
+        'diff_inter_pct',
+        'diff_intra_pct',
+        'diff_indeterm_pct',
+      ].includes(currentSortKey.value);
+
+      if (sortKeyIsDirectDBField && typeof query.orderBy === 'function' && currentSortKey.value) {
         try {
-          totalFilteredRecords = await query.clone().count();
-          // console.log("[USDetailedComparisonTable] Total records after filters (and potential DB sort):", totalFilteredRecords);
-        } catch (countError) {
-          console.error('[USDetailedComparisonTable] Error counting records:', countError);
-          // If count fails, proceed without it, but pagination might be less accurate.
+          query = query.orderBy(currentSortKey.value);
+          if (currentSortDirection.value === 'desc') {
+            query = query.reverse();
+          }
+          dbSortApplied = true;
+          console.log(
+            '[USDetailedComparisonTable] DB sort applied on:',
+            currentSortKey.value,
+            currentSortDirection.value
+          );
+        } catch (dbSortError) {
+          console.warn(
+            '[USDetailedComparisonTable] DB Sort error, will fall back to client sort if necessary:',
+            dbSortError
+          );
+          dbSortApplied = false;
         }
       }
 
-      // Apply pagination and fetch data
-      let newData = await query.offset(offset.value).limit(pageSize).toArray();
+      // Apply pagination
+      let newData = await query.offset(calculatedOffset).limit(itemsPerPage.value).toArray();
 
-      // Fallback to Client-Side Sorting if DB Sort wasn't applied (or wasn't on the final filtered set)
-      // and a sort key is active.
+      // Client-Side Sorting if DB sort wasn't applied or for computed columns
       if (!dbSortApplied && currentSortKey.value) {
         console.log(
           '[USDetailedComparisonTable] Applying client-side sort on:',
           currentSortKey.value,
           currentSortDirection.value
         );
+        isPerformingPageLevelSort.value = true; // Indicate page-level sort
         newData.sort((a, b) => {
           const valA = (a as any)[currentSortKey.value!];
           const valB = (b as any)[currentSortKey.value!];
           let comparison = 0;
 
-          // Handle nulls/undefined to sort them consistently (e.g., at the end for asc, beginning for desc)
           if (valA === null || valA === undefined) comparison = 1;
           else if (valB === null || valB === undefined) comparison = -1;
           else if (typeof valA === 'string' && typeof valB === 'string') {
             comparison = valA.localeCompare(valB);
+          } else if (typeof valA === 'number' && typeof valB === 'number') {
+            comparison = valA - valB;
           } else if (valA > valB) comparison = 1;
           else if (valA < valB) comparison = -1;
 
@@ -947,37 +1071,17 @@
         });
       }
 
-      // console.log(
-      //   `[USDetailedComparisonTable] Loaded ${newData.length} records (offset: ${offset.value}, limit: ${pageSize})`
-      // );
-
-      // Replace data if it's the first page load (offset 0), otherwise append
-      if (offset.value === 0) {
-        filteredComparisonData.value = newData;
-        // Update total records count used for display/logic if available from new count method
-        // This part is tricky because totalRecords isn't a defined ref in this component yet.
-        // For now, we rely on hasMoreData for pagination control.
-      } else {
-        filteredComparisonData.value.push(...newData); // Append new data
-      }
-
-      offset.value += newData.length; // Increment offset
-      // Adjust hasMoreData based on whether a full count was possible and if offset < totalFilteredRecords
-      if (offset.value === 0 && totalFilteredRecords > 0) {
-        // First page load with a count
-        hasMoreData.value = offset.value < totalFilteredRecords;
-      } else {
-        // Subsequent pages or no count available
-        hasMoreData.value = newData.length === pageSize;
-      }
+      displayedData.value = newData;
     } catch (err: any) {
-      console.error('Error loading more comparison data:', err);
-      error.value = err.message || 'Failed to load data';
-      hasMoreData.value = false; // Stop trying to load more on error
+      console.error('Error loading page data:', err);
+      error.value = err.message || 'Failed to load data for the page';
+      displayedData.value = []; // Clear data on error
+      totalFilteredItems.value = 0; // Reset count on error
     } finally {
-      isLoadingMore.value = false;
+      isPageLoading.value = false;
     }
   }
+  // --- End New Pagination Data Fetching Logic ---
 
   // New function to calculate averages based on ALL filtered data
   async function calculateFullFilteredAverages() {
@@ -1056,10 +1160,6 @@
         file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
       };
 
-      console.log(
-        '[USDetailedComparisonTable] Full filtered averages calculated:',
-        fullFilteredAverages.value
-      );
     } catch (err: any) {
       console.error('[USDetailedComparisonTable] Error calculating full filtered averages:', err);
       // Reset averages on error
@@ -1077,70 +1177,60 @@
   }
 
   // Function to reset and load initial data (used on mount and filter changes)
-  async function resetAndFetchData() {
+  // Renamed from resetAndFetchData to resetPaginationAndLoad
+  async function resetPaginationAndLoad() {
     // Set loading states
-    isLoading.value = true; // Indicate initial load phase for this filter set
-    isFiltering.value = true; // Indicate filters are being applied
+    // isLoading.value = true; // This was for the very initial mount, isPageLoading covers subsequent loads
+    isFiltering.value = true; // Indicate filters are being applied (for overlay)
+    isPageLoading.value = true; // General loading state for data fetching
 
     // Reset scroll position to top when filters change
     if (scrollContainerRef.value) {
       scrollContainerRef.value.scrollTop = 0;
     }
-    // Reset state before fetching
-    offset.value = 0; // Crucial: reset offset for new filter/sort context
-    // Do NOT clear filteredComparisonData.value here. The loading overlay will cover the stale data,
-    // and loadMoreData (when offset is 0) will replace it with the new data.
-    hasMoreData.value = true; // Assume there's data until proven otherwise
-    error.value = null;
-    isLoadingMore.value = false; // Ensure this is reset
 
-    // Trigger both table data fetch and full average calculation
-    const dataFetchPromise = loadMoreData(); // Load the first page of table data (uses currentSortKey/Direction)
-    const averageCalcPromise = calculateFullFilteredAverages(); // Calculate averages for all filtered data
+    currentPage.value = 1; // Reset to first page
+    directPageInput.value = 1; // Sync direct input
+    error.value = null;
+
+    // Trigger both table data fetch (first page) and full average calculation
+    const dataFetchPromise = fetchPageData(1);
+    const averageCalcPromise = calculateFullFilteredAverages();
 
     try {
       await Promise.all([dataFetchPromise, averageCalcPromise]);
     } catch (err) {
-      console.error('[USDetailedComparisonTable] Error during resetAndFetchData:', err);
+      console.error('[USDetailedComparisonTable] Error during resetPaginationAndLoad:', err);
+      // error ref should be set by individual failing functions
     } finally {
-      isLoading.value = false;
-      isFiltering.value = false;
+      // isLoading.value = false;
+      isFiltering.value = false; // Remove overlay
+      // isPageLoading is set to false inside fetchPageData
     }
   }
 
   // --- Lifecycle and Watchers ---
 
   onMounted(async () => {
-    isLoading.value = true;
+    isLoading.value = true; // For initial component setup (e.g. fetching states)
     await fetchUniqueStates(); // Fetch states first
-    await resetAndFetchData(); // Then load initial data
+    await resetPaginationAndLoad(); // Then load initial data (first page)
     isLoading.value = false;
   });
 
   // Watch for filter changes and reload data (DEBOUNCED)
-  const debouncedResetAndFetch = useDebounceFn(() => {
-    resetAndFetchData();
+  const debouncedResetPaginationAndLoad = useDebounceFn(() => {
+    resetPaginationAndLoad();
   }, 300); // 300ms debounce delay
 
   watch([searchTerm, selectedState], () => {
-    // Call the debounced function instead of the original
-    debouncedResetAndFetch();
+    debouncedResetPaginationAndLoad();
   });
 
-  // Setup Intersection Observer for infinite scrolling
-  useIntersectionObserver(
-    loadMoreTriggerRef,
-    ([{ isIntersecting }]) => {
-      if (isIntersecting && hasMoreData.value && !isLoadingMore.value && !isLoading.value) {
-        console.log('[USDetailedComparisonTable] Load more trigger intersecting, loading data...');
-        loadMoreData();
-      }
-    },
-    {
-      root: scrollContainerRef.value, // Observe within the scrollable container
-      threshold: 0.1, // Trigger when 10% visible
-    }
-  );
+  watch(itemsPerPage, () => {
+    // When items per page changes, go to page 1 and reload.
+    resetPaginationAndLoad(); // This will set currentPage to 1 and fetch data.
+  });
 
   // --- Helper Functions ---
 
@@ -1209,8 +1299,57 @@
       currentSortKey.value = key;
       currentSortDirection.value = 'asc';
     }
-    // After updating sort state, reload data from the beginning
-    await resetAndFetchData();
+    // After updating sort state, reload data from the beginning (page 1)
+    await resetPaginationAndLoad(); // This will set currentPage to 1 and fetch data
   }
   // --- End Sorting Handler ---
+
+  // --- Pagination Action Handlers ---
+  async function goToPage(page: number) {
+    if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+      await fetchPageData(page);
+      if (scrollContainerRef.value) {
+        // Scroll to top of table on page change
+        scrollContainerRef.value.scrollTop = 0;
+      }
+    } else if (page === currentPage.value) {
+      directPageInput.value = currentPage.value; // Reset input if invalid or same page
+    }
+  }
+
+  function goToFirstPage() {
+    if (canGoToPreviousPage.value) {
+      goToPage(1);
+    }
+  }
+
+  function goToPreviousPage() {
+    if (canGoToPreviousPage.value) {
+      goToPage(currentPage.value - 1);
+    }
+  }
+
+  function goToNextPage() {
+    if (canGoToNextPage.value) {
+      goToPage(currentPage.value + 1);
+    }
+  }
+
+  function goToLastPage() {
+    if (canGoToNextPage.value) {
+      goToPage(totalPages.value);
+    }
+  }
+
+  function handleDirectPageInput() {
+    const page = Number(directPageInput.value);
+    if (!isNaN(page) && page >= 1 && page <= totalPages.value) {
+      goToPage(page);
+    } else {
+      // Reset input to current page if invalid
+      directPageInput.value = currentPage.value;
+      // Optionally provide user feedback about invalid page number
+    }
+  }
+  // --- End Pagination Action Handlers ---
 </script>
