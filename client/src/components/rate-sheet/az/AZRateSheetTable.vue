@@ -1,23 +1,15 @@
 <template>
-  <div class="space-y-4">
-    <!-- Effective Date Settings (collapsible) -->
+  <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
     <div class="mb-4">
-      <div
-        @click="toggleEffectiveDateSettings()"
-        class="cursor-pointer bg-gray-900/30 p-2 rounded-t-md"
-      >
+      <div class="bg-gray-900/30 p-2 rounded-t-md">
         <div class="flex items-center gap-2 w-full justify-between">
           <h3 class="text-sm font-medium text-gray-300">Effective Date Settings</h3>
-          <button class="p-1 text-gray-400 hover:text-white rounded-full transition-colors">
-            <ChevronDownIcon
-              class="w-5 h-5 transition-transform"
-              :class="{ 'rotate-180': showEffectiveDateSettings }"
-            />
-          </button>
+          <!-- Removed ChevronDownIcon button -->
         </div>
       </div>
 
-      <div v-if="showEffectiveDateSettings" class="mt-4">
+      <div class="mt-4">
+        <!-- v-if removed, section always visible -->
         <!-- Date settings UI - Very minimal three date pickers in a row -->
         <div class="grid grid-cols-3 gap-4 mb-4">
           <!-- SAME Rate Effective Date -->
@@ -95,7 +87,7 @@
 
     <!-- Filters -->
     <div class="mb-4" :class="{ 'min-h-[16rem]': filteredData.length === 0 }">
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center justify-between mb-4 ">
         <div class="flex items-center gap-4">
           <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
           <span class="text-sm text-gray-400">
@@ -115,9 +107,9 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <!-- Filter -->
-        <div class="w-full">
+        <div class="w-full ">
           <Listbox v-model="filterStatus" as="div">
             <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
               >View Filter</ListboxLabel
@@ -291,15 +283,15 @@
                 <template v-if="header.sortable">
                   <ArrowUpIcon
                     v-if="sortColumnKey === header.key && sortDirection === 'asc'"
-                    class="w-4 h-4 ml-1.5 text-accent"
+                    class="w-3 h-3 ml-1 text-accent"
                   />
                   <ArrowDownIcon
                     v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
-                    class="w-4 h-4 ml-1.5 text-accent"
+                    class="w-3 h-3 ml-1 text-accent"
                   />
                   <ChevronUpDownIcon
                     v-else
-                    class="w-4 h-4 ml-1.5 text-gray-400 hover:text-gray-200"
+                    class="w-3 h-3 ml-1 text-gray-400 hover:text-gray-200"
                   />
                 </template>
               </div>

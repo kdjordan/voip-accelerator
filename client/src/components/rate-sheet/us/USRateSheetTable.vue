@@ -686,27 +686,6 @@
           </tr>
         </tbody>
       </table>
-
-      <!-- Trigger for loading more (only shown when there's data) -->
-      <!-- REMOVE THIS BLOCK -->
-      <!--
-      <div
-        v-if="displayedData.length > 0 && hasMoreData"
-        ref="loadMoreTriggerRef"
-        class="h-10"
-      ></div>
-      -->
-
-      <!-- Loading more indicator (only shown when there's data and loading more) -->
-      <!-- REMOVE THIS BLOCK -->
-      <!--
-      <div v-if="isLoadingMore && displayedData.length > 0" class="text-center text-gray-500 py-4">
-        Loading more...
-      </div>
-      -->
-
-      <!-- End of results message (only shown when there's data and no more to load) -->
-      <!-- UPDATED/SIMPLIFIED (or could be removed if pagination implies end) -->
       <div
         v-if="displayedData.length > 0 && currentPage === totalPages && totalFilteredItems > 0"
         class="text-center text-gray-600 py-4"

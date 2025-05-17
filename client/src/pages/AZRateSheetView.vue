@@ -45,67 +45,69 @@
               <h3 class="text-gray-400">Total Records</h3>
               <div class="text-xl">{{ store.getTotalRecords }}</div>
             </div>
-              <!-- Invalid Rows Status -->
-          <div v-if="store.hasInvalidRows" class="-mx-6 px-6">
-            <div
-              @click="toggleInvalidRowsDetails"
-              class="w-full py-3 cursor-pointer flex items-center justify-between rounded-md"
-            >
-              <div class="flex items-center space-x-2">
-                <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                <span class="text-sm font-medium text-red-400"
-                  >({{ store.getGroupedInvalidRows.length }})</span
-                >
+            <!-- Invalid Rows Status -->
+            <div v-if="store.hasInvalidRows" class="-mx-6 px-6">
+              <div
+                @click="toggleInvalidRowsDetails"
+                class="w-full py-3 cursor-pointer flex items-center justify-between rounded-md"
+              >
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
+                  <span class="text-sm font-medium text-red-400"
+                    >({{ store.getGroupedInvalidRows.length }})</span
+                  >
+                </div>
+                <component
+                  :is="showInvalidRowsDetails ? ChevronUpIcon : ChevronDownIcon"
+                  class="w-4 h-4 text-red-400"
+                />
               </div>
-              <component
-                :is="showInvalidRowsDetails ? ChevronUpIcon : ChevronDownIcon"
-                class="w-4 h-4 text-red-400"
-              />
-            </div>
 
-            <!-- Invalid Rows Content -->
-            <div
-              v-if="showInvalidRowsDetails"
-              class="transition-all duration-300 ease-in-out rounded-b-md mt-1"
-            >
-              <div class="px-2 py-4">
-                <table class="w-full min-w-full border-separate border-spacing-0">
-                  <thead class="bg-gray-800/80">
-                    <tr>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">NAME</th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">PREFIX</th>
-                      <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">RATE</th>
-                    </tr>
-                  </thead>
-                  <tbody class="bg-gray-900/80">
-                    <tr
-                      v-for="(row, index) in store.invalidRows"
-                      :key="index + row.prefix"
-                      class="hover:bg-gray-800/50"
-                    >
-                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                        {{ row.rowNumber }}
-                      </td>
-                      <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                        {{ row.destinationName }}
-                      </td>
-                      <td
-                        class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50"
+              <!-- Invalid Rows Content -->
+              <div
+                v-if="showInvalidRowsDetails"
+                class="transition-all duration-300 ease-in-out rounded-b-md mt-1"
+              >
+                <div class="px-2 py-4">
+                  <table class="w-full min-w-full border-separate border-spacing-0">
+                    <thead class="bg-gray-800/80">
+                      <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">NAME</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
+                          PREFIX
+                        </th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">RATE</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-gray-900/80">
+                      <tr
+                        v-for="(row, index) in store.invalidRows"
+                        :key="index + row.prefix"
+                        class="hover:bg-gray-800/50"
                       >
-                        {{ row.prefix }}
-                      </td>
-                      <td
-                        class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50"
-                      >
-                        {{ row.invalidRate }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
+                          {{ row.rowNumber }}
+                        </td>
+                        <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
+                          {{ row.destinationName }}
+                        </td>
+                        <td
+                          class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50"
+                        >
+                          {{ row.prefix }}
+                        </td>
+                        <td
+                          class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50"
+                        >
+                          {{ row.invalidRate }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
             <div>
               <div class="flex justify-between items-center mt-2">
                 <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
@@ -113,7 +115,7 @@
               </div>
             </div>
           </div>
-        
+
           <!-- Discrepancy Count -->
         </div>
 
@@ -270,7 +272,7 @@
         </div>
 
         <!-- Rate Sheet Table Section - Moved inside this bento box -->
-        <div v-if="isLocallyStored" class="mt-6 border-t border-gray-700/50 pt-6">
+        <div v-if="isLocallyStored" class="mt-6 pt-6">
           <RateSheetTable @update:discrepancy-count="updateDiscrepancyCount" />
         </div>
       </div>
