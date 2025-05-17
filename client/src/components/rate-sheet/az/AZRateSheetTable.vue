@@ -1,8 +1,11 @@
 <template>
   <div class="space-y-4">
     <!-- Effective Date Settings (collapsible) -->
-    <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
-      <div @click="toggleEffectiveDateSettings()" class="cursor-pointer bg-gray-900/30">
+    <div class="mb-4">
+      <div
+        @click="toggleEffectiveDateSettings()"
+        class="cursor-pointer bg-gray-900/30 p-2 rounded-t-md"
+      >
         <div class="flex items-center gap-2 w-full justify-between">
           <h3 class="text-sm font-medium text-gray-300">Effective Date Settings</h3>
           <button class="p-1 text-gray-400 hover:text-white rounded-full transition-colors">
@@ -91,24 +94,23 @@
     </div>
 
     <!-- Filters -->
-    <div
-      class="bg-gray-800 rounded-lg p-4 mb-4"
-      :class="{ 'min-h-[16rem]': filteredData.length === 0 }"
-    >
+    <div class="mb-4" :class="{ 'min-h-[16rem]': filteredData.length === 0 }">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-4">
           <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
-          <span class="text-sm text-info"> Showing {{ filteredData.length }} destinations </span>
+          <span class="text-sm text-gray-400">
+            Showing {{ filteredData.length }} destinations
+          </span>
         </div>
         <div class="flex items-center gap-2">
           <BaseButton
             variant="destructive"
-            size="standard"
+            size="small"
             :icon="TrashIcon"
             @click="handleClearData"
             title="Clear all loaded rate sheet data"
           >
-            Clear Rate Sheet Data
+            Delete Data
           </BaseButton>
         </div>
       </div>

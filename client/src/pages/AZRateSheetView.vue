@@ -17,7 +17,7 @@
       </button>
     </h1>
 
-    <!-- Stats Dashboard -->
+    <!-- Stats Dashboard - Single Unified Bento Box -->
     <div class="bg-gray-800 rounded-lg overflow-hidden">
       <!-- Header Section -->
       <div class="p-6 border-b border-gray-700/50">
@@ -45,18 +45,11 @@
               <h3 class="text-gray-400">Total Records</h3>
               <div class="text-xl">{{ store.getTotalRecords }}</div>
             </div>
-            <div>
-              <div class="flex justify-between items-center mt-2">
-                <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
-                <div class="text-xl">{{ currentDiscrepancyCount }}</div>
-              </div>
-            </div>
-          </div>
-          <!-- Invalid Rows Status -->
+              <!-- Invalid Rows Status -->
           <div v-if="store.hasInvalidRows" class="-mx-6 px-6">
             <div
               @click="toggleInvalidRowsDetails"
-              class="w-full bg-red-900/50 px-6 py-3 border border-red-500/40 cursor-pointer hover:bg-red-900/70 hover:border-red-500/60 transition-colors flex items-center justify-between shadow-sm rounded-md"
+              class="w-full py-3 cursor-pointer flex items-center justify-between rounded-md"
             >
               <div class="flex items-center space-x-2">
                 <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
@@ -73,9 +66,9 @@
             <!-- Invalid Rows Content -->
             <div
               v-if="showInvalidRowsDetails"
-              class="transition-all duration-300 ease-in-out bg-red-900/50 rounded-b-md mt-1"
+              class="transition-all duration-300 ease-in-out rounded-b-md mt-1"
             >
-              <div class="px-6 py-4">
+              <div class="px-2 py-4">
                 <table class="w-full min-w-full border-separate border-spacing-0">
                   <thead class="bg-gray-800/80">
                     <tr>
@@ -113,6 +106,14 @@
               </div>
             </div>
           </div>
+            <div>
+              <div class="flex justify-between items-center mt-2">
+                <h3 class="text-gray-400">Destinations with Rate Discrepancies</h3>
+                <div class="text-xl">{{ currentDiscrepancyCount }}</div>
+              </div>
+            </div>
+          </div>
+        
           <!-- Discrepancy Count -->
         </div>
 
@@ -267,11 +268,11 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Data Table -->
-      <div v-if="isLocallyStored" class="mt-8">
-        <RateSheetTable @update:discrepancy-count="updateDiscrepancyCount" />
+        <!-- Rate Sheet Table Section - Moved inside this bento box -->
+        <div v-if="isLocallyStored" class="mt-6 border-t border-gray-700/50 pt-6">
+          <RateSheetTable @update:discrepancy-count="updateDiscrepancyCount" />
+        </div>
       </div>
     </div>
 
