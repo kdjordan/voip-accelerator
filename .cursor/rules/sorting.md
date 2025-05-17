@@ -57,17 +57,21 @@
     - After updating `currentSortKey` and `currentSortDirection`, `handleSort` calls `resetPaginationAndLoad()` (which internally calls `fetchPageData(1)`).
 
 7.  **Watchers (Accomplished):**
+
     - Watchers for filter changes (search, state, metro) call `resetPaginationAndLoad()` (which internally calls `fetchPageData(1)`).
     - Watcher for `itemsPerPage` calls `resetPaginationAndLoad()`.
 
+8.  **Table Controls and Filter Management Enhancements (Accomplished):**
+    - Corrected "Showing X of Y entries" display to use `totalFilteredItems` for accuracy with pagination and filters.
+    - Relocated "Clear Data" button to the table header row and restyled to `small` variant for better UI layout.
+    - Implemented "Clear All Filters" button with `primary` styling and `XMarkIcon`, providing functionality to reset search, state, and metro filters, and then reload the table.
+
 ### Phase 1.1: Enhancements to Metro Filter in `USRateSheetTable.vue`
 
-1.  **Display Targeted NPAs in Metro Filter Summary:**
+1.  **Display Targeted NPAs in Metro Filter Summary (Accomplished):**
     - **Objective:** Provide users with explicit visibility into which specific NPA (area code) numbers are included in their current metro area selections.
     - **Requirement:** In the metro filter summary section (where "X metro area(s) selected" and "Total Affected Population" are displayed), add a new data point: "Targeted NPAs".
-    - **Display Format:** This should ideally be a comma-separated list of the unique NPA numbers derived from the `areaCodes` property of all `selectedMetros`.
-      - If the list of NPAs becomes very long, consider a more compact representation initially (e.g., "Targeting X NPAs: 212, 213, 310...") with a way to see all of them (e.g., a tooltip on hover, or a small "show more" button that expands a list).
-      - This data point should update reactively as metro selections change.
+    - **Display Format (Accomplished):** Displays as "Targeting X NPAs: 201, 212, 213..." (full list shown, tooltip for overflow if UI were to truncate).
     - **Benefit:** Allows users to confirm exactly which area codes will be affected by rate adjustments before applying them.
 
 ---
@@ -181,10 +185,9 @@ This section details the general UI and state for sortable columns, now in the c
 ## Summary of "To Do" vs. "Accomplished" (Focus on Sorting & Pagination):
 
 - **`USRateSheetTable.vue`:**
-  - **Accomplished:** Transition to pagination (UI, state, data logic in `fetchPageData`), including consistent loading overlay. Integrated refined sorting logic (DB attempt, client fallback for the page) within `fetchPageData`.
+  - **Accomplished:** Transition to pagination (UI, state, data logic in `fetchPageData`), including consistent loading overlay. Integrated refined sorting logic (DB attempt, client fallback for the page) within `fetchPageData`. Implemented "Display Targeted NPAs in Metro Filter Summary" (Phase 1.1). Enhanced table controls with "Clear All Filters" button, relocated/restyled "Clear Data" button, and corrected total entries display.
   - **To Do (Next):**
     1. Implement UI cues/messages for page-level sort (driven by `isPerformingPageLevelSort`).
-    2. Implement "Display Targeted NPAs in Metro Filter Summary" feature.
 - **`USDetailedComparisonTable.vue`:**
   - **To Do:** Transition to pagination. Implement sorting UI and logic (hybrid approach, adapting `USRateSheetTable.vue` learnings).
 - **`AZDetailedComparisonTable.vue`:**
