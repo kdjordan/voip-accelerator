@@ -3,7 +3,6 @@ import { useAzStore } from '@/stores/az-store';
 import { useUsStore } from '@/stores/us-store';
 import { AZService } from '@/services/az.service';
 import { USService } from '@/services/us.service';
-import { USColumnRole } from '@/types/domains/us-types';
 import { USNPAAnalyzerService } from '@/services/us-npa-analyzer.service';
 
 function getStoreNameFromFile(fileName: string): string {

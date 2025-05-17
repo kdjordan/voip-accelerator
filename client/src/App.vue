@@ -129,6 +129,7 @@
     clearApplicationDatabases().catch((err) =>
       console.error('[App Mount] Error clearing databases:', err)
     );
+
     // ---------------------------------------
 
     // --- Reset Store States (non-blocking) ---

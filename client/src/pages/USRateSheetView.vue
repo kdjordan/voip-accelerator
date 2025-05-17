@@ -50,6 +50,40 @@
               </div>
             </div>
           </div>
+              <!-- Invalid Rows Section (NEW) -->
+        <div v-if="store.hasInvalidRateSheetRows" class="my-4">
+          <details class="overflow-hidden group">
+            <summary
+              class="cursor-pointer list-none flex justify-between items-center group-open:bg-red-900/50 transition-colors duration-150 hover:bg-red-900/25"
+            >
+              <span class="font-medium text-red-400">
+                Invalid Rows Not Uploaded : {{ store.invalidRateSheetRows.length }} rows
+              </span>
+              <!-- Chevron icon for visual cue -->
+              <ChevronDownIcon
+                class="w-5 h-5 text-destructive transition-transform duration-150 group-open:rotate-180"
+              />
+            </summary>
+            <div class="p-4 bg-gray-900/30 text-xs">
+              <div class="max-h-60 overflow-y-auto pr-2 space-y-2">
+                <div
+                  v-for="(row, index) in store.invalidRateSheetRows"
+                  :key="index"
+                  class="bg-gray-800/50 p-2 rounded"
+                >
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="font-semibold text-gray-300">Row {{ row.rowIndex }}</span>
+                    <span class="text-red-400 text-xxs italic">{{ row.reason }}</span>
+                  </div>
+                  <div class="text-gray-400 break-all">
+                    NPANXX: {{ row.npanxx || 'N/A' }}, Inter: {{ row.interRate ?? 'N/A' }}, Intra:
+                    {{ row.intraRate ?? 'N/A' }}, Indeterm: {{ row.indetermRate ?? 'N/A' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
 
           <!-- Effective Date - Integrated Picker -->
           <div>
@@ -80,40 +114,7 @@
           </div>
         </div>
 
-        <!-- Invalid Rows Section (NEW) -->
-        <div v-if="store.hasInvalidRateSheetRows" class="my-4">
-          <details class="bg-red-950 border border-red-500/50 rounded-lg overflow-hidden group">
-            <summary
-              class="p-3 cursor-pointer list-none flex justify-between items-center group-open:bg-red-900/50 transition-colors duration-150 hover:bg-red-900/25"
-            >
-              <span class="font-medium text-red-400">
-                Invalid Rows Not Uploaded ({{ store.invalidRateSheetRows.length }})
-              </span>
-              <!-- Chevron icon for visual cue -->
-              <ChevronDownIcon
-                class="w-5 h-5 text-destructive transition-transform duration-150 group-open:rotate-180"
-              />
-            </summary>
-            <div class="p-4 bg-gray-900/30 border-t border-destructive/50 text-xs">
-              <div class="max-h-60 overflow-y-auto pr-2 space-y-2">
-                <div
-                  v-for="(row, index) in store.invalidRateSheetRows"
-                  :key="index"
-                  class="bg-gray-800/50 p-2 rounded"
-                >
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="font-semibold text-gray-300">Row {{ row.rowIndex }}</span>
-                    <span class="text-red-400 text-xxs italic">{{ row.reason }}</span>
-                  </div>
-                  <div class="text-gray-400 break-all">
-                    NPANXX: {{ row.npanxx || 'N/A' }}, Inter: {{ row.interRate ?? 'N/A' }}, Intra:
-                    {{ row.intraRate ?? 'N/A' }}, Indeterm: {{ row.indetermRate ?? 'N/A' }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </details>
-        </div>
+    
 
         <!-- File Upload Section -->
         <div v-if="!isLocallyStored" class="mt-6">

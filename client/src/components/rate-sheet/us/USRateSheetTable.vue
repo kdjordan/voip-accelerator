@@ -590,7 +590,7 @@
     </div>
 
     <!-- Table Container -->
-    <div class="overflow-y-auto max-h-[60vh] relative min-h-[300px]" ref="scrollContainerRef">
+    <div class="overflow-y-auto max-h-[600px] relative min-h-[300px]" ref="scrollContainerRef">
       <!-- Loading overlay for filter changes -->
       <transition
         enter-active-class="transition ease-out duration-200"

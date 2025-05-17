@@ -9,7 +9,7 @@
       <div>
         <!-- File 1 Badge -->
         <div class="mb-2">
-          <BaseBadge size="small" variant="success">{{ fileName1 }}</BaseBadge>
+          <BaseBadge size="small" variant="neutral">{{ fileName1 }}</BaseBadge>
         </div>
         <!-- File 1 Bento Boxes -->
         <div class="grid grid-cols-3 gap-2">
@@ -41,7 +41,7 @@
       <div>
         <!-- File 2 Badge -->
         <div class="mb-2">
-          <BaseBadge size="small" variant="info">{{ fileName2 }}</BaseBadge>
+          <BaseBadge size="small" variant="neutral">{{ fileName2 }}</BaseBadge>
         </div>
         <!-- File 2 Bento Boxes -->
         <div class="grid grid-cols-3 gap-2">
@@ -264,7 +264,7 @@
                   <template v-if="header.customRender">
                     <BaseBadge
                       size="small"
-                      :variant="header.fileBadge === 'file1' ? 'success' : 'info'"
+                      variant="neutral"
                       class="max-w-[100px] truncate"
                       :title="header.fileBadge === 'file1' ? fileName1 : fileName2"
                       >{{ header.fileBadge === 'file1' ? fileName1 : fileName2 }}</BaseBadge
@@ -301,31 +301,31 @@
               <td class="px-4 py-2 text-gray-400">{{ record.stateCode }}</td>
               <td class="px-4 py-2 text-gray-400">{{ record.countryCode }}</td>
               <!-- File 1 Inter Rate -->
-              <td class="px-4 py-2 text-green-300 bg-green-900/50">
+              <td class="px-4 py-2 text-gray-200 bg-gray-600/40">
                 {{ record.file1_inter?.toFixed(6) }}
               </td>
               <!-- File 2 Inter Rate -->
-              <td class="px-4 py-2 text-blue-300 bg-blue-900/50">
+              <td class="px-4 py-2 text-gray-200 bg-gray-700/40">
                 {{ record.file2_inter?.toFixed(6) }}
               </td>
               <!-- Diff Inter % Cell -->
               <td class="px-4 py-2 text-gray-400">{{ record.diff_inter_pct?.toFixed(2) }}%</td>
               <!-- File 1 Intra Rate -->
-              <td class="px-4 py-2 text-green-300 bg-green-900/50">
+              <td class="px-4 py-2 text-gray-200 bg-gray-600/40">
                 {{ record.file1_intra?.toFixed(6) }}
               </td>
               <!-- File 2 Intra Rate -->
-              <td class="px-4 py-2 text-blue-300 bg-blue-900/50">
+              <td class="px-4 py-2 text-gray-200 bg-gray-700/40">
                 {{ record.file2_intra?.toFixed(6) }}
               </td>
               <!-- Diff Intra % Cell -->
               <td class="px-4 py-2 text-gray-400">{{ record.diff_intra_pct?.toFixed(2) }}%</td>
               <!-- File 1 Indeterm Rate -->
-              <td class="px-4 py-2 text-green-300 bg-green-900/50">
+              <td class="px-4 py-2 text-gray-200 bg-gray-600/40">
                 {{ record.file1_indeterm?.toFixed(6) }}
               </td>
               <!-- File 2 Indeterm Rate -->
-              <td class="px-4 py-2 text-blue-300 bg-blue-900/50">
+              <td class="px-4 py-2 text-gray-200 bg-gray-700/40">
                 {{ record.file2_indeterm?.toFixed(6) }}
               </td>
               <!-- Diff Indeterm % Cell -->
@@ -1159,7 +1159,6 @@
         file2_intra_avg: calculateAvg(totals.file2_intra.sum, totals.file2_intra.count),
         file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
       };
-
     } catch (err: any) {
       console.error('[USDetailedComparisonTable] Error calculating full filtered averages:', err);
       // Reset averages on error
