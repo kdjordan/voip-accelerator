@@ -35,7 +35,7 @@
       <!-- Code Statistics Section -->
       <div class="bg-gray-800 p-3 rounded-lg">
         <div class="text-gray-400 mb-2">File Statistics:</div>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-2 gap-2">
           <!-- Unique Destinations -->
           <div class="bg-gray-900 p-2 rounded-lg text-center">
             <div class="text-gray-400 text-sm mb-1">Destinations</div>
@@ -48,13 +48,6 @@
             <div class="text-gray-400 text-sm mb-1">Dial Codes</div>
             <div class="text-lg text-white">
               {{ enhancedReport.codeStats.fileCodeCount?.toLocaleString() || 'N/A' }}
-            </div>
-          </div>
-          <!-- Unique Dest % -->
-          <div class="bg-gray-900 p-2 rounded-lg text-center">
-            <div class="text-gray-400 text-sm mb-1">Unique %</div>
-            <div class="text-lg text-white">
-              {{ enhancedReport.destinationStats.uniqueDestinationPercent?.toFixed(2) ?? 'N/A' }}%
             </div>
           </div>
         </div>

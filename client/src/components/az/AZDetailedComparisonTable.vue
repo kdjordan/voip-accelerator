@@ -204,18 +204,12 @@
                     : 'none'
                 "
               >
-                <div
-                  class="flex items-center"
-                  :class="{
-                    'justify-center': header.textAlign === 'text-center',
-                    'justify-start': header.textAlign === 'text-left' || !header.textAlign,
-                  }"
-                >
+                <div class="flex" :class="getHeaderClasses(header)">
                   <BaseBadge
                     v-if="header.key === 'destName1' || header.key === 'rate1'"
                     size="small"
                     variant="success"
-                    class="mb-1 max-w-[150px] truncate inline-block mr-1"
+                    class="mb-1 max-w-[150px] truncate"
                     :title="fileName1"
                     >{{ fileName1 }}</BaseBadge
                   >
@@ -223,29 +217,32 @@
                     v-if="header.key === 'destName2' || header.key === 'rate2'"
                     size="small"
                     variant="info"
-                    class="mb-1 max-w-[150px] truncate inline-block mr-1"
+                    class="mb-1 max-w-[150px] truncate"
                     :title="fileName2"
                     >{{ fileName2 }}</BaseBadge
                   >
-                  <span>{{
-                    header.label.includes(fileName1) || header.label.includes(fileName2)
-                      ? header.label.split(' (')[0]
-                      : header.label
-                  }}</span>
-                  <template v-if="header.sortable">
-                    <ArrowUpIcon
-                      v-if="sortColumnKey === header.key && sortDirection === 'asc'"
-                      class="w-4 h-4 ml-1.5 text-accent shrink-0"
-                    />
-                    <ArrowDownIcon
-                      v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
-                      class="w-4 h-4 ml-1.5 text-accent shrink-0"
-                    />
-                    <ChevronUpDownIcon
-                      v-else
-                      class="w-4 h-4 ml-1.5 text-gray-400 hover:text-gray-200 shrink-0"
-                    />
-                  </template>
+                  <!-- Wrapper for label and sort icon -->
+                  <div class="flex items-center">
+                    <span>{{
+                      header.label.includes(fileName1) || header.label.includes(fileName2)
+                        ? header.label.split(' (')[0]
+                        : header.label
+                    }}</span>
+                    <template v-if="header.sortable">
+                      <ArrowUpIcon
+                        v-if="sortColumnKey === header.key && sortDirection === 'asc'"
+                        class="w-4 h-4 ml-1.5 text-accent shrink-0"
+                      />
+                      <ArrowDownIcon
+                        v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
+                        class="w-4 h-4 ml-1.5 text-accent shrink-0"
+                      />
+                      <ChevronUpDownIcon
+                        v-else
+                        class="w-4 h-4 ml-1.5 text-gray-400 hover:text-gray-200 shrink-0"
+                      />
+                    </template>
+                  </div>
                 </div>
               </th>
             </tr>
@@ -260,18 +257,7 @@
               <td class="px-4 py-2 text-gray-400 text-center">{{ record.dialCode }}</td>
               <!-- Updated Match Status cell -->
               <td class="px-4 py-2 text-center">
-                <BaseBadge
-                  size="small"
-                  :variant="
-                    record.matchStatus === 'both'
-                      ? 'warning'
-                      : record.matchStatus === 'file1_only'
-                        ? 'success'
-                        : record.matchStatus === 'file2_only'
-                          ? 'info'
-                          : 'neutral'
-                  "
-                >
+                <BaseBadge size="small" variant="neutral">
                   {{ formatMatchStatus(record.matchStatus) }}
                 </BaseBadge>
               </td>
@@ -460,6 +446,28 @@
     }
   }
 
+  // --- Helper function to determine header classes for layout ---
+  function getHeaderClasses(header: SortableAZCompColumn): Record<string, boolean | undefined> {
+    const isBadgeHeader = ['destName1', 'rate1', 'destName2', 'rate2'].includes(
+      header.key as string
+    );
+
+    if (isBadgeHeader) {
+      // For headers with badges, stack them vertically and center items horizontally
+      return {
+        'flex-col': true,
+        'items-center': true,
+      };
+    } else {
+      // For other headers, maintain the original row layout
+      return {
+        'items-center': true,
+        'justify-center': header.textAlign === 'text-center',
+        'justify-start': header.textAlign === 'text-left' || !header.textAlign,
+      };
+    }
+  }
+
   async function fetchData(tableName: string | null, reset = false) {
     if (!tableName || isLoadingMore.value || (!hasMoreData.value && !reset)) {
       if (!tableName && reset) comparisonData.value = []; // Clear data if no table name during reset
@@ -488,10 +496,6 @@
         filters
       );
 
-      console.log(
-        `[AZDetailedComparisonTable] Loaded ${newData.length} records from ${tableName} (offset: ${offset.value})`
-      );
-
       if (reset) {
         comparisonData.value = newData;
       } else {
@@ -511,7 +515,6 @@
   }
 
   async function resetAndFetchData() {
-    console.log('[AZDetailedComparisonTable] Resetting and fetching data...');
     if (scrollContainerRef.value) {
       scrollContainerRef.value.scrollTop = 0;
     }
@@ -530,7 +533,6 @@
   watch(
     () => azStore.getDetailedComparisonTableName,
     (newTableName) => {
-      console.log(`[AZDetailedComparisonTable] Table name changed to: ${newTableName}`);
       if (newTableName !== currentTableName.value) {
         currentTableName.value = newTableName;
         // Reset sort when table changes, or decide if it should persist
@@ -558,9 +560,6 @@
         !isLoading.value &&
         currentTableName.value
       ) {
-        console.log(
-          '[AZDetailedComparisonTable] Load more trigger intersecting, loading next page...'
-        );
         fetchData(currentTableName.value);
       }
     },

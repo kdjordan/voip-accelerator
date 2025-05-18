@@ -20,12 +20,6 @@
                     <td class="py-2 text-gray-400">Total Destinations:</td>
                     <td class="py-2 text-right">{{ statsAz1.totalDestinations }}</td>
                   </tr>
-                  <tr :class="{ 'border-b border-gray-700': hasInvalidRows(fileNameAz1) }">
-                    <td class="py-2 font-medium text-gray-400">Unique Destinations %:</td>
-                    <td class="py-2 text-right">
-                      {{ statsAz1.uniqueDestinationsPercentage.toFixed(2) }}%
-                    </td>
-                  </tr>
                 </tbody>
               </table>
 
@@ -54,12 +48,6 @@
                   <tr class="border-b border-gray-700">
                     <td class="py-2 text-gray-400">Total Destinations:</td>
                     <td class="py-2 text-right">{{ statsAz2.totalDestinations }}</td>
-                  </tr>
-                  <tr :class="{ 'border-b border-gray-700': hasInvalidRows(fileNameAz2) }">
-                    <td class="py-2 font-medium text-gray-400">Unique Destinations %:</td>
-                    <td class="py-2 text-right">
-                      {{ statsAz2.uniqueDestinationsPercentage.toFixed(2) }}%
-                    </td>
                   </tr>
                 </tbody>
               </table>
