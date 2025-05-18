@@ -319,6 +319,7 @@
         if (updatedGroupedData && updatedGroupedData.length > 0) {
           store.updateGroupedDataEffectiveDates(updatedGroupedData);
         }
+        store.setEffectiveDateSettings({ ...effectiveDateSettings.value });
         const processingTime = Math.floor((Date.now() - processingStartTime.value) / 1000);
         processingStatus.value = `Complete! ${recordsUpdatedCount} records updated in ${processingTime}s`;
         processingPhase.value = 'finalizing';
