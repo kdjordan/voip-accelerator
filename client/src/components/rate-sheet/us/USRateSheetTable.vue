@@ -573,7 +573,7 @@
               isApplyingAdjustment ||
               adjustmentValue === null ||
               adjustmentValue <= 0 ||
-              totalRecords === 0
+              totalFilteredItems === 0
             "
             @click="handleApplyAdjustment"
             title="Apply adjustment to all currently filtered records"
@@ -1684,6 +1684,13 @@
           (record: USRateSheetEntry) => record.stateCode === selectedState.value
         );
         filtersApplied.push(`Region equals '${selectedState.value}'`);
+      }
+
+      // Apply Metro Area Filter (if active)
+      if (metroAreaCodesToFilter.value.length > 0) {
+        const npaSet = new Set(metroAreaCodesToFilter.value);
+        collection = collection.filter((record: USRateSheetEntry) => npaSet.has(record.npa));
+        filtersApplied.push(`Metro area NPAs: ${metroAreaCodesToFilter.value.join(', ')}`);
       }
 
       const filteredRecords = await collection.toArray();

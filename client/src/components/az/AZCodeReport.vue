@@ -30,71 +30,12 @@
               </table>
 
               <!-- Invalid Rows Section for File 1 -->
-              <div v-if="hasInvalidRows(fileNameAz1)" class="mt-4">
-                <div
-                  @click="toggleInvalidRowsDetails('az1')"
-                  class="flex items-center justify-between w-full px-6 py-3 rounded-md cursor-pointer bg-red-900/50 border border-red-500/40 hover:bg-red-900/70 hover:border-red-500/60 transition-colors shadow-sm"
-                >
-                  <div class="flex items-center space-x-2">
-                    <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                    <span class="text-sm font-medium text-red-400"
-                      >({{ getInvalidRowsForFile(fileNameAz1).length }})</span
-                    >
-                  </div>
-                  <ChevronDownIcon
-                    :class="{ 'transform rotate-180': expandedInvalidSections.az1 }"
-                    class="w-4 h-4 text-red-400"
-                  />
-                </div>
-                <div
-                  v-if="expandedInvalidSections.az1"
-                  class="mt-1 transition-all duration-300 ease-in-out bg-red-900/50 rounded-b-md overflow-hidden border-x border-b border-red-500/40"
-                >
-                  <div class="px-6 py-4">
-                    <!-- Invalid Rows Table for File 1 -->
-                    <table class="w-full min-w-full border-separate border-spacing-0">
-                      <thead class="bg-gray-800/80">
-                        <tr>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                            NAME
-                          </th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                            PREFIX
-                          </th>
-                          <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">
-                            RATE
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody class="bg-gray-900/80">
-                        <tr
-                          v-for="row in getInvalidRowsForFile(fileNameAz1)"
-                          :key="`az1-${row.rowIndex}-${row.dialCode}`"
-                          class="hover:bg-gray-800/50"
-                        >
-                          <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                            {{ row.rowIndex }}
-                          </td>
-                          <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                            {{ row.destName || 'Unknown' }}
-                          </td>
-                          <td
-                            class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50"
-                          >
-                            {{ row.dialCode || 'No Code' }}
-                          </td>
-                          <td
-                            class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50"
-                          >
-                            {{ row.invalidRate }}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <InvalidRows
+                v-if="hasInvalidRows(fileNameAz1)"
+                :items="invalidRowsFile1"
+                title="Invalid Rows Not Uploaded"
+                class="mt-4 -mx-6"
+              />
             </div>
           </div>
 
@@ -123,71 +64,12 @@
                 </tbody>
               </table>
               <!-- Invalid Rows Section for File 2 -->
-              <div v-if="hasInvalidRows(fileNameAz2)" class="mt-4">
-                <div
-                  @click="toggleInvalidRowsDetails('az2')"
-                  class="flex items-center justify-between w-full px-6 py-3 rounded-md cursor-pointer bg-red-900/50 border border-red-500/40 hover:bg-red-900/70 hover:border-red-500/60 transition-colors shadow-sm"
-                >
-                  <div class="flex items-center space-x-2">
-                    <h3 class="text-sm font-medium text-red-400">Invalid Rows Not Uploaded</h3>
-                    <span class="text-sm font-medium text-red-400"
-                      >({{ getInvalidRowsForFile(fileNameAz2).length }})</span
-                    >
-                  </div>
-                  <ChevronDownIcon
-                    :class="{ 'transform rotate-180': expandedInvalidSections.az2 }"
-                    class="w-4 h-4 text-red-400"
-                  />
-                </div>
-                <div
-                  v-if="expandedInvalidSections.az2"
-                  class="mt-1 transition-all duration-300 ease-in-out bg-red-900/50 rounded-b-md overflow-hidden border-x border-b border-red-500/40"
-                >
-                  <div class="px-6 py-4">
-                    <!-- Invalid Rows Table for File 2 -->
-                    <table class="w-full min-w-full border-separate border-spacing-0">
-                      <thead class="bg-gray-800/80">
-                        <tr>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">ROW</th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                            NAME
-                          </th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-300">
-                            PREFIX
-                          </th>
-                          <th class="px-4 py-2 text-right text-xs font-medium text-gray-300">
-                            RATE
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody class="bg-gray-900/80">
-                        <tr
-                          v-for="row in getInvalidRowsForFile(fileNameAz2)"
-                          :key="`az2-${row.rowIndex}-${row.dialCode}`"
-                          class="hover:bg-gray-800/50"
-                        >
-                          <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                            {{ row.rowIndex }}
-                          </td>
-                          <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
-                            {{ row.destName || 'Unknown' }}
-                          </td>
-                          <td
-                            class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50"
-                          >
-                            {{ row.dialCode || 'No Code' }}
-                          </td>
-                          <td
-                            class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50"
-                          >
-                            {{ row.invalidRate }}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <InvalidRows
+                v-if="hasInvalidRows(fileNameAz2)"
+                :items="invalidRowsFile2"
+                title="Invalid Rows Not Uploaded"
+                class="mt-4 -mx-6"
+              />
             </div>
           </div>
         </div>
@@ -246,6 +128,8 @@
   import { ref, reactive, computed } from 'vue';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
   import { useAzStore } from '@/stores/az-store';
+  import InvalidRows from '@/components/shared/InvalidRows.vue';
+  import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   // Remove the props definition, get data from store directly
   // const props = defineProps<{
@@ -310,6 +194,27 @@
   function isDestExpanded(componentId: ComponentId, destName: string): boolean {
     return expandedDestinations[componentId].has(destName);
   }
+
+  // --- Computed properties for InvalidRows component ---
+  const invalidRowsFile1 = computed<InvalidRowEntry[]>(() => {
+    if (!fileNameAz1.value) return [];
+    return getInvalidRowsForFile(fileNameAz1.value).map((row) => ({
+      rowNumber: row.rowIndex,
+      name: row.destName || 'Unknown',
+      identifier: row.dialCode || 'No Code',
+      problemValue: String(row.invalidRate),
+    }));
+  });
+
+  const invalidRowsFile2 = computed<InvalidRowEntry[]>(() => {
+    if (!fileNameAz2.value) return [];
+    return getInvalidRowsForFile(fileNameAz2.value).map((row) => ({
+      rowNumber: row.rowIndex,
+      name: row.destName || 'Unknown',
+      identifier: row.dialCode || 'No Code',
+      problemValue: String(row.invalidRate),
+    }));
+  });
 
   // --- Removed functions relying on props.report ---
   // function getFileName(file: FileKey): string {

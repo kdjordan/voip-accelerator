@@ -193,7 +193,7 @@
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold">Database Tables</h2>
           <div class="text-xs text-accent flex items-center gap-2">
-            <span class="text-green-400">Live</span>
+            <BaseBadge size="small" variant="success">Live</BaseBadge>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -212,13 +212,13 @@
                 :key="`${table.name}-${table.storage}`"
                 class="border-b border-gray-700/30 hover:bg-gray-700/20"
               >
-                <td class="py-3 pl-2 font-mono text-accent">{{ table.name }}</td>
+                <td class="py-3 pl-2 font-mono text-fbWhite">{{ table.name }}</td>
                 <td class="py-3">
-                  <BaseBadge size="small" variant="info">
+                  <BaseBadge size="small" variant="neutral">
                     {{ 'IndexedDB' }}
                   </BaseBadge>
                 </td>
-                <td class="py-3 text-green-400">{{ table.count.toLocaleString() }}</td>
+                <td class="py-3 text-fbWhite">{{ table.count.toLocaleString() }}</td>
                 <td class="py-3">
                   <BaseBadge size="small" :variant="getModuleBadgeVariant(table.name)">
                     {{ getModuleForTable(table.name) }}
@@ -238,8 +238,7 @@
         class="bg-gray-800 rounded-lg p-6 flex justify-center items-center h-36 border border-gray-700/50"
       >
         <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
-          <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-          <p class="text-sm text-accent">Loading database information...</p>
+          <ArrowPathIcon class="w-8 h-8 text-fbWhite animate-spin" />
         </div>
       </div>
       <div
@@ -523,21 +522,22 @@
   // Helper function to map module name to badge variant
   function getModuleBadgeVariant(tableName: string): BaseBadgeProps['variant'] {
     const module = getModuleForTable(tableName);
-    switch (module) {
-      case 'AZ':
-        return 'info';
-      case 'US':
-        return 'success';
-      case 'LERG':
-        return 'warning';
-      case 'Rate Sheet':
-        return 'violet';
-      case 'US Comparison':
-        return 'accent';
-      case 'Other':
-      default:
-        return 'neutral';
-    }
+    return 'neutral'; // Always return neutral
+    // switch (module) {
+    //   case 'AZ':
+    //     return 'info';
+    //   case 'US':
+    //     return 'success';
+    //   case 'LERG':
+    //     return 'warning';
+    //   case 'Rate Sheet':
+    //     return 'violet';
+    //   case 'US Comparison':
+    //     return 'accent';
+    //   case 'Other':
+    //   default:
+    //     return 'neutral';
+    // }
   }
 
   // Stores for accessing memory (Pinia) data and triggering updates

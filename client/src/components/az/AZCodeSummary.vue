@@ -6,7 +6,7 @@
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
       <div class="flex items-center space-x-2">
         <!-- Use BaseBadge for filename -->
-        <BaseBadge size="small" variant="info">
+        <BaseBadge size="small" variant="neutral">
           {{ enhancedReport.fileInfo.fileName }}
         </BaseBadge>
         <!-- Use BaseButton for Remove -->
@@ -135,6 +135,12 @@
                 <div v-else class="text-gray-500 italic ml-2">
                   No specific breakouts found in file for this country.
                 </div>
+                <InvalidRows
+                  v-if="country.invalidRows?.length"
+                  :items="country.invalidRows"
+                  title="Country-Specific Invalid Entries"
+                  class="mt-2"
+                />
               </div>
             </details>
           </div>
@@ -147,6 +153,12 @@
           </div>
         </div>
       </div>
+      <InvalidRows
+        v-if="enhancedReport.fileInfo?.invalidRows?.length"
+        :items="enhancedReport.fileInfo.invalidRows"
+        title="File-Level Invalid Entries"
+        class="mt-3"
+      />
     </div>
   </div>
   <div v-else class="mt-8 pt-8 border-t border-gray-700/50 text-center text-gray-500">
@@ -155,100 +167,102 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useAzStore } from '@/stores/az-store';
-import type { AZEnhancedCodeReport, AZCountryBreakdown } from '@/types/domains/az-types';
-import { TrashIcon } from '@heroicons/vue/24/outline';
-import BaseBadge from '@/components/shared/BaseBadge.vue';
-import BaseButton from '@/components/shared/BaseButton.vue';
+  import { computed, ref } from 'vue';
+  import { useAzStore } from '@/stores/az-store';
+  import type { AZEnhancedCodeReport, AZCountryBreakdown } from '@/types/domains/az-types';
+  import { TrashIcon } from '@heroicons/vue/24/outline';
+  import BaseBadge from '@/components/shared/BaseBadge.vue';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import InvalidRows from '@/components/shared/InvalidRows.vue';
+  import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
-// Define props
-const props = defineProps<{
-  componentId: string; // e.g., 'az1' or 'az2'
-  onRemove?: () => void; // Optional remove handler prop
-}>();
+  // Define props
+  const props = defineProps<{
+    componentId: string; // e.g., 'az1' or 'az2'
+    onRemove?: () => void; // Optional remove handler prop
+  }>();
 
-const azStore = useAzStore();
+  const azStore = useAzStore();
 
-// Get the filename associated with this component instance
-const fileName = computed<string>(() => {
-  return azStore.getFileNameByComponent(props.componentId);
-});
-
-// Get the enhanced report data from the store based on the filename
-const enhancedReport = computed<AZEnhancedCodeReport | null>(() => {
-  const name = fileName.value;
-  // Ensure we have a filename before trying to fetch the report
-  if (!name) {
-    console.warn(`[AZCodeSummary] No filename found for componentId: ${props.componentId}`);
-    return null;
-  }
-  const report = azStore.getEnhancedReportByFile(name);
-  if (!report) {
-    // console.log(`[AZCodeSummary] Report not yet available for: ${name}`);
-  }
-  return report;
-});
-
-// Search functionality state
-const searchQuery = ref('');
-
-// Computed property for filtered countries - updated search logic
-const filteredCountries = computed<AZCountryBreakdown[]>(() => {
-  if (!enhancedReport.value?.countries) return [];
-
-  const query = searchQuery.value.toLowerCase().trim();
-  if (!query) return enhancedReport.value.countries;
-
-  // First pass: Find all countries that potentially match on any field
-  const potentiallyRelevantCountries = enhancedReport.value.countries.filter((country) => {
-    // Check country name and ISO code
-    if (
-      country.countryName?.toLowerCase().includes(query) ||
-      country.isoCode?.toLowerCase().includes(query)
-    ) {
-      return true;
-    }
-    // Check within breakouts (name or any dial code)
-    if (country.breakouts) {
-      for (const breakout of country.breakouts) {
-        if (breakout.breakoutName?.toLowerCase().includes(query)) {
-          return true;
-        }
-        if (breakout.dialCodes?.some((code) => code.includes(query))) {
-          return true;
-        }
-      }
-    }
-    return false;
+  // Get the filename associated with this component instance
+  const fileName = computed<string>(() => {
+    return azStore.getFileNameByComponent(props.componentId);
   });
 
-  // Check if the query looks like a dial code search (contains digits)
-  const isDialCodeQuery = /\d/.test(query) && query.length >= 2; // Adjust length check if needed
+  // Get the enhanced report data from the store based on the filename
+  const enhancedReport = computed<AZEnhancedCodeReport | null>(() => {
+    const name = fileName.value;
+    // Ensure we have a filename before trying to fetch the report
+    if (!name) {
+      console.warn(`[AZCodeSummary] No filename found for componentId: ${props.componentId}`);
+      return null;
+    }
+    const report = azStore.getEnhancedReportByFile(name);
+    if (!report) {
+      // console.log(`[AZCodeSummary] Report not yet available for: ${name}`);
+    }
+    return report;
+  });
 
-  if (!isDialCodeQuery) {
-    // If not a dial code query, return the broadly matched countries
-    return potentiallyRelevantCountries;
-  } else {
-    // If it looks like a dial code search, refine the results:
-    // 1. Map each relevant country to a new object with only matching breakouts
-    // 2. Filter out countries that have no breakouts left after filtering by dial code
-    const results = potentiallyRelevantCountries
-      .map((country) => {
-        const matchingBreakouts =
-          country.breakouts?.filter((b) =>
-            // Match only if the dial code STARTS WITH the query
-            b.dialCodes.some((c) => c.startsWith(query))
-          ) || [];
-        return {
-          ...country,
-          breakouts: matchingBreakouts,
-          uniqueBreakoutCount: matchingBreakouts.length, // Update count
-        };
-      })
-      .filter((country) => country.breakouts.length > 0); // Remove countries with no matching breakouts
+  // Search functionality state
+  const searchQuery = ref('');
 
-    return results;
-  }
-});
+  // Computed property for filtered countries - updated search logic
+  const filteredCountries = computed<AZCountryBreakdown[]>(() => {
+    if (!enhancedReport.value?.countries) return [];
+
+    const query = searchQuery.value.toLowerCase().trim();
+    if (!query) return enhancedReport.value.countries;
+
+    // First pass: Find all countries that potentially match on any field
+    const potentiallyRelevantCountries = enhancedReport.value.countries.filter((country) => {
+      // Check country name and ISO code
+      if (
+        country.countryName?.toLowerCase().includes(query) ||
+        country.isoCode?.toLowerCase().includes(query)
+      ) {
+        return true;
+      }
+      // Check within breakouts (name or any dial code)
+      if (country.breakouts) {
+        for (const breakout of country.breakouts) {
+          if (breakout.breakoutName?.toLowerCase().includes(query)) {
+            return true;
+          }
+          if (breakout.dialCodes?.some((code) => code.includes(query))) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+
+    // Check if the query looks like a dial code search (contains digits)
+    const isDialCodeQuery = /\d/.test(query) && query.length >= 2; // Adjust length check if needed
+
+    if (!isDialCodeQuery) {
+      // If not a dial code query, return the broadly matched countries
+      return potentiallyRelevantCountries;
+    } else {
+      // If it looks like a dial code search, refine the results:
+      // 1. Map each relevant country to a new object with only matching breakouts
+      // 2. Filter out countries that have no breakouts left after filtering by dial code
+      const results = potentiallyRelevantCountries
+        .map((country) => {
+          const matchingBreakouts =
+            country.breakouts?.filter((b) =>
+              // Match only if the dial code STARTS WITH the query
+              b.dialCodes.some((c) => c.startsWith(query))
+            ) || [];
+          return {
+            ...country,
+            breakouts: matchingBreakouts,
+            uniqueBreakoutCount: matchingBreakouts.length, // Update count
+          };
+        })
+        .filter((country) => country.breakouts.length > 0); // Remove countries with no matching breakouts
+
+      return results;
+    }
+  });
 </script>
