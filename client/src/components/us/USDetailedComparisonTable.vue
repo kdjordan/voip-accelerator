@@ -173,6 +173,120 @@
         </Listbox>
       </div>
 
+      <!-- Metro Area Filter Dropdown -->
+      <div class="w-64">
+        <label for="metro-filter-button" class="block text-sm font-medium text-gray-400 mb-1"
+          >Filter by Metro Area</label
+        >
+        <Menu as="div" class="relative inline-block text-left w-full">
+          <div>
+            <MenuButton
+              id="metro-filter-button"
+              class="inline-flex w-full justify-between items-center rounded-lg bg-gray-800 py-2.5 pl-3 pr-2 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700 text-white"
+              :disabled="isLoading || isFiltering || isPageLoading"
+            >
+              <span class="block truncate">{{ metroButtonLabel }}</span>
+              <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </MenuButton>
+          </div>
+          <transition
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <MenuItems
+              class="absolute z-30 mt-1 max-h-96 w-full origin-top-right overflow-hidden rounded-md bg-gray-800 shadow-lg ring-1 ring-black/5 focus:outline-none flex flex-col"
+            >
+              <div class="p-2 border-b border-gray-700">
+                <div class="relative">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    v-model="metroSearchQuery"
+                    type="text"
+                    placeholder="Search metro areas..."
+                    class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <button
+                    v-if="metroSearchQuery"
+                    @click="clearMetroSearch"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
+                    aria-label="Clear search"
+                  >
+                    <XCircleIcon class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div class="p-2 border-b border-gray-700 flex justify-between items-center">
+                <button
+                  @click="handleSelectAllMetros"
+                  class="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
+                  :disabled="filteredMetroOptions.length === 0"
+                >
+                  {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select Visible' }}
+                </button>
+                <button
+                  v-if="selectedMetros.length > 0"
+                  @click="clearAllSelectedMetros"
+                  class="text-xs text-gray-400 hover:text-gray-200"
+                >
+                  Clear All Selected ({{ selectedMetros.length }})
+                </button>
+              </div>
+              <div class="overflow-y-auto flex-grow p-1 max-h-60">
+                <MenuItem
+                  v-for="metro in filteredMetroOptions"
+                  :key="metro.key"
+                  v-slot="{ active }"
+                  as="template"
+                >
+                  <li
+                    @click="() => toggleMetroSelection(metro)"
+                    :class="[
+                      active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                      'relative cursor-default select-none py-2 pl-10 pr-4 flex justify-between items-center',
+                    ]"
+                  >
+                    <div class="flex items-center">
+                      <span
+                        :class="[
+                          isMetroSelected(metro) ? 'text-primary-400' : 'text-gray-500',
+                          'absolute inset-y-0 left-0 flex items-center pl-3',
+                        ]"
+                      >
+                        <CheckIcon
+                          class="h-5 w-5"
+                          :class="isMetroSelected(metro) ? 'opacity-100' : 'opacity-0'"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span
+                        :class="[
+                          isMetroSelected(metro) ? 'font-semibold' : 'font-normal',
+                          'block truncate',
+                        ]"
+                      >
+                        {{ metro.displayName }}
+                      </span>
+                    </div>
+                    <span class="text-xs text-gray-500">{{
+                      formatPopulation(metro.population)
+                    }}</span>
+                  </li>
+                </MenuItem>
+                <div
+                  v-if="filteredMetroOptions.length === 0 && metroSearchQuery"
+                  class="px-4 py-2 text-sm text-gray-500 text-center"
+                >
+                  No metro areas match your search.
+                </div>
+              </div>
+            </MenuItems>
+          </transition>
+        </Menu>
+      </div>
+
       <!-- Download CSV Button -->
       <div class="ml-auto self-end">
         <BaseButton
@@ -192,6 +306,51 @@
             Export Filtered Data
           </span>
         </BaseButton>
+      </div>
+    </div>
+
+    <!-- Selected Metros Chips Display & Summary -->
+    <div v-if="selectedMetros.length > 0" class="my-3 space-y-3">
+      <div class="flex flex-wrap gap-2 items-center px-1">
+        <span class="text-xs text-gray-400 mr-1">Selected Metros:</span>
+        <span
+          v-for="metro in selectedMetros"
+          :key="metro.key"
+          class="inline-flex items-center gap-x-1.5 rounded-md bg-gray-700 px-2 py-1 text-xs font-medium text-gray-200 ring-1 ring-inset ring-gray-600"
+        >
+          {{ metro.displayName }}
+          <button
+            @click="removeSelectedMetro(metro)"
+            type="button"
+            class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+          >
+            <span class="sr-only">Remove</span>
+            <XCircleIcon
+              class="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-200"
+              aria-hidden="true"
+            />
+          </button>
+        </span>
+      </div>
+      <div class="bg-gray-800/60 p-3 rounded-lg text-sm">
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-gray-300">
+            <span class="font-semibold">{{ selectedMetros.length }}</span> metro area(s) selected.
+          </p>
+          <p class="text-gray-300">
+            Total Affected Population:
+            <span class="font-semibold text-white">{{
+              totalSelectedPopulation.toLocaleString()
+            }}</span>
+          </p>
+        </div>
+        <div
+          v-if="targetedNPAsDisplay.summary"
+          class="text-xs text-gray-400 pt-2 border-t border-gray-700/50"
+          :title="targetedNPAsDisplay.fullList"
+        >
+          {{ targetedNPAsDisplay.summary }}
+        </div>
       </div>
     </div>
 
@@ -458,8 +617,17 @@
     ListboxLabel,
     ListboxOptions,
     ListboxOption,
+    Menu,
+    MenuButton,
+    MenuItems,
+    MenuItem,
   } from '@headlessui/vue';
-  import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
+  import {
+    CheckIcon,
+    ChevronUpDownIcon,
+    MagnifyingGlassIcon,
+    XCircleIcon,
+  } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
   import { useLergStore } from '@/stores/lerg-store'; // Import lergStore
   import useDexieDB from '@/composables/useDexieDB';
@@ -471,6 +639,7 @@
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
   import BaseButton from '@/components/shared/BaseButton.vue'; // Import BaseButton
   import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/20/solid';
+  import { metroAreaOptions, type MetroAreaOption } from '@/types/constants/metro-population';
 
   // Type for sortable column definition
   interface SortableUSComparisonColumn {
@@ -498,6 +667,11 @@
   const error = ref<string | null>(null);
   const availableStates = ref<string[]>([]); // For state filter dropdown
 
+  // --- Metro Filter State --- START ---
+  const selectedMetros = ref<MetroAreaOption[]>([]);
+  const metroSearchQuery = ref('');
+  // --- Metro Filter State --- END ---
+
   // --- Sorting State ---
   const currentSortKey = ref<SortableUSComparisonColumn['key']>('npanxx'); // Default sort key
   const currentSortDirection = ref<'asc' | 'desc'>('asc'); // Default sort direction
@@ -507,6 +681,52 @@
   // Filter State Variables
   const searchTerm = ref<string>('');
   const selectedState = ref<string>('');
+
+  // --- Metro Filter Computed Properties --- START ---
+  const metroButtonLabel = computed(() => {
+    if (selectedMetros.value.length === 0) return 'All Metro Areas';
+    if (selectedMetros.value.length === 1) return selectedMetros.value[0].displayName;
+    return `${selectedMetros.value.length} Metro Areas Selected`;
+  });
+
+  const filteredMetroOptions = computed(() => {
+    if (!metroSearchQuery.value) {
+      return metroAreaOptions;
+    }
+    return metroAreaOptions.filter((metro) =>
+      metro.displayName.toLowerCase().includes(metroSearchQuery.value.toLowerCase())
+    );
+  });
+
+  const totalSelectedPopulation = computed(() => {
+    return selectedMetros.value.reduce((sum, metro) => sum + metro.population, 0);
+  });
+
+  const targetedNPAsDisplay = computed(() => {
+    if (selectedMetros.value.length === 0) {
+      return { summary: '', fullList: '' };
+    }
+    const allNPAs = [...new Set(selectedMetros.value.flatMap((metro) => metro.areaCodes))].sort();
+    const npaListString = allNPAs.join(', ');
+    if (allNPAs.length === 0) {
+      return { summary: '', fullList: '' };
+    }
+    const summaryText = `Targeting ${allNPAs.length} NPAs: ${npaListString}`;
+    return { summary: summaryText, fullList: npaListString };
+  });
+
+  const areAllMetrosSelected = computed(() => {
+    const optionsToConsider = filteredMetroOptions.value;
+    if (optionsToConsider.length === 0) return false;
+    return optionsToConsider.every((metro) =>
+      selectedMetros.value.some((sm) => sm.key === metro.key)
+    );
+  });
+
+  const metroAreaCodesToFilter = computed<string[]>(() => {
+    return [...new Set(selectedMetros.value.flatMap((metro) => metro.areaCodes))];
+  });
+  // --- Metro Filter Computed Properties --- END ---
 
   // --- Pagination State ---
   const currentPage = ref(1);
@@ -706,100 +926,109 @@
       // 1. Build the query dynamically to get ALL filtered data
       let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
-      // Apply filters
+      // Apply client-side filters
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
+
       if (searchTerm.value) {
         const term = searchTerm.value.trim();
-        if (term.length === 6) {
+        const lowerSearch = term.toLowerCase();
+        if (term.length === 6 && !isNaN(Number(term))) {
           currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
-        } else {
-          const lowerSearch = term.toLowerCase();
+        } else if (term.length > 0) {
           currentFilters.push((record: USPricingComparisonRecord) =>
             record.npanxx.toLowerCase().startsWith(lowerSearch)
           );
         }
       }
+
       if (selectedState.value) {
         currentFilters.push(
           (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
         );
       }
 
-      // Fetch ALL data matching filters by chaining
-      let filteredQuery = query.toCollection(); // Start with a collection
+      if (metroAreaCodesToFilter.value.length > 0) {
+        const npaSet = new Set(metroAreaCodesToFilter.value);
+        currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
+      }
+
+      let queryForCount = query.toCollection(); // Start with a full collection for counting
       if (currentFilters.length > 0) {
-        filteredQuery = query.filter((record) => currentFilters.every((fn) => fn(record)));
+        queryForCount = queryForCount.filter((record) => currentFilters.every((fn) => fn(record)));
       }
-      const allFilteredData = await filteredQuery.toArray(); // Chain .toArray() after filter
-      console.log(
-        `[USDetailedComparisonTable] Fetched ${allFilteredData.length} records for export.`
-      );
+      totalFilteredItems.value = await queryForCount.count();
 
-      if (allFilteredData.length === 0) {
-        // Handle no data case - maybe show a notification?
-        console.warn('[USDetailedComparisonTable] No data matching filters to export.');
-        alert('No data matches the current filters to export.'); // Simple alert for now
-        return;
+      let queryForPageData = query.toCollection(); // Start with a full collection for data fetching
+      if (currentFilters.length > 0) {
+        queryForPageData = queryForPageData.filter((record) =>
+          currentFilters.every((fn) => fn(record))
+        );
       }
 
-      // 2. Define CSV Fields (excluding cheaper_ columns)
-      const fields = [
-        { label: 'NPANXX', value: 'npanxx' },
-        { label: 'State', value: 'stateCode' },
-        { label: 'Country', value: 'countryCode' },
-        { label: `${fileName1.value}_InterRate`, value: 'file1_inter' },
-        { label: `${fileName2.value}_InterRate`, value: 'file2_inter' },
-        { label: 'InterRateDiffPct', value: 'diff_inter_pct' },
-        { label: `${fileName1.value}_IntraRate`, value: 'file1_intra' },
-        { label: `${fileName2.value}_IntraRate`, value: 'file2_intra' },
-        { label: 'IntraRateDiffPct', value: 'diff_intra_pct' },
-        { label: `${fileName1.value}_IndetermRate`, value: 'file1_indeterm' },
-        { label: `${fileName2.value}_IndetermRate`, value: 'file2_indeterm' },
-        { label: 'IndetermRateDiffPct', value: 'diff_indeterm_pct' },
-      ];
+      // Attempt DB-Level Sorting on queryForPageData
+      let dbSortApplied = false;
+      const sortKeyIsDirectDBField = ![
+        'diff_inter_pct',
+        'diff_intra_pct',
+        'diff_indeterm_pct',
+      ].includes(currentSortKey.value);
 
-      // 3. Format data for PapaParse
-      const dataForCsv = allFilteredData.map((record) => {
-        return {
-          npanxx: record.npanxx,
-          stateCode: record.stateCode,
-          countryCode: record.countryCode,
-          file1_inter: record.file1_inter?.toFixed(6) ?? '',
-          file2_inter: record.file2_inter?.toFixed(6) ?? '',
-          diff_inter_pct: record.diff_inter_pct?.toFixed(2) ?? '',
-          file1_intra: record.file1_intra?.toFixed(6) ?? '',
-          file2_intra: record.file2_intra?.toFixed(6) ?? '',
-          diff_intra_pct: record.diff_intra_pct?.toFixed(2) ?? '',
-          file1_indeterm: record.file1_indeterm?.toFixed(6) ?? '',
-          file2_indeterm: record.file2_indeterm?.toFixed(6) ?? '',
-          diff_indeterm_pct: record.diff_indeterm_pct?.toFixed(2) ?? '',
-        };
-      });
+      if (
+        sortKeyIsDirectDBField &&
+        typeof queryForPageData.orderBy === 'function' &&
+        currentSortKey.value
+      ) {
+        try {
+          queryForPageData = queryForPageData.orderBy(currentSortKey.value);
+          if (currentSortDirection.value === 'desc') {
+            queryForPageData = queryForPageData.reverse();
+          }
+          dbSortApplied = true;
+        } catch (dbSortError) {
+          dbSortApplied = false;
+        }
+      }
 
-      // 4. Generate and Download CSV
-      const csv = Papa.unparse({
-        fields: fields.map((f) => f.label), // Use labels as headers
-        data: dataForCsv.map((row) => fields.map((field) => row[field.value as keyof typeof row])), // Map data according to field order
-      });
+      // Apply pagination to queryForPageData
+      let newData = await queryForPageData
+        .offset(calculatedOffset)
+        .limit(itemsPerPage.value)
+        .toArray();
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      link.href = url;
-      link.setAttribute('download', `us-comparison-${timestamp}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      console.log('[USDetailedComparisonTable] CSV export complete.');
+      // Client-Side Sorting if DB sort wasn't applied or for computed columns
+      if (!dbSortApplied && currentSortKey.value) {
+        console.log(
+          '[USDetailedComparisonTable] Applying client-side sort on:',
+          currentSortKey.value,
+          currentSortDirection.value
+        );
+        isPerformingPageLevelSort.value = true; // Indicate page-level sort
+        newData.sort((a, b) => {
+          const valA = (a as any)[currentSortKey.value!];
+          const valB = (b as any)[currentSortKey.value!];
+          let comparison = 0;
+
+          if (valA === null || valA === undefined) comparison = 1;
+          else if (valB === null || valB === undefined) comparison = -1;
+          else if (typeof valA === 'string' && typeof valB === 'string') {
+            comparison = valA.localeCompare(valB);
+          } else if (typeof valA === 'number' && typeof valB === 'number') {
+            comparison = valA - valB;
+          } else if (valA > valB) comparison = 1;
+          else if (valA < valB) comparison = -1;
+
+          return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
+        });
+      }
+
+      displayedData.value = newData;
     } catch (err: any) {
-      console.error('Error during CSV export:', err);
-      error.value = err.message || 'Failed to export data';
-      // Optionally show an alert or notification to the user
-      alert(`Export failed: ${error.value}`);
+      console.error('Error loading page data:', err);
+      error.value = err.message || 'Failed to load data for the page';
+      displayedData.value = []; // Clear data on error
+      totalFilteredItems.value = 0; // Reset count on error
     } finally {
-      isExporting.value = false;
+      isPageLoading.value = false;
     }
   }
 
@@ -976,8 +1205,9 @@
 
       let query: any = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
-      // Apply client-side filters (as per original logic in loadMoreData)
+      // Apply client-side filters
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
+
       if (searchTerm.value) {
         const term = searchTerm.value.trim();
         const lowerSearch = term.toLowerCase();
@@ -989,31 +1219,32 @@
           );
         }
       }
+
       if (selectedState.value) {
         currentFilters.push(
           (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
         );
       }
 
-      let queryForCount = query;
-      if (currentFilters.length > 0) {
-        queryForCount = query.filter((record: USPricingComparisonRecord) =>
-          currentFilters.every((fn) => fn(record))
-        );
+      if (metroAreaCodesToFilter.value.length > 0) {
+        const npaSet = new Set(metroAreaCodesToFilter.value);
+        currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
       }
 
-      // Crucially, fetch totalFilteredItems BEFORE pagination and specific sorting for display
+      let queryForCount = query.toCollection(); // Start with a full collection for counting
+      if (currentFilters.length > 0) {
+        queryForCount = queryForCount.filter((record) => currentFilters.every((fn) => fn(record)));
+      }
       totalFilteredItems.value = await queryForCount.count();
 
-      // Apply filters to the main query for data fetching
+      let queryForPageData = query.toCollection(); // Start with a full collection for data fetching
       if (currentFilters.length > 0) {
-        query = query.filter((record: USPricingComparisonRecord) =>
+        queryForPageData = queryForPageData.filter((record) =>
           currentFilters.every((fn) => fn(record))
         );
       }
 
-      // Attempt DB-Level Sorting
-      // Diff columns (e.g., diff_inter_pct) are computed client-side and not in Dexie, so DB sort won't work for them.
+      // Attempt DB-Level Sorting on queryForPageData
       let dbSortApplied = false;
       const sortKeyIsDirectDBField = ![
         'diff_inter_pct',
@@ -1021,29 +1252,27 @@
         'diff_indeterm_pct',
       ].includes(currentSortKey.value);
 
-      if (sortKeyIsDirectDBField && typeof query.orderBy === 'function' && currentSortKey.value) {
+      if (
+        sortKeyIsDirectDBField &&
+        typeof queryForPageData.orderBy === 'function' &&
+        currentSortKey.value
+      ) {
         try {
-          query = query.orderBy(currentSortKey.value);
+          queryForPageData = queryForPageData.orderBy(currentSortKey.value);
           if (currentSortDirection.value === 'desc') {
-            query = query.reverse();
+            queryForPageData = queryForPageData.reverse();
           }
           dbSortApplied = true;
-          console.log(
-            '[USDetailedComparisonTable] DB sort applied on:',
-            currentSortKey.value,
-            currentSortDirection.value
-          );
         } catch (dbSortError) {
-          console.warn(
-            '[USDetailedComparisonTable] DB Sort error, will fall back to client sort if necessary:',
-            dbSortError
-          );
           dbSortApplied = false;
         }
       }
 
-      // Apply pagination
-      let newData = await query.offset(calculatedOffset).limit(itemsPerPage.value).toArray();
+      // Apply pagination to queryForPageData
+      let newData = await queryForPageData
+        .offset(calculatedOffset)
+        .limit(itemsPerPage.value)
+        .toArray();
 
       // Client-Side Sorting if DB sort wasn't applied or for computed columns
       if (!dbSortApplied && currentSortKey.value) {
@@ -1102,16 +1331,13 @@
     try {
       const query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
-      // Apply filters same as in loadMoreData
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
       if (searchTerm.value) {
         const term = searchTerm.value.trim();
-        if (term.length === 6) {
-          // Exact match for 6 digits
+        const lowerSearch = term.toLowerCase();
+        if (term.length === 6 && !isNaN(Number(term))) {
           currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
-        } else {
-          // StartsWith for shorter terms
-          const lowerSearch = term.toLowerCase();
+        } else if (term.length > 0) {
           currentFilters.push((record: USPricingComparisonRecord) =>
             record.npanxx.toLowerCase().startsWith(lowerSearch)
           );
@@ -1122,16 +1348,17 @@
           (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
         );
       }
-
-      // Apply filters and use .each directly
-      let filteredQuery = query.toCollection(); // Start with a collection
-      if (currentFilters.length > 0) {
-        filteredQuery = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      if (metroAreaCodesToFilter.value.length > 0) {
+        const npaSet = new Set(metroAreaCodesToFilter.value);
+        currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
       }
 
-      // Use .each on the filtered collection
+      let filteredQuery = query.toCollection();
+      if (currentFilters.length > 0) {
+        filteredQuery = filteredQuery.filter((record) => currentFilters.every((fn) => fn(record)));
+      }
+
       await filteredQuery.each((record) => {
-        // Chain .each() after filter
         const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
           if (value !== null && value !== undefined && !isNaN(value)) {
             totals[key].sum += value;
@@ -1230,6 +1457,16 @@
     // When items per page changes, go to page 1 and reload.
     resetPaginationAndLoad(); // This will set currentPage to 1 and fetch data.
   });
+
+  // --- Metro Filter Watcher --- START ---
+  watch(
+    selectedMetros,
+    async () => {
+      await debouncedResetPaginationAndLoad(); // Use debounced version
+    },
+    { deep: true }
+  );
+  // --- Metro Filter Watcher --- END ---
 
   // --- Helper Functions ---
 
@@ -1351,4 +1588,76 @@
     }
   }
   // --- End Pagination Action Handlers ---
+
+  // --- Metro Filter Functions --- START ---
+  function toggleMetroSelection(metro: MetroAreaOption) {
+    const index = selectedMetros.value.findIndex((m) => m.key === metro.key);
+    if (index > -1) {
+      selectedMetros.value.splice(index, 1);
+    } else {
+      selectedMetros.value.push(metro);
+    }
+  }
+
+  function isMetroSelected(metro: MetroAreaOption): boolean {
+    return selectedMetros.value.some((m) => m.key === metro.key);
+  }
+
+  function handleSelectAllMetros() {
+    const currentFilteredAreSelected = areAllMetrosSelected.value;
+    const optionsToConsider = filteredMetroOptions.value;
+
+    if (currentFilteredAreSelected) {
+      selectedMetros.value = selectedMetros.value.filter(
+        (sm) => !optionsToConsider.find((fm) => fm.key === sm.key)
+      );
+    } else {
+      optionsToConsider.forEach((metro) => {
+        if (!isMetroSelected(metro)) {
+          selectedMetros.value.push(metro);
+        }
+      });
+    }
+  }
+
+  function removeSelectedMetro(metro: MetroAreaOption) {
+    const index = selectedMetros.value.findIndex((m) => m.key === metro.key);
+    if (index > -1) {
+      selectedMetros.value.splice(index, 1);
+    }
+  }
+
+  function clearMetroSearch() {
+    metroSearchQuery.value = '';
+  }
+
+  function clearAllSelectedMetros() {
+    selectedMetros.value = [];
+    metroSearchQuery.value = '';
+  }
+
+  function formatPopulation(population: number): string {
+    if (population >= 1000000) {
+      return `${(population / 1000000).toFixed(1)}M`;
+    }
+    if (population >= 1000) {
+      return `${(population / 1000).toFixed(1)}K`;
+    }
+    return population.toString();
+  }
+  // --- Metro Filter Functions --- END ---
+
+  // --- Clear All Filters Function --- START ---
+  async function handleClearAllFilters() {
+    searchTerm.value = '';
+    selectedState.value = '';
+    clearAllSelectedMetros(); // This clears selectedMetros and metroSearchQuery
+
+    // Reset sorting to default (optional, but good UX)
+    currentSortKey.value = 'npanxx';
+    currentSortDirection.value = 'asc';
+
+    await resetPaginationAndLoad();
+  }
+  // --- Clear All Filters Function --- END ---
 </script>
