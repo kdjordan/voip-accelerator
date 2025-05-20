@@ -33,10 +33,10 @@
         ]"
       >
         <RouterLink to="/home" class="flex items-center text-accent gap-2">
-          <BoltIcon class="w-8 h-8 flex-shrink-0" />
+          <VoipLogo />
           <span
             v-if="userStore.ui.isSideNavOpen"
-            class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter"
+            class="font-medium font-pt-mono text-accent whitespace-nowrap tracking-tighter"
             >VoIP Accelerator</span
           >
         </RouterLink>
@@ -163,6 +163,7 @@
   } from '@heroicons/vue/24/outline';
   import { appNavigationItems } from '@/constants/navigation';
   import type { NavigationItem } from '@/types/nav-types';
+  import VoipLogo from './VoipLogo.vue';
 
   const userStore = useUserStore();
   const route = useRoute();

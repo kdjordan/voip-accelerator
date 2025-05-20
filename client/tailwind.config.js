@@ -13,6 +13,7 @@ export default {
       // sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
       sans: ['Inter', 'sans-serif'],
       secondary: ['Roboto Mono', 'monospace'],
+      'pt-mono': ['"PT Mono"', 'monospace'],
       // body: ['Open Sans', 'sans-serif'],
     },
     extend: {
