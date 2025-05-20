@@ -10,16 +10,13 @@
           <div class="flex items-center justify-center min-h-[28px]">
             <!-- Only show rate if NOT calculating AND value is not null -->
             <p
-              v-if="
-                !(isCalculatingOverall || isCalculatingState) &&
-                currentDisplayAverages.inter !== null
-              "
+              v-if="!isCalculatingAverages && currentDisplayAverages.inter !== null"
               class="text-lg font-semibold text-white font-mono mr-2"
             >
               {{ formatRate(animatedInterAvg) }}
             </p>
             <ArrowPathIcon
-              v-if="isCalculatingOverall || isCalculatingState"
+              v-if="isCalculatingAverages"
               class="w-4 h-4 text-gray-500 animate-spin"
             />
           </div>
@@ -30,16 +27,13 @@
           <div class="flex items-center justify-center min-h-[28px]">
             <!-- Only show rate if NOT calculating AND value is not null -->
             <p
-              v-if="
-                !(isCalculatingOverall || isCalculatingState) &&
-                currentDisplayAverages.intra !== null
-              "
+              v-if="!isCalculatingAverages && currentDisplayAverages.intra !== null"
               class="text-lg font-semibold text-white font-mono mr-2"
             >
               {{ formatRate(animatedIntraAvg) }}
             </p>
             <ArrowPathIcon
-              v-if="isCalculatingOverall || isCalculatingState"
+              v-if="isCalculatingAverages"
               class="w-4 h-4 text-gray-500 animate-spin"
             />
           </div>
@@ -50,16 +44,13 @@
           <div class="flex items-center justify-center min-h-[28px]">
             <!-- Only show rate if NOT calculating AND value is not null -->
             <p
-              v-if="
-                !(isCalculatingOverall || isCalculatingState) &&
-                currentDisplayAverages.indeterm !== null
-              "
+              v-if="!isCalculatingAverages && currentDisplayAverages.indeterm !== null"
               class="text-lg font-semibold text-white font-mono mr-2"
             >
               {{ formatRate(animatedIndetermAvg) }}
             </p>
             <ArrowPathIcon
-              v-if="isCalculatingOverall || isCalculatingState"
+              v-if="isCalculatingAverages"
               class="w-4 h-4 text-gray-500 animate-spin"
             />
           </div>
@@ -95,12 +86,12 @@
       <div class="flex items-center gap-4 flex-wrap">
         <!-- Basic Search -->
         <div class="relative">
-          <label for="npanxx-search" class="sr-only">Search NPANXX</label>
+          <label for="npanxx-search" class="sr-only">Search NPANXX (e.g., 201222, 301333)...</label>
           <input
             id="npanxx-search"
             v-model="searchQuery"
             type="text"
-            placeholder="Filter by NPANXX..."
+            placeholder="Filter by NPANXX (e.g., 201222, 301333)..."
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
           />
         </div>
@@ -884,7 +875,7 @@
   let adjustmentStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const searchQuery = ref('');
-  const debouncedSearchQuery = ref('');
+  const debouncedSearchQuery = ref<string[]>([]); // Changed from string to string[]
   const selectedState = ref<string>('');
 
   // --- Metro Filter State ---
@@ -1008,11 +999,8 @@
   });
 
   // State for Average Calculation
-  const overallAverages = ref<RateAverages | null>(null);
-  const stateAverageCache = ref<Map<string, RateAverages>>(new Map());
   const currentDisplayAverages = ref<RateAverages>({ inter: null, intra: null, indeterm: null });
-  const isCalculatingOverall = ref(false);
-  const isCalculatingState = ref(false);
+  const isCalculatingAverages = ref(false); // Ensuring this definition is clean and correct
 
   // --- Animated Averages ---
   const transitionConfig = { duration: 500 };
@@ -1025,12 +1013,22 @@
   const animatedIndetermAvg = useTransition(indetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
 
-  const debouncedSearch = useDebounceFn(() => {
-    debouncedSearchQuery.value = searchQuery.value.trim().toLowerCase();
+  const debouncedSearch = useDebounceFn(async () => {
+    // Made async
+    const terms = searchQuery.value
+      .split(',')
+      .map((term) => term.trim().toLowerCase())
+      .filter((term) => term.length > 0);
+    debouncedSearchQuery.value = terms;
+    console.log(
+      '[USRateSheetTable] Search watcher triggered. NPANXX terms:',
+      JSON.parse(JSON.stringify(debouncedSearchQuery.value))
+    );
     // Reset sorting when search query changes
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
-    resetPaginationAndLoad();
+    await resetPaginationAndLoad(); // Added await
+    await recalculateAndDisplayAverages();
   }, 300);
 
   const stopSearchWatcher = watch(searchQuery, debouncedSearch);
@@ -1126,53 +1124,26 @@
     // Reset sorting when state filter changes
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
+    console.log('[USRateSheetTable] State watcher triggered. New state:', newStateCode);
 
     // 1. Reset table data and pagination
     await resetPaginationAndLoad();
-
-    // 2. Update displayed averages based on the new state filter
-    if (!newStateCode) {
-      // Selected "All States/Provinces"
-      if (overallAverages.value) {
-        currentDisplayAverages.value = overallAverages.value;
-      } else {
-        // Should ideally be calculated on mount, but recalculate if somehow missing
-        console.warn('[USRateSheetTable] Overall averages not found, recalculating...');
-        const avg = await calculateAverages();
-        overallAverages.value = avg;
-        currentDisplayAverages.value = avg ?? { inter: null, intra: null, indeterm: null };
-      }
-    } else {
-      // Selected a specific state/province
-      if (stateAverageCache.value.has(newStateCode)) {
-        currentDisplayAverages.value = stateAverageCache.value.get(newStateCode)!;
-      } else {
-        // No need to clear currentDisplayAverages here, the spinner indicates loading
-        const stateAvg = await calculateAverages(newStateCode);
-        if (stateAvg) {
-          stateAverageCache.value.set(newStateCode, stateAvg);
-          currentDisplayAverages.value = stateAvg;
-        } else {
-          // Handle error case where calculation failed
-          currentDisplayAverages.value = { inter: null, intra: null, indeterm: null }; // Set to null on error
-          console.error(
-            `[USRateSheetTable] Failed to calculate averages for state: ${newStateCode}`
-          );
-        }
-      }
-    }
+    await recalculateAndDisplayAverages();
   });
 
   // Watcher for metro filter changes
   const stopMetroWatcher = watch(
     selectedMetros,
     async () => {
+      console.log(
+        '[USRateSheetTable] Metro watcher triggered. Selected metros:',
+        JSON.parse(JSON.stringify(selectedMetros.value))
+      );
       // Reset sorting when metro filter changes (if desired, or keep current sort)
       // currentSortKey.value = 'npanxx';
       // currentSortDirection.value = 'asc';
       await resetPaginationAndLoad();
-      // Note: Average calculations will need to be updated to consider metro filters if we want metro-specific averages.
-      // For now, averages remain based on state or overall.
+      await recalculateAndDisplayAverages();
     },
     { deep: true }
   );
@@ -1258,10 +1229,11 @@
       let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
 
       // Apply NPANXX Search Filter (if active)
-      if (debouncedSearchQuery.value) {
-        query = query.filter((record) =>
-          record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
-        );
+      if (debouncedSearchQuery.value.length > 0) {
+        query = query.filter((record) => {
+          const recordNpanxxLower = record.npanxx.toLowerCase();
+          return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
+        });
       }
 
       // Apply State Filter (if active)
@@ -1281,7 +1253,7 @@
       // Apply Sorting (DB-Level if possible, otherwise client-side later)
       let dbSortApplied = false;
       const filtersAppliedCount = [
-        debouncedSearchQuery.value,
+        debouncedSearchQuery.value.length > 0, // Check if array has elements
         selectedState.value,
         metroAreaCodesToFilter.value.length > 0,
       ].filter(Boolean).length;
@@ -1394,18 +1366,20 @@
    * @param stateCode Optional state code to filter by.
    * @returns Promise resolving to RateAverages or null if DB error.
    */
-  async function calculateAverages(stateCode?: string): Promise<RateAverages | null> {
-    const isLoadingOverall = !stateCode;
-    if (isLoadingOverall) {
-      isCalculatingOverall.value = true;
-    } else {
-      isCalculatingState.value = true;
-    }
+  async function calculateAverages(): Promise<RateAverages | null> {
+    console.log('[USRateSheetTable] calculateAverages started.');
+    console.log(
+      '[USRateSheetTable] Current filters for average calculation - NPANXXs:',
+      JSON.parse(JSON.stringify(debouncedSearchQuery.value)),
+      ', State:',
+      selectedState.value,
+      ', Metro NPAs:',
+      JSON.parse(JSON.stringify(metroAreaCodesToFilter.value))
+    );
 
     const dbReady = await initializeRateSheetDB();
     if (!dbReady || !dbInstance) {
-      if (isLoadingOverall) isCalculatingOverall.value = false;
-      else isCalculatingState.value = false;
+      console.error('[USRateSheetTable] calculateAverages: DB not ready or no instance.');
       return null;
     }
 
@@ -1417,13 +1391,43 @@
     try {
       const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
       let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
-        table;
+        table.toCollection(); // Start with the full collection
 
-      if (stateCode) {
-        queryChain = table.where('stateCode').equals(stateCode);
+      // Apply NPANXX Search Filter (if active)
+      if (debouncedSearchQuery.value.length > 0) {
+        queryChain = queryChain.filter((record) => {
+          const recordNpanxxLower = record.npanxx.toLowerCase();
+          return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
+        });
       }
 
+      // Apply Metro Area Filter (if active)
+      if (metroAreaCodesToFilter.value.length > 0) {
+        const npaSet = new Set(metroAreaCodesToFilter.value);
+        queryChain = queryChain.filter((record) => npaSet.has(record.npa));
+      }
+
+      // Apply State Filter (if active)
+      if (selectedState.value) {
+        queryChain = queryChain.filter((record) => record.stateCode === selectedState.value);
+      }
+
+      const recordCountForAverages = await queryChain.clone().count(); // Clone before count if further chaining happens on original
+      console.log(
+        `[USRateSheetTable] calculateAverages: Found ${recordCountForAverages} records matching filters for averaging.`
+      );
+
+      let logCount = 0;
+      const MAX_LOG_ENTRIES = 3;
+
       await queryChain.each((entry) => {
+        if (logCount < MAX_LOG_ENTRIES) {
+          console.log(
+            `[USRateSheetTable] calculateAverages: Processing entry for avg:`,
+            JSON.parse(JSON.stringify(entry))
+          );
+          logCount++;
+        }
         if (typeof entry.interRate === 'number') {
           sumInter += entry.interRate;
         }
@@ -1442,23 +1446,61 @@
         }
       });
 
-      const averages: RateAverages = {
+      const averagesResult: RateAverages = {
         inter: count > 0 && !isNaN(sumInter) ? sumInter / count : null,
         intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
         indeterm: count > 0 && !isNaN(sumIndeterm) ? sumIndeterm / count : null,
       };
-
-      return averages;
+      console.log(
+        '[USRateSheetTable] calculateAverages: Intermediate sums - Inter:',
+        sumInter,
+        'Intra:',
+        sumIntra,
+        'Indeterm:',
+        sumIndeterm,
+        'Count:',
+        count
+      );
+      console.log(
+        '[USRateSheetTable] calculateAverages: Calculated averages:',
+        JSON.parse(JSON.stringify(averagesResult))
+      );
+      return averagesResult;
     } catch (err: any) {
+      console.error('[USRateSheetTable] calculateAverages: Error during calculation:', err);
       dataError.value = err.message || 'Failed to calculate averages';
       return null;
     } finally {
-      if (isLoadingOverall) {
-        isCalculatingOverall.value = false;
-      } else {
-        isCalculatingState.value = false;
-      }
+      // isCalculatingAverages.value will be reset by the caller recalculateAndDisplayAverages
+      console.log('[USRateSheetTable] calculateAverages finished.');
     }
+  }
+
+  async function recalculateAndDisplayAverages() {
+    console.log(
+      '[USRateSheetTable] recalculateAndDisplayAverages started. Current filters - NPANXXs:',
+      JSON.parse(JSON.stringify(debouncedSearchQuery.value)),
+      ', State:',
+      selectedState.value,
+      ', Metro NPAs:',
+      JSON.parse(JSON.stringify(metroAreaCodesToFilter.value))
+    );
+    isCalculatingAverages.value = true;
+    currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+    await nextTick();
+
+    const averages = await calculateAverages();
+    console.log(
+      '[USRateSheetTable] recalculateAndDisplayAverages: Received averages from calculateAverages:',
+      JSON.parse(JSON.stringify(averages))
+    );
+    currentDisplayAverages.value = averages ?? { inter: null, intra: null, indeterm: null };
+    console.log(
+      '[USRateSheetTable] recalculateAndDisplayAverages: Updated currentDisplayAverages.value:',
+      JSON.parse(JSON.stringify(currentDisplayAverages.value))
+    );
+    isCalculatingAverages.value = false;
+    console.log('[USRateSheetTable] recalculateAndDisplayAverages finished.');
   }
 
   onMounted(async () => {
@@ -1470,14 +1512,12 @@
     if (dbReady && store.getHasUsRateSheetData) {
       isDataLoading.value = true; // Set loading true only if we proceed to load
       await updateAvailableStates();
+      console.log('[USRateSheetTable] onMounted: About to call initial resetPaginationAndLoad.');
       await resetPaginationAndLoad();
-
-      overallAverages.value = await calculateAverages();
-      currentDisplayAverages.value = overallAverages.value ?? {
-        inter: null,
-        intra: null,
-        indeterm: null,
-      };
+      console.log(
+        '[USRateSheetTable] onMounted: About to call initial recalculateAndDisplayAverages.'
+      );
+      await recalculateAndDisplayAverages();
     }
   });
 
@@ -1504,8 +1544,8 @@
           hasMoreData.value = false;
           dataError.value = null;
           isDataLoading.value = false;
-          overallAverages.value = null;
-          stateAverageCache.value.clear();
+          // overallAverages.value = null; // Removed
+          // stateAverageCache.value.clear(); // Removed
           currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
         } else {
           isDataLoading.value = true;
@@ -1514,6 +1554,7 @@
             isDataLoading.value = true; // Set loading before fetching
             await updateAvailableStates();
             await resetPaginationAndLoad();
+            await recalculateAndDisplayAverages(); // Added call
           } else {
             // If DB isn't ready after upload success, something is wrong,
             // keep loading false, error should be set by initializeRateSheetDB
@@ -1538,8 +1579,8 @@
 
   function handleClearData() {
     if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
-      overallAverages.value = null;
-      stateAverageCache.value.clear();
+      // overallAverages.value = null; // Removed
+      // stateAverageCache.value.clear(); // Removed
       currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
       store.clearUsRateSheetData();
     }
@@ -1673,11 +1714,18 @@
 
       const filtersApplied: string[] = [];
 
-      if (debouncedSearchQuery.value) {
-        collection = collection.filter((record: USRateSheetEntry) =>
-          record.npanxx.toLowerCase().startsWith(debouncedSearchQuery.value!)
-        );
-        filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value}'`);
+      if (debouncedSearchQuery.value.length > 0) {
+        collection = collection.filter((record: USRateSheetEntry) => {
+          const recordNpanxxLower = record.npanxx.toLowerCase();
+          return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
+        });
+        if (debouncedSearchQuery.value.length === 1) {
+          filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value[0]}'`);
+        } else {
+          filtersApplied.push(
+            `NPANXXs start with one of [${debouncedSearchQuery.value.join(', ')}]`
+          );
+        }
       }
       if (selectedState.value) {
         collection = collection.filter(
@@ -1771,7 +1819,11 @@
       adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
 
       // --- Refresh data and averages after successful update ---
-      await resetPaginationAndLoad(); // Reload table data
+      console.log(
+        '[USRateSheetTable] handleApplyAdjustment: About to refresh data and averages post-adjustment.'
+      );
+      await resetPaginationAndLoad();
+      await recalculateAndDisplayAverages();
 
       // Recalculate averages based on current filter
       if (selectedState.value) {
