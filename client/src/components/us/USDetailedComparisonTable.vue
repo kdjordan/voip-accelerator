@@ -71,92 +71,62 @@
     </div>
 
     <!-- Filter Controls -->
-    <div class="mb-4 flex flex-wrap gap-4 items-center">
-      <!-- NPANXX Search -->
-      <div>
-        <label for="npanxx-search" class="block text-sm font-medium text-gray-400 mb-1"
-          >Search NPANXX</label
-        >
-        <input
-          type="text"
-          id="npanxx-search"
-          v-model="searchTerm"
-          placeholder="Enter NPANXX..."
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
-        />
-      </div>
-
-      <!-- State Filter -->
-      <div class="w-52">
-        <Listbox v-model="selectedState" as="div">
-          <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
-            >Filter by State</ListboxLabel
+    <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+      <!-- Filter Group -->
+      <div class="flex flex-wrap gap-4 items-center flex-grow">
+        <!-- NPANXX Search -->
+        <div>
+          <label for="npanxx-search" class="block text-sm font-medium text-gray-400 mb-1"
+            >NPA(s), NPANXX Filter</label
           >
-          <div class="relative mt-1">
-            <ListboxButton
-              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
-              :disabled="availableStates.length === 0 || isLoading || isFiltering"
-            >
-              <span class="block truncate text-white">{{
-                selectedState
-                  ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
-                  : 'All States/Provinces'
-              }}</span>
-              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </span>
-            </ListboxButton>
+          <input
+            type="text"
+            id="npanxx-search"
+            v-model="npanxxSearchInput"
+            placeholder="Enter NPA(s), or NPANXX..."
+            class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+          />
+        </div>
 
-            <transition
-              leave-active-class="transition duration-100 ease-in"
-              leave-from-class="opacity-100"
-              leave-to-class="opacity-0"
+        <!-- State Filter -->
+        <div class="w-52">
+          <Listbox v-model="selectedState" as="div">
+            <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
+              >Filter by State</ListboxLabel
             >
-              <ListboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hover:text-green-300"
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+                :disabled="availableStates.length === 0 || isLoading || isFiltering"
               >
-                <!-- "All States/Provinces" Option -->
-                <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
-                  <li
-                    :class="[
-                      active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
-                      'relative cursor-default select-none py-2 pl-10 pr-4',
-                    ]"
-                  >
-                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                      >All States/Provinces</span
-                    >
-                    <span
-                      v-if="selected"
-                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                    >
-                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  </li>
-                </ListboxOption>
+                <span class="block truncate text-white">{{
+                  selectedState
+                    ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
+                    : 'All States/Provinces'
+                }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
 
-                <!-- State/Province Groups -->
-                <template v-for="group in groupedAvailableStates" :key="group.label">
-                  <!-- Group Label -->
-                  <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
-                    {{ group.label }}
-                  </li>
-                  <!-- Group Options -->
-                  <ListboxOption
-                    v-for="regionCode in group.codes"
-                    :key="regionCode"
-                    :value="regionCode"
-                    v-slot="{ active, selected }"
-                    as="template"
-                  >
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hover:text-green-300"
+                >
+                  <!-- "All States/Provinces" Option -->
+                  <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
                     <li
                       :class="[
-                        active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                        active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
                         'relative cursor-default select-none py-2 pl-10 pr-4',
                       ]"
                     >
                       <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                        >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                        >All States/Provinces</span
                       >
                       <span
                         v-if="selected"
@@ -166,129 +136,164 @@
                       </span>
                     </li>
                   </ListboxOption>
-                </template>
-              </ListboxOptions>
-            </transition>
-          </div>
-        </Listbox>
-      </div>
 
-      <!-- Metro Area Filter Dropdown -->
-      <div class="w-64">
-        <label for="metro-filter-button" class="block text-sm font-medium text-gray-400 mb-1"
-          >Filter by Metro Area</label
-        >
-        <Menu as="div" class="relative inline-block text-left w-full">
-          <div>
-            <MenuButton
-              id="metro-filter-button"
-              class="inline-flex w-full justify-between items-center rounded-lg bg-gray-800 py-2.5 pl-3 pr-2 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700 text-white"
-              :disabled="isLoading || isFiltering || isPageLoading"
-            >
-              <span class="block truncate">{{ metroButtonLabel }}</span>
-              <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-            </MenuButton>
-          </div>
-          <transition
-            leave-active-class="transition duration-100 ease-in"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
+                  <!-- State/Province Groups -->
+                  <template v-for="group in groupedAvailableStates" :key="group.label">
+                    <!-- Group Label -->
+                    <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
+                      {{ group.label }}
+                    </li>
+                    <!-- Group Options -->
+                    <ListboxOption
+                      v-for="regionCode in group.codes"
+                      :key="regionCode"
+                      :value="regionCode"
+                      v-slot="{ active, selected }"
+                      as="template"
+                    >
+                      <li
+                        :class="[
+                          active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                          'relative cursor-default select-none py-2 pl-10 pr-4',
+                        ]"
+                      >
+                        <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                          >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                        >
+                        <span
+                          v-if="selected"
+                          class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                        >
+                          <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                        </span>
+                      </li>
+                    </ListboxOption>
+                  </template>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
+        </div>
+
+        <!-- Metro Area Filter Dropdown -->
+        <div class="w-64">
+          <label for="metro-filter-button" class="block text-sm font-medium text-gray-400 mb-1"
+            >Filter by Metro Area</label
           >
-            <MenuItems
-              class="absolute z-30 mt-1 max-h-96 w-full origin-top-right overflow-hidden rounded-md bg-gray-800 shadow-lg ring-1 ring-black/5 focus:outline-none flex flex-col"
+          <Menu as="div" class="relative inline-block text-left w-full">
+            <div>
+              <MenuButton
+                id="metro-filter-button"
+                class="inline-flex w-full justify-between items-center rounded-lg bg-gray-800 py-2.5 pl-3 pr-2 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700 text-white"
+                :disabled="isLoading || isFiltering || isPageLoading"
+              >
+                <span class="block truncate">{{ metroButtonLabel }}</span>
+                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </MenuButton>
+            </div>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
             >
-              <div class="p-2 border-b border-gray-700">
-                <div class="relative">
-                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
+              <MenuItems
+                class="absolute z-30 mt-1 max-h-96 w-full origin-top-right overflow-hidden rounded-md bg-gray-800 shadow-lg ring-1 ring-black/5 focus:outline-none flex flex-col"
+              >
+                <div class="p-2 border-b border-gray-700">
+                  <div class="relative">
+                    <div
+                      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                    >
+                      <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      v-model="metroSearchQuery"
+                      type="text"
+                      placeholder="Search metro areas..."
+                      class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <button
+                      v-if="metroSearchQuery"
+                      @click="clearMetroSearch"
+                      class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
+                      aria-label="Clear search"
+                    >
+                      <XCircleIcon class="h-4 w-4" />
+                    </button>
                   </div>
-                  <input
-                    v-model="metroSearchQuery"
-                    type="text"
-                    placeholder="Search metro areas..."
-                    class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
-                  />
+                </div>
+                <div class="p-2 border-b border-gray-700 flex justify-between items-center">
                   <button
-                    v-if="metroSearchQuery"
-                    @click="clearMetroSearch"
-                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
-                    aria-label="Clear search"
+                    @click="handleSelectAllMetros"
+                    class="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
+                    :disabled="filteredMetroOptions.length === 0"
                   >
-                    <XCircleIcon class="h-4 w-4" />
+                    {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select Visible' }}
+                  </button>
+                  <button
+                    v-if="selectedMetros.length > 0"
+                    @click="clearAllSelectedMetros"
+                    class="text-xs text-gray-400 hover:text-gray-200"
+                  >
+                    Clear All Selected ({{ selectedMetros.length }})
                   </button>
                 </div>
-              </div>
-              <div class="p-2 border-b border-gray-700 flex justify-between items-center">
-                <button
-                  @click="handleSelectAllMetros"
-                  class="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
-                  :disabled="filteredMetroOptions.length === 0"
-                >
-                  {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select Visible' }}
-                </button>
-                <button
-                  v-if="selectedMetros.length > 0"
-                  @click="clearAllSelectedMetros"
-                  class="text-xs text-gray-400 hover:text-gray-200"
-                >
-                  Clear All Selected ({{ selectedMetros.length }})
-                </button>
-              </div>
-              <div class="overflow-y-auto flex-grow p-1 max-h-60">
-                <MenuItem
-                  v-for="metro in filteredMetroOptions"
-                  :key="metro.key"
-                  v-slot="{ active }"
-                  as="template"
-                >
-                  <li
-                    @click="() => toggleMetroSelection(metro)"
-                    :class="[
-                      active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                      'relative cursor-default select-none py-2 pl-10 pr-4 flex justify-between items-center',
-                    ]"
+                <div class="overflow-y-auto flex-grow p-1 max-h-60">
+                  <MenuItem
+                    v-for="metro in filteredMetroOptions"
+                    :key="metro.key"
+                    v-slot="{ active }"
+                    as="template"
                   >
-                    <div class="flex items-center">
-                      <span
-                        :class="[
-                          isMetroSelected(metro) ? 'text-primary-400' : 'text-gray-500',
-                          'absolute inset-y-0 left-0 flex items-center pl-3',
-                        ]"
-                      >
-                        <CheckIcon
-                          class="h-5 w-5"
-                          :class="isMetroSelected(metro) ? 'opacity-100' : 'opacity-0'"
-                          aria-hidden="true"
-                        />
-                      </span>
-                      <span
-                        :class="[
-                          isMetroSelected(metro) ? 'font-semibold' : 'font-normal',
-                          'block truncate',
-                        ]"
-                      >
-                        {{ metro.displayName }}
-                      </span>
-                    </div>
-                    <span class="text-xs text-gray-500">{{
-                      formatPopulation(metro.population)
-                    }}</span>
-                  </li>
-                </MenuItem>
-                <div
-                  v-if="filteredMetroOptions.length === 0 && metroSearchQuery"
-                  class="px-4 py-2 text-sm text-gray-500 text-center"
-                >
-                  No metro areas match your search.
+                    <li
+                      @click="() => toggleMetroSelection(metro)"
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4 flex justify-between items-center',
+                      ]"
+                    >
+                      <div class="flex items-center">
+                        <span
+                          :class="[
+                            isMetroSelected(metro) ? 'text-primary-400' : 'text-gray-500',
+                            'absolute inset-y-0 left-0 flex items-center pl-3',
+                          ]"
+                        >
+                          <CheckIcon
+                            class="h-5 w-5"
+                            :class="isMetroSelected(metro) ? 'opacity-100' : 'opacity-0'"
+                            aria-hidden="true"
+                          />
+                        </span>
+                        <span
+                          :class="[
+                            isMetroSelected(metro) ? 'font-semibold' : 'font-normal',
+                            'block truncate',
+                          ]"
+                        >
+                          {{ metro.displayName }}
+                        </span>
+                      </div>
+                      <span class="text-xs text-gray-500">{{
+                        formatPopulation(metro.population)
+                      }}</span>
+                    </li>
+                  </MenuItem>
+                  <div
+                    v-if="filteredMetroOptions.length === 0 && metroSearchQuery"
+                    class="px-4 py-2 text-sm text-gray-500 text-center"
+                  >
+                    No metro areas match your search.
+                  </div>
                 </div>
-              </div>
-            </MenuItems>
-          </transition>
-        </Menu>
+              </MenuItems>
+            </transition>
+          </Menu>
+        </div>
       </div>
 
       <!-- Download CSV Button -->
-      <div class="ml-auto self-end">
+      <div class="ml-auto self-end flex-shrink-0">
         <BaseButton
           variant="primary"
           size="small"
@@ -679,7 +684,8 @@
   // --- End Sorting State ---
 
   // Filter State Variables
-  const searchTerm = ref<string>('');
+  const npanxxSearchInput = ref<string>(''); // Renamed from searchTerm
+  const npanxxFilterTerms = ref<string[]>([]); // New ref for processed NPANXX terms
   const selectedState = ref<string>('');
 
   // --- Metro Filter Computed Properties --- START ---
@@ -929,16 +935,11 @@
       // Apply client-side filters
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
 
-      if (searchTerm.value) {
-        const term = searchTerm.value.trim();
-        const lowerSearch = term.toLowerCase();
-        if (term.length === 6 && !isNaN(Number(term))) {
-          currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
-        } else if (term.length > 0) {
-          currentFilters.push((record: USPricingComparisonRecord) =>
-            record.npanxx.toLowerCase().startsWith(lowerSearch)
-          );
-        }
+      if (npanxxFilterTerms.value.length > 0) {
+        currentFilters.push((record: USPricingComparisonRecord) => {
+          const recordNpanxxLower = record.npanxx.toLowerCase();
+          return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
+        });
       }
 
       if (selectedState.value) {
@@ -1208,16 +1209,11 @@
       // Apply client-side filters
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
 
-      if (searchTerm.value) {
-        const term = searchTerm.value.trim();
-        const lowerSearch = term.toLowerCase();
-        if (term.length === 6 && !isNaN(Number(term))) {
-          currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
-        } else if (term.length > 0) {
-          currentFilters.push((record: USPricingComparisonRecord) =>
-            record.npanxx.toLowerCase().startsWith(lowerSearch)
-          );
-        }
+      if (npanxxFilterTerms.value.length > 0) {
+        currentFilters.push((record: USPricingComparisonRecord) => {
+          const recordNpanxxLower = record.npanxx.toLowerCase();
+          return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
+        });
       }
 
       if (selectedState.value) {
@@ -1332,16 +1328,11 @@
       const query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
       const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
-      if (searchTerm.value) {
-        const term = searchTerm.value.trim();
-        const lowerSearch = term.toLowerCase();
-        if (term.length === 6 && !isNaN(Number(term))) {
-          currentFilters.push((record: USPricingComparisonRecord) => record.npanxx === term);
-        } else if (term.length > 0) {
-          currentFilters.push((record: USPricingComparisonRecord) =>
-            record.npanxx.toLowerCase().startsWith(lowerSearch)
-          );
-        }
+      if (npanxxFilterTerms.value.length > 0) {
+        currentFilters.push((record: USPricingComparisonRecord) => {
+          const recordNpanxxLower = record.npanxx.toLowerCase();
+          return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
+        });
       }
       if (selectedState.value) {
         currentFilters.push(
@@ -1449,7 +1440,15 @@
     resetPaginationAndLoad();
   }, 300); // 300ms debounce delay
 
-  watch([searchTerm, selectedState], () => {
+  // Watcher for the raw NPANXX input string
+  watch(npanxxSearchInput, () => {
+    debouncedProcessNpanxxInput(); // This updates npanxxFilterTerms
+  });
+
+  // This watcher should observe the processed terms, not the raw input for NPANXX.
+  // selectedState is fine.
+  watch([npanxxFilterTerms, selectedState], () => {
+    // Changed from npanxxSearchInput
     debouncedResetPaginationAndLoad();
   });
 
@@ -1461,8 +1460,18 @@
   // --- Metro Filter Watcher --- START ---
   watch(
     selectedMetros,
-    async () => {
-      await debouncedResetPaginationAndLoad(); // Use debounced version
+    async (newSelectedMetros) => {
+      if (newSelectedMetros.length > 0) {
+        console.log(
+          '[USDetailedComparisonTable] Metro selection changed, resetting NPANXX and State filters.'
+        );
+        npanxxSearchInput.value = ''; // This will trigger its watcher to clear npanxxFilterTerms
+        selectedState.value = '';
+      }
+      // debouncedResetPaginationAndLoad will be called by the watchers of npanxxSearchInput and selectedState
+      // if they change, or directly if they didn't (e.g. clearing the last metro selection)
+      // For consistency and to ensure it always runs after a metro change:
+      await debouncedResetPaginationAndLoad();
     },
     { deep: true }
   );
@@ -1521,6 +1530,17 @@
     const provinceName = lergStore.getProvinceNameByCode(code);
     return provinceName; // Returns the code itself if not found here either
   }
+
+  // Debounced function to process NPANXX input
+  const debouncedProcessNpanxxInput = useDebounceFn(() => {
+    const terms = npanxxSearchInput.value
+      .split(',')
+      .map((term) => term.trim().toLowerCase())
+      .filter((term) => term.length > 0);
+    npanxxFilterTerms.value = terms;
+    // The main data loading `debouncedResetPaginationAndLoad` is already watched by npanxxSearchInput,
+    // so no need to call it directly here. The change to npanxxFilterTerms will be picked up by it.
+  }, 300);
 
   // --- Sorting Handler ---
   async function handleSort(key: SortableUSComparisonColumn['key']) {
@@ -1649,7 +1669,7 @@
 
   // --- Clear All Filters Function --- START ---
   async function handleClearAllFilters() {
-    searchTerm.value = '';
+    npanxxSearchInput.value = ''; // Changed from searchTerm
     selectedState.value = '';
     clearAllSelectedMetros(); // This clears selectedMetros and metroSearchQuery
 

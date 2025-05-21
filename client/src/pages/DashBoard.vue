@@ -23,7 +23,6 @@
                 <h2 class="text-xl font-semibold">
                   Welcome back, {{ userStore.auth.user?.email || 'Guest' }}
                 </h2>
-                <p class="text-gray-400 mt-1">{{ userStore.auth.user?.email }}</p>
               </div>
               <!-- Add Logout Button Here -->
               <BaseButton
