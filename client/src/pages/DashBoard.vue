@@ -21,8 +21,9 @@
             <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
               <div>
                 <h2 class="text-xl font-semibold">
-                  Welcome back, {{ userStore.auth.user?.email || 'Guest' }}
+                  Welcome back,
                 </h2>
+                <p class="text-sm text-gray-400">{{ userStore.auth.user?.email || 'Guest' }}</p>
               </div>
               <!-- Add Logout Button Here -->
               <BaseButton
@@ -163,25 +164,25 @@
             <!-- Placeholder for potential errors or status messages -->
           </div>
         </div>
+      </div>
 
-        <!-- Delete Account Section -->
-        <div class="mt-8 border-t border-gray-700/50 pt-6">
-          <h3 class="text-md font-medium text-destructive mb-2">Delete Account</h3>
-          <p class="text-sm text-slate-400 mb-4">
-            Permanently delete your account and all associated data. This action is irreversible.
-          </p>
-          <BaseButton
-            variant="destructive"
-            @click="openDeleteConfirmModal"
-            :is-loading="isDeletingAccount"
-          >
-            <span v-if="isDeletingAccount">Deleting...</span>
-            <span v-else>Delete My Account</span>
-          </BaseButton>
-          <p v-if="deleteAccountError" class="mt-2 text-sm text-destructive">
-            {{ deleteAccountError }}
-          </p>
-        </div>
+      <!-- Delete Account Section -->
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
+        <h2 class="text-lg font-semibold text-destructive mb-4">Delete Account</h2>
+        <p class="text-sm text-slate-400 mb-4">
+          Permanently delete your account and all associated data. <br />This action is irreversible.
+        </p>
+        <BaseButton
+          variant="destructive"
+          @click="openDeleteConfirmModal"
+          :is-loading="isDeletingAccount"
+        >
+          <span v-if="isDeletingAccount">Deleting...</span>
+          <span v-else>Delete My Account</span>
+        </BaseButton>
+        <p v-if="deleteAccountError" class="mt-2 text-sm text-destructive">
+          {{ deleteAccountError }}
+        </p>
       </div>
 
       <!-- Database Tables Info -->
