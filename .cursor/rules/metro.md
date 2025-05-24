@@ -158,3 +158,124 @@ This plan incorporates user feedback to implement a multi-select metro area filt
 - **State/Metro Intersection Example**: If "New York Metro" is selected (spanning NY, NJ, CT NPAs) and the user then filters by State "NJ", the table should only show records matching NPAs from the New York Metro _that are also in NJ_ and match any NPANXX search terms.
 
 This revised plan should provide a clear path for implementation. I have no further questions at this time based on your feedback. I am ready to proceed with generating the code changes for `USDetailedComparisonTable.vue` according to this plan.
+
+---
+
+## Phase 3: Refactor Metro Filter into a Reusable Composable
+
+This phase focuses on extracting the common metro filter logic and UI state management into a dedicated Vue composable (`useMetroFilter.ts`) to reduce code duplication and improve maintainability in `USRateSheetTable.vue` and `USDetailedComparisonTable.vue`.
+
+### Step-by-Step Implementation Plan for `useMetroFilter.ts` and Integration
+
+**Step 1: Create the `useMetroFilter.ts` Composable**
+
+1.  **Create File**:
+    - Create a new file: `client/src/composables/filters/useMetroFilter.ts`.
+2.  **Import Dependencies**:
+    - Import `ref`, `computed` from `vue`.
+    - Import `metroAreaOptions`, `MetroAreaOption` from `client/src/types/constants/metro-population.ts`.
+3.  **Define Composable Function `useMetroFilter`**:
+    - This function will encapsulate all metro filter logic.
+4.  **Reactive State Inside Composable**:
+    - `const selectedMetros = ref<MetroAreaOption[]>([]);`
+    - `const metroSearchQuery = ref('');`
+5.  **Computed Properties Inside Composable**:
+    - `metroButtonLabel`: Computes the text for the dropdown button based on `selectedMetros.value`. (e.g., "All Metro Areas", "New York Metro", "3 Metros Selected").
+    - `filteredMetroOptions`: Filters `metroAreaOptions` based on `metroSearchQuery.value` (case-insensitive on `displayName`).
+    - `totalSelectedPopulation`: Calculates `selectedMetros.value.reduce((sum, metro) => sum + metro.population, 0);`.
+    - `targetedNPAsDisplay`: Generates an object `{ summary: string, fullList: string }` for NPAs from `selectedMetros.value.flatMap(metro => metro.areaCodes)`. Ensures uniqueness and sorting.
+    - `areAllMetrosSelected`: Checks if all metros in `filteredMetroOptions.value` are present in `selectedMetros.value`.
+    - `metroAreaCodesToFilter = computed<string[]>(() => [...new Set(selectedMetros.value.flatMap(metro => metro.areaCodes))]);` (This is the primary output for data filtering).
+6.  **Helper Functions Inside Composable**:
+    - `toggleMetroSelection(metro: MetroAreaOption)`: Adds/removes a metro from `selectedMetros`.
+    - `isMetroSelected(metro: MetroAreaOption): boolean`: Checks if a metro is in `selectedMetros`.
+    - `handleSelectAllMetros()`: Selects/deselects all metros currently visible in `filteredMetroOptions`. (Ensure this logic correctly adds to or removes from `selectedMetros` without overwriting unrelated selections if `filteredMetroOptions` is a subset of all options).
+    - `removeSelectedMetro(metro: MetroAreaOption)`: Removes a metro from `selectedMetros` (typically used by chips).
+    - `clearMetroSearch()`: Clears `metroSearchQuery`.
+    - `clearAllSelectedMetros()`: Clears `selectedMetros.value = []` and `metroSearchQuery.value = ''`.
+    - `formatPopulation(population: number): string`: Formats population (e.g., "1.2M", "500K").
+7.  **Expose from Composable**:
+    - Return all reactive state, computed properties, and helper functions that the parent components will need.
+    ```typescript
+    // Example structure for useMetroFilter.ts
+    // export function useMetroFilter() {
+    //   // ...state, computeds, functions...
+    //   return {
+    //     selectedMetros,
+    //     metroSearchQuery,
+    //     metroButtonLabel,
+    //     filteredMetroOptions,
+    //     totalSelectedPopulation,
+    //     targetedNPAsDisplay,
+    //     areAllMetrosSelected,
+    //     metroAreaCodesToFilter,
+    //     toggleMetroSelection,
+    //     isMetroSelected,
+    //     handleSelectAllMetros,
+    //     removeSelectedMetro,
+    //     clearMetroSearch,
+    //     clearAllSelectedMetros,
+    //     formatPopulation,
+    //   };
+    // }
+    ```
+
+**Step 2: Refactor `USRateSheetTable.vue` to use `useMetroFilter`**
+
+1.  **Import Composable**:
+    - In `<script setup lang="ts">`, import `useMetroFilter` from `client/src/composables/filters/useMetroFilter.ts`.
+2.  **Instantiate Composable**:
+    - `const { /* destructure all needed refs and functions */ } = useMetroFilter();`
+3.  **Remove Duplicated Logic**:
+    - Delete the local `selectedMetros`, `metroSearchQuery` refs.
+    - Delete the local computed properties: `metroButtonLabel`, `filteredMetroOptions`, `totalSelectedPopulation`, `targetedNPAsDisplay`, `areAllMetrosSelected`.
+    - Delete the local helper functions: `toggleMetroSelection`, `isMetroSelected`, `handleSelectAllMetros`, `removeSelectedMetro`, `clearMetroSearch`, `clearAllSelectedMetros`, `formatPopulation`.
+    - The `metroAreaCodesToFilter` computed property will also be replaced by the one from the composable.
+4.  **Update Template**:
+    - Ensure the template binds correctly to the refs and methods provided by the composable. No structural changes to the metro filter UI elements themselves should be needed if names are kept consistent.
+5.  **Update Data Filtering**:
+    - In `fetchPageData` and `calculateAverages` (and any other data fetching/processing functions), ensure the filter logic now uses `metroAreaCodesToFilter.value` from the composable.
+    - The watcher `watch(selectedMetros, ...)` should now watch `selectedMetros.value` from the composable.
+6.  **Update "Clear All Filters"**:
+    - Ensure `handleClearAllFilters` calls `clearAllSelectedMetros()` from the composable.
+
+**Step 3: Implement Metro Filter in `USDetailedComparisonTable.vue` using `useMetroFilter`**
+
+1.  **Import Composable**:
+    - In `<script setup lang="ts">`, import `useMetroFilter` from `client/src/composables/filters/useMetroFilter.ts`.
+    - Import `metroAreaOptions`, `MetroAreaOption` from `types/constants/metro-population.ts` (if not already, for type consistency if passing options to a sub-component later, though the composable handles `metroAreaOptions` internally).
+    - Import necessary Headless UI components (`Menu`, `MenuButton`, etc.) and icons.
+2.  **Instantiate Composable**:
+    - `const { /* destructure all needed refs and functions */ } = useMetroFilter();`
+3.  **Implement UI in `<template>` (as per Phase 2, Step 2, but using composable's state)**:
+    - **Metro Filter Dropdown**: Bind `MenuButton` label to `metroButtonLabel` from composable. Use `metroSearchQuery` for the input. Iterate `filteredMetroOptions` for `MenuItem`s. Call `toggleMetroSelection`, `isMetroSelected`, `handleSelectAllMetros`, `clearAllSelectedMetros` from composable.
+    - **Selected Metros Chips Display**: Iterate `selectedMetros` from composable. Call `removeSelectedMetro` from composable.
+    - **Metro Filter Summary Section**: Use `selectedMetros.length`, `totalSelectedPopulation`, and `targetedNPAsDisplay` from composable.
+4.  **Update Data Filtering Logic (as per Phase 2, Step 4)**:
+    - Modify `fetchPageData` (and related functions like `calculateFullFilteredAverages`, `downloadCsv`) to use `metroAreaCodesToFilter.value` from the composable for filtering records by NPA.
+5.  **Implement Watcher (as per Phase 2, Step 4.2)**:
+    - `watch(selectedMetros, async () => { await resetPaginationAndLoad(); await calculateFullFilteredAverages(); }, { deep: true });` (watching `selectedMetros` from the composable).
+6.  **Update "Clear All Filters" (as per Phase 2, Step 7.1)**:
+    - Ensure the component's `handleClearAllFilters` (or equivalent) calls `clearAllSelectedMetros()` from the composable.
+
+**Step 4: Testing**
+
+1.  **Thoroughly test the Metro Filter in `USRateSheetTable.vue`**:
+    - Single and multiple selections.
+    - Search functionality within the dropdown.
+    - Select/Deselect Visible.
+    - Clear All Selected Metros.
+    - Interaction with State and NPANXX filters (intersection logic).
+    - Correct data loading and average recalculation.
+    - CSV export with metro filter applied.
+    - Rate adjustments with metro filter applied.
+2.  **Thoroughly test the Metro Filter in `USDetailedComparisonTable.vue`**:
+    - All functionalities listed above for `USRateSheetTable.vue`.
+    - Correct display of selected metro chips and summary information.
+    - Correct intersection with NPANXX and State filters.
+    - Correct calculation of averages for `fullFilteredAverages`.
+    - Correct CSV export with metro filter applied.
+3.  **Ensure UI consistency** between the two tables for the metro filter components.
+4.  **Verify no console errors** related to the composable or its integration.
+
+This approach centralizes the metro filter's complex state and logic, making both parent components significantly cleaner and easier to maintain.
