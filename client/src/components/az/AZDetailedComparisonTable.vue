@@ -333,6 +333,7 @@
     ListboxOption,
   } from '@headlessui/vue';
   import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
+  import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
 
   const azStore = useAzStore();
   const azService = new AZService();
@@ -341,7 +342,9 @@
   const isLoading = ref<boolean>(false); // Initial loading
   const isLoadingMore = ref<boolean>(false); // Subsequent page loading
   const error = ref<string | null>(null);
-  const isExporting = ref(false);
+
+  // Replace any existing export-related refs with the composable
+  const { isExporting, exportError, exportToCSV } = useCSVExport();
 
   // Filter State
   const searchTerm = ref<string>('');
@@ -596,12 +599,9 @@
     }
   }
 
-  // --- CSV Download Function ---
   function downloadCsv(): void {
-    // Use comparisonData.value which reflects the current UI view (filtered + paginated)
     if (!comparisonData.value || comparisonData.value.length === 0) {
       console.warn('No data currently displayed to download.');
-      // Optionally show a user notification
       return;
     }
 
@@ -618,46 +618,27 @@
         'Cheaper File',
       ];
 
-      // Map the currently displayed data (comparisonData) for export
-      const dataToExport = comparisonData.value.map((record) => ({
-        'Dial Code': record.dialCode,
-        'Match Status': formatMatchStatus(record.matchStatus),
-        [`Dest Name ${fileName1.value}`]: record.destName1 ?? 'n/a',
-        [`Dest Name ${fileName2.value}`]: record.destName2 ?? 'n/a',
-        [`Rate ${fileName1.value}`]: record.rate1?.toFixed(6) ?? 'n/a',
-        [`Rate ${fileName2.value}`]: record.rate2?.toFixed(6) ?? 'n/a',
-        Diff: record.diff?.toFixed(6) ?? 'n/a',
-        'Diff %': record.diffPercent ? `${record.diffPercent.toFixed(2)}%` : 'n/a',
-        'Cheaper File': formatCheaperFile(record.cheaperFile),
-      }));
+      const rows = comparisonData.value.map((record) => [
+        record.dialCode,
+        formatMatchStatus(record.matchStatus),
+        record.destName1 ?? 'n/a',
+        record.destName2 ?? 'n/a',
+        formatRate(record.rate1),
+        formatRate(record.rate2),
+        formatRate(record.diff),
+        formatPercentage(record.diffPercent),
+        formatCheaperFile(record.cheaperFile),
+      ]);
 
-      const csv = Papa.unparse(
+      exportToCSV(
+        { headers, rows },
         {
-          fields: headers,
-          data: dataToExport.map((row) => headers.map((header) => row[header])),
-        },
-        {
-          header: true,
-          quotes: true, // Ensure fields with commas or quotes are properly quoted
+          filename: 'az-compare',
+          quoteFields: true,
         }
       );
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `az-compare-${timestamp}.csv`;
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (csvError) {
-      console.error('Error generating or downloading CSV:', csvError);
-      // Optionally show a user notification about the error
+    } catch (err: any) {
+      console.error('Error during CSV export:', err);
       error.value = 'Failed to generate CSV file.';
     }
   }

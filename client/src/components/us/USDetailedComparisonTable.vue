@@ -645,6 +645,15 @@
   import BaseButton from '@/components/shared/BaseButton.vue'; // Import BaseButton
   import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/20/solid';
   import { useMetroFilter } from '@/composables/filters/useMetroFilter';
+  import {
+    US_REGION_CODES,
+    CA_REGION_CODES,
+    getRegionName,
+    sortRegionCodesByName,
+    groupRegionCodes,
+    RegionType,
+  } from '@/types/constants/region-codes';
+  import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
 
   // Type for sortable column definition
   interface SortableUSComparisonColumn {
@@ -688,7 +697,6 @@
   const isLoading = ref<boolean>(false); // Initial loading state (for component mount)
   const isPageLoading = ref<boolean>(false); // Loading state for page changes and initial data load for a filter set
   const isFiltering = ref<boolean>(false); // State for loading during filter changes (visual overlay)
-  const isExporting = ref<boolean>(false); // Export loading state
   const error = ref<string | null>(null);
   const availableStates = ref<string[]>([]); // For state filter dropdown
 
@@ -887,13 +895,12 @@
     };
   });
 
+  // Replace isExporting ref with the one from composable
+  const { isExporting, exportError, exportToCSV } = useCSVExport();
+
   // --- CSV Download Function (Updated) ---
   async function downloadCsv(): Promise<void> {
-    if (isExporting.value) return; // Prevent multiple exports
-
-    isExporting.value = true;
-    error.value = null; // Clear previous errors
-    console.log('[USDetailedComparisonTable] Starting CSV export...');
+    if (isExporting.value) return;
 
     try {
       // Ensure DB is initialized
@@ -901,7 +908,7 @@
         throw new Error('Database not available for export.');
       }
 
-      // 1. Build the query dynamically to get ALL filtered data
+      // Build query with filters
       let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
       // Apply client-side filters
@@ -925,83 +932,62 @@
         currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
       }
 
-      let queryForCount = query.toCollection(); // Start with a full collection for counting
+      let queryForData = query.toCollection();
       if (currentFilters.length > 0) {
-        queryForCount = queryForCount.filter((record) => currentFilters.every((fn) => fn(record)));
-      }
-      totalFilteredItems.value = await queryForCount.count();
-
-      let queryForPageData = query.toCollection(); // Start with a full collection for data fetching
-      if (currentFilters.length > 0) {
-        queryForPageData = queryForPageData.filter((record) =>
-          currentFilters.every((fn) => fn(record))
-        );
+        queryForData = queryForData.filter((record) => currentFilters.every((fn) => fn(record)));
       }
 
-      // Attempt DB-Level Sorting on queryForPageData
-      let dbSortApplied = false;
-      const sortKeyIsDirectDBField = ![
-        'diff_inter_pct',
-        'diff_intra_pct',
-        'diff_indeterm_pct',
-      ].includes(currentSortKey.value);
+      const records = await queryForData.toArray();
 
-      if (
-        sortKeyIsDirectDBField &&
-        typeof queryForPageData.orderBy === 'function' &&
-        currentSortKey.value
-      ) {
-        try {
-          queryForPageData = queryForPageData.orderBy(currentSortKey.value);
-          if (currentSortDirection.value === 'desc') {
-            queryForPageData = queryForPageData.reverse();
-          }
-          dbSortApplied = true;
-        } catch (dbSortError) {
-          dbSortApplied = false;
+      // Prepare data for CSV export
+      const headers = [
+        'NPANXX',
+        'State',
+        'Country',
+        `${fileName1.value} Inter`,
+        `${fileName2.value} Inter`,
+        'Inter Diff %',
+        `${fileName1.value} Intra`,
+        `${fileName2.value} Intra`,
+        'Intra Diff %',
+        `${fileName1.value} Indeterm`,
+        `${fileName2.value} Indeterm`,
+        'Indeterm Diff %',
+      ];
+
+      const rows = records.map((record) => [
+        record.npanxx,
+        record.stateCode,
+        record.countryCode,
+        formatRate(record.file1_inter),
+        formatRate(record.file2_inter),
+        formatPercentage(record.diff_inter_pct),
+        formatRate(record.file1_intra),
+        formatRate(record.file2_intra),
+        formatPercentage(record.diff_intra_pct),
+        formatRate(record.file1_indeterm),
+        formatRate(record.file2_indeterm),
+        formatPercentage(record.diff_indeterm_pct),
+      ]);
+
+      // Build filename parts
+      const filenameParts = [];
+      if (selectedState.value) filenameParts.push(selectedState.value);
+      if (npanxxFilterTerms.value.length > 0)
+        filenameParts.push(`search_${npanxxFilterTerms.value.join('-')}`);
+
+      // Export using the composable
+      await exportToCSV(
+        { headers, rows },
+        {
+          filename: 'us-comparison',
+          additionalNameParts: filenameParts,
+          quoteFields: true,
         }
-      }
-
-      // Apply pagination to queryForPageData
-      let newData = await queryForPageData
-        .offset(calculatedOffset)
-        .limit(itemsPerPage.value)
-        .toArray();
-
-      // Client-Side Sorting if DB sort wasn't applied or for computed columns
-      if (!dbSortApplied && currentSortKey.value) {
-        console.log(
-          '[USDetailedComparisonTable] Applying client-side sort on:',
-          currentSortKey.value,
-          currentSortDirection.value
-        );
-        isPerformingPageLevelSort.value = true; // Indicate page-level sort
-        newData.sort((a, b) => {
-          const valA = (a as any)[currentSortKey.value!];
-          const valB = (b as any)[currentSortKey.value!];
-          let comparison = 0;
-
-          if (valA === null || valA === undefined) comparison = 1;
-          else if (valB === null || valB === undefined) comparison = -1;
-          else if (typeof valA === 'string' && typeof valB === 'string') {
-            comparison = valA.localeCompare(valB);
-          } else if (typeof valA === 'number' && typeof valB === 'number') {
-            comparison = valA - valB;
-          } else if (valA > valB) comparison = 1;
-          else if (valA < valB) comparison = -1;
-
-          return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
-        });
-      }
-
-      displayedData.value = newData;
+      );
     } catch (err: any) {
-      console.error('Error loading page data:', err);
-      error.value = err.message || 'Failed to load data for the page';
-      displayedData.value = []; // Clear data on error
-      totalFilteredItems.value = 0; // Reset count on error
-    } finally {
-      isPageLoading.value = false;
+      console.error('Error during CSV export:', err);
+      error.value = err.message || 'Failed to export data';
     }
   }
 
@@ -1030,78 +1016,12 @@
     return true; // Already initialized
   }
 
-  // Define US States and Canadian Provinces for sorting
-  const US_STATES = [
-    'AL',
-    'AK',
-    'AZ',
-    'AR',
-    'CA',
-    'CO',
-    'CT',
-    'DE',
-    'FL',
-    'GA',
-    'HI',
-    'ID',
-    'IL',
-    'IN',
-    'IA',
-    'KS',
-    'KY',
-    'LA',
-    'ME',
-    'MD',
-    'MA',
-    'MI',
-    'MN',
-    'MS',
-    'MO',
-    'MT',
-    'NE',
-    'NV',
-    'NH',
-    'NJ',
-    'NM',
-    'NY',
-    'NC',
-    'ND',
-    'OH',
-    'OK',
-    'OR',
-    'PA',
-    'RI',
-    'SC',
-    'SD',
-    'TN',
-    'TX',
-    'UT',
-    'VT',
-    'VA',
-    'WA',
-    'WV',
-    'WI',
-    'WY',
-    'DC',
-  ];
-  const CA_PROVINCES = [
-    'AB',
-    'BC',
-    'MB',
-    'NB',
-    'NL',
-    'NS',
-    'NT',
-    'NU',
-    'ON',
-    'PE',
-    'QC',
-    'SK',
-    'YT',
-  ];
+  // Replace the US_STATES and CA_PROVINCES constants with imported ones
+  const US_STATES = US_REGION_CODES;
+  const CA_PROVINCES = CA_REGION_CODES;
 
   async function fetchUniqueStates() {
-    if (!(await initializeDB()) || !dbInstance) return; // Ensure DB is ready
+    if (!(await initializeDB()) || !dbInstance) return;
 
     try {
       const uniqueRegionCodes = (await dbInstance
@@ -1109,28 +1029,10 @@
         .orderBy('stateCode')
         .uniqueKeys()) as string[];
 
-      // Custom sort: US States first, then Canadian Provinces, then others (alphabetical within groups)
-      availableStates.value = uniqueRegionCodes
-        .filter(Boolean) // Remove null/undefined/empty strings
-        .sort((a, b) => {
-          const aIsUS = US_STATES.includes(a);
-          const bIsUS = US_STATES.includes(b);
-          const aIsCA = CA_PROVINCES.includes(a);
-          const bIsCA = CA_PROVINCES.includes(b);
-
-          if (aIsUS && !bIsUS) return -1; // US comes before non-US
-          if (!aIsUS && bIsUS) return 1; // non-US comes after US
-
-          if (aIsUS && bIsUS) return a.localeCompare(b); // Sort US states alphabetically
-
-          if (aIsCA && !bIsCA) return -1; // CA comes before others (non-US, non-CA)
-          if (!aIsCA && bIsCA) return 1; // Others come after CA
-
-          if (aIsCA && bIsCA) return a.localeCompare(b); // Sort CA provinces alphabetically
-
-          // Sort any remaining items alphabetically
-          return a.localeCompare(b);
-        });
+      // Use the new utility functions for sorting
+      availableStates.value = sortRegionCodesByName(
+        uniqueRegionCodes.filter(Boolean) // Remove null/undefined/empty strings
+      );
 
       console.log(
         '[USDetailedComparisonTable] Fetched and sorted unique states:',
@@ -1138,28 +1040,25 @@
       );
     } catch (err: any) {
       console.error('Error fetching unique states:', err);
-      availableStates.value = []; // Clear on error
-      // Non-critical error, don't block UI, but maybe show a message?
+      availableStates.value = [];
       error.value = 'Could not load state filter options.';
     }
   }
 
   // Computed property to structure states for the dropdown with optgroup
   const groupedAvailableStates = computed(() => {
-    const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
-    const caOptions = availableStates.value.filter((code) => CA_PROVINCES.includes(code));
-    // Add otherOptions if needed: const otherOptions = availableStates.value.filter(code => !US_STATES.includes(code) && !CA_PROVINCES.includes(code));
+    const grouped = groupRegionCodes(availableStates.value);
 
-    const groups = [];
-    if (usOptions.length > 0) {
-      groups.push({ label: 'United States', codes: usOptions });
-    }
-    if (caOptions.length > 0) {
-      groups.push({ label: 'Canada', codes: caOptions });
-    }
-    // if (otherOptions.length > 0) { groups.push({ label: 'Other', codes: otherOptions }); }
-    return groups;
+    return [
+      { label: 'United States', codes: grouped['US'] || [] },
+      { label: 'Canada', codes: grouped['CA'] || [] },
+    ].filter((group) => group.codes.length > 0);
   });
+
+  // Helper function to get display name for state or province
+  function getRegionDisplayName(code: string): string {
+    return getRegionName(code) || code;
+  }
 
   // --- New Pagination Data Fetching Logic ---
   async function fetchPageData(page: number) {
@@ -1487,20 +1386,6 @@
     } else {
       return 'N/A'; // Handle undefined/null case
     }
-  }
-
-  // Helper function to get display name for state or province
-  function getRegionDisplayName(code: string): string {
-    if (!code) return '';
-    // Check US states first
-    const stateName = lergStore.getStateNameByCode(code);
-    if (stateName !== code) {
-      // getStateNameByCode returns the code itself if not found
-      return stateName;
-    }
-    // Check Canadian provinces if not found in US states
-    const provinceName = lergStore.getProvinceNameByCode(code);
-    return provinceName; // Returns the code itself if not found here either
   }
 
   // Debounced function to process NPANXX input

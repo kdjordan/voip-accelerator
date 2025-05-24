@@ -822,6 +822,15 @@
   } from '@/types/domains/rate-sheet-types';
   import Dexie from 'dexie';
   import { useMetroFilter } from '@/composables/filters/useMetroFilter';
+  import {
+    US_REGION_CODES,
+    CA_REGION_CODES,
+    getRegionName,
+    sortRegionCodesByName,
+    groupRegionCodes,
+    RegionType,
+  } from '@/types/constants/region-codes';
+  import { useCSVExport, formatRate } from '@/composables/exports/useCSVExport';
 
   // Minimum time (in ms) the filtering overlay should be displayed
   const MIN_FILTER_DISPLAY_TIME = 400;
@@ -898,7 +907,6 @@
   const selectedState = ref<string>('');
 
   const isFiltering = ref(false);
-  const isExporting = ref(false);
   const dataError = ref<string | null>(null);
   const hasMoreData = ref(false); // Add missing hasMoreData ref
 
@@ -907,75 +915,9 @@
   const displayedData = ref<USRateSheetEntry[]>([]);
   const availableStates = ref<string[]>([]);
 
-  // Define US States and Canadian Provinces for sorting
-  const US_STATES = [
-    'AL',
-    'AK',
-    'AZ',
-    'AR',
-    'CA',
-    'CO',
-    'CT',
-    'DE',
-    'FL',
-    'GA',
-    'HI',
-    'ID',
-    'IL',
-    'IN',
-    'IA',
-    'KS',
-    'KY',
-    'LA',
-    'ME',
-    'MD',
-    'MA',
-    'MI',
-    'MN',
-    'MS',
-    'MO',
-    'MT',
-    'NE',
-    'NV',
-    'NH',
-    'NJ',
-    'NM',
-    'NY',
-    'NC',
-    'ND',
-    'OH',
-    'OK',
-    'OR',
-    'PA',
-    'RI',
-    'SC',
-    'SD',
-    'TN',
-    'TX',
-    'UT',
-    'VT',
-    'VA',
-    'WA',
-    'WV',
-    'WI',
-    'WY',
-    'DC',
-  ];
-  const CA_PROVINCES = [
-    'AB',
-    'BC',
-    'MB',
-    'NB',
-    'NL',
-    'NS',
-    'NT',
-    'NU',
-    'ON',
-    'PE',
-    'QC',
-    'SK',
-    'YT',
-  ];
+  // Replace the US_STATES and CA_PROVINCES constants with imported ones
+  const US_STATES = US_REGION_CODES;
+  const CA_PROVINCES = CA_REGION_CODES;
 
   // --- Sorting State ---
   const currentSortKey = ref<string>('npanxx'); // Default sort column
@@ -1000,17 +942,12 @@
 
   // Computed property to structure states for the dropdown with optgroup
   const groupedAvailableStates = computed(() => {
-    const usOptions = availableStates.value.filter((code) => US_STATES.includes(code));
-    const caOptions = availableStates.value.filter((code) => CA_PROVINCES.includes(code));
+    const grouped = groupRegionCodes(availableStates.value);
 
-    const groups = [];
-    if (usOptions.length > 0) {
-      groups.push({ label: 'United States', codes: usOptions });
-    }
-    if (caOptions.length > 0) {
-      groups.push({ label: 'Canada', codes: caOptions });
-    }
-    return groups;
+    return [
+      { label: 'United States', codes: grouped['US'] || [] },
+      { label: 'Canada', codes: grouped['CA'] || [] },
+    ].filter((group) => group.codes.length > 0);
   });
 
   // State for Average Calculation
@@ -1156,24 +1093,10 @@
         .orderBy('stateCode')
         .uniqueKeys()) as string[];
 
-      availableStates.value = uniqueRegionCodes.filter(Boolean).sort((a, b) => {
-        const aIsUS = US_STATES.includes(a);
-        const bIsUS = US_STATES.includes(b);
-        const aIsCA = CA_PROVINCES.includes(a);
-        const bIsCA = CA_PROVINCES.includes(b);
-
-        if (aIsUS && !bIsUS) return -1;
-        if (!aIsUS && bIsUS) return 1;
-
-        if (aIsUS && bIsUS) return a.localeCompare(b);
-
-        if (aIsCA && !bIsCA) return -1;
-        if (!aIsCA && bIsCA) return 1;
-
-        if (aIsCA && bIsCA) return a.localeCompare(b);
-
-        return a.localeCompare(b);
-      });
+      // Use the new utility functions for sorting
+      availableStates.value = sortRegionCodesByName(
+        uniqueRegionCodes.filter(Boolean) // Remove null/undefined/empty strings
+      );
     } catch (err: any) {
       availableStates.value = [];
       dataError.value = 'Could not load state/province filter options.';
@@ -1554,85 +1477,69 @@
     }
   }
 
+  // Replace isExporting ref with the one from composable
+  const { isExporting, exportError, exportToCSV } = useCSVExport();
+
   async function handleExport() {
     if (isExporting.value) return;
+
     const dbReady = await initializeRateSheetDB();
     if (!dbReady || !dbInstance) {
       alert('Database is not ready. Cannot export.');
       return;
     }
 
-    isExporting.value = true;
-    dataError.value = null;
-
     try {
       const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-
       const allMatchingData = await table.toArray();
 
       if (allMatchingData.length === 0) {
         alert('No data found in the rate sheet to export.');
-        isExporting.value = false;
         return;
       }
 
-      const fields = [
-        { label: 'NPANXX', value: 'npanxx' },
-        { label: 'State', value: 'state' },
-        { label: 'Country', value: 'country' },
-        { label: 'Interstate Rate', value: 'interRate' },
-        { label: 'Intrastate Rate', value: 'intraRate' },
-        { label: 'Indeterminate Rate', value: 'indetermRate' },
-        { label: 'Effective Date', value: 'effectiveDate' },
+      const headers = [
+        'NPANXX',
+        'State',
+        'Country',
+        'Interstate Rate',
+        'Intrastate Rate',
+        'Indeterminate Rate',
+        'Effective Date',
       ];
 
-      const dataToExport = allMatchingData.map((entry) => {
+      const rows = allMatchingData.map((entry) => {
         const location = lergStore.getLocationByNPA(entry.npa);
-        const formatExportRate = (rate: number | string | null | undefined): string => {
-          if (rate === null || rate === undefined || typeof rate !== 'number') {
-            return 'N/A';
-          }
-          return Number(rate).toFixed(6);
-        };
-
-        return {
-          npanxx: `1${entry.npanxx}`,
-          state: location?.region || 'N/A',
-          country: location?.country || 'N/A',
-          interRate: formatExportRate(entry.interRate),
-          intraRate: formatExportRate(entry.intraRate),
-          indetermRate: formatExportRate(entry.indetermRate),
-          effectiveDate: store.getCurrentEffectiveDate || 'N/A',
-        };
+        return [
+          `1${entry.npanxx}`,
+          location?.region || 'N/A',
+          location?.country || 'N/A',
+          formatRate(entry.interRate),
+          formatRate(entry.intraRate),
+          formatRate(entry.indetermRate),
+          store.getCurrentEffectiveDate || 'N/A',
+        ];
       });
 
-      const csv = Papa.unparse({
-        fields: fields.map((f) => f.label),
-        data: dataToExport.map((row) =>
-          fields.map((field) => row[field.value as keyof typeof row])
-        ),
-      });
+      // Build filename parts
+      const filenameParts = [];
+      if (selectedState.value) filenameParts.push(selectedState.value);
+      if (debouncedSearchQuery.value.length > 0) {
+        filenameParts.push(`search_${debouncedSearchQuery.value.join('-')}`);
+      }
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      let filename = 'us-rate-sheet';
-      if (selectedState.value) filename += `-${selectedState.value}`;
-      if (debouncedSearchQuery.value) filename += `-search_${debouncedSearchQuery.value}`;
-      filename += `-${timestamp}.csv`;
-
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (exportError: any) {
-      dataError.value = exportError.message || 'An error occurred during export.';
+      await exportToCSV(
+        { headers, rows },
+        {
+          filename: 'us-rate-sheet',
+          additionalNameParts: filenameParts,
+          quoteFields: true,
+        }
+      );
+    } catch (err: any) {
+      console.error('Error during export:', err);
+      dataError.value = err.message || 'Failed to export data';
       alert(`Export failed: ${dataError.value}`);
-    } finally {
-      isExporting.value = false;
     }
   }
 
@@ -1826,11 +1733,7 @@
   );
 
   function getRegionDisplayName(code: string): string {
-    if (!code) return '';
-    const stateName = lergStore.getStateNameByCode(code);
-    if (stateName !== code) return stateName;
-    const provinceName = lergStore.getProvinceNameByCode(code);
-    return provinceName;
+    return getRegionName(code) || code;
   }
 
   // --- Sorting Handler ---
