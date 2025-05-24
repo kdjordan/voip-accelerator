@@ -644,7 +644,7 @@
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
   import BaseButton from '@/components/shared/BaseButton.vue'; // Import BaseButton
   import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/20/solid';
-  import { metroAreaOptions, type MetroAreaOption } from '@/types/constants/metro-population';
+  import { useMetroFilter } from '@/composables/filters/useMetroFilter';
 
   // Type for sortable column definition
   interface SortableUSComparisonColumn {
@@ -664,6 +664,26 @@
   const usStore = useUsStore(); // Instantiate usStore
   const lergStore = useLergStore(); // Instantiate lergStore
   const { getDB } = useDexieDB(); // Only need getDB now
+
+  // --- Metro Filter Composable ---
+  const {
+    selectedMetros,
+    metroSearchQuery,
+    metroButtonLabel,
+    filteredMetroOptions,
+    totalSelectedPopulation,
+    targetedNPAsDisplay,
+    areAllMetrosSelected,
+    metroAreaCodesToFilter,
+    toggleMetroSelection,
+    isMetroSelected,
+    handleSelectAllMetros,
+    removeSelectedMetro,
+    clearMetroSearch,
+    clearAllSelectedMetros,
+    formatPopulation,
+  } = useMetroFilter();
+
   const displayedData = ref<USPricingComparisonRecord[]>([]);
   const isLoading = ref<boolean>(false); // Initial loading state (for component mount)
   const isPageLoading = ref<boolean>(false); // Loading state for page changes and initial data load for a filter set
@@ -671,11 +691,6 @@
   const isExporting = ref<boolean>(false); // Export loading state
   const error = ref<string | null>(null);
   const availableStates = ref<string[]>([]); // For state filter dropdown
-
-  // --- Metro Filter State --- START ---
-  const selectedMetros = ref<MetroAreaOption[]>([]);
-  const metroSearchQuery = ref('');
-  // --- Metro Filter State --- END ---
 
   // --- Sorting State ---
   const currentSortKey = ref<SortableUSComparisonColumn['key']>('npanxx'); // Default sort key
@@ -689,49 +704,6 @@
   const selectedState = ref<string>('');
 
   // --- Metro Filter Computed Properties --- START ---
-  const metroButtonLabel = computed(() => {
-    if (selectedMetros.value.length === 0) return 'All Metro Areas';
-    if (selectedMetros.value.length === 1) return selectedMetros.value[0].displayName;
-    return `${selectedMetros.value.length} Metro Areas Selected`;
-  });
-
-  const filteredMetroOptions = computed(() => {
-    if (!metroSearchQuery.value) {
-      return metroAreaOptions;
-    }
-    return metroAreaOptions.filter((metro) =>
-      metro.displayName.toLowerCase().includes(metroSearchQuery.value.toLowerCase())
-    );
-  });
-
-  const totalSelectedPopulation = computed(() => {
-    return selectedMetros.value.reduce((sum, metro) => sum + metro.population, 0);
-  });
-
-  const targetedNPAsDisplay = computed(() => {
-    if (selectedMetros.value.length === 0) {
-      return { summary: '', fullList: '' };
-    }
-    const allNPAs = [...new Set(selectedMetros.value.flatMap((metro) => metro.areaCodes))].sort();
-    const npaListString = allNPAs.join(', ');
-    if (allNPAs.length === 0) {
-      return { summary: '', fullList: '' };
-    }
-    const summaryText = `Targeting ${allNPAs.length} NPAs: ${npaListString}`;
-    return { summary: summaryText, fullList: npaListString };
-  });
-
-  const areAllMetrosSelected = computed(() => {
-    const optionsToConsider = filteredMetroOptions.value;
-    if (optionsToConsider.length === 0) return false;
-    return optionsToConsider.every((metro) =>
-      selectedMetros.value.some((sm) => sm.key === metro.key)
-    );
-  });
-
-  const metroAreaCodesToFilter = computed<string[]>(() => {
-    return [...new Set(selectedMetros.value.flatMap((metro) => metro.areaCodes))];
-  });
   // --- Metro Filter Computed Properties --- END ---
 
   // --- Pagination State ---
@@ -1610,61 +1582,6 @@
   // --- End Pagination Action Handlers ---
 
   // --- Metro Filter Functions --- START ---
-  function toggleMetroSelection(metro: MetroAreaOption) {
-    const index = selectedMetros.value.findIndex((m) => m.key === metro.key);
-    if (index > -1) {
-      selectedMetros.value.splice(index, 1);
-    } else {
-      selectedMetros.value.push(metro);
-    }
-  }
-
-  function isMetroSelected(metro: MetroAreaOption): boolean {
-    return selectedMetros.value.some((m) => m.key === metro.key);
-  }
-
-  function handleSelectAllMetros() {
-    const currentFilteredAreSelected = areAllMetrosSelected.value;
-    const optionsToConsider = filteredMetroOptions.value;
-
-    if (currentFilteredAreSelected) {
-      selectedMetros.value = selectedMetros.value.filter(
-        (sm) => !optionsToConsider.find((fm) => fm.key === sm.key)
-      );
-    } else {
-      optionsToConsider.forEach((metro) => {
-        if (!isMetroSelected(metro)) {
-          selectedMetros.value.push(metro);
-        }
-      });
-    }
-  }
-
-  function removeSelectedMetro(metro: MetroAreaOption) {
-    const index = selectedMetros.value.findIndex((m) => m.key === metro.key);
-    if (index > -1) {
-      selectedMetros.value.splice(index, 1);
-    }
-  }
-
-  function clearMetroSearch() {
-    metroSearchQuery.value = '';
-  }
-
-  function clearAllSelectedMetros() {
-    selectedMetros.value = [];
-    metroSearchQuery.value = '';
-  }
-
-  function formatPopulation(population: number): string {
-    if (population >= 1000000) {
-      return `${(population / 1000000).toFixed(1)}M`;
-    }
-    if (population >= 1000) {
-      return `${(population / 1000).toFixed(1)}K`;
-    }
-    return population.toString();
-  }
   // --- Metro Filter Functions --- END ---
 
   // --- Clear All Filters Function --- START ---
