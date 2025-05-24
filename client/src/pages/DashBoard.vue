@@ -20,9 +20,7 @@
           <div class="flex-grow">
             <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
               <div>
-                <h2 class="text-xl font-semibold">
-                  Welcome back,
-                </h2>
+                <h2 class="text-xl font-semibold">Welcome back,</h2>
                 <p class="text-sm text-gray-400">{{ userStore.auth.user?.email || 'Guest' }}</p>
               </div>
               <!-- Add Logout Button Here -->
@@ -170,7 +168,8 @@
       <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
         <h2 class="text-lg font-semibold text-destructive mb-4">Delete Account</h2>
         <p class="text-sm text-slate-400 mb-4">
-          Permanently delete your account and all associated data. <br />This action is irreversible.
+          Permanently delete your account and all associated data. <br />This action is
+          irreversible.
         </p>
         <BaseButton
           variant="destructive"
