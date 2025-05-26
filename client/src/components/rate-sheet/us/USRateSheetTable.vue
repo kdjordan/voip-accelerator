@@ -715,7 +715,7 @@
       <!-- Page Info and Navigation -->
       <div class="flex items-center gap-2 flex-wrap justify-center">
         <BaseButton
-          @click="goToFirstPage"
+          @click="() => goToFirstPage(createFilters())"
           :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -725,7 +725,7 @@
           &laquo; First
         </BaseButton>
         <BaseButton
-          @click="goToPreviousPage"
+          @click="() => goToPreviousPage(createFilters())"
           :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -740,8 +740,8 @@
           <input
             type="number"
             v-model.number="directPageInput"
-            @change="handleDirectPageInput"
-            @keyup.enter="handleDirectPageInput"
+            @change="() => handleDirectPageInput(createFilters())"
+            @keyup.enter="() => handleDirectPageInput(createFilters())"
             min="1"
             :max="totalPages"
             class="bg-gray-800 border border-gray-700 text-white w-14 text-center sm:text-sm rounded-md p-1.5 focus:ring-primary-500 focus:border-primary-500"
@@ -751,7 +751,7 @@
         </span>
 
         <BaseButton
-          @click="goToNextPage"
+          @click="() => goToNextPage(createFilters())"
           :disabled="!canGoToNextPage || isDataLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -761,7 +761,7 @@
           Next &rsaquo;
         </BaseButton>
         <BaseButton
-          @click="goToLastPage"
+          @click="() => goToLastPage(createFilters())"
           :disabled="!canGoToNextPage || currentPage === totalPages || isDataLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -811,9 +811,7 @@
   import { useLergStore } from '@/stores/lerg-store';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
-  import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types/app-types';
-  import type { DexieDBBase } from '@/composables/useDexieDB';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import {
     type AdjustmentType,
@@ -831,9 +829,8 @@
     RegionType,
   } from '@/types/constants/region-codes';
   import { useCSVExport, formatRate } from '@/composables/exports/useCSVExport';
-
-  // Minimum time (in ms) the filtering overlay should be displayed
-  const MIN_FILTER_DISPLAY_TIME = 400;
+  import { useUSTableData } from '@/composables/tables/useUSTableData';
+  import type { FilterFunction } from '@/composables/tables/useTableData';
 
   // Type for average values
   interface RateAverages {
@@ -845,9 +842,58 @@
   // Initialize store and service
   const store = useUsRateSheetStore();
   const lergStore = useLergStore();
-  const { getDB } = useDexieDB();
-  let dbInstance: DexieDBBase | null = null;
   const RATE_SHEET_TABLE_NAME = 'entries';
+
+  // Initialize table data composable
+  const {
+    // Data
+    displayedData,
+    totalFilteredItems,
+
+    // Loading states
+    isDataLoading,
+    isFiltering,
+
+    // Error handling
+    dataError,
+
+    // Pagination
+    currentPage,
+    itemsPerPage,
+    itemsPerPageOptions,
+    totalPages,
+    canGoToPreviousPage,
+    canGoToNextPage,
+    directPageInput,
+
+    // Sorting
+    currentSortKey,
+    currentSortDirection,
+
+    // Methods
+    initializeDB,
+    fetchPageData,
+    resetPaginationAndLoad,
+    goToPage,
+    goToFirstPage,
+    goToPreviousPage,
+    goToNextPage,
+    goToLastPage,
+    handleDirectPageInput,
+
+    // DB instance
+    dbInstance,
+
+    // US-specific
+    availableStates,
+    fetchUniqueStates,
+  } = useUSTableData<USRateSheetEntry>({
+    dbName: DBName.US_RATE_SHEET,
+    tableName: RATE_SHEET_TABLE_NAME,
+    itemsPerPage: 100,
+    sortKey: 'npanxx',
+    sortDirection: 'asc',
+  });
 
   // --- Metro Filter Composable ---
   const {
@@ -868,8 +914,7 @@
     formatPopulation,
   } = useMetroFilter();
 
-  // --- Reactive State (Table Loading, Filters, Pagination) ---
-  const isDataLoading = ref(false); // Added: Tracks initial data loading state
+  // --- Reactive State (Table Filters) ---
   // --- Rate Adjustment Options Data ---
   const adjustmentTypeOptions = [
     { value: 'markup', label: 'Markup' },
@@ -906,22 +951,11 @@
   const debouncedSearchQuery = ref<string[]>([]); // Changed from string to string[]
   const selectedState = ref<string>('');
 
-  const isFiltering = ref(false);
-  const dataError = ref<string | null>(null);
-  const hasMoreData = ref(false); // Add missing hasMoreData ref
-
   const totalRecords = ref<number>(0); // This might become redundant if totalFilteredItems is always up-to-date
-
-  const displayedData = ref<USRateSheetEntry[]>([]);
-  const availableStates = ref<string[]>([]);
 
   // Replace the US_STATES and CA_PROVINCES constants with imported ones
   const US_STATES = US_REGION_CODES;
   const CA_PROVINCES = CA_REGION_CODES;
-
-  // --- Sorting State ---
-  const currentSortKey = ref<string>('npanxx'); // Default sort column
-  const currentSortDirection = ref<'asc' | 'desc'>('asc'); // Default sort direction
 
   // Define table headers for dynamic rendering and sorting
   const tableHeaders = ref([
@@ -938,7 +972,6 @@
       textAlign: 'text-center',
     }, // Global date, not sortable per row
   ]);
-  // --- End Sorting State ---
 
   // Computed property to structure states for the dropdown with optgroup
   const groupedAvailableStates = computed(() => {
@@ -965,8 +998,33 @@
   const animatedIndetermAvg = useTransition(indetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
 
+  // Create filter functions for the composable
+  function createFilters(): FilterFunction<USRateSheetEntry>[] {
+    const filters: FilterFunction<USRateSheetEntry>[] = [];
+
+    // NPANXX Search Filter
+    if (debouncedSearchQuery.value.length > 0) {
+      filters.push((record) => {
+        const recordNpanxxLower = record.npanxx.toLowerCase();
+        return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
+      });
+    }
+
+    // State Filter
+    if (selectedState.value) {
+      filters.push((record) => record.stateCode === selectedState.value);
+    }
+
+    // Metro Area Filter
+    if (metroAreaCodesToFilter.value.length > 0) {
+      const npaSet = new Set(metroAreaCodesToFilter.value);
+      filters.push((record) => npaSet.has(record.npa));
+    }
+
+    return filters;
+  }
+
   const debouncedSearch = useDebounceFn(async () => {
-    // Made async
     const terms = searchQuery.value
       .split(',')
       .map((term) => term.trim().toLowerCase())
@@ -979,49 +1037,15 @@
     // Reset sorting when search query changes
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
-    await resetPaginationAndLoad(); // Added await
+    await resetPaginationAndLoad(createFilters());
     await recalculateAndDisplayAverages();
   }, 300);
 
   const stopSearchWatcher = watch(searchQuery, debouncedSearch);
 
-  // --- Metro Filter Computed Properties ---
-  // All metro filter computed properties (filteredMetroOptions, totalSelectedPopulation,
-  // targetedNPAsDisplay, areAllMetrosSelected, metroAreaCodesToFilter) are now provided
-  // by the useMetroFilter() composable
-  // --- End Metro Filter Computed Properties ---
-
-  // --- Sorting UI State ---
-  const isPerformingPageLevelSort = ref(false);
-  // --- End Sorting UI State ---
-
-  // --- Pagination State ---
-  const currentPage = ref(1);
-  const itemsPerPage = ref(100); // Default items per page
-  const totalFilteredItems = ref(0);
-  const itemsPerPageOptions = ref([25, 50, 100, 250, 500]);
-  // --- End Pagination State ---
-
-  // --- Pagination Computed Properties ---
-  const totalPages = computed(() => {
-    if (totalFilteredItems.value === 0) return 1; // Avoid division by zero, show at least 1 page
-    return Math.ceil(totalFilteredItems.value / itemsPerPage.value);
-  });
-
-  const canGoToPreviousPage = computed(() => currentPage.value > 1);
-  const canGoToNextPage = computed(() => currentPage.value < totalPages.value);
-
-  // For direct page input
-  const directPageInput = ref<string | number>(currentPage.value);
-  watch(currentPage, (newPage) => {
-    directPageInput.value = newPage;
-  });
-  // --- End Pagination Computed Properties ---
-
   // Watcher for itemsPerPage changes
   const stopItemsPerPageWatcher = watch(itemsPerPage, async () => {
-    currentPage.value = 1; // Reset to first page when items per page changes
-    await resetPaginationAndLoad(); // Correctly calls the updated reset function
+    await resetPaginationAndLoad(createFilters());
   });
 
   // Watcher for state filter changes - handles table reload AND average calculation
@@ -1031,8 +1055,7 @@
     currentSortDirection.value = 'asc';
     console.log('[USRateSheetTable] State watcher triggered. New state:', newStateCode);
 
-    // 1. Reset table data and pagination
-    await resetPaginationAndLoad();
+    await resetPaginationAndLoad(createFilters());
     await recalculateAndDisplayAverages();
   });
 
@@ -1044,217 +1067,15 @@
         '[USRateSheetTable] Metro watcher triggered. Selected metros:',
         JSON.parse(JSON.stringify(selectedMetros.value))
       );
-      // Reset sorting when metro filter changes (if desired, or keep current sort)
-      // currentSortKey.value = 'npanxx';
-      // currentSortDirection.value = 'asc';
-      await resetPaginationAndLoad();
+      await resetPaginationAndLoad(createFilters());
       await recalculateAndDisplayAverages();
     },
     { deep: true }
   );
 
-  async function initializeRateSheetDB(): Promise<boolean> {
-    if (dbInstance) return true;
-
-    try {
-      const targetDbName = DBName.US_RATE_SHEET;
-      dbInstance = await getDB(targetDbName);
-      if (!dbInstance || !dbInstance.tables.some((t) => t.name === RATE_SHEET_TABLE_NAME)) {
-        if (!store.getHasUsRateSheetData) {
-          dataError.value = null;
-        } else {
-          dataError.value = `Rate sheet table '${RATE_SHEET_TABLE_NAME}' seems to be missing. Try re-uploading.`;
-        }
-        hasMoreData.value = false;
-        totalRecords.value = 0;
-        displayedData.value = [];
-        return false;
-      }
-      dataError.value = null;
-      return true;
-    } catch (err: any) {
-      dataError.value = err.message || 'Failed to connect to the rate sheet database';
-      hasMoreData.value = false;
-      totalRecords.value = 0;
-      displayedData.value = [];
-      return false;
-    }
-  }
-
-  async function fetchUniqueStates() {
-    if (!(await initializeRateSheetDB()) || !dbInstance) {
-      availableStates.value = [];
-      return;
-    }
-
-    try {
-      const uniqueRegionCodes = (await dbInstance
-        .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
-        .orderBy('stateCode')
-        .uniqueKeys()) as string[];
-
-      // Use the new utility functions for sorting
-      availableStates.value = sortRegionCodesByName(
-        uniqueRegionCodes.filter(Boolean) // Remove null/undefined/empty strings
-      );
-    } catch (err: any) {
-      availableStates.value = [];
-      dataError.value = 'Could not load state/province filter options.';
-    }
-  }
-
-  async function updateAvailableStates() {
-    await fetchUniqueStates();
-  }
-
-  async function fetchPageData(pageNumber: number): Promise<{
-    data: USRateSheetEntry[];
-    totalMatchingRecords: number;
-  }> {
-    dataError.value = null;
-    isDataLoading.value = true; // Indicate loading for the current page fetch
-    // DO NOT clear displayedData.value here, let the old data persist while new loads
-
-    try {
-      const table = dbInstance!.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
-
-      // Apply NPANXX Search Filter (if active)
-      if (debouncedSearchQuery.value.length > 0) {
-        query = query.filter((record) => {
-          const recordNpanxxLower = record.npanxx.toLowerCase();
-          return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
-        });
-      }
-
-      // Apply State Filter (if active)
-      if (selectedState.value) {
-        query = query.filter((record) => record.stateCode === selectedState.value);
-      }
-
-      // Apply Metro Area Filter (if active)
-      if (metroAreaCodesToFilter.value.length > 0) {
-        const npaSet = new Set(metroAreaCodesToFilter.value);
-        query = query.filter((record) => npaSet.has(record.npa));
-      }
-
-      // Get total count of matching records *before* pagination and sorting
-      const totalMatchingRecords = await query.count();
-
-      // Apply Sorting (DB-Level if possible, otherwise client-side later)
-      let dbSortApplied = false;
-      const filtersAppliedCount = [
-        debouncedSearchQuery.value.length > 0, // Check if array has elements
-        selectedState.value,
-        metroAreaCodesToFilter.value.length > 0,
-      ].filter(Boolean).length;
-      const hasComplexFilters =
-        filtersAppliedCount > 1 ||
-        (metroAreaCodesToFilter.value.length > 0 && filtersAppliedCount > 0); // Simplified complexity check
-
-      if (currentSortKey.value && !hasComplexFilters && typeof query.orderBy === 'function') {
-        try {
-          query = query.orderBy(currentSortKey.value);
-          if (currentSortDirection.value === 'desc') {
-            query = query.reverse();
-          }
-          dbSortApplied = true;
-        } catch (sortError) {
-          console.warn('Dexie orderBy failed, fallback to client sort', sortError);
-          dbSortApplied = false;
-        }
-      }
-
-      // Apply Pagination
-      const dexieOffset = (pageNumber - 1) * itemsPerPage.value;
-      let pageData = await query.offset(dexieOffset).limit(itemsPerPage.value).toArray();
-
-      // Client-side sort as a fallback or primary if complex filters are applied or DB sort failed
-      if (!dbSortApplied && currentSortKey.value) {
-        pageData.sort((a, b) => {
-          const valA = (a as any)[currentSortKey.value!];
-          const valB = (b as any)[currentSortKey.value!];
-          let comparison = 0;
-          if (valA === null || valA === undefined)
-            return currentSortDirection.value === 'asc' ? -1 : 1;
-          if (valB === null || valB === undefined)
-            return currentSortDirection.value === 'asc' ? 1 : -1;
-          if (typeof valA === 'string' && typeof valB === 'string') {
-            comparison = valA.localeCompare(valB);
-          } else if (valA > valB) {
-            comparison = 1;
-          } else if (valA < valB) {
-            comparison = -1;
-          }
-          return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
-        });
-      }
-
-      // Successfully fetched and processed data
-      displayedData.value = pageData; // Update displayed data for the current page
-      totalFilteredItems.value = totalMatchingRecords; // Update total for pagination UI
-      isDataLoading.value = false; // Loading finished
-
-      return {
-        data: pageData,
-        totalMatchingRecords: totalMatchingRecords,
-      };
-    } catch (err: any) {
-      console.error('Error in fetchPageData:', err);
-      dataError.value = err.message || 'Failed to load data for the page';
-      // DO NOT set displayedData.value = []; here. Keep old data on error.
-      totalFilteredItems.value = 0; // Or consider keeping the old count if that's desired UX on error
-      isDataLoading.value = false; // Loading finished (with error)
-      return {
-        data: [],
-        totalMatchingRecords: 0,
-      };
-    }
-  }
-
-  async function resetPaginationAndLoad() {
-    const startTime = performance.now();
-    isFiltering.value = true;
-    await nextTick();
-
-    // isDataLoading.value = true; // fetchPageData will set this
-
-    // scrollContainerRef.value?.scrollTop = 0; // No longer needed
-    currentPage.value = 1; // Ensure we are on the first page for a full reset
-    dataError.value = null;
-
-    const dbReady = await initializeRateSheetDB();
-    if (dbReady && dbInstance) {
-      try {
-        await fetchPageData(1); // Fetch the first page
-      } catch (fetchError) {
-        dataError.value = (fetchError as Error).message || 'Failed to fetch initial data.';
-      }
-    } else {
-      totalFilteredItems.value = 0;
-      displayedData.value = [];
-      if (!dbReady && !dataError.value) dataError.value = 'Database not available.';
-    }
-
-    // isDataLoading.value = false; // fetchPageData will set this
-
-    const endTime = performance.now();
-    const elapsedTime = endTime - startTime;
-    const remainingTime = MIN_FILTER_DISPLAY_TIME - elapsedTime;
-
-    if (remainingTime > 0) {
-      setTimeout(() => {
-        isFiltering.value = false;
-      }, remainingTime);
-    } else {
-      isFiltering.value = false;
-    }
-  }
-
   /**
    * Calculates the average rates for a given state or the entire dataset.
    * Uses Dexie.each for memory efficiency.
-   * @param stateCode Optional state code to filter by.
    * @returns Promise resolving to RateAverages or null if DB error.
    */
   async function calculateAverages(): Promise<RateAverages | null> {
@@ -1268,8 +1089,11 @@
       JSON.parse(JSON.stringify(metroAreaCodesToFilter.value))
     );
 
-    const dbReady = await initializeRateSheetDB();
-    if (!dbReady || !dbInstance) {
+    if (!dbInstance.value) {
+      await initializeDB();
+    }
+
+    if (!dbInstance.value) {
       console.error('[USRateSheetTable] calculateAverages: DB not ready or no instance.');
       return null;
     }
@@ -1280,30 +1104,16 @@
     let count = 0;
 
     try {
-      const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      let queryChain: Dexie.Collection<USRateSheetEntry, any> | Dexie.Table<USRateSheetEntry, any> =
-        table.toCollection(); // Start with the full collection
+      const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      let queryChain: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
 
-      // Apply NPANXX Search Filter (if active)
-      if (debouncedSearchQuery.value.length > 0) {
-        queryChain = queryChain.filter((record) => {
-          const recordNpanxxLower = record.npanxx.toLowerCase();
-          return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
-        });
+      // Apply filters using the same logic as createFilters()
+      const filters = createFilters();
+      if (filters.length > 0) {
+        queryChain = queryChain.filter((record) => filters.every((fn) => fn(record)));
       }
 
-      // Apply Metro Area Filter (if active)
-      if (metroAreaCodesToFilter.value.length > 0) {
-        const npaSet = new Set(metroAreaCodesToFilter.value);
-        queryChain = queryChain.filter((record) => npaSet.has(record.npa));
-      }
-
-      // Apply State Filter (if active)
-      if (selectedState.value) {
-        queryChain = queryChain.filter((record) => record.stateCode === selectedState.value);
-      }
-
-      const recordCountForAverages = await queryChain.clone().count(); // Clone before count if further chaining happens on original
+      const recordCountForAverages = await queryChain.clone().count();
       console.log(
         `[USRateSheetTable] calculateAverages: Found ${recordCountForAverages} records matching filters for averaging.`
       );
@@ -1343,16 +1153,6 @@
         indeterm: count > 0 && !isNaN(sumIndeterm) ? sumIndeterm / count : null,
       };
       console.log(
-        '[USRateSheetTable] calculateAverages: Intermediate sums - Inter:',
-        sumInter,
-        'Intra:',
-        sumIntra,
-        'Indeterm:',
-        sumIndeterm,
-        'Count:',
-        count
-      );
-      console.log(
         '[USRateSheetTable] calculateAverages: Calculated averages:',
         JSON.parse(JSON.stringify(averagesResult))
       );
@@ -1362,7 +1162,6 @@
       dataError.value = err.message || 'Failed to calculate averages';
       return null;
     } finally {
-      // isCalculatingAverages.value will be reset by the caller recalculateAndDisplayAverages
       console.log('[USRateSheetTable] calculateAverages finished.');
     }
   }
@@ -1399,12 +1198,10 @@
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
 
-    const dbReady = await initializeRateSheetDB();
-    if (dbReady && store.getHasUsRateSheetData) {
-      isDataLoading.value = true; // Set loading true only if we proceed to load
-      await updateAvailableStates();
+    if (store.getHasUsRateSheetData) {
+      await fetchUniqueStates();
       console.log('[USRateSheetTable] onMounted: About to call initial resetPaginationAndLoad.');
-      await resetPaginationAndLoad();
+      await resetPaginationAndLoad(createFilters());
       console.log(
         '[USRateSheetTable] onMounted: About to call initial recalculateAndDisplayAverages.'
       );
@@ -1415,10 +1212,8 @@
   onBeforeUnmount(() => {
     stopSearchWatcher();
     stopStateWatcher();
-    stopMetroWatcher(); // Stop metro watcher
-    stopItemsPerPageWatcher(); // Stop itemsPerPage watcher
-    // REMOVE: Intersection Observer cleanup if it was here
-    // Ensure no references to loadMoreTriggerRef remain implicitly if part of a larger object
+    stopMetroWatcher();
+    stopItemsPerPageWatcher();
   });
 
   watch(
@@ -1426,30 +1221,13 @@
     async (hasData, oldHasData) => {
       if (hasData !== oldHasData) {
         if (!hasData) {
-          dbInstance = null;
-          totalRecords.value = 0;
-          displayedData.value = [];
-          availableStates.value = [];
           selectedState.value = '';
           searchQuery.value = '';
-          hasMoreData.value = false;
-          dataError.value = null;
-          isDataLoading.value = false;
-          // overallAverages.value = null; // Removed
-          // stateAverageCache.value.clear(); // Removed
           currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
         } else {
-          isDataLoading.value = true;
-          const dbReady = await initializeRateSheetDB();
-          if (dbReady) {
-            isDataLoading.value = true; // Set loading before fetching
-            await updateAvailableStates();
-            await resetPaginationAndLoad();
-            await recalculateAndDisplayAverages(); // Added call
-          } else {
-            // If DB isn't ready after upload success, something is wrong,
-            // keep loading false, error should be set by initializeRateSheetDB
-          }
+          await fetchUniqueStates();
+          await resetPaginationAndLoad(createFilters());
+          await recalculateAndDisplayAverages();
         }
       }
     },
@@ -1470,8 +1248,6 @@
 
   function handleClearData() {
     if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
-      // overallAverages.value = null; // Removed
-      // stateAverageCache.value.clear(); // Removed
       currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
       store.clearUsRateSheetData();
     }
@@ -1482,19 +1258,49 @@
 
   async function handleExport() {
     if (isExporting.value) return;
+    console.log('[Export Debug] handleExport initiated'); // DEBUG LOG
 
-    const dbReady = await initializeRateSheetDB();
-    if (!dbReady || !dbInstance) {
+    if (!dbInstance.value) {
+      console.log('[Export Debug] DB instance not ready, initializing...'); // DEBUG LOG
+      await initializeDB();
+    }
+
+    if (!dbInstance.value) {
       alert('Database is not ready. Cannot export.');
+      console.error('[Export Debug] DB instance still not ready after init attempt.'); // DEBUG LOG
       return;
     }
 
-    try {
-      const table = dbInstance.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      const allMatchingData = await table.toArray();
+    isExporting.value = true;
+    exportError.value = null;
 
-      if (allMatchingData.length === 0) {
-        alert('No data found in the rate sheet to export.');
+    try {
+      console.log('[Export Debug] Starting try block for export.'); // DEBUG LOG
+      const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
+
+      const currentFilters = createFilters();
+      console.log('[Export Debug] Filters for export:', JSON.stringify(currentFilters)); // DEBUG LOG
+
+      if (currentFilters.length > 0) {
+        query = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      }
+
+      const dataToExport = await query.toArray();
+      console.log('[Export Debug] Number of records to export:', dataToExport.length); // DEBUG LOG
+
+      // Log the first few raw records from Dexie to inspect their rate values before mapping
+      if (dataToExport.length > 0) {
+        console.log(
+          '[Export Debug] Raw dataToExport (first 3 records):',
+          JSON.parse(JSON.stringify(dataToExport.slice(0, 3)))
+        );
+      }
+
+      if (dataToExport.length === 0) {
+        alert('No data matches the current filters to export.');
+        console.log('[Export Debug] No data to export, exiting.'); // DEBUG LOG
+        isExporting.value = false;
         return;
       }
 
@@ -1508,62 +1314,77 @@
         'Effective Date',
       ];
 
-      const rows = allMatchingData.map((entry) => {
+      const rows = dataToExport.map((entry) => {
         const location = lergStore.getLocationByNPA(entry.npa);
         return [
           `1${entry.npanxx}`,
           location?.region || 'N/A',
           location?.country || 'N/A',
-          formatRate(entry.interRate),
-          formatRate(entry.intraRate),
-          formatRate(entry.indetermRate),
+          typeof entry.interRate === 'number' ? formatRate(entry.interRate) : 'N/A',
+          typeof entry.intraRate === 'number' ? formatRate(entry.intraRate) : 'N/A',
+          typeof entry.indetermRate === 'number' ? formatRate(entry.indetermRate) : 'N/A',
           store.getCurrentEffectiveDate || 'N/A',
         ];
       });
+      console.log('[Export Debug] Data mapped to rows for CSV.'); // DEBUG LOG
 
-      // Build filename parts
-      const filenameParts = [];
-      if (selectedState.value) filenameParts.push(selectedState.value);
-      if (debouncedSearchQuery.value.length > 0) {
-        filenameParts.push(`search_${debouncedSearchQuery.value.join('-')}`);
-      }
-
-      await exportToCSV(
-        { headers, rows },
+      const csv = Papa.unparse(
         {
-          filename: 'us-rate-sheet',
-          additionalNameParts: filenameParts,
-          quoteFields: true,
+          fields: headers,
+          data: rows,
+        },
+        {
+          quotes: true, // Default to true for safety. This line has an error: options is not defined
+          header: true,
         }
       );
+      console.log(
+        '[Export Debug] CSV content generated by Papa.unparse:',
+        csv.substring(0, 200) + '...'
+      ); // DEBUG LOG
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = url;
+      // Re-add buildFilename call, assuming options might come from useCSVExport or be defined locally
+      const exportOptions = {
+        filename: 'us-rate-sheet',
+        additionalNameParts: [] as string[], // Placeholder, populate as needed
+        timestamp: true,
+      };
+      if (selectedState.value) exportOptions.additionalNameParts.push(selectedState.value);
+      if (debouncedSearchQuery.value.length > 0) {
+        exportOptions.additionalNameParts.push(`search_${debouncedSearchQuery.value.join('-')}`);
+      }
+      // Assuming buildFilename is accessible or defined in this component context
+      // For now, I'll use a simplified buildFilename logic as it was removed from the direct arguments
+      const filenameTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const finalFilename = `${exportOptions.filename}-${exportOptions.additionalNameParts.join('-')}-${filenameTimestamp}.csv`;
+
+      link.setAttribute('download', finalFilename);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      console.log('[Export Debug] Download link created and appended to body. Triggering click.'); // DEBUG LOG
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
+      console.log('[Export Debug] Export process completed successfully.'); // DEBUG LOG
     } catch (err: any) {
-      console.error('Error during export:', err);
+      console.error('[Export Debug] Error during export:', err); // DEBUG LOG
       dataError.value = err.message || 'Failed to export data';
       alert(`Export failed: ${dataError.value}`);
+    } finally {
+      isExporting.value = false;
+      console.log('[Export Debug] handleExport finished, isExporting set to false.'); // DEBUG LOG
     }
-  }
-
-  function applyLocalFilter(data: USRateSheetEntry[]): USRateSheetEntry[] {
-    let filteredData = data;
-
-    if (debouncedSearchQuery.value) {
-      filteredData = filteredData.filter((entry) =>
-        entry.npanxx.toLowerCase().includes(debouncedSearchQuery.value)
-      );
-    }
-
-    if (selectedState.value && lergStore.isLoaded) {
-      filteredData = filteredData.filter((entry) => {
-        const location = lergStore.getLocationByNPA(entry.npa);
-        return location?.country === 'US' && location.region === selectedState.value;
-      });
-    }
-
-    return filteredData;
   }
 
   async function handleApplyAdjustment() {
-    if (isApplyingAdjustment.value || !dbInstance) {
+    if (isApplyingAdjustment.value || !dbInstance.value) {
       return;
     }
     if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
@@ -1583,7 +1404,7 @@
     const startTime = performance.now();
 
     try {
-      let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance
+      let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance.value
         .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
         .toCollection();
 
@@ -1666,9 +1487,18 @@
 
           const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
 
+          console.log(
+            `[Adjustment] NPANXX: ${record.npanxx}, Field: ${rateField}, CurrentRate: ${currentRate}, Attempted FinalRate: ${finalRate}`
+          ); // DEBUG LOG
+
           if (finalRate !== currentRate) {
             changes[rateField] = finalRate;
             changed = true;
+            console.log(
+              `[Adjustment] CHANGE DETECTED for NPANXX: ${record.npanxx}, Field: ${rateField}, New Rate: ${finalRate}`
+            ); // DEBUG LOG
+          } else {
+            console.log(`[Adjustment] NO CHANGE for NPANXX: ${record.npanxx}, Field: ${rateField}`); // DEBUG LOG
           }
         });
 
@@ -1684,7 +1514,7 @@
         return;
       }
 
-      const tableToUpdate = dbInstance.table<USRateSheetEntry, number | string>(
+      const tableToUpdate = dbInstance.value.table<USRateSheetEntry, number | string>(
         RATE_SHEET_TABLE_NAME
       );
       await tableToUpdate.bulkUpdate(allUpdatesToApply);
@@ -1697,7 +1527,7 @@
       console.log(
         '[USRateSheetTable] handleApplyAdjustment: About to refresh data and averages post-adjustment.'
       );
-      await resetPaginationAndLoad();
+      await resetPaginationAndLoad(createFilters());
       await recalculateAndDisplayAverages();
       // --- End refresh ---
 
@@ -1750,86 +1580,20 @@
       currentSortDirection.value = 'asc';
     }
     // After updating sort state, reload data from the beginning
-    await resetPaginationAndLoad();
+    await resetPaginationAndLoad(createFilters());
   }
   // --- End Sorting Handler ---
 
-  // --- Pagination Navigation Functions ---
-  async function goToPage(page: number) {
-    // Make async
-    const startTime = performance.now();
-    isFiltering.value = true;
-    await nextTick();
-
-    const targetPage = Math.max(1, Math.min(page, totalPages.value || 1));
-    if (currentPage.value !== targetPage) {
-      currentPage.value = targetPage;
-      await fetchPageData(currentPage.value); // Fetch data for the new page
-    } else {
-      // If already on the target page (e.g., invalid input reset), still need to manage isFiltering
-      // Or if fetchPageData wasn't called because page didn't change, ensure isFiltering is handled
-    }
-    directPageInput.value = currentPage.value; // Sync input
-
-    const endTime = performance.now();
-    const elapsedTime = endTime - startTime;
-    const remainingTime = MIN_FILTER_DISPLAY_TIME - elapsedTime;
-
-    if (remainingTime > 0) {
-      setTimeout(() => {
-        isFiltering.value = false;
-      }, remainingTime);
-    } else {
-      isFiltering.value = false;
-    }
-  }
-
-  async function goToFirstPage() {
-    // Make async
-    await goToPage(1);
-  }
-
-  async function goToPreviousPage() {
-    // Make async
-    if (canGoToPreviousPage.value) {
-      await goToPage(currentPage.value - 1);
-    }
-  }
-
-  async function goToNextPage() {
-    // Make async
-    if (canGoToNextPage.value) {
-      await goToPage(currentPage.value + 1);
-    }
-  }
-
-  async function goToLastPage() {
-    // Make async
-    await goToPage(totalPages.value);
-  }
-
-  async function handleDirectPageInput() {
-    // Make async
-    const pageNum = parseInt(String(directPageInput.value), 10);
-    if (!isNaN(pageNum)) {
-      await goToPage(pageNum);
-    } else {
-      directPageInput.value = currentPage.value;
-    }
-  }
-  // --- End Pagination Navigation Functions ---
-
   async function handleClearAllFilters() {
     searchQuery.value = '';
-    // debouncedSearchQuery will be updated by its watcher or debouncedSearch function indirectly
     selectedState.value = '';
-    clearAllSelectedMetros(); // Use composable function instead of local logic
+    clearAllSelectedMetros();
 
-    // Reset sorting to default when clearing all filters might be a good UX
+    // Reset sorting to default when clearing all filters
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
 
-    await resetPaginationAndLoad();
+    await resetPaginationAndLoad(createFilters());
   }
 </script>
 

@@ -543,7 +543,7 @@
       <!-- Page Info and Navigation -->
       <div class="flex items-center gap-2 flex-wrap justify-center">
         <BaseButton
-          @click="goToFirstPage"
+          @click="() => goToFirstPage(createFilters())"
           :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -553,7 +553,7 @@
           &laquo; First
         </BaseButton>
         <BaseButton
-          @click="goToPreviousPage"
+          @click="() => goToPreviousPage(createFilters())"
           :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -568,8 +568,8 @@
           <input
             type="number"
             v-model.number="directPageInput"
-            @change="handleDirectPageInput"
-            @keyup.enter="handleDirectPageInput"
+            @change="() => handleDirectPageInput(createFilters())"
+            @keyup.enter="() => handleDirectPageInput(createFilters())"
             min="1"
             :max="totalPages"
             class="bg-gray-800 border border-gray-700 text-white w-14 text-center sm:text-sm rounded-md p-1.5 focus:ring-primary-500 focus:border-primary-500"
@@ -579,7 +579,7 @@
         </span>
 
         <BaseButton
-          @click="goToNextPage"
+          @click="() => goToNextPage(createFilters())"
           :disabled="!canGoToNextPage || isPageLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -589,7 +589,7 @@
           Next &rsaquo;
         </BaseButton>
         <BaseButton
-          @click="goToLastPage"
+          @click="() => goToLastPage(createFilters())"
           :disabled="!canGoToNextPage || currentPage === totalPages || isPageLoading || isFiltering"
           size="small"
           variant="secondary"
@@ -634,15 +634,13 @@
     XCircleIcon,
   } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
-  import { useLergStore } from '@/stores/lerg-store'; // Import lergStore
-  import useDexieDB from '@/composables/useDexieDB';
+  import { useLergStore } from '@/stores/lerg-store';
   import { DBName } from '@/types/app-types';
   import type { USPricingComparisonRecord } from '@/types/domains/us-types';
-  import type { DexieDBBase } from '@/composables/useDexieDB'; // Import the class type
-  import Papa from 'papaparse'; // Import PapaParse
-  import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Icons
-  import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
-  import BaseButton from '@/components/shared/BaseButton.vue'; // Import BaseButton
+  import Papa from 'papaparse';
+  import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/20/solid';
+  import BaseBadge from '@/components/shared/BaseBadge.vue';
+  import BaseButton from '@/components/shared/BaseButton.vue';
   import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/vue/20/solid';
   import { useMetroFilter } from '@/composables/filters/useMetroFilter';
   import {
@@ -654,6 +652,8 @@
     RegionType,
   } from '@/types/constants/region-codes';
   import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
+  import { useUSTableData } from '@/composables/tables/useUSTableData';
+  import type { FilterFunction } from '@/composables/tables/useTableData';
 
   // Type for sortable column definition
   interface SortableUSComparisonColumn {
@@ -670,9 +670,60 @@
     rateType?: 'Inter' | 'Intra' | 'Indeterm'; // For rate columns
   }
 
-  const usStore = useUsStore(); // Instantiate usStore
-  const lergStore = useLergStore(); // Instantiate lergStore
-  const { getDB } = useDexieDB(); // Only need getDB now
+  const usStore = useUsStore();
+  const lergStore = useLergStore();
+  const COMPARISON_TABLE_NAME = 'comparison_results';
+
+  // Initialize table data composable
+  const {
+    // Data
+    displayedData,
+    totalFilteredItems,
+
+    // Loading states
+    isDataLoading: isLoading,
+    isFiltering,
+
+    // Error handling
+    dataError: error,
+
+    // Pagination
+    currentPage,
+    itemsPerPage,
+    itemsPerPageOptions,
+    totalPages,
+    canGoToPreviousPage,
+    canGoToNextPage,
+    directPageInput,
+
+    // Sorting
+    currentSortKey,
+    currentSortDirection,
+
+    // Methods
+    initializeDB,
+    fetchPageData,
+    resetPaginationAndLoad,
+    goToPage,
+    goToFirstPage,
+    goToPreviousPage,
+    goToNextPage,
+    goToLastPage,
+    handleDirectPageInput,
+
+    // DB instance
+    dbInstance,
+
+    // US-specific
+    availableStates,
+    fetchUniqueStates,
+  } = useUSTableData<USPricingComparisonRecord>({
+    dbName: DBName.US_PRICING_COMPARISON,
+    tableName: COMPARISON_TABLE_NAME,
+    itemsPerPage: 50,
+    sortKey: 'npanxx',
+    sortDirection: 'asc',
+  });
 
   // --- Metro Filter Composable ---
   const {
@@ -693,33 +744,14 @@
     formatPopulation,
   } = useMetroFilter();
 
-  const displayedData = ref<USPricingComparisonRecord[]>([]);
-  const isLoading = ref<boolean>(false); // Initial loading state (for component mount)
+  // Additional loading states specific to this component
   const isPageLoading = ref<boolean>(false); // Loading state for page changes and initial data load for a filter set
-  const isFiltering = ref<boolean>(false); // State for loading during filter changes (visual overlay)
-  const error = ref<string | null>(null);
-  const availableStates = ref<string[]>([]); // For state filter dropdown
-
-  // --- Sorting State ---
-  const currentSortKey = ref<SortableUSComparisonColumn['key']>('npanxx'); // Default sort key
-  const currentSortDirection = ref<'asc' | 'desc'>('asc'); // Default sort direction
   const isPerformingPageLevelSort = ref<boolean>(false); // True if sorting is done on the current page data only
-  // --- End Sorting State ---
 
   // Filter State Variables
   const npanxxSearchInput = ref<string>(''); // Renamed from searchTerm
   const npanxxFilterTerms = ref<string[]>([]); // New ref for processed NPANXX terms
   const selectedState = ref<string>('');
-
-  // --- Metro Filter Computed Properties --- START ---
-  // --- Metro Filter Computed Properties --- END ---
-
-  // --- Pagination State ---
-  const currentPage = ref(1);
-  const itemsPerPage = ref(50); // Default items per page, matches original pageSize
-  const totalFilteredItems = ref(0);
-  const itemsPerPageOptions = ref([25, 50, 100, 250]);
-  // --- End Pagination State ---
 
   const scrollContainerRef = ref<HTMLElement | null>(null); // Ref for the scrollable div (still needed for scroll to top)
 
@@ -750,21 +782,6 @@
   const animatedFile2IntraAvg = useTransition(file2IntraAvgSource, transitionConfig);
   const animatedFile2IndetermAvg = useTransition(file2IndetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
-
-  // --- Pagination Computed Properties ---
-  const totalPages = computed(() => {
-    if (totalFilteredItems.value === 0) return 1;
-    return Math.ceil(totalFilteredItems.value / itemsPerPage.value);
-  });
-
-  const canGoToPreviousPage = computed(() => currentPage.value > 1);
-  const canGoToNextPage = computed(() => currentPage.value < totalPages.value);
-
-  const directPageInput = ref<string | number>(currentPage.value);
-  watch(currentPage, (newPage) => {
-    directPageInput.value = newPage;
-  });
-  // --- End Pagination Computed Properties ---
 
   // --- Table Headers ---
   const tableHeaders = computed<SortableUSComparisonColumn[]>(() => [
@@ -831,11 +848,6 @@
   ]);
   // --- End Table Headers ---
 
-  // Use the fixed table name for comparison results
-  const COMPARISON_TABLE_NAME = 'comparison_results';
-
-  let dbInstance: DexieDBBase | null = null; // Cache DB instance
-
   // --- Get Filenames for Headers ---
   const fileName1 = computed(() => {
     const names = usStore.getFileNames;
@@ -847,12 +859,106 @@
     return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
   });
 
-  // --- Computed property for average rates of filtered data (uses displayedData, which is current page) ---
-  // This computed will now reflect averages of the *current page* if used directly.
-  // The `fullFilteredAverages` ref holds the averages for the *entire filtered dataset*.
-  // The UI for averages already uses `fullFilteredAverages` (via animatedXxxAvg), so this is fine.
-  const averageRatesOfCurrentPage = computed(() => {
-    // Renamed for clarity
+  // Computed property to structure states for the dropdown with optgroup
+  const groupedAvailableStates = computed(() => {
+    const grouped = groupRegionCodes(availableStates.value);
+
+    return [
+      { label: 'United States', codes: grouped['US'] || [] },
+      { label: 'Canada', codes: grouped['CA'] || [] },
+    ].filter((group) => group.codes.length > 0);
+  });
+
+  // Helper function to get display name for state or province
+  function getRegionDisplayName(code: string): string {
+    return getRegionName(code) || code;
+  }
+
+  // Create filter functions for the composable
+  function createFilters(): FilterFunction<USPricingComparisonRecord>[] {
+    const filters: FilterFunction<USPricingComparisonRecord>[] = [];
+
+    // NPANXX Search Filter
+    if (npanxxFilterTerms.value.length > 0) {
+      filters.push((record) => {
+        const recordNpanxxLower = record.npanxx.toLowerCase();
+        return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
+      });
+    }
+
+    // State Filter
+    if (selectedState.value) {
+      filters.push((record) => record.stateCode === selectedState.value);
+    }
+
+    // Metro Area Filter
+    if (metroAreaCodesToFilter.value.length > 0) {
+      const npaSet = new Set(metroAreaCodesToFilter.value);
+      filters.push((record) => npaSet.has(record.npa));
+    }
+
+    return filters;
+  }
+
+  // Replace isExporting ref with the one from composable
+  const { isExporting, exportError, exportToCSV } = useCSVExport();
+
+  // Debounced function to process NPANXX input
+  const debouncedProcessNpanxxInput = useDebounceFn(() => {
+    const terms = npanxxSearchInput.value
+      .split(',')
+      .map((term) => term.trim().toLowerCase())
+      .filter((term) => term.length > 0);
+    npanxxFilterTerms.value = terms;
+  }, 300);
+
+  // Watch for filter changes and reload data (DEBOUNCED)
+  const debouncedResetPaginationAndLoad = useDebounceFn(() => {
+    resetPaginationAndLoad(createFilters());
+  }, 300);
+
+  // Watcher for the raw NPANXX input string
+  watch(npanxxSearchInput, () => {
+    debouncedProcessNpanxxInput();
+  });
+
+  // Watch for processed NPANXX terms and state changes
+  watch([npanxxFilterTerms, selectedState], () => {
+    debouncedResetPaginationAndLoad();
+  });
+
+  watch(itemsPerPage, () => {
+    // When items per page changes, go to page 1 and reload.
+    resetPaginationAndLoad(createFilters());
+  });
+
+  // --- Metro Filter Watcher ---
+  watch(
+    selectedMetros,
+    async (newSelectedMetros) => {
+      if (newSelectedMetros.length > 0) {
+        console.log(
+          '[USDetailedComparisonTable] Metro selection changed, resetting NPANXX and State filters.'
+        );
+        npanxxSearchInput.value = '';
+        selectedState.value = '';
+      }
+      await debouncedResetPaginationAndLoad();
+    },
+    { deep: true }
+  );
+
+  // New function to calculate averages based on ALL filtered data
+  async function calculateFullFilteredAverages() {
+    if (!dbInstance.value) {
+      await initializeDB();
+    }
+
+    if (!dbInstance.value) return;
+
+    isCalculatingAverages.value = true;
+    console.log('[USDetailedComparisonTable] Calculating averages for ALL filtered data...');
+
     const totals = {
       file1_inter: { sum: 0, count: 0 },
       file1_intra: { sum: 0, count: 0 },
@@ -862,79 +968,79 @@
       file2_indeterm: { sum: 0, count: 0 },
     };
 
-    for (const record of displayedData.value) {
-      // Iterate over current page data
-      // Helper to safely add to sum and count
-      const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
-        if (value !== null && value !== undefined && !isNaN(value)) {
-          totals[key].sum += value;
-          totals[key].count++;
-        }
+    try {
+      const query = dbInstance.value.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+
+      const filters = createFilters();
+      let filteredQuery = query.toCollection();
+      if (filters.length > 0) {
+        filteredQuery = filteredQuery.filter((record) => filters.every((fn) => fn(record)));
+      }
+
+      await filteredQuery.each((record) => {
+        const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
+          if (value !== null && value !== undefined && !isNaN(value)) {
+            totals[key].sum += value;
+            totals[key].count++;
+          }
+        };
+        addToTotals('file1_inter', record.file1_inter);
+        addToTotals('file1_intra', record.file1_intra);
+        addToTotals('file1_indeterm', record.file1_indeterm);
+        addToTotals('file2_inter', record.file2_inter);
+        addToTotals('file2_intra', record.file2_intra);
+        addToTotals('file2_indeterm', record.file2_indeterm);
+      });
+
+      // Helper to calculate average
+      const calculateAvg = (sum: number, count: number): number => {
+        return count > 0 ? sum / count : 0;
       };
 
-      addToTotals('file1_inter', record.file1_inter);
-      addToTotals('file1_intra', record.file1_intra);
-      addToTotals('file1_indeterm', record.file1_indeterm);
-      addToTotals('file2_inter', record.file2_inter);
-      addToTotals('file2_intra', record.file2_intra);
-      addToTotals('file2_indeterm', record.file2_indeterm);
+      fullFilteredAverages.value = {
+        file1_inter_avg: calculateAvg(totals.file1_inter.sum, totals.file1_inter.count),
+        file1_intra_avg: calculateAvg(totals.file1_intra.sum, totals.file1_intra.count),
+        file1_indeterm_avg: calculateAvg(totals.file1_indeterm.sum, totals.file1_indeterm.count),
+        file2_inter_avg: calculateAvg(totals.file2_inter.sum, totals.file2_inter.count),
+        file2_intra_avg: calculateAvg(totals.file2_intra.sum, totals.file2_intra.count),
+        file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
+      };
+    } catch (err: any) {
+      console.error('[USDetailedComparisonTable] Error calculating full filtered averages:', err);
+      // Reset averages on error
+      fullFilteredAverages.value = {
+        file1_inter_avg: 0,
+        file1_intra_avg: 0,
+        file1_indeterm_avg: 0,
+        file2_inter_avg: 0,
+        file2_intra_avg: 0,
+        file2_indeterm_avg: 0,
+      };
+    } finally {
+      isCalculatingAverages.value = false;
     }
-
-    // Helper to calculate average
-    const calculateAvg = (sum: number, count: number): number => {
-      return count > 0 ? sum / count : 0;
-    };
-
-    return {
-      file1_inter_avg: calculateAvg(totals.file1_inter.sum, totals.file1_inter.count),
-      file1_intra_avg: calculateAvg(totals.file1_intra.sum, totals.file1_intra.count),
-      file1_indeterm_avg: calculateAvg(totals.file1_indeterm.sum, totals.file1_indeterm.count),
-      file2_inter_avg: calculateAvg(totals.file2_inter.sum, totals.file2_inter.count),
-      file2_intra_avg: calculateAvg(totals.file2_intra.sum, totals.file2_intra.count),
-      file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
-    };
-  });
-
-  // Replace isExporting ref with the one from composable
-  const { isExporting, exportError, exportToCSV } = useCSVExport();
+  }
 
   // --- CSV Download Function (Updated) ---
   async function downloadCsv(): Promise<void> {
     if (isExporting.value) return;
 
     try {
-      // Ensure DB is initialized
-      if (!(await initializeDB()) || !dbInstance) {
+      if (!dbInstance.value) {
+        await initializeDB();
+      }
+
+      if (!dbInstance.value) {
         throw new Error('Database not available for export.');
       }
 
       // Build query with filters
-      let query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+      let query = dbInstance.value.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
 
-      // Apply client-side filters
-      const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
-
-      if (npanxxFilterTerms.value.length > 0) {
-        currentFilters.push((record: USPricingComparisonRecord) => {
-          const recordNpanxxLower = record.npanxx.toLowerCase();
-          return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
-        });
-      }
-
-      if (selectedState.value) {
-        currentFilters.push(
-          (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
-        );
-      }
-
-      if (metroAreaCodesToFilter.value.length > 0) {
-        const npaSet = new Set(metroAreaCodesToFilter.value);
-        currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
-      }
-
+      const filters = createFilters();
       let queryForData = query.toCollection();
-      if (currentFilters.length > 0) {
-        queryForData = queryForData.filter((record) => currentFilters.every((fn) => fn(record)));
+      if (filters.length > 0) {
+        queryForData = queryForData.filter((record) => filters.every((fn) => fn(record)));
       }
 
       const records = await queryForData.toArray();
@@ -991,414 +1097,6 @@
     }
   }
 
-  // --- Core Data Loading Logic ---
-
-  async function initializeDB() {
-    if (!dbInstance) {
-      try {
-        dbInstance = await getDB(DBName.US_PRICING_COMPARISON);
-        if (!dbInstance.tables.some((t) => t.name === COMPARISON_TABLE_NAME)) {
-          console.warn(
-            `[USDetailedComparisonTable] Table '${COMPARISON_TABLE_NAME}' not found in DB '${DBName.US_PRICING_COMPARISON}'. Cannot load data.`
-          );
-          error.value = `Comparison table '${COMPARISON_TABLE_NAME}' not found. Please generate reports first.`;
-          totalFilteredItems.value = 0; // No items if table doesn't exist
-          return false; // Indicate failure
-        }
-        return true; // Indicate success
-      } catch (err: any) {
-        console.error('Error initializing database:', err);
-        error.value = err.message || 'Failed to connect to the comparison database';
-        totalFilteredItems.value = 0; // No items on DB error
-        return false; // Indicate failure
-      }
-    }
-    return true; // Already initialized
-  }
-
-  // Replace the US_STATES and CA_PROVINCES constants with imported ones
-  const US_STATES = US_REGION_CODES;
-  const CA_PROVINCES = CA_REGION_CODES;
-
-  async function fetchUniqueStates() {
-    if (!(await initializeDB()) || !dbInstance) return;
-
-    try {
-      const uniqueRegionCodes = (await dbInstance
-        .table(COMPARISON_TABLE_NAME)
-        .orderBy('stateCode')
-        .uniqueKeys()) as string[];
-
-      // Use the new utility functions for sorting
-      availableStates.value = sortRegionCodesByName(
-        uniqueRegionCodes.filter(Boolean) // Remove null/undefined/empty strings
-      );
-
-      console.log(
-        '[USDetailedComparisonTable] Fetched and sorted unique states:',
-        availableStates.value
-      );
-    } catch (err: any) {
-      console.error('Error fetching unique states:', err);
-      availableStates.value = [];
-      error.value = 'Could not load state filter options.';
-    }
-  }
-
-  // Computed property to structure states for the dropdown with optgroup
-  const groupedAvailableStates = computed(() => {
-    const grouped = groupRegionCodes(availableStates.value);
-
-    return [
-      { label: 'United States', codes: grouped['US'] || [] },
-      { label: 'Canada', codes: grouped['CA'] || [] },
-    ].filter((group) => group.codes.length > 0);
-  });
-
-  // Helper function to get display name for state or province
-  function getRegionDisplayName(code: string): string {
-    return getRegionName(code) || code;
-  }
-
-  // --- New Pagination Data Fetching Logic ---
-  async function fetchPageData(page: number) {
-    if (!(await initializeDB()) || !dbInstance) {
-      isPageLoading.value = false;
-      return;
-    }
-
-    isPageLoading.value = true;
-    isPerformingPageLevelSort.value = false; // Reset sort status
-    error.value = null;
-
-    try {
-      currentPage.value = page;
-      const calculatedOffset = (page - 1) * itemsPerPage.value;
-
-      let query: any = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
-
-      // Apply client-side filters
-      const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
-
-      if (npanxxFilterTerms.value.length > 0) {
-        currentFilters.push((record: USPricingComparisonRecord) => {
-          const recordNpanxxLower = record.npanxx.toLowerCase();
-          return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
-        });
-      }
-
-      if (selectedState.value) {
-        currentFilters.push(
-          (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
-        );
-      }
-
-      if (metroAreaCodesToFilter.value.length > 0) {
-        const npaSet = new Set(metroAreaCodesToFilter.value);
-        currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
-      }
-
-      let queryForCount = query.toCollection(); // Start with a full collection for counting
-      if (currentFilters.length > 0) {
-        queryForCount = queryForCount.filter((record) => currentFilters.every((fn) => fn(record)));
-      }
-      totalFilteredItems.value = await queryForCount.count();
-
-      let queryForPageData = query.toCollection(); // Start with a full collection for data fetching
-      if (currentFilters.length > 0) {
-        queryForPageData = queryForPageData.filter((record) =>
-          currentFilters.every((fn) => fn(record))
-        );
-      }
-
-      // Attempt DB-Level Sorting on queryForPageData
-      let dbSortApplied = false;
-      const sortKeyIsDirectDBField = ![
-        'diff_inter_pct',
-        'diff_intra_pct',
-        'diff_indeterm_pct',
-      ].includes(currentSortKey.value);
-
-      if (
-        sortKeyIsDirectDBField &&
-        typeof queryForPageData.orderBy === 'function' &&
-        currentSortKey.value
-      ) {
-        try {
-          queryForPageData = queryForPageData.orderBy(currentSortKey.value);
-          if (currentSortDirection.value === 'desc') {
-            queryForPageData = queryForPageData.reverse();
-          }
-          dbSortApplied = true;
-        } catch (dbSortError) {
-          dbSortApplied = false;
-        }
-      }
-
-      // Apply pagination to queryForPageData
-      let newData = await queryForPageData
-        .offset(calculatedOffset)
-        .limit(itemsPerPage.value)
-        .toArray();
-
-      // Client-Side Sorting if DB sort wasn't applied or for computed columns
-      if (!dbSortApplied && currentSortKey.value) {
-        console.log(
-          '[USDetailedComparisonTable] Applying client-side sort on:',
-          currentSortKey.value,
-          currentSortDirection.value
-        );
-        isPerformingPageLevelSort.value = true; // Indicate page-level sort
-        newData.sort((a, b) => {
-          const valA = (a as any)[currentSortKey.value!];
-          const valB = (b as any)[currentSortKey.value!];
-          let comparison = 0;
-
-          if (valA === null || valA === undefined) comparison = 1;
-          else if (valB === null || valB === undefined) comparison = -1;
-          else if (typeof valA === 'string' && typeof valB === 'string') {
-            comparison = valA.localeCompare(valB);
-          } else if (typeof valA === 'number' && typeof valB === 'number') {
-            comparison = valA - valB;
-          } else if (valA > valB) comparison = 1;
-          else if (valA < valB) comparison = -1;
-
-          return currentSortDirection.value === 'asc' ? comparison : comparison * -1;
-        });
-      }
-
-      displayedData.value = newData;
-    } catch (err: any) {
-      console.error('Error loading page data:', err);
-      error.value = err.message || 'Failed to load data for the page';
-      displayedData.value = []; // Clear data on error
-      totalFilteredItems.value = 0; // Reset count on error
-    } finally {
-      isPageLoading.value = false;
-    }
-  }
-  // --- End New Pagination Data Fetching Logic ---
-
-  // New function to calculate averages based on ALL filtered data
-  async function calculateFullFilteredAverages() {
-    if (!(await initializeDB()) || !dbInstance) return; // Ensure DB is ready
-
-    isCalculatingAverages.value = true;
-    console.log('[USDetailedComparisonTable] Calculating averages for ALL filtered data...');
-
-    const totals = {
-      file1_inter: { sum: 0, count: 0 },
-      file1_intra: { sum: 0, count: 0 },
-      file1_indeterm: { sum: 0, count: 0 },
-      file2_inter: { sum: 0, count: 0 },
-      file2_intra: { sum: 0, count: 0 },
-      file2_indeterm: { sum: 0, count: 0 },
-    };
-
-    try {
-      const query = dbInstance.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
-
-      const currentFilters: Array<(record: USPricingComparisonRecord) => boolean> = [];
-      if (npanxxFilterTerms.value.length > 0) {
-        currentFilters.push((record: USPricingComparisonRecord) => {
-          const recordNpanxxLower = record.npanxx.toLowerCase();
-          return npanxxFilterTerms.value.some((term) => recordNpanxxLower.startsWith(term));
-        });
-      }
-      if (selectedState.value) {
-        currentFilters.push(
-          (record: USPricingComparisonRecord) => record.stateCode === selectedState.value
-        );
-      }
-      if (metroAreaCodesToFilter.value.length > 0) {
-        const npaSet = new Set(metroAreaCodesToFilter.value);
-        currentFilters.push((record: USPricingComparisonRecord) => npaSet.has(record.npa));
-      }
-
-      let filteredQuery = query.toCollection();
-      if (currentFilters.length > 0) {
-        filteredQuery = filteredQuery.filter((record) => currentFilters.every((fn) => fn(record)));
-      }
-
-      await filteredQuery.each((record) => {
-        const addToTotals = (key: keyof typeof totals, value: number | null | undefined) => {
-          if (value !== null && value !== undefined && !isNaN(value)) {
-            totals[key].sum += value;
-            totals[key].count++;
-          }
-        };
-        addToTotals('file1_inter', record.file1_inter);
-        addToTotals('file1_intra', record.file1_intra);
-        addToTotals('file1_indeterm', record.file1_indeterm);
-        addToTotals('file2_inter', record.file2_inter);
-        addToTotals('file2_intra', record.file2_intra);
-        addToTotals('file2_indeterm', record.file2_indeterm);
-      });
-
-      // Helper to calculate average
-      const calculateAvg = (sum: number, count: number): number => {
-        return count > 0 ? sum / count : 0;
-      };
-
-      fullFilteredAverages.value = {
-        file1_inter_avg: calculateAvg(totals.file1_inter.sum, totals.file1_inter.count),
-        file1_intra_avg: calculateAvg(totals.file1_intra.sum, totals.file1_intra.count),
-        file1_indeterm_avg: calculateAvg(totals.file1_indeterm.sum, totals.file1_indeterm.count),
-        file2_inter_avg: calculateAvg(totals.file2_inter.sum, totals.file2_inter.count),
-        file2_intra_avg: calculateAvg(totals.file2_intra.sum, totals.file2_intra.count),
-        file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
-      };
-    } catch (err: any) {
-      console.error('[USDetailedComparisonTable] Error calculating full filtered averages:', err);
-      // Reset averages on error
-      fullFilteredAverages.value = {
-        file1_inter_avg: 0,
-        file1_intra_avg: 0,
-        file1_indeterm_avg: 0,
-        file2_inter_avg: 0,
-        file2_intra_avg: 0,
-        file2_indeterm_avg: 0,
-      };
-    } finally {
-      isCalculatingAverages.value = false;
-    }
-  }
-
-  // Function to reset and load initial data (used on mount and filter changes)
-  // Renamed from resetAndFetchData to resetPaginationAndLoad
-  async function resetPaginationAndLoad() {
-    // Set loading states
-    // isLoading.value = true; // This was for the very initial mount, isPageLoading covers subsequent loads
-    isFiltering.value = true; // Indicate filters are being applied (for overlay)
-    isPageLoading.value = true; // General loading state for data fetching
-
-    // Reset scroll position to top when filters change
-    if (scrollContainerRef.value) {
-      scrollContainerRef.value.scrollTop = 0;
-    }
-
-    currentPage.value = 1; // Reset to first page
-    directPageInput.value = 1; // Sync direct input
-    error.value = null;
-
-    // Trigger both table data fetch (first page) and full average calculation
-    const dataFetchPromise = fetchPageData(1);
-    const averageCalcPromise = calculateFullFilteredAverages();
-
-    try {
-      await Promise.all([dataFetchPromise, averageCalcPromise]);
-    } catch (err) {
-      console.error('[USDetailedComparisonTable] Error during resetPaginationAndLoad:', err);
-      // error ref should be set by individual failing functions
-    } finally {
-      // isLoading.value = false;
-      isFiltering.value = false; // Remove overlay
-      // isPageLoading is set to false inside fetchPageData
-    }
-  }
-
-  // --- Lifecycle and Watchers ---
-
-  onMounted(async () => {
-    isLoading.value = true; // For initial component setup (e.g. fetching states)
-    await fetchUniqueStates(); // Fetch states first
-    await resetPaginationAndLoad(); // Then load initial data (first page)
-    isLoading.value = false;
-  });
-
-  // Watch for filter changes and reload data (DEBOUNCED)
-  const debouncedResetPaginationAndLoad = useDebounceFn(() => {
-    resetPaginationAndLoad();
-  }, 300); // 300ms debounce delay
-
-  // Watcher for the raw NPANXX input string
-  watch(npanxxSearchInput, () => {
-    debouncedProcessNpanxxInput(); // This updates npanxxFilterTerms
-  });
-
-  // This watcher should observe the processed terms, not the raw input for NPANXX.
-  // selectedState is fine.
-  watch([npanxxFilterTerms, selectedState], () => {
-    // Changed from npanxxSearchInput
-    debouncedResetPaginationAndLoad();
-  });
-
-  watch(itemsPerPage, () => {
-    // When items per page changes, go to page 1 and reload.
-    resetPaginationAndLoad(); // This will set currentPage to 1 and fetch data.
-  });
-
-  // --- Metro Filter Watcher --- START ---
-  watch(
-    selectedMetros,
-    async (newSelectedMetros) => {
-      if (newSelectedMetros.length > 0) {
-        console.log(
-          '[USDetailedComparisonTable] Metro selection changed, resetting NPANXX and State filters.'
-        );
-        npanxxSearchInput.value = ''; // This will trigger its watcher to clear npanxxFilterTerms
-        selectedState.value = '';
-      }
-      // debouncedResetPaginationAndLoad will be called by the watchers of npanxxSearchInput and selectedState
-      // if they change, or directly if they didn't (e.g. clearing the last metro selection)
-      // For consistency and to ensure it always runs after a metro change:
-      await debouncedResetPaginationAndLoad();
-    },
-    { deep: true }
-  );
-  // --- Metro Filter Watcher --- END ---
-
-  // --- Helper Functions ---
-
-  function getDiffClass(diff: number | null | undefined): string {
-    if (diff === null || diff === undefined) return 'text-gray-500'; // Handle potential nulls
-    if (diff > 0) return 'text-red-400';
-    if (diff < 0) return 'text-green-400';
-    return 'text-gray-400';
-  }
-
-  function getCheaperClass(cheaper: 'file1' | 'file2' | 'same' | null | undefined): string {
-    const baseStyle = 'font-medium px-2 py-0.5 rounded-md text-xs'; // Base badge style
-    if (cheaper === null || cheaper === undefined) return 'text-gray-500'; // Handle potential nulls
-    if (cheaper === 'file1') {
-      // File 1 is cheaper - Green style
-      return `${baseStyle} text-green-300 bg-green-900/50 border border-green-700`;
-    }
-    if (cheaper === 'file2') {
-      // File 2 is cheaper - Red style (consistent with diffs)
-      return `${baseStyle} text-red-300 bg-red-900/50 border border-red-700`;
-    }
-    if (cheaper === 'same') {
-      // Same Rate - Neutral/Gray style
-      return `${baseStyle} text-gray-300 bg-gray-700/50 border border-gray-600`;
-    }
-    return 'text-gray-500'; // Fallback for unexpected values
-  }
-
-  // Helper function to format Cheaper File text (similar to AZ)
-  function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
-    if (cheaper === 'file1') {
-      return fileName1.value; // Use computed property
-    } else if (cheaper === 'file2') {
-      return fileName2.value; // Use computed property
-    } else if (cheaper === 'same') {
-      return 'Same Rate';
-    } else {
-      return 'N/A'; // Handle undefined/null case
-    }
-  }
-
-  // Debounced function to process NPANXX input
-  const debouncedProcessNpanxxInput = useDebounceFn(() => {
-    const terms = npanxxSearchInput.value
-      .split(',')
-      .map((term) => term.trim().toLowerCase())
-      .filter((term) => term.length > 0);
-    npanxxFilterTerms.value = terms;
-    // The main data loading `debouncedResetPaginationAndLoad` is already watched by npanxxSearchInput,
-    // so no need to call it directly here. The change to npanxxFilterTerms will be picked up by it.
-  }, 300);
-
   // --- Sorting Handler ---
   async function handleSort(key: SortableUSComparisonColumn['key']) {
     const header = tableHeaders.value.find((h) => h.key === key);
@@ -1413,73 +1111,38 @@
       currentSortDirection.value = 'asc';
     }
     // After updating sort state, reload data from the beginning (page 1)
-    await resetPaginationAndLoad(); // This will set currentPage to 1 and fetch data
+    await resetPaginationAndLoad(createFilters()); // This will set currentPage to 1 and fetch data
   }
   // --- End Sorting Handler ---
 
-  // --- Pagination Action Handlers ---
-  async function goToPage(page: number) {
-    if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
-      await fetchPageData(page);
-      if (scrollContainerRef.value) {
-        // Scroll to top of table on page change
-        scrollContainerRef.value.scrollTop = 0;
-      }
-    } else if (page === currentPage.value) {
-      directPageInput.value = currentPage.value; // Reset input if invalid or same page
-    }
-  }
+  // --- Lifecycle and Watchers ---
+  onMounted(async () => {
+    await fetchUniqueStates(); // Fetch states first
+    await resetPaginationAndLoad(createFilters()); // Then load initial data (first page)
+    await calculateFullFilteredAverages(); // Calculate initial averages
+  });
 
-  function goToFirstPage() {
-    if (canGoToPreviousPage.value) {
-      goToPage(1);
-    }
-  }
-
-  function goToPreviousPage() {
-    if (canGoToPreviousPage.value) {
-      goToPage(currentPage.value - 1);
-    }
-  }
-
-  function goToNextPage() {
-    if (canGoToNextPage.value) {
-      goToPage(currentPage.value + 1);
-    }
-  }
-
-  function goToLastPage() {
-    if (canGoToNextPage.value) {
-      goToPage(totalPages.value);
-    }
-  }
-
-  function handleDirectPageInput() {
-    const page = Number(directPageInput.value);
-    if (!isNaN(page) && page >= 1 && page <= totalPages.value) {
-      goToPage(page);
-    } else {
-      // Reset input to current page if invalid
-      directPageInput.value = currentPage.value;
-      // Optionally provide user feedback about invalid page number
-    }
-  }
-  // --- End Pagination Action Handlers ---
-
-  // --- Metro Filter Functions --- START ---
-  // --- Metro Filter Functions --- END ---
-
-  // --- Clear All Filters Function --- START ---
+  // --- Clear All Filters Function ---
   async function handleClearAllFilters() {
-    npanxxSearchInput.value = ''; // Changed from searchTerm
+    npanxxSearchInput.value = '';
     selectedState.value = '';
-    clearAllSelectedMetros(); // This clears selectedMetros and metroSearchQuery
+    clearAllSelectedMetros();
 
     // Reset sorting to default (optional, but good UX)
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
 
-    await resetPaginationAndLoad();
+    await resetPaginationAndLoad(createFilters());
   }
-  // --- Clear All Filters Function --- END ---
+
+  // Watcher to trigger average calculation when data changes
+  watch(
+    displayedData,
+    async () => {
+      if (displayedData.value.length > 0) {
+        await calculateFullFilteredAverages();
+      }
+    },
+    { immediate: false }
+  );
 </script>

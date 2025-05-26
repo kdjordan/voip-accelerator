@@ -96,8 +96,10 @@ export function isValidNumber(value: any): value is number {
 
 // Utility function to format rate values consistently
 export function formatRate(rate: number | null | undefined, decimals: number = 6): string {
-  if (!isValidNumber(rate)) return 'N/A';
-  return rate.toFixed(decimals);
+  if (rate === null || rate === undefined || typeof rate !== 'number' || isNaN(rate)) {
+    return 'N/A';
+  }
+  return `$${rate.toFixed(decimals)}`;
 }
 
 // Utility function to format percentage values consistently

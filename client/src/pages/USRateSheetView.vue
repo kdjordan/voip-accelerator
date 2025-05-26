@@ -329,7 +329,6 @@
           showPreviewModal.value = true;
         },
         error: (error) => {
-          console.error('[processFile] Papa.parse error callback reached:', error);
           const parseErrorMessage = 'Failed to parse CSV file: ' + error.message;
           uploadError.value = parseErrorMessage;
           store.setError(parseErrorMessage);
@@ -337,7 +336,6 @@
         },
       });
     } catch (error) {
-      console.error('[processFile] Error during Papa.parse try/catch:', error);
       const processErrorMessage =
         'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
       uploadError.value = processErrorMessage;
@@ -356,7 +354,6 @@
     effectiveDate?: string // Make effectiveDate optional as it's not always passed
   ) {
     if (!selectedFile.value) {
-      console.error('No file selected for processing.');
       return;
     }
 
@@ -433,7 +430,6 @@
       selectedFile.value = null; // Clear selected file after processing
       rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
     } catch (error: any) {
-      console.error('[handleModalConfirm] Error processing file:', error);
       uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
       // Clear potentially inconsistent data on error
       await store.clearUsRateSheetData();
@@ -462,7 +458,6 @@
 
   async function handleApplyEffectiveDate() {
     if (!selectedEffectiveDate.value || !isDateChanged.value) {
-      console.warn('No new effective date selected or date has not changed.');
       return;
     }
     await store.updateEffectiveDate(selectedEffectiveDate.value);
