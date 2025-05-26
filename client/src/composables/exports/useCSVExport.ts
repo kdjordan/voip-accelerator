@@ -103,7 +103,7 @@ export function formatRate(rate: number | null | undefined, decimals: number = 6
 }
 
 // Utility function to format percentage values consistently
-export function formatPercentage(value: number | null | undefined, decimals: number = 2): string {
+export function formatPercentage(value: number | null | undefined, decimals: number = 6): string {
   if (!isValidNumber(value)) return 'N/A';
   return `${value.toFixed(decimals)}%`;
 }

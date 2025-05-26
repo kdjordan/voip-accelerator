@@ -3,7 +3,6 @@ import {
   useTableData,
   UseTableDataConfig,
   UseTableDataReturn,
-  FilterFunction,
 } from './useTableData';
 import { sortRegionCodesByName } from '@/types/constants/region-codes';
 import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
