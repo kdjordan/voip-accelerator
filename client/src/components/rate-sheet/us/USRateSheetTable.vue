@@ -61,10 +61,10 @@
     <!-- Header Row -->
     <div class="mb-4 flex items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <h3 class="text-sm font-medium text-gray-400 ml-2">Filter Controls</h3>
-        <span v-if="!isDataLoading" class="text-sm text-gray-400">
+        <h3 class="text-lg font-medium text-white">Filter Controls</h3><br>
+        <p v-if="!isDataLoading" class="text-sm text-gray-400">
           Showing {{ displayedData.length }} of {{ totalFilteredItems }} NPANXX entries
-        </span>
+        </p>
         <span v-else class="text-sm text-gray-400">Loading data...</span>
       </div>
       <div class="flex items-center gap-2">
@@ -222,11 +222,11 @@
               v-model="metroSearchQuery"
               type="text"
               placeholder="Search metros..."
-              class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-l p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
+              class="block w-full rounded-l-md border-0 py-2.5 pl-10 bg-gray-800 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm sm:leading-6"
             />
             <button
               @click="isMetroAreaVisible = !isMetroAreaVisible"
-              class="p-2.5 text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
               aria-label="Toggle metro area list"
               title="Toggle metro area list"
             >
