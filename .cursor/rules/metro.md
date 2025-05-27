@@ -279,3 +279,61 @@ This phase focuses on extracting the common metro filter logic and UI state mana
 4.  **Verify no console errors** related to the composable or its integration.
 
 This approach centralizes the metro filter's complex state and logic, making both parent components significantly cleaner and easier to maintain.
+
+---
+
+## Phase 4: UI/UX Refinement Notes for Metro Filter (from USRateSheetTable.vue)
+
+These notes capture the UI/UX refinements applied to `USRateSheetTable.vue` and should be considered when updating `USDetailedComparisonTable.vue` for consistency.
+
+### 1. Overall Filter Section Structure
+
+- **Single Main Header**: A top-level "Filter Controls" heading is used, along with the "Showing X of Y entries" text.
+- **Global Actions in Header**:
+  - "Export All" button (primary variant, small size).
+  - "Clear Data" button (destructive variant, small size).
+  - These are grouped to the right of the "Filter Controls" header.
+
+### 2. Primary Filters Row (Below Main Header)
+
+- **Layout**: Uses a responsive grid (e.g., `md:grid-cols-4 items-end`).
+- **Controls**:
+  - "Filter by NPANXX" input (e.g., `md:col-span-2`).
+  - "Filter by State/Province" dropdown (e.g., `md:col-span-1`).
+  - "Reset All Filters" button (secondary variant, standard size, clears NPANXX, State, and Metro filters) (e.g., `md:col-span-1`).
+- **Styling**: No separate background box; part of the main component background.
+
+### 3. Metro Area Filter Section (Below Primary Filters Row)
+
+- **Static Label**: A static uppercase label "FILTER BY METRO AREA" introduces this section.
+- **Metro Controls Row (First part of this section)**:
+  - **Layout**: Uses a responsive grid (e.g., `md:grid-cols-3 items-center`).
+  - **Search Input with Integrated Toggle (md:col-span-1)**:
+    - The "Search metros..." input field.
+    - A caret icon (`ChevronDownIcon`) is appended directly to the search input (styled as a button part) to toggle the visibility of the metro chip grid below.
+    - The search input has `rounded-l-md` and the toggle button has `rounded-r-md` to appear as one unit.
+    - The `XCircleIcon` to clear the search input is positioned within the input field, to the left of the toggle caret.
+  - **Metro Action Buttons (md:col-span-2, aligned right)**:
+    - "Select Top 10" (`secondary-outline`, `small`)
+    - "Select Top 25" (`secondary-outline`, `small`)
+    - "Select All" / "Deselect All" (`secondary`, `small`)
+    - "Clear Selected (X)" (`secondary-outline`, `small`, appears if metros are selected).
+- **Collapsible Metro Chip Grid (Below Metro Controls Row)**:
+  - This is the `div` containing the actual `grid` of selectable metro area chips.
+  - Its visibility is controlled by a reactive variable (`isMetroAreaVisible`), toggled by the caret next to the metro search input.
+  - Wrapped in a `<transition name="slide-fade">` for smooth animation.
+  - Styling: Typically has a border, slight background (`bg-gray-700/30`), padding, and `overflow-y-auto` with `max-h-*`.
+- **Metro Filter Summary (Below Collapsible Chip Grid)**:
+  - This section (showing selected count, total population, targeted NPAs) appears _only if_ `selectedMetros.length > 0`.
+  - It has its own distinct background/padding (e.g., `bg-gray-800/60 p-3 rounded-lg text-sm my-4`).
+
+### Key State Management for Collapsible Section:
+
+- `const isMetroAreaVisible = ref(true);` in the component script.
+
+### Styling Notes for Collapsible Toggle:
+
+- Caret icon uses `transform: rotate-180` when `isMetroAreaVisible` is true.
+- Smooth `transition-transform duration-200` on the caret.
+
+This refined structure aims for better logical grouping, reduced clutter, and improved scannability of the filter options.
