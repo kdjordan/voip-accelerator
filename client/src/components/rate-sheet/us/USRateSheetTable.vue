@@ -77,7 +77,7 @@
           @click="handleExport"
           title="Export all loaded data (based on current filters)"
         >
-          Export All
+          Export Rates
         </BaseButton>
         <BaseButton
           variant="destructive"

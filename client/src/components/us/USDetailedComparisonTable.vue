@@ -1,6 +1,6 @@
 <template>
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
-    <!-- Filtered Data Average Rates Summary - Moved Up -->
+    <!-- Filtered Data Average Rates Summary -->
     <div
       v-if="displayedData.length > 0 || isLoading || isPageLoading || isCalculatingAverages"
       class="mb-6 space-y-3"
@@ -70,29 +70,61 @@
       </div>
     </div>
 
-    <!-- Filter Controls -->
-    <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-      <!-- Filter Group -->
-      <div class="flex flex-wrap gap-4 items-center flex-grow">
-        <!-- NPANXX Search -->
+    <!-- New Filter Controls Section -->
+    <div class="mb-6">
+      <!-- Main Header for Filters -->
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
         <div>
+          <h3 class="text-lg font-medium text-white">Filter Controls</h3>
+          <p class="text-sm text-gray-400">
+            Showing {{ displayedData.length.toLocaleString() }} of
+            {{ totalFilteredItems.toLocaleString() }} entries
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <BaseButton
+            variant="primary"
+            size="small"
+            @click="downloadCsv"
+            :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
+            title="Download Filtered Data"
+            class="min-w-[160px]"
+          >
+            <span v-if="isExporting" class="flex items-center justify-center">
+              <ArrowPathIcon class="animate-spin w-4 h-4 mr-1.5" />
+              Exporting...
+            </span>
+            <span v-else class="flex items-center justify-center">
+              <ArrowDownTrayIcon class="w-4 h-4 mr-1.5" />
+              Export Data
+            </span>
+          </BaseButton>
+          <!-- Optional: Clear Data button from USRateSheetTable.vue can be added here -->
+          <!-- <BaseButton variant="destructive" size="small">Clear Data</BaseButton> -->
+        </div>
+      </div>
+
+      <!-- Primary Filters Row -->
+      <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-4 items-end mb-4">
+        <!-- NPANXX Search (lg:col-span-2) -->
+        <div class="md:col-span-1 lg:col-span-2">
           <label for="npanxx-search" class="block text-sm font-medium text-gray-400 mb-1"
-            >NPA(s), NPANXX Filter</label
+            >Filter by NPANXX</label
           >
           <input
             type="text"
             id="npanxx-search"
             v-model="npanxxSearchInput"
-            placeholder="Enter NPA(s), or NPANXX..."
+            placeholder="e.g., 201, 301333..."
             class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
           />
         </div>
 
-        <!-- State Filter -->
-        <div class="w-52">
+        <!-- State Filter (md:col-span-1) -->
+        <div class="w-full md:col-span-1">
           <Listbox v-model="selectedState" as="div">
             <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
-              >Filter by State</ListboxLabel
+              >Filter by State/Province</ListboxLabel
             >
             <div class="relative mt-1">
               <ListboxButton
@@ -108,20 +140,18 @@
                   <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </span>
               </ListboxButton>
-
               <transition
                 leave-active-class="transition duration-100 ease-in"
                 leave-from-class="opacity-100"
                 leave-to-class="opacity-0"
               >
                 <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hover:text-green-300"
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
                 >
-                  <!-- "All States/Provinces" Option -->
                   <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
                     <li
                       :class="[
-                        active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
                         'relative cursor-default select-none py-2 pl-10 pr-4',
                       ]"
                     >
@@ -136,14 +166,10 @@
                       </span>
                     </li>
                   </ListboxOption>
-
-                  <!-- State/Province Groups -->
                   <template v-for="group in groupedAvailableStates" :key="group.label">
-                    <!-- Group Label -->
                     <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
                       {{ group.label }}
                     </li>
-                    <!-- Group Options -->
                     <ListboxOption
                       v-for="regionCode in group.codes"
                       :key="regionCode"
@@ -153,7 +179,7 @@
                     >
                       <li
                         :class="[
-                          active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                          active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
                           'relative cursor-default select-none py-2 pl-10 pr-4',
                         ]"
                       >
@@ -175,144 +201,160 @@
           </Listbox>
         </div>
 
-        <!-- Metro Area Filter Dropdown -->
-        <div class="w-64">
-          <label for="metro-filter-button" class="block text-sm font-medium text-gray-400 mb-1"
-            >Filter by Metro Area</label
+        <!-- Reset All Filters Button (md:col-span-1) -->
+        <div class="md:col-span-1 self-end">
+          <BaseButton
+            variant="secondary"
+            size="default"
+            @click="handleClearAllFilters"
+            class="w-full"
+            :disabled="isLoading || isFiltering || isPageLoading"
+            title="Reset All Filters"
           >
-          <Menu as="div" class="relative inline-block text-left w-full">
-            <div>
-              <MenuButton
-                id="metro-filter-button"
-                class="inline-flex w-full justify-between items-center rounded-lg bg-gray-800 py-2.5 pl-3 pr-2 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700 text-white"
-                :disabled="isLoading || isFiltering || isPageLoading"
-              >
-                <span class="block truncate">{{ metroButtonLabel }}</span>
-                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </MenuButton>
-            </div>
-            <transition
-              leave-active-class="transition duration-100 ease-in"
-              leave-from-class="opacity-100"
-              leave-to-class="opacity-0"
-            >
-              <MenuItems
-                class="absolute z-30 mt-1 max-h-96 w-full origin-top-right overflow-hidden rounded-md bg-gray-800 shadow-lg ring-1 ring-black/5 focus:outline-none flex flex-col"
-              >
-                <div class="p-2 border-b border-gray-700">
-                  <div class="relative">
-                    <div
-                      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
-                    >
-                      <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                      v-model="metroSearchQuery"
-                      type="text"
-                      placeholder="Search metro areas..."
-                      class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <button
-                      v-if="metroSearchQuery"
-                      @click="clearMetroSearch"
-                      class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
-                      aria-label="Clear search"
-                    >
-                      <XCircleIcon class="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                <div class="p-2 border-b border-gray-700 flex justify-between items-center">
-                  <button
-                    @click="handleSelectAllMetros"
-                    class="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
-                    :disabled="filteredMetroOptions.length === 0"
-                  >
-                    {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select Visible' }}
-                  </button>
-                  <button
-                    v-if="selectedMetros.length > 0"
-                    @click="clearAllSelectedMetros"
-                    class="text-xs text-gray-400 hover:text-gray-200"
-                  >
-                    Clear All Selected ({{ selectedMetros.length }})
-                  </button>
-                </div>
-                <div class="overflow-y-auto flex-grow p-1 max-h-60">
-                  <MenuItem
-                    v-for="metro in filteredMetroOptions"
-                    :key="metro.key"
-                    v-slot="{ active }"
-                    as="template"
-                  >
-                    <li
-                      @click="() => toggleMetroSelection(metro)"
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4 flex justify-between items-center',
-                      ]"
-                    >
-                      <div class="flex items-center">
-                        <span
-                          :class="[
-                            isMetroSelected(metro) ? 'text-primary-400' : 'text-gray-500',
-                            'absolute inset-y-0 left-0 flex items-center pl-3',
-                          ]"
-                        >
-                          <CheckIcon
-                            class="h-5 w-5"
-                            :class="isMetroSelected(metro) ? 'opacity-100' : 'opacity-0'"
-                            aria-hidden="true"
-                          />
-                        </span>
-                        <span
-                          :class="[
-                            isMetroSelected(metro) ? 'font-semibold' : 'font-normal',
-                            'block truncate',
-                          ]"
-                        >
-                          {{ metro.displayName }}
-                        </span>
-                      </div>
-                      <span class="text-xs text-gray-500">{{
-                        formatPopulation(metro.population)
-                      }}</span>
-                    </li>
-                  </MenuItem>
-                  <div
-                    v-if="filteredMetroOptions.length === 0 && metroSearchQuery"
-                    class="px-4 py-2 text-sm text-gray-500 text-center"
-                  >
-                    No metro areas match your search.
-                  </div>
-                </div>
-              </MenuItems>
-            </transition>
-          </Menu>
+            <XCircleIcon class="w-5 h-5 mr-1.5" />
+            Reset All Filters
+          </BaseButton>
         </div>
       </div>
 
-      <!-- Download CSV Button -->
-      <div class="ml-auto self-end flex-shrink-0">
-        <BaseButton
-          variant="primary"
-          size="small"
-          @click="downloadCsv"
-          :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
-          title="Download Filtered Data"
-          class="min-w-[180px]"
+      <!-- Metro Area Filter Section -->
+      <div class="mt-4 pt-4 border-t border-gray-700/60">
+        <p class="text-xs uppercase text-gray-500 font-semibold tracking-wider mb-2">
+          FILTER BY METRO AREA
+        </p>
+        <!-- Metro Controls Row -->
+        <div class="grid md:grid-cols-3 gap-4 items-center mb-3">
+          <!-- Search Input with Integrated Toggle (md:col-span-1) -->
+          <div class="relative flex items-stretch md:col-span-1">
+            <div class="relative flex-grow focus-within:z-10">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <MagnifyingGlassIcon class="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                v-model="metroSearchQuery"
+                type="text"
+                placeholder="Search metros..."
+                class="block w-full rounded-l-md border-0 py-2.5 pl-10 bg-gray-800 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm sm:leading-6"
+              />
+              <button
+                v-if="metroSearchQuery"
+                @click="clearMetroSearch"
+                type="button"
+                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
+                aria-label="Clear search"
+              >
+                <XCircleIcon class="h-5 w-5" />
+              </button>
+            </div>
+            <button
+              @click="toggleMetroAreaVisibility"
+              type="button"
+              class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-md px-3 py-2.5 text-sm font-semibold bg-gray-800 text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-700 focus:z-10"
+              title="Toggle metro selection visibility"
+            >
+              <ChevronDownIcon
+                class="h-5 w-5 transition-transform duration-200"
+                :class="{ 'rotate-180': isMetroAreaVisible }"
+              />
+            </button>
+          </div>
+
+          <!-- Metro Action Buttons (md:col-span-2, aligned right) -->
+          <div
+            class="md:col-span-2 flex flex-wrap gap-x-2 gap-y-2 justify-start md:justify-end items-center"
+          >
+            <BaseButton
+              variant="secondary-outline"
+              size="small"
+              @click="() => selectTopNMetros(10)"
+              :disabled="isLoading || isFiltering || isPageLoading"
+            >
+              Select Top 10
+            </BaseButton>
+            <BaseButton
+              variant="secondary-outline"
+              size="small"
+              @click="() => selectTopNMetros(25)"
+              :disabled="isLoading || isFiltering || isPageLoading"
+            >
+              Select Top 25
+            </BaseButton>
+            <BaseButton
+              variant="secondary"
+              size="small"
+              @click="handleSelectAllMetros"
+              :disabled="
+                isLoading || isFiltering || isPageLoading || filteredMetroOptions.length === 0
+              "
+            >
+              {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select All' }}
+            </BaseButton>
+            <BaseButton
+              v-if="selectedMetros.length > 0"
+              variant="secondary-outline"
+              size="small"
+              @click="clearAllSelectedMetros"
+              :disabled="isLoading || isFiltering || isPageLoading"
+            >
+              Clear Selected ({{ selectedMetros.length }})
+            </BaseButton>
+          </div>
+        </div>
+
+        <!-- Collapsible Metro Chip Grid -->
+        <transition
+          enter-active-class="transition ease-out duration-200 origin-top"
+          enter-from-class="transform opacity-0 scale-y-95"
+          enter-to-class="transform opacity-100 scale-y-100"
+          leave-active-class="transition ease-in duration-150 origin-top"
+          leave-from-class="transform opacity-100 scale-y-100"
+          leave-to-class="transform opacity-0 scale-y-95"
         >
-          <span v-if="isExporting" class="flex items-center justify-center">
-            <ArrowPathIcon class="animate-spin w-4 h-4 mr-1.5" />
-            Exporting...
-          </span>
-          <span v-else class="flex items-center justify-center">
-            <ArrowDownTrayIcon class="w-4 h-4 mr-1.5" />
-            Export Filtered Data
-          </span>
-        </BaseButton>
+          <div
+            v-show="isMetroAreaVisible"
+            class="bg-gray-700/30 p-3 mt-1 rounded-lg border border-gray-600/50 max-h-[300px] overflow-y-auto shadow-md"
+          >
+            <div
+              v-if="filteredMetroOptions.length > 0"
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-2"
+            >
+              <label
+                v-for="metro in filteredMetroOptions"
+                :key="metro.key"
+                :for="`metro-checkbox-${metro.key}`"
+                class="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-600/40 cursor-pointer transition-colors duration-150 border border-transparent hover:border-gray-500"
+                :class="{ 'bg-primary-700/20 ring-1 ring-primary-600': isMetroSelected(metro) }"
+              >
+                <input
+                  :id="`metro-checkbox-${metro.key}`"
+                  type="checkbox"
+                  :checked="isMetroSelected(metro)"
+                  @change="() => toggleMetroSelection(metro)"
+                  class="h-4 w-4 rounded border-gray-500 bg-gray-800 text-primary-600 focus:ring-primary-500 focus:ring-offset-gray-900 shadow"
+                />
+                <span class="text-sm text-gray-200 truncate flex-grow" :title="metro.displayName">
+                  {{ metro.displayName }}
+                </span>
+                <span
+                  class="text-xs text-gray-400 ml-auto whitespace-nowrap bg-gray-600/50 px-1.5 py-0.5 rounded-sm"
+                  >{{ formatPopulation(metro.population) }}</span
+                >
+              </label>
+            </div>
+            <div
+              v-else-if="metroSearchQuery && filteredMetroOptions.length === 0"
+              class="py-4 text-center text-sm text-gray-500"
+            >
+              No metro areas match "{{ metroSearchQuery }}".
+            </div>
+            <div v-else class="py-4 text-center text-sm text-gray-500">
+              No metro areas available or matching current search.
+            </div>
+          </div>
+        </transition>
       </div>
     </div>
+    <!-- End New Filter Controls Section -->
 
     <!-- Selected Metros Chips Display & Summary -->
     <div v-if="selectedMetros.length > 0" class="my-3 space-y-3">
@@ -632,6 +674,7 @@
     ChevronUpDownIcon,
     MagnifyingGlassIcon,
     XCircleIcon,
+    ChevronDownIcon,
   } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
   import { useLergStore } from '@/stores/lerg-store';
@@ -729,7 +772,6 @@
   const {
     selectedMetros,
     metroSearchQuery,
-    metroButtonLabel,
     filteredMetroOptions,
     totalSelectedPopulation,
     targetedNPAsDisplay,
@@ -744,9 +786,30 @@
     formatPopulation,
   } = useMetroFilter();
 
-  // Additional loading states specific to this component
+  const isMetroAreaVisible = ref(true); // For collapsible metro chip grid
+
+  // Re-introducing the missing refs that were accessed in the template
   const isPageLoading = ref<boolean>(false); // Loading state for page changes and initial data load for a filter set
   const isPerformingPageLevelSort = ref<boolean>(false); // True if sorting is done on the current page data only
+
+  // Function to toggle metro area visibility
+  function toggleMetroAreaVisibility() {
+    isMetroAreaVisible.value = !isMetroAreaVisible.value;
+  }
+
+  // Import metroAreaOptions for "Select Top N"
+  import { metroAreaOptions as allMetroOptionsList } from '@/types/constants/metro-population';
+
+  function selectTopNMetros(count: number) {
+    const sortedByPopulation = [...allMetroOptionsList].sort((a, b) => b.population - a.population);
+    const topN = sortedByPopulation.slice(0, count);
+    clearAllSelectedMetros(); // Clear existing selections from composable
+    topN.forEach((metro) => {
+      // toggleMetroSelection will add it if not present, effectively selecting it.
+      // No need to check isMetroSelected if the goal is to set selection to these topN.
+      toggleMetroSelection(metro);
+    });
+  }
 
   // Filter State Variables
   const npanxxSearchInput = ref<string>(''); // Renamed from searchTerm
@@ -922,9 +985,10 @@
     debouncedProcessNpanxxInput();
   });
 
-  // Watch for processed NPANXX terms and state changes
-  watch([npanxxFilterTerms, selectedState], () => {
+  // Watch for processed NPANXX terms, state changes, and metro filter changes
+  watch([npanxxFilterTerms, selectedState, metroAreaCodesToFilter], () => {
     debouncedResetPaginationAndLoad();
+    // Averages will be recalculated via the watch on displayedData or other explicit calls.
   });
 
   watch(itemsPerPage, () => {
@@ -932,18 +996,16 @@
     resetPaginationAndLoad(createFilters());
   });
 
-  // --- Metro Filter Watcher ---
+  // --- Metro Filter Watcher (for selectedMetros directly from composable) ---
   watch(
-    selectedMetros,
-    async (newSelectedMetros) => {
-      if (newSelectedMetros.length > 0) {
-        console.log(
-          '[USDetailedComparisonTable] Metro selection changed, resetting NPANXX and State filters.'
-        );
-        npanxxSearchInput.value = '';
-        selectedState.value = '';
-      }
+    selectedMetros, // This is the array of selected metro objects
+    async () => {
+      // When metro selection changes directly (e.g. chip removal, select top N, composable internals),
+      // ensure data is reloaded and averages recalculated.
+      // The metroAreaCodesToFilter watcher also triggers reload, so this might be slightly redundant
+      // but ensures direct manipulations of selectedMetros also trigger updates.
       await debouncedResetPaginationAndLoad();
+      await calculateFullFilteredAverages(); // Recalculate averages when metro selection changes
     },
     { deep: true }
   );
@@ -1124,7 +1186,6 @@
       await calculateFullFilteredAverages(); // Calculate initial averages
     } catch (err) {
       console.error('[USDetailedComparisonTable] Error during onMounted: ', err);
-      // error.value is already handled by useUSTableData, but you might want specific error handling here
     } finally {
       isPageLoading.value = false; // Ensure page loading is set to false after all operations
     }
@@ -1132,18 +1193,21 @@
 
   // --- Clear All Filters Function ---
   async function handleClearAllFilters() {
-    npanxxSearchInput.value = '';
+    npanxxSearchInput.value = ''; // Clears the input which triggers npanxxFilterTerms update via watcher
     selectedState.value = '';
-    clearAllSelectedMetros();
+    clearAllSelectedMetros(); // This clears selectedMetros and metroSearchQuery from composable
 
-    // Reset sorting to default (optional, but good UX)
+    // Reset sorting to default
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
 
+    // Data reload will be triggered by watchers on npanxxFilterTerms, selectedState, and selectedMetros (via metroAreaCodesToFilter)
+    // Explicitly calling resetPaginationAndLoad here is safer.
     await resetPaginationAndLoad(createFilters());
+    await calculateFullFilteredAverages(); // Recalculate averages after clearing all filters
   }
 
-  // Watcher to trigger average calculation when data changes
+  // Watcher to trigger average calculation when displayedData changes (e.g., after filtering/pagination)
   watch(
     displayedData,
     async () => {
