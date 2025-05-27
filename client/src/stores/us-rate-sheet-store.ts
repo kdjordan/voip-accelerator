@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
 import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import service
-import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
-import type { InvalidUsRow } from '@/types/domains/us-types';
+import type { USRateSheetEntry, InvalidUsRow } from '@/types/domains/us-types'; // Corrected import
 // Add date-fns for default date calculation
 import { addDays, format } from 'date-fns';
 
@@ -11,9 +10,9 @@ interface USRateSheetState {
   error: string | null;
   totalRecords: number;
   currentEffectiveDate: string | null; // Store global effective date
-  // isUpdatingEffectiveDate: boolean; // Removed
+  isUpdatingEffectiveDate: boolean; // Add state for update process
   lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
-  invalidRateSheetRows: InvalidUsRow[]; // Added state for invalid rows
+  invalidRateSheetRows: InvalidUsRow[]; // Updated type usage
 }
 
 // Instantiate service outside the store definition (singleton pattern)
@@ -31,7 +30,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     error: null,
     totalRecords: 0,
     currentEffectiveDate: null, // Initialize as null
-    // isUpdatingEffectiveDate: false, // Removed
+    isUpdatingEffectiveDate: false, // Add state for update process
     lastDbUpdateTime: Date.now(), // Initialize timestamp
     invalidRateSheetRows: [], // Initialize invalid rows state
   }),
@@ -90,7 +89,10 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
      * Handles successful upload: updates metadata, stores invalid rows, sets default effective date.
      * @param processedData The result from the service's processFile method.
      */
-    async handleUploadSuccess(processedData: { recordCount: number; invalidRows: InvalidUsRow[] }) {
+    async handleUploadSuccess(processedData: {
+      recordCount: number;
+      invalidRows: InvalidUsRow[]; // Updated type usage
+    }) {
       console.log(
         `[us-rate-sheet-store] handleUploadSuccess called with ${processedData.recordCount} valid records and ${processedData.invalidRows.length} invalid rows.`
       );

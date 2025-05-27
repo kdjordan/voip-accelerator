@@ -178,6 +178,7 @@ export function useTableData<T extends Record<string, any>>(
   ): Promise<{ data: T[]; totalMatchingRecords: number }> {
     dataError.value = null;
     isDataLoading.value = true;
+    console.log('[useTableData] fetchPageData CALLED. Page:', pageNumber, 'Filters:', filters);
 
     try {
       if (!dbInstance.value) {
@@ -194,6 +195,10 @@ export function useTableData<T extends Record<string, any>>(
 
       // Get total count before pagination
       const totalMatchingRecords = await query.count();
+      console.log(
+        '[useTableData] fetchPageData: query.count() for totalMatchingRecords BEFORE pagination:',
+        totalMatchingRecords
+      );
 
       // Try to apply DB-level sorting if possible
       let dbSortApplied = false;
@@ -213,6 +218,10 @@ export function useTableData<T extends Record<string, any>>(
       // Apply pagination
       const offset = (pageNumber - 1) * itemsPerPage.value;
       let pageData = await query.offset(offset).limit(itemsPerPage.value).toArray();
+      console.log(
+        '[useTableData] fetchPageData: pageData.length AFTER pagination:',
+        pageData.length
+      );
 
       // Apply client-side sort if DB sort wasn't applied
       if (!dbSortApplied && currentSortKey.value) {

@@ -210,7 +210,7 @@ export class USRateSheetService {
                   const storeEndTime = Date.now();
                   // console.log(`[${new Date().toISOString()}] [USRateSheetService] SUCCESS storing batch ${batchStartIndex}-${batchEndIndex} (${batchToStore.length} records). Duration: ${storeEndTime - storeStartTime}ms`);
                 })
-                .catch((batchError) => {
+                .catch((batchError: Error) => {
                   const storeEndTime = Date.now();
                   // console.error(`[${new Date().toISOString()}] [USRateSheetService] ERROR storing batch ${batchStartIndex}-${batchEndIndex}. Duration: ${storeEndTime - storeStartTime}ms`, batchError);
                   // Add failed rows to invalidRows or handle differently if needed

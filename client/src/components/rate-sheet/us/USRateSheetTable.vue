@@ -585,9 +585,30 @@
         </div>
       </div>
       <!-- Feedback Area -->
-      <div v-if="adjustmentStatusMessage || adjustmentError" class="mt-3 text-xs">
+      <div
+        v-if="adjustmentStatusMessage || adjustmentError || adjustedNpasThisSession.size > 0"
+        class="mt-3 text-xs"
+      >
         <p v-if="adjustmentStatusMessage" class="text-green-400">{{ adjustmentStatusMessage }}</p>
         <p v-if="adjustmentError" class="text-red-400">Error: {{ adjustmentError }}</p>
+        <div
+          v-if="adjustedNpasThisSession.size > 0"
+          class="flex items-center justify-between mt-2 p-2 bg-blue-900/30 rounded border border-blue-700/50"
+        >
+          <p class="text-blue-300">
+            <span class="font-medium">{{ adjustedNpasThisSession.size }}</span> NPA(s) adjusted this
+            session (protected from re-adjustment)
+          </p>
+          <BaseButton
+            variant="secondary"
+            size="small"
+            @click="handleResetSession"
+            class="text-xs"
+            title="Reset session tracking to allow re-adjusting all NPAs"
+          >
+            Reset Session
+          </BaseButton>
+        </div>
       </div>
     </div>
 
@@ -837,7 +858,7 @@
     groupRegionCodes,
     RegionType,
   } from '@/types/constants/region-codes';
-  import { useCSVExport, formatRate } from '@/composables/exports/useCSVExport';
+  import { useCSVExport, type CSVExportOptions } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
 
@@ -951,6 +972,7 @@
   const isApplyingAdjustment = ref(false);
   const adjustmentStatusMessage = ref<string | null>(null);
   const adjustmentError = ref<string | null>(null);
+  const adjustedNpasThisSession = ref(new Set<string>()); // Stores NPAs of records adjusted in this session
   // --- End Rate Adjustment State ---
 
   // Moved initialization out of hooks/functions
@@ -1080,7 +1102,6 @@
    * @returns Promise resolving to RateAverages or null if DB error.
    */
   async function calculateAverages(): Promise<RateAverages | null> {
-
     if (!dbInstance.value) {
       await initializeDB();
     }
@@ -1106,14 +1127,12 @@
       }
 
       const recordCountForAverages = await queryChain.clone().count();
-    
 
       let logCount = 0;
       const MAX_LOG_ENTRIES = 3;
 
       await queryChain.each((entry) => {
         if (logCount < MAX_LOG_ENTRIES) {
-    
           logCount++;
         }
         if (typeof entry.interRate === 'number') {
@@ -1139,16 +1158,15 @@
         intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
         indeterm: count > 0 && !isNaN(sumIndeterm) ? sumIndeterm / count : null,
       };
-  
+
       return averagesResult;
     } catch (err: any) {
       dataError.value = err.message || 'Failed to calculate averages';
       return null;
-    } 
+    }
   }
 
   async function recalculateAndDisplayAverages() {
-
     isCalculatingAverages.value = true;
     currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
     await nextTick();
@@ -1158,19 +1176,19 @@
     currentDisplayAverages.value = averages ?? { inter: null, intra: null, indeterm: null };
 
     isCalculatingAverages.value = false;
-    
   }
 
   onMounted(async () => {
+    adjustedNpasThisSession.value.clear(); // Clear on mount for a fresh session
     if (!lergStore.isLoaded) {
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
 
     if (store.getHasUsRateSheetData) {
       await fetchUniqueStates();
-   
+
       await resetPaginationAndLoad(createFilters());
-   
+
       await recalculateAndDisplayAverages();
     }
   });
@@ -1215,7 +1233,28 @@
   function handleClearData() {
     if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
       currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+      adjustedNpasThisSession.value.clear(); // Clear adjusted NPAs
       store.clearUsRateSheetData();
+    }
+  }
+
+  function handleResetSession() {
+    if (confirm('Reset session tracking? This will allow all NPAs to be adjusted again.')) {
+      console.log(
+        '[USRateSheetTable] Resetting session tracking. Previously adjusted NPAs:',
+        Array.from(adjustedNpasThisSession.value)
+      );
+      adjustedNpasThisSession.value.clear();
+      adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
+
+      // Clear the message after a few seconds
+      if (adjustmentStatusTimeoutId) {
+        clearTimeout(adjustmentStatusTimeoutId);
+      }
+      adjustmentStatusTimeoutId = setTimeout(() => {
+        adjustmentStatusMessage.value = null;
+        adjustmentStatusTimeoutId = null;
+      }, 3000);
     }
   }
 
@@ -1224,7 +1263,6 @@
 
   async function handleExport() {
     if (isExporting.value) return; // Already handled by useCSVExport, but good for clarity
-    
 
     if (!dbInstance.value) {
       await initializeDB(); // Ensure DB is initialized if not already
@@ -1308,7 +1346,17 @@
   }
 
   async function handleApplyAdjustment() {
+    console.log('[USRateSheetTable] handleApplyAdjustment: ENTRY POINT - Function called');
+    console.log(
+      '[USRateSheetTable] handleApplyAdjustment: isApplyingAdjustment.value =',
+      isApplyingAdjustment.value
+    );
+    console.log('[USRateSheetTable] handleApplyAdjustment: dbInstance.value =', !!dbInstance.value);
+
     if (isApplyingAdjustment.value || !dbInstance.value) {
+      console.log(
+        '[USRateSheetTable] handleApplyAdjustment: EARLY EXIT - isApplyingAdjustment or no dbInstance'
+      );
       return;
     }
     if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
@@ -1328,6 +1376,11 @@
     const startTime = performance.now();
 
     try {
+      console.log(
+        '[USRateSheetTable] handleApplyAdjustment: Start. adjustedNpasThisSession:',
+        new Set(adjustedNpasThisSession.value)
+      );
+
       let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance.value
         .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
         .toCollection();
@@ -1374,9 +1427,28 @@
       adjustmentStatusMessage.value = `Applying ${recordCount} updates...`;
 
       const allUpdatesToApply: { key: any; changes: Partial<USRateSheetEntry> }[] = [];
+      const npasBeingAdjustedThisRound = new Set<string>(); // Track NPAs being adjusted in this round
 
       for (const record of filteredRecords) {
-        if (!record) continue;
+        console.log(
+          `[USRateSheetTable] Processing record: NPANXX=${record.npanxx}, NPA=${record.npa}, ID=${record.id}`
+        );
+        if (!record || !record.id || !record.npa) {
+          console.warn('[USRateSheetTable] Skipping record due to missing id or npa:', record);
+          continue; // Ensure record, record.id, and record.npa exist
+        }
+
+        // Skip if the NPA of this record has already been adjusted in this session
+        const isNpaAdjusted = adjustedNpasThisSession.value.has(record.npa);
+        console.log(
+          `[USRateSheetTable] NPA ${record.npa} in adjustedNpasThisSession? ${isNpaAdjusted}`
+        );
+        if (isNpaAdjusted) {
+          console.log(
+            `[USRateSheetTable] SKIPPING record ${record.npanxx} (NPA: ${record.npa}) as its NPA was already adjusted this session.`
+          );
+          continue;
+        }
 
         const changes: Partial<USRateSheetEntry> = {};
         let changed = false;
@@ -1419,9 +1491,18 @@
 
         if (changed && record.id) {
           allUpdatesToApply.push({ key: record.id, changes });
+          // Track this NPA as being adjusted in this round
+          npasBeingAdjustedThisRound.add(record.npa);
+          console.log(
+            `[USRateSheetTable] Adding NPA ${record.npa} to npasBeingAdjustedThisRound (will be added to session tracking after successful update)`
+          );
         }
       }
 
+      console.log(
+        '[USRateSheetTable] Records to update (allUpdatesToApply):',
+        JSON.parse(JSON.stringify(allUpdatesToApply))
+      );
       const updatesCount = allUpdatesToApply.length;
       if (updatesCount === 0) {
         adjustmentStatusMessage.value = 'No changes needed for the matching records.';
@@ -1433,6 +1514,22 @@
         RATE_SHEET_TABLE_NAME
       );
       await tableToUpdate.bulkUpdate(allUpdatesToApply);
+
+      // Add successfully updated NPAs to the session tracking
+      console.log(
+        '[USRateSheetTable] Adding NPAs from this round to adjustedNpasThisSession:',
+        Array.from(npasBeingAdjustedThisRound)
+      );
+
+      npasBeingAdjustedThisRound.forEach((npa) => {
+        adjustedNpasThisSession.value.add(npa);
+        console.log(`[USRateSheetTable] Added NPA ${npa} to adjustedNpasThisSession`);
+      });
+
+      console.log(
+        '[USRateSheetTable] handleApplyAdjustment: End. adjustedNpasThisSession:',
+        new Set(adjustedNpasThisSession.value)
+      );
 
       const endTime = performance.now();
       const duration = ((endTime - startTime) / 1000).toFixed(2);
