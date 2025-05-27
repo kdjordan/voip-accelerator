@@ -61,8 +61,8 @@
     <!-- Header Row -->
     <div class="mb-4 flex items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <h3 class="text-sm font-medium text-gray-300">Table Controls</h3>
-        <span v-if="!isDataLoading" class="text-sm text-gray-400">
+        <h3 class="text-sm font-medium text-gray-400 ml-2">Filter Controls</h3>
+        <span v-if="!isDataLoading" class="text-sm text-gray-300">
           Showing {{ displayedData.length }} of {{ totalFilteredItems }} NPANXX entries
         </span>
         <span v-else class="text-sm text-gray-400">Loading data...</span>
@@ -81,202 +81,65 @@
     </div>
 
     <!-- Filters and Actions Row -->
-    <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-      <!-- Left Side: Filters -->
-      <div class="flex items-center gap-4 flex-wrap">
-        <!-- Basic Search -->
-        <div class="relative">
-          <label for="npanxx-search" class="sr-only">Search NPANXX (e.g., 201222, 301333)...</label>
-          <input
-            id="npanxx-search"
-            v-model="searchQuery"
-            type="text"
-            placeholder="Filter by NPANXX (e.g., 201222, 301333)..."
-            class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
-          />
-        </div>
-
-        <!-- Metro Area Filter Dropdown -->
-        <div class="relative w-64">
-          <Menu as="div" class="relative inline-block text-left w-full">
-            <div>
-              <MenuButton
-                class="inline-flex w-full justify-between items-center rounded-lg bg-gray-800 py-2.5 pl-3 pr-2 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700 text-white"
-                :disabled="isDataLoading"
-              >
-                <span class="block truncate">{{ metroButtonLabel }}</span>
-                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </MenuButton>
-            </div>
-            <transition
-              leave-active-class="transition duration-100 ease-in"
-              leave-from-class="opacity-100"
-              leave-to-class="opacity-0"
+    <div class="mb-4 flex flex-col gap-4">
+      <!-- Top row of filters & actions -->
+      <div class="bg-gray-800/60 p-3 rounded-lg mb-4">
+        <h4 class="text-xs font-medium text-gray-400 uppercase mb-3">NPA & State Filters</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div class="relative">
+            <label for="npanxx-search" class="block text-xs font-medium text-gray-400 mb-1"
+              >Filter by NPANXX</label
             >
-              <MenuItems
-                class="absolute z-30 mt-1 max-h-96 w-full origin-top-right overflow-hidden rounded-md bg-gray-800 shadow-lg ring-1 ring-black/5 focus:outline-none flex flex-col"
-              >
-                <div class="p-2 border-b border-gray-700">
-                  <div class="relative">
-                    <div
-                      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
-                    >
-                      <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                      v-model="metroSearchQuery"
-                      type="text"
-                      placeholder="Search metro areas..."
-                      class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <button
-                      v-if="metroSearchQuery"
-                      @click="clearMetroSearch"
-                      class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
-                      aria-label="Clear search"
-                    >
-                      <XCircleIcon class="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                <div class="p-2 border-b border-gray-700 flex justify-between items-center">
-                  <button
-                    @click="handleSelectAllMetros"
-                    class="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
-                    :disabled="filteredMetroOptions.length === 0"
-                  >
-                    {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select Visible' }}
-                  </button>
-                  <button
-                    v-if="selectedMetros.length > 0"
-                    @click="clearAllSelectedMetros"
-                    class="text-xs text-gray-400 hover:text-gray-200"
-                  >
-                    Clear All Selected ({{ selectedMetros.length }})
-                  </button>
-                </div>
-                <div class="overflow-y-auto flex-grow p-1 max-h-60">
-                  <MenuItem
-                    v-for="metro in filteredMetroOptions"
-                    :key="metro.key"
-                    v-slot="{ active }"
-                    as="template"
-                  >
-                    <li
-                      @click="() => toggleMetroSelection(metro)"
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4 flex justify-between items-center',
-                      ]"
-                    >
-                      <div class="flex items-center">
-                        <span
-                          :class="[
-                            isMetroSelected(metro) ? 'text-primary-400' : 'text-gray-500',
-                            'absolute inset-y-0 left-0 flex items-center pl-3',
-                          ]"
-                        >
-                          <CheckIcon
-                            class="h-5 w-5"
-                            :class="isMetroSelected(metro) ? 'opacity-100' : 'opacity-0'"
-                            aria-hidden="true"
-                          />
-                        </span>
-                        <span
-                          :class="[
-                            isMetroSelected(metro) ? 'font-semibold' : 'font-normal',
-                            'block truncate',
-                          ]"
-                        >
-                          {{ metro.displayName }}
-                        </span>
-                      </div>
-                      <span class="text-xs text-gray-500">{{
-                        formatPopulation(metro.population)
-                      }}</span>
-                    </li>
-                  </MenuItem>
-                  <div
-                    v-if="filteredMetroOptions.length === 0 && metroSearchQuery"
-                    class="px-4 py-2 text-sm text-gray-500 text-center"
-                  >
-                    No metro areas match your search.
-                  </div>
-                </div>
-              </MenuItems>
-            </transition>
-          </Menu>
-        </div>
+            <input
+              id="npanxx-search"
+              v-model="searchQuery"
+              type="text"
+              placeholder="e.g., 201, 301333..."
+              class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+            />
+          </div>
 
-        <!-- State Filter Dropdown -->
-        <div class="relative w-52">
-          <Listbox v-model="selectedState" as="div">
-            <ListboxLabel class="sr-only">Filter by State/Province</ListboxLabel>
-            <div class="relative mt-1">
-              <ListboxButton
-                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
-                :disabled="availableStates.length === 0 || isDataLoading"
+          <!-- State Filter Dropdown -->
+          <div class="relative">
+            <Listbox v-model="selectedState" as="div">
+              <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
+                >Filter by State/Province</ListboxLabel
               >
-                <span class="block truncate text-white">{{
-                  selectedState
-                    ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
-                    : 'All States/Provinces'
-                }}</span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-                </span>
-              </ListboxButton>
-
-              <transition
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-              >
-                <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+              <div class="relative mt-1">
+                <ListboxButton
+                  class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+                  :disabled="availableStates.length === 0 || isDataLoading"
                 >
-                  <!-- "All States/Provinces" Option -->
-                  <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
-                    <li
-                      :class="[
-                        active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
-                        'relative cursor-default select-none py-2 pl-10 pr-4',
-                      ]"
-                    >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                        >All States/Provinces</span
-                      >
-                      <span
-                        v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                      >
-                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                      </span>
-                    </li>
-                  </ListboxOption>
+                  <span class="block truncate text-white">{{
+                    selectedState
+                      ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
+                      : 'All States/Provinces'
+                  }}</span>
+                  <span
+                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                  >
+                    <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  </span>
+                </ListboxButton>
 
-                  <!-- State/Province Groups -->
-                  <template v-for="group in groupedAvailableStates" :key="group.label">
-                    <!-- Group Label -->
-                    <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
-                      {{ group.label }}
-                    </li>
-                    <!-- Group Options -->
-                    <ListboxOption
-                      v-for="regionCode in group.codes"
-                      :key="regionCode"
-                      :value="regionCode"
-                      v-slot="{ active, selected }"
-                      as="template"
-                    >
+                <transition
+                  leave-active-class="transition duration-100 ease-in"
+                  leave-from-class="opacity-100"
+                  leave-to-class="opacity-0"
+                >
+                  <ListboxOptions
+                    class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                  >
+                    <!-- "All States/Provinces" Option -->
+                    <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
                       <li
                         :class="[
-                          active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                          active ? 'bg-gray-800 text-primary-400' : 'bg-gray-600 text-accent',
                           'relative cursor-default select-none py-2 pl-10 pr-4',
                         ]"
                       >
                         <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                          >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                          >All States/Provinces</span
                         >
                         <span
                           v-if="selected"
@@ -286,61 +149,205 @@
                         </span>
                       </li>
                     </ListboxOption>
-                  </template>
-                </ListboxOptions>
-              </transition>
-            </div>
-          </Listbox>
+
+                    <!-- State/Province Groups -->
+                    <template v-for="group in groupedAvailableStates" :key="group.label">
+                      <!-- Group Label -->
+                      <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
+                        {{ group.label }}
+                      </li>
+                      <!-- Group Options -->
+                      <ListboxOption
+                        v-for="regionCode in group.codes"
+                        :key="regionCode"
+                        :value="regionCode"
+                        v-slot="{ active, selected }"
+                        as="template"
+                      >
+                        <li
+                          :class="[
+                            active ? 'bg-gray-800 text-primary-400' : 'bg-gray-800 text-gray-300',
+                            'relative cursor-default select-none py-2 pl-10 pr-4',
+                          ]"
+                        >
+                          <span
+                            :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                            >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                          >
+                          <span
+                            v-if="selected"
+                            class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                          >
+                            <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                          </span>
+                        </li>
+                      </ListboxOption>
+                    </template>
+                  </ListboxOptions>
+                </transition>
+              </div>
+            </Listbox>
+          </div>
+          <BaseButton
+            variant="primary"
+            size="standard"
+            class="w-full md:w-auto"
+            :icon="XMarkIcon"
+            @click="handleClearAllFilters"
+            title="Clear all active filters"
+          >
+            Clear Filters
+          </BaseButton>
         </div>
-        <BaseButton
-          variant="primary"
-          size="small"
-          :icon="XMarkIcon"
-          @click="handleClearAllFilters"
-          title="Clear all active filters"
-          class="ml-1"
-        >
-          Clear Filters
-        </BaseButton>
+
+        <!-- Export All button remains in the top bar, separate from specific filter sections -->
+        <div class="flex justify-end mb-4">
+          <div class="flex items-center">
+            <BaseButton
+              variant="primary"
+              size="standard"
+              :icon="ArrowDownTrayIcon"
+              :loading="isExporting"
+              :disabled="totalFilteredItems === 0 || isExporting"
+              @click="handleExport"
+              title="Export all loaded data"
+            >
+              Export All
+            </BaseButton>
+          </div>
+        </div>
       </div>
 
-      <!-- Right Side: Actions -->
-      <div class="flex items-center gap-4 flex-wrap">
-        <BaseButton
-          variant="primary"
-          size="standard"
-          :icon="ArrowDownTrayIcon"
-          :loading="isExporting"
-          :disabled="totalFilteredItems === 0 || isExporting"
-          @click="handleExport"
-          title="Export all loaded data"
-        >
-          Export All
-        </BaseButton>
-      </div>
-    </div>
+      <!-- New Metro Area Filter Section -->
+      <div class="bg-gray-800/60 p-3 rounded-lg">
+        <h4 class="text-xs font-medium text-gray-400 uppercase mb-3">Filter by Metro Area</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+          <!-- Metro Search -->
+          <div class="md:col-span-1">
+            <label for="metro-search-input" class="sr-only">Search Metro Areas</label>
+            <div class="relative">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                id="metro-search-input"
+                v-model="metroSearchQuery"
+                type="text"
+                placeholder="Search metros..."
+                class="w-full bg-gray-700 border border-gray-600 text-white sm:text-sm rounded-md p-2 pl-9 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <button
+                v-if="metroSearchQuery"
+                @click="clearMetroSearch"
+                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
+                aria-label="Clear metro search"
+              >
+                <XCircleIcon class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
 
-    <!-- Selected Metros Chips Display -->
-    <div v-if="selectedMetros.length > 0" class="my-3 flex flex-wrap gap-2 items-center px-1">
-      <span class="text-xs text-gray-400 mr-1">Selected Metros:</span>
-      <span
-        v-for="metro in selectedMetros"
-        :key="metro.key"
-        class="inline-flex items-center gap-x-1.5 rounded-md bg-gray-700 px-2 py-1 text-xs font-medium text-gray-200 ring-1 ring-inset ring-gray-600"
-      >
-        {{ metro.displayName }}
-        <button
-          @click="removeSelectedMetro(metro)"
-          type="button"
-          class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+          <!-- Action Buttons -->
+          <div class="md:col-span-2 flex flex-wrap items-center justify-start md:justify-end gap-2">
+            <BaseButton
+              variant="secondary-outline"
+              size="small"
+              @click="() => selectTopNMetros(10)"
+              :disabled="filteredMetroOptions.length < 1 || isDataLoading"
+              title="Select the top 10 visible metro areas by population (if available)"
+            >
+              Select Top 10
+            </BaseButton>
+            <BaseButton
+              variant="secondary-outline"
+              size="small"
+              @click="() => selectTopNMetros(25)"
+              :disabled="filteredMetroOptions.length < 1 || isDataLoading"
+              title="Select the top 25 visible metro areas by population (if available)"
+            >
+              Select Top 25
+            </BaseButton>
+            <BaseButton
+              variant="secondary"
+              size="small"
+              @click="handleSelectAllMetros"
+              :title="
+                areAllMetrosSelected
+                  ? 'Deselect all visible metro areas'
+                  : 'Select all visible metro areas'
+              "
+            >
+              {{ areAllMetrosSelected ? 'Deselect All' : 'Select All' }}
+            </BaseButton>
+            <BaseButton
+              v-if="selectedMetros.length > 0"
+              variant="secondary-outline"
+              size="small"
+              @click="clearAllSelectedMetros"
+              title="Clear all selected metro areas"
+            >
+              Clear Selected ({{ selectedMetros.length }})
+            </BaseButton>
+          </div>
+        </div>
+
+        <!-- Metro list display area -->
+        <div
+          class="mt-3 overflow-y-auto max-h-96 border border-gray-700 rounded-md bg-gray-700/30 p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
         >
-          <span class="sr-only">Remove</span>
-          <XCircleIcon
-            class="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-200"
-            aria-hidden="true"
-          />
-        </button>
-      </span>
+          <template v-if="filteredMetroOptions.length > 0">
+            <div
+              v-for="metro in filteredMetroOptions"
+              :key="metro.key"
+              @click="() => toggleMetroSelection(metro)"
+              class="flex flex-col items-start p-2.5 hover:bg-gray-600/50 cursor-pointer rounded-md border border-gray-600 h-full"
+              :class="{
+                'bg-primary-500/10 hover:bg-primary-500/20 border-primary-500/50':
+                  isMetroSelected(metro),
+                'bg-gray-700/50 hover:bg-gray-600/70': !isMetroSelected(metro),
+              }"
+            >
+              <div class="flex items-center justify-between w-full">
+                <div class="flex items-center overflow-hidden mr-2">
+                  <input
+                    type="checkbox"
+                    :id="`metro-checkbox-${metro.key}`"
+                    :checked="isMetroSelected(metro)"
+                    class="h-4 w-4 rounded border-gray-500 text-primary-500 focus:ring-primary-400 focus:ring-offset-gray-700 bg-gray-800 mr-2.5 cursor-pointer"
+                    @click.stop
+                    @change="() => toggleMetroSelection(metro)"
+                  />
+                  <label
+                    :for="`metro-checkbox-${metro.key}`"
+                    :class="[
+                      isMetroSelected(metro)
+                        ? 'font-semibold text-primary-300'
+                        : 'font-normal text-gray-100',
+                      'text-sm cursor-pointer line-clamp-1',
+                    ]"
+                    :title="metro.displayName"
+                  >
+                    {{ metro.displayName }}
+                  </label>
+                </div>
+                <BaseBadge variant="neutral" size="small">{{
+                  formatPopulation(metro.population)
+                }}</BaseBadge>
+              </div>
+            </div>
+          </template>
+          <div
+            v-else-if="metroSearchQuery"
+            class="p-4 text-sm text-gray-500 text-center col-span-full"
+          >
+            No metro areas match your search.
+          </div>
+          <div v-else class="p-4 text-sm text-gray-500 text-center">
+            <!-- Consider adding a loading state here if metro options are fetched async -->
+            No metro areas available.
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Metro Filter Summary -->
@@ -788,10 +795,6 @@
     ListboxLabel,
     ListboxOptions,
     ListboxOption,
-    Menu,
-    MenuButton,
-    MenuItems,
-    MenuItem,
   } from '@headlessui/vue';
   import {
     TrashIcon,
@@ -808,6 +811,7 @@
   } from '@heroicons/vue/20/solid';
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+  import BaseBadge from '@/components/shared/BaseBadge.vue';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
@@ -899,7 +903,6 @@
   const {
     selectedMetros,
     metroSearchQuery,
-    metroButtonLabel,
     filteredMetroOptions,
     totalSelectedPopulation,
     targetedNPAsDisplay,
@@ -910,6 +913,7 @@
     handleSelectAllMetros,
     removeSelectedMetro,
     clearMetroSearch,
+    selectTopNMetros,
     clearAllSelectedMetros,
     formatPopulation,
   } = useMetroFilter();

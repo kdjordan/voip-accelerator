@@ -359,19 +359,19 @@
       </div>
     </div>
 
-    <div v-if="isLoading && displayedData.length === 0" class="text-center text-gray-500 py-10">
-      <div
-        class="flex items-center justify-center space-x-2 border border-neutral-700 rounded-lg p-2 w-1/4 mx-auto"
-      >
-        <ArrowPathIcon class="animate-spin w-6 h-6" />
-      </div>
+    <div
+      v-if="isLoading && displayedData.length === 0"
+      class="flex flex-col items-center justify-center py-10 min-h-[300px]"
+    >
+      <ArrowPathIcon class="animate-spin w-10 h-10 text-accent mb-3" />
+      <p class="text-gray-400 text-sm">Loading comparison data...</p>
     </div>
     <div v-else-if="error" class="text-center text-red-500 py-10">
       Error loading data: {{ error }}
     </div>
     <div
-      v-else-if="displayedData.length === 0 && !isLoading"
-      class="text-center text-gray-500 py-10"
+      v-else-if="displayedData.length === 0 && !isLoading && !isPageLoading"
+      class="flex flex-col items-center justify-center text-gray-500 py-10 min-h-[300px] w-full"
     >
       No matching comparison data found. Ensure reports have been generated or adjust filters.
     </div>
@@ -1117,9 +1117,17 @@
 
   // --- Lifecycle and Watchers ---
   onMounted(async () => {
-    await fetchUniqueStates(); // Fetch states first
-    await resetPaginationAndLoad(createFilters()); // Then load initial data (first page)
-    await calculateFullFilteredAverages(); // Calculate initial averages
+    isPageLoading.value = true; // Start with page loading true
+    try {
+      await fetchUniqueStates(); // Fetch states first
+      await resetPaginationAndLoad(createFilters()); // Then load initial data (first page)
+      await calculateFullFilteredAverages(); // Calculate initial averages
+    } catch (err) {
+      console.error('[USDetailedComparisonTable] Error during onMounted: ', err);
+      // error.value is already handled by useUSTableData, but you might want specific error handling here
+    } finally {
+      isPageLoading.value = false; // Ensure page loading is set to false after all operations
+    }
   });
 
   // --- Clear All Filters Function ---

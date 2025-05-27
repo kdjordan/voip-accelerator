@@ -107,6 +107,12 @@ export function useMetroFilter() {
     metroSearchQuery.value = ''; // Also clear search
   }
 
+  function selectTopNMetros(count: number) {
+    selectedMetros.value = []; // Clear existing selections
+    const topN = filteredMetroOptions.value.slice(0, count);
+    selectedMetros.value.push(...topN);
+  }
+
   function formatPopulation(population: number): string {
     if (population >= 1000000) {
       return `${(population / 1000000).toFixed(1)}M`;
@@ -137,6 +143,7 @@ export function useMetroFilter() {
     handleSelectAllMetros,
     removeSelectedMetro,
     clearMetroSearch,
+    selectTopNMetros,
     clearAllSelectedMetros,
     formatPopulation,
   };
