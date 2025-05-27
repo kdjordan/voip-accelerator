@@ -1019,7 +1019,7 @@
     if (!dbInstance.value) return;
 
     isCalculatingAverages.value = true;
-    console.log('[USDetailedComparisonTable] Calculating averages for ALL filtered data...');
+    
 
     const totals = {
       file1_inter: { sum: 0, count: 0 },
