@@ -61,7 +61,8 @@
     <!-- Header Row -->
     <div class="mb-4 flex items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <h3 class="text-lg font-medium text-white">Filter Controls</h3><br>
+        <h3 class="text-lg font-medium text-white">Filter Controls</h3>
+        <br />
         <p v-if="!isDataLoading" class="text-sm text-gray-400">
           Showing {{ displayedData.length }} of {{ totalFilteredItems }} NPANXX entries
         </p>
@@ -1039,10 +1040,6 @@
       .map((term) => term.trim().toLowerCase())
       .filter((term) => term.length > 0);
     debouncedSearchQuery.value = terms;
-    console.log(
-      '[USRateSheetTable] Search watcher triggered. NPANXX terms:',
-      JSON.parse(JSON.stringify(debouncedSearchQuery.value))
-    );
     // Reset sorting when search query changes
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
@@ -1062,7 +1059,6 @@
     // Reset sorting when state filter changes
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
-    console.log('[USRateSheetTable] State watcher triggered. New state:', newStateCode);
 
     await resetPaginationAndLoad(createFilters());
     await recalculateAndDisplayAverages();
@@ -1072,10 +1068,6 @@
   const stopMetroWatcher = watch(
     selectedMetros,
     async () => {
-      console.log(
-        '[USRateSheetTable] Metro watcher triggered. Selected metros:',
-        JSON.parse(JSON.stringify(selectedMetros.value))
-      );
       await resetPaginationAndLoad(createFilters());
       await recalculateAndDisplayAverages();
     },
@@ -1088,15 +1080,6 @@
    * @returns Promise resolving to RateAverages or null if DB error.
    */
   async function calculateAverages(): Promise<RateAverages | null> {
-    console.log('[USRateSheetTable] calculateAverages started.');
-    console.log(
-      '[USRateSheetTable] Current filters for average calculation - NPANXXs:',
-      JSON.parse(JSON.stringify(debouncedSearchQuery.value)),
-      ', State:',
-      selectedState.value,
-      ', Metro NPAs:',
-      JSON.parse(JSON.stringify(metroAreaCodesToFilter.value))
-    );
 
     if (!dbInstance.value) {
       await initializeDB();
@@ -1123,19 +1106,14 @@
       }
 
       const recordCountForAverages = await queryChain.clone().count();
-      console.log(
-        `[USRateSheetTable] calculateAverages: Found ${recordCountForAverages} records matching filters for averaging.`
-      );
+    
 
       let logCount = 0;
       const MAX_LOG_ENTRIES = 3;
 
       await queryChain.each((entry) => {
         if (logCount < MAX_LOG_ENTRIES) {
-          console.log(
-            `[USRateSheetTable] calculateAverages: Processing entry for avg:`,
-            JSON.parse(JSON.stringify(entry))
-          );
+    
           logCount++;
         }
         if (typeof entry.interRate === 'number') {
@@ -1161,45 +1139,26 @@
         intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
         indeterm: count > 0 && !isNaN(sumIndeterm) ? sumIndeterm / count : null,
       };
-      console.log(
-        '[USRateSheetTable] calculateAverages: Calculated averages:',
-        JSON.parse(JSON.stringify(averagesResult))
-      );
+  
       return averagesResult;
     } catch (err: any) {
-      console.error('[USRateSheetTable] calculateAverages: Error during calculation:', err);
       dataError.value = err.message || 'Failed to calculate averages';
       return null;
-    } finally {
-      console.log('[USRateSheetTable] calculateAverages finished.');
-    }
+    } 
   }
 
   async function recalculateAndDisplayAverages() {
-    console.log(
-      '[USRateSheetTable] recalculateAndDisplayAverages started. Current filters - NPANXXs:',
-      JSON.parse(JSON.stringify(debouncedSearchQuery.value)),
-      ', State:',
-      selectedState.value,
-      ', Metro NPAs:',
-      JSON.parse(JSON.stringify(metroAreaCodesToFilter.value))
-    );
+
     isCalculatingAverages.value = true;
     currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
     await nextTick();
 
     const averages = await calculateAverages();
-    console.log(
-      '[USRateSheetTable] recalculateAndDisplayAverages: Received averages from calculateAverages:',
-      JSON.parse(JSON.stringify(averages))
-    );
+
     currentDisplayAverages.value = averages ?? { inter: null, intra: null, indeterm: null };
-    console.log(
-      '[USRateSheetTable] recalculateAndDisplayAverages: Updated currentDisplayAverages.value:',
-      JSON.parse(JSON.stringify(currentDisplayAverages.value))
-    );
+
     isCalculatingAverages.value = false;
-    console.log('[USRateSheetTable] recalculateAndDisplayAverages finished.');
+    
   }
 
   onMounted(async () => {
@@ -1209,11 +1168,9 @@
 
     if (store.getHasUsRateSheetData) {
       await fetchUniqueStates();
-      console.log('[USRateSheetTable] onMounted: About to call initial resetPaginationAndLoad.');
+   
       await resetPaginationAndLoad(createFilters());
-      console.log(
-        '[USRateSheetTable] onMounted: About to call initial recalculateAndDisplayAverages.'
-      );
+   
       await recalculateAndDisplayAverages();
     }
   });
@@ -1267,10 +1224,9 @@
 
   async function handleExport() {
     if (isExporting.value) return; // Already handled by useCSVExport, but good for clarity
-    console.log('[Export Debug] handleExport initiated');
+    
 
     if (!dbInstance.value) {
-      console.log('[Export Debug] DB instance not ready, attempting to initialize...');
       await initializeDB(); // Ensure DB is initialized if not already
       if (!dbInstance.value) {
         alert('Database is not ready. Cannot export.');
@@ -1279,35 +1235,21 @@
       }
     }
 
-    // isExporting.value = true; // Handled by useCSVExport
-    // exportError.value = null; // Handled by useCSVExport
-
     try {
-      console.log('[Export Debug] Starting try block for export.');
       const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
       let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
 
       const currentFilters = createFilters();
-      console.log('[Export Debug] Filters for export:', JSON.stringify(currentFilters));
 
       if (currentFilters.length > 0) {
         query = query.filter((record) => currentFilters.every((fn) => fn(record)));
       }
 
       const dataToExport = await query.toArray();
-      console.log('[Export Debug] Number of records to export:', dataToExport.length);
-
-      if (dataToExport.length > 0) {
-        console.log(
-          '[Export Debug] Raw dataToExport (first 3 records):',
-          JSON.parse(JSON.stringify(dataToExport.slice(0, 3)))
-        );
-      }
 
       if (dataToExport.length === 0) {
         alert('No data matches the current filters to export.');
-        console.log('[Export Debug] No data to export, exiting.');
-        // isExporting.value = false; // Handled by useCSVExport
+
         return;
       }
 
@@ -1334,7 +1276,6 @@
           store.getCurrentEffectiveDate || 'N/A', // Assuming store is the usRateSheetStore
         ];
       });
-      console.log('[Export Debug] Data mapped to rows for CSV. First row example:', rows[0]);
 
       const exportOptions: CSVExportOptions = {
         filename: 'us-rate-sheet',
@@ -1354,11 +1295,7 @@
         exportOptions.additionalNameParts?.push(`search_${queryPart.replace(/\s+/g, '_')}`);
       }
 
-      console.log('[Export Debug] CSV Export options:', exportOptions);
-
       await exportToCSV({ headers, rows }, exportOptions);
-
-      console.log('[Export Debug] Export process completed successfully via composable.');
     } catch (err: any) {
       console.error('[Export Debug] Error during export:', err);
       // exportError.value is already set by useCSVExport if the error originated there
@@ -1367,9 +1304,6 @@
       alert(`Export failed: ${err.message || 'An unexpected error occurred'}`);
       // If you have a specific dataError ref for this component:
       // dataError.value = err.message || 'Failed to export data';
-    } finally {
-      // isExporting.value = false; // This is handled by the useCSVExport composable
-      console.log('[Export Debug] handleExport finished.');
     }
   }
 
@@ -1477,18 +1411,9 @@
 
           const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
 
-          console.log(
-            `[Adjustment] NPANXX: ${record.npanxx}, Field: ${rateField}, CurrentRate: ${currentRate}, Attempted FinalRate: ${finalRate}`
-          ); // DEBUG LOG
-
           if (finalRate !== currentRate) {
             changes[rateField] = finalRate;
             changed = true;
-            console.log(
-              `[Adjustment] CHANGE DETECTED for NPANXX: ${record.npanxx}, Field: ${rateField}, New Rate: ${finalRate}`
-            ); // DEBUG LOG
-          } else {
-            console.log(`[Adjustment] NO CHANGE for NPANXX: ${record.npanxx}, Field: ${rateField}`); // DEBUG LOG
           }
         });
 
@@ -1513,10 +1438,6 @@
       const duration = ((endTime - startTime) / 1000).toFixed(2);
       adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
 
-      // --- Refresh data and averages after successful update ---
-      console.log(
-        '[USRateSheetTable] handleApplyAdjustment: About to refresh data and averages post-adjustment.'
-      );
       await resetPaginationAndLoad(createFilters());
       await recalculateAndDisplayAverages();
       // --- End refresh ---
