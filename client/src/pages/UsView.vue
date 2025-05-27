@@ -75,17 +75,15 @@ const { initializeLergData, error: lergError } = useLergData();
 watch(
   () => usStore.activeReportType,
   (newValue) => {
-    console.log(`[UsView] Active report type changed to: ${newValue}`);
   }
 );
 
 watch(
   () => usStore.hasEnhancedReports,
   (hasReports) => {
-    console.log(`[UsView] Enhanced reports available: ${hasReports}`);
+    
     if (hasReports) {
       console.log(`[UsView] Report count: ${usStore.enhancedCodeReports.size}`);
-      console.log(`[UsView] Report files: ${Array.from(usStore.enhancedCodeReports.keys())}`);
     }
   }
 );
@@ -106,20 +104,20 @@ onMounted(async () => {
     const pingResult = await ping();
 
     await initializeLergData();
-    console.log('[UsView] Mounting component, checking LERG data');
+    
 
     // Check actual LERG data counts
     const usStates = lergStore.getUSStates;
     const canadaProvinces = lergStore.getCanadianProvinces;
     const countryData = lergStore.getCountryData;
 
-    console.log('[UsView] LERG loaded');
+    
 
     // Check if files are already loaded before loading sample data
     const filesAlreadyUploaded = usStore.getNumberOfFilesUploaded === 2;
 
     if (filesAlreadyUploaded) {
-      console.log('[UsView] Files already uploaded, skipping sample data loading');
+      
     } else {
       // Only load sample decks if no files are already uploaded
       // console.log('[UsView] No files uploaded, loading sample data');
