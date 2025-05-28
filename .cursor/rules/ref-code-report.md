@@ -776,11 +776,11 @@ This component will render the table for "SELL TO" and "BUY FROM" analysis to ke
 
 ## Summary of New Files/Major Changes:
 
-1.  **`client/src/types/domains/us-types.ts`**: Heavily modified with new interfaces.
-2.  **`client/src/services/us.service.ts`**: `makeUsCodeReport` and helper methods significantly updated.
-3.  **`client/src/components/us/USCodeReport.vue`**: Template significantly updated to include new sections and use new sub-components.
-4.  **`client/src/components/us/MarginAnalysisTable.vue`**: New component.
-5.  **`client/src/components/us/MarginAnalysisTableRow.vue`**: New component.
+1.  **`client/src/types/domains/us-types.ts`**: Heavily modified with new interfaces (`MarginBucketDetail`, `MarginAnalysis`, `ZeroMarginDetail`) and updated `USCodeReport` to include these and `totalComparableInterCodes`/`totalComparableIntraCodes`.
+2.  **`client/src/services/us.service.ts`**: `makeUsCodeReport` method significantly updated with logic for margin calculation, categorization, and percentage computation using new helper methods (`createMarginBucketDetail`, `createMarginAnalysis`, `createZeroMarginDetail`, `categorizeMargin`, `calculateBucketPercentages`, `sumAnalysisTotals`).
+3.  **`client/src/components/us/USCodeReport.vue`**: Template significantly updated to include new "0% Margin Matches" section, a two-column layout for "SELL TO" / "BUY FROM" analyses, and display of total comparable codes. Imports and uses the new `MarginAnalysisTable.vue` component.
+4.  **`client/src/components/us/MarginAnalysisTable.vue`**: New component created to render the detailed margin breakdown table for both "SELL TO" and "BUY FROM" sections.
+5.  **`client/src/components/us/MarginAnalysisTableRow.vue`**: New component created to render individual rows within the `MarginAnalysisTable.vue`.
 6.  **`client/src/stores/us-store.ts`**: No structural code change, but will use the updated `USCodeReport` type.
 
 This plan provides a comprehensive approach to implementing the requested feature.
@@ -798,5 +798,32 @@ The `SELL TO` and `BUY FROM` subheadings now clarify the rate comparison (e.g., 
 The `MarginAnalysisTableRow.vue` uses `last:border-b-0` to remove the bottom border from the last data row before the "Total" row.
 The "Total" row in `MarginAnalysisTable.vue` is styled to be bold and uses `border-t-2` for separation.
 A small fix to the `categorizeMargin` logic: `marginPercent <= 100` for the `90-100%` bucket to correctly include 100%.
-The `BUY FROM` margin calculation is `(Rate_File1 - Rate_File2) / Rate_File1` if `Rate_File1 > Rate_File2`, making it a positive percentage representing how much "cheaper" File 1 is for buying purposes, relative to File 1's rate. If the margin needs to be relative to File 2 for "BUY FROM", that calculation would need to be `(Rate_File1 - Rate_File2) / Rate_File2`. The current plan uses File 1 as the base for both calculations for consistency. This should be confirmed if there's any ambiguity. The user's previous clarification: "If the opposite is true - then that should be considered a BUY FROM and that count should be included for the appropriate margin calculation." This implies the margin is still calculated in a way that fits the positive buckets, so `(Rate_File1 - Rate_File2) / Rate_File1` when `Rate_File1 > Rate_File2` will give a positive percentage.
+The `BUY FROM` margin calculation is `(Rate_File1 - Rate_File2) / Rate_File1` if `Rate_File1 > Rate_File2`, making it a positive percentage representing how much "cheaper" File 1 is for buying purposes, relative to File 1's rate.
 Corrected the console.warn in `USCodeReport.vue`'s `getComponentIdForFile` to use backticks for the template literal.
+
+## Learnings & Next Steps: A-Z Margin Analysis
+
+The implementation of the US margin analysis provides a solid foundation for adding similar functionality to the A-Z reports. The A-Z analysis will share core concepts but will be simpler in one key aspect: A-Z rates typically do not have an inter/intra-state distinction, meaning there's only a single rate per code to compare.
+
+**Key Differences & Considerations for A-Z:**
+
+- **Single Rate Comparison:** The primary simplification is that margin calculations will be based on a single rate for each dial code, rather than separate inter and intra-state rates.
+- **Data Structures:** New or adapted types will be needed in `client/src/types/domains/az-types.ts`:
+  - `MarginBucketDetailAZ`: Could potentially reuse `MarginBucketDetail` by ignoring one set of inter/intra fields, or create a simplified version with just `matchCount` and `percentOfComparable`. A new type is likely cleaner.
+  - `MarginAnalysisAZ`: Similar to the US version but referencing the A-Z specific bucket detail. The `totalMatches` and `totalPercent` fields would not be split into inter/intra.
+  - `ZeroMarginDetailAZ`: A simplified version for A-Z.
+  - The main `AzCodeReport` (or a relevant report interface if combined differently) will need to be updated to include these new analysis structures.
+- **Service Logic (`client/src/services/az.service.ts`):**
+  - The `makeAzCombinedReport` method (or a dedicated new method if the existing one becomes too complex) will need to be updated.
+  - It will calculate margins based on the single rate:
+    - SELL TO: If `file1.rate < file2.rate`, margin is `(file2.rate - file1.rate) / file1.rate`.
+    - BUY FROM: If `file1.rate > file2.rate`, margin is `(file1.rate - file2.rate) / file1.rate`.
+  - Helper functions (`createMarginBucketDetailAZ`, `createMarginAnalysisAZ`, `categorizeMarginAZ`, `calculateBucketPercentagesAZ`, `sumAnalysisTotalsAZ`) will need to be created, adapted from their US counterparts but simplified for a single rate.
+  - `totalComparableCodes` will be the denominator for A-Z percentage calculations.
+- **UI Presentation (`client/src/components/az/AZCodeReport.vue`):**
+  - The component will need to be updated to display "SELL TO," "BUY FROM," and "0% Margin" sections, similar to the US report.
+  - New sub-components like `MarginAnalysisTableAZ.vue` and `MarginAnalysisTableRowAZ.vue` will likely be needed. These can be adapted from the US versions, simplifying them to display a single set of match counts and percentages per bucket instead of inter/intra.
+- **Store (`client/src/stores/az-store.ts`):**
+  - The store needs to correctly type and handle the updated `AzCodeReport` (or the relevant report object) that includes the new margin analysis fields.
+
+By leveraging the patterns established in the US margin analysis, the A-Z implementation should be more streamlined. The main focus will be on adapting the logic and UI for a single-rate comparison model.
