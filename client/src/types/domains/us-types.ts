@@ -71,6 +71,41 @@ export interface USReportResponse {
   code: any; // TODO: Define proper code report type
 }
 
+// Represents the data for a single margin bucket (e.g., <10%, 10-20%)
+export interface MarginBucketDetail {
+  matchInter: number; // Count of inter-state matches in this bucket
+  percentInter: number; // Percentage of total comparable inter-state codes
+  matchIntra: number; // Count of intra-state matches in this bucket
+  percentIntra: number; // Percentage of total comparable intra-state codes
+}
+
+// Represents the full breakdown for either "SELL TO" or "BUY FROM"
+export interface MarginAnalysis {
+  lessThan10: MarginBucketDetail;
+  between10And20: MarginBucketDetail;
+  between20And30: MarginBucketDetail;
+  between30And40: MarginBucketDetail;
+  between40And50: MarginBucketDetail;
+  between50And60: MarginBucketDetail;
+  between60And70: MarginBucketDetail;
+  between70And80: MarginBucketDetail;
+  between80And90: MarginBucketDetail;
+  between90And100: MarginBucketDetail;
+  greaterThan100: MarginBucketDetail;
+  totalInterMatches: number; // Sum of all inter-matches across buckets
+  totalIntraMatches: number; // Sum of all intra-matches across buckets
+  totalPercentInter: number; // Sum of all inter percentages
+  totalPercentIntra: number; // Sum of all intra percentages
+}
+
+// Specific structure for the 0% margin scenario
+export interface ZeroMarginDetail {
+  matchInter: number;
+  percentInter: number;
+  matchIntra: number;
+  percentIntra: number;
+}
+
 export interface USCodeReport {
   file1: USFileReport;
   file2: USFileReport;
@@ -80,6 +115,13 @@ export interface USCodeReport {
   nonMatchedCodesPercentage: number;
   matchedNPAs?: number; // Number of NPAs that match between files
   totalUniqueNPAs?: number; // Total number of unique NPAs across both files
+
+  // New fields for detailed margin analysis
+  sellToAnalysis?: MarginAnalysis; // Optional because it requires two files
+  buyFromAnalysis?: MarginAnalysis; // Optional
+  zeroMarginDetail?: ZeroMarginDetail; // Optional
+  totalComparableInterCodes?: number; // Total codes used as a base for inter %
+  totalComparableIntraCodes?: number; // Total codes used as a base for intra %
 }
 
 export interface USPricingReport {

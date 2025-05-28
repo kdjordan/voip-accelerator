@@ -13,6 +13,10 @@ import type {
   USComparisonData as USComparison,
   RateStats,
   USPricingComparisonRecord,
+  MarginBucketDetail,
+  MarginAnalysis,
+  ZeroMarginDetail,
+  USFileReport,
 } from '@/types/domains/us-types';
 
 // Define the store type to avoid type mismatch
@@ -663,136 +667,333 @@ export class USService {
     return sorted[middle];
   }
 
+  // Helper function to initialize MarginBucketDetail
+  private createMarginBucketDetail(): MarginBucketDetail {
+    return {
+      matchInter: 0,
+      percentInter: 0,
+      matchIntra: 0,
+      percentIntra: 0,
+    };
+  }
+
+  // Helper function to initialize MarginAnalysis
+  private createMarginAnalysis(): MarginAnalysis {
+    return {
+      lessThan10: this.createMarginBucketDetail(),
+      between10And20: this.createMarginBucketDetail(),
+      between20And30: this.createMarginBucketDetail(),
+      between30And40: this.createMarginBucketDetail(),
+      between40And50: this.createMarginBucketDetail(),
+      between50And60: this.createMarginBucketDetail(),
+      between60And70: this.createMarginBucketDetail(),
+      between70And80: this.createMarginBucketDetail(),
+      between80And90: this.createMarginBucketDetail(),
+      between90And100: this.createMarginBucketDetail(),
+      greaterThan100: this.createMarginBucketDetail(),
+      totalInterMatches: 0,
+      totalIntraMatches: 0,
+      totalPercentInter: 0,
+      totalPercentIntra: 0,
+    };
+  }
+
+  // Helper function to initialize ZeroMarginDetail
+  private createZeroMarginDetail(): ZeroMarginDetail {
+    return {
+      matchInter: 0,
+      percentInter: 0,
+      matchIntra: 0,
+      percentIntra: 0,
+    };
+  }
+
+  // Helper method to categorize margin into buckets
+  private categorizeMargin(margin: number, analysis: MarginAnalysis, type: 'inter' | 'intra') {
+    const marginPercent = margin * 100;
+    let bucket: MarginBucketDetail | null = null;
+
+    if (marginPercent < 10) bucket = analysis.lessThan10;
+    else if (marginPercent < 20) bucket = analysis.between10And20;
+    else if (marginPercent < 30) bucket = analysis.between20And30;
+    else if (marginPercent < 40) bucket = analysis.between30And40;
+    else if (marginPercent < 50) bucket = analysis.between40And50;
+    else if (marginPercent < 60) bucket = analysis.between50And60;
+    else if (marginPercent < 70) bucket = analysis.between60And70;
+    else if (marginPercent < 80) bucket = analysis.between70And80;
+    else if (marginPercent < 90) bucket = analysis.between80And90;
+    else if (marginPercent <= 100)
+      bucket = analysis.between90And100; // Adjusted to include 100%
+    else bucket = analysis.greaterThan100;
+
+    if (bucket) {
+      if (type === 'inter') bucket.matchInter++;
+      else bucket.matchIntra++;
+    }
+  }
+
+  // Helper method to calculate percentages for all buckets in an analysis
+  private calculateBucketPercentages(
+    analysis: MarginAnalysis | undefined,
+    totalComparableInter: number,
+    totalComparableIntra: number
+  ) {
+    if (!analysis) return;
+    const buckets = [
+      analysis.lessThan10,
+      analysis.between10And20,
+      analysis.between20And30,
+      analysis.between30And40,
+      analysis.between40And50,
+      analysis.between50And60,
+      analysis.between60And70,
+      analysis.between70And80,
+      analysis.between80And90,
+      analysis.between90And100,
+      analysis.greaterThan100,
+    ];
+
+    for (const bucket of buckets) {
+      bucket.percentInter =
+        totalComparableInter > 0 ? (bucket.matchInter / totalComparableInter) * 100 : 0;
+      bucket.percentIntra =
+        totalComparableIntra > 0 ? (bucket.matchIntra / totalComparableIntra) * 100 : 0;
+    }
+  }
+
+  // Helper method to sum total matches and percentages for an analysis
+  private sumAnalysisTotals(analysis: MarginAnalysis | undefined) {
+    if (!analysis) return;
+    analysis.totalInterMatches = 0;
+    analysis.totalIntraMatches = 0;
+    analysis.totalPercentInter = 0;
+    analysis.totalPercentIntra = 0;
+
+    const buckets = [
+      analysis.lessThan10,
+      analysis.between10And20,
+      analysis.between20And30,
+      analysis.between30And40,
+      analysis.between40And50,
+      analysis.between50And60,
+      analysis.between60And70,
+      analysis.between70And80,
+      analysis.between80And90,
+      analysis.between90And100,
+      analysis.greaterThan100,
+    ];
+
+    for (const bucket of buckets) {
+      analysis.totalInterMatches += bucket.matchInter;
+      analysis.totalIntraMatches += bucket.matchIntra;
+      analysis.totalPercentInter += bucket.percentInter;
+      analysis.totalPercentIntra += bucket.percentIntra;
+    }
+  }
+
   async makeUsCodeReport(file1Name: string, file2Name: string): Promise<USCodeReport> {
     try {
       const table1Name = file1Name.toLowerCase().replace('.csv', '');
-      const table2Name = file2Name.toLowerCase().replace('.csv', '');
+      const table2Name = file2Name ? file2Name.toLowerCase().replace('.csv', '') : '';
 
-      const { getDB } = this.dexieDB; // Use instance-level dexieDB
+      const { getDB } = this.dexieDB;
       const usDb = await getDB(DBName.US);
-      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
 
-      // Extract comparison table name dynamically
-      const comparisonSchemaString = DBSchemas[DBName.US_PRICING_COMPARISON];
-      const comparisonTableName = this._extractTableNameFromSchema(comparisonSchemaString);
-      if (!comparisonTableName) {
-        throw new Error(
-          `Could not extract table name from DBSchemas for ${DBName.US_PRICING_COMPARISON} in makeUsCodeReport`
-        );
+      const file1Data = await usDb.table<USStandardizedData>(table1Name).toArray();
+      let file2Data: USStandardizedData[] = [];
+      if (table2Name) {
+        file2Data = await usDb.table<USStandardizedData>(table2Name).toArray();
       }
 
-      // Ensure comparison DB is open
-      if (!comparisonDb.isOpen()) await comparisonDb.open();
-
-      // --- Fetch Data for Rate Calculations ---
-      const file1Data = await usDb.table<USStandardizedData>(table1Name).toArray(); // Use usDb
-
-      const file2Data = await usDb.table<USStandardizedData>(table2Name).toArray(); // Use usDb
-
-      // --- Calculate Summary Stats ---
-      const file1Stats = {
+      // --- Basic File Stats (largely existing logic) ---
+      const file1NPAs = new Set<string>(file1Data.map((r) => r.npa));
+      const file1StatsData = {
         inter: this.calculateRateStats(file1Data.map((r) => r.interRate)),
         intra: this.calculateRateStats(file1Data.map((r) => r.intraRate)),
         indeterm: this.calculateRateStats(file1Data.map((r) => r.indetermRate)),
       };
-
-      const file2Stats = {
-        inter: this.calculateRateStats(file2Data.map((r) => r.interRate)),
-        intra: this.calculateRateStats(file2Data.map((r) => r.intraRate)),
-        indeterm: this.calculateRateStats(file2Data.map((r) => r.indetermRate)),
+      const reportFile1: USFileReport = {
+        fileName: file1Name,
+        totalNPANXX: file1Data.length,
+        uniqueNPA: file1NPAs.size,
+        uniqueNXX: new Set(file1Data.map((r) => r.nxx)).size,
+        coveragePercentage: 0, // TODO: Define coverage
+        rateStats: {
+          interstate: file1StatsData.inter,
+          intrastate: file1StatsData.intra,
+          indeterminate: file1StatsData.indeterm,
+        },
       };
 
-      // --- Fetch Comparison Data ---
-      // Check if table exists before querying
-      if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
-        console.warn(
-          `[USService] Comparison table ${comparisonTableName} not found in ${comparisonDb.name}. Returning empty comparison data for report.`
-        );
-        // Handle case where comparison hasn't run or table failed to create
-        // Potentially return an empty array or skip comparison stats calculation
-        // Depending on desired behavior, you might throw or return a partial report
-        // For now, let's proceed assuming comparisonData might be empty
-        // You could also throw here: throw new Error(`Comparison table ${comparisonTableName} not found.`);
-      }
-
-      // Use extracted table name
-      const comparisonData = comparisonDb.tables.some((t) => t.name === comparisonTableName)
-        ? await comparisonDb.table<USPricingComparisonRecord>(comparisonTableName).toArray()
-        : []; // Fetch data only if table exists, otherwise empty array
-
-      // --- Calculate Matching and NPA Stats ---
-      const file1NPAs = new Set<string>();
-      const file2NPAs = new Set<string>();
-      const matchedNPAsSet = new Set<string>();
-      const allUniqueNPAsSet = new Set<string>();
-
-      const table2Map = new Map<string, { npa: string }>();
-      file2Data.forEach((record) => {
-        table2Map.set(record.npanxx, { npa: record.npa });
-        file2NPAs.add(record.npa);
-        allUniqueNPAsSet.add(record.npa);
-      });
-
-      let matchCount = 0;
-      file1Data.forEach((record) => {
-        file1NPAs.add(record.npa);
-        allUniqueNPAsSet.add(record.npa);
-
-        const matchInFile2 = table2Map.get(record.npanxx);
-        if (matchInFile2) {
-          matchCount++;
-          // Ensure NPA match for matchedNPAsSet, adjust if logic needs refinement
-          if (record.npa === matchInFile2.npa) {
-            matchedNPAsSet.add(record.npa);
-          }
-        }
-      });
-
-      const totalUniqueNpanxx = new Set([
-        ...file1Data.map((r) => r.npanxx),
-        ...file2Data.map((r) => r.npanxx),
-      ]).size;
-      const nonMatchedCount = totalUniqueNpanxx > 0 ? totalUniqueNpanxx - matchCount : 0;
-
-      // --- Construct Report According to USCodeReport Interface ---
-      const report: USCodeReport = {
-        file1: {
-          fileName: file1Name,
-          totalNPANXX: file1Data.length,
-          uniqueNPA: file1NPAs.size,
-          uniqueNXX: new Set(file1Data.map((r) => r.nxx)).size, // Calculate unique NXX
-          coveragePercentage: 0, // TODO: Define how coveragePercentage is calculated
-          rateStats: {
-            interstate: file1Stats.inter,
-            intrastate: file1Stats.intra,
-            indeterminate: file1Stats.indeterm,
-          },
-        },
-        file2: {
+      let reportFile2: USFileReport | undefined = undefined;
+      let file2NPAs = new Set<string>();
+      if (file2Data.length > 0 && file2Name) {
+        file2NPAs = new Set<string>(file2Data.map((r) => r.npa));
+        const file2StatsData = {
+          inter: this.calculateRateStats(file2Data.map((r) => r.interRate)),
+          intra: this.calculateRateStats(file2Data.map((r) => r.intraRate)),
+          indeterm: this.calculateRateStats(file2Data.map((r) => r.indetermRate)),
+        };
+        reportFile2 = {
           fileName: file2Name,
           totalNPANXX: file2Data.length,
           uniqueNPA: file2NPAs.size,
-          uniqueNXX: new Set(file2Data.map((r) => r.nxx)).size, // Calculate unique NXX
-          coveragePercentage: 0, // TODO: Define how coveragePercentage is calculated
+          uniqueNXX: new Set(file2Data.map((r) => r.nxx)).size,
+          coveragePercentage: 0, // TODO: Define coverage
           rateStats: {
-            interstate: file2Stats.inter,
-            intrastate: file2Stats.intra,
-            indeterminate: file2Stats.indeterm,
+            interstate: file2StatsData.inter,
+            intrastate: file2StatsData.intra,
+            indeterminate: file2StatsData.indeterm,
           },
-        },
-        matchedCodes: matchCount,
-        nonMatchedCodes: nonMatchedCount,
-        matchedCodesPercentage: totalUniqueNpanxx > 0 ? (matchCount / totalUniqueNpanxx) * 100 : 0,
-        nonMatchedCodesPercentage:
-          totalUniqueNpanxx > 0 ? (nonMatchedCount / totalUniqueNpanxx) * 100 : 0,
-        matchedNPAs: matchedNPAsSet.size,
-        totalUniqueNPAs: allUniqueNPAsSet.size,
-      };
+        };
+      }
 
+      let matchedCodes = 0;
+      let nonMatchedCodes = 0;
+      let matchedCodesPercentage = 0;
+      let nonMatchedCodesPercentage = 0;
+      let matchedNPAs = 0;
+      let totalUniqueNPAs = 0;
+
+      let sellToAnalysis: MarginAnalysis | undefined = undefined;
+      let buyFromAnalysis: MarginAnalysis | undefined = undefined;
+      let zeroMarginDetail: ZeroMarginDetail | undefined = undefined;
+      let totalComparableInterCodes = 0;
+      let totalComparableIntraCodes = 0;
+
+      if (file1Data.length > 0 && file2Data.length > 0) {
+        sellToAnalysis = this.createMarginAnalysis();
+        buyFromAnalysis = this.createMarginAnalysis();
+        zeroMarginDetail = this.createZeroMarginDetail();
+
+        const file2Map = new Map<string, USStandardizedData>();
+        file2Data.forEach((record) => file2Map.set(record.npanxx, record));
+
+        const allNpanxxFile1 = new Set(file1Data.map((r) => r.npanxx));
+        const allNpanxxFile2 = new Set(file2Data.map((r) => r.npanxx));
+        const allUniqueNpanxxCombined = new Set([...allNpanxxFile1, ...allNpanxxFile2]);
+
+        for (const record1 of file1Data) {
+          const record2 = file2Map.get(record1.npanxx);
+          if (record2) {
+            matchedCodes++;
+
+            // Inter-state rate comparison
+            if (typeof record1.interRate === 'number' && typeof record2.interRate === 'number') {
+              totalComparableInterCodes++;
+              const marginInter = (record2.interRate - record1.interRate) / record1.interRate;
+
+              if (record1.interRate < record2.interRate) {
+                // SELL TO opportunity
+                this.categorizeMargin(marginInter, sellToAnalysis, 'inter');
+              } else if (record1.interRate > record2.interRate) {
+                // BUY FROM opportunity
+                // For BUY FROM, margin is (R1 - R2) / R1 (how much cheaper we buy than they sell)
+                const buyMarginInter = (record1.interRate - record2.interRate) / record1.interRate;
+                this.categorizeMargin(buyMarginInter, buyFromAnalysis, 'inter');
+              } else {
+                // Zero margin
+                zeroMarginDetail.matchInter++;
+              }
+            }
+
+            // Intra-state rate comparison
+            if (typeof record1.intraRate === 'number' && typeof record2.intraRate === 'number') {
+              totalComparableIntraCodes++;
+              const marginIntra = (record2.intraRate - record1.intraRate) / record1.intraRate;
+
+              if (record1.intraRate < record2.intraRate) {
+                // SELL TO opportunity
+                this.categorizeMargin(marginIntra, sellToAnalysis, 'intra');
+              } else if (record1.intraRate > record2.intraRate) {
+                // BUY FROM opportunity
+                const buyMarginIntra = (record1.intraRate - record2.intraRate) / record1.intraRate;
+                this.categorizeMargin(buyMarginIntra, buyFromAnalysis, 'intra');
+              } else {
+                // Zero margin
+                zeroMarginDetail.matchIntra++;
+              }
+            }
+          }
+        }
+        nonMatchedCodes = allUniqueNpanxxCombined.size - matchedCodes;
+        matchedCodesPercentage =
+          allUniqueNpanxxCombined.size > 0
+            ? (matchedCodes / allUniqueNpanxxCombined.size) * 100
+            : 0;
+        nonMatchedCodesPercentage =
+          allUniqueNpanxxCombined.size > 0
+            ? (nonMatchedCodes / allUniqueNpanxxCombined.size) * 100
+            : 0;
+
+        // Calculate percentages for each bucket
+        this.calculateBucketPercentages(
+          sellToAnalysis,
+          totalComparableInterCodes,
+          totalComparableIntraCodes
+        );
+        this.calculateBucketPercentages(
+          buyFromAnalysis,
+          totalComparableInterCodes,
+          totalComparableIntraCodes
+        );
+        if (zeroMarginDetail) {
+          zeroMarginDetail.percentInter =
+            totalComparableInterCodes > 0
+              ? (zeroMarginDetail.matchInter / totalComparableInterCodes) * 100
+              : 0;
+          zeroMarginDetail.percentIntra =
+            totalComparableIntraCodes > 0
+              ? (zeroMarginDetail.matchIntra / totalComparableIntraCodes) * 100
+              : 0;
+        }
+
+        // Calculate total matches and percentages for sellToAnalysis and buyFromAnalysis
+        this.sumAnalysisTotals(sellToAnalysis);
+        this.sumAnalysisTotals(buyFromAnalysis);
+      }
+
+      // Matched NPAs and Total Unique NPAs (existing logic adjusted)
+      const allFileNPAsSet = new Set([...file1NPAs, ...file2NPAs]);
+      totalUniqueNPAs = allFileNPAsSet.size;
+      const matchedNPAsSet = new Set<string>();
+      if (file1Data.length > 0 && file2Data.length > 0) {
+        const file2NpaMap = new Map<string, string[]>(); // NPANXX -> NPA
+        file2Data.forEach((r) => {
+          if (!file2NpaMap.has(r.npanxx)) file2NpaMap.set(r.npanxx, []);
+          file2NpaMap.get(r.npanxx)!.push(r.npa);
+        });
+
+        file1Data.forEach((r1) => {
+          if (file2NpaMap.has(r1.npanxx)) {
+            // An NPANXX match. Now check if NPA also matches.
+            if (file2NpaMap.get(r1.npanxx)!.includes(r1.npa)) {
+              matchedNPAsSet.add(r1.npa);
+            }
+          }
+        });
+      }
+      matchedNPAs = matchedNPAsSet.size;
+
+      const report: USCodeReport = {
+        file1: reportFile1,
+        file2: reportFile2!, // Will be undefined if no file2, handle in UI
+        matchedCodes,
+        nonMatchedCodes,
+        matchedCodesPercentage,
+        nonMatchedCodesPercentage,
+        matchedNPAs,
+        totalUniqueNPAs,
+        sellToAnalysis,
+        buyFromAnalysis,
+        zeroMarginDetail,
+        totalComparableInterCodes,
+        totalComparableIntraCodes,
+      };
       return report;
     } catch (error) {
       console.error('[USService] Error generating US code report:', error);
-      throw error;
+      throw error; // Rethrow or handle as appropriate
     }
   }
 
