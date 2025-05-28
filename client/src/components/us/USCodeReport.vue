@@ -3,17 +3,15 @@
     <div class="bg-gray-800 rounded-lg p-6 min-w-max">
       <!-- Changed to min-w-max for wider content -->
       <div v-if="report" class="space-y-8">
-        <h2 class="text-xl text-white font-semibold">Code Report</h2>
 
         <!-- Comparison Section (Existing) -->
         <div
           v-if="isValidFileReport(report.file2)"
-          class="rounded-lg overflow-hidden bg-gray-900/50"
         >
-          <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-            <span class="text-accent">Overall Comparison</span>
-          </h2>
-          <div class="p-6">
+          <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+            Overall Comparison
+          </h4>
+          <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
             <table class="w-full">
               <tbody>
                 <tr class="border-b border-gray-700">
@@ -68,15 +66,15 @@
         <!-- 0% Margin Detail Section -->
         <div
           v-if="report.file2 && report.zeroMarginDetail"
-          class="rounded-lg overflow-hidden bg-gray-900/50"
+          
         >
-          <h2 class="py-3 text-xl text-center text-fbWhite px-6">
-            <span class="text-accent">0% Margin Matches</span>
+          <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+            0% Margin Matches
             <span class="block text-sm text-gray-400">
-              (Rates are identical in {{ report.file1.fileName }} and {{ report.file2.fileName }})
+              Rates are identical in {{ report.file1.fileName }} and {{ report.file2.fileName }}
             </span>
-          </h2>
-          <div class="p-6">
+          </h4>
+          <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
             <table class="w-full">
               <thead>
                 <tr class="text-left text-gray-400 text-sm">
@@ -115,24 +113,24 @@
           class="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           <!-- SELL TO Column -->
-          <div v-if="report.sellToAnalysis" class="rounded-lg overflow-hidden bg-gray-900/50">
-            <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-              <span class="text-accent">SELL TO</span>
-              <span class="block text-sm text-gray-400">
-                ({{ report.file1.fileName }} rate &lt; {{ report.file2.fileName }} rate)
+          <div v-if="report.sellToAnalysis" class="rounded-lg overflow-hidden">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+              SELL TO
+              <span class="block text-sm text-gray-400 ">
+                {{ report.file1.fileName }} <span class="lowercase">rate</span> &lt; {{ report.file2.fileName }} <span class="lowercase">rate</span>
               </span>
-            </h2>
+            </h4>
             <MarginAnalysisTable :analysis="report.sellToAnalysis" />
           </div>
 
           <!-- BUY FROM Column -->
-          <div v-if="report.buyFromAnalysis" class="rounded-lg overflow-hidden bg-gray-900/50">
-            <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-              <span class="text-accent">BUY FROM</span>
+          <div v-if="report.buyFromAnalysis" class="rounded-lg overflow-hidden">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+              BUY FROM
               <span class="block text-sm text-gray-400">
-                ({{ report.file1.fileName }} rate &gt; {{ report.file2.fileName }} rate)
+                    {{ report.file1.fileName }} <span class="lowercase">rate</span> &gt; {{ report.file2.fileName }} <span class="lowercase">rate</span>
               </span>
-            </h2>
+            </h4>
             <MarginAnalysisTable :analysis="report.buyFromAnalysis" />
           </div>
         </div>

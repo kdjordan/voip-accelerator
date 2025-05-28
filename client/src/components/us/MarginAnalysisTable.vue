@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left text-gray-400">

@@ -4,7 +4,7 @@
     <!-- REMOVED US Pricing Summary Section -->
     <!-- Detailed NPANXX Comparison Section -->
     <div class="bg-gray-800 p-6 rounded-lg">
-      <h4 class="text-lge text-gray-400 font-medium mb-4 uppercase">US Pricing Comparison</h4>
+      <h3 class="text-lg text-gray-400 font-medium mb-4 uppercase">US Pricing Comparison</h3>
       <!-- USDetailedComparisonTable will handle summary and details -->
       <USDetailedComparisonTable />
     </div>
