@@ -286,6 +286,61 @@ export interface AZEnhancedCodeReport {
   countries: AZCountryBreakdown[];
 }
 
+// A-Z Margin Analysis Types (simplified from US version for single-rate comparison)
+
+/**
+ * Represents the data for a single margin bucket (e.g., <10%, 10-20%) for A-Z analysis
+ */
+export interface MarginBucketDetailAZ {
+  matchCount: number; // Count of matches in this bucket
+  percentOfComparable: number; // Percentage of total comparable codes
+}
+
+/**
+ * Represents the full breakdown for either "SELL TO" or "BUY FROM" for A-Z analysis
+ */
+export interface MarginAnalysisAZ {
+  lessThan10: MarginBucketDetailAZ;
+  between10And20: MarginBucketDetailAZ;
+  between20And30: MarginBucketDetailAZ;
+  between30And40: MarginBucketDetailAZ;
+  between40And50: MarginBucketDetailAZ;
+  between50And60: MarginBucketDetailAZ;
+  between60And70: MarginBucketDetailAZ;
+  between70And80: MarginBucketDetailAZ;
+  between80And90: MarginBucketDetailAZ;
+  between90And100: MarginBucketDetailAZ;
+  greaterThan100: MarginBucketDetailAZ;
+  totalMatches: number; // Sum of all matches across buckets
+  totalPercent: number; // Sum of all percentages
+}
+
+/**
+ * Specific structure for the 0% margin scenario for A-Z analysis
+ */
+export interface ZeroMarginDetailAZ {
+  matchCount: number;
+  percentOfComparable: number;
+}
+
+/**
+ * Updated AZ Code Report to include margin analysis
+ */
+export interface AzCodeReportEnhanced {
+  file1: AzCodeReportFileInfo;
+  file2?: AzCodeReportFileInfo; // Optional for single file reports
+  matchedCodes: number;
+  nonMatchedCodes: number;
+  matchedCodesPercentage: number;
+  nonMatchedCodesPercentage: number;
+
+  // New fields for detailed margin analysis
+  sellToAnalysis?: MarginAnalysisAZ; // Optional because it requires two files
+  buyFromAnalysis?: MarginAnalysisAZ; // Optional
+  zeroMarginDetail?: ZeroMarginDetailAZ; // Optional
+  totalComparableCodes?: number; // Total codes used as a base for percentage calculations
+}
+
 export interface AZDetailedComparisonResult {
   // ... existing code ...
 }

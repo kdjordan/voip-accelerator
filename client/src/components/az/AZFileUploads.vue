@@ -399,6 +399,17 @@
       console.log(`[AZFileUploads] Calling makeAzCombinedReport for ${fileName1} and ${fileName2}`);
       await azService.makeAzCombinedReport(fileName1, fileName2);
       console.log(`[AZFileUploads] Combined report generation complete (or started).`);
+
+      // Generate enhanced code report with margin analysis
+      console.log(
+        `[AZFileUploads] Generating enhanced code report with margin analysis for ${fileName1} and ${fileName2}`
+      );
+      const enhancedReport = await azService.makeAzCodeReportWithMarginAnalysis(
+        fileName1,
+        fileName2
+      );
+      azStore.setEnhancedCodeReportWithMargins(enhancedReport);
+      console.log(`[AZFileUploads] Enhanced margin analysis report generation complete.`);
     } catch (error: unknown) {
       console.error('[AZFileUploads] Error generating reports:', error);
       // TODO: Maybe show a user-facing error notification

@@ -1,15 +1,15 @@
 <template>
   <div class="overflow-x-auto">
-    <div class="rounded-lg p-6 min-w-content bg-gray-800 pt-4">
+    <div class="rounded-lg p-6 min-w-max bg-gray-800 pt-4">
       <div v-if="hasSingleFile || hasTwoFiles" class="space-y-8">
         <!-- Individual File Stats -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- File 1 Stats (if fileNameAz1 exists) -->
-          <div v-if="fileNameAz1" class="rounded-lg overflow-hidden bg-gray-900/50">
-            <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-              <span class="text-accent">{{ fileNameAz1 }}</span>
-            </h2>
-            <div class="p-6">
+          <div v-if="fileNameAz1">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+              {{ fileNameAz1 }}
+            </h4>
+            <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
               <table class="w-full">
                 <tbody>
                   <tr class="border-b border-gray-700">
@@ -34,11 +34,11 @@
           </div>
 
           <!-- File 2 Stats (if fileNameAz2 exists) -->
-          <div v-if="fileNameAz2" class="rounded-lg overflow-hidden bg-gray-900/50">
-            <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-              <span class="text-accent">{{ fileNameAz2 }}</span>
-            </h2>
-            <div class="p-6">
+          <div v-if="fileNameAz2">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+              {{ fileNameAz2 }}
+            </h4>
+            <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
               <table class="w-full">
                 <tbody>
                   <tr class="border-b border-gray-700">
@@ -62,15 +62,10 @@
           </div>
         </div>
 
-        <!-- Comparison Section - Only show when comparison report is available -->
-        <div
-          v-if="showComparisonSection && comparisonReport"
-          class="rounded-lg overflow-hidden bg-gray-900/50"
-        >
-          <h2 class="py-3 text-xl text-center text-fbWhite px-6 border-b border-gray-700">
-            <span class="text-accent">Comparison Summary</span>
-          </h2>
-          <div class="p-6">
+        <!-- Comparison Section - Only show when comparison report is available and NO enhanced report -->
+        <div v-if="showComparisonSection && comparisonReport && !enhancedCodeReport">
+          <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">Comparison Summary</h4>
+          <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
             <table class="w-full">
               <tbody>
                 <tr class="border-b border-gray-700">
@@ -101,6 +96,108 @@
             </table>
           </div>
         </div>
+
+        <!-- Enhanced Code Report with Margin Analysis -->
+        <div v-if="enhancedCodeReport">
+          <!-- Overall Comparison with Enhanced Data -->
+          <div v-if="enhancedCodeReport.file2">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">Overall Comparison</h4>
+            <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
+              <table class="w-full">
+                <tbody>
+                  <tr class="border-b border-gray-700">
+                    <td class="py-2 font-medium text-gray-400">Matched Codes:</td>
+                    <td class="py-2 text-right text-foreground">
+                      {{ enhancedCodeReport.matchedCodes }} ({{
+                        enhancedCodeReport.matchedCodesPercentage.toFixed(2)
+                      }}%)
+                    </td>
+                  </tr>
+                  <tr class="border-b border-gray-700">
+                    <td class="py-2 font-medium text-gray-400">Non-Matched Codes:</td>
+                    <td class="py-2 text-right text-foreground">
+                      {{ enhancedCodeReport.nonMatchedCodes }} ({{
+                        enhancedCodeReport.nonMatchedCodesPercentage.toFixed(2)
+                      }}%)
+                    </td>
+                  </tr>
+                  <tr v-if="enhancedCodeReport.totalComparableCodes !== undefined">
+                    <td class="py-2 font-medium text-gray-400">Total Comparable Codes:</td>
+                    <td class="py-2 text-right text-foreground">
+                      {{ enhancedCodeReport.totalComparableCodes }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 0% Margin Detail Section -->
+          <div v-if="enhancedCodeReport.file2 && enhancedCodeReport.zeroMarginDetail">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+              0% Margin Matches
+              <span class="block text-sm text-gray-400">
+                Rates are identical in {{ enhancedCodeReport.file1.fileName }} and
+                {{ enhancedCodeReport.file2.fileName }}
+              </span>
+            </h4>
+            <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
+              <table class="w-full">
+                <thead>
+                  <tr class="text-left text-gray-400 text-sm">
+                    <th class="py-2 px-3">Type</th>
+                    <th class="py-2 px-3 text-right">Match Count</th>
+                    <th class="py-2 px-3 text-right">% of Comparable</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-3 font-medium text-gray-300">All Rates</td>
+                    <td class="py-2 px-3 text-right text-foreground">
+                      {{ enhancedCodeReport.zeroMarginDetail.matchCount }}
+                    </td>
+                    <td class="py-2 px-3 text-right text-foreground">
+                      {{ enhancedCodeReport.zeroMarginDetail.percentOfComparable.toFixed(2) }}%
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SELL TO / BUY FROM Section -->
+          <div
+            v-if="
+              enhancedCodeReport.file2 &&
+              (enhancedCodeReport.sellToAnalysis || enhancedCodeReport.buyFromAnalysis)
+            "
+            class="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <!-- SELL TO Column -->
+            <div v-if="enhancedCodeReport.sellToAnalysis">
+              <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+                SELL TO
+                <span class="block text-sm text-gray-400">
+                  {{ enhancedCodeReport.file1.fileName }} <span class="lowercase">rate</span> &lt;
+                  {{ enhancedCodeReport.file2.fileName }} <span class="lowercase">rate</span>
+                </span>
+              </h4>
+              <MarginAnalysisTableAZ :analysis="enhancedCodeReport.sellToAnalysis" />
+            </div>
+
+            <!-- BUY FROM Column -->
+            <div v-if="enhancedCodeReport.buyFromAnalysis">
+              <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+                BUY FROM
+                <span class="block text-sm text-gray-400">
+                  {{ enhancedCodeReport.file1.fileName }} <span class="lowercase">rate</span> &gt;
+                  {{ enhancedCodeReport.file2.fileName }} <span class="lowercase">rate</span>
+                </span>
+              </h4>
+              <MarginAnalysisTableAZ :analysis="enhancedCodeReport.buyFromAnalysis" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Message if no files are uploaded -->
@@ -113,10 +210,11 @@
 
 <script setup lang="ts">
   import { type AzCodeReport, type InvalidAzRow } from '@/types/domains/az-types';
-  import { ref, reactive, computed } from 'vue';
+  import { ref, reactive, computed, watch } from 'vue';
   import { ChevronDownIcon } from '@heroicons/vue/24/outline';
   import { useAzStore } from '@/stores/az-store';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
+  import MarginAnalysisTableAZ from './MarginAnalysisTableAZ.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   // Remove the props definition, get data from store directly
@@ -137,6 +235,8 @@
   const statsAz2 = computed(() => store.getFileStats('az2'));
 
   const comparisonReport = computed(() => store.getCodeReport);
+
+  const enhancedCodeReport = computed(() => store.getEnhancedCodeReport);
 
   const hasSingleFile = computed(() => store.getNumberOfFilesUploaded === 1);
   const hasTwoFiles = computed(() => store.getNumberOfFilesUploaded === 2);

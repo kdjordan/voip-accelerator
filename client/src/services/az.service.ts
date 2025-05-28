@@ -7,6 +7,10 @@ import {
   type AZReportsInput,
   type AzPricingReport,
   type AZDetailedComparisonFilters,
+  type MarginBucketDetailAZ,
+  type MarginAnalysisAZ,
+  type ZeroMarginDetailAZ,
+  type AzCodeReportEnhanced,
 } from '@/types/domains/az-types';
 import { DBName } from '@/types/app-types';
 import { useAzStore } from '@/stores/az-store';
@@ -493,6 +497,272 @@ export class AZService {
         error
       );
       throw error; // Re-throw for the caller to handle
+    }
+  }
+
+  // AZ Margin Analysis Helper Methods (adapted from US version for single-rate comparison)
+
+  /**
+   * Helper function to initialize MarginBucketDetailAZ
+   */
+  private createMarginBucketDetailAZ(): MarginBucketDetailAZ {
+    return {
+      matchCount: 0,
+      percentOfComparable: 0,
+    };
+  }
+
+  /**
+   * Helper function to initialize MarginAnalysisAZ
+   */
+  private createMarginAnalysisAZ(): MarginAnalysisAZ {
+    return {
+      lessThan10: this.createMarginBucketDetailAZ(),
+      between10And20: this.createMarginBucketDetailAZ(),
+      between20And30: this.createMarginBucketDetailAZ(),
+      between30And40: this.createMarginBucketDetailAZ(),
+      between40And50: this.createMarginBucketDetailAZ(),
+      between50And60: this.createMarginBucketDetailAZ(),
+      between60And70: this.createMarginBucketDetailAZ(),
+      between70And80: this.createMarginBucketDetailAZ(),
+      between80And90: this.createMarginBucketDetailAZ(),
+      between90And100: this.createMarginBucketDetailAZ(),
+      greaterThan100: this.createMarginBucketDetailAZ(),
+      totalMatches: 0,
+      totalPercent: 0,
+    };
+  }
+
+  /**
+   * Helper function to initialize ZeroMarginDetailAZ
+   */
+  private createZeroMarginDetailAZ(): ZeroMarginDetailAZ {
+    return {
+      matchCount: 0,
+      percentOfComparable: 0,
+    };
+  }
+
+  /**
+   * Helper method to categorize margin into buckets for AZ
+   */
+  private categorizeMarginAZ(margin: number, analysis: MarginAnalysisAZ) {
+    const marginPercent = margin * 100;
+    let bucket: MarginBucketDetailAZ | null = null;
+
+    if (marginPercent < 10) bucket = analysis.lessThan10;
+    else if (marginPercent < 20) bucket = analysis.between10And20;
+    else if (marginPercent < 30) bucket = analysis.between20And30;
+    else if (marginPercent < 40) bucket = analysis.between30And40;
+    else if (marginPercent < 50) bucket = analysis.between40And50;
+    else if (marginPercent < 60) bucket = analysis.between50And60;
+    else if (marginPercent < 70) bucket = analysis.between60And70;
+    else if (marginPercent < 80) bucket = analysis.between70And80;
+    else if (marginPercent < 90) bucket = analysis.between80And90;
+    else if (marginPercent <= 100)
+      bucket = analysis.between90And100; // Include 100%
+    else bucket = analysis.greaterThan100;
+
+    if (bucket) {
+      bucket.matchCount++;
+    }
+  }
+
+  /**
+   * Helper method to calculate percentages for all buckets in an AZ analysis
+   */
+  private calculateBucketPercentagesAZ(
+    analysis: MarginAnalysisAZ | undefined,
+    totalComparable: number
+  ) {
+    if (!analysis) return;
+    const buckets = [
+      analysis.lessThan10,
+      analysis.between10And20,
+      analysis.between20And30,
+      analysis.between30And40,
+      analysis.between40And50,
+      analysis.between50And60,
+      analysis.between60And70,
+      analysis.between70And80,
+      analysis.between80And90,
+      analysis.between90And100,
+      analysis.greaterThan100,
+    ];
+
+    for (const bucket of buckets) {
+      bucket.percentOfComparable =
+        totalComparable > 0 ? (bucket.matchCount / totalComparable) * 100 : 0;
+    }
+  }
+
+  /**
+   * Helper method to sum total matches and percentages for an AZ analysis
+   */
+  private sumAnalysisTotalsAZ(analysis: MarginAnalysisAZ | undefined) {
+    if (!analysis) return;
+    analysis.totalMatches = 0;
+    analysis.totalPercent = 0;
+
+    const buckets = [
+      analysis.lessThan10,
+      analysis.between10And20,
+      analysis.between20And30,
+      analysis.between30And40,
+      analysis.between40And50,
+      analysis.between50And60,
+      analysis.between60And70,
+      analysis.between70And80,
+      analysis.between80And90,
+      analysis.between90And100,
+      analysis.greaterThan100,
+    ];
+
+    for (const bucket of buckets) {
+      analysis.totalMatches += bucket.matchCount;
+      analysis.totalPercent += bucket.percentOfComparable;
+    }
+  }
+
+  /**
+   * Enhanced AZ Code Report with margin analysis
+   */
+  async makeAzCodeReportWithMarginAnalysis(
+    fileName1: string,
+    fileName2: string
+  ): Promise<AzCodeReportEnhanced> {
+    try {
+      const tableName1 = fileName1.toLowerCase().replace('.csv', '');
+      const tableName2 = fileName2 ? fileName2.toLowerCase().replace('.csv', '') : '';
+
+      const file1Data = await this.getData(tableName1);
+      let file2Data: AZStandardizedData[] = [];
+      if (tableName2) {
+        file2Data = await this.getData(tableName2);
+      }
+
+      // Basic file stats
+      const file1Info = {
+        fileName: fileName1,
+        totalCodes: file1Data.length,
+        totalDestinations: new Set(file1Data.map((r) => r.destName)).size,
+        uniqueDestinationsPercentage:
+          file1Data.length > 0
+            ? (new Set(file1Data.map((r) => r.destName)).size / file1Data.length) * 100
+            : 0,
+      };
+
+      let file2Info: typeof file1Info | undefined = undefined;
+      if (file2Data.length > 0 && fileName2) {
+        file2Info = {
+          fileName: fileName2,
+          totalCodes: file2Data.length,
+          totalDestinations: new Set(file2Data.map((r) => r.destName)).size,
+          uniqueDestinationsPercentage:
+            file2Data.length > 0
+              ? (new Set(file2Data.map((r) => r.destName)).size / file2Data.length) * 100
+              : 0,
+        };
+      }
+
+      let matchedCodes = 0;
+      let nonMatchedCodes = 0;
+      let matchedCodesPercentage = 0;
+      let nonMatchedCodesPercentage = 0;
+
+      let sellToAnalysis: MarginAnalysisAZ | undefined = undefined;
+      let buyFromAnalysis: MarginAnalysisAZ | undefined = undefined;
+      let zeroMarginDetail: ZeroMarginDetailAZ | undefined = undefined;
+      let totalComparableCodes = 0;
+
+      if (file1Data.length > 0 && file2Data.length > 0) {
+        console.log(`[AZService] Both files have data, starting margin analysis...`);
+        sellToAnalysis = this.createMarginAnalysisAZ();
+        buyFromAnalysis = this.createMarginAnalysisAZ();
+        zeroMarginDetail = this.createZeroMarginDetailAZ();
+
+        const file2Map = new Map<string, AZStandardizedData>();
+        file2Data.forEach((record) => file2Map.set(record.dialCode, record));
+
+        const allDialCodesFile1 = new Set(file1Data.map((r) => r.dialCode));
+        const allDialCodesFile2 = new Set(file2Data.map((r) => r.dialCode));
+        const allUniqueDialCodesCombined = new Set([...allDialCodesFile1, ...allDialCodesFile2]);
+
+        for (const record1 of file1Data) {
+          const record2 = file2Map.get(record1.dialCode);
+          if (record2) {
+            matchedCodes++;
+
+            // Single rate comparison for AZ
+            if (typeof record1.rate === 'number' && typeof record2.rate === 'number') {
+              totalComparableCodes++;
+              const margin = (record2.rate - record1.rate) / record1.rate;
+
+              if (record1.rate < record2.rate) {
+                // SELL TO opportunity
+                this.categorizeMarginAZ(margin, sellToAnalysis);
+              } else if (record1.rate > record2.rate) {
+                // BUY FROM opportunity
+                const buyMargin = (record1.rate - record2.rate) / record1.rate;
+                this.categorizeMarginAZ(buyMargin, buyFromAnalysis);
+              } else {
+                // Zero margin
+                zeroMarginDetail.matchCount++;
+              }
+            }
+          }
+        }
+
+        nonMatchedCodes = allUniqueDialCodesCombined.size - matchedCodes;
+        matchedCodesPercentage =
+          allUniqueDialCodesCombined.size > 0
+            ? (matchedCodes / allUniqueDialCodesCombined.size) * 100
+            : 0;
+        nonMatchedCodesPercentage =
+          allUniqueDialCodesCombined.size > 0
+            ? (nonMatchedCodes / allUniqueDialCodesCombined.size) * 100
+            : 0;
+
+        // Calculate percentages for each bucket
+        this.calculateBucketPercentagesAZ(sellToAnalysis, totalComparableCodes);
+        this.calculateBucketPercentagesAZ(buyFromAnalysis, totalComparableCodes);
+        if (zeroMarginDetail) {
+          zeroMarginDetail.percentOfComparable =
+            totalComparableCodes > 0
+              ? (zeroMarginDetail.matchCount / totalComparableCodes) * 100
+              : 0;
+        }
+
+        // Calculate total matches and percentages
+        this.sumAnalysisTotalsAZ(sellToAnalysis);
+        this.sumAnalysisTotalsAZ(buyFromAnalysis);
+
+        console.log(`[AZService] Margin analysis completed:`, {
+          matchedCodes,
+          totalComparableCodes,
+          sellToMatches: sellToAnalysis.totalMatches,
+          buyFromMatches: buyFromAnalysis.totalMatches,
+          zeroMarginMatches: zeroMarginDetail.matchCount,
+        });
+      }
+
+      const report: AzCodeReportEnhanced = {
+        file1: file1Info,
+        file2: file2Info,
+        matchedCodes,
+        nonMatchedCodes,
+        matchedCodesPercentage,
+        nonMatchedCodesPercentage,
+        sellToAnalysis,
+        buyFromAnalysis,
+        zeroMarginDetail,
+        totalComparableCodes,
+      };
+
+      return report;
+    } catch (error) {
+      console.error('[AZService] Error generating AZ code report with margin analysis:', error);
+      throw error;
     }
   }
 

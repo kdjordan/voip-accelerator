@@ -4,6 +4,7 @@ import type {
   AzCodeReport,
   InvalidAzRow,
   AZEnhancedCodeReport,
+  AzCodeReportEnhanced,
 } from '@/types/domains/az-types';
 import type { ReportType } from '@/types';
 import { AZService } from '@/services/az.service';
@@ -25,6 +26,7 @@ export const useAzStore = defineStore('az', {
     activeReportType: 'files' as ReportType,
     pricingReport: null as AzPricingReport | null,
     codeReport: null as AzCodeReport | null,
+    enhancedCodeReport: null as AzCodeReportEnhanced | null,
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidAzRow[]>(),
     fileStats: new Map<
@@ -65,6 +67,8 @@ export const useAzStore = defineStore('az', {
 
       return null;
     },
+
+    getEnhancedCodeReport: (state) => state.enhancedCodeReport,
 
     getFileNameByComponent: (state) => (componentId: string) => {
       const file = state.filesUploaded.get(componentId);
@@ -134,10 +138,8 @@ export const useAzStore = defineStore('az', {
       const { deleteDatabase } = useDexieDB();
 
       try {
-    
         await deleteDatabase(DBName.AZ);
         await deleteDatabase(DBName.AZ_PRICING_COMPARISON);
-    
       } catch (dbError) {
         console.error('[az-store] Error deleting AZ Dexie databases:', dbError);
       }
@@ -147,6 +149,7 @@ export const useAzStore = defineStore('az', {
       this.invalidRows.clear();
       this.pricingReport = null;
       this.codeReport = null;
+      this.enhancedCodeReport = null;
       this.detailedComparisonTableName = null;
       this.reportsGenerated = false;
       this.activeReportType = 'files';
@@ -172,9 +175,7 @@ export const useAzStore = defineStore('az', {
       const azService = new AZService();
       azService
         .removeTable(tableName)
-        .then(() => {
-      
-        })
+        .then(() => {})
         .catch((error) => {
           console.error(`[az-store] Error removing Dexie table ${tableName}:`, error);
           // Optionally notify the user or handle the error further
@@ -199,7 +200,6 @@ export const useAzStore = defineStore('az', {
 
         // Clear enhanced code report for this file
         this.enhancedCodeReports.delete(fileName);
-
       } else {
         console.warn(`[AzStore] Could not find component ID for file ${fileName}`);
       }
@@ -212,6 +212,7 @@ export const useAzStore = defineStore('az', {
         this.reportsGenerated = false;
         this.pricingReport = null;
         this.codeReport = null;
+        this.enhancedCodeReport = null;
         this.detailedComparisonTableName = null;
         this.activeReportType = 'files';
       }
@@ -293,6 +294,11 @@ export const useAzStore = defineStore('az', {
     // Action to set enhanced code report
     setEnhancedCodeReport(fileName: string, report: AZEnhancedCodeReport) {
       this.enhancedCodeReports.set(fileName, report);
+    },
+
+    setEnhancedCodeReportWithMargins(report: AzCodeReportEnhanced) {
+      this.enhancedCodeReport = report;
+      this.reportsGenerated = true;
     },
   },
 });
