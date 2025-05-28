@@ -134,7 +134,7 @@
 
           <!-- 0% Margin Detail Section -->
           <div v-if="enhancedCodeReport.file2 && enhancedCodeReport.zeroMarginDetail">
-            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
+            <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2 mt-4">
               0% Margin Matches
               <span class="block text-sm text-gray-400">
                 Rates are identical in {{ enhancedCodeReport.file1.fileName }} and
@@ -171,7 +171,7 @@
               enhancedCodeReport.file2 &&
               (enhancedCodeReport.sellToAnalysis || enhancedCodeReport.buyFromAnalysis)
             "
-            class="grid grid-cols-1 md:grid-cols-2 gap-6"
+            class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4"
           >
             <!-- SELL TO Column -->
             <div v-if="enhancedCodeReport.sellToAnalysis">
