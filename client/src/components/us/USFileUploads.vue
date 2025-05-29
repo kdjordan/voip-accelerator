@@ -5,7 +5,7 @@
       <div class="bg-gray-800 rounded-b-lg p-6">
         <div class="pb-4 mb-6">
           <!-- Change from grid to flex layout -->
-          <div class="flex min-w-max gap-6">
+          <div class="flex w-full gap-6">
             <!-- Left Side: First Upload Zone and Single File Report -->
             <div class="w-1/2 pr-6">
               <!-- Conditionally render Drop Zone or Code Summary -->

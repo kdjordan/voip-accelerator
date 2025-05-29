@@ -110,6 +110,15 @@
 
             <!-- Countries Section -->
             <div v-else class="space-y-4">
+              <!-- No Results Message -->
+              <div
+                v-if="searchQuery && !isFiltering && filteredCountries.length === 0"
+                class="text-center py-4 text-gray-400"
+              >
+                No results found for "{{ searchQuery }}"
+              </div>
+
+              <!-- Countries List -->
               <template v-for="country in filteredCountries" :key="country.countryCode">
                 <!-- Only render the country block if coverage > 0 -->
                 <template v-if="country.npaCoverage > 0">
@@ -120,7 +129,7 @@
                     >
                       <span class="text-gray-300">{{ country.countryName }}</span>
                       <div class="flex items-center space-x-2">
-                        <span class="text-accent">
+                        <span class="text-gray-400 text-sm">
                           {{ formatCoverage(country.npaCoverage) }}% Coverage
                         </span>
                         <span
@@ -157,7 +166,7 @@
                               getStateName(state.stateCode, country.countryCode)
                             }}</span>
                             <div class="flex items-center space-x-2">
-                              <span class="text-accent">
+                              <span class="text-gray-400 text-sm">
                                 {{ formatCoverage(state.coverage) }}% Coverage
                               </span>
                               <span
@@ -227,14 +236,6 @@
                 </template>
               </template>
             </div>
-
-            <!-- No Results Message -->
-            <div
-              v-if="searchQuery && !isFiltering && filteredCountries.length === 0"
-              class="text-center py-4 text-gray-400"
-            >
-              No results found for "{{ searchQuery }}"
-            </div>
           </div>
         </div>
       </div>
@@ -243,188 +244,181 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue';
-import { useUsStore } from '@/stores/us-store';
-import { useLergStore } from '@/stores/lerg-store';
-import { getStateName } from '@/types/constants/state-codes';
-import { getCountryName } from '@/types/constants/country-codes';
-import { TrashIcon } from '@heroicons/vue/24/outline';
-import BaseButton from '@/components/shared/BaseButton.vue';
-import BaseBadge from '@/components/shared/BaseBadge.vue';
-import type { ComponentId } from '@/types/app-types';
-import type {
-  USEnhancedCodeReport,
-  USCountryBreakdown,
-  USStateBreakdown,
-} from '@/types/domains/us-types';
+  import { computed, ref, watch, nextTick } from 'vue';
+  import { useUsStore } from '@/stores/us-store';
+  import { useLergStore } from '@/stores/lerg-store';
+  import { getStateName } from '@/types/constants/state-codes';
+  import { getCountryName } from '@/types/constants/country-codes';
+  import { TrashIcon } from '@heroicons/vue/24/outline';
+  import BaseButton from '@/components/shared/BaseButton.vue';
+  import BaseBadge from '@/components/shared/BaseBadge.vue';
+  import type { ComponentId } from '@/types/app-types';
+  import type {
+    USEnhancedCodeReport,
+    USCountryBreakdown,
+    USStateBreakdown,
+  } from '@/types/domains/us-types';
 
-// Define props
-const props = defineProps<{
-  componentId: ComponentId;
-}>();
+  // Define props
+  const props = defineProps<{
+    componentId: ComponentId;
+  }>();
 
-// Define emits
-const emit = defineEmits<{ (e: 'remove-file', componentId: ComponentId): void }>();
+  // Define emits
+  const emit = defineEmits<{ (e: 'remove-file', componentId: ComponentId): void }>();
 
-const usStore = useUsStore();
-const lergStore = useLergStore();
+  const usStore = useUsStore();
+  const lergStore = useLergStore();
 
-// UI state
-const showDistribution = ref(true);
-const searchQuery = ref('');
-const isFiltering = ref(false);
-const expandedStates = ref<Set<string>>(new Set());
-const expandedCountries = ref<Set<string>>(new Set());
+  // UI state
+  const showDistribution = ref(true);
+  const searchQuery = ref('');
+  const isFiltering = ref(false);
+  const expandedStates = ref<Set<string>>(new Set());
+  const expandedCountries = ref<Set<string>>(new Set());
 
-// Create a computed property for the truncated filename
-const truncatedFileName = computed(() => {
-  const fullName = usStore.getFileNameByComponent(props.componentId);
-  if (fullName.length > 10) {
-    return `${fullName.slice(0, 10)}...`;
-  }
-  return fullName;
-});
+  // Create a computed property for the truncated filename
+  const truncatedFileName = computed(() => {
+    const fullName = usStore.getFileNameByComponent(props.componentId);
+    if (fullName.length > 10) {
+      return `${fullName.slice(0, 10)}...`;
+    }
+    return fullName;
+  });
 
-// Get the enhanced report for this component
-const enhancedReport = computed(() => {
-  const fileName = usStore.getFileNameByComponent(props.componentId);
-  return usStore.getEnhancedReportByFile(fileName);
-});
+  // Get the enhanced report for this component
+  const enhancedReport = computed(() => {
+    const fileName = usStore.getFileNameByComponent(props.componentId);
+    return usStore.getEnhancedReportByFile(fileName);
+  });
 
-// Basic stats
-const totalLergCodes = computed(() => lergStore.calculateTotalLergCodes() || 0);
-const totalFileNPAs = computed(() => {
-  const countries = enhancedReport.value?.file1?.countries;
-  if (!countries) return 0;
-  return countries.reduce(
-    (total: number, country: USCountryBreakdown) => total + (country.npas?.length || 0),
-    0
-  );
-});
+  // Basic stats
+  const totalLergCodes = computed(() => lergStore.calculateTotalLergCodes() || 0);
+  const totalFileNPAs = computed(() => {
+    const countries = enhancedReport.value?.file1?.countries;
+    if (!countries) return 0;
+    return countries.reduce(
+      (total: number, country: USCountryBreakdown) => total + (country.npas?.length || 0),
+      0
+    );
+  });
 
-const overallCoveragePercentage = computed(() => {
-  if (!enhancedReport.value?.file1?.countries?.[0]) return 0;
-  return formatCoverage(enhancedReport.value.file1.countries[0].npaCoverage);
-});
+  const overallCoveragePercentage = computed(() => {
+    if (!enhancedReport.value?.file1?.countries?.[0]) return 0;
+    return formatCoverage(enhancedReport.value.file1.countries[0].npaCoverage);
+  });
 
-// Average rates
-const averageRates = computed(() => {
-  // Get stats directly from fileStats using the componentId
-  const stats = usStore.fileStats.get(props.componentId);
-  return {
-    interstate: Number(stats?.avgInterRate || 0).toFixed(4),
-    intrastate: Number(stats?.avgIntraRate || 0).toFixed(4),
-    indeterminate: Number(stats?.avgIndetermRate || 0).toFixed(4),
-  };
-});
+  // Average rates
+  const averageRates = computed(() => {
+    // Get stats directly from fileStats using the componentId
+    const stats = usStore.fileStats.get(props.componentId);
+    return {
+      interstate: Number(stats?.avgInterRate || 0).toFixed(4),
+      intrastate: Number(stats?.avgIntraRate || 0).toFixed(4),
+      indeterminate: Number(stats?.avgIndetermRate || 0).toFixed(4),
+    };
+  });
 
-// Format coverage to 2 decimal places
-function formatCoverage(value: number | undefined): number {
-  if (value === undefined) return 0;
-  return Number(value.toFixed(2));
-}
-
-// Format rate to 4 decimal places
-function formatRate(value: number | undefined): string {
-  if (value === undefined) return '0.0000';
-  return value.toFixed(4);
-}
-
-// Countries data with filtering
-const countries = computed(() => {
-  if (!enhancedReport.value?.file1?.countries) return [];
-
-  // Return USCountryBreakdown array directly
-  return enhancedReport.value.file1.countries;
-});
-
-const filteredCountries = computed(() => {
-  if (!searchQuery.value) return countries.value;
-
-  const query = searchQuery.value.toLowerCase();
-
-  // Filter based on the original countries array
-  return countries.value
-    .map((country: USCountryBreakdown) => {
-      // Filter states based on search query
-      // Ensure country.states exists before filtering
-      const filteredStates = (country.states || []).filter((state: USStateBreakdown) => {
-        const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase(); // Use stateCode
-        const hasMatchingNPA = state.npas.some((npa: string | number) =>
-          npa.toString().includes(query)
-        );
-        return stateName.includes(query) || hasMatchingNPA;
-      });
-
-      // If country name matches, return country with all its states
-      if (country.countryName.toLowerCase().includes(query)) {
-        return { ...country }; // Return the original country shape
-      }
-
-      // If any states match, return country with only matching states
-      if (filteredStates.length > 0) {
-        return { ...country, states: filteredStates }; // Return original shape but with filtered states
-      }
-
-      // If no matches, return null
-      return null;
-    })
-    .filter((country): country is USCountryBreakdown => {
-      // Check country.states exists and ensure boolean return
-      const statesExistAndMatch = country?.states ? country.states.length > 0 : false;
-      return (
-        country !== null &&
-        (country.countryName.toLowerCase().includes(query) || statesExistAndMatch)
-      );
-    });
-});
-
-// Toggle functions
-function toggleStateExpanded(code: string) {
-  if (expandedStates.value.has(code)) {
-    expandedStates.value.delete(code);
-  } else {
-    expandedStates.value.add(code);
-  }
-}
-
-function toggleCountryExpanded(code: string) {
-  if (expandedCountries.value.has(code)) {
-    expandedCountries.value.delete(code);
-  } else {
-    expandedCountries.value.add(code);
-  }
-}
-
-// Add watcher to auto-expand matching items
-watch(searchQuery, (newQuery) => {
-  if (!newQuery) {
-    // Clear all expansions when search is cleared
-    expandedStates.value.clear();
-    expandedCountries.value.clear();
-    return;
+  // Format coverage to 2 decimal places
+  function formatCoverage(value: number | undefined): number {
+    if (value === undefined) return 0;
+    return Number(value.toFixed(2));
   }
 
-  const query = newQuery.toLowerCase();
+  // Format rate to 4 decimal places
+  function formatRate(value: number | undefined): string {
+    if (value === undefined) return '0.0000';
+    return value.toFixed(4);
+  }
 
-  // Expand countries and states that match the search
-  filteredCountries.value.forEach((country) => {
-    if (country.countryName.toLowerCase().includes(query)) {
-      expandedCountries.value.add(country.countryCode);
+  // Countries data with filtering
+  const countries = computed(() => {
+    if (!enhancedReport.value?.file1?.countries) return [];
+    return enhancedReport.value.file1.countries;
+  });
+
+  const filteredCountries = computed(() => {
+    if (!searchQuery.value) return countries.value;
+
+    const query = searchQuery.value.toLowerCase();
+    return countries.value
+      .map((country: USCountryBreakdown) => {
+        // Check if country name matches
+        const countryMatches = country.countryName.toLowerCase().includes(query);
+
+        if (countryMatches) {
+          // If country matches, return entire country with all states
+          return country;
+        }
+
+        // Filter states within this country
+        const filteredStates = country.states?.filter((state) => {
+          const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase();
+
+          // Check if state name matches
+          if (stateName.includes(query)) return true;
+
+          // Check if any NPA in this state matches
+          return state.npas.some((npa) => npa.toString().includes(query));
+        });
+
+        // If no states match, don't include this country
+        if (!filteredStates || filteredStates.length === 0) {
+          return null;
+        }
+
+        // Return country with only the filtered states
+        return {
+          ...country,
+          states: filteredStates,
+        };
+      })
+      .filter((country): country is USCountryBreakdown => country !== null);
+  });
+
+  // Toggle functions
+  function toggleStateExpanded(code: string) {
+    if (expandedStates.value.has(code)) {
+      expandedStates.value.delete(code);
+    } else {
+      expandedStates.value.add(code);
+    }
+  }
+
+  function toggleCountryExpanded(code: string) {
+    if (expandedCountries.value.has(code)) {
+      expandedCountries.value.delete(code);
+    } else {
+      expandedCountries.value.add(code);
+    }
+  }
+
+  // Add watcher to auto-expand matching items
+  watch(searchQuery, async (newQuery) => {
+    if (!newQuery) {
+      expandedStates.value.clear();
+      expandedCountries.value.clear();
+      return;
     }
 
-    // Ensure country.states exists before iterating
-    (country.states || []).forEach((state: USStateBreakdown) => {
-      const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase(); // Use stateCode
-      const hasMatchingNPA = state.npas.some((npa: string | number) =>
-        npa.toString().includes(query)
-      );
+    const query = newQuery.toLowerCase();
+    await nextTick();
 
-      if (stateName.includes(query) || hasMatchingNPA) {
+    filteredCountries.value.forEach((country) => {
+      if (country.countryName.toLowerCase().includes(query)) {
         expandedCountries.value.add(country.countryCode);
-        expandedStates.value.add(state.stateCode); // Use stateCode
+        return;
       }
+
+      country.states?.forEach((state) => {
+        const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase();
+        const hasMatchingNPA = state.npas.some((npa) => npa.toString().includes(query));
+
+        if (stateName.includes(query) || hasMatchingNPA) {
+          expandedCountries.value.add(country.countryCode);
+          expandedStates.value.add(state.stateCode);
+        }
+      });
     });
   });
-});
 </script>

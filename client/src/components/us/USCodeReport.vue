@@ -1,16 +1,11 @@
 <template>
   <div class="overflow-x-auto">
-    <div class="bg-gray-800 rounded-lg p-6 min-w-max">
-      <!-- Changed to min-w-max for wider content -->
+    <div class="bg-gray-800 rounded-lg p-6 w-full">
+      <!-- Changed from min-w-max to w-full to prevent expansion -->
       <div v-if="report" class="space-y-8">
-
         <!-- Comparison Section (Existing) -->
-        <div
-          v-if="isValidFileReport(report.file2)"
-        >
-          <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
-            Overall Comparison
-          </h4>
+        <div v-if="isValidFileReport(report.file2)">
+          <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">Overall Comparison</h4>
           <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
             <table class="w-full">
               <tbody>
@@ -38,7 +33,7 @@
                   v-if="report.matchedNPAs !== undefined && report.totalUniqueNPAs > 0"
                   class="border-b border-gray-700"
                 >
-                  <td class="py-2 font-medium text-gray-400 ">Area Code Match Percentage:</td>
+                  <td class="py-2 font-medium text-gray-400">Area Code Match Percentage:</td>
                   <td class="py-2 text-right text-foreground">
                     {{ ((report.matchedNPAs / report.totalUniqueNPAs) * 100).toFixed(2) }}%
                   </td>
@@ -64,10 +59,7 @@
         </div>
 
         <!-- 0% Margin Detail Section -->
-        <div
-          v-if="report.file2 && report.zeroMarginDetail"
-          
-        >
+        <div v-if="report.file2 && report.zeroMarginDetail">
           <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
             0% Margin Matches
             <span class="block text-sm text-gray-400">
@@ -116,8 +108,9 @@
           <div v-if="report.sellToAnalysis" class="rounded-lg overflow-hidden">
             <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
               SELL TO
-              <span class="block text-sm text-gray-400 ">
-                {{ report.file1.fileName }} <span class="lowercase">rate</span> &lt; {{ report.file2.fileName }} <span class="lowercase">rate</span>
+              <span class="block text-sm text-gray-400">
+                {{ report.file1.fileName }} <span class="lowercase">rate</span> &lt;
+                {{ report.file2.fileName }} <span class="lowercase">rate</span>
               </span>
             </h4>
             <MarginAnalysisTable :analysis="report.sellToAnalysis" />
@@ -128,7 +121,8 @@
             <h4 class="text-lg text-fbWhite font-medium mb-4 uppercase ml-2">
               BUY FROM
               <span class="block text-sm text-gray-400">
-                    {{ report.file1.fileName }} <span class="lowercase">rate</span> &gt; {{ report.file2.fileName }} <span class="lowercase">rate</span>
+                {{ report.file1.fileName }} <span class="lowercase">rate</span> &gt;
+                {{ report.file2.fileName }} <span class="lowercase">rate</span>
               </span>
             </h4>
             <MarginAnalysisTable :analysis="report.buyFromAnalysis" />
