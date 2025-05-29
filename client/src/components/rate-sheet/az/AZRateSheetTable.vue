@@ -217,7 +217,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
-          <template v-for="group in filteredData" :key="group.destinationName">
+          <template v-for="group in paginatedData" :key="group.destinationName">
             <!-- Main Row -->
             <tr
               class="hover:bg-gray-700/50 cursor-pointer"
@@ -628,6 +628,90 @@
       </table>
     </div>
 
+    <!-- Pagination Controls (Phase 1 - Placeholder) -->
+    <div
+      v-if="filteredData.length > 0"
+      class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+    >
+      <!-- Left: Items per page selector -->
+      <div class="flex items-center space-x-2">
+        <label for="az-items-per-page" class="text-sm text-gray-400">Show:</label>
+        <select
+          id="az-items-per-page"
+          v-model="itemsPerPage"
+          @change="handleItemsPerPageChange"
+          :disabled="isSearching"
+          class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
+          :class="{ 'opacity-50': isSearching }"
+        >
+          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+        <span class="text-sm text-gray-400">entries per page</span>
+      </div>
+
+      <!-- Center: Page navigation -->
+      <div class="flex items-center space-x-1">
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToFirstPage"
+          :disabled="!canGoToPreviousPage || isSearching"
+          title="First page"
+        >
+          &laquo; First
+        </BaseButton>
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToPreviousPage"
+          :disabled="!canGoToPreviousPage || isSearching"
+          title="Previous page"
+        >
+          &lsaquo; Prev
+        </BaseButton>
+
+        <span class="text-sm text-gray-400 px-2">Page</span>
+        <input
+          v-model.number="directPageInput"
+          @keyup.enter="handleDirectPageInput"
+          type="number"
+          min="1"
+          :max="totalPages"
+          :disabled="isSearching"
+          class="w-16 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg text-center focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
+          :class="{ 'opacity-50': isSearching }"
+          title="Go to page"
+        />
+        <span class="text-sm text-gray-400 px-2">of {{ totalPages }}</span>
+
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToNextPage"
+          :disabled="!canGoToNextPage || isSearching"
+          title="Next page"
+        >
+          Next &rsaquo;
+        </BaseButton>
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToLastPage"
+          :disabled="!canGoToNextPage || isSearching"
+          title="Last page"
+        >
+          Last &raquo;
+        </BaseButton>
+      </div>
+
+      <!-- Right: Results info -->
+      <div class="text-sm text-gray-400">
+        {{ currentPageRange }}
+      </div>
+    </div>
+
     <!-- Empty State -->
     <div v-else class="text-center py-12 bg-gray-800 rounded-lg">
       <p class="text-gray-400" v-if="isSearching">
@@ -868,7 +952,13 @@
   // Track which codes match the current search query
   const matchingCodes = ref<{ [destinationName: string]: { [rate: number]: string[] } }>({});
 
-  
+  // --- Pagination State (Phase 1) ---
+  const currentPage = ref(1);
+  const itemsPerPage = ref(50);
+  const itemsPerPageOptions = ref([10, 25, 50, 100, 250]);
+  const directPageInput = ref(1);
+  // --- End Pagination State ---
+
   // Add these properties to handle search state
   let searchDebounceTimeout: NodeJS.Timeout | null = null;
 
@@ -1001,6 +1091,75 @@
     }
     return result;
   });
+
+  // --- Pagination Computed Properties (Phase 2) ---
+  const totalPages = computed(() => {
+    if (!filteredData.value || filteredData.value.length === 0) {
+      return 1;
+    }
+    return Math.ceil(filteredData.value.length / itemsPerPage.value);
+  });
+
+  const paginatedData = computed(() => {
+    if (!filteredData.value) {
+      return [];
+    }
+    const start = (currentPage.value - 1) * itemsPerPage.value;
+    const end = start + itemsPerPage.value;
+    return filteredData.value.slice(start, end);
+  });
+  // --- End Pagination Computed Properties ---
+
+  // --- Pagination UI State (Phase 3) ---
+  const canGoToPreviousPage = computed(() => currentPage.value > 1);
+  const canGoToNextPage = computed(() => currentPage.value < totalPages.value);
+
+  // Computed property for displaying current page range
+  const currentPageRange = computed(() => {
+    if (filteredData.value.length === 0) return 'No entries';
+
+    const start = (currentPage.value - 1) * itemsPerPage.value + 1;
+    const end = Math.min(currentPage.value * itemsPerPage.value, filteredData.value.length);
+    return `Showing ${start.toLocaleString()}-${end.toLocaleString()} of ${filteredData.value.length.toLocaleString()} entries`;
+  });
+  // --- End Pagination UI State ---
+
+  // --- Pagination Navigation Functions (Phase 3) ---
+  function goToNextPage() {
+    if (currentPage.value < totalPages.value) {
+      currentPage.value++;
+      directPageInput.value = currentPage.value;
+    }
+  }
+
+  function goToPreviousPage() {
+    if (currentPage.value > 1) {
+      currentPage.value--;
+      directPageInput.value = currentPage.value;
+    }
+  }
+
+  function goToFirstPage() {
+    currentPage.value = 1;
+    directPageInput.value = currentPage.value;
+  }
+
+  function goToLastPage() {
+    currentPage.value = totalPages.value;
+    directPageInput.value = currentPage.value;
+  }
+
+  function handleDirectPageInput() {
+    const pageNum = Math.max(1, Math.min(directPageInput.value, totalPages.value));
+    currentPage.value = pageNum;
+    directPageInput.value = pageNum;
+  }
+
+  function handleItemsPerPageChange() {
+    currentPage.value = 1;
+    directPageInput.value = 1;
+  }
+  // --- End Pagination Functions ---
 
   // Add a new function to perform the search asynchronously
   async function performAsyncSearch(query: string) {
@@ -1887,8 +2046,32 @@
       sortColumnKey.value = column.key;
       sortDirection.value = 'asc';
     }
+    // Reset to first page when sorting changes (Phase 4)
+    currentPage.value = 1;
+    directPageInput.value = 1;
   }
   // --- End Sorting Handler ---
+
+  // --- Pagination Reset Watchers (Phase 4) ---
+  // Reset to first page when filters change
+  watch([filterStatus, debouncedSearchQuery], () => {
+    currentPage.value = 1;
+    directPageInput.value = 1;
+  });
+
+  // Keep directPageInput in sync with currentPage
+  watch(currentPage, (newPage) => {
+    directPageInput.value = newPage;
+  });
+  // --- End Pagination Reset Watchers ---
+
+  // Effective Date Logic - MOVED
+  // function toggleEffectiveDateSettings() { ... } // MOVED
+
+  // Date selection helper methods - MOVED
+  // function setSameDate(value: 'today' | 'tomorrow' | 'custom') { ... }
+  // function setIncreaseDate(value: 'today' | 'tomorrow' | 'week' | 'custom') { ... }
+  // function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') { ... }
 
   // ... rest of the script setup ...
 </script>
