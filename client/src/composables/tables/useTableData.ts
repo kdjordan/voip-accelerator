@@ -1,13 +1,12 @@
 import { ref, computed, watch, Ref, ComputedRef } from 'vue';
-import { useDebounceFn } from '@vueuse/core';
 import Dexie from 'dexie';
 import type { DexieDBBase } from '@/composables/useDexieDB';
 import useDexieDB from '@/composables/useDexieDB';
-import { type DBName } from '@/types/app-types';
+import type { DBNameType } from '@/types/app-types';
 
 // Configuration interface for the composable
 export interface UseTableDataConfig<T> {
-  dbName: DBName;
+  dbName: DBNameType;
   tableName: string;
   itemsPerPage?: number;
   itemsPerPageOptions?: number[];

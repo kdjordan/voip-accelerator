@@ -130,12 +130,11 @@
 
       <!-- Download CSV Button -->
       <div class="ml-auto self-end">
-        <!-- Use BaseButton for Export -->
         <BaseButton
           variant="primary"
           size="small"
           @click="downloadCsv"
-          :disabled="isLoading || isLoadingMore || comparisonData.length === 0 || isExporting"
+          :disabled="isDataLoading || isFiltering || displayedData.length === 0 || isExporting"
           title="Export Current View"
           class="min-w-[180px]"
         >
@@ -151,30 +150,38 @@
       </div>
     </div>
 
-    <!-- 1. Loading Spinner (show whenever isLoading is true) -->
-    <div v-if="isLoading" class="text-center text-gray-500 py-10">
+    <!-- Filtering Overlay -->
+    <div v-if="isFiltering" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
+        <ArrowPathIcon class="animate-spin w-6 h-6 text-accent" />
+        <span class="text-white">Filtering data...</span>
+      </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div v-if="isDataLoading && !isFiltering" class="text-center text-gray-500 py-10">
       <div class="flex items-center justify-center space-x-2">
         <ArrowPathIcon class="animate-spin w-8 h-8" />
         <span>Loading comparison data...</span>
       </div>
     </div>
 
-    <!-- 2. Error Message -->
-    <div v-else-if="error" class="text-center text-red-500 py-10">
-      Error loading data: {{ error }}
+    <!-- Error Message -->
+    <div v-else-if="dataError" class="text-center text-red-500 py-10">
+      Error loading data: {{ dataError }}
     </div>
 
-    <!-- 3. No Data Message Block (Now contains spinner instead of text) -->
-    <div v-else-if="comparisonData.length === 0" class="text-center text-gray-500 py-10">
-      <!-- Spinner content moved here -->
-      <div class="flex items-center justify-center space-x-2">
-        <span>No matching records found.</span>
-      </div>
+    <!-- No Data Message -->
+    <div
+      v-else-if="displayedData.length === 0 && !isDataLoading"
+      class="text-center text-gray-500 py-10"
+    >
+      <span>No matching records found.</span>
     </div>
 
-    <!-- 4. Data Table (show if not loading, no error, and data exists) -->
+    <!-- Data Table -->
     <div v-else class="overflow-x-auto">
-      <div ref="scrollContainerRef" class="max-h-[600px] overflow-y-auto">
+      <div class="max-h-[600px] overflow-y-auto">
         <table class="min-w-full divide-y divide-gray-700 text-sm">
           <thead class="bg-gray-800 sticky top-0 z-10">
             <tr>
@@ -197,8 +204,8 @@
                 ]"
                 @click="header.sortable ? handleSort(header.key) : undefined"
                 :aria-sort="
-                  header.sortable && sortColumnKey === header.key
-                    ? sortDirection === 'asc'
+                  header.sortable && currentSortKey === header.key
+                    ? currentSortDirection === 'asc'
                       ? 'ascending'
                       : 'descending'
                     : 'none'
@@ -208,7 +215,7 @@
                   <BaseBadge
                     v-if="header.key === 'destName1' || header.key === 'rate1'"
                     size="small"
-                    variant="success"
+                    variant="neutral"
                     class="mb-1 max-w-[150px] truncate"
                     :title="fileName1"
                     >{{ fileName1 }}</BaseBadge
@@ -216,7 +223,7 @@
                   <BaseBadge
                     v-if="header.key === 'destName2' || header.key === 'rate2'"
                     size="small"
-                    variant="info"
+                    variant="neutral"
                     class="mb-1 max-w-[150px] truncate"
                     :title="fileName2"
                     >{{ fileName2 }}</BaseBadge
@@ -230,11 +237,11 @@
                     }}</span>
                     <template v-if="header.sortable">
                       <ArrowUpIcon
-                        v-if="sortColumnKey === header.key && sortDirection === 'asc'"
+                        v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
                         class="w-4 h-4 ml-1.5 text-accent shrink-0"
                       />
                       <ArrowDownIcon
-                        v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
+                        v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'"
                         class="w-4 h-4 ml-1.5 text-accent shrink-0"
                       />
                       <ChevronUpDownIcon
@@ -249,7 +256,7 @@
           </thead>
           <tbody class="divide-y divide-gray-800">
             <tr
-              v-for="record in comparisonData"
+              v-for="record in displayedData"
               :key="record.id || record.dialCode"
               class="hover:bg-gray-700/50"
             >
@@ -263,45 +270,103 @@
               </td>
               <td class="px-4 py-2 text-gray-400 text-center">{{ record.destName1 ?? 'N/A' }}</td>
               <td class="px-4 py-2 text-gray-400 text-center">{{ record.destName2 ?? 'N/A' }}</td>
-              <td class="px-4 py-2 text-white text-center">
+              <td class="px-4 py-2 text-gray-200 text-center bg-gray-600/40">
                 {{ record.rate1?.toFixed(6) ?? 'N/A' }}
               </td>
-              <td class="px-4 py-2 text-white text-center">
+              <td class="px-4 py-2 text-gray-200 text-center bg-gray-700/40">
                 {{ record.rate2?.toFixed(6) ?? 'N/A' }}
               </td>
-              <td class="px-4 py-2 text-center" :class="getDiffClass(record.diff)">
+              <td class="px-4 py-2 text-gray-400 text-center">
                 {{ record.diff?.toFixed(6) ?? 'N/A' }}
               </td>
-              <td class="px-4 py-2 text-center" :class="getDiffPercentClass(record.diffPercent)">
+              <td class="px-4 py-2 text-gray-400 text-center">
                 {{ record.diffPercent ? record.diffPercent.toFixed(2) + '%' : 'N/A' }}
               </td>
-              <td class="px-4 py-2 text-center">
-                <span :class="getCheaperClass(record.cheaperFile)">
-                  {{ formatCheaperFile(record.cheaperFile) }}
-                </span>
+              <td class="px-4 py-2 text-gray-400 text-center">
+                {{ formatCheaperFile(record.cheaperFile) }}
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
 
-        <!-- Trigger for loading more -->
-        <div ref="loadMoreTriggerRef" class="h-10"></div>
-
-        <!-- Loading indicator for subsequent pages -->
-        <div v-if="isLoadingMore" class="text-center text-gray-500 py-4">
-          <div class="flex items-center justify-center space-x-2">
-            <ArrowPathIcon class="animate-spin w-5 h-5" />
-            <span>Loading more...</span>
-          </div>
-        </div>
-
-        <!-- End of results message -->
-        <div
-          v-if="!hasMoreData && comparisonData.length > 0"
-          class="text-center text-gray-600 py-4"
+    <!-- Pagination Controls -->
+    <div
+      v-if="displayedData.length > 0"
+      class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+    >
+      <!-- Left: Items per page selector -->
+      <div class="flex items-center space-x-2">
+        <label for="az-items-per-page" class="text-sm text-gray-400">Show:</label>
+        <select
+          id="az-items-per-page"
+          v-model="itemsPerPage"
+          class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
         >
-          End of results.
-        </div>
+          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+        <span class="text-sm text-gray-400">entries per page</span>
+      </div>
+
+      <!-- Center: Page navigation -->
+      <div class="flex items-center space-x-1">
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToFirstPage(createFilters())"
+          :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
+          title="First page"
+        >
+          &laquo; First
+        </BaseButton>
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToPreviousPage(createFilters())"
+          :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
+          title="Previous page"
+        >
+          &lsaquo; Prev
+        </BaseButton>
+
+        <span class="text-sm text-gray-400 px-2">Page</span>
+        <input
+          v-model.number="directPageInput"
+          @keyup.enter="handleDirectPageInput(createFilters())"
+          type="number"
+          min="1"
+          :max="totalPages"
+          class="w-16 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg text-center focus:ring-primary-500 focus:border-primary-500 px-2 py-1"
+          title="Go to page"
+        />
+        <span class="text-sm text-gray-400 px-2">of {{ totalPages }}</span>
+
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToNextPage(createFilters())"
+          :disabled="!canGoToNextPage || isDataLoading || isFiltering"
+          title="Next page"
+        >
+          Next &rsaquo;
+        </BaseButton>
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="goToLastPage(createFilters())"
+          :disabled="!canGoToNextPage || isDataLoading || isFiltering"
+          title="Last page"
+        >
+          Last &raquo;
+        </BaseButton>
+      </div>
+
+      <!-- Right: Total results info -->
+      <div class="text-sm text-gray-400">
+        Total: {{ totalFilteredItems.toLocaleString() }} records
       </div>
     </div>
   </div>
@@ -309,9 +374,11 @@
 
 <script setup lang="ts">
   import { ref, watch, computed } from 'vue';
-  import { useIntersectionObserver } from '@vueuse/core';
   import { useAzStore } from '@/stores/az-store';
-  import { AZService } from '@/services/az.service';
+  import { useAZTableData } from '@/composables/tables/useAZTableData';
+  import type { FilterFunction } from '@/composables/tables/useTableData';
+  import { DBName } from '@/types/app-types';
+  import { useDebounceFn } from '@vueuse/core';
   import Papa from 'papaparse';
   import {
     ArrowDownTrayIcon,
@@ -321,10 +388,7 @@
   } from '@heroicons/vue/20/solid';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
-  import type {
-    AZDetailedComparisonEntry,
-    AZDetailedComparisonFilters,
-  } from '@/types/domains/az-types';
+  import type { AZDetailedComparisonEntry } from '@/types/domains/az-types';
   import {
     Listbox,
     ListboxButton,
@@ -336,12 +400,6 @@
   import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
 
   const azStore = useAzStore();
-  const azService = new AZService();
-
-  const comparisonData = ref<AZDetailedComparisonEntry[]>([]);
-  const isLoading = ref<boolean>(false); // Initial loading
-  const isLoadingMore = ref<boolean>(false); // Subsequent page loading
-  const error = ref<string | null>(null);
 
   // Replace any existing export-related refs with the composable
   const { isExporting, exportError, exportToCSV } = useCSVExport();
@@ -351,19 +409,50 @@
   const selectedCheaper = ref<'' | 'file1' | 'file2' | 'same'>('');
   const selectedMatchStatus = ref<'' | 'both' | 'file1_only' | 'file2_only'>('');
 
-  // Pagination State
-  const offset = ref<number>(0);
-  const pageSize = 50; // Items per page
-  const hasMoreData = ref<boolean>(true);
+  // Table name state
   const currentTableName = ref<string | null>(null);
 
-  // Infinite Scroll Elements
-  const loadMoreTriggerRef = ref<HTMLElement | null>(null);
-  const scrollContainerRef = ref<HTMLElement | null>(null);
+  // Initialize the table data composable
+  const {
+    // Data
+    displayedData,
+    totalFilteredItems,
 
-  // --- Sorting State ---
-  const sortColumnKey = ref<keyof AZDetailedComparisonEntry | string | null>(null);
-  const sortDirection = ref<'asc' | 'desc'>('asc');
+    // Loading states
+    isDataLoading,
+    isFiltering,
+
+    // Error handling
+    dataError,
+
+    // Pagination
+    currentPage,
+    itemsPerPage,
+    itemsPerPageOptions,
+    totalPages,
+    canGoToPreviousPage,
+    canGoToNextPage,
+    directPageInput,
+
+    // Sorting
+    currentSortKey,
+    currentSortDirection,
+
+    // Methods
+    initializeDB,
+    resetPaginationAndLoad,
+    goToFirstPage,
+    goToPreviousPage,
+    goToNextPage,
+    goToLastPage,
+    handleDirectPageInput,
+  } = useAZTableData<AZDetailedComparisonEntry>({
+    dbName: DBName.AZ_PRICING_COMPARISON,
+    tableName: 'az_comparison_results',
+    itemsPerPage: 50,
+    sortKey: 'dialCode',
+    sortDirection: 'asc',
+  });
 
   interface SortableAZCompColumn {
     key: keyof AZDetailedComparisonEntry | string;
@@ -394,7 +483,6 @@
     { key: 'diffPercent', label: 'Diff %', sortable: true, textAlign: 'center' },
     { key: 'cheaperFile', label: 'Cheaper File', sortable: true, textAlign: 'center' },
   ]);
-  // --- End Sorting State ---
 
   // --- Get Filenames for Headers ---
   const fileName1 = computed(() => {
@@ -422,7 +510,40 @@
     { value: 'file2_only', label: `${fileName2.value} Only` },
   ]);
 
-  // --- Helper function to format match status (Updated Again) ---
+  // Create filter functions based on current filter state
+  function createFilters(): FilterFunction<AZDetailedComparisonEntry>[] {
+    const filters: FilterFunction<AZDetailedComparisonEntry>[] = [];
+
+    // Search filter
+    const term = searchTerm.value.toLowerCase().trim();
+    if (term) {
+      filters.push(
+        (record) =>
+          record.dialCode.toLowerCase().includes(term) ||
+          record.destName1?.toLowerCase().includes(term) ||
+          record.destName2?.toLowerCase().includes(term)
+      );
+    }
+
+    // Cheaper file filter
+    if (selectedCheaper.value) {
+      filters.push((record) => record.cheaperFile === selectedCheaper.value);
+    }
+
+    // Match status filter
+    if (selectedMatchStatus.value) {
+      filters.push((record) => record.matchStatus === selectedMatchStatus.value);
+    }
+
+    return filters;
+  }
+
+  // Debounced function for filter changes
+  const debouncedResetPaginationAndLoad = useDebounceFn(async () => {
+    await resetPaginationAndLoad(createFilters());
+  }, 300);
+
+  // --- Helper function to format match status ---
   function formatMatchStatus(status: 'both' | 'file1_only' | 'file2_only'): string {
     switch (status) {
       case 'both':
@@ -436,7 +557,7 @@
     }
   }
 
-  // --- Helper function to format Cheaper File (New) ---
+  // --- Helper function to format Cheaper File ---
   function formatCheaperFile(cheaper?: 'file1' | 'file2' | 'same'): string {
     if (cheaper === 'file1') {
       return fileName1.value;
@@ -445,7 +566,7 @@
     } else if (cheaper === 'same') {
       return 'Same Rate';
     } else {
-      return 'N/A'; // Handle undefined/null case
+      return 'N/A';
     }
   }
 
@@ -456,13 +577,11 @@
     );
 
     if (isBadgeHeader) {
-      // For headers with badges, stack them vertically and center items horizontally
       return {
         'flex-col': true,
         'items-center': true,
       };
     } else {
-      // For other headers, maintain the original row layout
       return {
         'items-center': true,
         'justify-center': header.textAlign === 'text-center',
@@ -471,136 +590,33 @@
     }
   }
 
-  async function fetchData(tableName: string | null, reset = false) {
-    if (!tableName || isLoadingMore.value || (!hasMoreData.value && !reset)) {
-      if (!tableName && reset) comparisonData.value = []; // Clear data if no table name during reset
-      return;
-    }
-
-    const initialLoad = reset || comparisonData.value.length === 0;
-    if (initialLoad) isLoading.value = true;
-    else isLoadingMore.value = true;
-
-    error.value = null;
-
-    try {
-      const filters: AZDetailedComparisonFilters = {};
-      if (searchTerm.value) filters.search = searchTerm.value;
-      if (selectedCheaper.value) filters.cheaper = selectedCheaper.value;
-      if (selectedMatchStatus.value) filters.matchStatus = selectedMatchStatus.value;
-      // Add sort parameters to filters
-      if (sortColumnKey.value) filters.sortKey = sortColumnKey.value as string; // Cast needed if keyof AZDetailedComparisonEntry
-      if (sortColumnKey.value && sortDirection.value) filters.sortDir = sortDirection.value;
-
-      const newData = await azService.getPagedDetailedComparisonData(
-        tableName,
-        pageSize,
-        offset.value,
-        filters
-      );
-
-      if (reset) {
-        comparisonData.value = newData;
-      } else {
-        comparisonData.value.push(...newData);
-      }
-
-      offset.value += newData.length;
-      hasMoreData.value = newData.length === pageSize;
-    } catch (err: any) {
-      console.error('Error loading detailed AZ comparison data:', err);
-      error.value = err.message || 'Failed to load data';
-      hasMoreData.value = false;
-    } finally {
-      if (initialLoad) isLoading.value = false;
-      isLoadingMore.value = false;
-    }
-  }
-
-  async function resetAndFetchData() {
-    if (scrollContainerRef.value) {
-      scrollContainerRef.value.scrollTop = 0;
-    }
-    offset.value = 0;
-    hasMoreData.value = true;
-    error.value = null;
-    isLoadingMore.value = false;
-    isLoading.value = true; // Ensure loading state is active
-
-    // Explicitly clear the data array *before* fetching new data on reset
-    comparisonData.value = [];
-
-    await fetchData(currentTableName.value, true); // Pass reset = true
-  }
-
+  // Watch for table name changes from the store
   watch(
     () => azStore.getDetailedComparisonTableName,
     (newTableName) => {
       if (newTableName !== currentTableName.value) {
         currentTableName.value = newTableName;
-        // Reset sort when table changes, or decide if it should persist
-        // sortColumnKey.value = null;
-        resetAndFetchData();
+        if (newTableName) {
+          resetPaginationAndLoad(createFilters());
+        }
       }
     },
     { immediate: true }
   );
 
+  // Watch for filter changes
   watch([searchTerm, selectedCheaper, selectedMatchStatus], () => {
-    // Reset sort to default when primary filters change
-    sortColumnKey.value = null; // Or set to a default like 'dialCode'
-    sortDirection.value = 'asc';
-    resetAndFetchData();
+    debouncedResetPaginationAndLoad();
   });
 
-  useIntersectionObserver(
-    loadMoreTriggerRef,
-    ([{ isIntersecting }]) => {
-      if (
-        isIntersecting &&
-        hasMoreData.value &&
-        !isLoadingMore.value &&
-        !isLoading.value &&
-        currentTableName.value
-      ) {
-        fetchData(currentTableName.value);
-      }
-    },
-    {
-      root: scrollContainerRef.value,
-      threshold: 0.1,
-    }
-  );
+  // Watch for items per page changes
+  watch(itemsPerPage, () => {
+    resetPaginationAndLoad(createFilters());
+  });
 
-  function getDiffClass(value: number | null | undefined): string {
-    if (value === null || value === undefined || value === 0) return 'text-gray-400';
-    return value > 0 ? 'text-red-400' : 'text-green-400';
-  }
-
-  function getDiffPercentClass(value: number | null | undefined): string {
-    if (value === null || value === undefined || value === 0) return 'text-gray-400';
-    return value > 0 ? 'text-red-400' : 'text-green-400';
-  }
-
-  function getCheaperClass(cheaper?: 'file1' | 'file2' | 'same'): string {
-    const baseStyle = 'font-medium px-2 py-0.5 rounded-md text-xs'; // Base button style
-    if (cheaper === 'file1') {
-      // File 1 is cheaper - Green style
-      return `${baseStyle} text-green-300 bg-green-900/50 border border-green-700`;
-    } else if (cheaper === 'file2') {
-      // File 2 is cheaper - Blue style (matching header)
-      return `${baseStyle} text-blue-300 bg-blue-900/50 border border-blue-700`;
-    } else if (cheaper === 'same') {
-      // Same Rate - Neutral/Gray style (similar to orange but gray)
-      return `${baseStyle} text-gray-300 bg-gray-700/50 border border-gray-600`;
-    } else {
-      // N/A or undefined - Plain text style
-      return 'text-gray-500';
-    }
-  }
-
+  // CSV Export function
   function downloadCsv(): void {
-    if (!comparisonData.value || comparisonData.value.length === 0) {
+    if (!displayedData.value || displayedData.value.length === 0) {
       console.warn('No data currently displayed to download.');
       return;
     }
@@ -618,7 +634,7 @@
         'Cheaper File',
       ];
 
-      const rows = comparisonData.value.map((record) => [
+      const rows = displayedData.value.map((record) => [
         record.dialCode,
         formatMatchStatus(record.matchStatus),
         record.destName1 ?? 'n/a',
@@ -639,22 +655,22 @@
       );
     } catch (err: any) {
       console.error('Error during CSV export:', err);
-      error.value = 'Failed to generate CSV file.';
+      dataError.value = 'Failed to generate CSV file.';
     }
   }
 
-  // --- Sorting Handler ---
-  function handleSort(columnKey: keyof AZDetailedComparisonEntry | string) {
+  // Sorting Handler
+  async function handleSort(columnKey: keyof AZDetailedComparisonEntry | string) {
     const header = tableHeaders.value.find((h) => h.key === columnKey);
     if (!header || !header.sortable) return;
 
-    if (sortColumnKey.value === columnKey) {
-      sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+    if (currentSortKey.value === columnKey) {
+      currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
-      sortColumnKey.value = columnKey;
-      sortDirection.value = 'asc';
+      currentSortKey.value = columnKey as string;
+      currentSortDirection.value = 'asc';
     }
-    resetAndFetchData(); // Refetch data with new sort parameters
+
+    await resetPaginationAndLoad(createFilters());
   }
-  // --- End Sorting Handler ---
 </script>

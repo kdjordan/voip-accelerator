@@ -184,6 +184,20 @@ export interface InvalidRowsState {
 export type FileKey = 'file1' | 'file2';
 
 /**
+ * Represents a flat entry for A-Z rate sheets as stored in Dexie.
+ */
+export interface AZFlatRateEntry {
+  id?: number;
+  destinationName: string; // Corresponds to 'name' in RateSheetRecord
+  code: string; // Corresponds to 'prefix' in RateSheetRecord
+  rate: number;
+  effectiveDate: string; // Corresponds to 'effective' in RateSheetRecord
+  minDuration?: number;
+  increments?: number;
+  // Note: changeCode is derived during formalization, not stored directly here.
+}
+
+/**
  * Types for the US Rate Sheet entries
  */
 // Specific fields for a US Rate Sheet Entry
