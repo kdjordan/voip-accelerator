@@ -2,6 +2,15 @@
   <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
     <AZEffectiveDates />
 
+    <!-- Global Adjustment -->
+    <AZGlobalAdjustment />
+
+    <!-- Adjustment Memory Panel -->
+    <AZAdjustmentMemory />
+
+    <!-- Bucket Bulk Adjustment -->
+    <AZBucketBulkAdjustment />
+
     <!-- Filters -->
     <div class="mb-4" :class="{ 'min-h-[16rem]': filteredData.length === 0 }">
       <div class="flex items-center justify-between mb-4">
@@ -11,7 +20,20 @@
             Showing {{ filteredData.length }} destinations
           </span>
         </div>
+        <!-- Updated buttons container -->
         <div class="flex items-center gap-2">
+          <BaseButton
+            variant="primary"
+            size="small"
+            :icon="ArrowDownTrayIcon"
+            :disabled="!store.canExport"
+            @click="handleExport"
+            :title="
+              store.canExport ? 'Export Rate Sheet' : 'Resolve all rate conflicts before exporting'
+            "
+          >
+            Export Rate Sheet
+          </BaseButton>
           <BaseButton
             variant="destructive"
             size="small"
@@ -24,7 +46,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <!-- Filter -->
         <div class="w-full">
           <Listbox v-model="filterStatus" as="div">
@@ -79,6 +101,62 @@
           </Listbox>
         </div>
 
+        <!-- Rate Bucket Filter -->
+        <div class="w-full">
+          <Listbox v-model="selectedRateBucket" as="div">
+            <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1">
+              Rate Bucket Filter
+            </ListboxLabel>
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-900 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 sm:text-sm border border-gray-700"
+                :class="{ 'opacity-50': !canUseBucketFilter }"
+                :disabled="!canUseBucketFilter"
+              >
+                <span class="block truncate text-gray-300">{{ selectedBucketLabel }}</span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <ListboxOption
+                    v-for="bucket in RATE_BUCKETS"
+                    :key="bucket.type"
+                    :value="bucket.type"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-accent/20 text-accent' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">
+                        {{ bucket.label }}
+                      </span>
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
+        </div>
+
         <!-- Search -->
         <div>
           <label class="block text-sm text-gray-400 mb-1">Search</label>
@@ -95,7 +173,7 @@
           </div>
         </div>
 
-        <!-- Actions Column -->
+        <!-- Actions Column - Remove Export button from here since it's moved up -->
         <div>
           <!-- Bulk Actions -->
           <div v-if="store.getDiscrepancyCount > 0">
@@ -143,19 +221,6 @@
               </BaseButton>
             </div>
           </div>
-          <!-- Export Action -->
-          <div v-else-if="!isBulkProcessing && store.getDiscrepancyCount === 0">
-            <label class="block text-sm text-gray-400 mb-1">Actions</label>
-            <BaseButton
-              variant="primary"
-              size="standard"
-              class="w-full"
-              :icon="ArrowDownTrayIcon"
-              @click="handleExport"
-            >
-              Export Rate Sheet
-            </BaseButton>
-          </div>
         </div>
       </div>
     </div>
@@ -169,7 +234,6 @@
         <thead class="bg-gray-900/50 sticky top-0 z-10">
           <tr>
             <th scope="col" class="w-8 px-3 py-3"></th>
-            <!-- Spacer for expand icon -->
             <th
               v-for="header in tableHeaders"
               :key="header.key"
@@ -193,23 +257,27 @@
                 :class="{
                   'justify-center': header.textAlign === 'text-center',
                   'justify-end': header.textAlign === 'text-right',
-                  'justify-start': header.textAlign === 'text-left' || !header.textAlign, // Default to justify-start
+                  'justify-start': header.textAlign === 'text-left' || !header.textAlign,
                 }"
               >
                 <span>{{ header.label }}</span>
                 <template v-if="header.sortable">
-                  <ArrowUpIcon
-                    v-if="sortColumnKey === header.key && sortDirection === 'asc'"
-                    class="w-3 h-3 ml-1 text-accent"
-                  />
-                  <ArrowDownIcon
-                    v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
-                    class="w-3 h-3 ml-1 text-accent"
-                  />
-                  <ChevronUpDownIcon
-                    v-else
-                    class="w-3 h-3 ml-1 text-gray-400 hover:text-gray-200"
-                  />
+                  <div class="flex items-center ml-1">
+                    <template v-if="sortColumnKey === header.key && isSorting">
+                      <ArrowPathIcon class="w-3 h-3 text-accent animate-spin" />
+                    </template>
+                    <template v-else>
+                      <ArrowUpIcon
+                        v-if="sortColumnKey === header.key && sortDirection === 'asc'"
+                        class="w-3 h-3 text-accent"
+                      />
+                      <ArrowDownIcon
+                        v-else-if="sortColumnKey === header.key && sortDirection === 'desc'"
+                        class="w-3 h-3 text-accent"
+                      />
+                      <ChevronUpDownIcon v-else class="w-3 h-3 text-gray-400 hover:text-gray-200" />
+                    </template>
+                  </div>
                 </template>
               </div>
             </th>
@@ -253,16 +321,7 @@
               </td>
               <!-- Change Code column -->
               <td class="px-3 py-4 text-sm text-center align-middle">
-                <BaseBadge
-                  :variant="
-                    group.changeCode === ChangeCode.INCREASE
-                      ? 'accent'
-                      : group.changeCode === ChangeCode.DECREASE
-                        ? 'destructive'
-                        : 'info'
-                  "
-                  size="small"
-                >
+                <BaseBadge variant="neutral" size="small">
                   {{ group.changeCode }}
                 </BaseBadge>
               </td>
@@ -738,6 +797,7 @@
     ChevronUpDownIcon,
     ArrowUpIcon, // Added
     ArrowDownIcon, // Added
+    ExclamationTriangleIcon,
   } from '@heroicons/vue/24/outline';
   import {
     Listbox,
@@ -755,11 +815,17 @@
     EffectiveDateStoreSettings,
     AdjustmentType,
     AdjustmentValueType,
+    RateBucketType,
   } from '@/types/domains/rate-sheet-types';
   // import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker'; // Moved to AZEffectiveDates
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
   import AZEffectiveDates from './AZEffectiveDates.vue'; // Import the new component
+  import AZAdjustmentMemory from './AZAdjustmentMemory.vue'; // Import the new memory component
+  import AZBucketBulkAdjustment from './AZBucketBulkAdjustment.vue'; // Import the new bucket adjustment component
+  import AZGlobalAdjustment from './AZGlobalAdjustment.vue'; // Import the new global adjustment component
+  import { RATE_BUCKETS, formatRate } from '@/constants/rate-buckets';
+  import TableSorterWorker from '@/workers/table-sorter.worker?worker';
 
   // Define emits
   const emit = defineEmits(['update:discrepancy-count']);
@@ -901,6 +967,13 @@
   const filterStatus = ref<
     'all' | 'conflicts' | 'no-conflicts' | 'change-same' | 'change-increase' | 'change-decrease'
   >('all');
+  const selectedRateBucket = ref<RateBucketType>('all');
+  const canUseBucketFilter = computed(() => store.canUseBucketAdjustments);
+  const selectedBucketLabel = computed(() => {
+    const bucket = RATE_BUCKETS.find((b) => b.type === selectedRateBucket.value);
+    return bucket?.label || 'All Rates';
+  });
+
   const searchQuery = ref('');
   const debouncedSearchQuery = ref('');
   const isSearching = ref(false);
@@ -982,8 +1055,14 @@
         performAsyncSearch(newValue.toLowerCase());
       }, 300); // 300ms debounce
     });
+
+    // Watch for bucket filter changes
+    watch(selectedRateBucket, (newValue) => {
+      store.setRateBucketFilter(newValue);
+    });
   });
 
+  // Single source of truth for filtered data
   const filteredData = computed(() => {
     let filtered = groupedData.value;
 
@@ -1000,95 +1079,25 @@
       filtered = filtered.filter((group) => group.changeCode === ChangeCode.DECREASE);
     }
 
-    // If no search query, return filtered data without additional processing
+    // Apply bucket filter
+    filtered = store.getFilteredByRateBucket;
+
+    // If no search query, return filtered data
     if (!debouncedSearchQuery.value) {
-      // Clear matching codes when search is empty
       matchingCodes.value = {};
-      // Apply sorting to nameMatches or the original filtered list if no search
-      if (sortColumnKey.value && filtered.length > 0) {
-        const sortKey = sortColumnKey.value;
-        const direction = sortDirection.value === 'asc' ? 1 : -1;
-        const headerConfig = tableHeaders.value.find((h) => h.key === sortKey);
-
-        filtered.sort((a, b) => {
-          let valA, valB;
-          if (headerConfig?.getValue) {
-            valA = headerConfig.getValue(a, selectedRates);
-            valB = headerConfig.getValue(b, selectedRates);
-          } else {
-            valA = (a as any)[sortKey];
-            valB = (b as any)[sortKey];
-          }
-
-          const isInvalidA =
-            valA === null || valA === undefined || valA === -Infinity || valA === Infinity;
-          const isInvalidB =
-            valB === null || valB === undefined || valB === -Infinity || valB === Infinity;
-
-          if (isInvalidA && isInvalidB) return 0;
-          if (isInvalidA) return direction; // Push invalid to end for asc
-          if (isInvalidB) return -direction; // Push invalid to end for asc (B comes before A)
-
-          if (typeof valA === 'string' && typeof valB === 'string') {
-            return valA.localeCompare(valB) * direction;
-          }
-          if (typeof valA === 'number' && typeof valB === 'number') {
-            return (valA - valB) * direction;
-          }
-          if (valA < valB) return -1 * direction;
-          if (valA > valB) return 1 * direction;
-          return 0;
-        });
-      }
       return filtered;
     }
 
     const query = debouncedSearchQuery.value.toLowerCase();
 
-    // Fast path: filter by destination name first (this is very quick)
+    // Fast path: filter by destination name first
     let result = filtered.filter((group) => group.destinationName.toLowerCase().includes(query));
 
-    // If no name matches, search codes (precomputed results from async search)
+    // If no name matches, search codes
     if (result.length === 0) {
       result = filtered.filter((group) => !!matchingCodes.value[group.destinationName]);
     }
 
-    // Apply sorting to the final result list
-    if (sortColumnKey.value && result.length > 0) {
-      const sortKey = sortColumnKey.value;
-      const direction = sortDirection.value === 'asc' ? 1 : -1;
-      const headerConfig = tableHeaders.value.find((h) => h.key === sortKey);
-
-      result.sort((a, b) => {
-        let valA, valB;
-        if (headerConfig?.getValue) {
-          valA = headerConfig.getValue(a, selectedRates);
-          valB = headerConfig.getValue(b, selectedRates);
-        } else {
-          valA = (a as any)[sortKey];
-          valB = (b as any)[sortKey];
-        }
-
-        const isInvalidA =
-          valA === null || valA === undefined || valA === -Infinity || valA === Infinity;
-        const isInvalidB =
-          valB === null || valB === undefined || valB === -Infinity || valB === Infinity;
-
-        if (isInvalidA && isInvalidB) return 0;
-        if (isInvalidA) return direction;
-        if (isInvalidB) return -direction;
-
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          return valA.localeCompare(valB) * direction;
-        }
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return (valA - valB) * direction;
-        }
-        if (valA < valB) return -1 * direction;
-        if (valA > valB) return 1 * direction;
-        return 0;
-      });
-    }
     return result;
   });
 
@@ -1496,15 +1505,13 @@
     processedCount.value = 0;
     bulkMode.value = mode;
 
-    // Give the browser a chance to update the UI and show the animation
-    // by using requestAnimationFrame and a small setTimeout
+    // Give the browser a chance to update the UI
     await new Promise((resolve) => {
       requestAnimationFrame(() => {
         setTimeout(resolve, 50);
       });
     });
 
-    // Get all destinations with discrepancies
     const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
     totalToProcess.value = destinationsToFix.length;
 
@@ -1514,37 +1521,38 @@
       return;
     }
 
-    // Initialize current discrepancy count
-    currentDiscrepancyCount.value = store.getDiscrepancyCount;
+    const batchSize = 10;
+    for (let i = 0; i < destinationsToFix.length; i += batchSize) {
+      const batch = destinationsToFix.slice(i, i + batchSize);
 
-    try {
-      console.time('bulkUpdate');
-
-      // Create an array to hold all update operations
-      const updates = destinationsToFix.map((group) => {
+      const updates = batch.map((group) => {
         const rates = group.rates.map((r) => r.rate);
         const newRate = mode === 'highest' ? Math.max(...rates) : Math.min(...rates);
         return { name: group.destinationName, rate: newRate };
       });
 
-      // Use a single operation to update all rates at once for maximum performance
       await store.bulkUpdateDestinationRates(updates);
 
-      // Single UI update when complete
-      processedCount.value = totalToProcess.value;
-      currentDiscrepancyCount.value = 0;
+      // Force a store update after each batch
+      store.setGroupedData([...store.getGroupedData]);
 
-      // Force a final update of the grouped data
-      store.setGroupedData(store.getGroupedData);
-      console.timeEnd('bulkUpdate');
+      processedCount.value += batch.length;
+      currentDiscrepancyCount.value = store.getDiscrepancyCount;
 
-      // Add a small delay to show the button animation
-      // since the operation is now so fast users might miss the feedback
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    } finally {
-      isBulkProcessing.value = false;
-      bulkMode.value = null;
+      // Yield control back to the main thread
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 50);
+        });
+      });
     }
+
+    // Final store update to ensure UI is in sync
+    store.setGroupedData([...store.getGroupedData]);
+    currentDiscrepancyCount.value = store.getDiscrepancyCount;
+
+    isBulkProcessing.value = false;
+    bulkMode.value = null;
   }
   // --- End Bulk Update ---
 
@@ -1554,62 +1562,57 @@
     bulkMode.value = 'mostCommon';
     processedCount.value = 0;
 
-    // Give the browser a chance to update the UI
     await new Promise((resolve) => {
       requestAnimationFrame(() => {
         setTimeout(resolve, 50);
       });
     });
 
-    // Get all destinations with discrepancies
     const destinationsToFix = groupedData.value.filter((group) => group.hasDiscrepancy);
-
-    if (destinationsToFix.length === 0) {
-      isBulkProcessing.value = false;
-      bulkMode.value = null;
-      return;
-    }
-
     const updates: { name: string; rate: number }[] = [];
 
     for (const group of destinationsToFix) {
       const sortedRatesInfo = getSortedRates(group);
-
-      // Find rates marked as highest percentage (could be multiple if equal distribution)
       const highestPercentageRates = sortedRatesInfo.filter((r) => r.isHighestPercentage);
 
-      // Only proceed if there's exactly one rate with the highest percentage
       if (highestPercentageRates.length === 1) {
         const mostCommonRate = highestPercentageRates[0].rate;
         updates.push({ name: group.destinationName, rate: mostCommonRate });
       }
-      // Skip destinations with equal distribution (highestPercentageRates.length > 1 or 0)
     }
 
     totalToProcess.value = updates.length;
 
     if (updates.length > 0) {
       try {
-        console.time('bulkUpdateMostCommon');
-        await store.bulkUpdateDestinationRates(updates);
-        processedCount.value = updates.length;
-        // Force a final update of the grouped data
-        store.setGroupedData(store.getGroupedData);
-        console.timeEnd('bulkUpdateMostCommon');
-        await new Promise((resolve) => setTimeout(resolve, 300)); // Show feedback
+        const batchSize = 10;
+        for (let i = 0; i < updates.length; i += batchSize) {
+          const batch = updates.slice(i, i + batchSize);
+          await store.bulkUpdateDestinationRates(batch);
+
+          // Force a store update after each batch
+          store.setGroupedData([...store.getGroupedData]);
+
+          processedCount.value += batch.length;
+          currentDiscrepancyCount.value = store.getDiscrepancyCount;
+
+          await new Promise((resolve) => {
+            requestAnimationFrame(() => {
+              setTimeout(resolve, 50);
+            });
+          });
+        }
+
+        // Final store update
+        store.setGroupedData([...store.getGroupedData]);
+        currentDiscrepancyCount.value = store.getDiscrepancyCount;
       } catch (error) {
         console.error('Bulk update with most common rate failed:', error);
-        // Optionally show an error to the user
-      } finally {
-        isBulkProcessing.value = false;
-        bulkMode.value = null;
       }
-    } else {
-      console.log('No destinations found with a single most common rate to apply for bulk update.');
-      // Optionally provide feedback to the user (e.g., via a toast message)
-      isBulkProcessing.value = false;
-      bulkMode.value = null;
     }
+
+    isBulkProcessing.value = false;
+    bulkMode.value = null;
   }
   // --- End Bulk Update Most Common ---
 
@@ -1712,10 +1715,9 @@
   watch(
     () => store.getDiscrepancyCount,
     (newCount) => {
-      if (!isBulkProcessing.value) {
-        currentDiscrepancyCount.value = newCount;
-        emit('update:discrepancy-count', newCount);
-      }
+      // Ensure we update the count even during bulk processing
+      currentDiscrepancyCount.value = newCount;
+      emit('update:discrepancy-count', newCount);
     },
     { immediate: true }
   );
@@ -2039,16 +2041,60 @@
 
   // --- Sorting Handler ---
   function handleSort(column: SortableAZColumn) {
-    if (!column.sortable) return;
+    if (!column.sortable || !sortWorker.value) return;
+
+    // Cancel any pending sort operation
+    if (sortDebounceTimeout) {
+      clearTimeout(sortDebounceTimeout);
+    }
+
+    // Update sort direction
     if (sortColumnKey.value === column.key) {
       sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
       sortColumnKey.value = column.key;
       sortDirection.value = 'asc';
     }
-    // Reset to first page when sorting changes (Phase 4)
-    currentPage.value = 1;
-    directPageInput.value = 1;
+
+    // Set loading state
+    isSorting.value = true;
+
+    // Debounce the sort operation
+    sortDebounceTimeout = setTimeout(() => {
+      try {
+        // Create a plain object with only the data needed for sorting
+        const sortData = {
+          data: groupedData.value.map((group) => ({
+            destinationName: String(group.destinationName),
+            codes: [...group.codes],
+            rates: group.rates.map((r) => ({
+              rate: Number(r.rate),
+              count: Number(r.count),
+              percentage: Number(r.percentage),
+              isCommon: Boolean(r.isCommon),
+            })),
+            hasDiscrepancy: Boolean(group.hasDiscrepancy),
+            changeCode: String(group.changeCode),
+            effectiveDate: String(group.effectiveDate),
+            minDuration: group.minDuration ? String(group.minDuration) : undefined,
+            increments: group.increments ? String(group.increments) : undefined,
+          })),
+          sortKey: String(column.key),
+          sortDirection: sortDirection.value,
+          selectedRates: { ...selectedRates.value },
+        };
+
+        // Post message to worker
+        sortWorker.value?.postMessage(sortData);
+
+        // Reset to first page
+        currentPage.value = 1;
+        directPageInput.value = 1;
+      } catch (error) {
+        console.error('Error sending data to worker:', error);
+        isSorting.value = false;
+      }
+    }, 150);
   }
   // --- End Sorting Handler ---
 
@@ -2074,6 +2120,46 @@
   // function setDecreaseDate(value: 'today' | 'tomorrow' | 'custom') { ... }
 
   // ... rest of the script setup ...
+
+  // Watch for bucket filter changes
+  watch(selectedRateBucket, (newValue) => {
+    store.setRateBucketFilter(newValue);
+  });
+
+  // Add new refs for sorting state
+  const isSorting = ref(false);
+  const sortWorker = ref<Worker | null>(null);
+  let sortDebounceTimeout: NodeJS.Timeout | null = null;
+
+  // Initialize worker
+  onMounted(() => {
+    // Initialize worker
+    try {
+      sortWorker.value = new TableSorterWorker();
+      sortWorker.value.onmessage = (e) => {
+        store.setGroupedData(e.data);
+        isSorting.value = false;
+      };
+      sortWorker.value.onerror = (error) => {
+        console.error('Worker error:', error);
+        isSorting.value = false;
+      };
+    } catch (error) {
+      console.error('Failed to initialize worker:', error);
+    }
+  });
+
+  // Cleanup worker
+  onBeforeUnmount(() => {
+    if (sortWorker.value) {
+      sortWorker.value.terminate();
+      sortWorker.value = null;
+    }
+    if (sortDebounceTimeout) {
+      clearTimeout(sortDebounceTimeout);
+      sortDebounceTimeout = null;
+    }
+  });
 </script>
 
 <style scoped>

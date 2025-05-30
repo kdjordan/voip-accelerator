@@ -94,6 +94,10 @@ export interface RateSheetState {
     hasIncrements: boolean;
   };
   effectiveDateSettings: EffectiveDateStoreSettings;
+  // AZ Rate Sheet Advanced Filtering & Markup State
+  selectedRateBucket: RateBucketType;
+  adjustmentMemory: AdjustmentMemoryState;
+  operationInProgress: boolean; // Prevent concurrent operations
 }
 
 export const RequiredRFColumnRole = {
@@ -211,3 +215,68 @@ export interface USRateSheetEntry {
   intraRate: number | null;
   indetermRate: number | null; // Keep indetermRate as requested
 }
+
+// --- AZ Rate Sheet Advanced Filtering & Markup Types ---
+
+// Rate bucket types with boundary handling
+export type RateBucketType =
+  | '0.000000-0.015000'
+  | '0.015001-0.050000'
+  | '0.050001-0.150000'
+  | '0.150000+'
+  | 'all';
+
+export interface RateBucketFilter {
+  type: RateBucketType;
+  label: string;
+  min: number;
+  max: number | null;
+}
+
+// Memory system types with sequential IDs
+export interface RateAdjustmentMemory {
+  id: number; // Simple sequential counter
+  destinationName: string;
+  originalRate: number;
+  adjustedRate: number;
+  adjustmentType: 'markup' | 'markdown';
+  adjustmentValue: number;
+  adjustmentValueType: 'percentage' | 'fixed';
+  timestamp: string;
+  codes: string[];
+  bucketCategory: RateBucketType;
+  method: 'individual' | 'bucket' | 'global';
+}
+
+export interface AdjustmentMemoryState {
+  adjustments: RateAdjustmentMemory[];
+  excludedDestinations: Set<string>;
+  sessionStartTime: string;
+  totalAdjustmentsMade: number;
+  nextId: number; // Sequential counter for IDs
+}
+
+export interface MemoryStats {
+  totalDestinationsAdjusted: number;
+  markupCount: number;
+  markdownCount: number;
+  averageAdjustmentPercentage: number;
+  bucketDistribution: Record<RateBucketType, number>;
+}
+
+// Bulk adjustment types with rollback support
+export interface BucketBulkAdjustment {
+  bucketType: RateBucketType;
+  adjustmentType: 'markup' | 'markdown';
+  adjustmentValueType: 'percentage' | 'fixed';
+  adjustmentValue: number;
+  affectedDestinations: string[];
+  excludedDestinations: string[];
+  previewData: {
+    totalDestinations: number;
+    eligibleDestinations: number;
+    estimatedNewRates: { destinationName: string; newRate: number }[];
+  };
+}
+
+// --- End AZ Rate Sheet Advanced Filtering & Markup Types ---

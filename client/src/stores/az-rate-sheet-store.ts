@@ -8,7 +8,12 @@ import type {
   InvalidRow,
   ChangeCodeType,
   EffectiveDateStoreSettings,
+  RateBucketType,
+  AdjustmentMemoryState,
+  RateAdjustmentMemory,
+  MemoryStats,
 } from '@/types/domains/rate-sheet-types';
+import { classifyRateIntoBucket, isRateInBucket } from '@/constants/rate-buckets';
 
 const STORAGE_KEY = 'voip-accelerator-rate-sheet-data';
 const STORAGE_KEY_SETTINGS = 'voip-accelerator-rate-sheet-settings';
@@ -34,6 +39,16 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       hasMinDuration: false,
       hasIncrements: false,
     },
+    // AZ Rate Sheet Advanced Filtering & Markup State
+    selectedRateBucket: 'all' as RateBucketType,
+    adjustmentMemory: {
+      adjustments: [],
+      excludedDestinations: new Set<string>(),
+      sessionStartTime: new Date().toISOString(),
+      totalAdjustmentsMade: 0,
+      nextId: 1, // Sequential counter starts at 1
+    } as AdjustmentMemoryState,
+    operationInProgress: false, // Prevent concurrent operations
   }),
 
   actions: {
@@ -70,6 +85,66 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         hasIncrements: Object.values(mappings).includes('increments'),
       };
       localStorage.setItem('rate-sheet-optional-fields', JSON.stringify(this.optionalFields));
+    },
+
+    // Memory management actions
+    addAdjustmentToMemory(adjustment: Omit<RateAdjustmentMemory, 'id'>) {
+      const adjustmentWithId = {
+        ...adjustment,
+        id: this.adjustmentMemory.nextId++,
+      };
+
+      this.adjustmentMemory.adjustments.push(adjustmentWithId);
+      this.adjustmentMemory.excludedDestinations.add(adjustment.destinationName);
+      this.adjustmentMemory.totalAdjustmentsMade++;
+      this.saveMemoryToLocalStorage();
+    },
+
+    removeAdjustmentFromMemory(adjustmentId: number) {
+      const adjustmentIndex = this.adjustmentMemory.adjustments.findIndex(
+        (a) => a.id === adjustmentId
+      );
+      if (adjustmentIndex >= 0) {
+        const adjustment = this.adjustmentMemory.adjustments[adjustmentIndex];
+        this.adjustmentMemory.adjustments.splice(adjustmentIndex, 1);
+        this.adjustmentMemory.excludedDestinations.delete(adjustment.destinationName);
+
+        // Revert the rate change
+        this.updateDestinationRate(adjustment.destinationName, adjustment.originalRate);
+      }
+      this.saveMemoryToLocalStorage();
+    },
+
+    clearAllAdjustmentMemory() {
+      // Revert all adjustments to original rates
+      for (const adjustment of this.adjustmentMemory.adjustments) {
+        this.updateDestinationRate(adjustment.destinationName, adjustment.originalRate);
+      }
+
+      // Clear memory but keep DexieJS data intact
+      this.adjustmentMemory = {
+        adjustments: [],
+        excludedDestinations: new Set<string>(),
+        sessionStartTime: new Date().toISOString(),
+        totalAdjustmentsMade: 0,
+        nextId: 1,
+      };
+      this.saveMemoryToLocalStorage();
+    },
+
+    isDestinationExcluded(destinationName: string): boolean {
+      return this.adjustmentMemory.excludedDestinations.has(destinationName);
+    },
+
+    // Operation state management
+    setOperationInProgress(inProgress: boolean) {
+      this.operationInProgress = inProgress;
+    },
+
+    // Bucket filtering actions
+    setRateBucketFilter(bucketType: RateBucketType) {
+      this.selectedRateBucket = bucketType;
+      localStorage.setItem('az-rate-bucket-filter', bucketType);
     },
 
     async updateDestinationRate(destinationName: string, newRate: number) {
@@ -338,8 +413,23 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       this.groupedData = [];
       this.isLocallyStored = false;
       this.invalidRows = [];
+
+      // Clear memory system
+      this.adjustmentMemory = {
+        adjustments: [],
+        excludedDestinations: new Set<string>(),
+        sessionStartTime: new Date().toISOString(),
+        totalAdjustmentsMade: 0,
+        nextId: 1,
+      };
+
+      // Reset bucket filter
+      this.selectedRateBucket = 'all';
+
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY_INVALID);
+      localStorage.removeItem('az-adjustment-memory');
+      localStorage.removeItem('az-rate-bucket-filter');
     },
 
     addInvalidRow(row: InvalidRow) {
@@ -598,6 +688,59 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     saveInvalidRowsToLocalStorage() {
       // Persistence disabled - invalid rows will not be saved between browser refreshes
     },
+
+    // Save memory to localStorage - disabled, no persistence between sessions
+    saveMemoryToLocalStorage() {
+      // Persistence disabled - memory will not be saved between browser refreshes
+    },
+
+    // Update existing saveRateSelection to integrate with memory
+    async updateDestinationRateWithMemory(
+      destinationName: string,
+      newRate: number,
+      adjustmentDetails?: {
+        adjustmentType: 'markup' | 'markdown';
+        adjustmentValue: number;
+        adjustmentValueType: 'percentage' | 'fixed';
+      }
+    ) {
+      const originalRate = this.getOriginalRateForDestination(destinationName);
+      const success = await this.updateDestinationRate(destinationName, newRate);
+
+      if (success && adjustmentDetails) {
+        // Add to memory system
+        const group = this.groupedData.find((g) => g.destinationName === destinationName);
+        if (group) {
+          this.addAdjustmentToMemory({
+            destinationName,
+            originalRate,
+            adjustedRate: newRate,
+            adjustmentType: adjustmentDetails.adjustmentType,
+            adjustmentValue: adjustmentDetails.adjustmentValue,
+            adjustmentValueType: adjustmentDetails.adjustmentValueType,
+            timestamp: new Date().toISOString(),
+            codes: group.codes,
+            bucketCategory: classifyRateIntoBucket(originalRate),
+            method: 'individual',
+          });
+        }
+      }
+
+      return success;
+    },
+
+    getOriginalRateForDestination(destinationName: string): number {
+      const group = this.groupedData.find((g) => g.destinationName === destinationName);
+      const memoryEntry = this.adjustmentMemory.adjustments.find(
+        (a) => a.destinationName === destinationName
+      );
+
+      if (memoryEntry) {
+        return memoryEntry.originalRate;
+      }
+
+      return group?.rates[0]?.rate || 0;
+    },
   },
 
   getters: {
@@ -735,6 +878,66 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
     hasStoredData(state): boolean {
       return state.originalData.length > 0;
+    },
+
+    // New getters for AZ Rate Sheet Advanced Filtering & Markup
+
+    getFilteredByRateBucket(state) {
+      if (state.selectedRateBucket === 'all') {
+        return state.groupedData;
+      }
+
+      return state.groupedData.filter((group) => {
+        // For destinations with conflicts, check all rates
+        if (group.hasDiscrepancy) {
+          return group.rates.some((rate) => isRateInBucket(rate.rate, state.selectedRateBucket));
+        }
+        // For single-rate destinations, check the single rate
+        return isRateInBucket(group.rates[0]?.rate || 0, state.selectedRateBucket);
+      });
+    },
+
+    canUseBucketAdjustments(state) {
+      return state.groupedData.filter((group) => group.hasDiscrepancy).length === 0;
+    },
+
+    canExport(state) {
+      // Block export until conflicts resolved
+      return state.groupedData.filter((group) => group.hasDiscrepancy).length === 0;
+    },
+
+    getMemoryStats(state): MemoryStats {
+      const adjustments = state.adjustmentMemory.adjustments;
+      const bucketDistribution: Record<RateBucketType, number> = {
+        '0.0-1.5': 0,
+        '1.6-5.0': 0,
+        '5.1-15.0': 0,
+        '15.0+': 0,
+        all: 0,
+      };
+
+      let markupCount = 0;
+      let markdownCount = 0;
+      let totalPercentageChange = 0;
+
+      adjustments.forEach((adj) => {
+        bucketDistribution[adj.bucketCategory]++;
+        if (adj.adjustmentType === 'markup') markupCount++;
+        else markdownCount++;
+
+        if (adj.adjustmentValueType === 'percentage') {
+          totalPercentageChange += adj.adjustmentValue;
+        }
+      });
+
+      return {
+        totalDestinationsAdjusted: adjustments.length,
+        markupCount,
+        markdownCount,
+        averageAdjustmentPercentage:
+          adjustments.length > 0 ? totalPercentageChange / adjustments.length : 0,
+        bucketDistribution,
+      };
     },
   },
 });
