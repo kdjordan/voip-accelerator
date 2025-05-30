@@ -152,9 +152,8 @@
 
     <!-- Filtering Overlay -->
     <div v-if="isFiltering" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
-        <ArrowPathIcon class="animate-spin w-6 h-6 text-accent" />
-        <span class="text-white">Filtering data...</span>
+      <div class="p-6 flex items-center space-x-3">
+        <ArrowPathIcon class="animate-spin w-6 h-6 text-grey-400" />
       </div>
     </div>
 
@@ -412,7 +411,94 @@
   // Table name state
   const currentTableName = ref<string | null>(null);
 
-  // Initialize the table data composable
+  // Get Filenames for Headers first
+  const fileName1 = computed(() => {
+    const names = azStore.getFileNames;
+    return names.length > 0 ? names[0].replace(/\.csv$/i, '') : 'File 1';
+  });
+
+  const fileName2 = computed(() => {
+    const names = azStore.getFileNames;
+    return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
+  });
+
+  // Type for sortable column definition
+  interface SortableAZCompColumn {
+    key: keyof AZDetailedComparisonEntry | string;
+    label: string;
+    sortable: boolean;
+    textAlign?: string;
+    getValue?: (record: AZDetailedComparisonEntry) => any;
+  }
+
+  // Define table headers as a constant before composable initialization
+  const tableHeaders: SortableAZCompColumn[] = [
+    {
+      key: 'dialCode',
+      label: 'Dial Code',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.dialCode,
+    },
+    {
+      key: 'matchStatus',
+      label: 'Match Status',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.matchStatus,
+    },
+    {
+      key: 'destName1',
+      label: 'Dest Name (File 1)',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.destName1 || '',
+    },
+    {
+      key: 'destName2',
+      label: 'Dest Name (File 2)',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.destName2 || '',
+    },
+    {
+      key: 'rate1',
+      label: 'Rate (File 1)',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.rate1 || 0,
+    },
+    {
+      key: 'rate2',
+      label: 'Rate (File 2)',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.rate2 || 0,
+    },
+    {
+      key: 'diff',
+      label: 'Diff',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.diff || 0,
+    },
+    {
+      key: 'diffPercent',
+      label: 'Diff %',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.diffPercent || 0,
+    },
+    {
+      key: 'cheaperFile',
+      label: 'Cheaper File',
+      sortable: true,
+      textAlign: 'center',
+      getValue: (entry: AZDetailedComparisonEntry) => entry.cheaperFile || '',
+    },
+  ];
+
+  // Initialize table data composable
   const {
     // Data
     displayedData,
@@ -452,47 +538,20 @@
     itemsPerPage: 50,
     sortKey: 'dialCode',
     sortDirection: 'asc',
+    tableHeaders,
   });
 
-  interface SortableAZCompColumn {
-    key: keyof AZDetailedComparisonEntry | string;
-    label: string;
-    sortable: boolean;
-    textAlign?: string;
-    getValue?: (record: AZDetailedComparisonEntry) => any;
-  }
+  // Update the table header labels when filenames change
+  watch([fileName1, fileName2], ([newFile1, newFile2]) => {
+    const destName1Header = tableHeaders.find((h) => h.key === 'destName1');
+    const destName2Header = tableHeaders.find((h) => h.key === 'destName2');
+    const rate1Header = tableHeaders.find((h) => h.key === 'rate1');
+    const rate2Header = tableHeaders.find((h) => h.key === 'rate2');
 
-  const tableHeaders = computed<SortableAZCompColumn[]>(() => [
-    { key: 'dialCode', label: 'Dial Code', sortable: true, textAlign: 'center' },
-    { key: 'matchStatus', label: 'Match Status', sortable: true, textAlign: 'center' },
-    {
-      key: 'destName1',
-      label: `Dest Name (${fileName1.value})`,
-      sortable: true,
-      textAlign: 'center',
-    },
-    {
-      key: 'destName2',
-      label: `Dest Name (${fileName2.value})`,
-      sortable: true,
-      textAlign: 'center',
-    },
-    { key: 'rate1', label: `Rate (${fileName1.value})`, sortable: true, textAlign: 'center' },
-    { key: 'rate2', label: `Rate (${fileName2.value})`, sortable: true, textAlign: 'center' },
-    { key: 'diff', label: 'Diff', sortable: true, textAlign: 'center' },
-    { key: 'diffPercent', label: 'Diff %', sortable: true, textAlign: 'center' },
-    { key: 'cheaperFile', label: 'Cheaper File', sortable: true, textAlign: 'center' },
-  ]);
-
-  // --- Get Filenames for Headers ---
-  const fileName1 = computed(() => {
-    const names = azStore.getFileNames;
-    return names.length > 0 ? names[0].replace(/\.csv$/i, '') : 'File 1';
-  });
-
-  const fileName2 = computed(() => {
-    const names = azStore.getFileNames;
-    return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
+    if (destName1Header) destName1Header.label = `Dest Name (${newFile1})`;
+    if (destName2Header) destName2Header.label = `Dest Name (${newFile2})`;
+    if (rate1Header) rate1Header.label = `Rate (${newFile1})`;
+    if (rate2Header) rate2Header.label = `Rate (${newFile2})`;
   });
 
   // --- Dynamic Filter Options ---
@@ -661,7 +720,7 @@
 
   // Sorting Handler
   async function handleSort(columnKey: keyof AZDetailedComparisonEntry | string) {
-    const header = tableHeaders.value.find((h) => h.key === columnKey);
+    const header = tableHeaders.find((h) => h.key === columnKey);
     if (!header || !header.sortable) return;
 
     if (currentSortKey.value === columnKey) {

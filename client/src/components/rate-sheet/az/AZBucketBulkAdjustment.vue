@@ -200,7 +200,7 @@
     <div v-if="isApplyingBulkAdjustment" class="mt-4 mb-4">
       <!-- Progress Status -->
       <div class="flex items-center justify-between text-sm mb-2">
-        <span class="text-accent">{{ processingStatus }}</span>
+        <span class="text-fbWhite">{{ processingStatus }}</span>
         <span class="text-gray-400">{{ processedCount }} / {{ totalToProcess }}</span>
       </div>
 

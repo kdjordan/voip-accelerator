@@ -13,6 +13,13 @@ export interface UseTableDataConfig<T> {
   sortKey?: string;
   sortDirection?: 'asc' | 'desc';
   debounceMs?: number;
+  tableHeaders?: {
+    key: string;
+    label: string;
+    sortable: boolean;
+    textAlign?: string;
+    getValue?: (record: T) => any;
+  }[];
 }
 
 // Filter function type
@@ -146,9 +153,13 @@ export function useTableData<T extends Record<string, any>>(
   function applySort(data: T[], sortKey: string, sortDirection: 'asc' | 'desc'): T[] {
     if (!sortKey) return data;
 
+    // Find the header configuration for this sort key
+    const header = config.tableHeaders?.find((h) => h.key === sortKey);
+
     return [...data].sort((a, b) => {
-      const valA = (a as any)[sortKey];
-      const valB = (b as any)[sortKey];
+      // Use getValue function if available in header config
+      const valA = header?.getValue ? header.getValue(a) : (a as any)[sortKey];
+      const valB = header?.getValue ? header.getValue(b) : (b as any)[sortKey];
       let comparison = 0;
 
       if (valA === null || valA === undefined) {
@@ -199,9 +210,17 @@ export function useTableData<T extends Record<string, any>>(
         totalMatchingRecords
       );
 
-      // Try to apply DB-level sorting if possible
+      // Check if current sort column has a getValue function
+      const header = config.tableHeaders?.find((h) => h.key === currentSortKey.value);
+      const shouldUseClientSort = header?.getValue !== undefined;
+
+      // Try to apply DB-level sorting if possible and no getValue function exists
       let dbSortApplied = false;
-      if (currentSortKey.value && typeof (query as any).orderBy === 'function') {
+      if (
+        currentSortKey.value &&
+        !shouldUseClientSort &&
+        typeof (query as any).orderBy === 'function'
+      ) {
         try {
           query = (query as any).orderBy(currentSortKey.value);
           if (currentSortDirection.value === 'desc') {
@@ -214,18 +233,35 @@ export function useTableData<T extends Record<string, any>>(
         }
       }
 
-      // Apply pagination
-      const offset = (pageNumber - 1) * itemsPerPage.value;
-      let pageData = await query.offset(offset).limit(itemsPerPage.value).toArray();
+      // For getValue columns or if DB sort failed, get all matching records for client-side sort
+      let pageData: T[];
+      if (shouldUseClientSort) {
+        // Get all matching records
+        const allMatchingData = await query.toArray();
+        // Sort all records
+        const sortedData = applySort(
+          allMatchingData,
+          currentSortKey.value,
+          currentSortDirection.value
+        );
+        // Apply pagination in memory
+        const start = (pageNumber - 1) * itemsPerPage.value;
+        pageData = sortedData.slice(start, start + itemsPerPage.value);
+      } else {
+        // Apply regular pagination for DB-sorted data
+        const offset = (pageNumber - 1) * itemsPerPage.value;
+        pageData = await query.offset(offset).limit(itemsPerPage.value).toArray();
+
+        // Apply client-side sort if DB sort wasn't applied
+        if (!dbSortApplied && currentSortKey.value) {
+          pageData = applySort(pageData, currentSortKey.value, currentSortDirection.value);
+        }
+      }
+
       console.log(
         '[useTableData] fetchPageData: pageData.length AFTER pagination:',
         pageData.length
       );
-
-      // Apply client-side sort if DB sort wasn't applied
-      if (!dbSortApplied && currentSortKey.value) {
-        pageData = applySort(pageData, currentSortKey.value, currentSortDirection.value);
-      }
 
       // Update state
       displayedData.value = pageData;

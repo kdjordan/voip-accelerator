@@ -711,7 +711,116 @@
     customRender?: boolean; // For headers that need complex rendering like badges
     fileBadge?: 'file1' | 'file2'; // To associate with fileName1 or fileName2
     rateType?: 'Inter' | 'Intra' | 'Indeterm'; // For rate columns
+    getValue?: (entry: USPricingComparisonRecord) => any; // Function to get the value for sorting
   }
+
+  // Define table headers before composable initialization
+  const tableHeaders: SortableUSComparisonColumn[] = [
+    {
+      key: 'npanxx',
+      label: 'NPANXX',
+      sortable: true,
+      textAlign: 'text-left',
+      getValue: (entry: USPricingComparisonRecord) => entry.npanxx,
+    },
+    {
+      key: 'stateCode',
+      label: 'State',
+      sortable: true,
+      textAlign: 'text-left',
+      getValue: (entry: USPricingComparisonRecord) =>
+        lergStore.getLocationByNPA(entry.npa)?.region || 'N/A',
+    },
+    {
+      key: 'countryCode',
+      label: 'Country',
+      sortable: true,
+      textAlign: 'text-left',
+      getValue: (entry: USPricingComparisonRecord) =>
+        lergStore.getLocationByNPA(entry.npa)?.country || 'N/A',
+    },
+    {
+      key: 'file1_inter',
+      label: 'Inter',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file1',
+      rateType: 'Inter',
+      getValue: (entry: USPricingComparisonRecord) => entry.file1_inter || 0,
+    },
+    {
+      key: 'file2_inter',
+      label: 'Inter',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file2',
+      rateType: 'Inter',
+      getValue: (entry: USPricingComparisonRecord) => entry.file2_inter || 0,
+    },
+    {
+      key: 'diff_inter_pct',
+      label: 'Diff %',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USPricingComparisonRecord) => entry.diff_inter_pct || 0,
+    },
+    {
+      key: 'file1_intra',
+      label: 'Intra',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file1',
+      rateType: 'Intra',
+      getValue: (entry: USPricingComparisonRecord) => entry.file1_intra || 0,
+    },
+    {
+      key: 'file2_intra',
+      label: 'Intra',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file2',
+      rateType: 'Intra',
+      getValue: (entry: USPricingComparisonRecord) => entry.file2_intra || 0,
+    },
+    {
+      key: 'diff_intra_pct',
+      label: 'Diff %',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USPricingComparisonRecord) => entry.diff_intra_pct || 0,
+    },
+    {
+      key: 'file1_indeterm',
+      label: 'Indeterm',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file1',
+      rateType: 'Indeterm',
+      getValue: (entry: USPricingComparisonRecord) => entry.file1_indeterm || 0,
+    },
+    {
+      key: 'file2_indeterm',
+      label: 'Indeterm',
+      sortable: true,
+      textAlign: 'text-center',
+      customRender: true,
+      fileBadge: 'file2',
+      rateType: 'Indeterm',
+      getValue: (entry: USPricingComparisonRecord) => entry.file2_indeterm || 0,
+    },
+    {
+      key: 'diff_indeterm_pct',
+      label: 'Diff %',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USPricingComparisonRecord) => entry.diff_indeterm_pct || 0,
+    },
+  ];
 
   const usStore = useUsStore();
   const lergStore = useLergStore();
@@ -766,6 +875,7 @@
     itemsPerPage: 50,
     sortKey: 'npanxx',
     sortDirection: 'asc',
+    tableHeaders,
   });
 
   // --- Metro Filter Composable ---
@@ -845,71 +955,6 @@
   const animatedFile2IntraAvg = useTransition(file2IntraAvgSource, transitionConfig);
   const animatedFile2IndetermAvg = useTransition(file2IndetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
-
-  // --- Table Headers ---
-  const tableHeaders = computed<SortableUSComparisonColumn[]>(() => [
-    { key: 'npanxx', label: 'NPANXX', sortable: true, textAlign: 'text-left' },
-    { key: 'stateCode', label: 'State', sortable: true, textAlign: 'text-left' },
-    { key: 'countryCode', label: 'Country', sortable: true, textAlign: 'text-left' },
-    {
-      key: 'file1_inter',
-      label: 'Inter',
-      sortable: true,
-      textAlign: 'text-center',
-      customRender: true,
-      fileBadge: 'file1',
-      rateType: 'Inter',
-    },
-    {
-      key: 'file2_inter',
-      label: 'Inter',
-      sortable: true,
-      textAlign: 'text-center',
-      customRender: true,
-      fileBadge: 'file2',
-      rateType: 'Inter',
-    },
-    { key: 'diff_inter_pct', label: 'Diff %', sortable: true, textAlign: 'text-center' },
-    {
-      key: 'file1_intra',
-      label: 'Intra',
-      sortable: true,
-      textAlign: 'text-center',
-      customRender: true,
-      fileBadge: 'file1',
-      rateType: 'Intra',
-    },
-    {
-      key: 'file2_intra',
-      label: 'Intra',
-      sortable: true,
-      textAlign: 'text-center',
-      customRender: true,
-      fileBadge: 'file2',
-      rateType: 'Intra',
-    },
-    { key: 'diff_intra_pct', label: 'Diff %', sortable: true, textAlign: 'text-center' },
-    {
-      key: 'file1_indeterm',
-      label: 'Indeterm',
-      sortable: true,
-      textAlign: 'text-center',
-      customRender: true,
-      fileBadge: 'file1',
-      rateType: 'Indeterm',
-    },
-    {
-      key: 'file2_indeterm',
-      label: 'Indeterm',
-      sortable: true,
-      textAlign: 'text-center',
-      customRender: true,
-      fileBadge: 'file2',
-      rateType: 'Indeterm',
-    },
-    { key: 'diff_indeterm_pct', label: 'Diff %', sortable: true, textAlign: 'text-center' },
-  ]);
-  // --- End Table Headers ---
 
   // --- Get Filenames for Headers ---
   const fileName1 = computed(() => {
@@ -1019,7 +1064,6 @@
     if (!dbInstance.value) return;
 
     isCalculatingAverages.value = true;
-    
 
     const totals = {
       file1_inter: { sum: 0, count: 0 },
@@ -1161,7 +1205,7 @@
 
   // --- Sorting Handler ---
   async function handleSort(key: SortableUSComparisonColumn['key']) {
-    const header = tableHeaders.value.find((h) => h.key === key);
+    const header = tableHeaders.find((h) => h.key === key);
     if (!header || !header.sortable) {
       return;
     }

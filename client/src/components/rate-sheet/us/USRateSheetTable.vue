@@ -677,7 +677,11 @@
             <tr v-for="entry in displayedData" :key="entry.npanxx" class="hover:bg-gray-700/50">
               <td class="px-4 py-2 text-gray-400 font-mono text-center">{{ entry.npanxx }}</td>
               <td class="px-4 py-2 text-gray-400 text-center">
-                {{ lergStore.getLocationByNPA(entry.npa)?.region || 'N/A' }}
+                {{
+                  tableHeaders.find((h) => h.key === 'stateCode')?.getValue?.(entry) ||
+                  lergStore.getLocationByNPA(entry.npa)?.region ||
+                  'N/A'
+                }}
               </td>
               <td class="px-4 py-2 text-gray-400 text-center">
                 {{ lergStore.getLocationByNPA(entry.npa)?.country || 'N/A' }}
@@ -874,6 +878,60 @@
   const lergStore = useLergStore();
   const RATE_SHEET_TABLE_NAME = 'entries';
 
+  // Define table headers for dynamic rendering and sorting
+  const tableHeaders = ref([
+    {
+      key: 'npanxx',
+      label: 'NPANXX',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) => entry.npanxx,
+    },
+    {
+      key: 'stateCode',
+      label: 'State',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) => lergStore.getLocationByNPA(entry.npa)?.region || 'N/A',
+    },
+    {
+      key: 'countryCode',
+      label: 'Country',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) =>
+        lergStore.getLocationByNPA(entry.npa)?.country || 'N/A',
+    },
+    {
+      key: 'interRate',
+      label: 'Interstate Rate',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) => entry.interRate,
+    },
+    {
+      key: 'intraRate',
+      label: 'Intrastate Rate',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) => entry.intraRate,
+    },
+    {
+      key: 'indetermRate',
+      label: 'Indeterminate Rate',
+      sortable: true,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) => entry.indetermRate,
+    },
+    {
+      key: 'effectiveDateGlobal',
+      label: 'Effective Date',
+      sortable: false,
+      textAlign: 'text-center',
+      getValue: (entry: USRateSheetEntry) => store.getCurrentEffectiveDate || 'N/A',
+    },
+  ]);
+
   // Initialize table data composable
   const {
     // Data
@@ -923,6 +981,7 @@
     itemsPerPage: 100,
     sortKey: 'npanxx',
     sortDirection: 'asc',
+    tableHeaders: tableHeaders.value,
   });
 
   // --- Metro Filter Composable ---
@@ -988,32 +1047,6 @@
   // Replace the US_STATES and CA_PROVINCES constants with imported ones
   const US_STATES = US_REGION_CODES;
   const CA_PROVINCES = CA_REGION_CODES;
-
-  // Define table headers for dynamic rendering and sorting
-  const tableHeaders = ref([
-    { key: 'npanxx', label: 'NPANXX', sortable: true, textAlign: 'text-center' },
-    { key: 'stateCode', label: 'State', sortable: true, textAlign: 'text-center' }, // Sort by stateCode
-    { key: 'countryCode', label: 'Country', sortable: true, textAlign: 'text-center' }, // Sort by countryCode (assuming field exists)
-    { key: 'interRate', label: 'Interstate Rate', sortable: true, textAlign: 'text-center' },
-    { key: 'intraRate', label: 'Intrastate Rate', sortable: true, textAlign: 'text-center' },
-    { key: 'indetermRate', label: 'Indeterminate Rate', sortable: true, textAlign: 'text-center' },
-    {
-      key: 'effectiveDateGlobal',
-      label: 'Effective Date',
-      sortable: false,
-      textAlign: 'text-center',
-    }, // Global date, not sortable per row
-  ]);
-
-  // Computed property to structure states for the dropdown with optgroup
-  const groupedAvailableStates = computed(() => {
-    const grouped = groupRegionCodes(availableStates.value);
-
-    return [
-      { label: 'United States', codes: grouped['US'] || [] },
-      { label: 'Canada', codes: grouped['CA'] || [] },
-    ].filter((group) => group.codes.length > 0);
-  });
 
   // State for Average Calculation
   const currentDisplayAverages = ref<RateAverages>({ inter: null, intra: null, indeterm: null });
