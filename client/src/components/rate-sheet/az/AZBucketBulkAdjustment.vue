@@ -10,7 +10,8 @@
       </BaseBadge>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <!-- Grid for inputs -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <!-- Bucket Selector -->
       <div>
         <label class="block text-xs font-medium text-gray-400 mb-1">Target Bucket</label>
@@ -184,20 +185,6 @@
           :disabled="store.operationInProgress"
         />
       </div>
-
-      <!-- Apply Button -->
-      <div class="flex items-end">
-        <BaseButton
-          variant="primary"
-          size="standard"
-          class="w-full"
-          :disabled="!canApplyBulkAdjustment || store.operationInProgress"
-          :loading="isApplyingBulkAdjustment"
-          @click="handleApplyBulkAdjustment"
-        >
-          Apply to {{ previewData.eligibleDestinations }} destinations
-        </BaseButton>
-      </div>
     </div>
 
     <!-- Error Display -->
@@ -209,28 +196,65 @@
       {{ lastError }}
     </div>
 
+    <!-- Progress Indicator -->
+    <div v-if="isApplyingBulkAdjustment" class="mt-4 mb-4">
+      <!-- Progress Status -->
+      <div class="flex items-center justify-between text-sm mb-2">
+        <span class="text-accent">{{ processingStatus }}</span>
+        <span class="text-gray-400">{{ processedCount }} / {{ totalToProcess }}</span>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+        <div
+          class="bg-accent h-full transition-all duration-200"
+          :style="{ width: `${(processedCount / totalToProcess) * 100}%` }"
+        ></div>
+      </div>
+    </div>
+
     <!-- Preview Section -->
-    <div v-if="previewData.eligibleDestinations > 0" class="mt-4 p-3 bg-gray-800/50 rounded-lg">
+    <div
+      v-if="previewData.eligibleDestinations > 0 && bulkAdjustment.adjustmentValue > 0"
+      class="mt-4"
+    >
+      <!-- Preview Header -->
       <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-        <span>Preview (showing first 5 destinations):</span>
+        <span>Destinations:</span>
         <span v-if="previewData.excludedDestinations.length > 0" class="text-amber-400">
           {{ previewData.excludedDestinations.length }} destinations excluded (already adjusted)
         </span>
       </div>
-      <div class="space-y-1">
-        <div
-          v-for="preview in previewData.estimatedNewRates.slice(0, 5)"
-          :key="preview.destinationName"
-          class="text-xs text-gray-300"
+
+      <!-- Scrollable Preview Box -->
+      <div class="bg-gray-800/50 rounded-lg p-3">
+        <div class="max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+          <div
+            v-for="preview in previewData.estimatedNewRates"
+            :key="preview.destinationName"
+            class="text-xs text-gray-300 mb-1"
+          >
+            {{ preview.destinationName }}: ${{
+              formatRate(getCurrentRate(preview.destinationName))
+            }}
+            → ${{ formatRate(preview.newRate) }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Apply Button -->
+      <div class="flex justify-end mt-4">
+        <BaseButton
+          variant="primary"
+          size="small"
+          class="w-1/8"
+          :icon="ArrowRightIcon"
+          :disabled="!canApplyBulkAdjustment || store.operationInProgress"
+          :loading="isApplyingBulkAdjustment"
+          @click="handleApplyBulkAdjustment"
         >
-          {{ preview.destinationName }}: ${{
-            formatRate(getCurrentRate(preview.destinationName))
-          }}
-          → ${{ formatRate(preview.newRate) }}
-        </div>
-        <div v-if="previewData.estimatedNewRates.length > 5" class="text-xs text-gray-400">
-          ... and {{ previewData.estimatedNewRates.length - 5 }} more destinations
-        </div>
+          Apply
+        </BaseButton>
       </div>
     </div>
   </div>
@@ -239,7 +263,12 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue';
   import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue';
-  import { ChevronUpDownIcon, ExclamationTriangleIcon, CheckIcon } from '@heroicons/vue/24/outline';
+  import {
+    ChevronUpDownIcon,
+    ExclamationTriangleIcon,
+    CheckIcon,
+    ArrowRightIcon,
+  } from '@heroicons/vue/24/outline';
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
   import {
     RATE_BUCKETS,
@@ -266,6 +295,9 @@
 
   const isApplyingBulkAdjustment = ref(false);
   const lastError = ref<string | null>(null);
+  const processingStatus = ref('');
+  const processedCount = ref(0);
+  const totalToProcess = ref(0);
 
   // Options for dropdowns
   const adjustmentTypeOptions = [
@@ -292,11 +324,7 @@
   });
 
   const previewData = computed(() => {
-    if (
-      !bulkAdjustment.value.bucketType ||
-      !bulkAdjustment.value.adjustmentValue ||
-      bulkAdjustment.value.adjustmentValue <= 0
-    ) {
+    if (!bulkAdjustment.value.bucketType) {
       return {
         totalDestinations: 0,
         eligibleDestinations: 0,
@@ -319,20 +347,24 @@
       store.isDestinationExcluded(group.destinationName)
     );
 
-    const estimatedNewRates = eligibleDestinations.map((group) => {
-      const currentRate = group.rates[0]?.rate || 0;
-      const newRate = calculateAdjustedRate(
-        currentRate,
-        bulkAdjustment.value.adjustmentType!,
-        bulkAdjustment.value.adjustmentValue!,
-        bulkAdjustment.value.adjustmentValueType!
-      );
+    // Only calculate estimated rates if we have a valid adjustment value
+    const estimatedNewRates =
+      bulkAdjustment.value.adjustmentValue && bulkAdjustment.value.adjustmentValue > 0
+        ? eligibleDestinations.map((group) => {
+            const currentRate = group.rates[0]?.rate || 0;
+            const newRate = calculateAdjustedRate(
+              currentRate,
+              bulkAdjustment.value.adjustmentType!,
+              bulkAdjustment.value.adjustmentValue!,
+              bulkAdjustment.value.adjustmentValueType!
+            );
 
-      return {
-        destinationName: group.destinationName,
-        newRate,
-      };
-    });
+            return {
+              destinationName: group.destinationName,
+              newRate,
+            };
+          })
+        : [];
 
     return {
       totalDestinations: bucketDestinations.length,
@@ -370,73 +402,138 @@
   async function handleApplyBulkAdjustment() {
     if (!canApplyBulkAdjustment.value) return;
 
-    if (
-      !confirm(
-        `Apply ${bulkAdjustment.value.adjustmentType} of ${bulkAdjustment.value.adjustmentValue}${
-          bulkAdjustment.value.adjustmentValueType === 'percentage' ? '%' : '$'
-        } to ${previewData.value.eligibleDestinations} destinations?`
-      )
-    ) {
-      return;
-    }
-
     isApplyingBulkAdjustment.value = true;
     store.setOperationInProgress(true);
     lastError.value = null;
+    processedCount.value = 0;
+    totalToProcess.value = previewData.value.estimatedNewRates.length;
 
     try {
-      // Store original state for rollback
+      // Store original state for rollback and memory tracking
+      processingStatus.value = 'Preparing adjustment data...';
       const originalStates = previewData.value.estimatedNewRates.map((item) => ({
         destinationName: item.destinationName,
         originalRate: getCurrentRate(item.destinationName),
+        bucketCategory: classifyRateIntoBucket(getCurrentRate(item.destinationName)),
       }));
 
-      // Apply adjustments to all eligible destinations
+      // Prepare all updates
       const updates = previewData.value.estimatedNewRates.map((item) => ({
         name: item.destinationName,
         rate: item.newRate,
       }));
 
-      const success = await store.bulkUpdateDestinationRates(updates);
+      // Process updates in smaller batches
+      const BATCH_SIZE = 50;
+      const batches = [];
 
-      if (!success) {
-        throw new Error('Bulk update operation failed');
+      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+        batches.push(updates.slice(i, i + BATCH_SIZE));
       }
 
-      // Add each adjustment to memory
-      for (const item of previewData.value.estimatedNewRates) {
-        const originalRate =
-          originalStates.find((s) => s.destinationName === item.destinationName)?.originalRate || 0;
-        const group = store.groupedData.find((g) => g.destinationName === item.destinationName);
+      // Process each batch with a micro-delay
+      processingStatus.value = 'Applying rate adjustments...';
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
 
-        if (group) {
-          store.addAdjustmentToMemory({
-            destinationName: item.destinationName,
-            originalRate,
-            adjustedRate: item.newRate,
-            adjustmentType: bulkAdjustment.value.adjustmentType!,
-            adjustmentValue: bulkAdjustment.value.adjustmentValue!,
-            adjustmentValueType: bulkAdjustment.value.adjustmentValueType!,
-            timestamp: new Date().toISOString(),
-            codes: group.codes,
-            bucketCategory: classifyRateIntoBucket(originalRate),
-            method: 'bucket',
-          });
+        // Update rates for this batch
+        const success = await store.bulkUpdateDestinationRates(batch);
+        if (!success) {
+          throw new Error('Bulk adjustment operation failed at batch ' + (i + 1));
         }
+
+        // Give UI time to breathe between batches
+        await new Promise((resolve) => requestAnimationFrame(resolve));
       }
 
+      // Record adjustments in memory with batched processing
+      processingStatus.value = 'Recording adjustments in memory...';
+
+      // Process memory updates in batches
+      const processMemoryBatch = async (startIdx: number) => {
+        const endIdx = Math.min(startIdx + BATCH_SIZE, previewData.value.estimatedNewRates.length);
+        const currentBatch = previewData.value.estimatedNewRates.slice(startIdx, endIdx);
+
+        for (const item of currentBatch) {
+          const originalState = originalStates.find(
+            (s) => s.destinationName === item.destinationName
+          );
+          const group = store.groupedData.find((g) => g.destinationName === item.destinationName);
+
+          if (group && originalState) {
+            store.addAdjustmentToMemory({
+              destinationName: item.destinationName,
+              originalRate: originalState.originalRate,
+              adjustedRate: item.newRate,
+              adjustmentType: bulkAdjustment.value.adjustmentType!,
+              adjustmentValue: bulkAdjustment.value.adjustmentValue!,
+              adjustmentValueType: bulkAdjustment.value.adjustmentValueType!,
+              timestamp: new Date().toISOString(),
+              codes: group.codes,
+              bucketCategory: originalState.bucketCategory,
+              method: 'bucket',
+            });
+          }
+          processedCount.value++;
+
+          // Update UI every 10 items within a batch
+          if (processedCount.value % 10 === 0) {
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          }
+        }
+
+        // If there are more items to process, schedule the next batch
+        if (endIdx < previewData.value.estimatedNewRates.length) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await processMemoryBatch(endIdx);
+        }
+      };
+
+      // Start processing memory updates
+      await processMemoryBatch(0);
+
+      processingStatus.value = 'Finalizing changes...';
       // Reset form
       bulkAdjustment.value.adjustmentValue = 0;
+
+      // Show completion message briefly
+      processingStatus.value = 'Adjustment complete!';
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      processingStatus.value = '';
     } catch (error) {
       console.error('Failed to apply bulk adjustment:', error);
       lastError.value = `Bulk adjustment failed: ${
         error instanceof Error ? error.message : 'Unknown error'
       }. All changes have been rolled back.`;
-
-      // Rollback is handled automatically by the store's error handling
     } finally {
       isApplyingBulkAdjustment.value = false;
       store.setOperationInProgress(false);
+      processedCount.value = 0;
+      totalToProcess.value = 0;
     }
   }
 </script>
+
+<style scoped>
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(75, 85, 99, 0.5);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(75, 85, 99, 0.7);
+  }
+</style>

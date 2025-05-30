@@ -6,7 +6,7 @@
     <!-- Header with Stats -->
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-4">
-        <h3 class="text-sm font-semibold text-accent">Adjustment Memory</h3>
+        <h3 class="text-sm font-semibold text-fbWhite">Adjustment Memory</h3>
         <div class="flex items-center gap-2 text-xs text-gray-400">
           <span>{{ stats.totalDestinationsAdjusted }} destinations adjusted</span>
           <span>•</span>
@@ -19,11 +19,26 @@
         variant="destructive"
         size="small"
         :disabled="memoryStore.operationInProgress"
+        :loading="isResetting"
         @click="handleStartOver"
         title="Reset all adjustments to original rates"
       >
         Start Over
       </BaseButton>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div v-if="isResetting" class="mb-4">
+      <div class="flex items-center justify-between text-sm mb-2">
+        <span class="text-accent">{{ processingStatus }}</span>
+        <span class="text-gray-400">{{ processedCount }} / {{ totalToProcess }}</span>
+      </div>
+      <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+        <div
+          class="bg-accent h-full transition-all duration-200"
+          :style="{ width: `${(processedCount / totalToProcess) * 100}%` }"
+        ></div>
+      </div>
     </div>
 
     <!-- Adjustments List -->
@@ -79,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { ref, computed } from 'vue';
   import { ArrowRightIcon } from '@heroicons/vue/24/outline';
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
   import { formatRate } from '@/constants/rate-buckets';
@@ -87,12 +102,62 @@
   import BaseBadge from '@/components/shared/BaseBadge.vue';
 
   const memoryStore = useAzRateSheetStore();
+  const isResetting = ref(false);
+  const processingStatus = ref('');
+  const processedCount = ref(0);
+  const totalToProcess = ref(0);
 
   const stats = computed(() => memoryStore.getMemoryStats);
 
-  function handleStartOver() {
-    if (confirm('This will reset all adjustments to their original rates. Are you sure?')) {
-      memoryStore.clearAllAdjustmentMemory();
+  async function handleStartOver() {
+    isResetting.value = true;
+    memoryStore.setOperationInProgress(true);
+    const adjustments = [...memoryStore.adjustmentMemory.adjustments];
+    totalToProcess.value = adjustments.length;
+    processedCount.value = 0;
+
+    try {
+      processingStatus.value = 'Preparing to reset adjustments...';
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Let UI update
+
+      const BATCH_SIZE = 50;
+      const batches = [];
+
+      // Prepare batches
+      for (let i = 0; i < adjustments.length; i += BATCH_SIZE) {
+        batches.push(adjustments.slice(i, i + BATCH_SIZE));
+      }
+
+      // Process each batch
+      processingStatus.value = 'Resetting adjustments...';
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+
+        // Process items in current batch
+        for (const adjustment of batch) {
+          await memoryStore.removeAdjustmentFromMemory(adjustment.id);
+          processedCount.value++;
+
+          // Give UI time to breathe every few items
+          if (processedCount.value % 10 === 0) {
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          }
+        }
+
+        // Micro-delay between batches
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
+      processingStatus.value = 'Reset complete!';
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error('Failed to reset adjustments:', error);
+    } finally {
+      isResetting.value = false;
+      memoryStore.setOperationInProgress(false);
+      processingStatus.value = '';
+      processedCount.value = 0;
+      totalToProcess.value = 0;
     }
   }
 

@@ -137,16 +137,17 @@
       </div>
 
       <!-- Apply Button with Enhanced Safety -->
-      <div class="flex items-end">
+      <div class="flex items-end justify-end">
         <BaseButton
           variant="accent"
-          size="standard"
-          class="w-full"
+          size="small"
+          class="w-1/3"
+          :icon="ArrowRightIcon"
           :disabled="!canApplyGlobalAdjustment || store.operationInProgress"
           :loading="isApplyingGlobalAdjustment"
           @click="handleApplyGlobalAdjustment"
         >
-          Apply to ALL {{ previewData.eligibleDestinations }}
+          Apply
         </BaseButton>
       </div>
     </div>
@@ -155,14 +156,14 @@
     <div v-if="isApplyingGlobalAdjustment" class="mt-4">
       <!-- Progress Status -->
       <div class="flex items-center justify-between text-sm mb-2">
-        <span class="text-blue-300">{{ processingStatus }}</span>
+        <span class="text-gray-400">{{ processingStatus }}</span>
         <span class="text-gray-400">{{ processedCount }} / {{ totalToProcess }}</span>
       </div>
 
       <!-- Progress Bar -->
       <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
         <div
-          class="bg-blue-500 h-full transition-all duration-200"
+          class="bg-accent h-full transition-all duration-200"
           :style="{ width: `${(processedCount / totalToProcess) * 100}%` }"
         ></div>
       </div>
@@ -223,12 +224,12 @@
       </div>
     </div>
 
-    <!-- Safety Warning -->
+    <!-- Safety Warning
     <div class="mt-3 p-2 bg-amber-900/20 border border-amber-500/20 rounded text-xs text-amber-300">
       <ExclamationTriangleIcon class="w-3 h-3 inline mr-1" />
       <strong>Caution:</strong> Global adjustments apply to ALL destinations across all rate
       buckets. This action will be tracked in memory and can be reversed using "Start Over."
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -240,6 +241,7 @@
     ExclamationTriangleIcon,
     CheckIcon,
     GlobeAltIcon,
+    ArrowRightIcon,
   } from '@heroicons/vue/24/outline';
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
   import {
@@ -368,29 +370,6 @@
   async function handleApplyGlobalAdjustment() {
     if (!canApplyGlobalAdjustment.value) return;
 
-    // Enhanced confirmation with more details
-    const totalDestinations = previewData.value.eligibleDestinations;
-    const adjustmentDesc = `${globalAdjustment.value.adjustmentType} of ${
-      globalAdjustment.value.adjustmentValue
-    }${globalAdjustment.value.adjustmentValueType === 'percentage' ? '%' : '$'}`;
-
-    const bucketBreakdown = Object.entries(bucketDistribution.value)
-      .map(([bucket, count]) => `${getBucketLabel(bucket)}: ${count}`)
-      .join(', ');
-
-    if (
-      !confirm(
-        `⚠️ GLOBAL ADJUSTMENT CONFIRMATION ⚠️\n\n` +
-          `Apply ${adjustmentDesc} to ALL ${totalDestinations} destinations?\n\n` +
-          `Distribution: ${bucketBreakdown}\n\n` +
-          `This action affects all rate buckets simultaneously.\n` +
-          `You can reverse this action using "Start Over" if needed.\n\n` +
-          `Continue?`
-      )
-    ) {
-      return;
-    }
-
     isApplyingGlobalAdjustment.value = true;
     store.setOperationInProgress(true);
     lastError.value = null;
@@ -406,29 +385,44 @@
         bucketCategory: item.currentBucket,
       }));
 
-      // Apply adjustments to all eligible destinations
-      processingStatus.value = 'Applying rate adjustments...';
+      // Prepare all updates
       const updates = previewData.value.estimatedNewRates.map((item) => ({
         name: item.destinationName,
         rate: item.newRate,
       }));
 
-      const success = await store.bulkUpdateDestinationRates(updates);
+      // Process updates in smaller batches
+      const BATCH_SIZE = 50; // Smaller batch size for smoother UI updates
+      const batches = [];
 
-      if (!success) {
-        throw new Error('Global adjustment operation failed');
+      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+        batches.push(updates.slice(i, i + BATCH_SIZE));
       }
 
-      // Add each adjustment to memory with progress tracking
-      processingStatus.value = 'Recording adjustments in memory...';
-      const batchSize = 100; // Process in batches to keep UI responsive
-      for (let i = 0; i < previewData.value.estimatedNewRates.length; i += batchSize) {
-        const batch = previewData.value.estimatedNewRates.slice(
-          i,
-          Math.min(i + batchSize, previewData.value.estimatedNewRates.length)
-        );
+      // Process each batch with a micro-delay
+      processingStatus.value = 'Applying rate adjustments...';
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
 
-        for (const item of batch) {
+        // Update rates for this batch
+        const success = await store.bulkUpdateDestinationRates(batch);
+        if (!success) {
+          throw new Error('Global adjustment operation failed at batch ' + (i + 1));
+        }
+
+        // Give UI time to breathe between batches
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      // Record adjustments in memory with batched processing
+      processingStatus.value = 'Recording adjustments in memory...';
+
+      // Process memory updates in batches using requestIdleCallback or setTimeout
+      const processMemoryBatch = async (startIdx: number) => {
+        const endIdx = Math.min(startIdx + BATCH_SIZE, previewData.value.estimatedNewRates.length);
+        const currentBatch = previewData.value.estimatedNewRates.slice(startIdx, endIdx);
+
+        for (const item of currentBatch) {
           const originalState = originalStates.find(
             (s) => s.destinationName === item.destinationName
           );
@@ -449,10 +443,22 @@
             });
           }
           processedCount.value++;
+
+          // Update UI every 10 items within a batch
+          if (processedCount.value % 10 === 0) {
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          }
         }
-        // Give UI a chance to update
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-      }
+
+        // If there are more items to process, schedule the next batch
+        if (endIdx < previewData.value.estimatedNewRates.length) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await processMemoryBatch(endIdx);
+        }
+      };
+
+      // Start processing memory updates
+      await processMemoryBatch(0);
 
       processingStatus.value = 'Finalizing changes...';
       // Reset form
