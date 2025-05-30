@@ -164,7 +164,7 @@
       <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
         <div
           class="bg-accent h-full transition-all duration-200"
-          :style="{ width: `${(processedCount / totalToProcess) * 100}%` }"
+          :style="{ width: `${progressPercentage}%` }"
         ></div>
       </div>
     </div>
@@ -255,6 +255,7 @@
   import type { RateBucketType } from '@/types/domains/rate-sheet-types';
 
   const store = useAzRateSheetStore();
+  const BATCH_SIZE = 25;
 
   // State
   const globalAdjustment = ref({
@@ -268,6 +269,7 @@
   const processingStatus = ref('');
   const processedCount = ref(0);
   const totalToProcess = ref(0);
+  const progressPercentage = ref(0);
 
   // Options for dropdowns
   const adjustmentTypeOptions = [
@@ -294,11 +296,9 @@
     }
 
     const allDestinations = store.groupedData.filter((group) => !group.hasDiscrepancy);
-
     const eligibleDestinations = allDestinations.filter(
       (group) => !store.isDestinationExcluded(group.destinationName)
     );
-
     const excludedDestinations = allDestinations.filter((group) =>
       store.isDestinationExcluded(group.destinationName)
     );
@@ -329,12 +329,10 @@
 
   const bucketDistribution = computed(() => {
     const distribution: Record<string, number> = {};
-
     previewData.value.estimatedNewRates.forEach((item) => {
       const bucket = item.currentBucket;
       distribution[bucket] = (distribution[bucket] || 0) + 1;
     });
-
     return distribution;
   });
 
@@ -367,6 +365,38 @@
     return adjustmentValueTypeOptions.find((opt) => opt.value === value)?.label || 'Select Unit';
   }
 
+  async function processBatch(destinations: any[], startIdx: number) {
+    const endIdx = Math.min(startIdx + BATCH_SIZE, destinations.length);
+    const currentBatch = destinations.slice(startIdx, endIdx);
+
+    // Process rate updates only
+    const rateUpdates = currentBatch.map((group) => ({
+      name: group.destinationName,
+      rate: calculateAdjustedRate(
+        group.rates[0]?.rate || 0,
+        globalAdjustment.value.adjustmentType,
+        globalAdjustment.value.adjustmentValue,
+        globalAdjustment.value.adjustmentValueType
+      ),
+    }));
+
+    // Update rates for this batch
+    const success = await store.bulkUpdateDestinationRates(rateUpdates);
+    if (!success) {
+      throw new Error('Failed to update rates for batch');
+    }
+
+    // Update progress
+    processedCount.value = endIdx;
+    progressPercentage.value = (endIdx / destinations.length) * 100;
+
+    // Process next batch if there are more items
+    if (endIdx < destinations.length) {
+      await new Promise((resolve) => setTimeout(resolve, 0)); // Let UI breathe
+      await processBatch(destinations, endIdx);
+    }
+  }
+
   async function handleApplyGlobalAdjustment() {
     if (!canApplyGlobalAdjustment.value) return;
 
@@ -374,110 +404,35 @@
     store.setOperationInProgress(true);
     lastError.value = null;
     processedCount.value = 0;
-    totalToProcess.value = previewData.value.estimatedNewRates.length;
+    progressPercentage.value = 0;
 
     try {
-      // Store original state for rollback and memory tracking
-      processingStatus.value = 'Preparing adjustment data...';
-      const originalStates = previewData.value.estimatedNewRates.map((item) => ({
-        destinationName: item.destinationName,
-        originalRate: getCurrentRate(item.destinationName),
-        bucketCategory: item.currentBucket,
-      }));
+      // Only filter by discrepancy and valid rates, ignore memory exclusions
+      const eligibleDestinations = store.groupedData.filter(
+        (group) => !group.hasDiscrepancy && group.rates && group.rates.length > 0
+      );
 
-      // Prepare all updates
-      const updates = previewData.value.estimatedNewRates.map((item) => ({
-        name: item.destinationName,
-        rate: item.newRate,
-      }));
+      totalToProcess.value = eligibleDestinations.length;
+      processingStatus.value = 'Processing rate adjustments...';
 
-      // Process updates in smaller batches
-      const BATCH_SIZE = 50; // Smaller batch size for smoother UI updates
-      const batches = [];
+      // Start processing in batches
+      await processBatch(eligibleDestinations, 0);
 
-      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-        batches.push(updates.slice(i, i + BATCH_SIZE));
-      }
-
-      // Process each batch with a micro-delay
-      processingStatus.value = 'Applying rate adjustments...';
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-
-        // Update rates for this batch
-        const success = await store.bulkUpdateDestinationRates(batch);
-        if (!success) {
-          throw new Error('Global adjustment operation failed at batch ' + (i + 1));
-        }
-
-        // Give UI time to breathe between batches
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-      }
-
-      // Record adjustments in memory with batched processing
-      processingStatus.value = 'Recording adjustments in memory...';
-
-      // Process memory updates in batches using requestIdleCallback or setTimeout
-      const processMemoryBatch = async (startIdx: number) => {
-        const endIdx = Math.min(startIdx + BATCH_SIZE, previewData.value.estimatedNewRates.length);
-        const currentBatch = previewData.value.estimatedNewRates.slice(startIdx, endIdx);
-
-        for (const item of currentBatch) {
-          const originalState = originalStates.find(
-            (s) => s.destinationName === item.destinationName
-          );
-          const group = store.groupedData.find((g) => g.destinationName === item.destinationName);
-
-          if (group && originalState) {
-            store.addAdjustmentToMemory({
-              destinationName: item.destinationName,
-              originalRate: originalState.originalRate,
-              adjustedRate: item.newRate,
-              adjustmentType: globalAdjustment.value.adjustmentType,
-              adjustmentValue: globalAdjustment.value.adjustmentValue,
-              adjustmentValueType: globalAdjustment.value.adjustmentValueType,
-              timestamp: new Date().toISOString(),
-              codes: group.codes,
-              bucketCategory: originalState.bucketCategory,
-              method: 'global',
-            });
-          }
-          processedCount.value++;
-
-          // Update UI every 10 items within a batch
-          if (processedCount.value % 10 === 0) {
-            await new Promise((resolve) => requestAnimationFrame(resolve));
-          }
-        }
-
-        // If there are more items to process, schedule the next batch
-        if (endIdx < previewData.value.estimatedNewRates.length) {
-          await new Promise((resolve) => setTimeout(resolve, 0));
-          await processMemoryBatch(endIdx);
-        }
-      };
-
-      // Start processing memory updates
-      await processMemoryBatch(0);
-
-      processingStatus.value = 'Finalizing changes...';
       // Reset form
       globalAdjustment.value.adjustmentValue = 0;
-
-      // Show completion message briefly
       processingStatus.value = 'Adjustment complete!';
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      processingStatus.value = '';
+
+      // Show completion briefly
+      setTimeout(() => {
+        processingStatus.value = '';
+        isApplyingGlobalAdjustment.value = false;
+        store.setOperationInProgress(false);
+      }, 1000);
     } catch (error) {
       console.error('Failed to apply global adjustment:', error);
-      lastError.value = `Global adjustment failed: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }. All changes have been rolled back.`;
-    } finally {
+      lastError.value = `Global adjustment failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       isApplyingGlobalAdjustment.value = false;
       store.setOperationInProgress(false);
-      processedCount.value = 0;
-      totalToProcess.value = 0;
     }
   }
 </script>

@@ -9,9 +9,6 @@ import type {
   ChangeCodeType,
   EffectiveDateStoreSettings,
   RateBucketType,
-  AdjustmentMemoryState,
-  RateAdjustmentMemory,
-  MemoryStats,
 } from '@/types/domains/rate-sheet-types';
 import { classifyRateIntoBucket, isRateInBucket } from '@/constants/rate-buckets';
 
@@ -39,16 +36,9 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       hasMinDuration: false,
       hasIncrements: false,
     },
-    // AZ Rate Sheet Advanced Filtering & Markup State
     selectedRateBucket: 'all' as RateBucketType,
-    adjustmentMemory: {
-      adjustments: [],
-      excludedDestinations: new Set<string>(),
-      sessionStartTime: new Date().toISOString(),
-      totalAdjustmentsMade: 0,
-      nextId: 1, // Sequential counter starts at 1
-    } as AdjustmentMemoryState,
-    operationInProgress: false, // Prevent concurrent operations
+    operationInProgress: false,
+    excludedDestinations: new Set<string>(),
   }),
 
   actions: {
@@ -87,325 +77,60 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       localStorage.setItem('rate-sheet-optional-fields', JSON.stringify(this.optionalFields));
     },
 
-    // Memory management actions
-    addAdjustmentToMemory(adjustment: Omit<RateAdjustmentMemory, 'id'>) {
-      const adjustmentWithId = {
-        ...adjustment,
-        id: this.adjustmentMemory.nextId++,
-      };
-
-      this.adjustmentMemory.adjustments.push(adjustmentWithId);
-      this.adjustmentMemory.excludedDestinations.add(adjustment.destinationName);
-      this.adjustmentMemory.totalAdjustmentsMade++;
-      this.saveMemoryToLocalStorage();
-    },
-
-    removeAdjustmentFromMemory(adjustmentId: number) {
-      const adjustmentIndex = this.adjustmentMemory.adjustments.findIndex(
-        (a) => a.id === adjustmentId
-      );
-      if (adjustmentIndex >= 0) {
-        const adjustment = this.adjustmentMemory.adjustments[adjustmentIndex];
-        this.adjustmentMemory.adjustments.splice(adjustmentIndex, 1);
-        this.adjustmentMemory.excludedDestinations.delete(adjustment.destinationName);
-
-        // Revert the rate change
-        this.updateDestinationRate(adjustment.destinationName, adjustment.originalRate);
-      }
-      this.saveMemoryToLocalStorage();
-    },
-
-    clearAllAdjustmentMemory() {
-      // Revert all adjustments to original rates
-      for (const adjustment of this.adjustmentMemory.adjustments) {
-        this.updateDestinationRate(adjustment.destinationName, adjustment.originalRate);
-      }
-
-      // Clear memory but keep DexieJS data intact
-      this.adjustmentMemory = {
-        adjustments: [],
-        excludedDestinations: new Set<string>(),
-        sessionStartTime: new Date().toISOString(),
-        totalAdjustmentsMade: 0,
-        nextId: 1,
-      };
-      this.saveMemoryToLocalStorage();
-    },
-
-    isDestinationExcluded(destinationName: string): boolean {
-      return this.adjustmentMemory.excludedDestinations.has(destinationName);
-    },
-
     // Operation state management
     setOperationInProgress(inProgress: boolean) {
       this.operationInProgress = inProgress;
     },
 
-    // Bucket filtering actions
-    setRateBucketFilter(bucketType: RateBucketType) {
-      this.selectedRateBucket = bucketType;
-      localStorage.setItem('az-rate-bucket-filter', bucketType);
-    },
-
-    async updateDestinationRate(destinationName: string, newRate: number) {
-      // const today = new Date().toISOString().split('T')[0]; // Not needed as a local default here
-
-      // Get all records for this destination to determine the appropriate change code
-      const records = this.originalData.filter((record) => record.name === destinationName);
-      if (records.length === 0) return false;
-
-      // Determine the most appropriate change code based on rate comparison
-      let hasIncrease = false;
-      let hasDecrease = false;
-      for (const record of records) {
-        if (newRate > record.rate) {
-          hasIncrease = true;
-          break; // Prioritize INCREASE
-        } else if (newRate < record.rate) {
-          hasDecrease = true;
-        }
-      }
-
-      let changeCode: ChangeCodeType = ChangeCode.SAME; // Default
-      if (hasIncrease) {
-        changeCode = ChangeCode.INCREASE;
-      } else if (hasDecrease) {
-        changeCode = ChangeCode.DECREASE;
-      }
-      // If neither, changeCode remains SAME, which is the default initial value.
-
-      // Calculate effectiveDate using the determined changeCode and current store settings
-      const effectiveDate = this.calculateEffectiveDateForChangeCode(changeCode);
-
-      console.log(
-        `Updating destination: ${destinationName}, ChangeCode: ${changeCode}, EffectiveDate: ${effectiveDate}`
-      );
-
-      // Update all records for this destination with the consistent change code and effective date
-      this.originalData = this.originalData.map((record) =>
-        record.name === destinationName
-          ? {
+    // Rate update methods
+    async updateDestinationRate(destinationName: string, newRate: number): Promise<boolean> {
+      try {
+        // Update original data
+        this.originalData = this.originalData.map((record) => {
+          if (record.name === destinationName) {
+            return {
               ...record,
               rate: newRate,
-              changeCode: changeCode,
-              effective: effectiveDate,
-            }
-          : record
-      );
-      this.saveToLocalStorage();
+            };
+          }
+          return record;
+        });
 
-      // Update grouped data
-      const updatedGroupedData = this.groupedData.map((group) => {
-        if (group.destinationName === destinationName) {
-          // Rebuild the rates statistics
-          const recordsForDestination = this.originalData.filter((r) => r.name === destinationName);
-          const totalRecords = recordsForDestination.length;
+        // Update grouped data
+        this.groupedData = this.processRecordsIntoGroups(this.originalData);
 
-          // Since we've just unified the rate, we'll have only one rate with 100% usage
-          const rates: RateStatistics[] = [
-            {
-              rate: newRate,
-              count: totalRecords,
-              percentage: 100,
-              isCommon: true,
-            },
-          ];
-
-          return {
-            ...group,
-            rates,
-            hasDiscrepancy: false,
-            changeCode: changeCode,
-            effectiveDate: effectiveDate,
-          };
-        }
-        return group;
-      });
-
-      this.groupedData = updatedGroupedData;
-      this.saveToLocalStorage();
-
-      return true;
+        return true;
+      } catch (error) {
+        console.error('Failed to update destination rate:', error);
+        return false;
+      }
     },
 
-    // High-performance bulk update for handling multiple destinations at once
-    async bulkUpdateDestinationRates(updates: { name: string; rate: number }[]) {
-      const today = new Date().toISOString().split('T')[0];
+    async bulkUpdateDestinationRates(updates: { name: string; rate: number }[]): Promise<boolean> {
+      try {
+        // Create a map for faster lookups
+        const updateMap = new Map(updates.map((update) => [update.name, update.rate]));
 
-      // Create a map for quick lookups of new rates
-      const updateMap = new Map<string, number>();
-      for (const update of updates) {
-        updateMap.set(update.name, update.rate);
-      }
-
-      // First collect all destinations and their new rates
-      const destinationsToUpdate = new Set<string>();
-      updates.forEach((update) => destinationsToUpdate.add(update.name));
-
-      // Pre-compute change codes and effective dates by destination
-      const changeCodeByDestination = new Map<string, ChangeCodeType>();
-      const effectiveDateByDestination = new Map<string, string>();
-
-      // Calculate the appropriate change code and effective date for each destination
-      for (const destination of destinationsToUpdate) {
-        const newRate = updateMap.get(destination) || 0;
-
-        // Get all records for this destination to determine the change code
-        const records = this.originalData.filter((record) => record.name === destination);
-        if (records.length === 0) continue;
-
-        // Determine the most appropriate change code based on rate comparison
-        // If ANY records show an increase, use INCREASE
-        // Otherwise, if ANY records show a decrease, use DECREASE
-        // Otherwise, use SAME
-        let hasIncrease = false;
-        let hasDecrease = false;
-
-        for (const record of records) {
-          if (newRate > record.rate) {
-            hasIncrease = true;
-            break; // Prioritize INCREASE
-          } else if (newRate < record.rate) {
-            hasDecrease = true;
-          }
-        }
-
-        let determinedChangeCode: ChangeCodeType = ChangeCode.SAME;
-        let determinedEffectiveDate = today;
-
-        // Use effectiveDateSettings from the store to determine the date
-        if (hasIncrease) {
-          determinedChangeCode = ChangeCode.INCREASE;
-          determinedEffectiveDate = this.calculateEffectiveDateForChangeCode(ChangeCode.INCREASE);
-        } else if (hasDecrease) {
-          determinedChangeCode = ChangeCode.DECREASE;
-          determinedEffectiveDate = this.calculateEffectiveDateForChangeCode(ChangeCode.DECREASE);
-        } else {
-          determinedChangeCode = ChangeCode.SAME;
-          determinedEffectiveDate = this.calculateEffectiveDateForChangeCode(ChangeCode.SAME);
-        }
-
-        // Store the consistent values for this destination
-        changeCodeByDestination.set(destination, determinedChangeCode);
-        effectiveDateByDestination.set(destination, determinedEffectiveDate);
-
-        console.log(
-          `Bulk Prep Destination: ${destination}, ChangeCode: ${determinedChangeCode}, EffectiveDate: ${determinedEffectiveDate}`
-        );
-      }
-
-      // Single pass through the originalData array for maximum efficiency
-      this.originalData = this.originalData.map((record) => {
-        if (destinationsToUpdate.has(record.name)) {
+        // Update original data
+        this.originalData = this.originalData.map((record) => {
           const newRate = updateMap.get(record.name);
-          if (newRate === undefined) return record;
-
-          // Use the pre-computed consistent change code and effective date for this destination
-          const changeCode = changeCodeByDestination.get(record.name) || ChangeCode.SAME;
-          const effectiveDate = effectiveDateByDestination.get(record.name) || today;
-
-          return {
-            ...record,
-            rate: newRate,
-            changeCode: changeCode,
-            effective: effectiveDate,
-          };
-        }
-        return record;
-      });
-
-      // Update grouped data in a single efficient operation
-      const updatedGroupedData: GroupedRateData[] = [];
-      const processedDestinations = new Set<string>();
-
-      for (const group of this.groupedData) {
-        if (
-          destinationsToUpdate.has(group.destinationName) &&
-          !processedDestinations.has(group.destinationName)
-        ) {
-          const newRateForGroup = updateMap.get(group.destinationName);
-          if (newRateForGroup === undefined) {
-            updatedGroupedData.push(group); // Should not happen if destinationsToUpdate is accurate
-            processedDestinations.add(group.destinationName);
-            continue;
+          if (newRate !== undefined) {
+            return {
+              ...record,
+              rate: newRate,
+            };
           }
+          return record;
+        });
 
-          const recordsForDestination = this.originalData.filter(
-            (r) => r.name === group.destinationName
-          );
-          const totalRecords = recordsForDestination.length;
+        // Update grouped data
+        this.groupedData = this.processRecordsIntoGroups(this.originalData);
 
-          // New rates statistics
-          const rates: RateStatistics[] = [
-            {
-              rate: newRateForGroup,
-              count: totalRecords,
-              percentage: 100,
-              isCommon: true,
-            },
-          ];
-
-          updatedGroupedData.push({
-            ...group,
-            rates,
-            hasDiscrepancy: false,
-            changeCode: changeCodeByDestination.get(group.destinationName) || ChangeCode.SAME,
-            effectiveDate: effectiveDateByDestination.get(group.destinationName) || today,
-          });
-          processedDestinations.add(group.destinationName);
-        } else if (!processedDestinations.has(group.destinationName)) {
-          updatedGroupedData.push(group);
-          processedDestinations.add(group.destinationName);
-        }
+        return true;
+      } catch (error) {
+        console.error('Failed to bulk update rates:', error);
+        return false;
       }
-      this.groupedData = updatedGroupedData;
-      this.saveToLocalStorage();
-
-      return true;
-    },
-
-    // Helper to calculate effective date based on current store settings
-    calculateEffectiveDateForChangeCode(changeCode: ChangeCodeType): string {
-      const settings = this.effectiveDateSettings;
-      const today = new Date();
-      let effectiveDate = new Date(today); // Create a new Date object to avoid modifying 'today'
-
-      // Helper to format date as YYYY-MM-DD
-      const formatDate = (date: Date): string => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      if (changeCode === ChangeCode.SAME) {
-        if (settings.same === 'today') {
-          // effectiveDate is already today
-        } else if (settings.same === 'tomorrow') {
-          effectiveDate.setDate(today.getDate() + 1);
-        } else if (settings.same === 'custom') {
-          return settings.sameCustomDate; // Return directly as it's already formatted
-        }
-      } else if (changeCode === ChangeCode.INCREASE) {
-        if (settings.increase === 'today') {
-          // effectiveDate is already today
-        } else if (settings.increase === 'tomorrow') {
-          effectiveDate.setDate(today.getDate() + 1);
-        } else if (settings.increase === 'week') {
-          effectiveDate.setDate(today.getDate() + 7);
-        } else if (settings.increase === 'custom') {
-          return settings.increaseCustomDate; // Return directly
-        }
-      } else if (changeCode === ChangeCode.DECREASE) {
-        if (settings.decrease === 'today') {
-          // effectiveDate is already today
-        } else if (settings.decrease === 'tomorrow') {
-          effectiveDate.setDate(today.getDate() + 1);
-        } else if (settings.decrease === 'custom') {
-          return settings.decreaseCustomDate; // Return directly
-        }
-      }
-      return formatDate(effectiveDate);
     },
 
     clearData() {
@@ -413,22 +138,9 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       this.groupedData = [];
       this.isLocallyStored = false;
       this.invalidRows = [];
-
-      // Clear memory system
-      this.adjustmentMemory = {
-        adjustments: [],
-        excludedDestinations: new Set<string>(),
-        sessionStartTime: new Date().toISOString(),
-        totalAdjustmentsMade: 0,
-        nextId: 1,
-      };
-
-      // Reset bucket filter
       this.selectedRateBucket = 'all';
-
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY_INVALID);
-      localStorage.removeItem('az-adjustment-memory');
       localStorage.removeItem('az-rate-bucket-filter');
     },
 
@@ -498,11 +210,8 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       updatedRecords: { name: string; prefix: string; effective: string }[]
     ) {
       if (!updatedRecords || updatedRecords.length === 0) {
-        console.log('No records to update');
         return;
       }
-
-      console.log(`Updating ${updatedRecords.length} records in store`);
 
       // Create a quick lookup map for the updates
       const updateMap = new Map<string, string>();
@@ -689,64 +398,26 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       // Persistence disabled - invalid rows will not be saved between browser refreshes
     },
 
-    // Save memory to localStorage - disabled, no persistence between sessions
-    saveMemoryToLocalStorage() {
-      // Persistence disabled - memory will not be saved between browser refreshes
+    isDestinationExcluded(destinationName: string): boolean {
+      return this.excludedDestinations.has(destinationName);
     },
 
-    // Update existing saveRateSelection to integrate with memory
-    async updateDestinationRateWithMemory(
-      destinationName: string,
-      newRate: number,
-      adjustmentDetails?: {
-        adjustmentType: 'markup' | 'markdown';
-        adjustmentValue: number;
-        adjustmentValueType: 'percentage' | 'fixed';
-      }
-    ) {
-      const originalRate = this.getOriginalRateForDestination(destinationName);
-      const success = await this.updateDestinationRate(destinationName, newRate);
-
-      if (success && adjustmentDetails) {
-        // Add to memory system
-        const group = this.groupedData.find((g) => g.destinationName === destinationName);
-        if (group) {
-          this.addAdjustmentToMemory({
-            destinationName,
-            originalRate,
-            adjustedRate: newRate,
-            adjustmentType: adjustmentDetails.adjustmentType,
-            adjustmentValue: adjustmentDetails.adjustmentValue,
-            adjustmentValueType: adjustmentDetails.adjustmentValueType,
-            timestamp: new Date().toISOString(),
-            codes: group.codes,
-            bucketCategory: classifyRateIntoBucket(originalRate),
-            method: 'individual',
-          });
-        }
-      }
-
-      return success;
+    addExcludedDestination(destinationName: string): void {
+      this.excludedDestinations.add(destinationName);
     },
 
-    getOriginalRateForDestination(destinationName: string): number {
-      const group = this.groupedData.find((g) => g.destinationName === destinationName);
-      const memoryEntry = this.adjustmentMemory.adjustments.find(
-        (a) => a.destinationName === destinationName
-      );
+    removeExcludedDestination(destinationName: string): void {
+      this.excludedDestinations.delete(destinationName);
+    },
 
-      if (memoryEntry) {
-        return memoryEntry.originalRate;
-      }
-
-      return group?.rates[0]?.rate || 0;
+    clearExcludedDestinations(): void {
+      this.excludedDestinations.clear();
     },
   },
 
   getters: {
     getDiscrepancyCount: (state): number => {
       const count = state.groupedData.filter((group) => group.hasDiscrepancy).length;
-      console.log(`Destinations with rate discrepancies: ${count}`);
       return count;
     },
 
@@ -904,40 +575,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     canExport(state) {
       // Block export until conflicts resolved
       return state.groupedData.filter((group) => group.hasDiscrepancy).length === 0;
-    },
-
-    getMemoryStats(state): MemoryStats {
-      const adjustments = state.adjustmentMemory.adjustments;
-      const bucketDistribution: Record<RateBucketType, number> = {
-        '0.0-1.5': 0,
-        '1.6-5.0': 0,
-        '5.1-15.0': 0,
-        '15.0+': 0,
-        all: 0,
-      };
-
-      let markupCount = 0;
-      let markdownCount = 0;
-      let totalPercentageChange = 0;
-
-      adjustments.forEach((adj) => {
-        bucketDistribution[adj.bucketCategory]++;
-        if (adj.adjustmentType === 'markup') markupCount++;
-        else markdownCount++;
-
-        if (adj.adjustmentValueType === 'percentage') {
-          totalPercentageChange += adj.adjustmentValue;
-        }
-      });
-
-      return {
-        totalDestinationsAdjusted: adjustments.length,
-        markupCount,
-        markdownCount,
-        averageAdjustmentPercentage:
-          adjustments.length > 0 ? totalPercentageChange / adjustments.length : 0,
-        bucketDistribution,
-      };
     },
   },
 });

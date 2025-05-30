@@ -299,6 +299,11 @@
   const processedCount = ref(0);
   const totalToProcess = ref(0);
 
+  // Add new refs for processing state
+  const isBulkProcessing = ref(false);
+  const bulkMode = ref<'highest' | 'lowest' | 'mostCommon' | null>(null);
+  const currentDiscrepancyCount = ref(0); // Track current discrepancy count during processing
+
   // Options for dropdowns
   const adjustmentTypeOptions = [
     { value: 'markup', label: 'Markup' },
@@ -409,14 +414,6 @@
     totalToProcess.value = previewData.value.estimatedNewRates.length;
 
     try {
-      // Store original state for rollback and memory tracking
-      processingStatus.value = 'Preparing adjustment data...';
-      const originalStates = previewData.value.estimatedNewRates.map((item) => ({
-        destinationName: item.destinationName,
-        originalRate: getCurrentRate(item.destinationName),
-        bucketCategory: classifyRateIntoBucket(getCurrentRate(item.destinationName)),
-      }));
-
       // Prepare all updates
       const updates = previewData.value.estimatedNewRates.map((item) => ({
         name: item.destinationName,
@@ -442,74 +439,27 @@
           throw new Error('Bulk adjustment operation failed at batch ' + (i + 1));
         }
 
+        processedCount.value += batch.length;
+
         // Give UI time to breathe between batches
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
 
-      // Record adjustments in memory with batched processing
-      processingStatus.value = 'Recording adjustments in memory...';
-
-      // Process memory updates in batches
-      const processMemoryBatch = async (startIdx: number) => {
-        const endIdx = Math.min(startIdx + BATCH_SIZE, previewData.value.estimatedNewRates.length);
-        const currentBatch = previewData.value.estimatedNewRates.slice(startIdx, endIdx);
-
-        for (const item of currentBatch) {
-          const originalState = originalStates.find(
-            (s) => s.destinationName === item.destinationName
-          );
-          const group = store.groupedData.find((g) => g.destinationName === item.destinationName);
-
-          if (group && originalState) {
-            store.addAdjustmentToMemory({
-              destinationName: item.destinationName,
-              originalRate: originalState.originalRate,
-              adjustedRate: item.newRate,
-              adjustmentType: bulkAdjustment.value.adjustmentType!,
-              adjustmentValue: bulkAdjustment.value.adjustmentValue!,
-              adjustmentValueType: bulkAdjustment.value.adjustmentValueType!,
-              timestamp: new Date().toISOString(),
-              codes: group.codes,
-              bucketCategory: originalState.bucketCategory,
-              method: 'bucket',
-            });
-          }
-          processedCount.value++;
-
-          // Update UI every 10 items within a batch
-          if (processedCount.value % 10 === 0) {
-            await new Promise((resolve) => requestAnimationFrame(resolve));
-          }
-        }
-
-        // If there are more items to process, schedule the next batch
-        if (endIdx < previewData.value.estimatedNewRates.length) {
-          await new Promise((resolve) => setTimeout(resolve, 0));
-          await processMemoryBatch(endIdx);
-        }
-      };
-
-      // Start processing memory updates
-      await processMemoryBatch(0);
-
-      processingStatus.value = 'Finalizing changes...';
       // Reset form
       bulkAdjustment.value.adjustmentValue = 0;
-
-      // Show completion message briefly
       processingStatus.value = 'Adjustment complete!';
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      processingStatus.value = '';
+
+      // Show completion briefly
+      setTimeout(() => {
+        processingStatus.value = '';
+        isApplyingBulkAdjustment.value = false;
+        store.setOperationInProgress(false);
+      }, 1000);
     } catch (error) {
       console.error('Failed to apply bulk adjustment:', error);
-      lastError.value = `Bulk adjustment failed: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }. All changes have been rolled back.`;
-    } finally {
+      lastError.value = `Bulk adjustment failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       isApplyingBulkAdjustment.value = false;
       store.setOperationInProgress(false);
-      processedCount.value = 0;
-      totalToProcess.value = 0;
     }
   }
 </script>

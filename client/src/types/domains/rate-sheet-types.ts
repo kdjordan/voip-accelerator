@@ -94,10 +94,9 @@ export interface RateSheetState {
     hasIncrements: boolean;
   };
   effectiveDateSettings: EffectiveDateStoreSettings;
-  // AZ Rate Sheet Advanced Filtering & Markup State
   selectedRateBucket: RateBucketType;
-  adjustmentMemory: AdjustmentMemoryState;
-  operationInProgress: boolean; // Prevent concurrent operations
+  operationInProgress: boolean;
+  excludedDestinations: Set<string>;
 }
 
 export const RequiredRFColumnRole = {

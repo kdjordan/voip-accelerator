@@ -5,8 +5,7 @@
     <!-- Global Adjustment -->
     <AZGlobalAdjustment />
 
-    <!-- Adjustment Memory Panel -->
-    <AZAdjustmentMemory />
+
 
     <!-- Bucket Bulk Adjustment -->
     <AZBucketBulkAdjustment />
@@ -821,7 +820,7 @@
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
   import AZEffectiveDates from './AZEffectiveDates.vue'; // Import the new component
-  import AZAdjustmentMemory from './AZAdjustmentMemory.vue'; // Import the new memory component
+  
   import AZBucketBulkAdjustment from './AZBucketBulkAdjustment.vue'; // Import the new bucket adjustment component
   import AZGlobalAdjustment from './AZGlobalAdjustment.vue'; // Import the new global adjustment component
   import { RATE_BUCKETS, formatRate } from '@/constants/rate-buckets';

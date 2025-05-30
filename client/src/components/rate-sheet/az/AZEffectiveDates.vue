@@ -82,7 +82,7 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
-  import EffectiveDateUpdaterWorker from '@/workers/effective-date-updater.worker?worker';
+  import EffectiveDateUpdaterWorker from '@/workers/az-effective-date-updater.worker?worker';
   import type { EffectiveDateSettings, ChangeCodeType } from '@/types/domains/rate-sheet-types';
   import { ChangeCode } from '@/types/domains/rate-sheet-types';
   import BaseButton from '@/components/shared/BaseButton.vue';
