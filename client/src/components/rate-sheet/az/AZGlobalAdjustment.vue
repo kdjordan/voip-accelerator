@@ -255,7 +255,7 @@
   import type { RateBucketType } from '@/types/domains/rate-sheet-types';
 
   const store = useAzRateSheetStore();
-  const BATCH_SIZE = 25;
+  const BATCH_SIZE = 1000;
 
   // State
   const globalAdjustment = ref({

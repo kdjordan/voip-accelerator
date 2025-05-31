@@ -68,7 +68,7 @@ Implementation plan for advanced rate filtering and markup functionality for the
 
 ---
 
-## FINALIZED INCREMENTAL IMPLEMENTATION PLAN
+## REFACTOR FOR EFFICIENCY
 
 ### Phase 1A: Foundation Types & Constants (Day 1 Morning)
 
@@ -1113,3 +1113,111 @@ loadMemoryFromLocalStorage() {
 - [ ] One operation at a time enforcement
 
 This comprehensive implementation delivers all specified functionality with robust error handling, precise calculations, and seamless integration.
+
+### Performance Optimization Plan for Large Datasets (200K+ Records)
+
+#### 1. Web Worker Optimization
+
+1. Move all filtering logic to worker
+
+   - Relocate eligibleDestinations filtering
+   - Pre-filter data before sending to main thread
+   - Cache filtered results in worker
+
+2. Implement Worker Pool
+
+   - Create worker pool manager
+   - Distribute work across multiple workers
+   - Coordinate results aggregation
+   - Handle worker lifecycle management
+
+3. Memory Management
+
+   - Stream updates instead of building large arrays
+   - Implement chunked processing in worker
+   - Use TypedArrays for numeric data
+   - Clear temporary arrays after processing
+
+4. Progress Updates Optimization
+   - Reduce progress update frequency to every 1000 records
+   - Implement RequestAnimationFrame for UI updates
+   - Add throttling for progress messages
+   - Buffer progress updates
+
+#### 2. Store Operations Enhancement
+
+1. Batch Store Updates
+
+   - Aggregate mutations into larger chunks
+   - Implement optimistic UI updates
+   - Use temporary storage for intermediate results
+   - Defer non-critical updates
+
+2. Transaction Management
+   - Implement transaction-like behavior
+   - Add rollback capability
+   - Handle partial failures
+   - Track operation state
+
+#### 3. UI Responsiveness Improvements
+
+1. Main Thread Optimization
+
+   - Move heavy processing to Web Worker
+   - Implement proper loading states
+   - Use requestIdleCallback for non-critical updates
+   - Defer UI updates during processing
+
+2. DOM Updates
+   - Implement virtual scrolling
+   - Batch DOM updates
+   - Use document fragments
+   - Minimize reflows/repaints
+
+#### 4. Data Structure Optimization
+
+1. Flatten Data Structures
+
+   - Simplify worker communication payload
+   - Use structured cloning optimization
+   - Minimize data transfer between worker and main thread
+   - Cache computed values
+
+2. Memory Efficiency
+   - Implement cleanup for temporary objects
+   - Use WeakMap for caching
+   - Clear references after processing
+   - Implement memory monitoring
+
+#### 5. Error Handling Enhancement
+
+1. Implement Retry Mechanism
+
+   - Add exponential backoff
+   - Handle partial failures
+   - Track failed operations
+   - Provide recovery options
+
+2. Error Recovery
+   - Implement transaction rollback
+   - Save operation checkpoints
+   - Add resume capability
+   - Track operation history
+
+#### Implementation Priority Order:
+
+1. Worker Pool Implementation
+2. Memory Management Optimization
+3. Progress Updates Enhancement
+4. Store Operations Batching
+5. UI Responsiveness Improvements
+6. Data Structure Optimization
+7. Error Handling Enhancement
+
+#### Success Metrics:
+
+- Processing time under 30 seconds for 200K records
+- Memory usage under 500MB
+- UI remains responsive during processing
+- Zero data loss on errors
+- Successful recovery from interruptions
