@@ -266,6 +266,9 @@
   import type { ParseResult } from 'papaparse';
   import { RateSheetService } from '@/services/az-rate-sheet.service';
 
+  // Import memory monitoring utilities for Phase 1 testing
+  import { memoryMonitor, logReactivityStatus } from '@/utils/memory-test';
+
   const store = useAzRateSheetStore();
   const userStore = useUserStore(); // Initialize user store
   const rateSheetService = new RateSheetService();
@@ -316,6 +319,9 @@
       console.log('No rate sheet data found in localStorage');
     } else {
       console.log('Rate sheet data loaded from localStorage');
+      // Log reactivity status for Phase 1 verification
+      logReactivityStatus('Mounted - groupedData', store.groupedData);
+      logReactivityStatus('Mounted - originalData', store.originalData);
     }
   });
 
@@ -381,6 +387,9 @@
     isRFUploading.value = true;
     uploadError.value = null;
 
+    // Take memory snapshot before processing
+    memoryMonitor.takeSnapshot('Before File Processing');
+
     try {
       // Convert the new mappings format to the expected columnMapping format
       const columnMapping = {
@@ -416,6 +425,18 @@
           const result = await rateSheetService.processFile(file, columnMapping, startLine.value);
           store.setOptionalFields(mappings);
           console.log(`File processed successfully on attempt ${attempts}`);
+
+          // Take memory snapshot after processing
+          memoryMonitor.takeSnapshot('After File Processing');
+
+          // Log reactivity status for Phase 1 verification
+          logReactivityStatus('After Processing - groupedData', store.groupedData);
+          logReactivityStatus('After Processing - originalData', store.originalData);
+
+          // Compare memory usage
+          memoryMonitor.compareSnapshots('Before File Processing', 'After File Processing');
+          memoryMonitor.logSummary();
+
           rfUploadStatus.value = { type: 'success', message: 'Rate sheet processed successfully' };
           userStore.incrementUploadsToday(); // Increment upload count
           return;

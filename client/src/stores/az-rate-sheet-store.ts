@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { markRaw } from 'vue';
 import { ChangeCode } from '@/types/domains/rate-sheet-types';
 import type {
   RateSheetState,
@@ -55,17 +56,22 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     },
 
     setGroupedData(data: GroupedRateData[]) {
-      this.groupedData = data;
+      // Use markRaw to prevent Vue from making the data deeply reactive
+      this.groupedData = markRaw(data) as GroupedRateData[];
     },
 
     setOriginalData(data: RateSheetRecord[]) {
       const today = new Date().toISOString().split('T')[0];
 
-      this.originalData = data.map((record) => ({
+      // Process the data first
+      const processedData = data.map((record) => ({
         ...record,
         effective: record.effective || today,
         changeCode: record.changeCode || ChangeCode.SAME,
       }));
+
+      // Use markRaw to prevent Vue from making the data deeply reactive
+      this.originalData = markRaw(processedData) as RateSheetRecord[];
       this.saveToLocalStorage();
     },
 
@@ -82,11 +88,18 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       this.operationInProgress = inProgress;
     },
 
+    // Add a method to trigger updates when components need reactivity
+    triggerDataUpdate() {
+      // Force reactivity update by creating a new array reference
+      // This is more efficient than deep reactivity for large datasets
+      this.groupedData = [...this.groupedData];
+    },
+
     // Rate update methods
     async updateDestinationRate(destinationName: string, newRate: number): Promise<boolean> {
       try {
         // Update original data
-        this.originalData = this.originalData.map((record) => {
+        const updatedOriginalData = this.originalData.map((record) => {
           if (record.name === destinationName) {
             return {
               ...record,
@@ -96,8 +109,15 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
           return record;
         });
 
+        // Use markRaw when setting the updated data
+        this.originalData = markRaw(updatedOriginalData) as RateSheetRecord[];
+
         // Update grouped data
-        this.groupedData = this.processRecordsIntoGroups(this.originalData);
+        const updatedGroupedData = this.processRecordsIntoGroups(this.originalData);
+        this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
+
+        // Trigger update for components that need it
+        this.triggerDataUpdate();
 
         return true;
       } catch (error) {
@@ -112,7 +132,7 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         const updateMap = new Map(updates.map((update) => [update.name, update.rate]));
 
         // Update original data
-        this.originalData = this.originalData.map((record) => {
+        const updatedOriginalData = this.originalData.map((record) => {
           const newRate = updateMap.get(record.name);
           if (newRate !== undefined) {
             return {
@@ -123,8 +143,15 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
           return record;
         });
 
+        // Use markRaw when setting the updated data
+        this.originalData = markRaw(updatedOriginalData) as RateSheetRecord[];
+
         // Update grouped data
-        this.groupedData = this.processRecordsIntoGroups(this.originalData);
+        const updatedGroupedData = this.processRecordsIntoGroups(this.originalData);
+        this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
+
+        // Trigger update for components that need it
+        this.triggerDataUpdate();
 
         return true;
       } catch (error) {
@@ -161,12 +188,15 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
     updateEffectiveDates(changeCode: ChangeCodeType, newDate: string) {
       // Update effective dates for all items with the specified change code
-      this.groupedData = this.groupedData.map((item) => {
+      const updatedGroupedData = this.groupedData.map((item) => {
         if (item.changeCode === changeCode) {
           return { ...item, effectiveDate: newDate };
         }
         return item;
       });
+
+      this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
+      this.triggerDataUpdate();
       this.saveToLocalStorage();
     },
 
@@ -190,7 +220,7 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       });
 
       // Update the grouped data
-      this.groupedData = this.groupedData.map((group) => {
+      const updatedGroupedData = this.groupedData.map((group) => {
         const update = updateMap.get(group.destinationName);
         if (update) {
           return {
@@ -202,6 +232,8 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         return group;
       });
 
+      this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
+      this.triggerDataUpdate();
       this.saveToLocalStorage();
     },
 
@@ -226,7 +258,7 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       }
 
       // Apply updates to original data
-      this.originalData = this.originalData.map((record) => {
+      const updatedOriginalData = this.originalData.map((record) => {
         const key = `${record.name}|${record.prefix}`;
         const newEffectiveDate = updateMap.get(key);
 
@@ -244,6 +276,8 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         return record;
       });
 
+      this.originalData = markRaw(updatedOriginalData) as RateSheetRecord[];
+      this.triggerDataUpdate();
       this.saveToLocalStorage();
       console.log(`Successfully updated ${updatedRecords.length} records in store`);
     },
@@ -367,11 +401,12 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
     // Create a method to process a CSV file directly
     processRateSheetData(records: RateSheetRecord[]): void {
-      // Set the data
-      this.originalData = records;
+      // Set the data with markRaw
+      this.originalData = markRaw(records) as RateSheetRecord[];
 
       // Process the data into groups
-      this.groupedData = this.processRecordsIntoGroups(records);
+      const groupedData = this.processRecordsIntoGroups(records);
+      this.groupedData = markRaw(groupedData) as GroupedRateData[];
 
       // Set isLocallyStored to true since we now have data
       this.isLocallyStored = true;
@@ -413,6 +448,19 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     clearExcludedDestinations(): void {
       this.excludedDestinations.clear();
     },
+
+    // Add rate bucket filter methods
+    setRateBucketFilter(bucket: RateBucketType) {
+      this.selectedRateBucket = bucket;
+      localStorage.setItem('az-rate-bucket-filter', bucket);
+    },
+
+    loadRateBucketFilter() {
+      const saved = localStorage.getItem('az-rate-bucket-filter') as RateBucketType;
+      if (saved) {
+        this.selectedRateBucket = saved;
+      }
+    },
   },
 
   getters: {
@@ -427,52 +475,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
     getDestinationsByStatus: (state) => (hasDiscrepancy: boolean) =>
       state.groupedData.filter((group) => group.hasDiscrepancy === hasDiscrepancy),
-
-    getGroupedData: (state): GroupedRateData[] => {
-      const groupedByName = new Map<string, RateSheetRecord[]>();
-
-      state.originalData.forEach((record) => {
-        const records = groupedByName.get(record.name) || [];
-        records.push(record);
-        groupedByName.set(record.name, records);
-      });
-
-      return Array.from(groupedByName.entries()).map(([name, records]) => {
-        const rateMap = new Map<number, number>();
-        records.forEach((record) => {
-          const rate = typeof record.rate === 'string' ? parseFloat(record.rate) : record.rate;
-          rateMap.set(rate, (rateMap.get(rate) || 0) + 1);
-        });
-
-        const totalRecords = records.length;
-
-        const rates: RateStatistics[] = Array.from(rateMap.entries()).map(([rate, count]) => ({
-          rate,
-          count,
-          percentage: (count / totalRecords) * 100,
-          isCommon: false,
-        }));
-
-        const maxCount = Math.max(...rates.map((r) => r.count));
-        rates.forEach((rate) => {
-          rate.isCommon = rate.count === maxCount;
-        });
-
-        const effectiveDate = records[0]?.effective || '';
-        const changeCode: ChangeCodeType = records[0]?.changeCode || ChangeCode.SAME;
-
-        return {
-          destinationName: name,
-          codes: records.map((r) => r.prefix),
-          rates,
-          hasDiscrepancy: rateMap.size > 1,
-          effectiveDate,
-          changeCode,
-          minDuration: records[0]?.minDuration,
-          increments: records[0]?.increments,
-        };
-      });
-    },
 
     hasInvalidRows: (state): boolean => state.invalidRows.length > 0,
 

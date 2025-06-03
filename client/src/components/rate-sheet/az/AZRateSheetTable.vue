@@ -5,8 +5,6 @@
     <!-- Global Adjustment -->
     <AZGlobalAdjustment />
 
-
-
     <!-- Bucket Bulk Adjustment -->
     <AZBucketBulkAdjustment />
 
@@ -820,7 +818,7 @@
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue'; // Import BaseBadge
   import AZEffectiveDates from './AZEffectiveDates.vue'; // Import the new component
-  
+
   import AZBucketBulkAdjustment from './AZBucketBulkAdjustment.vue'; // Import the new bucket adjustment component
   import AZGlobalAdjustment from './AZGlobalAdjustment.vue'; // Import the new global adjustment component
   import { RATE_BUCKETS, formatRate } from '@/constants/rate-buckets';
@@ -832,7 +830,7 @@
   // Initialize store and service
   const store = useAzRateSheetStore();
   const rateSheetService = new RateSheetService();
-  const groupedData = computed(() => store.getGroupedData);
+  const groupedData = computed(() => store.groupedData);
 
   // --- Sorting State ---
   const sortColumnKey = ref<string | null>('destinationName');
@@ -1533,7 +1531,7 @@
       await store.bulkUpdateDestinationRates(updates);
 
       // Force a store update after each batch
-      store.setGroupedData([...store.getGroupedData]);
+      store.setGroupedData([...store.groupedData]);
 
       processedCount.value += batch.length;
       currentDiscrepancyCount.value = store.getDiscrepancyCount;
@@ -1547,7 +1545,7 @@
     }
 
     // Final store update to ensure UI is in sync
-    store.setGroupedData([...store.getGroupedData]);
+    store.setGroupedData([...store.groupedData]);
     currentDiscrepancyCount.value = store.getDiscrepancyCount;
 
     isBulkProcessing.value = false;
@@ -1590,7 +1588,7 @@
           await store.bulkUpdateDestinationRates(batch);
 
           // Force a store update after each batch
-          store.setGroupedData([...store.getGroupedData]);
+          store.setGroupedData([...store.groupedData]);
 
           processedCount.value += batch.length;
           currentDiscrepancyCount.value = store.getDiscrepancyCount;
@@ -1603,7 +1601,7 @@
         }
 
         // Final store update
-        store.setGroupedData([...store.getGroupedData]);
+        store.setGroupedData([...store.groupedData]);
         currentDiscrepancyCount.value = store.getDiscrepancyCount;
       } catch (error) {
         console.error('Bulk update with most common rate failed:', error);
