@@ -91,7 +91,7 @@
         <!-- NPA Distribution Section -->
         <div class="bg-gray-800 p-3 rounded-lg">
           <div class="flex justify-between mb-2">
-            <div class="text-gray-400">NPA Coverage:</div>
+            <div class="text-gray-400">NPA Coverage</div>
             <div
               v-if="showDistribution"
               @click="showDistribution = false"
@@ -142,7 +142,10 @@
               </div>
 
               <!-- Hierarchical Country Structure -->
-              <template v-for="[countryKey, countryInfo] in Object.entries(hierarchicalData)" :key="countryKey">
+              <template
+                v-for="[countryKey, countryInfo] in Object.entries(hierarchicalData)"
+                :key="countryKey"
+              >
                 <div class="bg-gray-900 p-3 rounded-lg" :class="getCountryBorderClass(countryKey)">
                   <div
                     @click="toggleCountryExpanded(countryKey)"
@@ -150,9 +153,7 @@
                   >
                     <span class="text-gray-300 font-medium">{{ countryInfo.displayName }}</span>
                     <div class="flex items-center space-x-2">
-                      <span class="text-gray-400 text-sm">
-                        {{ countryInfo.totalNPAs }} NPAs
-                      </span>
+                      <span class="text-gray-400 text-sm"> {{ countryInfo.totalNPAs }} NPAs </span>
                       <span
                         class="transform transition-transform"
                         :class="{ 'rotate-180': expandedCountries.has(countryKey) }"
@@ -178,7 +179,7 @@
                   <!-- States/Provinces/Direct NPAs Section -->
                   <div v-if="expandedCountries.has(countryKey)" class="mt-3 space-y-2">
                     <!-- US/Canada - Show States/Provinces -->
-                    <template v-if="countryInfo.hasStates">
+                    <template v-if="countryInfo.hasStates && countryInfo.states && countryInfo.states.length > 0">
                       <template v-for="state in countryInfo.states" :key="state.stateCode">
                         <div class="bg-gray-800/60 rounded overflow-hidden">
                           <div
@@ -335,18 +336,18 @@
   const allFileNPAs = computed(() => {
     const countries = enhancedReport.value?.file1?.countries;
     if (!countries) return [];
-    
+
     const allNPAs: number[] = [];
     countries.forEach((country: USCountryBreakdown) => {
       if (country.npas) {
         // Convert string NPAs to numbers
-        const numericNPAs = country.npas.map(npa => parseInt(npa, 10)).filter(npa => !isNaN(npa));
+        const numericNPAs = country.npas
+          .map((npa) => parseInt(npa, 10))
+          .filter((npa) => !isNaN(npa));
         allNPAs.push(...numericNPAs);
-        
       }
     });
-    
-    
+
     return allNPAs;
   });
 
@@ -356,8 +357,7 @@
 
   // Basic stats
   const totalLergCodes = computed(() => lergStore.calculateTotalLergCodes() || 0);
-  
-  
+
   const usCoveragePercentage = computed(() => {
     return calculateCoveragePercentage(npaBreakdown.value.us.count, totalLergCodes.value);
   });
@@ -414,16 +414,8 @@
 
           // Check if any NPA in this state matches (search from beginning only)
           const hasMatchingNPA = state.npas.some((npa) => npa.startsWith(query));
-          
-          // Debug for numeric queries
-          if (query && hasMatchingNPA && /^\d+$/.test(query)) {
-            console.log(`🔍 State ${stateName} has NPAs starting with "${query}":`, {
-              stateCode: state.stateCode,
-              allNPAs: state.npas,
-              matchingNPAs: state.npas.filter(npa => npa.startsWith(query))
-            });
-          }
-          
+
+
           return hasMatchingNPA;
         });
 
@@ -444,16 +436,16 @@
   // Filtered Others countries
   const filteredOthersCountries = computed(() => {
     const othersCountries = Array.from(npaBreakdown.value.others.countries.entries());
-    
+
     if (!searchQuery.value) return othersCountries;
 
     const query = searchQuery.value.toLowerCase();
     return othersCountries.filter(([countryCode, countryData]) => {
       // Check if country name matches
       if (countryData.countryName.toLowerCase().includes(query)) return true;
-      
+
       // Check if any NPA matches
-      return countryData.npas.some(npa => npa.toString().startsWith(query));
+      return countryData.npas.some((npa) => npa.toString().startsWith(query));
     });
   });
 
@@ -462,9 +454,7 @@
     if (!searchQuery.value) return npaBreakdown.value.unidentified.npas;
 
     const query = searchQuery.value.toLowerCase();
-    return npaBreakdown.value.unidentified.npas.filter(npa => 
-      npa.toString().startsWith(query)
-    );
+    return npaBreakdown.value.unidentified.npas.filter((npa) => npa.toString().startsWith(query));
   });
 
   // Create hierarchical data structure
@@ -474,69 +464,94 @@
 
     // Process existing enhanced report data to maintain US/Canada state structure
     if (enhancedReport.value?.file1?.countries) {
+      
       enhancedReport.value.file1.countries.forEach((country: USCountryBreakdown) => {
         if (country.npas && country.npas.length > 0) {
           const countryName = country.countryName;
           const hasStates = country.states && country.states.length > 0;
-          
+
           // Filter by search query if needed
           let shouldInclude = !query;
           if (query) {
-            shouldInclude = countryName.toLowerCase().includes(query) ||
-              (country.states?.some(state => 
-                getStateName(state.stateCode, country.countryCode).toLowerCase().includes(query) ||
-                state.npas.some(npa => npa.startsWith(query))
-              )) ||
-              country.npas.some(npa => npa.startsWith(query));
+            shouldInclude =
+              countryName.toLowerCase().includes(query) ||
+              country.states?.some(
+                (state) =>
+                  getStateName(state.stateCode, country.countryCode)
+                    .toLowerCase()
+                    .includes(query) || state.npas.some((npa) => npa.startsWith(query))
+              ) ||
+              country.npas.some((npa) => npa.startsWith(query));
           }
 
           if (shouldInclude) {
             // If searching and country has states, filter states to only matching ones
             let filteredStates = country.states;
             if (query && hasStates && country.states) {
-              filteredStates = country.states.filter(state => {
+              filteredStates = country.states.filter((state) => {
                 const stateName = getStateName(state.stateCode, country.countryCode).toLowerCase();
                 // Check if state name matches
                 if (stateName.includes(query)) return true;
                 // Check if any NPA in state matches
-                return state.npas.some(npa => npa.startsWith(query));
+                return state.npas.some((npa) => npa.startsWith(query));
               });
+            }
+            
+            // Ensure we always have the full states array when not searching
+            if (!query && hasStates) {
+              filteredStates = country.states;
             }
 
             // Only include country if it has matching states (when searching) or any states (when not searching)
             if (!query || (filteredStates && filteredStates.length > 0) || !hasStates) {
-              result[country.countryCode] = {
-                displayName: countryName,
-                totalNPAs: query && filteredStates ? 
-                  filteredStates.reduce((sum, state) => sum + state.npas.length, 0) : 
-                  country.npas.length,
-                hasStates: hasStates,
-                npas: country.npas,
-                states: hasStates && filteredStates ? filteredStates.map(state => ({
+              // Force correct states mapping for Canada and US
+              let statesArray = undefined;
+              if (hasStates && filteredStates && filteredStates.length > 0) {
+                statesArray = filteredStates.map((state) => ({
                   stateCode: state.stateCode,
                   displayName: getStateName(state.stateCode, country.countryCode),
                   npas: state.npas,
-                  rateStats: state.rateStats
-                })) : null
+                  rateStats: state.rateStats,
+                }));
+              }
+              
+              
+              const countryResult = {
+                displayName: countryName,
+                totalNPAs:
+                  query && filteredStates
+                    ? filteredStates.reduce((sum, state) => sum + state.npas.length, 0)
+                    : country.npas.length,
+                hasStates: hasStates,
+                npas: country.npas,
+                states: statesArray
               };
+              
+              
+              
+              result[country.countryCode] = countryResult;
             }
           }
         }
       });
     }
 
-    // Add non-US countries from breakdown
+    // Add non-US countries from breakdown (exclude CA since it's already processed with states)
     npaBreakdown.value.others.countries.forEach((countryData, countryCode) => {
-      const shouldInclude = !query || 
+      // Skip Canada as it's already processed with provinces from enhanced report
+      if (countryCode === 'CA') return;
+      
+      const shouldInclude =
+        !query ||
         countryData.countryName.toLowerCase().includes(query) ||
-        countryData.npas.some(npa => npa.toString().startsWith(query));
+        countryData.npas.some((npa) => npa.toString().startsWith(query));
 
       if (shouldInclude && countryData.npas.length > 0) {
         result[countryCode] = {
           displayName: countryData.countryName,
           totalNPAs: countryData.npas.length,
           hasStates: false,
-          npas: countryData.npas.map(n => n.toString())
+          npas: countryData.npas.map((n) => n.toString()),
         };
       }
     });
@@ -548,10 +563,11 @@
         displayName: 'Unknown',
         totalNPAs: unidentifiedNPAs.length,
         hasStates: false,
-        npas: unidentifiedNPAs.map(n => n.toString())
+        npas: unidentifiedNPAs.map((n) => n.toString()),
       };
     }
 
+    
     return result;
   });
 

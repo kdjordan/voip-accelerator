@@ -542,25 +542,11 @@
     fileName: string,
     data: USStandardizedData[]
   ): Promise<USEnhancedCodeReport> {
-    console.error(`[Main] Creating worker for ${fileName}`);
     const codeReportWorker = new USCodeReportWorker();
 
     try {
       // Get LERG data efficiently using the optimized preparation
       const lergData = prepareLergWorkerData();
-      console.log(`[Main] LERG data prepared:`, lergData);
-      // Ensure lergData is not null and access properties safely
-      if (lergData) {
-        // Accessing lergData properties that actually exist
-        console.error(
-          `[Main] LERG data prepared with ${lergData.validNpas?.length || 0} valid NPAs and ${
-            Object.keys(lergData.countryGroups || {}).length
-          } country groups.`
-        );
-      } else {
-        console.error(`[Main] LERG data preparation returned null or undefined.`);
-        // Handle the case where LERG data is not available, maybe reject or return default report
-      }
 
       // Continue only if lergData is valid
       if (!lergData) {
@@ -569,24 +555,20 @@
 
       return await new Promise<USEnhancedCodeReport>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.error(`[Main] Worker timeout for ${fileName} after 10 seconds`);
           codeReportWorker.terminate();
           reject(new Error('Worker timeout after 10 seconds'));
         }, 10000);
 
         codeReportWorker.onmessage = (event) => {
           clearTimeout(timeout);
-          console.log(`[Main] Worker message received for ${fileName}`);
 
           if (event.data?.error) {
-            console.error(`[Main] Worker error: ${event.data.error}`);
             codeReportWorker.terminate();
             reject(new Error(event.data.error));
             return;
           }
 
           if (!event.data?.file1) {
-            console.error(`[Main] Invalid report format from worker`);
             codeReportWorker.terminate();
             reject(new Error('Invalid report format received from worker'));
             return;
@@ -603,7 +585,6 @@
 
         codeReportWorker.onerror = (error) => {
           clearTimeout(timeout);
-          console.error(`[Main] Worker error event for ${fileName}:`, error);
           codeReportWorker.terminate();
           reject(error);
         };
@@ -615,11 +596,9 @@
           lergData,
         };
 
-        console.error(`[Main] Sending data to worker for ${fileName}`);
         codeReportWorker.postMessage(input);
       });
     } catch (error) {
-      console.error(`[Main] Error in generateEnhancedCodeReport for ${fileName}:`, error);
       codeReportWorker.terminate();
       throw error;
     }
