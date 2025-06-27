@@ -173,6 +173,16 @@ function processFileData(
     });
   }
 
+  // Process unknown NPAs (not found in LERG)
+  const unknownNPAs = findUnknownNPAs(npaGroups, lergData);
+  if (unknownNPAs.length > 0) {
+    console.log(`[Worker] Found ${unknownNPAs.length} unknown NPAs:`, unknownNPAs);
+    const unknownCountry = createUnknownCountryBreakdown(unknownNPAs, npaGroups);
+    if (unknownCountry) {
+      countries.push(unknownCountry);
+    }
+  }
+
   // --- Calculate OVERALL rate statistics for the entire file --- //
 
   const overallRateStats = calculateRateStats(fileData);
@@ -352,4 +362,48 @@ function getStateName(code: string, country: string): string {
     return PROVINCE_CODES[code]?.name || code;
   }
   return code;
+}
+
+// Helper function to find NPAs that are not in LERG data
+function findUnknownNPAs(
+  npaGroups: Map<string, USStandardizedData[]>,
+  lergData?: USEnhancedCodeReportInput['lergData']
+): string[] {
+  if (!lergData) return Array.from(npaGroups.keys());
+
+  // Get all NPAs from LERG data
+  const knownNPAs = new Set<string>();
+  
+  // Add all valid NPAs from LERG
+  if (lergData.validNpas) {
+    lergData.validNpas.forEach(npa => knownNPAs.add(npa));
+  }
+
+  // Find NPAs in file that are not in LERG
+  const allFileNPAs = Array.from(npaGroups.keys());
+  const unknownNPAs = allFileNPAs.filter(npa => !knownNPAs.has(npa));
+  
+  return unknownNPAs;
+}
+
+// Helper function to create a country breakdown for unknown NPAs
+function createUnknownCountryBreakdown(
+  unknownNPAs: string[],
+  npaGroups: Map<string, USStandardizedData[]>
+): USCountryBreakdown {
+  // Calculate total entries for unknown NPAs
+  let totalEntries = 0;
+  unknownNPAs.forEach(npa => {
+    const entries = npaGroups.get(npa) || [];
+    totalEntries += entries.length;
+  });
+
+  return {
+    countryCode: 'UNKNOWN',
+    countryName: 'Unknown',
+    npaCoverage: 0, // No coverage calculation for unknown
+    totalNPAs: unknownNPAs.length,
+    npas: unknownNPAs.sort(),
+    // No states breakdown for unknown NPAs
+  };
 }
