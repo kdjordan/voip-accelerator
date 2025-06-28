@@ -53,15 +53,16 @@ export interface UserState {
 }
 
 export interface Profile {
-  id: string; // UUID, references auth.users.id
-  created_at: string; // timestamp with timezone
-  updated_at?: string | null; // timestamp with timezone
-  role: 'user' | 'admin'; // text, 'user' or 'admin'
-  plan_expires_at?: string | null; // timestamp with timezone
-  user_agent?: string | null; // text
-  signup_method?: 'email' | 'google' | string | null; // text (allow others for future)
-  stripe_customer_id?: string | null; // text
-  subscription_status?: string | null; // text
+  id: string; // UUID
+  updated_at: string; // timestamptz
+  username: string; // text
+  full_name: string; // text
+  avatar_url: string; // text
+  website: string; // text
+  role: 'user' | 'admin' | 'superadmin'; // text, 'user', 'admin', or 'superadmin'
+  company: string; // text
+  billing_address: any; // jsonb
+  payment_method: any; // jsonb
 }
 
 // Keep Supabase User type for reference in store
