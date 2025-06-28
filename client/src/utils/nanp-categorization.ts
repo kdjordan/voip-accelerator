@@ -95,10 +95,7 @@ export class NANPCategorizer {
    * Categorize from constants (fallback)
    */
   private static categorizeFromConstants(npa: string): NANPCategorization | null {
-    // This would be a lookup table of known NPA ranges
-    // For now, we'll implement basic logic
-    
-    // Known US NPAs (examples - this could be expanded)
+    // Known US NPAs
     if (this.isKnownUSNPA(npa)) {
       return {
         npa,
@@ -110,13 +107,37 @@ export class NANPCategorizer {
       };
     }
 
-    // Known Canadian NPAs (examples)
+    // Known Canadian NPAs
     if (this.isKnownCanadianNPA(npa)) {
       return {
         npa,
         country: 'CA',
         countryName: 'Canada',
         category: 'canadian',
+        source: 'constants',
+        confidence: 'medium'
+      };
+    }
+
+    // Known Caribbean NPAs
+    if (this.isKnownCaribbeanNPA(npa)) {
+      return {
+        npa,
+        country: 'CARIBBEAN',
+        countryName: 'Caribbean Territory',
+        category: 'caribbean',
+        source: 'constants',
+        confidence: 'medium'
+      };
+    }
+
+    // Known Pacific NPAs
+    if (this.isKnownPacificNPA(npa)) {
+      return {
+        npa,
+        country: 'PACIFIC',
+        countryName: 'Pacific Territory',
+        category: 'pacific',
         source: 'constants',
         confidence: 'medium'
       };
@@ -278,15 +299,28 @@ export class NANPCategorizer {
   }
 
   private static isKnownUSNPA(npa: string): boolean {
-    // Known US NPA ranges - could be expanded
-    const usRanges = ['212', '213', '214', '215', '216', '217', '218', '219'];
-    return usRanges.includes(npa);
+    // Basic US NPA patterns - primary data should come from Supabase
+    // This is only for emergency fallback when LERG/Supabase data is unavailable
+    const basicUSPatterns = ['201', '212', '213', '214', '215', '216', '217', '305', '310', '312', '313', '404', '415', '510', '718', '773', '917'];
+    return basicUSPatterns.includes(npa);
   }
 
   private static isKnownCanadianNPA(npa: string): boolean {
-    // Known Canadian NPA ranges - could be expanded  
-    const canadianRanges = ['204', '226', '236', '249', '250', '263'];
-    return canadianRanges.includes(npa);
+    // Basic Canadian NPA patterns - primary data should come from Supabase
+    const basicCanadianPatterns = ['204', '403', '416', '418', '450', '514', '604', '613', '705', '780', '902', '905'];
+    return basicCanadianPatterns.includes(npa);
+  }
+
+  private static isKnownCaribbeanNPA(npa: string): boolean {
+    // Basic Caribbean patterns - primary data should come from Supabase
+    const basicCaribbeanPatterns = ['242', '246', '264', '268', '284', '340', '441', '649', '664', '721', '758', '767', '784', '787', '809', '829', '849', '868', '869', '876', '939', '987'];
+    return basicCaribbeanPatterns.includes(npa);
+  }
+
+  private static isKnownPacificNPA(npa: string): boolean {
+    // Pacific territory NPAs
+    const pacificNPAs = ['670', '671', '684'];
+    return pacificNPAs.includes(npa);
   }
 
   private static buildRegionsSummary(results: NANPCategorization[]): NANPRegion[] {

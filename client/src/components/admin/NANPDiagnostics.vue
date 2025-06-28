@@ -59,6 +59,9 @@
               </div>
               <div class="text-gray-400 text-sm">High Confidence</div>
               <div class="text-xs text-gray-500">(LERG Data)</div>
+              <div v-if="diagnostics.coverage_analysis" class="text-xs text-green-300 mt-1">
+                {{ diagnostics.coverage_analysis.high_confidence_percent }}%
+              </div>
             </div>
             <div class="text-center">
               <div class="text-xl font-bold text-yellow-400">
@@ -66,6 +69,9 @@
               </div>
               <div class="text-gray-400 text-sm">Medium Confidence</div>
               <div class="text-xs text-gray-500">(Constants)</div>
+              <div v-if="diagnostics.coverage_analysis" class="text-xs text-yellow-300 mt-1">
+                {{ diagnostics.coverage_analysis.medium_confidence_percent }}%
+              </div>
             </div>
             <div class="text-center">
               <div class="text-xl font-bold text-red-400">
@@ -73,7 +79,44 @@
               </div>
               <div class="text-gray-400 text-sm">Low Confidence</div>
               <div class="text-xs text-gray-500">(Inferred)</div>
+              <div v-if="diagnostics.coverage_analysis" class="text-xs text-red-300 mt-1">
+                {{ diagnostics.coverage_analysis.low_confidence_percent }}%
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Data Sources Information -->
+        <div v-if="diagnostics.data_sources" class="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+          <h3 class="text-lg font-medium text-blue-400 mb-3">Data Sources Status</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div class="text-center">
+              <div class="text-lg font-bold" :class="diagnostics.data_sources.lerg_loaded ? 'text-green-400' : 'text-red-400'">
+                {{ diagnostics.data_sources.lerg_loaded ? '✓' : '✗' }}
+              </div>
+              <div class="text-gray-400">LERG Loaded</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-blue-300">
+                {{ diagnostics.data_sources.lerg_us_states }}
+              </div>
+              <div class="text-gray-400">US States</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-blue-300">
+                {{ diagnostics.data_sources.lerg_canada_provinces }}
+              </div>
+              <div class="text-gray-400">CA Provinces</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-blue-300">
+                {{ diagnostics.data_sources.lerg_other_countries }}
+              </div>
+              <div class="text-gray-400">Other Countries</div>
+            </div>
+          </div>
+          <div v-if="diagnostics.timestamp" class="mt-3 text-xs text-gray-500 text-center">
+            Last analyzed: {{ new Date(diagnostics.timestamp).toLocaleString() }}
           </div>
         </div>
 
@@ -235,49 +278,100 @@ function toggleDiagnostics() {
 async function runDiagnostics() {
   isAnalyzing.value = true;
   try {
-    // Get all NPAs from your system (you'd need to implement this)
+    console.log('[NANPDiagnostics] Starting categorization analysis...');
+    
+    // Get all NPAs from various sources
     const allNPAs = getAllKnownNPAs();
     
-    // Run validation
-    diagnostics.value = NANPCategorizer.validateCategorization(allNPAs);
+    if (allNPAs.length === 0) {
+      throw new Error('No NPAs found. Please ensure LERG data is loaded.');
+    }
     
-    console.log('NANP Categorization Diagnostics completed');
+    console.log(`[NANPDiagnostics] Analyzing ${allNPAs.length} NPAs...`);
+    
+    // Run validation with detailed logging
+    const validationResult = NANPCategorizer.validateCategorization(allNPAs);
+    
+    // Add additional analytics
+    const enhancedResult = {
+      ...validationResult,
+      timestamp: new Date().toISOString(),
+      data_sources: {
+        lerg_loaded: lergStore.isLoaded,
+        lerg_us_states: lergStore.usStates?.size || 0,
+        lerg_canada_provinces: lergStore.canadaProvinces?.size || 0,
+        lerg_other_countries: lergStore.otherCountries?.size || 0,
+        total_lerg_npas: lergStore.stats?.totalNPAs || 0
+      },
+      coverage_analysis: {
+        high_confidence_percent: Math.round((validationResult.confidence_breakdown.high || 0) / validationResult.total * 100),
+        medium_confidence_percent: Math.round((validationResult.confidence_breakdown.medium || 0) / validationResult.total * 100),
+        low_confidence_percent: Math.round((validationResult.confidence_breakdown.low || 0) / validationResult.total * 100)
+      }
+    };
+    
+    diagnostics.value = enhancedResult;
+    
+    console.log('[NANPDiagnostics] Analysis completed:', enhancedResult);
+    
   } catch (error) {
-    console.error('Failed to run diagnostics:', error);
+    console.error('[NANPDiagnostics] Failed to run diagnostics:', error);
+    alert(`❌ Diagnostic analysis failed: ${error.message}`);
   } finally {
     isAnalyzing.value = false;
   }
 }
 
 function getAllKnownNPAs(): string[] {
-  // This would collect NPAs from various sources
-  // You'd implement this based on your data structure
   const npas = new Set<string>();
   
-  // From LERG store
-  lergStore.usStates.forEach(state => {
-    state.npas.forEach(npa => npas.add(npa));
-  });
-  
-  lergStore.canadaProvinces.forEach(province => {
-    province.npas.forEach(npa => npas.add(npa));
-  });
-  
-  lergStore.otherCountries.forEach(country => {
-    country.npas.forEach(npa => npas.add(npa));
-  });
-  
-  // Add some common NPAs that might be missing
-  const commonNPAs = [
-    '212', '213', '214', '215', '216', '217', '218', '219', // US examples
-    '204', '226', '236', '249', '250', '263', '289', '306', // Canadian examples  
-    '242', '246', '264', '268', '284', '340', '345', '441', // Caribbean examples
-    '649', '664', '670', '671', '684', '721', '758', '767',
-    '784', '787', '809', '829', '849', '868', '869', '876',
-    '939', '987'
-  ];
-  
-  commonNPAs.forEach(npa => npas.add(npa));
+  try {
+    // From LERG store - US States
+    if (lergStore.usStates && lergStore.usStates.size > 0) {
+      for (const [stateCode, npaEntries] of lergStore.usStates.entries()) {
+        if (Array.isArray(npaEntries)) {
+          npaEntries.forEach(entry => {
+            if (entry && entry.npa) {
+              npas.add(entry.npa);
+            }
+          });
+        }
+      }
+    }
+    
+    // From LERG store - Canadian Provinces
+    if (lergStore.canadaProvinces && lergStore.canadaProvinces.size > 0) {
+      for (const [provinceCode, npaEntries] of lergStore.canadaProvinces.entries()) {
+        if (Array.isArray(npaEntries)) {
+          npaEntries.forEach(entry => {
+            if (entry && entry.npa) {
+              npas.add(entry.npa);
+            }
+          });
+        }
+      }
+    }
+    
+    // From LERG store - Other Countries  
+    if (lergStore.otherCountries && lergStore.otherCountries.size > 0) {
+      for (const [countryCode, npaEntries] of lergStore.otherCountries.entries()) {
+        if (Array.isArray(npaEntries)) {
+          npaEntries.forEach(entry => {
+            if (entry && entry.npa) {
+              npas.add(entry.npa);
+            }
+          });
+        }
+      }
+    }
+    
+    // Note: Removed hardcoded NPAs to use Supabase as single source of truth
+    
+    console.log(`[NANPDiagnostics] Collected ${npas.size} NPAs from all sources`);
+    
+  } catch (error) {
+    console.error('[NANPDiagnostics] Error collecting NPAs:', error);
+  }
   
   return Array.from(npas).sort();
 }
