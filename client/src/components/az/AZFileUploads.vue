@@ -226,14 +226,6 @@
       @cancel="handleModalCancel"
     />
 
-    <!-- Plus One Handling Modal -->
-    <PlusOneHandlingModal
-      v-if="showPlusOneModal"
-      :showModal="showPlusOneModal"
-      :analysis="plusOneAnalysis"
-      @proceed="handlePlusOneAction"
-      @cancel="handlePlusOneCancel"
-    />
   </div>
 </template>
 
@@ -265,9 +257,6 @@
   import { ReportTypes } from '@/types';
   import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
   import { useDragDrop } from '@/composables/useDragDrop';
-  import { detectPlusOneDestinations, filterByPlusOneChoice } from '@/utils/plus-one-detector';
-  import PlusOneHandlingModal from '@/components/shared/PlusOneHandlingModal.vue';
-  import type { PlusOneAnalysis } from '@/utils/plus-one-detector';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -290,11 +279,6 @@
   const startLine = ref(1);
   const activeComponent = ref<ComponentId>('az1');
 
-  // Plus One Modal state
-  const showPlusOneModal = ref(false);
-  const plusOneAnalysis = ref<PlusOneAnalysis | null>(null);
-  const originalFileData = ref<string[][]>([]);
-  const selectedPlusOneAction = ref<'include-all' | 'filter-plus-one' | 'extract-plus-one' | null>(null);
 
   // Preview state
   const isModalValid = ref(false);
@@ -454,29 +438,13 @@
     azStore.setTempFile(componentId, file);
 
     Papa.parse(file, {
-      preview: 100, // Parse more lines to detect +1 destinations
+      preview: 100,
       complete: (results) => {
-        // Detect +1 destinations
-        console.log('🧪 [AZ UPLOAD] Testing +1 detection with real file...');
-        const detection = detectPlusOneDestinations(results.data as string[][]);
-        console.log('📊 [AZ UPLOAD] Detection results:', detection);
-        
-        if (detection.hasPlusOne && detection.suggestedAction === 'show-modal') {
-          console.log('🚨 [AZ UPLOAD] This file contains +1 destinations - showing modal!');
-          // Store the analysis and show +1 modal first
-          plusOneAnalysis.value = detection;
-          previewData.value = results.data.slice(1) as string[][];
-          columns.value = results.data[0] as string[];
-          activeComponent.value = componentId;
-          showPlusOneModal.value = true;
-        } else {
-          console.log('✅ [AZ UPLOAD] No +1 destinations detected - proceeding normally');
-          // Proceed directly to preview modal
-          previewData.value = results.data.slice(1) as string[][];
-          columns.value = results.data[0] as string[];
-          activeComponent.value = componentId;
-          showPreviewModal.value = true;
-        }
+        // Proceed directly to preview modal - no +1 detection needed for AZ
+        previewData.value = results.data.slice(1) as string[][];
+        columns.value = results.data[0] as string[];
+        activeComponent.value = componentId;
+        showPreviewModal.value = true;
       },
       error: (error) => {
         console.error('Error parsing CSV:', error);
@@ -542,28 +510,6 @@
     columnMappings.value = newMappings;
   }
 
-  // Plus One Modal handlers
-  function handlePlusOneAction(action: 'include-all' | 'filter-plus-one' | 'extract-plus-one') {
-    selectedPlusOneAction.value = action;
-    showPlusOneModal.value = false;
-    
-    console.log('🎯 [AZ UPLOAD] User selected action:', action);
-    
-    // After user chooses how to handle +1, show the preview modal
-    showPreviewModal.value = true;
-  }
-
-  function handlePlusOneCancel() {
-    showPlusOneModal.value = false;
-    plusOneAnalysis.value = null;
-    selectedPlusOneAction.value = null;
-    
-    // Clear temp file and reset state
-    azStore.clearTempFile(activeComponent.value);
-    activeComponent.value = 'az1';
-    
-    console.log('❌ [AZ UPLOAD] User cancelled +1 handling');
-  }
 
   // Add this debugging function after the existing handleDragEnter function
   function setTestError(componentId: ComponentId, message: string) {
@@ -577,64 +523,4 @@
     azStore.setActiveReportType(ReportTypes.CODE);
   }
   
-  // Plus One Modal Handlers
-  function handlePlusOneChoice(choice: 'include-all' | 'remove-plus-one' | 'extract-plus-one-only') {
-    showPlusOneModal.value = false;
-    
-    let filteredData = originalFileData.value;
-    
-    // Apply filtering based on user choice
-    if (choice === 'remove-plus-one') {
-      filteredData = filterByPlusOneChoice(originalFileData.value, 'exclude-all-plus-one');
-      console.log('🚫 [AZ UPLOAD] Removing all +1 destinations');
-    } else if (choice === 'extract-plus-one-only') {
-      // For AZ uploads, extract only +1 destinations (inverse of remove)
-      // This requires a custom filter since we want to KEEP only +1
-      const [headers, ...rows] = originalFileData.value;
-      const filteredRows = rows.filter(row => {
-        const dialCode = extractDialCode(row);
-        const npa = extractNPA(dialCode);
-        return npa !== ''; // Keep only +1 destinations
-      });
-      filteredData = [headers, ...filteredRows];
-      console.log('🎯 [AZ UPLOAD] Extracting only +1 destinations');
-    } else {
-      console.log('✅ [AZ UPLOAD] Including all destinations');
-    }
-    
-    // Continue with the preview modal using filtered data
-    previewData.value = filteredData.slice(1);
-    columns.value = filteredData[0];
-    showPreviewModal.value = true;
-  }
-  
-  function cancelPlusOneModal() {
-    showPlusOneModal.value = false;
-    plusOneAnalysis.value = null;
-    originalFileData.value = [];
-    
-    // Clear the temp file and reset the component
-    azStore.clearTempFile(activeComponent.value);
-    azStore.setComponentUploading(activeComponent.value, false);
-  }
-  
-  // Helper functions for filtering (if not imported)
-  function extractDialCode(row: any[]): string {
-    for (const cell of row) {
-      if (!cell) continue;
-      const str = cell.toString().trim();
-      const cleaned = str.replace(/[\s\-\+\(\)]/g, '');
-      if (/^1\d{3,}/.test(cleaned)) {
-        return cleaned;
-      }
-    }
-    return '';
-  }
-  
-  function extractNPA(dialCode: string): string {
-    if (dialCode.startsWith('1') && dialCode.length >= 4) {
-      return dialCode.substring(1, 4);
-    }
-    return '';
-  }
 </script>

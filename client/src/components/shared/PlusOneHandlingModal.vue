@@ -40,6 +40,21 @@
         </div>
       </div>
 
+      <!-- Expensive Destinations Warning (if applicable) -->
+      <div v-if="hasExpensiveDestinations" class="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4 mb-6">
+        <div class="flex items-start space-x-3">
+          <span class="text-2xl">⚠️</span>
+          <div>
+            <h3 class="text-lg font-medium text-yellow-300 mb-2">Expensive Destinations Detected</h3>
+            <p class="text-yellow-100 text-sm">
+              This rate deck contains Caribbean or territory destinations that are typically 
+              <strong class="text-yellow-300">much more expensive</strong> than US/Canada rates. 
+              These can result in unexpected billing costs.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- +1 Breakdown -->
       <div class="bg-gray-900/30 rounded-lg p-4 mb-6">
         <h3 class="text-lg font-medium text-white mb-4">North American (+1) Destinations Found</h3>
@@ -109,10 +124,11 @@
             <div class="flex-1">
               <div class="text-white font-medium">Include All Destinations</div>
               <div class="text-gray-400 text-sm mt-1">
-                Process the entire file as international rates, including +1 destinations
+                Accept all destinations including expensive Caribbean/territory codes
               </div>
               <div class="text-xs text-gray-500 mt-1">
-                Recommended for: International carrier rate sheets
+                <span v-if="hasExpensiveDestinations" class="text-yellow-400">⚠️ This includes expensive destinations that may increase costs</span>
+                <span v-else class="text-green-400">✓ Only US/Canada destinations found - no billing surprises</span>
               </div>
             </div>
           </label>
@@ -126,12 +142,12 @@
               class="mt-1"
             />
             <div class="flex-1">
-              <div class="text-white font-medium">Remove +1 Destinations</div>
+              <div class="text-white font-medium">Remove All +1 Destinations</div>
               <div class="text-gray-400 text-sm mt-1">
-                Filter out all North American (+1) codes and process only international destinations
+                Remove all North American codes to create a pure international rate deck
               </div>
               <div class="text-xs text-gray-500 mt-1">
-                This will remove {{ getTotalPlusOneCount() }} destinations from your file
+                This will remove {{ getTotalPlusOneCount() }} destinations ({{ analysis.plusOneBreakdown.usNPAs.length }} US, {{ analysis.plusOneBreakdown.canadianNPAs.length }} Canada, {{ analysis.plusOneBreakdown.caribbeanNPAs.length }} Caribbean)
               </div>
             </div>
           </label>
@@ -145,12 +161,13 @@
               class="mt-1"
             />
             <div class="flex-1">
-              <div class="text-white font-medium">Extract +1 Destinations Only</div>
+              <div class="text-white font-medium">Keep Only US/Canada (Recommended)</div>
               <div class="text-gray-400 text-sm mt-1">
-                Process only the North American (+1) destinations, filtering out international codes
+                Remove expensive Caribbean/territory destinations, keep only US and Canada
               </div>
               <div class="text-xs text-gray-500 mt-1">
-                This will process {{ getTotalPlusOneCount() }} destinations
+                <span v-if="hasExpensiveDestinations" class="text-green-400">✓ Removes {{ analysis.plusOneBreakdown.caribbeanNPAs.length + analysis.plusOneBreakdown.unknownNPAs.length }} expensive destinations</span>
+                <span v-else>Keeps {{ analysis.plusOneBreakdown.usNPAs.length + analysis.plusOneBreakdown.canadianNPAs.length }} US/Canada destinations</span>
               </div>
             </div>
           </label>
@@ -204,6 +221,11 @@ const getTotalPlusOneCount = () => {
          breakdown.caribbeanNPAs.length + 
          breakdown.unknownNPAs.length;
 };
+
+const hasExpensiveDestinations = computed(() => {
+  const breakdown = props.analysis.plusOneBreakdown;
+  return breakdown.caribbeanNPAs.length > 0 || breakdown.unknownNPAs.length > 0;
+});
 
 function handleProceed() {
   if (selectedAction.value) {

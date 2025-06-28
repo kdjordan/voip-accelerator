@@ -898,10 +898,7 @@
       preview: 100, // Increased to detect +1 destinations
       complete: (results) => {
         const detection = detectPlusOneDestinations(results.data as string[][]);
-        console.log('📊 [US UPLOAD] Detection results:', detection);
-        
         if (detection.hasPlusOne && detection.suggestedAction === 'show-modal') {
-          console.log('🚨 [US UPLOAD] This file contains +1 destinations - showing modal');
           
           // Store the analysis and original data
           plusOneAnalysis.value = detection;
@@ -911,7 +908,6 @@
           // Show the plus one modal instead of preview modal
           showPlusOneModal.value = true;
         } else {
-          console.log('✅ [US UPLOAD] No mixed +1 destinations detected - proceeding normally');
           
           // Proceed with normal flow
           previewData.value = results.data.slice(1) as string[][];
@@ -929,21 +925,17 @@
   }
   
   // Plus One Modal Handlers
-  function handlePlusOneChoice(choice: 'include-all' | 'remove-plus-one' | 'extract-plus-one-only') {
+  function handlePlusOneChoice(choice: 'include-all' | 'filter-plus-one' | 'extract-plus-one') {
     showPlusOneModal.value = false;
     
     let filteredData = originalFileData.value;
     
-    // Apply filtering based on user choice
-    if (choice === 'remove-plus-one') {
+    // Apply filtering based on user choice with business focus
+    if (choice === 'filter-plus-one') {
       filteredData = filterByPlusOneChoice(originalFileData.value, 'exclude-all-plus-one');
-      console.log('🚫 [US UPLOAD] Removing all +1 destinations');
-    } else if (choice === 'extract-plus-one-only') {
-      // For US uploads, we typically want to exclude US NPAs but keep Canadian/Caribbean
-      filteredData = filterByPlusOneChoice(originalFileData.value, 'exclude-us');
-      console.log('🎯 [US UPLOAD] Extracting only non-US +1 destinations');
-    } else {
-      console.log('✅ [US UPLOAD] Including all destinations');
+    } else if (choice === 'extract-plus-one') {
+      // US rate deck protection: keep only US+Canada, remove expensive Caribbean/territories
+      filteredData = filterByPlusOneChoice(originalFileData.value, 'keep-us-canada-only');
     }
     
     // Continue with the preview modal using filtered data

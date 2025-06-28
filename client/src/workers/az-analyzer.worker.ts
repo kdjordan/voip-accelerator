@@ -157,32 +157,70 @@ function generateReport(
     }
   });
 
-  // Build the final AZCountryBreakdown array
+  // Build the final AZCountryBreakdown array with NANP consolidation
   const countries: AZCountryBreakdown[] = [];
+  const nanpBreakoutMap = new Map<string, Set<string>>(); // Consolidated NANP breakouts
+  let nanpTotalDialCodes = 0;
+
   countryDataAccumulator.forEach((breakoutMap, isoCode) => {
     const countryInfo = isoToCountryMap.get(isoCode);
     if (countryInfo) {
-      const breakouts: AZBreakoutDetail[] = [];
-      breakoutMap.forEach((dialCodeSet, breakoutName) => {
-        breakouts.push({
-          breakoutName,
-          dialCodes: Array.from(dialCodeSet).sort(), // Sort dial codes for consistency
+      const isNANPCountry = countryInfo.dialCodes.some(code => code === '1');
+      
+      if (isNANPCountry) {
+        // Consolidate NANP countries into a single "North America" entry
+        nanpTotalDialCodes += countryInfo.dialCodes.length;
+        
+        breakoutMap.forEach((dialCodeSet, breakoutName) => {
+          if (!nanpBreakoutMap.has(breakoutName)) {
+            nanpBreakoutMap.set(breakoutName, new Set<string>());
+          }
+          const consolidatedDialCodes = nanpBreakoutMap.get(breakoutName)!;
+          dialCodeSet.forEach(code => consolidatedDialCodes.add(code));
         });
-      });
+      } else {
+        // Non-NANP countries: process normally
+        const breakouts: AZBreakoutDetail[] = [];
+        breakoutMap.forEach((dialCodeSet, breakoutName) => {
+          breakouts.push({
+            breakoutName,
+            dialCodes: Array.from(dialCodeSet).sort(),
+          });
+        });
 
-      // Sort breakouts alphabetically by name
-      breakouts.sort((a, b) => a.breakoutName.localeCompare(b.breakoutName));
+        breakouts.sort((a, b) => a.breakoutName.localeCompare(b.breakoutName));
 
-      countries.push({
-        countryName: countryInfo.countryName,
-        isoCode: countryInfo.isoCode,
-        totalSystemDialCodes: countryInfo.dialCodes.length, // Total dial codes known for this country
-        uniqueBreakoutCount: breakoutMap.size, // Count of unique destination names found
-        breakouts, // The detailed breakout list
-      });
+        countries.push({
+          countryName: countryInfo.countryName,
+          isoCode: countryInfo.isoCode,
+          totalSystemDialCodes: countryInfo.dialCodes.length,
+          uniqueBreakoutCount: breakoutMap.size,
+          breakouts,
+        });
+      }
     }
-    // else: isoCode from accumulator not found in isoToCountryMap (shouldn't happen)
   });
+
+  // Add consolidated North America entry if any NANP data was found
+  if (nanpBreakoutMap.size > 0) {
+    const nanpBreakouts: AZBreakoutDetail[] = [];
+    nanpBreakoutMap.forEach((dialCodeSet, breakoutName) => {
+      nanpBreakouts.push({
+        breakoutName,
+        dialCodes: Array.from(dialCodeSet).sort(),
+      });
+    });
+
+    nanpBreakouts.sort((a, b) => a.breakoutName.localeCompare(b.breakoutName));
+
+    countries.push({
+      countryName: 'North America',
+      isoCode: 'NANP',
+      totalSystemDialCodes: nanpTotalDialCodes,
+      uniqueBreakoutCount: nanpBreakoutMap.size,
+      breakouts: nanpBreakouts,
+    });
+  }
 
   // Sort countries alphabetically by name
   countries.sort((a, b) => a.countryName.localeCompare(b.countryName));

@@ -78,8 +78,7 @@ export function detectPlusOneDestinations(data: string[][]): PlusOneAnalysis {
     unknownNPAs: [] as string[]
   };
   
-  // Log categorization for debugging
-  console.log('🔍 [+1 Detector] Categorizing NPAs using NANPCategorizer...');
+  // Categorize NPAs using professional NANP system
   
   for (const npa of plusOneNPAs) {
     const categorization = NANPCategorizer.categorizeNPA(npa);
@@ -98,32 +97,33 @@ export function detectPlusOneDestinations(data: string[][]): PlusOneAnalysis {
       case 'unknown':
       default:
         breakdown.unknownNPAs.push(npa);
-        console.log(`⚠️ Unknown NPA: ${npa} - ${categorization.countryName}`);
+        console.log(`Unknown NPA detected: ${npa} - ${categorization.countryName}`);
     }
   }
   
-  // Log confidence metrics
+  // Validate categorization quality for diagnostics
   const allNPAs = Array.from(plusOneNPAs);
   const validation = NANPCategorizer.validateCategorization(allNPAs);
-  console.log('📊 [+1 Detector] Categorization quality:', {
-    total: validation.total,
-    properlyMapped: validation.properly_categorized,
-    needsAttention: validation.needs_attention.length,
-    confidence: validation.confidence_breakdown
-  });
   
   const hasPlusOne = plusOneNPAs.size > 0;
-  const hasMultipleTypes = [
-    breakdown.usNPAs.length > 0,
-    breakdown.canadianNPAs.length > 0,
-    breakdown.caribbeanNPAs.length > 0
-  ].filter(Boolean).length > 1;
+  
+  // For US rate decks: US + Canada = acceptable, Caribbean/territories = warning needed
+  const hasExpensiveDestinations = breakdown.caribbeanNPAs.length > 0 || breakdown.unknownNPAs.length > 0;
+  const hasAcceptableOnly = (breakdown.usNPAs.length > 0 || breakdown.canadianNPAs.length > 0) && !hasExpensiveDestinations;
+  
+  // Show modal only if there are expensive Caribbean/territory destinations
+  const suggestedAction = hasPlusOne && hasExpensiveDestinations ? 'show-modal' : 'proceed-normal';
+  
+  // Production logging for business monitoring
+  if (hasPlusOne && hasExpensiveDestinations) {
+    console.log('[+1 Detector] Expensive destinations detected - user warning triggered');
+  }
   
   return {
     hasPlusOne,
     totalDestinations: dataRows.length,
     plusOneBreakdown: breakdown,
-    suggestedAction: hasPlusOne && hasMultipleTypes ? 'show-modal' : 'proceed-normal'
+    suggestedAction
   };
 }
 
@@ -132,7 +132,7 @@ export function detectPlusOneDestinations(data: string[][]): PlusOneAnalysis {
  */
 export function filterByPlusOneChoice(
   data: string[][],
-  choice: 'include-all' | 'exclude-us' | 'exclude-all-plus-one'
+  choice: 'include-all' | 'exclude-us' | 'exclude-all-plus-one' | 'keep-us-canada-only'
 ): string[][] {
   if (choice === 'include-all') {
     return data;
@@ -159,6 +159,12 @@ export function filterByPlusOneChoice(
       // Keep everything except US NPAs
       const categorization = NANPCategorizer.categorizeNPA(npa);
       return categorization.category !== 'us-domestic';
+    }
+    
+    if (choice === 'keep-us-canada-only') {
+      // For US rate deck protection: keep only US domestic and Canadian NPAs
+      const categorization = NANPCategorizer.categorizeNPA(npa);
+      return categorization.category === 'us-domestic' || categorization.category === 'canadian';
     }
     
     return true;

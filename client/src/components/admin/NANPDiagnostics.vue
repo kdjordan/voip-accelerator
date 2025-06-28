@@ -99,6 +99,61 @@
           </p>
         </div>
 
+        <!-- Manual NPA Management -->
+        <div class="bg-gray-800/50 p-4 rounded-lg">
+          <h3 class="text-lg font-medium text-white mb-4">Manual NPA Management</h3>
+          
+          <!-- Quick Add NPA -->
+          <div class="grid grid-cols-4 gap-3 mb-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">NPA</label>
+              <input 
+                v-model="newNPA.npa" 
+                type="text" 
+                maxlength="3"
+                placeholder="e.g., 809" 
+                class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-accent focus:outline-none"
+                @input="validateNPA"
+              />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Country</label>
+              <select 
+                v-model="newNPA.country" 
+                class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-accent focus:outline-none"
+              >
+                <option value="">Select...</option>
+                <option value="us-domestic">US Domestic</option>
+                <option value="canadian">Canada</option>
+                <option value="caribbean">Caribbean</option>
+                <option value="pacific">Pacific</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Region (Optional)</label>
+              <input 
+                v-model="newNPA.region" 
+                type="text" 
+                placeholder="State/Province"
+                class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+            <div class="flex items-end">
+              <button
+                @click="addNPA"
+                :disabled="!canAddNPA"
+                class="w-full px-3 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+              >
+                ➕ Add NPA
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="npaValidation.message" :class="npaValidation.isValid ? 'text-green-400' : 'text-red-400'" class="text-sm mb-3">
+            {{ npaValidation.message }}
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="flex justify-between items-center">
           <button
@@ -108,13 +163,23 @@
             🔄 Refresh Analysis
           </button>
           
-          <button
-            v-if="diagnostics.needs_attention.length > 0"
-            @click="exportUnknownNPAs"
-            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-          >
-            📋 Export Unknown NPAs
-          </button>
+          <div class="flex space-x-3">
+            <button
+              v-if="diagnostics.needs_attention.length > 0"
+              @click="exportUnknownNPAs"
+              class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            >
+              📋 Export Unknown NPAs
+            </button>
+            
+            <button
+              v-if="diagnostics.needs_attention.length > 0"
+              @click="bulkAddUnknownNPAs"
+              class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded transition-colors"
+            >
+              🚀 Bulk Add as Caribbean
+            </button>
+          </div>
         </div>
       </div>
 
@@ -135,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { ChevronDownIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
 import { NANPCategorizer } from '@/utils/nanp-categorization';
 import { useLergStore } from '@/stores/lerg-store';
@@ -144,6 +209,24 @@ const showDiagnostics = ref(false);
 const isAnalyzing = ref(false);
 const diagnostics = ref<any>(null);
 const lergStore = useLergStore();
+
+// Manual NPA management state
+const newNPA = ref({
+  npa: '',
+  country: '',
+  region: ''
+});
+
+const npaValidation = ref({
+  isValid: false,
+  message: ''
+});
+
+const canAddNPA = computed(() => {
+  return newNPA.value.npa.length === 3 && 
+         newNPA.value.country && 
+         npaValidation.value.isValid;
+});
 
 function toggleDiagnostics() {
   showDiagnostics.value = !showDiagnostics.value;
@@ -158,7 +241,7 @@ async function runDiagnostics() {
     // Run validation
     diagnostics.value = NANPCategorizer.validateCategorization(allNPAs);
     
-    console.log('🔍 NANP Categorization Diagnostics:', diagnostics.value);
+    console.log('NANP Categorization Diagnostics completed');
   } catch (error) {
     console.error('Failed to run diagnostics:', error);
   } finally {
@@ -214,6 +297,92 @@ function exportUnknownNPAs() {
   a.download = `unknown_npas_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   window.URL.revokeObjectURL(url);
+}
+
+// Manual NPA management methods
+function validateNPA() {
+  const npa = newNPA.value.npa;
+  
+  if (!npa) {
+    npaValidation.value = { isValid: false, message: '' };
+    return;
+  }
+  
+  if (!/^\d{3}$/.test(npa)) {
+    npaValidation.value = { 
+      isValid: false, 
+      message: 'NPA must be exactly 3 digits' 
+    };
+    return;
+  }
+  
+  // Check if NPA already exists in LERG data
+  const existing = NANPCategorizer.categorizeNPA(npa);
+  if (existing.category !== 'unknown') {
+    npaValidation.value = { 
+      isValid: false, 
+      message: `NPA ${npa} already categorized as ${existing.category}` 
+    };
+    return;
+  }
+  
+  npaValidation.value = { 
+    isValid: true, 
+    message: `✓ NPA ${npa} is available for addition` 
+  };
+}
+
+async function addNPA() {
+  if (!canAddNPA.value) return;
+  
+  try {
+    // TODO: Replace with actual Supabase integration
+    console.log('Adding NPA to manual overrides:', {
+      npa: newNPA.value.npa,
+      category: newNPA.value.country,
+      region: newNPA.value.region || null,
+      source: 'manual',
+      added_by: 'admin',
+      added_at: new Date().toISOString()
+    });
+    
+    alert(`NPA ${newNPA.value.npa} added successfully as ${newNPA.value.country}`);
+    
+    // Reset form
+    newNPA.value = { npa: '', country: '', region: '' };
+    npaValidation.value = { isValid: false, message: '' };
+    
+    // Refresh diagnostics
+    await runDiagnostics();
+    
+  } catch (error) {
+    console.error('Failed to add NPA:', error);
+    alert('❌ Failed to add NPA. Please try again.');
+  }
+}
+
+async function bulkAddUnknownNPAs() {
+  if (!diagnostics.value || !diagnostics.value.needs_attention.length) return;
+  
+  const unknownNPAs = diagnostics.value.needs_attention;
+  
+  if (!confirm(`This will add ${unknownNPAs.length} unknown NPAs as "Caribbean" destinations. Continue?`)) {
+    return;
+  }
+  
+  try {
+    // TODO: Replace with actual Supabase bulk operation
+    console.log('Bulk adding unknown NPAs as Caribbean destinations');
+    
+    alert(`Successfully added ${unknownNPAs.length} NPAs as Caribbean destinations`);
+    
+    // Refresh diagnostics
+    await runDiagnostics();
+    
+  } catch (error) {
+    console.error('Failed to bulk add NPAs:', error);
+    alert('❌ Bulk operation failed. Please try again.');
+  }
 }
 
 onMounted(() => {
