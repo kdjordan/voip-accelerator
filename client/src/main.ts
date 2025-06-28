@@ -6,6 +6,9 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
 
+// TEMP: Load test functions for +1 detection (remove after testing)
+// import './utils/test-detection-console';
+
 // Initialize the application
 const app = createApp(App);
 

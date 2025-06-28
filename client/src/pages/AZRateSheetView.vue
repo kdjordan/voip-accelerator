@@ -268,6 +268,7 @@
 
   // Import memory monitoring utilities for Phase 1 testing
   import { memoryMonitor, logReactivityStatus } from '@/utils/memory-test';
+  import { detectPlusOneDestinations } from '@/utils/plus-one-detector';
 
   const store = useAzRateSheetStore();
   const userStore = useUserStore(); // Initialize user store
@@ -357,7 +358,22 @@
       Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
+        preview: 100, // Parse enough lines to detect +1 destinations
         complete: (results: ParseResult<string[]>) => {
+          // Detect +1 destinations
+          console.log('🧪 [AZ RATE SHEET] Testing +1 detection with real file...');
+          const detection = detectPlusOneDestinations(results.data);
+          console.log('📊 [AZ RATE SHEET] Detection results:', detection);
+          
+          if (detection.hasPlusOne && detection.suggestedAction === 'show-modal') {
+            console.log('🚨 [AZ RATE SHEET] This file contains +1 destinations - NEED TO ADD MODAL HERE!');
+            console.log('📋 [AZ RATE SHEET] Breakdown:', detection.plusOneBreakdown);
+            console.log('💡 [AZ RATE SHEET] Suggested action:', detection.suggestedAction);
+            // TODO: Add modal integration here
+          } else {
+            console.log('✅ [AZ RATE SHEET] No +1 destinations detected - proceeding normally');
+          }
+          
           columns.value = results.data[0].map((h) => h.trim());
           previewData.value = results.data
             .slice(0, 10)

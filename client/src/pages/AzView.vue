@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen text-white pt-2 w-full">
+  <div class="min-h-screen text-white pt-2 w-full max-w-full overflow-x-hidden">
     <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
         AZ Rate Deck Analyzer
@@ -18,9 +18,9 @@
     </h1>
     <AZContentHeader />
 
-    <div>
+    <div class="w-full max-w-full overflow-x-hidden">
       <transition name="fade" mode="out-in" appear>
-        <div :key="azStore.getActiveReportType">
+        <div :key="azStore.getActiveReportType" class="w-full max-w-full overflow-x-hidden">
           <AZFileUploads v-if="azStore.getActiveReportType === ReportTypes.FILES" />
           <CodeReportAZ
             v-if="

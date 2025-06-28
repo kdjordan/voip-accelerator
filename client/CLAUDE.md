@@ -48,9 +48,13 @@ npm run lint          # Run ESLint
 ### Key Features
 - Rate sheet upload and processing (CSV/Excel)
 - LERG data management and validation
+- **Professional NANP categorization system with confidence scoring**
+- **+1 destination detection and intelligent filtering**
+- **Mixed rate deck handling with user choice modal**
 - Bulk adjustment operations with effective date handling
 - Performance optimization for datasets with 250K+ records
 - Export functionality with conflict resolution
+- **Admin diagnostics dashboard for data quality monitoring**
 
 ## Development Guidelines
 
@@ -143,6 +147,10 @@ export const useStore = defineStore('storeName', {
 - Bulk adjustment operations with batch processing
 - Effective date management for pricing changes
 - LERG data integration with Supabase edge functions
+- **Professional NANP (North American Numbering Plan) categorization**
+- **Mixed rate deck detection and filtering with user choice modals**
+- **Hierarchical data source prioritization (LERG → Constants → Inference)**
+- **Confidence scoring for data quality assessment**
 
 ### Security & Authentication
 ```typescript
@@ -175,3 +183,45 @@ const hasPermission = user.role === 'superadmin' || user.role === 'admin';
 - Stripe integration still needed for payment processing
 - Current architecture is production-ready despite technical debt areas
 - Focus on user-facing features over internal code cleanup for initial launch
+
+## 🎯 **Recent Major Feature Completion (June 2025)**
+
+### +1 Destination Management System ✅ STRATEGIC PIVOT
+
+**Business Context Clarification:**
+- **US Rate Decks**: Need sophisticated +1 filtering to protect users from surprise Caribbean/territory billing
+- **AZ International Decks**: Simple labeling fix - display +1 codes as "North America" instead of "United States"
+
+**Current Implementation Status:**
+- ✅ **US Protection System**: Professional NANP categorization with user choice modal (KEEP)
+- 🔄 **AZ Simplification**: Remove complex detection, use simple "North America" labeling (PIVOT)
+- ✅ **Admin NPA Management**: Robust categorization system for ongoing data quality (ENHANCE)
+
+**Key Files (Active):**
+- `/src/utils/nanp-categorization.ts` - Core categorization engine for US protection
+- `/src/utils/plus-one-detector.ts` - US-focused +1 detection for billing protection
+- `/src/components/shared/PlusOneHandlingModal.vue` - User choice interface for US uploads
+- `/src/components/admin/NANPDiagnostics.vue` - Admin dashboard for NPA management
+
+**Business Impact:** Protects US users from surprise billing while maintaining enterprise-grade categorization for admin operations.
+
+**Next Priority**: Remove AZ over-engineering, focus on US protection + admin NPA management tools
+
+## 🎯 **Current Development Priorities (Q3 2025)**
+
+### **Priority 1: US Rate Deck Protection** (Business Critical)
+**Problem**: Providers slip expensive Caribbean/territory codes into "US domestic" rate decks
+**Solution**: Professional +1 detection distinguishing US+Canada (acceptable) vs Caribbean/territories (expensive)
+**User Value**: "This deck contains Bahamas/Jamaica codes - these are expensive destinations, do you want them?"
+**Status**: Core system complete, needs refinement and testing
+
+### **Priority 2: Admin NPA Management** (Operational Excellence)  
+**Problem**: Monthly LERG updates aren't always accurate, need manual override capability
+**Solution**: Robust admin tools for real-time NPA categorization updates via Supabase
+**Business Value**: Fix categorization issues immediately without code deployments
+**Timeline**: 2-3 days development (high ROI)
+
+### **Priority 3: AZ Simplification** (Engineering Efficiency)
+**Problem**: Over-engineered +1 detection for international rate decks (unnecessary complexity)
+**Solution**: Remove modal/filtering complexity, simple "North America" labeling instead of "United States"
+**Outcome**: Focus engineering effort where business value is highest

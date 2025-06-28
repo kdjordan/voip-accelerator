@@ -71,21 +71,25 @@ serve(async (req) => {
 
     console.log(`[upload-lerg] Processing ${records.length} records`);
 
-    // Clear existing LERG data using DELETE instead of RPC
-    console.log("[upload-lerg] Truncating existing LERG data");
-    const { error: truncateError } = await supabaseClient
-      .from("lerg_codes")
-      .delete()
-      .neq("npa", "000"); // This will delete all records
+    console.log(`Received ${records.length} records to process.`);
 
-    if (truncateError) {
-      console.error("[upload-lerg] Error truncating table:", truncateError);
-      throw truncateError;
+    // First, clear all existing LERG codes - THIS IS THE OLD, PROBLEMATIC CODE.
+    /*
+    const { error: deleteError } = await supabaseClient.from(LERG_CODES_TABLE).delete().neq('npa', '000'); // Delete all but a dummy value
+    if (deleteError) {
+      console.error('Error clearing LERG codes:', deleteError);
+      throw deleteError;
     }
+    console.log('Successfully cleared existing LERG codes.');
+    */
+
+    // Add a last_updated timestamp to each record
+    const timestamp = new Date().toISOString();
 
     // Process in chunks of 25 for insertion
     const CHUNK_SIZE = 25;
     let totalProcessed = 0;
+    let failedChunks = 0;
 
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
       const chunk = records.slice(i, i + CHUNK_SIZE).map((record) => ({
@@ -100,27 +104,26 @@ serve(async (req) => {
       );
 
       try {
-        const { error: insertError } = await supabaseClient
+        const { error: upsertError } = await supabaseClient
           .from("lerg_codes")
-          .insert(chunk);
+          .upsert(chunk, { onConflict: "npa" });
 
-        if (insertError) {
-          console.error("[upload-lerg] Error inserting records:", {
-            error: insertError,
-            chunk: chunk.length,
-            firstRecord: chunk[0],
-          });
-          throw insertError;
-        }
+        if (upsertError) {
+          console.error(
+            `Error upserting chunk starting at index ${i}:`,
+            upsertError
+          );
+          failedChunks++;
+        } else {
+          totalProcessed += chunk.length;
+          console.log(
+            `[upload-lerg] Progress: ${totalProcessed}/${records.length} records processed`
+          );
 
-        totalProcessed += chunk.length;
-        console.log(
-          `[upload-lerg] Progress: ${totalProcessed}/${records.length} records processed`
-        );
-
-        // Add a small delay between chunks to prevent rate limiting
-        if (i + CHUNK_SIZE < records.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // Add a small delay between chunks to prevent rate limiting
+          if (i + CHUNK_SIZE < records.length) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
         }
       } catch (err) {
         console.error("[upload-lerg] Chunk insertion failed:", {
@@ -131,20 +134,26 @@ serve(async (req) => {
       }
     }
 
-    const result = {
-      processedRecords: totalProcessed,
-      totalRecords: records.length,
-    };
+    const message = `Upload complete. Successfully processed ${
+      records.length
+    } records. ${
+      failedChunks > 0
+        ? `${failedChunks} chunks failed.`
+        : "New records were added and existing ones were updated."
+    }`;
 
-    console.log("[upload-lerg] Upload completed successfully:", result);
+    console.log(message);
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
+    return new Response(
+      JSON.stringify({ message, successfulInserts: totalProcessed }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
+    );
   } catch (err) {
     console.error("[upload-lerg] Error:", err);
     return new Response(

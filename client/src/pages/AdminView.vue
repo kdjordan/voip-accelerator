@@ -549,6 +549,9 @@
           </form>
         </div>
       </div>
+
+      <!-- NANP Categorization Diagnostics -->
+      <NANPDiagnostics />
     </div>
 
     <!-- New Preview Modal -->
@@ -592,6 +595,7 @@ import Papa from 'papaparse';
 import type { ParseResult } from 'papaparse';
 import { useDragDrop } from '@/composables/useDragDrop';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import NANPDiagnostics from '@/components/admin/NANPDiagnostics.vue';
 
 const store = useLergStore();
 const {

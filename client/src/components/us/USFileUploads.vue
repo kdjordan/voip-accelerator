@@ -253,6 +253,15 @@
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
+    
+    <!-- Plus One Handling Modal -->
+    <PlusOneHandlingModal
+      v-if="showPlusOneModal"
+      :showModal="showPlusOneModal"
+      :analysis="plusOneAnalysis"
+      @handle-choice="handlePlusOneChoice"
+      @cancel="cancelPlusOneModal"
+    />
   </div>
 </template>
 
@@ -287,6 +296,8 @@
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDragDrop } from '@/composables/useDragDrop';
+  import PlusOneHandlingModal from '@/components/shared/PlusOneHandlingModal.vue';
+  import { detectPlusOneDestinations, filterByPlusOneChoice } from '@/utils/plus-one-detector';
   import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
   import { ComponentId, DBName } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
@@ -322,6 +333,11 @@
     az1: null,
     az2: null,
   });
+  
+  // Plus One handling state
+  const showPlusOneModal = ref(false);
+  const plusOneAnalysis = ref<any>(null);
+  const originalFileData = ref<string[][]>([]);
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
@@ -879,12 +895,30 @@
     usStore.setTempFile(componentId, file);
     console.log('[USFileUploads] is launching preview modal');
     Papa.parse(file, {
-      preview: 20,
+      preview: 100, // Increased to detect +1 destinations
       complete: (results) => {
-        previewData.value = results.data.slice(1) as string[][];
-        columns.value = results.data[0] as string[];
-        activeComponent.value = componentId;
-        showPreviewModal.value = true;
+        const detection = detectPlusOneDestinations(results.data as string[][]);
+        console.log('📊 [US UPLOAD] Detection results:', detection);
+        
+        if (detection.hasPlusOne && detection.suggestedAction === 'show-modal') {
+          console.log('🚨 [US UPLOAD] This file contains +1 destinations - showing modal');
+          
+          // Store the analysis and original data
+          plusOneAnalysis.value = detection;
+          originalFileData.value = results.data as string[][];
+          activeComponent.value = componentId;
+          
+          // Show the plus one modal instead of preview modal
+          showPlusOneModal.value = true;
+        } else {
+          console.log('✅ [US UPLOAD] No mixed +1 destinations detected - proceeding normally');
+          
+          // Proceed with normal flow
+          previewData.value = results.data.slice(1) as string[][];
+          columns.value = results.data[0] as string[];
+          activeComponent.value = componentId;
+          showPreviewModal.value = true;
+        }
       },
       error: (error) => {
         console.error('Error parsing CSV:', error);
@@ -892,5 +926,39 @@
         uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
       },
     });
+  }
+  
+  // Plus One Modal Handlers
+  function handlePlusOneChoice(choice: 'include-all' | 'remove-plus-one' | 'extract-plus-one-only') {
+    showPlusOneModal.value = false;
+    
+    let filteredData = originalFileData.value;
+    
+    // Apply filtering based on user choice
+    if (choice === 'remove-plus-one') {
+      filteredData = filterByPlusOneChoice(originalFileData.value, 'exclude-all-plus-one');
+      console.log('🚫 [US UPLOAD] Removing all +1 destinations');
+    } else if (choice === 'extract-plus-one-only') {
+      // For US uploads, we typically want to exclude US NPAs but keep Canadian/Caribbean
+      filteredData = filterByPlusOneChoice(originalFileData.value, 'exclude-us');
+      console.log('🎯 [US UPLOAD] Extracting only non-US +1 destinations');
+    } else {
+      console.log('✅ [US UPLOAD] Including all destinations');
+    }
+    
+    // Continue with the preview modal using filtered data
+    previewData.value = filteredData.slice(1);
+    columns.value = filteredData[0];
+    showPreviewModal.value = true;
+  }
+  
+  function cancelPlusOneModal() {
+    showPlusOneModal.value = false;
+    plusOneAnalysis.value = null;
+    originalFileData.value = [];
+    
+    // Clear the temp file and reset the component
+    usStore.clearTempFile(activeComponent.value);
+    usStore.setComponentUploading(activeComponent.value, false);
   }
 </script>
