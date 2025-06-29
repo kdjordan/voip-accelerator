@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie';
 import type { LERGRecord, StateNPAMapping, CountryLergData } from '@/types/domains/lerg-types';
+import type { EnhancedLERGRecord } from '@/composables/useEnhancedLERG';
 import { useLergStore } from '@/stores/lerg-store';
 import { DBName } from '@/types/app-types';
 import useDexieDB from '@/composables/useDexieDB';
@@ -155,26 +156,30 @@ export class LergService {
 
   /**
    * Get a connection to the database
-   * This method implements reference counting to manage connections
+   * Phase 1: Uses useDexieDB for initialization, keeps existing connection management
    * @returns A promise that resolves to the database instance
    */
   async getConnection(): Promise<Dexie> {
     try {
-      // Initialize DB if needed
+      // Initialize DB if needed using managed getDB()
       if (!this.db) {
+        console.log('[LergService] Phase 1: Initializing database using useDexieDB...');
         const { getDB } = useDexieDB();
         this.db = await this.executeWithRetry(
           async () => await getDB(DBName.LERG),
-          'Database initialization'
+          'Database initialization via useDexieDB'
         );
+        console.log('[LergService] Phase 1: Database initialized successfully via useDexieDB');
       }
 
+      // Keep existing connection management for Phase 1
       // Open the database if it's not already open
       if (!this.db.isOpen() && !this.isConnecting) {
         this.isConnecting = true;
         try {
           await this.executeWithRetry(async () => await this.db!.open(), 'Database open');
           this.connectionError = null;
+          console.log('[LergService] Phase 1: Database opened successfully');
         } catch (error) {
           const connectionError = error instanceof Error ? error : new Error(String(error));
           this.connectionError = new LergConnectionError(
@@ -188,7 +193,7 @@ export class LergService {
         }
       }
 
-      // Increment connection count
+      // Increment connection count (keeping existing logic for Phase 1)
       this.connectionCount++;
       return this.db;
     } catch (error) {
@@ -289,23 +294,23 @@ export class LergService {
   }
 
   /**
-   * Check if LERG data exists in the database
+   * Check if enhanced LERG data exists in the database
    * @returns Promise resolving to true if data exists, false otherwise
    */
   async hasData(): Promise<boolean> {
     try {
       const db = await this.getConnection();
 
-      // Check if lerg table exists
-      if (!db.tables.some((t) => t.name === 'lerg')) {
+      // Check if enhanced_lerg table exists
+      if (!db.tables.some((t) => t.name === 'enhanced_lerg')) {
         return false;
       }
 
       // Check if there are records
-      const count = await db.table('lerg').count();
+      const count = await db.table('enhanced_lerg').count();
       return count > 0;
     } catch (error) {
-      console.error('Error checking if LERG data exists:', error);
+      console.error('Error checking if enhanced LERG data exists:', error);
       return false;
     } finally {
       await this.releaseConnection();
@@ -313,22 +318,22 @@ export class LergService {
   }
 
   /**
-   * Get the count of LERG records in the database
+   * Get the count of enhanced LERG records in the database
    * @returns Promise resolving to the number of records
    */
   async getRecordCount(): Promise<number> {
     try {
       const db = await this.getConnection();
 
-      // Check if lerg table exists
-      if (!db.tables.some((t) => t.name === 'lerg')) {
+      // Check if enhanced_lerg table exists
+      if (!db.tables.some((t) => t.name === 'enhanced_lerg')) {
         return 0;
       }
 
       // Get the count
-      return await db.table('lerg').count();
+      return await db.table('enhanced_lerg').count();
     } catch (error) {
-      console.error('Error getting LERG record count:', error);
+      console.error('Error getting enhanced LERG record count:', error);
       return 0;
     } finally {
       await this.releaseConnection();
@@ -339,74 +344,128 @@ export class LergService {
    * Initialize the LERG table with data
    * @param lergData The LERG data to initialize
    */
-  async initializeLergTable(lergData: LERGRecord[]): Promise<void> {
+  async initializeLergTable(lergData: EnhancedLERGRecord[]): Promise<void> {
+    console.log('[LergService] ========== STARTING INDEXEDDB INITIALIZATION ==========');
+    console.log('[LergService] Input data length:', lergData.length);
+    console.log('[LergService] Sample input record:', lergData[0]);
+    
     try {
-      // Get DB but don't auto-open it
+      console.log('[LergService] Getting database connection...');
+      
+      // Phase 1: Clear any existing database to avoid schema conflicts
+      console.log('[LergService] Phase 1: Clearing existing database to avoid schema conflicts...');
+      
+      // Reset our internal DB reference first
+      if (this.db) {
+        console.log('[LergService] Phase 1: Closing existing database connection...');
+        await this.db.close();
+        this.db = null;
+        this.connectionCount = 0;
+      }
+      
+      // Force delete the database using Dexie.delete directly
+      try {
+        console.log('[LergService] Phase 1: Force deleting database with Dexie.delete...');
+        await Dexie.delete(DBName.LERG);
+        console.log('[LergService] Phase 1: Database force deleted successfully');
+        
+        // Wait a moment for IndexedDB to fully process the deletion
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (deleteError) {
+        console.log('[LergService] Phase 1: Error deleting database (may not exist):', deleteError);
+      }
+      
+      // Phase 1: Get managed database connection with fresh schema
+      console.log('[LergService] Phase 1: Getting managed database connection...');
       const db = await this.getConnection();
-      if (!db) throw new LergConnectionError('Failed to initialize database');
-
-      // Close any existing connection first
-      if (db.isOpen()) {
-        await db.close();
-        this.connectionCount = 0; // Reset connection count since we closed the DB
+      if (!db) {
+        console.error('[LergService] ERROR: Failed to get database connection');
+        throw new LergConnectionError('Failed to initialize database');
+      }
+      console.log('[LergService] Phase 1: Database connection obtained via useDexieDB');
+      
+      // Phase 1: Verify the enhanced_lerg table exists or will be created
+      const tableNames = db.tables.map(t => t.name);
+      console.log('[LergService] Phase 1: Available tables:', tableNames);
+      
+      if (!tableNames.includes('enhanced_lerg')) {
+        console.log('[LergService] Phase 1: enhanced_lerg table not found, useDexieDB should handle schema creation');
+      } else {
+        console.log('[LergService] Phase 1: enhanced_lerg table found');
       }
 
-      // Check if the schema already exists and initialize if needed
-      const hasLergTable = db.tables.some((t: Table) => t.name === 'lerg');
-      if (!hasLergTable) {
-        try {
-          // Create a new version with the lerg table
-          const newVersion = (db.verno || 0) + 1;
-          db.version(newVersion).stores({
-            lerg: '++id, npa, *state, *country',
-          });
-        } catch (error) {
-          throw new LergSchemaError(
-            'Failed to create schema',
-            error instanceof Error ? error : new Error(String(error))
-          );
-        }
-      }
-
-      // Now open the database with the correct schema
-      await this.executeWithRetry(
-        async () => await db.open(),
-        'Database open after schema modification'
-      );
-
-      // Clear and populate the table
-      await db.table('lerg').clear();
+      // Phase 1: Clear existing data (keeping existing table structure)
+      console.log('[LergService] Phase 1: Clearing enhanced_lerg table...');
+      await db.table('enhanced_lerg').clear();
+      console.log('[LergService] Phase 1: Table cleared successfully');
 
       // Insert the data in smaller batches to avoid transaction limits
       const BATCH_SIZE = 1000;
       let processedCount = 0;
+      const totalBatches = Math.ceil(lergData.length / BATCH_SIZE);
+
+      console.log(`[LergService] Starting batch insertion: ${totalBatches} batches of ${BATCH_SIZE} records each`);
 
       for (let i = 0; i < lergData.length; i += BATCH_SIZE) {
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
         const batch = lergData.slice(i, i + BATCH_SIZE);
+        
+        console.log(`[LergService] Processing batch ${batchNumber}/${totalBatches} (${batch.length} records)`);
+        console.log(`[LergService] Sample record from batch ${batchNumber}:`, batch[0]);
+        
         await this.executeWithRetry(
-          async () => await db.table('lerg').bulkPut(batch),
-          `Data batch ${i / BATCH_SIZE + 1} insertion`
+          async () => {
+            console.log(`[LergService] Phase 1: Executing bulkPut for batch ${batchNumber}...`);
+            const result = await db.table('enhanced_lerg').bulkPut(batch);
+            console.log(`[LergService] Phase 1: bulkPut result for batch ${batchNumber}:`, result);
+            return result;
+          },
+          `Data batch ${batchNumber} insertion`
         );
 
         processedCount += batch.length;
         const progressPercent = Math.round((processedCount / lergData.length) * 100);
+        console.log(`[LergService] Batch ${batchNumber} complete: ${progressPercent}% total progress (${processedCount}/${lergData.length})`);
       }
 
+      // Phase 1: Verify data was stored
+      console.log('[LergService] Phase 1: Verifying data storage...');
+      const storedCount = await db.table('enhanced_lerg').count();
+      console.log(`[LergService] Phase 1: Verification: ${storedCount} records stored in enhanced_lerg table`);
+      
+      if (storedCount !== lergData.length) {
+        console.error(`[LergService] Phase 1: ERROR: Storage verification failed! Expected ${lergData.length}, got ${storedCount}`);
+        throw new Error(`Storage verification failed: ${storedCount}/${lergData.length} records stored`);
+      }
+
+      // Get a sample record to verify structure
+      const sampleStored = await db.table('enhanced_lerg').limit(1).first();
+      console.log('[LergService] Phase 1: Sample stored record:', sampleStored);
+
       // Invalidate cache since data has changed
+      console.log('[LergService] Invalidating cache...');
       this.invalidateCache();
+      
+      console.log('[LergService] ========== PHASE 1: INDEXEDDB INITIALIZATION COMPLETE ==========');
     } catch (error) {
+      console.error('[LergService] ========== PHASE 1: INDEXEDDB INITIALIZATION FAILED ==========');
+      console.error('[LergService] Phase 1: Error details:', error);
+      console.error('[LergService] Phase 1: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
       const dataError = error instanceof Error ? error : new Error(String(error));
       throw new LergDataError('Failed to initialize LERG data', dataError);
     } finally {
+      console.log('[LergService] Phase 1: Cleanup: Releasing connection...');
       await this.releaseConnection();
     }
   }
 
   /**
-   * Get all LERG records from the database
-   * @returns Promise resolving to an array of LERG records
+   * Get all enhanced LERG records from the database
+   * @returns Promise resolving to an array of enhanced LERG records
    */
-  async getLergData(): Promise<LERGRecord[]> {
+  async getLergData(): Promise<EnhancedLERGRecord[]> {
     try {
       const db = await this.getConnection();
 
@@ -414,10 +473,10 @@ export class LergService {
         await this.executeWithRetry(async () => await db.open(), 'Database open for getLergData');
       }
 
-      return await db.table('lerg').toArray();
+      return await db.table('enhanced_lerg').toArray();
     } catch (error) {
       const dataError = error instanceof Error ? error : new Error(String(error));
-      throw new LergDataError('Failed to get LERG data', dataError);
+      throw new LergDataError('Failed to get enhanced LERG data', dataError);
     } finally {
       await this.releaseConnection();
     }
@@ -437,8 +496,8 @@ export class LergService {
       }
 
       // Clear IndexedDB table if it exists
-      if (db.tables.some((t) => t.name === 'lerg')) {
-        await this.executeWithRetry(async () => await db.table('lerg').clear(), 'Clear LERG table');
+      if (db.tables.some((t) => t.name === 'enhanced_lerg')) {
+        await this.executeWithRetry(async () => await db.table('enhanced_lerg').clear(), 'Clear enhanced LERG table');
       }
 
       // Clear store using the new clearLergData method
@@ -512,8 +571,8 @@ export class LergService {
         );
       }
 
-      // Check if lerg table exists
-      if (!db.tables.some((t) => t.name === 'lerg')) {
+      // Check if enhanced_lerg table exists
+      if (!db.tables.some((t) => t.name === 'enhanced_lerg')) {
         return {
           stateMapping: {},
           canadaProvinces: {},
@@ -522,7 +581,18 @@ export class LergService {
       }
 
       // Get the total count first
-      const totalCount = await db.table('lerg').count();
+      const totalCount = await db.table('enhanced_lerg').count();
+      
+      if (totalCount === 0) {
+        console.warn('[LergService] enhanced_lerg table is empty');
+        return {
+          stateMapping: {},
+          canadaProvinces: {},
+          countryData: [],
+        };
+      }
+
+      console.log(`[LergService] Processing ${totalCount} enhanced LERG records`);
 
       // Process data in chunks for better memory usage with large datasets
       const CHUNK_SIZE = 5000;
@@ -533,10 +603,21 @@ export class LergService {
       // Process data in chunks
       let offset = 0;
       while (offset < totalCount) {
-        const records = await db.table('lerg').offset(offset).limit(CHUNK_SIZE).toArray();
+        const records = await db.table('enhanced_lerg').offset(offset).limit(CHUNK_SIZE).toArray();
 
-        // Process this chunk
-        this.processDataChunk(records, stateMapping, canadaProvinces, countryMap);
+        // Process this chunk (convert enhanced records to basic format for compatibility)
+        const basicRecords = records
+          .filter((record: any) => record && record.npa) // Filter out undefined/invalid records
+          .map((record: any) => ({
+            npa: record.npa || record.NPA,
+            state: record.state_province_code || record.state || record.STATE || 'XX',
+            country: record.country_code || record.country || record.COUNTRY || 'XX'
+          }))
+          .filter((record: any) => record.npa && record.state && record.country); // Ensure all required fields
+        
+        if (basicRecords.length > 0) {
+          this.processDataChunk(basicRecords, stateMapping, canadaProvinces, countryMap);
+        }
 
         offset += CHUNK_SIZE;
       }
@@ -582,16 +663,32 @@ export class LergService {
     canadaProvinces: Record<string, Set<string>>,
     countryMap: Map<string, Set<string>>
   ): void {
+    // Filter out any invalid records first
+    const validRecords = records.filter(record => 
+      record && 
+      record.npa && 
+      record.state && 
+      record.country &&
+      typeof record.npa === 'string' &&
+      typeof record.state === 'string' &&
+      typeof record.country === 'string'
+    );
+
+    if (validRecords.length === 0) {
+      console.warn('[LergService] No valid records to process in chunk');
+      return;
+    }
+
     // First pass - identify all US records including California
-    const usRecords = records.filter(
+    const usRecords = validRecords.filter(
       (record) => record.country === 'US' || (record.state === 'CA' && record.country === 'US')
     );
 
     // Second pass - identify true Canadian records
-    const canadianRecords = records.filter((record) => record.country === 'CA');
+    const canadianRecords = validRecords.filter((record) => record.country === 'CA');
 
     // Third pass - other countries
-    const otherRecords = records.filter(
+    const otherRecords = validRecords.filter(
       (record) => record.country !== 'US' && record.country !== 'CA'
     );
 
@@ -665,11 +762,11 @@ export class LergService {
       const db = await this.getConnection();
 
       // Get the timestamp from the first record
-      const lergTable = db.table('lerg');
+      const lergTable = db.table('enhanced_lerg');
       const firstRecord = await lergTable.limit(1).first();
 
-      const timestamp = firstRecord?.last_updated
-        ? new Date(firstRecord.last_updated).toISOString()
+      const timestamp = firstRecord?.updated_at || firstRecord?.last_updated
+        ? new Date(firstRecord.updated_at || firstRecord.last_updated).toISOString()
         : null;
 
       return {
@@ -684,13 +781,13 @@ export class LergService {
   }
 
   /**
-   * Get all LERG records from the database
-   * @returns Promise resolving to an array of all LERG records
+   * Get all enhanced LERG records from the database
+   * @returns Promise resolving to an array of all enhanced LERG records
    */
-  public async getAllRecords(): Promise<LERGRecord[]> {
+  public async getAllRecords(): Promise<EnhancedLERGRecord[]> {
     try {
       const db = await this.getConnection();
-      const lergTable = db.table('lerg');
+      const lergTable = db.table('enhanced_lerg');
 
       // Get all records - use limit to avoid memory issues if the dataset is extremely large
       const MAX_RECORDS = 50000; // Adjust based on your expected dataset size
@@ -698,9 +795,9 @@ export class LergService {
 
       return records;
     } catch (error) {
-      console.error('Error getting all LERG records:', error);
+      console.error('Error getting all enhanced LERG records:', error);
       throw new LergDataError(
-        'Failed to retrieve all LERG records',
+        'Failed to retrieve all enhanced LERG records',
         error instanceof Error ? error : undefined
       );
     } finally {

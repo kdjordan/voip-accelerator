@@ -14,7 +14,7 @@
  * - Intelligent caching: Frequently accessed NPAs cached in memory
  */
 
-import { useEnhancedNANPLocal } from '@/composables/useEnhancedNANPLocal';
+import { enhancedLergLocalService } from '@/services/enhanced-lerg-local.service';
 import { COUNTRY_CODES, getCountryName } from '@/types/constants/country-codes';
 import { STATE_CODES, getStateName } from '@/types/constants/state-codes';
 import { PROVINCE_CODES, getProvinceName } from '@/types/constants/province-codes';
@@ -64,7 +64,6 @@ export interface NANPSummaryEnhanced {
 }
 
 export class EnhancedNANPCategorizer {
-  private static nanpLocal = useEnhancedNANPLocal();
   private static isInitialized = false;
 
   /**
@@ -75,7 +74,9 @@ export class EnhancedNANPCategorizer {
 
     try {
       console.log('[EnhancedNANPCategorizer] Initializing...');
-      await this.nanpLocal.initializeLocalData();
+      
+      // Initialize the local service directly
+      await enhancedLergLocalService.initializeLocalData();
       this.isInitialized = true;
       console.log('[EnhancedNANPCategorizer] Initialization complete');
     } catch (error) {
@@ -98,8 +99,8 @@ export class EnhancedNANPCategorizer {
     }
 
     try {
-      // Try local lookup first
-      const location = await this.nanpLocal.getNPALocation(npa);
+      // Try local lookup first using the service directly
+      const location = await enhancedLergLocalService.getNPALocation(npa);
       
       if (location) {
         return {
@@ -149,35 +150,56 @@ export class EnhancedNANPCategorizer {
     const uniqueNpas = [...new Set(npas.filter(npa => /^[0-9]{3}$/.test(npa)))];
     console.log(`[EnhancedNANPCategorizer] Processing ${uniqueNpas.length} unique NPAs...`);
 
-    // Use the batch categorization from the composable for optimal performance
-    const batchResults = await this.nanpLocal.categorizeNPAs(uniqueNpas);
-
-    // Process results
-    for (const [npa, result] of batchResults.entries()) {
-      if (result.category === 'unknown') {
-        unknownNpas.push(npa);
-        fallbackLookups++;
-      } else {
-        successfulLookups++;
-      }
-
-      // Convert to enhanced categorization format
-      const categorization: EnhancedNANPCategorization = {
-        npa,
-        country_code: this.inferCountryCode(result.category),
-        country_name: this.inferCountryName(result.category),
-        state_province_code: 'XX', // Would need lookup for full details
-        state_province_name: result.location || 'Unknown',
-        region: undefined,
-        category: result.category,
-        source: result.source as any,
-        confidence_score: result.confidence,
-        display_location: result.location || 'Unknown Location',
-        full_location: result.location || 'Unknown Location',
-        is_active: true
-      };
-
-      results.set(npa, categorization);
+    // Process NPAs in batches using direct service calls
+    const batchSize = 100;
+    for (let i = 0; i < uniqueNpas.length; i += batchSize) {
+      const batch = uniqueNpas.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (npa) => {
+        try {
+          const location = await enhancedLergLocalService.getNPALocation(npa);
+          if (location) {
+            successfulLookups++;
+            return {
+              npa,
+              categorization: {
+                npa: location.npa,
+                country_code: location.country_code,
+                country_name: location.country_name,
+                state_province_code: location.state_province_code,
+                state_province_name: location.state_province_name,
+                region: location.region || undefined,
+                category: location.category,
+                source: 'local' as const,
+                confidence_score: location.confidence_score,
+                display_location: location.display_location,
+                full_location: location.full_location,
+                is_active: location.is_active
+              }
+            };
+          } else {
+            fallbackLookups++;
+            unknownNpas.push(npa);
+            return {
+              npa,
+              categorization: this.fallbackCategorization(npa)
+            };
+          }
+        } catch (error) {
+          console.error(`[EnhancedNANPCategorizer] Error processing NPA ${npa}:`, error);
+          fallbackLookups++;
+          unknownNpas.push(npa);
+          return {
+            npa,
+            categorization: this.fallbackCategorization(npa)
+          };
+        }
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(({ npa, categorization }) => {
+        results.set(npa, categorization);
+      });
     }
 
     const processingTime = Date.now() - startTime;
@@ -246,7 +268,7 @@ export class EnhancedNANPCategorizer {
    * Check if the categorizer is ready for use
    */
   static isReady(): boolean {
-    return this.isInitialized && this.nanpLocal.isDataReady.value;
+    return this.isInitialized;
   }
 
   /**
@@ -260,15 +282,15 @@ export class EnhancedNANPCategorizer {
       };
     }
 
-    const stats = await this.nanpLocal.getLocalStats();
-    const syncStatus = this.nanpLocal.getCurrentSyncStatus();
+    const stats = await enhancedLergLocalService.getLocalStats();
+    const syncStatus = enhancedLergLocalService.getSyncStatus();
 
     return {
-      status: this.nanpLocal.isHealthy.value ? 'healthy' : 'degraded',
+      status: stats ? 'healthy' : 'degraded',
       local_records: stats?.total || 0,
       last_sync: syncStatus.last_sync,
-      needs_sync: this.nanpLocal.needsSync.value,
-      error: this.nanpLocal.error.value
+      needs_sync: syncStatus.last_sync ? Date.now() - syncStatus.last_sync.getTime() > 24 * 60 * 60 * 1000 : true,
+      error: syncStatus.last_error
     };
   }
 
@@ -276,7 +298,7 @@ export class EnhancedNANPCategorizer {
    * Force sync with Supabase (admin function)
    */
   static async forceSync(): Promise<void> {
-    await this.nanpLocal.forceSync();
+    await enhancedLergLocalService.forceSync();
   }
 
   // Private helper methods

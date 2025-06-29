@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useLergData } from './useLergData';
 import { useEnhancedLERG } from './useEnhancedLERG';
 import type { AddEnhancedLERGRecordPayload } from './useEnhancedLERG';
@@ -224,13 +224,13 @@ export function useEnhancedLergData() {
 
   return {
     // State (delegate to appropriate system)
-    isLoading: isLoading.value ? isLoading : (enhancedLerg.isEdgeFunctionAvailable.value ? enhancedLerg.isLoading : legacyLerg.isLoading),
-    error: error.value ? error : (enhancedLerg.isEdgeFunctionAvailable.value ? enhancedLerg.error : legacyLerg.error),
-    isEdgeFunctionAvailable: enhancedLerg.isEdgeFunctionAvailable.value || legacyLerg.isEdgeFunctionAvailable.value,
+    isLoading: computed(() => isLoading.value || (enhancedLerg.isEdgeFunctionAvailable.value ? enhancedLerg.isLoading.value : legacyLerg.isLoading.value)),
+    error: computed(() => error.value || (enhancedLerg.isEdgeFunctionAvailable.value ? enhancedLerg.error.value : legacyLerg.error.value)),
+    isEdgeFunctionAvailable: computed(() => enhancedLerg.isEdgeFunctionAvailable.value || legacyLerg.isEdgeFunctionAvailable.value),
     
     // Enhanced system availability
     isEnhancedAvailable: enhancedLerg.isEdgeFunctionAvailable,
-    isUsingEnhanced: enhancedLerg.isEdgeFunctionAvailable.value && preferEnhanced.value,
+    isUsingEnhanced: computed(() => enhancedLerg.isEdgeFunctionAvailable.value && preferEnhanced.value),
     
     // Methods
     initializeLergData,

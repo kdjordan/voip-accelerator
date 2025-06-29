@@ -19,6 +19,8 @@ npm run test          # Run tests with Vitest
 npm run lint          # Run ESLint
 ```
 
+**NOTE**: Development server is always running - do not attempt to start it during development sessions.
+
 ## Project Architecture
 
 ### Core Structure
