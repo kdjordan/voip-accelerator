@@ -54,8 +54,8 @@ export function useNANPManagement() {
         throw new Error('Edge functions are not available');
       }
 
-      // Use existing get-lerg-data function to load NPAs
-      const { data, error: loadError } = await supabase.functions.invoke('get-lerg-data');
+      // Use enhanced get-enhanced-lerg-data function to load NPAs
+      const { data, error: loadError } = await supabase.functions.invoke('get-enhanced-lerg-data');
       
       if (loadError) {
         throw new Error(loadError.message);
@@ -106,12 +106,16 @@ export function useNANPManagement() {
         throw new Error('Edge functions are not available');
       }
 
-      // Use existing add-lerg-record function for single NPA addition
-      const { error: addError } = await supabase.functions.invoke('add-lerg-record', {
+      // Use enhanced add-enhanced-lerg-record function for single NPA addition
+      const { error: addError } = await supabase.functions.invoke('add-enhanced-lerg-record', {
         body: {
           npa: npaData.npa,
-          state: npaData.region || 'XX', // Default region if not provided
-          country: npaData.country
+          country_code: npaData.country,
+          country_name: getCountryName(npaData.country),
+          state_province_code: npaData.region || 'XX',
+          state_province_name: getRegionName(npaData.region || 'XX', npaData.country),
+          category: npaData.category,
+          source: 'manual'
         }
       });
 
@@ -164,9 +168,22 @@ export function useNANPManagement() {
         country: npa.country
       }));
 
-      const { error: uploadError } = await supabase.functions.invoke('upload-lerg', {
-        body: { records: lergRecords }
-      });
+      // Note: Bulk upload requires implementing bulk-enhanced-lerg-records endpoint
+      // For now, add records individually using enhanced function
+      for (const record of lergRecords) {
+        const { error: addError } = await supabase.functions.invoke('add-enhanced-lerg-record', {
+          body: {
+            npa: record.npa,
+            country_code: record.country,
+            country_name: getCountryName(record.country),
+            state_province_code: record.state,
+            state_province_name: getRegionName(record.state, record.country),
+            category: determineCategory(record.country),
+            source: 'import'
+          }
+        });
+        if (addError) throw new Error(addError.message);
+      }
 
       if (uploadError) {
         throw new Error(uploadError.message);

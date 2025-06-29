@@ -291,7 +291,7 @@
   import { TrashIcon } from '@heroicons/vue/24/outline';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
-  import { categorizeNPAList, calculateCoveragePercentage } from '@/utils/npa-categorizer';
+  import { NANPCategorizer } from '@/utils/nanp-categorization';
   import type { ComponentId } from '@/types/app-types';
   import type {
     USEnhancedCodeReport,
@@ -352,14 +352,35 @@
   });
 
   const npaBreakdown = computed(() => {
-    return categorizeNPAList(allFileNPAs.value);
+    // Use enhanced NANPCategorizer to get detailed breakdown
+    const result = NANPCategorizer.categorizeNPAList(allFileNPAs.value);
+    
+    // Transform to expected format for backward compatibility
+    return {
+      us: {
+        npas: result.regions.find(r => r.category === 'us-domestic')?.npas || [],
+        count: result.regions.find(r => r.category === 'us-domestic')?.npas.length || 0
+      },
+      others: {
+        npas: result.regions.filter(r => r.category !== 'us-domestic').flatMap(r => r.npas),
+        count: result.regions.filter(r => r.category !== 'us-domestic').reduce((sum, r) => sum + r.npas.length, 0),
+        countries: new Map() // Legacy format, enhanced data available in result.regions
+      },
+      unidentified: {
+        npas: result.regions.find(r => r.category === 'unknown')?.npas || [],
+        count: result.regions.find(r => r.category === 'unknown')?.npas.length || 0
+      }
+    };
   });
 
   // Basic stats
   const totalLergCodes = computed(() => lergStore.calculateTotalLergCodes() || 0);
 
   const usCoveragePercentage = computed(() => {
-    return calculateCoveragePercentage(npaBreakdown.value.us.count, totalLergCodes.value);
+    // Enhanced coverage calculation using US domestic NPAs
+    const usCount = npaBreakdown.value.us.count;
+    const total = totalLergCodes.value;
+    return total > 0 ? ((usCount / total) * 100).toFixed(2) : '0.00';
   });
 
   // Average rates

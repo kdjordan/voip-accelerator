@@ -33,6 +33,12 @@ export const useUsStore = defineStore('us', {
         avgInterRate: number;
         avgIntraRate: number;
         avgIndetermRate: number;
+        // Enhanced NANP categorization quality metrics
+        categorizationQuality?: {
+          totalNPAs: number;
+          highConfidenceNPAs: number;
+          qualityPercentage: number;
+        };
       }
     >(),
   }),
@@ -116,6 +122,11 @@ export const useUsStore = defineStore('us', {
           avgInterRate: 0,
           avgIntraRate: 0,
           avgIndetermRate: 0,
+          categorizationQuality: {
+            totalNPAs: 0,
+            highConfidenceNPAs: 0,
+            qualityPercentage: 0,
+          },
         }
       );
     },
@@ -298,6 +309,11 @@ export const useUsStore = defineStore('us', {
         avgInterRate: number;
         avgIntraRate: number;
         avgIndetermRate: number;
+        categorizationQuality?: {
+          totalNPAs: number;
+          highConfidenceNPAs: number;
+          qualityPercentage: number;
+        };
       }
     ) {
       this.fileStats.set(componentId, stats);

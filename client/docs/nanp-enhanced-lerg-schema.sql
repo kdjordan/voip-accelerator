@@ -24,7 +24,7 @@ CREATE TABLE enhanced_lerg (
     category VARCHAR(20) NOT NULL CHECK (category IN ('us-domestic', 'canadian', 'caribbean', 'pacific')),
     
     -- Audit fields
-    source VARCHAR(20) DEFAULT 'lerg' CHECK (source IN ('lerg', 'manual', 'import', 'seed')),
+    source VARCHAR(20) DEFAULT 'lerg' CHECK (source IN ('lerg', 'manual', 'import', 'seed', 'consolidated')),
     confidence_score DECIMAL(3,2) DEFAULT 1.00, -- 0.00 to 1.00
     
     -- Timestamps

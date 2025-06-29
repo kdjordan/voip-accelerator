@@ -94,7 +94,7 @@ export function useLergData() {
         }
 
         const { data: lergData, error: lergError } =
-          await supabase.functions.invoke('get-lerg-data');
+          await supabase.functions.invoke('get-enhanced-lerg-data');
         if (lergError) throw new Error(lergError.message);
 
         if (lergData?.data?.length > 0) {
@@ -219,7 +219,7 @@ export function useLergData() {
         throw new Error('Edge functions are not available');
       }
 
-      const { data, error: downloadError } = await supabase.functions.invoke('get-lerg-data');
+      const { data, error: downloadError } = await supabase.functions.invoke('get-enhanced-lerg-data');
       if (downloadError) throw new Error(downloadError.message);
 
       if (data?.data?.length) {
@@ -363,9 +363,17 @@ export function useLergData() {
     error.value = null;
     let didFunctionFail = false;
     try {
-      console.log(`Invoking Supabase function add-lerg-record for: ${JSON.stringify(record)}`);
-      const { error: functionError } = await supabase.functions.invoke('add-lerg-record', {
-        body: record,
+      console.log(`Invoking Supabase function add-enhanced-lerg-record for: ${JSON.stringify(record)}`);
+      const { error: functionError } = await supabase.functions.invoke('add-enhanced-lerg-record', {
+        body: {
+          npa: record.npa,
+          country_code: record.country,
+          country_name: record.country === 'US' ? 'United States' : record.country === 'CA' ? 'Canada' : record.country,
+          state_province_code: record.state,
+          state_province_name: record.state,
+          category: record.country === 'US' ? 'us-domestic' : record.country === 'CA' ? 'canadian' : 'caribbean',
+          source: 'manual'
+        },
       });
 
       if (functionError) {
@@ -393,7 +401,7 @@ export function useLergData() {
         throw new Error(error.value ?? 'Supabase function invocation failed');
       }
 
-      console.log('Supabase function "add-lerg-record" successful. Triggering refresh...');
+      console.log('Supabase function "add-enhanced-lerg-record" successful. Triggering refresh...');
       await initializeLergData();
       console.log('LERG data refresh completed after adding single record.');
     } catch (err) {

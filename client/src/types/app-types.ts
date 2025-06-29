@@ -241,7 +241,7 @@ export const DBSchemas = {
   // Schema for US Rate Sheet (new) - CORRECTED
   [DBName.US_RATE_SHEET]:
     'entries: ++id, npanxx, stateCode, npa, nxx, *interRate, *intraRate, *indetermRate',
-  [DBName.LERG]: 'lerg: npa, *state, *country',
+  [DBName.LERG]: 'enhanced_lerg: npa, country_code, country_name, state_province_code, state_province_name, region, category, source, confidence_score, *category, *country_code, *state_province_code',
   [DBName.US_PRICING_COMPARISON]: `
     comparison_results: ++id, &npanxx,
     npa,

@@ -5,6 +5,7 @@ import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
 import { useLergStore } from '@/stores/lerg-store';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
+import { NANPCategorizer } from '@/utils/nanp-categorization';
 import { DBSchemas } from '@/types/app-types';
 
 import type {
@@ -42,6 +43,11 @@ interface UsStore {
       avgInterRate: number;
       avgIntraRate: number;
       avgIndetermRate: number;
+      categorizationQuality?: {
+        totalNPAs: number;
+        highConfidenceNPAs: number;
+        qualityPercentage: number;
+      };
     }
   ) => void;
   getFileNameByComponent: (componentName: string) => string;
@@ -290,7 +296,7 @@ export class USService {
       // Calculate unique percentage - for US, we use NPA uniqueness
       const uniquePercentage = ((uniqueNPAs / totalCodes) * 100).toFixed(2);
 
-      // Calculate US NPA coverage using LERG data
+      // Calculate US NPA coverage using enhanced NANP categorization
       if (!this.lergStore.isLoaded) {
         console.warn('[USService] LERG data might not be loaded. Proceeding anyway.');
       }
@@ -298,12 +304,23 @@ export class USService {
       // Create a set of all NPAs from the file
       const allFileNPAs = new Set(data.map((item) => item.npa));
 
-      // Count how many valid US NPAs are in our file (those that exist in LERG data)
+      // Count how many valid US domestic NPAs are in our file using enhanced categorization
       let validUSNPAsInFile = 0;
+      let categorizedNPAs = 0;
+      let highConfidenceNPAs = 0;
+      
       for (const npaFromFile of allFileNPAs) {
-        const location = this.lergStore.getOptimizedLocationByNPA(npaFromFile);
-        if (location && location.country === 'US') {
+        const categorization = NANPCategorizer.categorizeNPA(npaFromFile);
+        categorizedNPAs++;
+        
+        // Count as valid US if it's categorized as US domestic with medium+ confidence
+        if (categorization.category === 'us-domestic' && categorization.confidence !== 'low') {
           validUSNPAsInFile++;
+        }
+        
+        // Track high confidence categorizations for quality metrics
+        if (categorization.confidence === 'high') {
+          highConfidenceNPAs++;
         }
       }
 
@@ -311,6 +328,10 @@ export class USService {
       const totalUSNPAs = this.lergStore.getTotalUSNPAs;
       const usNPACoveragePercentage =
         totalUSNPAs > 0 ? ((validUSNPAsInFile / totalUSNPAs) * 100).toFixed(2) : '0.00';
+      
+      // Log enhanced categorization quality for diagnostics
+      const qualityPercentage = categorizedNPAs > 0 ? ((highConfidenceNPAs / categorizedNPAs) * 100).toFixed(1) : '0.0';
+      console.log(`[USService] Enhanced NANP categorization: ${validUSNPAsInFile}/${categorizedNPAs} US domestic NPAs, ${qualityPercentage}% high confidence`);
 
       // Calculate average rates
       const avgInterRate = data.reduce((sum, item) => sum + item.interRate, 0) / totalCodes;
@@ -322,7 +343,7 @@ export class USService {
       const formattedAvgIntraRate = parseFloat(avgIntraRate.toFixed(4));
       const formattedAvgIndetermRate = parseFloat(avgIndetermRate.toFixed(4));
 
-      // Update store
+      // Update store with enhanced metrics
       this.store.setFileStats(componentId, {
         totalCodes,
         totalDestinations: uniqueNPAs,
@@ -331,6 +352,11 @@ export class USService {
         avgInterRate: formattedAvgInterRate,
         avgIntraRate: formattedAvgIntraRate,
         avgIndetermRate: formattedAvgIndetermRate,
+        categorizationQuality: {
+          totalNPAs: categorizedNPAs,
+          highConfidenceNPAs,
+          qualityPercentage: parseFloat(qualityPercentage),
+        },
       });
     } catch (error) {
       console.error('Error calculating file stats:', error);

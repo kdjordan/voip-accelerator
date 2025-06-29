@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.enhanced_lerg (
     category VARCHAR(20) NOT NULL CHECK (category IN ('us-domestic', 'canadian', 'caribbean', 'pacific')),
     
     -- Audit fields
-    source VARCHAR(20) DEFAULT 'lerg' CHECK (source IN ('lerg', 'manual', 'import', 'seed')),
+    source VARCHAR(20) DEFAULT 'lerg' CHECK (source IN ('lerg', 'manual', 'import', 'seed', 'consolidated')),
     confidence_score DECIMAL(3,2) DEFAULT 1.00 CHECK (confidence_score >= 0 AND confidence_score <= 1),
     
     -- Timestamps
@@ -122,13 +122,13 @@ GRANT ALL ON public.enhanced_lerg TO service_role;
 ALTER TABLE public.enhanced_lerg ENABLE ROW LEVEL SECURITY;
 
 -- Policy for authenticated users to read
-CREATE POLICY "Allow authenticated read access" ON public.enhanced_lerg
+CREATE OR REPLACE POLICY "Allow authenticated read access" ON public.enhanced_lerg
     FOR SELECT
     TO authenticated
     USING (is_active = true);
 
 -- Policy for service role to have full access
-CREATE POLICY "Allow service role full access" ON public.enhanced_lerg
+CREATE OR REPLACE POLICY "Allow service role full access" ON public.enhanced_lerg
     FOR ALL
     TO service_role
     USING (true)

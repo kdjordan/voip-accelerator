@@ -1,33 +1,57 @@
 <template>
   <div class="bg-gray-900/50">
-    <div
-      @click="toggleManagement"
-      class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
-    >
+    <div class="px-6 py-4">
       <div class="flex justify-between items-center">
         <h2 class="text-xl font-semibold">NANP Data Management</h2>
         <div class="flex items-center space-x-3">
           <span v-if="stats" class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
             {{ stats.total }} NPAs
           </span>
-          <div class="flex items-center space-x-1">
-            <div
-              class="w-3 h-3 rounded-full"
-              :class="isEdgeFunctionAvailable ? 'bg-accent' : 'bg-red-500'"
-            ></div>
-            <span class="text-xs text-gray-400">
-              {{ isEdgeFunctionAvailable ? 'Connected' : 'Offline' }}
+          <div class="flex items-center space-x-3">
+            <!-- Enhanced System Status -->
+            <div class="flex items-center space-x-1">
+              <div
+                class="w-3 h-3 rounded-full"
+                :class="systemStatus.enhanced_available ? 'bg-green-500' : 'bg-gray-500'"
+              ></div>
+              <span class="text-xs text-gray-400">Enhanced</span>
+            </div>
+            <!-- Legacy System Status -->
+            <div class="flex items-center space-x-1">
+              <div
+                class="w-3 h-3 rounded-full"
+                :class="systemStatus.legacy_available ? 'bg-blue-500' : 'bg-gray-500'"
+              ></div>
+              <span class="text-xs text-gray-400">Legacy</span>
+            </div>
+            <!-- Currently Using -->
+            <span class="text-xs text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {{ systemStatus.using_enhanced ? 'Enhanced' : 'Legacy' }}
             </span>
           </div>
-          <ChevronDownIcon
-            :class="{ 'transform rotate-180': showManagement }"
-            class="w-5 h-5 transition-transform text-gray-400"
-          />
         </div>
       </div>
     </div>
 
-    <div v-if="showManagement" class="border-t border-gray-700/50 p-6 space-y-6">
+    <div class="border-t border-gray-700/50 p-6 space-y-6">
+      <!-- Enhanced System Information -->
+      <div v-if="systemStatus.using_enhanced && getMigrationStatus" class="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-6">
+        <div class="flex items-start space-x-3">
+          <span class="text-2xl">✨</span>
+          <div>
+            <h3 class="text-lg font-medium text-green-400 mb-2">Enhanced System Active</h3>
+            <p class="text-green-300 text-sm mb-3">
+              Using enhanced LERG data with complete geographic context, confidence scoring, and full audit trail.
+            </p>
+            <div class="flex space-x-4 text-xs">
+              <span class="text-green-400">{{ getMigrationStatus.enhanced_records }} Enhanced Records</span>
+              <span class="text-blue-400">{{ getMigrationStatus.legacy_records }} Legacy Records</span>
+              <span class="text-accent">{{ getMigrationStatus.migration_progress }}% Migrated</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Statistics Dashboard -->
       <div v-if="stats" class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-gray-800/50 p-4 rounded-lg">
@@ -35,11 +59,11 @@
           <div class="text-gray-400 text-sm">Total NPAs</div>
         </div>
         <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-xl font-bold text-green-400">{{ stats.us }}</div>
+          <div class="text-xl font-bold text-green-400">{{ stats.us_domestic }}</div>
           <div class="text-gray-400 text-sm">US Domestic</div>
         </div>
         <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-xl font-bold text-blue-400">{{ stats.canada }}</div>
+          <div class="text-xl font-bold text-blue-400">{{ stats.canadian }}</div>
           <div class="text-gray-400 text-sm">Canada</div>
         </div>
         <div class="bg-gray-800/50 p-4 rounded-lg">
@@ -311,10 +335,10 @@
                 <thead class="bg-gray-700/50 sticky top-0">
                   <tr>
                     <th class="px-4 py-3 text-left text-gray-300">NPA</th>
+                    <th class="px-4 py-3 text-left text-gray-300">Location</th>
                     <th class="px-4 py-3 text-left text-gray-300">Category</th>
-                    <th class="px-4 py-3 text-left text-gray-300">Country</th>
-                    <th class="px-4 py-3 text-left text-gray-300">Region</th>
                     <th class="px-4 py-3 text-left text-gray-300">Source</th>
+                    <th class="px-4 py-3 text-left text-gray-300" v-if="systemStatus.using_enhanced">Quality</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700">
@@ -325,6 +349,15 @@
                   >
                     <td class="px-4 py-3 font-mono text-accent">{{ npa.npa }}</td>
                     <td class="px-4 py-3">
+                      <div v-if="systemStatus.using_enhanced">
+                        <div class="text-white text-sm">{{ npa.display_location }}</div>
+                        <div class="text-gray-400 text-xs">{{ npa.full_location }}</div>
+                      </div>
+                      <div v-else class="text-gray-300">
+                        {{ npa.country_name || npa.country }}{{ npa.state_province_name ? `, ${npa.state_province_name}` : '' }}
+                      </div>
+                    </td>
+                    <td class="px-4 py-3">
                       <span 
                         class="px-2 py-1 rounded text-xs"
                         :class="getCategoryBadgeClass(npa.category)"
@@ -332,9 +365,19 @@
                         {{ formatCategory(npa.category) }}
                       </span>
                     </td>
-                    <td class="px-4 py-3 text-gray-300">{{ npa.country_name || npa.country }}</td>
-                    <td class="px-4 py-3 text-gray-300">{{ npa.region_name || npa.region || '-' }}</td>
                     <td class="px-4 py-3 text-gray-400">{{ npa.source || 'lerg' }}</td>
+                    <td class="px-4 py-3 text-gray-400" v-if="systemStatus.using_enhanced">
+                      <div class="flex items-center space-x-2">
+                        <span class="text-xs">{{ (npa.confidence_score * 100).toFixed(0) }}%</span>
+                        <div class="w-12 bg-gray-700 rounded-full h-1.5">
+                          <div 
+                            class="h-1.5 rounded-full"
+                            :class="npa.confidence_score >= 0.9 ? 'bg-green-500' : npa.confidence_score >= 0.7 ? 'bg-yellow-500' : 'bg-red-500'"
+                            :style="{ width: `${npa.confidence_score * 100}%` }"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -378,8 +421,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue';
 import { ChevronDownIcon, ArrowPathIcon, DocumentIcon } from '@heroicons/vue/24/outline';
-import { useNANPManagement, type NPARecord } from '@/composables/useNANPManagement';
-import { useLergData } from '@/composables/useLergData';
+import { useEnhancedNANPManagement } from '@/composables/useEnhancedNANPManagement';
+import { useEnhancedLergData } from '@/composables/useEnhancedLergData';
 import { useDragDrop } from '@/composables/useDragDrop';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import Papa from 'papaparse';
@@ -398,28 +441,37 @@ const tabs = [
   { id: 'manage', label: 'Manage Data' }
 ];
 
-// NANP Management
+// Enhanced NANP Management (with automatic fallback)
 const {
   isLoading: nanpLoading,
   error: nanpError,
-  allNPAs,
+  allRecords: allNPAs,
   stats,
-  isEdgeFunctionAvailable,
-  loadNPAs,
-  exportNPAs: exportNPAsToCSV
-} = useNANPManagement();
+  systemStatus,
+  loadNANPData: loadNPAs,
+  addNPARecord,
+  exportNANPData,
+  searchRecords,
+  getMigrationStatus
+} = useEnhancedNANPManagement();
 
-// LERG Data Management (for file upload and single record add)
+// Enhanced LERG Data Management (for file upload and single record add)
 const {
   isLoading: lergLoading,
   error: lergError,
   uploadLerg,
   addSingleLergRecord,
-  checkEdgeFunctionStatus
-} = useLergData();
+  checkEdgeFunctionStatus,
+  isEnhancedAvailable,
+  isUsingEnhanced
+} = useEnhancedLergData();
+
+// Derived system availability
+const isEdgeFunctionAvailable = computed(() => 
+  systemStatus.value.enhanced_available || systemStatus.value.legacy_available
+);
 
 // UI State
-const showManagement = ref(false);
 const activeTab = ref('upload');
 
 // Combined loading state
@@ -462,19 +514,10 @@ const isFormValid = computed(() => {
 });
 
 const filteredNPAs = computed(() => {
-  let filtered = allNPAs.value;
+  // Use enhanced search function when available
+  let filtered = searchTerm.value ? searchRecords.value(searchTerm.value) : allNPAs.value;
   
-  if (searchTerm.value) {
-    const term = searchTerm.value.toLowerCase();
-    filtered = filtered.filter(npa => 
-      npa.npa.includes(term) ||
-      npa.country?.toLowerCase().includes(term) ||
-      npa.region?.toLowerCase().includes(term) ||
-      npa.country_name?.toLowerCase().includes(term) ||
-      npa.region_name?.toLowerCase().includes(term)
-    );
-  }
-  
+  // Apply category filter
   if (selectedCategory.value) {
     filtered = filtered.filter(npa => npa.category === selectedCategory.value);
   }
@@ -539,18 +582,12 @@ const {
 });
 
 // Methods
-function toggleManagement() {
-  showManagement.value = !showManagement.value;
-  if (showManagement.value && allNPAs.value.length === 0) {
-    loadData();
-  }
-}
 
 async function loadData() {
   try {
     await Promise.all([
       checkEdgeFunctionStatus(),
-      loadNPAs()
+      loadNPAs() // This now uses enhanced system with fallback
     ]);
   } catch (err: any) {
     console.error('[UnifiedNANPManagement] Failed to load data:', err);
@@ -621,15 +658,15 @@ async function handleAddSingleRecord() {
       country: newRecord.country
     });
 
-    addSuccessMessage.value = `✅ NPA ${newRecord.npa} added successfully`;
+    addSuccessMessage.value = `✅ NPA ${newRecord.npa} added successfully ${systemStatus.value.using_enhanced ? '(Enhanced)' : '(Legacy)'}`;
     
     // Reset form
     newRecord.npa = '';
     newRecord.state = '';
     newRecord.country = '';
 
-    // Refresh data
-    await loadData();
+    // Refresh data using enhanced system
+    await loadNPAs();
 
     // Clear success message after delay
     setTimeout(() => {
@@ -643,12 +680,12 @@ async function handleAddSingleRecord() {
 
 function exportData() {
   try {
-    const csvData = exportNPAsToCSV();
+    const csvData = exportNANPData(); // Now includes enhanced data format
     const blob = new Blob([csvData], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `nanp-data-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `nanp-data-${systemStatus.value.using_enhanced ? 'enhanced' : 'legacy'}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   } catch (err: any) {
@@ -711,8 +748,6 @@ function formatCategory(category: string) {
 }
 
 onMounted(() => {
-  if (showManagement.value) {
-    loadData();
-  }
+  loadData();
 });
 </script>
