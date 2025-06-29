@@ -353,7 +353,9 @@
 
   const npaBreakdown = computed(() => {
     // Use enhanced NANPCategorizer to get detailed breakdown
-    const result = NANPCategorizer.categorizeNPAList(allFileNPAs.value);
+    // Convert numbers to strings for the categorizer
+    const stringNPAs = allFileNPAs.value.map(npa => npa.toString());
+    const result = NANPCategorizer.categorizeNPAs(stringNPAs);
     
     // Transform to expected format for backward compatibility
     return {

@@ -380,28 +380,28 @@ export function useLergData() {
       console.log('[updateStoreData] US state entries to process:', usStateEntries.length);
       
       usStateEntries.forEach(([code, npas]) => {
-        console.log(`[updateStoreData] Processing US state ${code} with ${npas.length} NPAs`);
+      
         usStatesMap.set(
           code,
           npas.map((npa: string) => ({ npa }))
         );
       });
 
-      console.log('[updateStoreData] Processing Canada provinces...');
+      
       Object.entries(canadaProvinces).forEach(([code, npaSet]) => {
-        console.log(`[updateStoreData] Processing Canada province ${code} with ${npaSet.size} NPAs`);
+        
         canadaProvincesMap.set(
           code,
           Array.from(npaSet).map((npa: string) => ({ npa }))
         );
       });
 
-      console.log('[updateStoreData] Processing other countries...');
+      
       const otherCountries = countryData.filter((c) => c.country !== 'US' && c.country !== 'CA');
-      console.log('[updateStoreData] Other countries to process:', otherCountries.length);
+      
       
       otherCountries.forEach((c) => {
-        console.log(`[updateStoreData] Processing country ${c.country} with ${c.npas.length} NPAs`);
+      
         otherCountriesMap.set(
           c.country,
           c.npas.map((npa: string) => ({ npa }))

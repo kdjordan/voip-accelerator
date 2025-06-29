@@ -254,14 +254,14 @@
       @cancel="handleModalCancel"
     />
     
-    <!-- Plus One Handling Modal -->
-    <PlusOneHandlingModal
+    <!-- Plus One Handling Modal - REMOVED: Analysis moved to USCodeReport -->
+    <!-- <PlusOneHandlingModal
       v-if="showPlusOneModal"
       :showModal="showPlusOneModal"
       :analysis="plusOneAnalysis"
       @handle-choice="handlePlusOneChoice"
       @cancel="cancelPlusOneModal"
-    />
+    /> -->
   </div>
 </template>
 
@@ -296,10 +296,10 @@
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDragDrop } from '@/composables/useDragDrop';
-  import PlusOneHandlingModal from '@/components/shared/PlusOneHandlingModal.vue';
-  import { detectPlusOneDestinations, filterByPlusOneChoice } from '@/utils/plus-one-detector';
+  // import PlusOneHandlingModal from '@/components/shared/PlusOneHandlingModal.vue';
+  // import { detectPlusOneDestinations, filterByPlusOneChoice } from '@/utils/plus-one-detector';
   import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
-  import { ComponentId, DBName } from '@/types/app-types';
+  import { ComponentId, DBName, ReportTypes } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
   import { useUserStore } from '@/stores/user-store';
 
@@ -334,10 +334,10 @@
     az2: null,
   });
   
-  // Plus One handling state
-  const showPlusOneModal = ref(false);
-  const plusOneAnalysis = ref<any>(null);
-  const originalFileData = ref<string[][]>([]);
+  // Plus One handling state - DEPRECATED: Analysis moved to USCodeReport
+  // const showPlusOneModal = ref(false);
+  // const plusOneAnalysis = ref<any>(null);
+  // const originalFileData = ref<string[][]>([]);
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
@@ -538,8 +538,9 @@
       // usStore.setPricingReport(pricingReportSummary);
       // console.log('[USFileUploads] Pricing report set in store.');
 
-      // Reports are generated, potentially hide upload components
+      // Reports are generated, switch to code report view
       usStore.showUploadComponents = false;
+      usStore.setActiveReportType(ReportTypes.CODE); // Switch to code report view
     } catch (error) {
       console.error('[USFileUploads] Error during report generation process:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -895,26 +896,13 @@
     usStore.setTempFile(componentId, file);
     console.log('[USFileUploads] is launching preview modal');
     Papa.parse(file, {
-      preview: 100, // Increased to detect +1 destinations
+      preview: 100, // Preview for column mapping only
       complete: (results) => {
-        const detection = detectPlusOneDestinations(results.data as string[][]);
-        if (detection.hasPlusOne && detection.suggestedAction === 'show-modal') {
-          
-          // Store the analysis and original data
-          plusOneAnalysis.value = detection;
-          originalFileData.value = results.data as string[][];
-          activeComponent.value = componentId;
-          
-          // Show the plus one modal instead of preview modal
-          showPlusOneModal.value = true;
-        } else {
-          
-          // Proceed with normal flow
-          previewData.value = results.data.slice(1) as string[][];
-          columns.value = results.data[0] as string[];
-          activeComponent.value = componentId;
-          showPreviewModal.value = true;
-        }
+        // Proceed directly to preview modal - comprehensive +1 analysis moved to USCodeReport
+        previewData.value = results.data.slice(1) as string[][];
+        columns.value = results.data[0] as string[];
+        activeComponent.value = componentId;
+        showPreviewModal.value = true;
       },
       error: (error) => {
         console.error('Error parsing CSV:', error);
@@ -924,33 +912,12 @@
     });
   }
   
-  // Plus One Modal Handlers
-  function handlePlusOneChoice(choice: 'include-all' | 'filter-plus-one' | 'extract-plus-one') {
-    showPlusOneModal.value = false;
-    
-    let filteredData = originalFileData.value;
-    
-    // Apply filtering based on user choice with business focus
-    if (choice === 'filter-plus-one') {
-      filteredData = filterByPlusOneChoice(originalFileData.value, 'exclude-all-plus-one');
-    } else if (choice === 'extract-plus-one') {
-      // US rate deck protection: keep only US+Canada, remove expensive Caribbean/territories
-      filteredData = filterByPlusOneChoice(originalFileData.value, 'keep-us-canada-only');
-    }
-    
-    // Continue with the preview modal using filtered data
-    previewData.value = filteredData.slice(1);
-    columns.value = filteredData[0];
-    showPreviewModal.value = true;
-  }
-  
-  function cancelPlusOneModal() {
-    showPlusOneModal.value = false;
-    plusOneAnalysis.value = null;
-    originalFileData.value = [];
-    
-    // Clear the temp file and reset the component
-    usStore.clearTempFile(activeComponent.value);
-    usStore.setComponentUploading(activeComponent.value, false);
-  }
+  // Plus One Modal Handlers - REMOVED: Analysis moved to USCodeReport
+  // function handlePlusOneChoice(choice: 'include-all' | 'filter-plus-one' | 'extract-plus-one') {
+  //   // Implementation moved to USCodeReport.vue
+  // }
+  // 
+  // function cancelPlusOneModal() {
+  //   // Implementation moved to USCodeReport.vue
+  // }
 </script>

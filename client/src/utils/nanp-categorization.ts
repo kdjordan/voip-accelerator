@@ -47,11 +47,12 @@ export class NANPCategorizer {
   /**
    * Categorize a single NPA using hierarchical data sources
    */
-  static categorizeNPA(npa: string): NANPCategorization {
-    // Remove any +1 prefix and validate
-    const cleanNPA = npa.replace(/^1?(\d{3})$/, '$1');
+  static categorizeNPA(npa: string | number): NANPCategorization {
+    // Convert to string and remove any +1 prefix and validate
+    const npaString = npa.toString();
+    const cleanNPA = npaString.replace(/^1?(\d{3})$/, '$1');
     if (!/^\d{3}$/.test(cleanNPA)) {
-      return this.createUnknownResult(npa, 'Invalid NPA format');
+      return this.createUnknownResult(npaString, 'Invalid NPA format');
     }
 
     // 1. Try LERG data first (most authoritative)
@@ -182,7 +183,7 @@ export class NANPCategorizer {
   /**
    * Categorize multiple NPAs and return summary
    */
-  static categorizeNPAs(npas: string[]): NANPSummary {
+  static categorizeNPAs(npas: (string | number)[]): NANPSummary {
     const results = npas.map(npa => this.categorizeNPA(npa));
     
     const summary: NANPSummary = {
