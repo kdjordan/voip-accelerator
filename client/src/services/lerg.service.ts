@@ -395,68 +395,50 @@ export class LergService {
         console.log('[LergService] Phase 1: enhanced_lerg table found');
       }
 
-      // Phase 1: Clear existing data (keeping existing table structure)
-      console.log('[LergService] Phase 1: Clearing enhanced_lerg table...');
-      await db.table('enhanced_lerg').clear();
-      console.log('[LergService] Phase 1: Table cleared successfully');
+      // Phase 2: Use storeInDexieDB for optimized bulk operations
+      console.log('[LergService] Phase 2: Using storeInDexieDB for bulk data storage...');
+      const { storeInDexieDB } = useDexieDB();
+      
+      console.log(`[LergService] Phase 2: Storing ${lergData.length} records using storeInDexieDB...`);
+      console.log('[LergService] Phase 2: Sample record being stored:', lergData[0]);
+      
+      await storeInDexieDB(
+        lergData,
+        DBName.LERG,
+        'enhanced_lerg',
+        { replaceExisting: true }
+      );
+      
+      console.log('[LergService] Phase 2: Bulk storage completed successfully');
 
-      // Insert the data in smaller batches to avoid transaction limits
-      const BATCH_SIZE = 1000;
-      let processedCount = 0;
-      const totalBatches = Math.ceil(lergData.length / BATCH_SIZE);
-
-      console.log(`[LergService] Starting batch insertion: ${totalBatches} batches of ${BATCH_SIZE} records each`);
-
-      for (let i = 0; i < lergData.length; i += BATCH_SIZE) {
-        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-        const batch = lergData.slice(i, i + BATCH_SIZE);
-        
-        console.log(`[LergService] Processing batch ${batchNumber}/${totalBatches} (${batch.length} records)`);
-        console.log(`[LergService] Sample record from batch ${batchNumber}:`, batch[0]);
-        
-        await this.executeWithRetry(
-          async () => {
-            console.log(`[LergService] Phase 1: Executing bulkPut for batch ${batchNumber}...`);
-            const result = await db.table('enhanced_lerg').bulkPut(batch);
-            console.log(`[LergService] Phase 1: bulkPut result for batch ${batchNumber}:`, result);
-            return result;
-          },
-          `Data batch ${batchNumber} insertion`
-        );
-
-        processedCount += batch.length;
-        const progressPercent = Math.round((processedCount / lergData.length) * 100);
-        console.log(`[LergService] Batch ${batchNumber} complete: ${progressPercent}% total progress (${processedCount}/${lergData.length})`);
-      }
-
-      // Phase 1: Verify data was stored
-      console.log('[LergService] Phase 1: Verifying data storage...');
+      // Phase 2: Verify data was stored using managed connection
+      console.log('[LergService] Phase 2: Verifying data storage...');
       const storedCount = await db.table('enhanced_lerg').count();
-      console.log(`[LergService] Phase 1: Verification: ${storedCount} records stored in enhanced_lerg table`);
+      console.log(`[LergService] Phase 2: Verification: ${storedCount} records stored in enhanced_lerg table`);
       
       if (storedCount !== lergData.length) {
-        console.error(`[LergService] Phase 1: ERROR: Storage verification failed! Expected ${lergData.length}, got ${storedCount}`);
+        console.error(`[LergService] Phase 2: ERROR: Storage verification failed! Expected ${lergData.length}, got ${storedCount}`);
         throw new Error(`Storage verification failed: ${storedCount}/${lergData.length} records stored`);
       }
 
       // Get a sample record to verify structure
       const sampleStored = await db.table('enhanced_lerg').limit(1).first();
-      console.log('[LergService] Phase 1: Sample stored record:', sampleStored);
+      console.log('[LergService] Phase 2: Sample stored record:', sampleStored);
 
       // Invalidate cache since data has changed
       console.log('[LergService] Invalidating cache...');
       this.invalidateCache();
       
-      console.log('[LergService] ========== PHASE 1: INDEXEDDB INITIALIZATION COMPLETE ==========');
+      console.log('[LergService] ========== PHASE 2: INDEXEDDB INITIALIZATION COMPLETE ==========');
     } catch (error) {
-      console.error('[LergService] ========== PHASE 1: INDEXEDDB INITIALIZATION FAILED ==========');
-      console.error('[LergService] Phase 1: Error details:', error);
-      console.error('[LergService] Phase 1: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('[LergService] ========== PHASE 2: INDEXEDDB INITIALIZATION FAILED ==========');
+      console.error('[LergService] Phase 2: Error details:', error);
+      console.error('[LergService] Phase 2: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       const dataError = error instanceof Error ? error : new Error(String(error));
       throw new LergDataError('Failed to initialize LERG data', dataError);
     } finally {
-      console.log('[LergService] Phase 1: Cleanup: Releasing connection...');
+      console.log('[LergService] Phase 2: Cleanup: Releasing connection...');
       await this.releaseConnection();
     }
   }
