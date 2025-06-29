@@ -125,23 +125,18 @@ export class USRateSheetService {
       return Promise.reject(new Error(errorMsg));
     }
 
-    // --- Prepare Database and Table ONCE ---
-    let db: DexieDBBase;
-    let table: Table<USRateSheetEntry, any>; // Use 'any' for primary key type as it might be auto-incrementing
+    // --- Prepare Database ONCE ---
     try {
-      // console.log(`[USRateSheetService] Getting DB instance for ${this.dbName}...`);
-      db = await this.getDB(this.dbName);
-      // console.log(`[USRateSheetService] Ensuring table 'entries' exists and clearing it...`);
+      // console.log(`[USRateSheetService] Preparing database and clearing existing data...`);
+      // Clear existing data using storeInDexieDB unified pattern
       await this.storeInDexieDB([], this.dbName, 'entries', { replaceExisting: true });
-      table = db.table('entries'); // Get table reference after ensuring it exists
-      // console.log(`[USRateSheetService] DB and table 'entries' prepared and cleared.`);
+      // console.log(`[USRateSheetService] Database prepared and cleared.`);
     } catch (dbError) {
-      // console.error('[USRateSheetService] Failed to prepare database/table:', dbError);
+      // console.error('[USRateSheetService] Failed to prepare database:', dbError);
       return Promise.reject(dbError); // Reject if DB setup fails
     }
     // --- End DB Preparation ---
 
-    const batchPromises: Promise<void>[] = [];
     const invalidRows: InvalidUsRow[] = [];
     let processingBatch: USRateSheetEntry[] = []; // Local batch for this run
     let totalRecords = 0;
@@ -195,17 +190,16 @@ export class USRateSheetService {
               totalRecords++; // Increment only for valid, processed rows
             }
 
-            // When we reach the batch size, store the batch directly
+            // When we reach the batch size, store the batch using storeInDexieDB
             if (processingBatch.length >= BATCH_SIZE) {
               const batchToStore = [...processingBatch];
               const batchStartIndex = totalChunks - batchToStore.length + 1;
               const batchEndIndex = totalChunks;
               processingBatch = []; // Reset local batch
               const storeStartTime = Date.now();
-              // console.log(`[${new Date().toISOString()}] [USRateSheetService] Storing batch ${batchStartIndex}-${batchEndIndex} (${batchToStore.length} records)...`);
-              // Use direct bulkPut on the prepared table reference
-              const bulkPutPromise = table
-                .bulkPut(batchToStore)
+              
+              // Use storeInDexieDB for unified storage pattern (async but don't wait)
+              this.storeInDexieDB(batchToStore, this.dbName, 'entries', { replaceExisting: false })
                 .then(() => {
                   const storeEndTime = Date.now();
                   // console.log(`[${new Date().toISOString()}] [USRateSheetService] SUCCESS storing batch ${batchStartIndex}-${batchEndIndex} (${batchToStore.length} records). Duration: ${storeEndTime - storeStartTime}ms`);
@@ -213,10 +207,10 @@ export class USRateSheetService {
                 .catch((batchError: Error) => {
                   const storeEndTime = Date.now();
                   // console.error(`[${new Date().toISOString()}] [USRateSheetService] ERROR storing batch ${batchStartIndex}-${batchEndIndex}. Duration: ${storeEndTime - storeStartTime}ms`, batchError);
-                  // Add failed rows to invalidRows or handle differently if needed
+                  // Add failed rows to invalidRows
                   invalidRows.push(
                     ...batchToStore.map((r) => ({
-                      rowIndex: totalChunks - batchToStore.length + batchToStore.indexOf(r), // Approximate row index
+                      rowIndex: totalChunks - batchToStore.length + batchToStore.indexOf(r),
                       npanxx: r.npanxx,
                       npa: r.npa,
                       nxx: r.nxx,
@@ -226,10 +220,7 @@ export class USRateSheetService {
                       reason: `Failed to store batch: ${(batchError as Error).message}`,
                     }))
                   );
-                  // Optionally re-throw or just log and add to invalid.
                 });
-              batchPromises.push(bulkPutPromise);
-              // console.log(`[${new Date().toISOString()}] [USRateSheetService] Pushed bulkPut promise for batch ${batchStartIndex}-${batchEndIndex} onto queue.`); // <-- New Log
             }
           } catch (error) {
             // Log error processing a specific row but don't let it stop the stream
@@ -247,31 +238,21 @@ export class USRateSheetService {
           }
         },
         complete: async () => {
-          // console.log('[USRateSheetService] PapaParse complete. Processing final batches...');
-          // Wait for all intermediate batch storage operations to complete
-          try {
-            await Promise.all(batchPromises);
-            // console.log('[USRateSheetService] Intermediate batches stored successfully.');
-          } catch (batchError) {
-            // Errors are now caught and logged within the bulkPut catch handler,
-            // but we might still log a summary error here if needed.
-            // console.error(`[USRateSheetService] One or more intermediate batches failed to store (see logs above).`, batchError // This might be the first error encountered by Promise.all);
-            // Depending on requirements, we might reject here or allow final batch attempt
-          }
-
-          // Store any remaining rows in the final batch
+          // console.log('[USRateSheetService] PapaParse complete. Processing final batch...');
+          
+          // Store any remaining rows in the final batch using storeInDexieDB
           if (processingBatch.length > 0) {
             // console.log(`[USRateSheetService] Storing final batch of ${processingBatch.length} records...`);
             try {
-              // Use direct bulkPut for the final batch
-              await table.bulkPut(processingBatch);
+              // Use storeInDexieDB for unified pattern
+              await this.storeInDexieDB(processingBatch, this.dbName, 'entries', { replaceExisting: false });
               // console.log('[USRateSheetService] Final batch stored successfully.');
             } catch (finalBatchError) {
               // console.error('[USRateSheetService] Error storing final batch:', finalBatchError);
               // Add failed rows to invalidRows
               invalidRows.push(
                 ...processingBatch.map((r) => ({
-                  rowIndex: totalChunks - processingBatch.length + processingBatch.indexOf(r), // Approximate
+                  rowIndex: totalChunks - processingBatch.length + processingBatch.indexOf(r),
                   npanxx: r.npanxx,
                   npa: r.npa,
                   nxx: r.nxx,
@@ -281,7 +262,6 @@ export class USRateSheetService {
                   reason: `Failed to store final batch: ${(finalBatchError as Error).message}`,
                 }))
               );
-              // Reject if the final batch fails? Or just resolve with invalid rows? Resolve for now.
             }
           }
 

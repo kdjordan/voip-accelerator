@@ -420,19 +420,15 @@ export class USService {
     }
   }
 
-  // Get record count for a table
+  // Get record count for a table using unified pattern
   async getRecordCount(tableName: string): Promise<number> {
     try {
-      // Use the instance-level dexieDB
-      const { getDB } = this.dexieDB;
-      const db = await getDB(DBName.US);
-      // Use standard Dexie check
-      if (!db.tables.some((table) => table.name === tableName)) {
-        console.warn(`[USService] Table ${tableName} does not exist in ${DBName.US} for count.`);
-        return 0;
-      }
-      const count = await db.table(tableName).count();
-      return count;
+      // Use unified loadFromDexieDB to get all records and count them
+      // This is less efficient than .count() but follows the unified pattern
+      const { loadFromDexieDB } = this.dexieDB;
+      const data = await loadFromDexieDB<USStandardizedData>(DBName.US, tableName);
+      console.log(`[USService] Got record count ${data.length} for table ${tableName} using unified pattern`);
+      return data.length;
     } catch (error) {
       console.error(`[USService] Failed to get record count for table ${tableName}:`, error);
       return 0;
@@ -447,12 +443,15 @@ export class USService {
       const tableNames = await getAllStoreNamesForDB(DBName.US);
       const tableCounts: Record<string, number> = {};
       for (const name of tableNames) {
-        // Use standard Dexie check before counting (safer)
-        const db = await this.dexieDB.getDB(DBName.US);
-        if (db.tables.some((table) => table.name === name)) {
-          tableCounts[name] = await db.table(name).count();
-        } else {
-          tableCounts[name] = 0; // Should not happen if getAllStoreNamesForDB is accurate
+        // Use unified pattern for counting
+        try {
+          const { loadFromDexieDB } = this.dexieDB;
+          const data = await loadFromDexieDB<USStandardizedData>(DBName.US, name);
+          tableCounts[name] = data.length;
+          console.log(`[USService] Table ${name}: ${data.length} records using unified pattern`);
+        } catch (error) {
+          console.warn(`[USService] Could not count records for table ${name}:`, error);
+          tableCounts[name] = 0;
         }
       }
       return tableCounts;
@@ -464,15 +463,11 @@ export class USService {
 
   async getTableCount(tableName: string): Promise<number> {
     try {
-      // Use the instance-level dexieDB
-      const { getDB } = this.dexieDB;
-      const db = await getDB(DBName.US);
-      // Use standard Dexie check
-      if (!db.tables.some((table) => table.name === tableName)) {
-        console.warn(`[USService] Table ${tableName} does not exist in ${DBName.US} for count.`);
-        return 0;
-      }
-      return await db.table(tableName).count();
+      // Use unified loadFromDexieDB pattern for consistency
+      const { loadFromDexieDB } = this.dexieDB;
+      const data = await loadFromDexieDB<USStandardizedData>(DBName.US, tableName);
+      console.log(`[USService] Got table count ${data.length} for table ${tableName} using unified pattern`);
+      return data.length;
     } catch (error) {
       console.error(`[USService] Error getting record count for table ${tableName}:`, error);
       return 0;
@@ -511,28 +506,19 @@ export class USService {
         return;
       }
 
-      // 2. Prepare the target database and table for comparison results
-      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
-      // No need to define schema locally - getDB handles it
-
-      // Ensure DB is open after potential initialization from getDB
-      if (!comparisonDb.isOpen()) await comparisonDb.open();
-
-      // Ensure the table exists after getDB initialization
-      if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
-        console.error(
-          `[USService] CRITICAL: Table ${comparisonTableName} does not exist in ${comparisonDb.name} even after getDB.`
-        );
-        // Handle this critical error - maybe throw, maybe return
-        this.store.setPricingReportProcessing(false);
-        throw new Error(`Comparison table ${comparisonTableName} could not be initialized.`);
-      }
-
-      // Use the extracted table name here
-      const comparisonTable = comparisonDb.table<USPricingComparisonRecord>(comparisonTableName);
-
-      // 4. Clear existing comparison data
-      await comparisonTable.clear();
+      // 2. Prepare comparison table using unified pattern
+      console.log(`[USService] Preparing comparison table ${comparisonTableName} using unified pattern...`);
+      
+      // Clear existing comparison data using unified pattern
+      const { storeInDexieDB: clearTable } = this.dexieDB;
+      await clearTable(
+        [], // Empty array clears the table
+        DBName.US_PRICING_COMPARISON,
+        comparisonTableName,
+        { replaceExisting: true }
+      );
+      
+      console.log(`[USService] Cleared existing comparison data using unified pattern`);
 
       // 5. Create lookup map for faster processing
       const table2Map = new Map<string, USStandardizedData>();
@@ -652,9 +638,16 @@ export class USService {
         }
       } // End for loop
 
-      // 7. Bulk insert results into the comparison table
+      // 7. Store comparison results using unified storeInDexieDB pattern
       if (comparisonResults.length > 0) {
-        await comparisonTable.bulkPut(comparisonResults);
+        const { storeInDexieDB } = this.dexieDB;
+        await storeInDexieDB(
+          comparisonResults,
+          DBName.US_PRICING_COMPARISON,
+          comparisonTableName,
+          { replaceExisting: true }
+        );
+        console.log(`[USService] Stored ${comparisonResults.length} comparison results using unified pattern`);
       }
     } catch (error) {
       console.error('[USService] Critical error during US pricing comparison process:', error);
@@ -822,13 +815,18 @@ export class USService {
       const table1Name = file1Name.toLowerCase().replace('.csv', '');
       const table2Name = file2Name ? file2Name.toLowerCase().replace('.csv', '') : '';
 
-      const { getDB } = this.dexieDB;
-      const usDb = await getDB(DBName.US);
+      // Use unified loadFromDexieDB pattern instead of direct table access
+      const { loadFromDexieDB } = this.dexieDB;
 
-      const file1Data = await usDb.table<USStandardizedData>(table1Name).toArray();
+      const file1Data = await loadFromDexieDB<USStandardizedData>(DBName.US, table1Name);
       let file2Data: USStandardizedData[] = [];
       if (table2Name) {
-        file2Data = await usDb.table<USStandardizedData>(table2Name).toArray();
+        file2Data = await loadFromDexieDB<USStandardizedData>(DBName.US, table2Name);
+      }
+      
+      console.log(`[USService] Loaded ${file1Data.length} records from ${table1Name} using unified pattern`);
+      if (table2Name) {
+        console.log(`[USService] Loaded ${file2Data.length} records from ${table2Name} using unified pattern`);
       }
 
       // --- Basic File Stats (largely existing logic) ---
@@ -1023,13 +1021,9 @@ export class USService {
     }
   }
 
-  // Add method to clear US comparison data
+  // Add method to clear US comparison data using unified pattern
   async clearPricingComparisonData(): Promise<void> {
     try {
-      // Only need getDB from dexieDB
-      const { getDB } = this.dexieDB;
-      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
-
       // Get the specific comparison table name
       const comparisonSchemaString = DBSchemas[DBName.US_PRICING_COMPARISON];
       const comparisonTableName = this._extractTableNameFromSchema(comparisonSchemaString);
@@ -1041,15 +1035,19 @@ export class USService {
         return;
       }
 
-      // Check if the table exists before trying to clear
-      if (comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
-        const comparisonTable = comparisonDb.table(comparisonTableName);
-        await comparisonTable.clear(); // Use clear() instead of deleteTableStore
-      }
+      // Use unified storeInDexieDB to clear data (empty array with replaceExisting: true)
+      const { storeInDexieDB } = this.dexieDB;
+      await storeInDexieDB(
+        [], // Empty array clears the table
+        DBName.US_PRICING_COMPARISON,
+        comparisonTableName,
+        { replaceExisting: true }
+      );
+      
+      console.log(`[USService] Cleared pricing comparison data using unified pattern`);
     } catch (error) {
       console.error('[USService] Failed to clear US pricing comparison data:', error);
-      // Decide if error should be thrown or just logged
-      // throw error;
+      throw error; // Re-throw to maintain error handling contract
     }
   }
 
