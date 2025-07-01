@@ -677,7 +677,7 @@
     ChevronDownIcon,
   } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
-  import { useLergStore } from '@/stores/lerg-store';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { DBName } from '@/types/app-types';
   import type { USPricingComparisonRecord } from '@/types/domains/us-types';
   import Papa from 'papaparse';
@@ -823,7 +823,7 @@
   ];
 
   const usStore = useUsStore();
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const COMPARISON_TABLE_NAME = 'comparison_results';
 
   // Initialize table data composable

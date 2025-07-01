@@ -56,7 +56,6 @@ import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { useAzStore } from '@/stores/az-store';
 import { ReportTypes } from '@/types/app-types';
 import { onMounted, ref } from 'vue';
-import { loadSampleDecks } from '@/utils/load-sample-data';
 import { DBName } from '@/types/app-types';
 
 const azStore = useAzStore();
@@ -73,16 +72,5 @@ function closeInfoModal() {
   showInfoModal.value = false;
 }
 
-onMounted(async () => {
-  const filesAlreadyUploaded = azStore.getNumberOfFilesUploaded > 0;
 
-  if (filesAlreadyUploaded) {
-    console.log('[AzView] Files already uploaded, skipping sample data loading');
-  } else {
-    const sampleDecks = setTimeout(async () => {
-      // await loadSampleDecks([DBName.AZ]);
-    }, 1000);
-    return () => clearTimeout(sampleDecks);
-  }
-});
 </script>

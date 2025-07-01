@@ -2,7 +2,7 @@
  * Utility for detecting and analyzing +1 (North American) destinations in rate decks
  */
 
-import { useLergStore } from '@/stores/lerg-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { NANPCategorizer } from '@/utils/nanp-categorization';
 
 export interface PlusOneAnalysis {
@@ -54,7 +54,7 @@ function extractNPA(dialCode: string): string {
  * Detect +1 destinations in rate deck data
  */
 export function detectPlusOneDestinations(data: string[][]): PlusOneAnalysis {
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const plusOneNPAs = new Set<string>();
   
   // Skip header row, analyze data rows
@@ -138,7 +138,7 @@ export function filterByPlusOneChoice(
     return data;
   }
   
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const [headers, ...rows] = data;
   
   const filteredRows = rows.filter(row => {

@@ -3,7 +3,7 @@ import { DBName } from '@/types/app-types';
 import { useUsStore } from '@/stores/us-store';
 import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
-import { useLergStore } from '@/stores/lerg-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
 import { NANPCategorizer } from '@/utils/nanp-categorization';
 import { DBSchemas } from '@/types/app-types';
@@ -59,7 +59,7 @@ interface UsStore {
 
 export class USService {
   private store: UsStore;
-  private lergStore = useLergStore(); // Add instance of lergStore
+  private lergStore = useLergStoreV2(); // Add instance of lergStore
   private dexieDB = useDexieDB(); // Add instance of dexieDB composable
 
   constructor() {
@@ -476,7 +476,7 @@ export class USService {
 
   async processComparisons(file1Name: string, file2Name: string): Promise<void> {
     const { loadFromDexieDB, getDB } = this.dexieDB;
-    const lergStore = useLergStore();
+    const lergStore = useLergStoreV2();
 
     // Derive table names from file names
     const table1Name = file1Name.toLowerCase().replace('.csv', '');

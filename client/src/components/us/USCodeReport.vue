@@ -277,14 +277,15 @@
   // Analyze +1 destinations when report changes
   watch(
     () => props.report,
-    (newReport) => {
+    async (newReport) => {
+      // Analysis triggered
       if (!newReport) {
         plusOneAnalysis.value = null;
         return;
       }
       
       try {
-        console.log('[USCodeReport] Starting comprehensive +1 analysis...');
+        // Starting comprehensive +1 analysis
         
         // Collect all NPAs from both uploaded files
         const allNPAs = new Map<string, {
@@ -295,23 +296,28 @@
           examples: string[];
         }>();
         
-        // Analyze file 1 - Get data from US store instead of service
+        // Analyze file 1 - Get data from IndexedDB for comparison mode
         if (newReport.file1?.fileName) {
-          const file1ComponentId = getComponentIdForFile(newReport.file1.fileName);
-          const file1Data = usStore.getFileDataByComponent(file1ComponentId);
-          console.log(`[USCodeReport] Analyzing file 1: ${newReport.file1.fileName}, records: ${file1Data.length}`);
-          
-          for (const record of file1Data) {
-            if (!allNPAs.has(record.npa)) {
-              const categorization = NANPCategorizer.categorizeNPA(record.npa);
-              allNPAs.set(record.npa, {
-                npa: record.npa,
-                category: categorization.category,
-                confidence: categorization.confidence,
-                totalRecords: 0,
-                examples: []
-              });
+          const table1Name = newReport.file1.fileName.toLowerCase().replace('.csv', '');
+          try {
+            const file1Data = await usService.getData(table1Name);
+            if (!file1Data || file1Data.length === 0) {
+              console.warn(`[USCodeReport] No data found for table: ${table1Name}`);
+              return;
             }
+            for (const record of file1Data) {
+              if (!allNPAs.has(record.npa)) {
+                const categorization = NANPCategorizer.categorizeNPA(record.npa);
+                allNPAs.set(record.npa, {
+                  npa: record.npa,
+                  category: categorization.category,
+                  confidence: categorization.confidence,
+                  totalRecords: 0,
+                  examples: []
+                });
+              }
+              
+              // Processing records
             
             const npaData = allNPAs.get(record.npa)!;
             npaData.totalRecords++;
@@ -321,13 +327,19 @@
               npaData.examples.push(record.npanxx);
             }
           }
+          } catch (error) {
+            console.error(`[USCodeReport] Error loading file 1 data:`, error);
+            return;
+          }
         }
         
-        // Analyze file 2 if present - Get data from US store instead of service
+        // Analyze file 2 if present - Get data from IndexedDB for comparison mode
         if (newReport.file2?.fileName) {
-          const file2ComponentId = getComponentIdForFile(newReport.file2.fileName);
-          const file2Data = usStore.getFileDataByComponent(file2ComponentId);
-          console.log(`[USCodeReport] Analyzing file 2: ${newReport.file2.fileName}, records: ${file2Data.length}`);
+          console.log(`[USCodeReport] Looking for file 2: ${newReport.file2.fileName}`);
+          const table2Name = newReport.file2.fileName.toLowerCase().replace('.csv', '');
+          console.log(`[USCodeReport] File 2 table name: ${table2Name}`);
+          const file2Data = await usService.getData(table2Name);
+          console.log(`[USCodeReport] File 2 data: ${file2Data ? file2Data.length : 'NULL'} records`);
           
           for (const record of file2Data) {
             if (!allNPAs.has(record.npa)) {
@@ -389,6 +401,11 @@
         }
         
         const hasIssues = caribbeanNPAs.length > 0 || pacificNPAs.length > 0;
+        
+        // Log only if Caribbean/Pacific NPAs found
+        if (hasIssues) {
+          console.log(`🚨 ${caribbeanNPAs.length + pacificNPAs.length} expensive +1 destinations detected in rate deck`);
+        }
         
         plusOneAnalysis.value = {
           hasIssues,

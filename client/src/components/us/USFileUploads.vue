@@ -277,8 +277,8 @@
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import { useUsStore } from '@/stores/us-store';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { USService } from '@/services/us.service';
-  import { USNPAAnalyzerService } from '@/services/us-npa-analyzer.service';
   import {
     USReportsInput,
     type USPricingReport,
@@ -305,7 +305,7 @@
 
   const usStore = useUsStore();
   const service = new USService();
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const userStore = useUserStore();
 
   // Computed property for the reports button text
@@ -446,7 +446,6 @@
       // }
 
       // REMOVED: Analyzer instantiation and call
-      // const analyzer = new USNPAAnalyzerService();
       // const enhancedReport = await analyzer.analyzeTableNPAs(tableName, fileName);
       // console.log(`[USFileUploads] NPA analysis completed:`, enhancedReport);
 

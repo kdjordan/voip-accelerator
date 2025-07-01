@@ -5,7 +5,7 @@ import { DBName } from '@/types/app-types';
 import type { DBNameType } from '@/types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
 import Dexie, { type Table } from 'dexie';
-import { useLergStore } from '@/stores/lerg-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 // Define the structure for column mapping indices
 interface USRateSheetColumnMapping {
@@ -34,7 +34,7 @@ export class USRateSheetService {
     options?: { sourceFile?: string; replaceExisting?: boolean }
   ) => Promise<void>;
   private deleteDatabase: (dbName: DBNameType) => Promise<void>;
-  private lergStore: ReturnType<typeof useLergStore>;
+  private lergStore: ReturnType<typeof useLergStoreV2>;
 
   constructor() {
     // Get required functions from the composable
@@ -43,7 +43,7 @@ export class USRateSheetService {
     this.loadFromDexieDB = loadFromDexieDB;
     this.storeInDexieDB = storeInDexieDB;
     this.deleteDatabase = deleteDatabase;
-    this.lergStore = useLergStore();
+    this.lergStore = useLergStoreV2();
 
     // Ensure LERG data is loaded before proceeding (optional but recommended)
     // Moved check to processFile as LERG might load after constructor
@@ -118,10 +118,10 @@ export class USRateSheetService {
     effectiveDate?: string // Added effectiveDate parameter
   ): Promise<ProcessFileResult> {
     // --- Add Guard: Ensure LERG data is loaded ---
-    if (!this.lergStore.isLoaded) {
+    if (!this.lergStore.isInitialized) {
       const errorMsg =
         'LERG data is not loaded. Cannot process rate sheet without state information.';
-      // console.error(`[USRateSheetService] ${errorMsg}`);
+      console.error(`[USRateSheetService] ${errorMsg}`);
       return Promise.reject(new Error(errorMsg));
     }
 
@@ -394,9 +394,9 @@ export class USRateSheetService {
       return null;
     }
 
-    // Get state code from LergStore using the optimized getter
-    const location = this.lergStore.getOptimizedLocationByNPA(npa);
-    const stateCode = location?.region || 'N/A';
+    // Get state code from LergStore using the new simplified getter
+    const npaInfo = this.lergStore.getNPAInfo(npa);
+    const stateCode = npaInfo?.state_province_code || 'N/A';
 
     // Return the standardized entry
     // Removed the 'id' property as we assume auto-incrementing primary key '++id'

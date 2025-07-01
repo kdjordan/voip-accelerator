@@ -679,12 +679,12 @@
               <td class="px-4 py-2 text-gray-400 text-center">
                 {{
                   tableHeaders.find((h) => h.key === 'stateCode')?.getValue?.(entry) ||
-                  lergStore.getLocationByNPA(entry.npa)?.region ||
+                  lergStore.getNPAInfo(entry.npa)?.state_province_code ||
                   'N/A'
                 }}
               </td>
               <td class="px-4 py-2 text-gray-400 text-center">
-                {{ lergStore.getLocationByNPA(entry.npa)?.country || 'N/A' }}
+                {{ lergStore.getNPAInfo(entry.npa)?.country_code || 'N/A' }}
               </td>
               <td class="px-4 py-2 text-white font-mono text-center">
                 {{ formatRate(entry.interRate) }}
@@ -842,7 +842,7 @@
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
-  import { useLergStore } from '@/stores/lerg-store';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
   import { DBName } from '@/types/app-types';
@@ -875,7 +875,7 @@
 
   // Initialize store and service
   const store = useUsRateSheetStore();
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const RATE_SHEET_TABLE_NAME = 'entries';
 
   // Define table headers for dynamic rendering and sorting
@@ -892,7 +892,7 @@
       label: 'State',
       sortable: true,
       textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => lergStore.getLocationByNPA(entry.npa)?.region || 'N/A',
+      getValue: (entry: USRateSheetEntry) => lergStore.getNPAInfo(entry.npa)?.state_province_code || 'N/A',
     },
     {
       key: 'countryCode',
@@ -900,7 +900,7 @@
       sortable: true,
       textAlign: 'text-center',
       getValue: (entry: USRateSheetEntry) =>
-        lergStore.getLocationByNPA(entry.npa)?.country || 'N/A',
+        lergStore.getNPAInfo(entry.npa)?.country_code || 'N/A',
     },
     {
       key: 'interRate',
@@ -1335,11 +1335,11 @@
       ];
 
       const rows = dataToExport.map((entry) => {
-        const location = lergStore.getLocationByNPA(entry.npa); // Assuming lergStore is available
+        const npaInfo = lergStore.getNPAInfo(entry.npa); // Get NPA info from enhanced store
         return [
           `1${entry.npanxx}`,
-          location?.region || 'N/A',
-          location?.country || 'N/A',
+          npaInfo?.state_province_code || 'N/A',
+          npaInfo?.country_code || 'N/A',
           // Using the local formatRate which is confirmed to use .toFixed(6)
           typeof entry.interRate === 'number' ? formatRate(entry.interRate) : 'N/A',
           typeof entry.intraRate === 'number' ? formatRate(entry.intraRate) : 'N/A',

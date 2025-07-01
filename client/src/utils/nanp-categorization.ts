@@ -8,10 +8,7 @@
  * 4. Handling the "types shitshow" professionally
  */
 
-import { useLergStore } from '@/stores/lerg-store';
-import { COUNTRY_CODES, getCountryName } from '@/types/constants/country-codes';
-import { STATE_CODES, getStateName } from '@/types/constants/state-codes';
-import { PROVINCE_CODES, getProvinceName } from '@/types/constants/province-codes';
+import { useLergStoreV2, type EnhancedNPARecord } from '@/stores/lerg-store-v2';
 
 export interface NANPCategorization {
   npa: string;
@@ -42,7 +39,9 @@ export interface NANPSummary {
 }
 
 export class NANPCategorizer {
-  private static lergStore = useLergStore();
+  private static get lergStore() {
+    return useLergStoreV2();
+  }
 
   /**
    * Categorize a single NPA using hierarchical data sources
@@ -57,7 +56,9 @@ export class NANPCategorizer {
 
     // 1. Try LERG data first (most authoritative)
     const lergResult = this.categorizeFromLERG(cleanNPA);
-    if (lergResult) return lergResult;
+    if (lergResult) {
+      return lergResult;
+    }
 
     // 2. Try constants fallback
     const constantsResult = this.categorizeFromConstants(cleanNPA);
@@ -72,23 +73,25 @@ export class NANPCategorizer {
   }
 
   /**
-   * Categorize from LERG data (primary source)
+   * Categorize from LERG data (primary source) - now uses enhanced data
    */
   private static categorizeFromLERG(npa: string): NANPCategorization | null {
-    const lergData = this.lergStore.getOptimizedLocationByNPA(npa);
-    if (!lergData) return null;
+    // Get enhanced data directly from store
+    const enhancedData = this.lergStore.getNPAInfo(npa);
+    if (!enhancedData) {
+      return null;
+    }
 
-    const { country, state } = lergData;
-    
+    const category = enhancedData.category;
     return {
       npa,
-      country,
-      countryName: this.getCountryDisplayName(country),
-      region: state,
-      regionName: this.getRegionDisplayName(state, country),
-      category: this.determineCategory(country),
-      source: 'lerg',
-      confidence: 'high'
+      country: enhancedData.country_code,
+      countryName: enhancedData.country_name,
+      region: enhancedData.state_province_code,
+      regionName: enhancedData.state_province_name,
+      category,
+      source: 'lerg' as const,
+      confidence: 'high' as const
     };
   }
 
@@ -96,6 +99,45 @@ export class NANPCategorizer {
    * Categorize from constants (fallback)
    */
   private static categorizeFromConstants(npa: string): NANPCategorization | null {
+    // Known Caribbean NPAs - check this first since these are most important to detect
+    if (this.isKnownCaribbeanNPA(npa)) {
+      // Try to get enhanced data first, even in constants fallback
+      const enhancedData = this.getEnhancedDataForNPA(npa);
+      if (enhancedData) {
+        return {
+          npa,
+          country: enhancedData.country_code,
+          countryName: enhancedData.country_name,
+          region: enhancedData.state_province_code,
+          regionName: enhancedData.state_province_name,
+          category: 'caribbean',
+          source: 'lerg',
+          confidence: 'high'
+        };
+      }
+      
+      return {
+        npa,
+        country: 'CARIBBEAN',
+        countryName: 'Caribbean Territory',
+        category: 'caribbean',
+        source: 'constants',
+        confidence: 'medium'
+      };
+    }
+
+    // Known Pacific NPAs
+    if (this.isKnownPacificNPA(npa)) {
+      return {
+        npa,
+        country: 'PACIFIC',
+        countryName: 'Pacific Territory',
+        category: 'pacific',
+        source: 'constants',
+        confidence: 'medium'
+      };
+    }
+
     // Known US NPAs
     if (this.isKnownUSNPA(npa)) {
       return {
@@ -115,30 +157,6 @@ export class NANPCategorizer {
         country: 'CA',
         countryName: 'Canada',
         category: 'canadian',
-        source: 'constants',
-        confidence: 'medium'
-      };
-    }
-
-    // Known Caribbean NPAs
-    if (this.isKnownCaribbeanNPA(npa)) {
-      return {
-        npa,
-        country: 'CARIBBEAN',
-        countryName: 'Caribbean Territory',
-        category: 'caribbean',
-        source: 'constants',
-        confidence: 'medium'
-      };
-    }
-
-    // Known Pacific NPAs
-    if (this.isKnownPacificNPA(npa)) {
-      return {
-        npa,
-        country: 'PACIFIC',
-        countryName: 'Pacific Territory',
-        category: 'pacific',
         source: 'constants',
         confidence: 'medium'
       };
@@ -286,17 +304,25 @@ export class NANPCategorizer {
     }
   }
 
-  private static getCountryDisplayName(countryCode: string): string {
-    return getCountryName(countryCode) || countryCode;
+  /**
+   * Get enhanced data for an NPA directly from the store
+   */
+  private static getEnhancedDataForNPA(npa: string): EnhancedNPARecord | null {
+    return this.lergStore.getNPAInfo(npa);
   }
 
-  private static getRegionDisplayName(regionCode: string, countryCode: string): string {
-    if (countryCode === 'US') {
-      return getStateName(regionCode, 'US') || regionCode;
-    } else if (countryCode === 'CA') {
-      return getProvinceName(regionCode) || regionCode;
-    }
-    return regionCode;
+  /**
+   * Get country display name from enhanced store data
+   */
+  private static getCountryDisplayNameFromStore(countryCode: string): string {
+    return this.lergStore.getCountryName(countryCode);
+  }
+
+  /**
+   * Get region display name from enhanced store data
+   */
+  private static getRegionDisplayNameFromStore(regionCode: string, countryCode: string): string {
+    return this.lergStore.getStateName(regionCode);
   }
 
   private static isKnownUSNPA(npa: string): boolean {
@@ -328,7 +354,9 @@ export class NANPCategorizer {
     const regionMap = new Map<string, NANPRegion>();
 
     results.forEach(result => {
-      if (result.country === 'UNKNOWN') return;
+      if (result.country === 'UNKNOWN') {
+        return;
+      }
 
       const key = `${result.country}-${result.category}`;
       if (!regionMap.has(key)) {

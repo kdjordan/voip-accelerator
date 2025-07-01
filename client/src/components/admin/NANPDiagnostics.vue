@@ -246,12 +246,12 @@
 import { ref, onMounted, computed } from 'vue';
 import { ChevronDownIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
 import { NANPCategorizer } from '@/utils/nanp-categorization';
-import { useLergStore } from '@/stores/lerg-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 const showDiagnostics = ref(false);
 const isAnalyzing = ref(false);
 const diagnostics = ref<any>(null);
-const lergStore = useLergStore();
+const lergStore = useLergStoreV2();
 
 // Manual NPA management state
 const newNPA = ref({
