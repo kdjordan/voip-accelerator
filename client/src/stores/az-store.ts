@@ -101,9 +101,6 @@ export const useAzStore = defineStore('az', {
       return result;
     },
 
-    // isUsingMemoryStorage: () => {
-    //   return true; // Always use memory storage since config was removed
-    // },
 
     getFileStats: (state) => (componentId: string) => {
       return (
