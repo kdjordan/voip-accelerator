@@ -6,42 +6,6 @@
 
     <!-- Stats Dashboard -->
     <div class="flex flex-col gap-6 bg-gray-800 pb-6">
-      <!-- LERG Details Section -->
-      <div class="bg-gray-900/50">
-        <div
-          @click="toggleLergDetails"
-          class="w-full cursor-pointer px-6 py-4 hover:bg-gray-700/30 transition-colors"
-        >
-          <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold">LERG Details</h2>
-            <ChevronDownIcon
-              :class="{ 'transform rotate-180': showLergDetails }"
-              class="w-5 h-5 transition-transform text-gray-400"
-            />
-          </div>
-        </div>
-
-        <!-- LERG Stats Grid -->
-        <div v-if="showLergDetails" class="border-t border-gray-700/50 p-6 space-y-6">
-          <div class="grid grid-cols-1 gap-3 border-b border-gray-700/50 pb-4 mb-6">
-            <!-- Last Updated -->
-            <div>
-              <div class="flex justify-between items-center">
-                <h3 class="text-gray-400">Last Updated</h3>
-                <div class="text-lg">{{ formatDate(lergStats.lastUpdated) }}</div>
-              </div>
-            </div>
-            <!-- Total Records -->
-            <div>
-              <div class="flex justify-between items-center">
-                <h3 class="text-gray-400">Total NPA Records</h3>
-                <div class="text-2xl font-bold">{{ formatNumber(lergStats.totalNPAs) }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
     </div>
@@ -70,7 +34,6 @@
   import { useLergOperations } from '@/composables/useLergOperations';
   import { usePingStatus } from '@/composables/usePingStatus';
   import {
-    ChevronDownIcon,
     TrashIcon,
     ArrowUpTrayIcon,
     DocumentIcon,
@@ -107,7 +70,6 @@
   const expandedProvinces = ref<string[]>([]);
   const showCountryDetails = ref(false);
   const showLergSection = ref(false);
-  const showLergDetails = ref(true);
   const showAddLergSection = ref(true);
 
   const isLergLocallyStored = computed(() => {
@@ -162,6 +124,20 @@
       /^[A-Za-z]{2}$/.test(newRecord.country) &&
       Object.values(validationErrors).every((err) => !err)
     );
+  });
+
+  // Edge status computed property
+  const edgeStatusClass = computed(() => {
+    const status = pingStatus.value;
+    if (!status) {
+      return 'bg-gray-500'; // Loading/unknown
+    }
+    
+    if (status.hasLergTable && !status.error) {
+      return 'bg-accent animate-status-pulse-success'; // Green pulsing
+    } else {
+      return 'bg-red-500 animate-status-pulse-error'; // Red pulsing
+    }
   });
 
   onMounted(async () => {
@@ -431,9 +407,6 @@
     showLergSection.value = !showLergSection.value;
   }
 
-  function toggleLergDetails() {
-    showLergDetails.value = !showLergDetails.value;
-  }
 
   function toggleAddLergSection() {
     showAddLergSection.value = !showAddLergSection.value;

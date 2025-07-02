@@ -53,6 +53,8 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     isLoaded: false,
     isLoading: false,
     error: null as string | null,
+    // Phase 1 Optimization: NPA Index for O(1) lookups
+    _npaIndex: null as Map<string, EnhancedNPARecord> | null,
   }),
 
   getters: {
@@ -203,9 +205,28 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       };
     },
 
-    // NPA Lookup
+    // NPA Lookup - Phase 1 Optimized with O(1) Map lookup
     getNPAInfo: (state) => (npa: string) => {
-      return state.allNPAs.find(record => record.npa === npa) || null;
+      // Lazy initialize index for performance
+      if (!state._npaIndex) {
+        console.log('[LergStoreV2] Initializing NPA index for O(1) lookups...');
+        state._npaIndex = new Map(state.allNPAs.map(record => [record.npa, record]));
+        console.log(`[LergStoreV2] NPA index created with ${state._npaIndex.size} entries`);
+      }
+      return state._npaIndex.get(npa) || null;
+    },
+
+    // Phase 1: Add missing optimized method referenced in us.service.ts
+    getOptimizedLocationByNPA: (state) => (npa: string) => {
+      const record = state.getNPAInfo(npa);
+      if (!record) return null;
+      return {
+        country: record.country_code,
+        region: record.state_province_code,
+        state: record.state_province_name,
+        category: record.category,
+        confidence: record.confidence_score
+      };
     },
 
     // Get NPAs by state/province
@@ -266,6 +287,8 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         this.allNPAs = data.data;
         this.lastUpdated = new Date();
         this.isLoaded = true;
+        // Phase 1: Clear index cache when data updates
+        this._npaIndex = null;
 
         console.log(`[LergStoreV2] Successfully loaded ${this.allNPAs.length} NPAs`);
         console.log('[LergStoreV2] Category breakdown:', {
@@ -295,6 +318,8 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       } as EnhancedNPARecord;
 
       this.allNPAs.push(newRecord);
+      // Phase 1: Clear index cache when data changes
+      this._npaIndex = null;
     },
 
     // Clear all data
@@ -303,6 +328,8 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       this.lastUpdated = null;
       this.isLoaded = false;
       this.error = null;
+      // Phase 1: Clear index cache
+      this._npaIndex = null;
     },
 
     // Refresh data from Supabase

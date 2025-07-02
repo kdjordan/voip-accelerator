@@ -2,7 +2,14 @@
   <div class="bg-gray-900/50">
     <div class="px-6 py-4">
       <div class="flex justify-between items-center">
-        <h2 class="text-xl font-semibold">NANP Data Management</h2>
+        <div class="flex items-center space-x-3">
+          <h2 class="text-xl font-semibold">LERG Management</h2>
+          <div 
+            class="w-3 h-3 rounded-full"
+            :class="edgeStatusClass"
+            :title="edgeStatusTitle"
+          ></div>
+        </div>
         <span v-if="stats" class="text-sm text-accent bg-accent/10 px-2 py-0.5 rounded">
           {{ stats.total }} NPAs
         </span>
@@ -380,6 +387,7 @@ import { ChevronDownIcon, ArrowPathIcon, DocumentIcon } from '@heroicons/vue/24/
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { useLergOperations } from '@/composables/useLergOperations';
 import { useDragDrop } from '@/composables/useDragDrop';
+import { usePingStatus } from '@/composables/usePingStatus';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import Papa from 'papaparse';
 
@@ -407,6 +415,7 @@ const {
   clearLerg,
   downloadLerg,
 } = useLergOperations();
+const { status: pingStatus, checkPingStatus } = usePingStatus();
 
 // Store data access
 const allNPAs = computed(() => store.allNPAs);
@@ -471,6 +480,35 @@ const filteredNPAs = computed(() => {
   }
   
   return filtered.sort((a, b) => a.npa.localeCompare(b.npa));
+});
+
+// Edge status computed properties
+const edgeStatusClass = computed(() => {
+  const status = pingStatus.value;
+  console.log('Edge status debug:', status); // Debug log
+  
+  if (!status) {
+    return 'bg-gray-500'; // Loading/unknown
+  }
+  
+  if (status.hasLergTable === true && status.isOnline === true) {
+    return 'bg-accent animate-status-pulse-success'; // Green pulsing
+  } else {
+    return 'bg-red-500 animate-status-pulse-error'; // Red pulsing
+  }
+});
+
+const edgeStatusTitle = computed(() => {
+  const status = pingStatus.value;
+  if (!status) {
+    return 'Checking Supabase edge function status...';
+  }
+  
+  if (status.hasLergTable === true && status.isOnline === true) {
+    return 'Supabase edge functions connected';
+  } else {
+    return `Supabase edge functions disconnected${status.error ? ': ' + status.error : ''}`;
+  }
 });
 
 // Drag and Drop Setup
@@ -687,7 +725,8 @@ function formatCategory(category: string) {
   }
 }
 
-onMounted(() => {
-  loadData();
+onMounted(async () => {
+  await loadData();
+  await checkPingStatus();
 });
 </script>

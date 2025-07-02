@@ -35,6 +35,10 @@ export class USRateSheetService {
   ) => Promise<void>;
   private deleteDatabase: (dbName: DBNameType) => Promise<void>;
   private lergStore: ReturnType<typeof useLergStoreV2>;
+  
+  // Phase 1.1 Performance: Pre-compiled regex patterns
+  private static readonly NUMERIC_REGEX = /^[0-9]+$/;
+  private static readonly SIMPLE_RATE_REGEX = /^\d+(\.\d+)?$/;
 
   constructor() {
     // Get required functions from the composable
@@ -117,6 +121,11 @@ export class USRateSheetService {
     indeterminateDefinition: string | undefined,
     effectiveDate?: string // Added effectiveDate parameter
   ): Promise<ProcessFileResult> {
+    // Phase 1 Performance Timing
+    const performanceStart = performance.now();
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+    console.log(`[PERF] Phase 1 - Starting upload processing for ${fileSizeMB}MB file...`);
+
     // --- Add Guard: Ensure LERG data is loaded ---
     if (!this.lergStore.isInitialized) {
       const errorMsg =
@@ -141,7 +150,10 @@ export class USRateSheetService {
     let processingBatch: USRateSheetEntry[] = []; // Local batch for this run
     let totalRecords = 0;
     let totalChunks = 0; // Renamed from totalChunks for clarity, represents rows read
-    const BATCH_SIZE = 1000; // Keep batch size
+    
+    // Phase 1.2: Optimize storage strategy
+    const BATCH_SIZE = 5000; // Larger batches = fewer storage operations
+    const allProcessedData: USRateSheetEntry[] = []; // Store all data in memory first
 
     return new Promise((resolve, reject) => {
       // Show progress indicators
@@ -169,7 +181,7 @@ export class USRateSheetService {
           try {
             const row = results.data as string[];
             // Process the row and add it to the current batch
-            const processRowStartTime = Date.now(); // <-- Start timer
+            const processRowStartTime = performance.now(); // Use performance.now for better precision
             const processedRow = this.processRow(
               row,
               totalChunks, // Use the actual row number
@@ -177,50 +189,23 @@ export class USRateSheetService {
               indeterminateDefinition,
               invalidRows
             );
-            const processRowEndTime = Date.now(); // <-- End timer
-            if (processRowEndTime - processRowStartTime > 50) {
-              // Log if it takes more than 50ms
-              // console.log(`[${new Date().toISOString()}] [USRateSheetService] processRow for row ${totalChunks} took ${processRowEndTime - processRowStartTime}ms`);
+            const processRowEndTime = performance.now();
+            const rowProcessTime = processRowEndTime - processRowStartTime;
+            
+            // Log slow rows for debugging (Phase 1.1 optimization)
+            if (rowProcessTime > 5) { // Lowered threshold to catch more issues
+              console.log(`[PERF] Slow row ${totalChunks}: ${rowProcessTime.toFixed(2)}ms`);
             }
 
             if (processedRow) {
-              // No need for custom ID if using auto-incrementing primary key '++id'
-              // const recordToBatch = { ...processedRow }; // Simplified
-              processingBatch.push(processedRow);
+              // Phase 1.2: Store in memory first, write to IndexedDB later
+              allProcessedData.push(processedRow);
               totalRecords++; // Increment only for valid, processed rows
-            }
-
-            // When we reach the batch size, store the batch using storeInDexieDB
-            if (processingBatch.length >= BATCH_SIZE) {
-              const batchToStore = [...processingBatch];
-              const batchStartIndex = totalChunks - batchToStore.length + 1;
-              const batchEndIndex = totalChunks;
-              processingBatch = []; // Reset local batch
-              const storeStartTime = Date.now();
               
-              // Use storeInDexieDB for unified storage pattern (async but don't wait)
-              this.storeInDexieDB(batchToStore, this.dbName, 'entries', { replaceExisting: false })
-                .then(() => {
-                  const storeEndTime = Date.now();
-                  // console.log(`[${new Date().toISOString()}] [USRateSheetService] SUCCESS storing batch ${batchStartIndex}-${batchEndIndex} (${batchToStore.length} records). Duration: ${storeEndTime - storeStartTime}ms`);
-                })
-                .catch((batchError: Error) => {
-                  const storeEndTime = Date.now();
-                  // console.error(`[${new Date().toISOString()}] [USRateSheetService] ERROR storing batch ${batchStartIndex}-${batchEndIndex}. Duration: ${storeEndTime - storeStartTime}ms`, batchError);
-                  // Add failed rows to invalidRows
-                  invalidRows.push(
-                    ...batchToStore.map((r) => ({
-                      rowIndex: totalChunks - batchToStore.length + batchToStore.indexOf(r),
-                      npanxx: r.npanxx,
-                      npa: r.npa,
-                      nxx: r.nxx,
-                      interRate: String(r.interRate),
-                      intraRate: String(r.intraRate),
-                      indetermRate: String(r.indetermRate),
-                      reason: `Failed to store batch: ${(batchError as Error).message}`,
-                    }))
-                  );
-                });
+              // Optional: Show progress for large files
+              if (totalRecords % 10000 === 0) {
+                console.log(`[PERF] Processed ${totalRecords} records...`);
+              }
             }
           } catch (error) {
             // Log error processing a specific row but don't let it stop the stream
@@ -238,33 +223,29 @@ export class USRateSheetService {
           }
         },
         complete: async () => {
-          // console.log('[USRateSheetService] PapaParse complete. Processing final batch...');
+          console.log(`[PERF] CSV parsing complete. Storing ${allProcessedData.length} records to IndexedDB...`);
           
-          // Store any remaining rows in the final batch using storeInDexieDB
-          if (processingBatch.length > 0) {
-            // console.log(`[USRateSheetService] Storing final batch of ${processingBatch.length} records...`);
+          // Phase 1.3: Store in optimized chunks for better IndexedDB performance
+          if (allProcessedData.length > 0) {
+            const storeStartTime = performance.now();
             try {
-              // Use storeInDexieDB for unified pattern
-              await this.storeInDexieDB(processingBatch, this.dbName, 'entries', { replaceExisting: false });
-              // console.log('[USRateSheetService] Final batch stored successfully.');
-            } catch (finalBatchError) {
-              // console.error('[USRateSheetService] Error storing final batch:', finalBatchError);
-              // Add failed rows to invalidRows
-              invalidRows.push(
-                ...processingBatch.map((r) => ({
-                  rowIndex: totalChunks - processingBatch.length + processingBatch.indexOf(r),
-                  npanxx: r.npanxx,
-                  npa: r.npa,
-                  nxx: r.nxx,
-                  interRate: String(r.interRate),
-                  intraRate: String(r.intraRate),
-                  indetermRate: String(r.indetermRate),
-                  reason: `Failed to store final batch: ${(finalBatchError as Error).message}`,
-                }))
-              );
+              await this.storeDataInOptimizedChunks(allProcessedData);
+              const storeEndTime = performance.now();
+              const storeDuration = (storeEndTime - storeStartTime) / 1000;
+              console.log(`[PERF] IndexedDB storage completed in ${storeDuration.toFixed(2)}s for ${allProcessedData.length} records`);
+            } catch (storageError) {
+              console.error('[PERF] Storage error:', storageError);
+              // Could add recovery logic here
             }
           }
 
+          // Phase 1.3 Performance Timing - End
+          const performanceEnd = performance.now();
+          const duration = (performanceEnd - performanceStart) / 1000;
+          const recordsPerSecond = duration > 0 ? Math.round(totalRecords / duration) : 0;
+          console.log(`[PERF] Phase 1.3 - Total upload completed in ${duration.toFixed(2)}s`);
+          console.log(`[PERF] Phase 1.3 - Processed ${totalRecords} records at ${recordsPerSecond} records/sec`);
+          
           // console.log(`[USRateSheetService] Processing finished. Valid records processed: ${totalRecords}, Invalid/Skipped rows logged: ${invalidRows.length}`);
           // Resolve the promise with the results
           resolve({
@@ -273,6 +254,11 @@ export class USRateSheetService {
           });
         },
         error: (error: Error) => {
+          // Phase 1 Performance Timing - Error case
+          const performanceEnd = performance.now();
+          const duration = (performanceEnd - performanceStart) / 1000;
+          console.log(`[PERF] Phase 1 - Upload failed after ${duration.toFixed(2)}s`);
+          
           // console.error('[USRateSheetService] PapaParse Streaming Error:', error);
           reject(new Error(`Failed to parse CSV file: ${error.message}`));
         },
@@ -310,22 +296,22 @@ export class USRateSheetService {
       rawNpanxx &&
       rawNpanxx.length === 7 &&
       rawNpanxx.startsWith('1') &&
-      /^[0-9]+$/.test(rawNpanxx)
+      USRateSheetService.NUMERIC_REGEX.test(rawNpanxx)
     ) {
       npanxx = rawNpanxx.substring(1); // Remove leading '1'
       npa = npanxx.substring(0, 3);
       nxx = npanxx.substring(3, 6);
-    } else if (rawNpanxx && rawNpanxx.length === 6 && /^[0-9]+$/.test(rawNpanxx)) {
+    } else if (rawNpanxx && rawNpanxx.length === 6 && USRateSheetService.NUMERIC_REGEX.test(rawNpanxx)) {
       npanxx = rawNpanxx;
       npa = rawNpanxx.substring(0, 3);
       nxx = rawNpanxx.substring(3, 6);
     } else if (
       rawNpa &&
       rawNpa.length === 3 &&
-      /^[0-9]+$/.test(rawNpa) &&
+      USRateSheetService.NUMERIC_REGEX.test(rawNpa) &&
       rawNxx &&
       rawNxx.length === 3 &&
-      /^[0-9]+$/.test(rawNxx)
+      USRateSheetService.NUMERIC_REGEX.test(rawNxx)
     ) {
       npanxx = rawNpa + rawNxx;
       npa = rawNpa;
@@ -345,12 +331,19 @@ export class USRateSheetService {
       return null;
     }
 
-    // Helper to parse rates, returns null if invalid
+    // Helper to parse rates - Phase 1.1 optimized for performance
     const parseRate = (rateStr: string | undefined): number | null => {
-      if (rateStr === undefined || rateStr === '' || rateStr === 'null' || rateStr === '-')
-        return 0; // Treat empty/nullish as 0
+      // Fast path for common empty cases
+      if (!rateStr || rateStr === '' || rateStr === 'null' || rateStr === '-') return 0;
+      
+      // Fast path for simple numbers (avoid parseFloat when possible)
+      if (USRateSheetService.SIMPLE_RATE_REGEX.test(rateStr)) {
+        const num = Number(rateStr);
+        return num >= 0 ? num : null;
+      }
+      
+      // Fallback to parseFloat for edge cases
       const num = parseFloat(rateStr);
-      // Check if it's a valid number and non-negative
       return !isNaN(num) && num >= 0 ? num : null;
     };
 
@@ -429,6 +422,47 @@ export class USRateSheetService {
       //   error
       // );
       return []; // Return empty array on error
+    }
+  }
+
+  /**
+   * Phase 1.3: Store data in optimized chunks for better IndexedDB performance
+   */
+  private async storeDataInOptimizedChunks(data: USRateSheetEntry[]): Promise<void> {
+    const OPTIMAL_CHUNK_SIZE = 2500; // Sweet spot for IndexedDB performance
+    const chunks = [];
+    
+    // Split data into chunks
+    for (let i = 0; i < data.length; i += OPTIMAL_CHUNK_SIZE) {
+      chunks.push(data.slice(i, i + OPTIMAL_CHUNK_SIZE));
+    }
+    
+    console.log(`[PERF] Storing ${data.length} records in ${chunks.length} chunks of ${OPTIMAL_CHUNK_SIZE}`);
+    
+    // Store chunks with minimal delay between operations
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkStartTime = performance.now();
+      
+      try {
+        await this.storeInDexieDB(chunks[i], this.dbName, 'entries', { replaceExisting: i === 0 });
+        
+        const chunkEndTime = performance.now();
+        const chunkDuration = chunkEndTime - chunkStartTime;
+        
+        // Only log slow chunks
+        if (chunkDuration > 500) {
+          console.log(`[PERF] Chunk ${i + 1}/${chunks.length}: ${chunkDuration.toFixed(2)}ms for ${chunks[i].length} records`);
+        }
+        
+        // Small yield to prevent blocking UI (every 4 chunks)
+        if (i % 4 === 0 && i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1));
+        }
+        
+      } catch (error) {
+        console.error(`[PERF] Error storing chunk ${i + 1}:`, error);
+        throw error;
+      }
     }
   }
 }
