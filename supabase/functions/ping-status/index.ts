@@ -1,5 +1,6 @@
 import { serve } from "std/http/server.ts";
 import { createClient } from "@supabase/supabase-js";
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface PingStatusResponse {
   status: "ok" | "error";
@@ -7,14 +8,6 @@ interface PingStatusResponse {
   error: string | null;
   timestamp: string;
 }
-
-// CORS headers for the response
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -33,7 +26,7 @@ serve(async (req) => {
 
     console.log("[ping-status] Supabase client created");
 
-    // Attempt to select from 'profiles' and 'enhanced_lerg' 
+    // Attempt to select from 'profiles' and 'enhanced_lerg'
     const [profilesResult, lergResult] = await Promise.all([
       supabaseClient.from("profiles").select("id").limit(1),
       supabaseClient.from("enhanced_lerg").select("npa").limit(1),

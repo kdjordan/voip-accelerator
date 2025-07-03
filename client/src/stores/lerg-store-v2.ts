@@ -62,15 +62,16 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     stats(): LergStats {
       return {
         total: this.allNPAs.length,
-        us_domestic: this.allNPAs.filter(n => n.category === 'us-domestic').length,
-        canadian: this.allNPAs.filter(n => n.category === 'canadian').length,
-        caribbean: this.allNPAs.filter(n => n.category === 'caribbean').length,
-        pacific: this.allNPAs.filter(n => n.category === 'pacific').length,
+        us_domestic: this.allNPAs.filter((n) => n.category === 'us-domestic').length,
+        canadian: this.allNPAs.filter((n) => n.category === 'canadian').length,
+        caribbean: this.allNPAs.filter((n) => n.category === 'caribbean').length,
+        pacific: this.allNPAs.filter((n) => n.category === 'pacific').length,
         last_updated: this.lastUpdated?.toISOString() || null,
         confidence_breakdown: {
-          high: this.allNPAs.filter(n => n.confidence_score >= 0.9).length,
-          medium: this.allNPAs.filter(n => n.confidence_score >= 0.7 && n.confidence_score < 0.9).length,
-          low: this.allNPAs.filter(n => n.confidence_score < 0.7).length,
+          high: this.allNPAs.filter((n) => n.confidence_score >= 0.9).length,
+          medium: this.allNPAs.filter((n) => n.confidence_score >= 0.7 && n.confidence_score < 0.9)
+            .length,
+          low: this.allNPAs.filter((n) => n.confidence_score < 0.7).length,
         },
       };
     },
@@ -81,35 +82,38 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     },
 
     usTotalNPAs(): number {
-      return this.allNPAs.filter(n => n.country_code === 'US').length;
+      return this.allNPAs.filter((n) => n.country_code === 'US').length;
     },
 
     canadaTotalNPAs(): number {
-      return this.allNPAs.filter(n => n.country_code === 'CA').length;
+      return this.allNPAs.filter((n) => n.country_code === 'CA').length;
     },
 
     caribbeanTotalNPAs(): number {
-      return this.allNPAs.filter(n => n.category === 'caribbean').length;
+      return this.allNPAs.filter((n) => n.category === 'caribbean').length;
     },
 
     // US States
     getUSStates(): StateProvince[] {
       const grouped = this.allNPAs
-        .filter(npa => npa.country_code === 'US')
-        .reduce((acc, npa) => {
-          if (!acc[npa.state_province_code]) {
-            acc[npa.state_province_code] = {
-              code: npa.state_province_code,
-              name: npa.state_province_name,
-              npas: [],
-            };
-          }
-          acc[npa.state_province_code].npas.push(npa.npa);
-          return acc;
-        }, {} as Record<string, { code: string; name: string; npas: string[] }>);
+        .filter((npa) => npa.country_code === 'US')
+        .reduce(
+          (acc, npa) => {
+            if (!acc[npa.state_province_code]) {
+              acc[npa.state_province_code] = {
+                code: npa.state_province_code,
+                name: npa.state_province_name,
+                npas: [],
+              };
+            }
+            acc[npa.state_province_code].npas.push(npa.npa);
+            return acc;
+          },
+          {} as Record<string, { code: string; name: string; npas: string[] }>
+        );
 
       return Object.values(grouped)
-        .map(state => ({
+        .map((state) => ({
           ...state,
           count: state.npas.length,
         }))
@@ -119,21 +123,24 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     // Canadian Provinces
     getCanadianProvinces(): StateProvince[] {
       const grouped = this.allNPAs
-        .filter(npa => npa.country_code === 'CA')
-        .reduce((acc, npa) => {
-          if (!acc[npa.state_province_code]) {
-            acc[npa.state_province_code] = {
-              code: npa.state_province_code,
-              name: npa.state_province_name,
-              npas: [],
-            };
-          }
-          acc[npa.state_province_code].npas.push(npa.npa);
-          return acc;
-        }, {} as Record<string, { code: string; name: string; npas: string[] }>);
+        .filter((npa) => npa.country_code === 'CA')
+        .reduce(
+          (acc, npa) => {
+            if (!acc[npa.state_province_code]) {
+              acc[npa.state_province_code] = {
+                code: npa.state_province_code,
+                name: npa.state_province_name,
+                npas: [],
+              };
+            }
+            acc[npa.state_province_code].npas.push(npa.npa);
+            return acc;
+          },
+          {} as Record<string, { code: string; name: string; npas: string[] }>
+        );
 
       return Object.values(grouped)
-        .map(province => ({
+        .map((province) => ({
           ...province,
           count: province.npas.length,
         }))
@@ -143,21 +150,24 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     // Other Countries (Caribbean, Pacific, etc.)
     getDistinctCountries(): CountryData[] {
       const grouped = this.allNPAs
-        .filter(npa => npa.country_code !== 'US' && npa.country_code !== 'CA')
-        .reduce((acc, npa) => {
-          if (!acc[npa.country_code]) {
-            acc[npa.country_code] = {
-              code: npa.country_code,
-              name: npa.country_name,
-              npas: [],
-            };
-          }
-          acc[npa.country_code].npas.push(npa.npa);
-          return acc;
-        }, {} as Record<string, { code: string; name: string; npas: string[] }>);
+        .filter((npa) => npa.country_code !== 'US' && npa.country_code !== 'CA')
+        .reduce(
+          (acc, npa) => {
+            if (!acc[npa.country_code]) {
+              acc[npa.country_code] = {
+                code: npa.country_code,
+                name: npa.country_name,
+                npas: [],
+              };
+            }
+            acc[npa.country_code].npas.push(npa.npa);
+            return acc;
+          },
+          {} as Record<string, { code: string; name: string; npas: string[] }>
+        );
 
       return Object.values(grouped)
-        .map(country => ({
+        .map((country) => ({
           ...country,
           npaCount: country.npas.length, // For compatibility
           count: country.npas.length,
@@ -168,28 +178,28 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     // State NPAs Map (for compatibility)
     stateNPAs(): Record<string, string[]> {
       const map: Record<string, string[]> = {};
-      
+
       // Add US states
-      this.getUSStates.forEach(state => {
+      this.getUSStates.forEach((state) => {
         map[state.code] = state.npas;
       });
-      
+
       // Add Canadian provinces
-      this.getCanadianProvinces.forEach(province => {
+      this.getCanadianProvinces.forEach((province) => {
         map[province.code] = province.npas;
       });
-      
+
       return map;
     },
 
     // Other countries Map (for compatibility)
     otherCountries(): Map<string, string[]> {
       const map = new Map<string, string[]>();
-      
-      this.getDistinctCountries.forEach(country => {
+
+      this.getDistinctCountries.forEach((country) => {
         map.set(country.code, country.npas);
       });
-      
+
       return map;
     },
 
@@ -197,7 +207,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     lergData() {
       return {
         stateNPAs: this.stateNPAs,
-        countryData: this.getDistinctCountries.map(country => ({
+        countryData: this.getDistinctCountries.map((country) => ({
           country: country.code,
           npaCount: country.npas.length,
           npas: country.npas,
@@ -210,7 +220,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       // Lazy initialize index for performance
       if (!state._npaIndex) {
         console.log('[LergStoreV2] Initializing NPA index for O(1) lookups...');
-        state._npaIndex = new Map(state.allNPAs.map(record => [record.npa, record]));
+        state._npaIndex = new Map(state.allNPAs.map((record) => [record.npa, record]));
         console.log(`[LergStoreV2] NPA index created with ${state._npaIndex.size} entries`);
       }
       return state._npaIndex.get(npa) || null;
@@ -225,22 +235,20 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         region: record.state_province_code,
         state: record.state_province_name,
         category: record.category,
-        confidence: record.confidence_score
+        confidence: record.confidence_score,
       };
     },
 
     // Get NPAs by state/province
     getStateNPAs: (state) => (stateCode: string) => {
       return state.allNPAs
-        .filter(npa => npa.state_province_code === stateCode)
-        .map(npa => npa.npa);
+        .filter((npa) => npa.state_province_code === stateCode)
+        .map((npa) => npa.npa);
     },
 
     // Get NPAs by country
     getCountryNPAs: (state) => (countryCode: string) => {
-      return state.allNPAs
-        .filter(npa => npa.country_code === countryCode)
-        .map(npa => npa.npa);
+      return state.allNPAs.filter((npa) => npa.country_code === countryCode).map((npa) => npa.npa);
     },
 
     // Check if data is ready
@@ -250,13 +258,13 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
 
     // Get state/province name
     getStateName: (state) => (stateCode: string) => {
-      const npa = state.allNPAs.find(n => n.state_province_code === stateCode);
+      const npa = state.allNPAs.find((n) => n.state_province_code === stateCode);
       return npa?.state_province_name || stateCode;
     },
 
     // Get country name
     getCountryName: (state) => (countryCode: string) => {
-      const npa = state.allNPAs.find(n => n.country_code === countryCode);
+      const npa = state.allNPAs.find((n) => n.country_code === countryCode);
       return npa?.country_name || countryCode;
     },
   },
@@ -273,9 +281,9 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
 
       try {
         console.log('[LergStoreV2] Loading enhanced LERG data from Supabase...');
-        
+
         const { data, error } = await supabase.functions.invoke('get-enhanced-lerg-data');
-        
+
         if (error) {
           throw new Error(error.message || 'Failed to load LERG data');
         }
@@ -293,11 +301,10 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         console.log(`[LergStoreV2] Successfully loaded ${this.allNPAs.length} NPAs`);
         console.log('[LergStoreV2] Category breakdown:', {
           'US Domestic': this.stats.us_domestic,
-          'Canadian': this.stats.canadian,
-          'Caribbean': this.stats.caribbean,
-          'Pacific': this.stats.pacific,
+          Canadian: this.stats.canadian,
+          Caribbean: this.stats.caribbean,
+          Pacific: this.stats.pacific,
         });
-
       } catch (err) {
         console.error('[LergStoreV2] Error loading LERG data:', err);
         this.error = err instanceof Error ? err.message : 'Failed to load LERG data';

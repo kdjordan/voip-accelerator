@@ -19,6 +19,7 @@
       :start-line="startLine"
       :column-options="LERG_COLUMN_ROLE_OPTIONS"
       :source="'LERG'"
+      :validate-required="true"
       @update:mappings="handleMappingUpdate"
       @update:valid="(isValid) => (isModalValid = isValid)"
       @update:start-line="(newStartLine) => (startLine = newStartLine)"

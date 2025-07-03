@@ -353,7 +353,7 @@ private static readonly NPA_PATTERN = /^[2-9][0-9]{2}$/;
 private static readonly STATE_CODE_PATTERN = /^[A-Z]{2}$/;
 ```
 
----
+
 
 ### **Priority 4: US Service Alignment** (Consistency)
 **File**: `/src/services/us.service.ts`  
