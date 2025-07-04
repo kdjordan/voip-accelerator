@@ -718,7 +718,7 @@
     groupRegionCodes,
     RegionType,
   } from '@/types/constants/region-codes';
-  import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
+  import { useCSVExport } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
 
@@ -1274,15 +1274,15 @@
         record.npanxx,
         record.stateCode,
         record.countryCode,
-        formatRate(record.file1_inter),
-        formatRate(record.file2_inter),
-        formatPercentage(record.diff_inter_pct),
-        formatRate(record.file1_intra),
-        formatRate(record.file2_intra),
-        formatPercentage(record.diff_intra_pct),
-        formatRate(record.file1_indeterm),
-        formatRate(record.file2_indeterm),
-        formatPercentage(record.diff_indeterm_pct),
+        record.file1_inter?.toFixed(6) || 'N/A',
+        record.file2_inter?.toFixed(6) || 'N/A',
+        record.diff_inter_pct?.toFixed(6) || 'N/A',
+        record.file1_intra?.toFixed(6) || 'N/A',
+        record.file2_intra?.toFixed(6) || 'N/A',
+        record.diff_intra_pct?.toFixed(6) || 'N/A',
+        record.file1_indeterm?.toFixed(6) || 'N/A',
+        record.file2_indeterm?.toFixed(6) || 'N/A',
+        record.diff_indeterm_pct?.toFixed(6) || 'N/A',
       ]);
 
       // Build filename parts

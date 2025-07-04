@@ -71,7 +71,7 @@
       return 'Code Compare';
     }
     if (type === ReportTypes.PRICING) {
-      return usStore.isPricingReportProcessing ? 'Processing...' : 'Pricing Report';
+      return 'Pricing Report';
     }
     return type.charAt(0).toUpperCase() + type.slice(1);
   }
