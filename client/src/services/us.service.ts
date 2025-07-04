@@ -325,7 +325,7 @@ export class USService {
       }
 
       // Calculate coverage based on valid US NPAs found in the file against total US NPAs
-      const totalUSNPAs = this.lergStore.getTotalUSNPAs;
+      const totalUSNPAs = this.lergStore.usTotalNPAs;
       const usNPACoveragePercentage =
         totalUSNPAs > 0 ? ((validUSNPAsInFile / totalUSNPAs) * 100).toFixed(2) : '0.00';
       

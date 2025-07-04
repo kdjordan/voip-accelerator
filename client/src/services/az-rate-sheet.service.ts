@@ -255,6 +255,7 @@ export class RateSheetService {
       prefix: prefix,
       rate: parseFloat(rate),
       effective: row[columnMapping.effective]?.trim() || '',
+      changeCode: ChangeCode.SAME,
       minDuration: row[columnMapping.minDuration] ? parseInt(row[columnMapping.minDuration]) : undefined,
       increments: row[columnMapping.increments] ? parseInt(row[columnMapping.increments]) : undefined,
     };

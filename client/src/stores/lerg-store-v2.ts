@@ -228,7 +228,11 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
 
     // Phase 1: Add missing optimized method referenced in us.service.ts
     getOptimizedLocationByNPA: (state) => (npa: string) => {
-      const record = state.getNPAInfo(npa);
+      // Lazy initialize index for performance (same as getNPAInfo)
+      if (!state._npaIndex) {
+        state._npaIndex = new Map(state.allNPAs.map((record) => [record.npa, record]));
+      }
+      const record = state._npaIndex.get(npa) || null;
       if (!record) return null;
       return {
         country: record.country_code,

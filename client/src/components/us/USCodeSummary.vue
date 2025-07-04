@@ -217,33 +217,11 @@
                             </div>
                           </div>
 
-                          <!-- NPAs and Rate Stats -->
+                          <!-- NPAs -->
                           <div
                             v-if="expandedStates.has(state.stateCode)"
                             class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
                           >
-                            <!-- Rate Stats (if available) -->
-                            <div v-if="state.rateStats" class="mb-3 grid grid-cols-3 gap-2">
-                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                                <div class="text-xs text-gray-400 mb-1">IE Rate</div>
-                                <div class="text-sm text-white">
-                                  ${{ formatRate(state.rateStats.interstate?.average) }}
-                                </div>
-                              </div>
-                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                                <div class="text-xs text-gray-400 mb-1">IA Rate</div>
-                                <div class="text-sm text-white">
-                                  ${{ formatRate(state.rateStats.intrastate?.average) }}
-                                </div>
-                              </div>
-                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                                <div class="text-xs text-gray-400 mb-1">IJ Rate</div>
-                                <div class="text-sm text-white">
-                                  ${{ formatRate(state.rateStats.indeterminate?.average) }}
-                                </div>
-                              </div>
-                            </div>
-
                             <div class="text-xs text-gray-400 mb-2">NPAs:</div>
                             <div class="flex flex-wrap gap-2">
                               <div
@@ -294,42 +272,17 @@
                             </div>
                           </div>
 
-                          <!-- NPAs and Rate Stats for this country -->
+                          <!-- NPAs for this country -->
                           <div
                             v-if="expandedStates.has(country.countryCode)"
                             class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
                           >
-                            <!-- Debug rate stats -->
-                            {{ console.log('Debug country data:', country.countryName, 'hasRateStats:', !!country.rateStats, 'rateStats:', country.rateStats) }}
-                            
-                            <!-- Rate Stats (if available) -->
-                            <div v-if="country.rateStats" class="mb-3 grid grid-cols-3 gap-2">
-                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                                <div class="text-xs text-gray-400 mb-1">IE Rate</div>
-                                <div class="text-sm text-white">
-                                  ${{ formatRate(country.rateStats.interstate?.average) }}
-                                </div>
-                              </div>
-                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                                <div class="text-xs text-gray-400 mb-1">IA Rate</div>
-                                <div class="text-sm text-white">
-                                  ${{ formatRate(country.rateStats.intrastate?.average) }}
-                                </div>
-                              </div>
-                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
-                                <div class="text-xs text-gray-400 mb-1">IJ Rate</div>
-                                <div class="text-sm text-white">
-                                  ${{ formatRate(country.rateStats.indeterminate?.average) }}
-                                </div>
-                              </div>
-                            </div>
-
                             <div class="text-xs text-gray-400 mb-2">NPAs:</div>
                             <div class="flex flex-wrap gap-2">
                               <div
                                 v-for="npa in country.npas"
                                 :key="npa"
-                                class="bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded text-xs"
+                                class="bg-gray-700/50 px-2 py-1 rounded text-xs text-white"
                               >
                                 {{ npa }}
                               </div>
@@ -656,60 +609,6 @@
     return npaBreakdown.value.unidentified.npas.filter((npa) => npa.toString().startsWith(query));
   });
 
-  // Calculate rate statistics for a specific country based on NPAs
-  function calculateCountryRateStats(countryCode: string, npas: string[]) {
-    try {
-      const fileData = usStore.getFileDataByComponent(props.componentId);
-      console.log('Rate calc debug:', countryCode, 'npas:', npas, 'fileData length:', fileData?.length || 0);
-      if (!fileData || fileData.length === 0) {
-        console.log('No file data found for rate calculation');
-        return null;
-      }
-
-    // Filter records for this country's NPAs
-    const countryRecords = fileData.filter(record => {
-      const recordNPA = (record.npa || record.NPA || record.code || record.Code)?.toString();
-      return npas.includes(recordNPA);
-    });
-
-    if (countryRecords.length === 0) {
-      return null;
-    }
-
-    // Calculate averages for each rate type
-    const interRates: number[] = [];
-    const intraRates: number[] = [];
-    const indetermRates: number[] = [];
-
-    countryRecords.forEach(record => {
-      const interRate = parseFloat(record.interstate_rate || record.inter_rate || 0);
-      const intraRate = parseFloat(record.intrastate_rate || record.intra_rate || 0);
-      const indetermRate = parseFloat(record.indeterminate_rate || record.indeterm_rate || record.ij_rate || 0);
-
-      if (!isNaN(interRate) && interRate > 0) interRates.push(interRate);
-      if (!isNaN(intraRate) && intraRate > 0) intraRates.push(intraRate);
-      if (!isNaN(indetermRate) && indetermRate > 0) indetermRates.push(indetermRate);
-    });
-
-      return {
-        interstate: {
-          average: interRates.length > 0 ? interRates.reduce((a, b) => a + b, 0) / interRates.length : 0,
-          count: interRates.length
-        },
-        intrastate: {
-          average: intraRates.length > 0 ? intraRates.reduce((a, b) => a + b, 0) / intraRates.length : 0,
-          count: intraRates.length
-        },
-        indeterminate: {
-          average: indetermRates.length > 0 ? indetermRates.reduce((a, b) => a + b, 0) / indetermRates.length : 0,
-          count: indetermRates.length
-        }
-      };
-    } catch (error) {
-      console.error('[USCodeSummary] Error calculating rate stats for', countryCode, error);
-      return null;
-    }
-  }
 
   // Create hierarchical data structure
   const hierarchicalData = computed(() => {
@@ -805,15 +704,11 @@
             const hasMatchingNPAs = filteredNPAs.length > 0;
 
             if (countryMatches || hasMatchingNPAs) {
-              // Calculate rate statistics for this country
-              const rateStats = calculateCountryRateStats(countryCode, filteredNPAs);
-              
               othersCountries.push({
                 countryCode: countryCode,
                 countryName: countryName,
                 npas: filteredNPAs,
                 totalNPAs: filteredNPAs.length,
-                rateStats: rateStats,
               });
               totalOthersNPAs += filteredNPAs.length;
             }
@@ -840,15 +735,12 @@
 
         if ((countryMatches || filteredNPAs.length > 0) && filteredNPAs.length > 0) {
           const stringNPAs = filteredNPAs.map((npa) => npa.toString());
-          // Calculate rate statistics for this country
-          const rateStats = calculateCountryRateStats(countryCode, stringNPAs);
           
           othersCountries.push({
             countryCode: countryCode,
             countryName: countryData.countryName,
             npas: stringNPAs,
             totalNPAs: filteredNPAs.length,
-            rateStats: rateStats,
           });
           totalOthersNPAs += filteredNPAs.length;
         }

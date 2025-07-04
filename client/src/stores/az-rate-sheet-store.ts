@@ -70,7 +70,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       // Use markRaw to prevent Vue from making the data deeply reactive
       this.originalData = markRaw(processedData) as RateSheetRecord[];
-      this.saveToLocalStorage();
     },
 
     setOptionalFields(mappings: Record<string, string>) {
@@ -191,7 +190,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
       this.triggerDataUpdate();
-      this.saveToLocalStorage();
     },
 
     // Method to update grouped data with effective dates from worker
@@ -228,7 +226,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
       this.triggerDataUpdate();
-      this.saveToLocalStorage();
     },
 
     // Bulk update effective dates for records (replaces the database operation)
@@ -272,7 +269,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       this.originalData = markRaw(updatedOriginalData) as RateSheetRecord[];
       this.triggerDataUpdate();
-      this.saveToLocalStorage();
       console.log(`Successfully updated ${updatedRecords.length} records in store`);
     },
 
