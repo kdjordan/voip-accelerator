@@ -259,6 +259,86 @@
                       </template>
                     </template>
 
+                    <!-- Others - Show Countries as sub-items -->
+                    <template v-else-if="countryInfo.hasCountries">
+                      <template v-for="country in countryInfo.countries" :key="country.countryCode">
+                        <div class="bg-gray-800/60 rounded overflow-hidden">
+                          <div
+                            @click="toggleStateExpanded(country.countryCode)"
+                            class="px-3 py-2 cursor-pointer hover:bg-gray-700/60 flex justify-between items-center"
+                          >
+                            <span class="text-gray-300">{{ country.countryName }}</span>
+                            <div class="flex items-center space-x-2">
+                              <span class="text-gray-400 text-sm">
+                                {{ country.totalNPAs }} NPAs
+                              </span>
+                              <span
+                                class="transform transition-transform"
+                                :class="{ 'rotate-180': expandedStates.has(country.countryCode) }"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  class="h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              </span>
+                            </div>
+                          </div>
+
+                          <!-- NPAs and Rate Stats for this country -->
+                          <div
+                            v-if="expandedStates.has(country.countryCode)"
+                            class="px-3 py-2 bg-black/20 border-t border-gray-700/30"
+                          >
+                            <!-- Debug rate stats -->
+                            {{ console.log('Debug country data:', country.countryName, 'hasRateStats:', !!country.rateStats, 'rateStats:', country.rateStats) }}
+                            
+                            <!-- Rate Stats (if available) -->
+                            <div v-if="country.rateStats" class="mb-3 grid grid-cols-3 gap-2">
+                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                                <div class="text-xs text-gray-400 mb-1">IE Rate</div>
+                                <div class="text-sm text-white">
+                                  ${{ formatRate(country.rateStats.interstate?.average) }}
+                                </div>
+                              </div>
+                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                                <div class="text-xs text-gray-400 mb-1">IA Rate</div>
+                                <div class="text-sm text-white">
+                                  ${{ formatRate(country.rateStats.intrastate?.average) }}
+                                </div>
+                              </div>
+                              <div class="bg-gray-800/50 px-2 py-1.5 rounded">
+                                <div class="text-xs text-gray-400 mb-1">IJ Rate</div>
+                                <div class="text-sm text-white">
+                                  ${{ formatRate(country.rateStats.indeterminate?.average) }}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="text-xs text-gray-400 mb-2">NPAs:</div>
+                            <div class="flex flex-wrap gap-2">
+                              <div
+                                v-for="npa in country.npas"
+                                :key="npa"
+                                class="bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded text-xs"
+                              >
+                                {{ npa }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                    </template>
+
                     <!-- Other Countries/Unknown - Show NPAs directly -->
                     <template v-else>
                       <div class="bg-gray-800/60 rounded p-2">
@@ -576,126 +656,215 @@
     return npaBreakdown.value.unidentified.npas.filter((npa) => npa.toString().startsWith(query));
   });
 
+  // Calculate rate statistics for a specific country based on NPAs
+  function calculateCountryRateStats(countryCode: string, npas: string[]) {
+    try {
+      const fileData = usStore.getFileDataByComponent(props.componentId);
+      console.log('Rate calc debug:', countryCode, 'npas:', npas, 'fileData length:', fileData?.length || 0);
+      if (!fileData || fileData.length === 0) {
+        console.log('No file data found for rate calculation');
+        return null;
+      }
+
+    // Filter records for this country's NPAs
+    const countryRecords = fileData.filter(record => {
+      const recordNPA = (record.npa || record.NPA || record.code || record.Code)?.toString();
+      return npas.includes(recordNPA);
+    });
+
+    if (countryRecords.length === 0) {
+      return null;
+    }
+
+    // Calculate averages for each rate type
+    const interRates: number[] = [];
+    const intraRates: number[] = [];
+    const indetermRates: number[] = [];
+
+    countryRecords.forEach(record => {
+      const interRate = parseFloat(record.interstate_rate || record.inter_rate || 0);
+      const intraRate = parseFloat(record.intrastate_rate || record.intra_rate || 0);
+      const indetermRate = parseFloat(record.indeterminate_rate || record.indeterm_rate || record.ij_rate || 0);
+
+      if (!isNaN(interRate) && interRate > 0) interRates.push(interRate);
+      if (!isNaN(intraRate) && intraRate > 0) intraRates.push(intraRate);
+      if (!isNaN(indetermRate) && indetermRate > 0) indetermRates.push(indetermRate);
+    });
+
+      return {
+        interstate: {
+          average: interRates.length > 0 ? interRates.reduce((a, b) => a + b, 0) / interRates.length : 0,
+          count: interRates.length
+        },
+        intrastate: {
+          average: intraRates.length > 0 ? intraRates.reduce((a, b) => a + b, 0) / intraRates.length : 0,
+          count: intraRates.length
+        },
+        indeterminate: {
+          average: indetermRates.length > 0 ? indetermRates.reduce((a, b) => a + b, 0) / indetermRates.length : 0,
+          count: indetermRates.length
+        }
+      };
+    } catch (error) {
+      console.error('[USCodeSummary] Error calculating rate stats for', countryCode, error);
+      return null;
+    }
+  }
+
   // Create hierarchical data structure
   const hierarchicalData = computed(() => {
     const result: Record<string, any> = {};
     const query = searchQuery.value.toLowerCase();
 
-    // Process existing enhanced report data to maintain US/Canada state structure
+    // Collect all "Others" countries (non-US/Canada)
+    const othersCountries: any[] = [];
+    let totalOthersNPAs = 0;
+
+    // Process existing enhanced report data
     if (enhancedReport.value?.file1?.countries) {
       enhancedReport.value.file1.countries.forEach((country: USCountryBreakdown) => {
         if (country.npas && country.npas.length > 0) {
           const countryName = country.countryName;
+          const countryCode = country.countryCode;
           const hasStates = country.states && country.states.length > 0;
 
-          // Filter by search query if needed
-          let shouldInclude = !query;
-          if (query) {
-            shouldInclude =
-              countryName.toLowerCase().includes(query) ||
-              country.states?.some((state) => {
-                const stateName =
-                  country.countryCode === 'US'
-                    ? getStateName(state.stateCode)
-                    : getProvinceName(state.stateCode);
-                return (
-                  stateName.toLowerCase().includes(query) ||
-                  state.npas.some((npa) => npa.startsWith(query))
-                );
-              }) ||
-              country.npas.some((npa) => npa.startsWith(query));
-          }
-
-          if (shouldInclude) {
-            // If searching and country has states, filter states to only matching ones
-            let filteredStates = country.states;
-            if (query && hasStates && country.states) {
-              filteredStates = country.states.filter((state) => {
-                const stateName = (
-                  country.countryCode === 'US'
-                    ? getStateName(state.stateCode)
-                    : getProvinceName(state.stateCode)
-                ).toLowerCase();
-                // Check if state name matches
-                if (stateName.includes(query)) return true;
-                // Check if any NPA in state matches
-                return state.npas.some((npa) => npa.startsWith(query));
-              });
-            }
-
-            // Ensure we always have the full states array when not searching
-            if (!query && hasStates) {
-              filteredStates = country.states;
-            }
-
-            // Only include country if it has matching states (when searching) or any states (when not searching)
-            if (!query || (filteredStates && filteredStates.length > 0) || !hasStates) {
-              // Force correct states mapping for Canada and US
-              let statesArray = undefined;
-              if (hasStates && filteredStates && filteredStates.length > 0) {
-                statesArray = filteredStates.map((state) => ({
-                  stateCode: state.stateCode,
-                  displayName:
-                    country.countryCode === 'US'
+          // Handle US and Canada separately
+          if (countryCode === 'US' || countryCode === 'CA') {
+            // Filter by search query if needed
+            let shouldInclude = !query;
+            if (query) {
+              shouldInclude =
+                countryName.toLowerCase().includes(query) ||
+                country.states?.some((state) => {
+                  const stateName =
+                    countryCode === 'US'
                       ? getStateName(state.stateCode)
-                      : getProvinceName(state.stateCode),
-                  npas: state.npas,
-                  rateStats: state.rateStats,
-                }));
+                      : getProvinceName(state.stateCode);
+                  return (
+                    stateName.toLowerCase().includes(query) ||
+                    state.npas.some((npa) => npa.startsWith(query))
+                  );
+                }) ||
+                country.npas.some((npa) => npa.startsWith(query));
+            }
+
+            if (shouldInclude) {
+              // Handle states filtering for US/Canada
+              let filteredStates = country.states;
+              if (query && hasStates && country.states) {
+                filteredStates = country.states.filter((state) => {
+                  const stateName = (
+                    countryCode === 'US'
+                      ? getStateName(state.stateCode)
+                      : getProvinceName(state.stateCode)
+                  ).toLowerCase();
+                  return (
+                    stateName.includes(query) ||
+                    state.npas.some((npa) => npa.startsWith(query))
+                  );
+                });
               }
 
-              const countryResult = {
-                displayName: countryName,
-                totalNPAs:
-                  query && filteredStates
-                    ? filteredStates.reduce((sum, state) => sum + state.npas.length, 0)
-                    : country.npas.length,
-                hasStates: hasStates,
-                npas: country.npas,
-                states: statesArray,
-              };
+              if (!query && hasStates) {
+                filteredStates = country.states;
+              }
 
-              result[country.countryCode] = countryResult;
+              if (!query || (filteredStates && filteredStates.length > 0) || !hasStates) {
+                let statesArray = undefined;
+                if (hasStates && filteredStates && filteredStates.length > 0) {
+                  statesArray = filteredStates.map((state) => ({
+                    stateCode: state.stateCode,
+                    displayName:
+                      countryCode === 'US'
+                        ? getStateName(state.stateCode)
+                        : getProvinceName(state.stateCode),
+                    npas: state.npas,
+                    rateStats: state.rateStats,
+                  }));
+                }
+
+                result[countryCode] = {
+                  displayName: countryName,
+                  totalNPAs:
+                    query && filteredStates
+                      ? filteredStates.reduce((sum, state) => sum + state.npas.length, 0)
+                      : country.npas.length,
+                  hasStates: hasStates,
+                  npas: country.npas,
+                  states: statesArray,
+                };
+              }
+            }
+          } else {
+            // Collect all other countries for "Others" group
+            const filteredNPAs = query
+              ? country.npas.filter((npa) => npa.startsWith(query))
+              : country.npas;
+
+            const countryMatches = !query || countryName.toLowerCase().includes(query);
+            const hasMatchingNPAs = filteredNPAs.length > 0;
+
+            if (countryMatches || hasMatchingNPAs) {
+              // Calculate rate statistics for this country
+              const rateStats = calculateCountryRateStats(countryCode, filteredNPAs);
+              
+              othersCountries.push({
+                countryCode: countryCode,
+                countryName: countryName,
+                npas: filteredNPAs,
+                totalNPAs: filteredNPAs.length,
+                rateStats: rateStats,
+              });
+              totalOthersNPAs += filteredNPAs.length;
             }
           }
         }
       });
     }
 
-    // Add Others countries (Caribbean/Pacific) from the categorization breakdown
+    // Add additional Others countries from categorization breakdown
     const othersMap = npaBreakdown.value.others.countries;
     if (othersMap && othersMap.size > 0) {
-      // Process each country in the others map
       othersMap.forEach((countryData, countryCode) => {
-        // Skip if this country is already included from enhanced report
-        if (result[countryCode]) {
-          return;
-        }
+        // Skip if already included from enhanced report
+        const alreadyIncluded = othersCountries.some(c => c.countryCode === countryCode);
+        if (alreadyIncluded) return;
 
-        // Filter by search query if needed
-        let shouldInclude = !query;
-        if (query) {
-          shouldInclude =
-            countryData.countryName.toLowerCase().includes(query) ||
-            countryData.npas.some((npa) => npa.toString().startsWith(query));
-        }
+        // Skip US/Canada as they're handled separately
+        if (countryCode === 'US' || countryCode === 'CA') return;
 
-        if (shouldInclude) {
-          // Filter NPAs if searching
-          const filteredNPAs = query
-            ? countryData.npas.filter((npa) => npa.toString().startsWith(query))
-            : countryData.npas;
+        const countryMatches = !query || countryData.countryName.toLowerCase().includes(query);
+        const filteredNPAs = query
+          ? countryData.npas.filter((npa) => npa.toString().startsWith(query))
+          : countryData.npas;
 
-          if (filteredNPAs.length > 0) {
-            result[countryCode] = {
-              displayName: countryData.countryName,
-              totalNPAs: filteredNPAs.length,
-              hasStates: false,
-              npas: filteredNPAs.map((npa) => npa.toString()),
-            };
-          }
+        if ((countryMatches || filteredNPAs.length > 0) && filteredNPAs.length > 0) {
+          const stringNPAs = filteredNPAs.map((npa) => npa.toString());
+          // Calculate rate statistics for this country
+          const rateStats = calculateCountryRateStats(countryCode, stringNPAs);
+          
+          othersCountries.push({
+            countryCode: countryCode,
+            countryName: countryData.countryName,
+            npas: stringNPAs,
+            totalNPAs: filteredNPAs.length,
+            rateStats: rateStats,
+          });
+          totalOthersNPAs += filteredNPAs.length;
         }
       });
+    }
+
+    // Create "Others" group if we have any other countries
+    if (othersCountries.length > 0) {
+      result['OTHERS'] = {
+        displayName: 'Others',
+        totalNPAs: totalOthersNPAs,
+        hasStates: false,
+        hasCountries: true,
+        countries: othersCountries,
+        npas: othersCountries.flatMap(c => c.npas),
+      };
     }
 
     // Add unidentified NPAs
@@ -770,8 +939,19 @@
             expandedStates.value.add(state.stateCode);
           }
         });
+      } else if (countryInfo.hasCountries && countryInfo.countries) {
+        // Handle "Others" group with countries as sub-items
+        countryInfo.countries.forEach((country: any) => {
+          const hasMatchingCountry = country.countryName.toLowerCase().includes(query);
+          const hasMatchingNPA = country.npas.some((npa: string) => npa.startsWith(query));
+
+          if (hasMatchingCountry || hasMatchingNPA) {
+            expandedCountries.value.add(countryKey);
+            expandedStates.value.add(country.countryCode);
+          }
+        });
       } else {
-        // Check direct NPAs for non-state countries
+        // Check direct NPAs for other countries
         const hasMatchingNPA = countryInfo.npas.some((npa: string) => npa.startsWith(query));
         if (hasMatchingNPA) {
           expandedCountries.value.add(countryKey);

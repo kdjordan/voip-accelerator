@@ -1,6 +1,6 @@
 import { serve } from "std/http/server.ts";
 import { createClient } from "@supabase/supabase-js";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 interface PingStatusResponse {
   status: "ok" | "error";
@@ -10,6 +10,10 @@ interface PingStatusResponse {
 }
 
 serve(async (req) => {
+  // Get the origin from the request headers
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

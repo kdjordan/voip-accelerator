@@ -584,6 +584,15 @@
     // Simple search and filter using store data
     let filtered = allNPAs.value;
 
+    // Debug logging
+    console.log('All NPAs count:', allNPAs.value.length);
+    console.log('Search term:', searchTerm.value);
+    console.log('Selected category:', selectedCategory.value);
+    
+    // Check if 242 exists in the store
+    const npa242 = allNPAs.value.find(npa => npa.npa === '242');
+    console.log('NPA 242 in store:', npa242);
+
     // Apply search term filter
     if (searchTerm.value) {
       const term = searchTerm.value.toLowerCase();
@@ -593,11 +602,13 @@
           npa.country_name.toLowerCase().includes(term) ||
           npa.state_province_name.toLowerCase().includes(term)
       );
+      console.log('After search filter:', filtered.length);
     }
 
     // Apply category filter
     if (selectedCategory.value) {
       filtered = filtered.filter((npa) => npa.category === selectedCategory.value);
+      console.log('After category filter:', filtered.length);
     }
 
     return filtered.sort((a, b) => a.npa.localeCompare(b.npa));

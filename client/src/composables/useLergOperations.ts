@@ -143,12 +143,42 @@ export function useLergOperations() {
 
       console.log(`[LergOps] Adding LERG record: ${record.npa}`);
 
+      // Map state codes to names
+      const stateNames: Record<string, string> = {
+        // US States
+        AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+        CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia',
+        FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois',
+        IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana',
+        ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota',
+        MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada',
+        NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York',
+        NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon',
+        PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota',
+        TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia',
+        WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+        // Canadian Provinces
+        AB: 'Alberta', BC: 'British Columbia', MB: 'Manitoba', NB: 'New Brunswick',
+        NL: 'Newfoundland and Labrador', NS: 'Nova Scotia', NT: 'Northwest Territories',
+        NU: 'Nunavut', ON: 'Ontario', PE: 'Prince Edward Island', QC: 'Quebec',
+        SK: 'Saskatchewan', YT: 'Yukon',
+        // US Territories
+        PR: 'Puerto Rico', VI: 'Virgin Islands', GU: 'Guam', AS: 'American Samoa',
+        MP: 'Northern Mariana Islands'
+      };
+
+      const stateCode = record.state.toUpperCase();
+      const stateName = stateNames[stateCode] || stateCode;
+      
       // Add via edge function
-      const { data, error: addError } = await supabase.functions.invoke('add-lerg-record', {
+      const { data, error: addError } = await supabase.functions.invoke('add-enhanced-lerg-record', {
         body: {
           npa: record.npa,
-          state_province_code: record.state.toUpperCase(),
+          state_province_code: stateCode,
           country_code: record.country.toUpperCase(),
+          state_province_name: stateName,
+          country_name: record.country === 'US' ? 'United States' : record.country === 'CA' ? 'Canada' : record.country,
+          category: record.country === 'US' ? 'us-domestic' : record.country === 'CA' ? 'canadian' : 'caribbean',
         },
       });
 
