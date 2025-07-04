@@ -302,6 +302,7 @@
   import { ComponentId, DBName, ReportTypes } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
   import { useUserStore } from '@/stores/user-store';
+  import useDexieDB from '@/composables/useDexieDB';
 
   const usStore = useUsStore();
   const service = new USService();
@@ -511,6 +512,9 @@
         // Call the correct function to generate comparison data
         await service.processComparisons(table1Name, table2Name);
         console.log('[USFileUploads] Detailed pricing comparison completed successfully.');
+        // Set pricing report as ready since comparison data is now available
+        usStore.setPricingReportReady();
+        console.log('[USFileUploads] Pricing report marked as ready.');
       } catch (comparisonError) {
         console.error('[USFileUploads] Detailed pricing comparison failed:', comparisonError);
         // Handle comparison-specific error if needed, e.g., show a specific message
@@ -841,6 +845,15 @@
 
       // First, remove the data from the appropriate storage
       await service.removeTable(tableName);
+
+      // Delete comparison database since comparison data will be obsolete
+      const { deleteDatabase } = useDexieDB();
+      try {
+        await deleteDatabase(DBName.US_PRICING_COMPARISON);
+        console.log('[USFileUploads] Deleted obsolete comparison database after file removal.');
+      } catch (dbError) {
+        console.warn('[USFileUploads] Failed to delete comparison database:', dbError);
+      }
 
       // Then, remove the file from the store
       // Note: The removeFile method in the store now handles clearing fileStats

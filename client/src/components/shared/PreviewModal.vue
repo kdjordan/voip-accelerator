@@ -77,14 +77,6 @@
             </div>
 
             <!-- Informational note about auto-generated fields -->
-            <!--
-            <div class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md">
-              <div class="text-sm text-blue-400">
-                <h3 class="text-lg font-medium">{{ modalMessage.title }}</h3>
-                <span v-html="modalMessage.message"></span>
-              </div>
-            </div>
--->
             <!-- US-specific help text -->
             <!--
             <div

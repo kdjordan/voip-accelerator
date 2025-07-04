@@ -188,7 +188,6 @@ export function useTableData<T extends Record<string, any>>(
   ): Promise<{ data: T[]; totalMatchingRecords: number }> {
     dataError.value = null;
     isDataLoading.value = true;
-    console.log('[useTableData] fetchPageData CALLED. Page:', pageNumber, 'Filters:', filters);
 
     try {
       if (!dbInstance.value) {
@@ -205,10 +204,6 @@ export function useTableData<T extends Record<string, any>>(
 
       // Get total count before pagination
       const totalMatchingRecords = await query.count();
-      console.log(
-        '[useTableData] fetchPageData: query.count() for totalMatchingRecords BEFORE pagination:',
-        totalMatchingRecords
-      );
 
       // Check if current sort column has a getValue function
       const header = config.tableHeaders?.find((h) => h.key === currentSortKey.value);
@@ -228,7 +223,6 @@ export function useTableData<T extends Record<string, any>>(
           }
           dbSortApplied = true;
         } catch (sortError) {
-          console.warn('DB-level sort failed, will use client-side sort', sortError);
           dbSortApplied = false;
         }
       }
@@ -258,18 +252,12 @@ export function useTableData<T extends Record<string, any>>(
         }
       }
 
-      console.log(
-        '[useTableData] fetchPageData: pageData.length AFTER pagination:',
-        pageData.length
-      );
-
       // Update state
       displayedData.value = pageData;
       totalFilteredItems.value = totalMatchingRecords;
 
       return { data: pageData, totalMatchingRecords };
     } catch (err: any) {
-      console.error('Error in fetchPageData:', err);
       dataError.value = err.message || 'Failed to load data';
       totalFilteredItems.value = 0;
       return { data: [], totalMatchingRecords: 0 };

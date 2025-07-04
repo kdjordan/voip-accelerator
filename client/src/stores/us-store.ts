@@ -218,6 +218,10 @@ export const useUsStore = defineStore('us', {
       this.isPricingReportProcessing = processing;
     },
 
+    setPricingReportReady() {
+      this.isPricingReportReady = true;
+    },
+
     setEnhancedCodeReport(report: USEnhancedCodeReport) {
       if (report.file1?.fileName) {
         this.enhancedCodeReports.set(report.file1.fileName, report);

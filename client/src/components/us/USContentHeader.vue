@@ -8,6 +8,7 @@
           :key="type"
           :label="getReportLabel(type)"
           :is-active="usStore.activeReportType === type"
+          :is-loading="type === 'pricing' && usStore.isPricingReportProcessing"
           @click="usStore.setActiveReportType(type)"
         />
 
@@ -45,18 +46,20 @@
     const types: ReportType[] = [ReportTypes.FILES]; // Files always available
     if (usStore.isCodeReportReady) {
       types.push(ReportTypes.CODE);
-      // Show Pricing tab as soon as Code report is ready
+    }
+    // Show Pricing tab when ready OR when processing (to show spinner)
+    if (usStore.isPricingReportReady || usStore.isPricingReportProcessing) {
       types.push(ReportTypes.PRICING);
     }
     return types;
   });
 
-  // Watch for code report readiness and switch tab
+  // Watch for code report readiness and switch tab only from Files tab
   watch(
     () => usStore.isCodeReportReady,
     (isReady) => {
-      if (isReady && usStore.activeReportType !== ReportTypes.CODE) {
-        console.log('[USContentHeader] Code report ready, switching to Code tab.');
+      if (isReady && usStore.activeReportType === ReportTypes.FILES) {
+        console.log('[USContentHeader] Code report ready, switching from Files to Code tab.');
         usStore.setActiveReportType(ReportTypes.CODE);
       }
     }
@@ -68,7 +71,7 @@
       return 'Code Compare';
     }
     if (type === ReportTypes.PRICING) {
-      return 'Pricing Report';
+      return usStore.isPricingReportProcessing ? 'Processing...' : 'Pricing Report';
     }
     return type.charAt(0).toUpperCase() + type.slice(1);
   }

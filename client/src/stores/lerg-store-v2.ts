@@ -60,18 +60,45 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
   getters: {
     // Stats
     stats(): LergStats {
+      const initialStats = {
+        us_domestic: 0,
+        canadian: 0,
+        caribbean: 0,
+        pacific: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+      };
+
+      const calculatedStats = this.allNPAs.reduce((acc, npa) => {
+        // Increment category count, checking for valid category keys
+        if (npa.category && Object.prototype.hasOwnProperty.call(acc, npa.category)) {
+          (acc as any)[npa.category]++;
+        }
+
+        // Increment confidence breakdown
+        if (npa.confidence_score >= 0.9) {
+          acc.high++;
+        } else if (npa.confidence_score >= 0.7) {
+          acc.medium++;
+        } else {
+          acc.low++;
+        }
+
+        return acc;
+      }, initialStats);
+
       return {
         total: this.allNPAs.length,
-        us_domestic: this.allNPAs.filter((n) => n.category === 'us-domestic').length,
-        canadian: this.allNPAs.filter((n) => n.category === 'canadian').length,
-        caribbean: this.allNPAs.filter((n) => n.category === 'caribbean').length,
-        pacific: this.allNPAs.filter((n) => n.category === 'pacific').length,
+        us_domestic: calculatedStats.us_domestic,
+        canadian: calculatedStats.canadian,
+        caribbean: calculatedStats.caribbean,
+        pacific: calculatedStats.pacific,
         last_updated: this.lastUpdated?.toISOString() || null,
         confidence_breakdown: {
-          high: this.allNPAs.filter((n) => n.confidence_score >= 0.9).length,
-          medium: this.allNPAs.filter((n) => n.confidence_score >= 0.7 && n.confidence_score < 0.9)
-            .length,
-          low: this.allNPAs.filter((n) => n.confidence_score < 0.7).length,
+          high: calculatedStats.high,
+          medium: calculatedStats.medium,
+          low: calculatedStats.low,
         },
       };
     },
