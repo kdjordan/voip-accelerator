@@ -1217,20 +1217,38 @@
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
 
-    if (store.getHasUsRateSheetData) {
+    // RESPECT UPLOAD GATE: Only load data if not currently uploading
+    if (store.getHasUsRateSheetData && !store.getIsUploadInProgress) {
+      console.log('[USRateSheetTable] Mounting with existing data and upload gate CLOSED - loading table data');
       await fetchUniqueStates();
-
       await resetPaginationAndLoad(createFilters());
-
       await recalculateAndDisplayAverages();
+    } else if (store.getIsUploadInProgress) {
+      console.log('[USRateSheetTable] Mounting but upload gate is OPEN - skipping data load');
     }
   });
+
+  // Watcher for upload gate changes  
+  const stopUploadGateWatcher = watch(
+    () => store.getIsUploadInProgress,
+    async (isUploading, wasUploading) => {
+      // When upload completes (gate closes) and we have data, load it
+      if (wasUploading && !isUploading && store.getHasUsRateSheetData) {
+        console.log('[USRateSheetTable] Upload gate CLOSED after upload - loading complete data');
+        await fetchUniqueStates();
+        await resetPaginationAndLoad(createFilters());
+        await recalculateAndDisplayAverages();
+      }
+    },
+    { immediate: false }
+  );
 
   onBeforeUnmount(() => {
     stopSearchWatcher();
     stopStateWatcher();
     stopMetroWatcher();
     stopItemsPerPageWatcher();
+    stopUploadGateWatcher();
   });
 
   watch(
@@ -1242,9 +1260,15 @@
           searchQuery.value = '';
           currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
         } else {
-          await fetchUniqueStates();
-          await resetPaginationAndLoad(createFilters());
-          await recalculateAndDisplayAverages();
+          // RESPECT UPLOAD GATE: Only load data if upload is complete
+          if (!store.getIsUploadInProgress) {
+            console.log('[USRateSheetTable] Data available and upload gate CLOSED - loading table data');
+            await fetchUniqueStates();
+            await resetPaginationAndLoad(createFilters());
+            await recalculateAndDisplayAverages();
+          } else {
+            console.log('[USRateSheetTable] Data available but upload gate is OPEN - waiting for upload completion');
+          }
         }
       }
     },

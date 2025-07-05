@@ -221,6 +221,7 @@
 
   const store = useUsRateSheetStore();
   const userStore = useUserStore();
+  // Use the simple, original USRateSheetService (no web workers, no streaming complexity)
   const usRateSheetService = new USRateSheetService();
   const isLocallyStored = computed(() => store.getHasUsRateSheetData);
   const isRFUploading = ref(false);
@@ -284,16 +285,10 @@
   // --- End Drag and Drop Setup ---
 
   onMounted(async () => {
-    // Load initial data state from Dexie via the store
-    // Only load if the store indicates data might exist from a previous session
-    if (store.getHasUsRateSheetData) {
-      // loadRateSheetData now triggers fetchCurrentEffectiveDate internally
-      // The watcher above will handle setting selectedEffectiveDate.value
-      await store.loadRateSheetData();
-    } else {
-      // Ensure loading state is false if we don't attempt to load
-      store.setLoading(false);
-    }
+    // DISABLE automatic loading to prevent partial data display
+    // Data will only be loaded after successful upload via handleUploadSuccess
+    console.log('[USRateSheetView] Skipping automatic data loading to prevent partial data display');
+    store.setLoading(false);
   });
 
   function handleFileChange(event: Event) {
@@ -359,6 +354,7 @@
 
     store.setLoading(true);
     store.setError(null);
+    store.setUploadInProgress(true); // BLOCK table loading
     uploadError.value = null;
     rfUploadStatus.value = null;
 
@@ -416,6 +412,7 @@
         );
       }
 
+      // Use the simple, original USRateSheetService (no complex optimization)
       const processedData = await usRateSheetService.processFile(
         fileToProcess,
         mappedColumns,
@@ -426,7 +423,8 @@
 
       await store.handleUploadSuccess(processedData);
       userStore.incrementUploadsToday();
-
+      
+      store.setUploadInProgress(false); // ALLOW table loading now
       selectedFile.value = null; // Clear selected file after processing
       rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
     } catch (error: any) {
