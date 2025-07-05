@@ -44,6 +44,7 @@ interface CountryData {
   name: string;
   npas: string[];
   count: number;
+  npaCount?: number; // For compatibility
 }
 
 export const useLergStoreV2 = defineStore('lerg-v2', {
@@ -71,8 +72,10 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       };
 
       const calculatedStats = this.allNPAs.reduce((acc, npa) => {
-        // Increment category count, checking for valid category keys
-        if (npa.category && Object.prototype.hasOwnProperty.call(acc, npa.category)) {
+        // Simple category increment - just fix the us-domestic mapping
+        if (npa.category === 'us-domestic') {
+          acc.us_domestic++;
+        } else if (npa.category && Object.prototype.hasOwnProperty.call(acc, npa.category)) {
           (acc as any)[npa.category]++;
         }
 
@@ -196,8 +199,8 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       return Object.values(grouped)
         .map((country) => ({
           ...country,
-          npaCount: country.npas.length, // For compatibility
           count: country.npas.length,
+          npaCount: country.npas.length, // For compatibility
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
     },
@@ -267,6 +270,9 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         state: record.state_province_name,
         category: record.category,
         confidence: record.confidence_score,
+        country_code: record.country_code,
+        state_province_code: record.state_province_code,
+        state_province_name: record.state_province_name,
       };
     },
 
@@ -297,6 +303,15 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     getCountryName: (state) => (countryCode: string) => {
       const npa = state.allNPAs.find((n) => n.country_code === countryCode);
       return npa?.country_name || countryCode;
+    },
+
+    // Legacy compatibility getters
+    usStates(): StateProvince[] {
+      return this.getUSStates;
+    },
+
+    canadaProvinces(): StateProvince[] {
+      return this.getCanadianProvinces;
     },
   },
 
@@ -356,7 +371,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       } as EnhancedNPARecord;
 
       this.allNPAs.push(newRecord);
-      // Phase 1: Clear index cache when data changes
+      // Phase 1: Clear cache when data changes
       this._npaIndex = null;
     },
 
@@ -366,7 +381,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       this.lastUpdated = null;
       this.isLoaded = false;
       this.error = null;
-      // Phase 1: Clear index cache
+      // Phase 1: Clear cache
       this._npaIndex = null;
     },
 
@@ -375,5 +390,6 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       this.isLoaded = false; // Force reload
       await this.loadFromSupabase();
     },
+
   },
 });

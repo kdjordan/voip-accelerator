@@ -11,6 +11,7 @@
           variant="destructive"
           size="small"
           :icon="TrashIcon"
+          :loading="props.isRemoving"
           @click="$emit('remove-file', componentId)"
         >
           Remove
@@ -338,6 +339,7 @@
   // Define props
   const props = defineProps<{
     componentId: ComponentId;
+    isRemoving?: boolean;
   }>();
 
   // Define emits

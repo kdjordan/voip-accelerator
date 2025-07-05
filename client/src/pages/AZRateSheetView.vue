@@ -216,7 +216,10 @@
 
         <!-- Rate Sheet Table Section - Moved inside this bento box -->
         <div v-if="isLocallyStored" class="mt-6 pt-6">
-          <RateSheetTable @update:discrepancy-count="updateDiscrepancyCount" />
+          <RateSheetTable 
+            @update:discrepancy-count="updateDiscrepancyCount" 
+            @data-cleared="handleDataCleared"
+          />
         </div>
       </div>
     </div>
@@ -287,6 +290,11 @@
 
   function updateDiscrepancyCount(count: number) {
     currentDiscrepancyCount.value = count;
+  }
+
+  // Handle data clearing event from the table component
+  function handleDataCleared() {
+    currentDiscrepancyCount.value = 0;
   }
 
   // Preview Modal state

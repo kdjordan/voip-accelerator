@@ -163,6 +163,11 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       this.isLocallyStored = false;
       this.invalidRows = [];
       this.selectedRateBucket = 'all';
+      this.excludedDestinations.clear();
+      
+      // Force reactivity update to ensure components are notified
+      this.triggerDataUpdate();
+      
       // Memory-only storage - no persistence to clear
     },
 

@@ -17,7 +17,7 @@
             v-if="usStore.filesUploaded.size === 2"
             variant="destructive"
             size="small"
-            @click="handleReset"
+            @click="showResetConfirmModal = true"
             :is-loading="isResetting"
           >
             Reset
@@ -26,6 +26,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Reset Confirmation Modal -->
+  <ConfirmationModal
+    v-model="showResetConfirmModal"
+    title="Reset All US Rate Sheet Data"
+    :message="`This will permanently delete all uploaded rate sheet data, analysis reports, and database records.
+
+This action cannot be undone.`"
+    confirm-button-text="Reset All Data"
+    cancel-button-text="Cancel"
+    :loading="isResetting"
+    @confirm="confirmReset"
+  />
 </template>
 
 <script setup lang="ts">
@@ -36,10 +49,12 @@
   import { computed, watch, ref } from 'vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import ReportTabButton from '@/components/shared/ReportsTabButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
   const usStore = useUsStore();
   const { deleteDatabase } = useDexieDB();
   const isResetting = ref(false);
+  const showResetConfirmModal = ref(false);
 
   // Compute available report types based on the new readiness flags
   const availableReportTypes = computed(() => {
@@ -76,7 +91,7 @@
     return type.charAt(0).toUpperCase() + type.slice(1);
   }
 
-  async function handleReset() {
+  async function confirmReset() {
     isResetting.value = true;
     try {
       console.log('Resetting the US report');
@@ -97,6 +112,7 @@
         );
 
       console.log('Reset completed successfully');
+      showResetConfirmModal.value = false;
     } catch (error) {
       console.error('Error during reset:', error);
     } finally {

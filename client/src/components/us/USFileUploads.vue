@@ -10,7 +10,11 @@
             <div class="w-1/2 pr-6">
               <!-- Conditionally render Drop Zone or Code Summary -->
               <template v-if="usStore.isComponentDisabled('us1')">
-                <USCodeSummary componentId="us1" @remove-file="handleRemoveFile" />
+                <USCodeSummary 
+                  componentId="us1" 
+                  :isRemoving="isRemovingFile.us1"
+                  @remove-file="handleRemoveFile" 
+                />
               </template>
               <template v-else>
                 <!-- Your Rates Upload Zone (Drop Zone Content) -->
@@ -115,7 +119,11 @@
             <div class="w-1/2 pl-6">
               <!-- Conditionally render Drop Zone or Code Summary for us2 -->
               <template v-if="usStore.isComponentDisabled('us2')">
-                <USCodeSummary componentId="us2" @remove-file="handleRemoveFile" />
+                <USCodeSummary 
+                  componentId="us2" 
+                  :isRemoving="isRemovingFile.us2"
+                  @remove-file="handleRemoveFile" 
+                />
               </template>
               <template v-else>
                 <!-- Prospect's Rates Upload Zone (Drop Zone Content) -->
@@ -262,6 +270,19 @@
       @handle-choice="handlePlusOneChoice"
       @cancel="cancelPlusOneModal"
     /> -->
+
+    <!-- Remove File Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showRemoveConfirmModal"
+      title="Remove US Rate Sheet Data"
+      :message="`This will permanently delete the uploaded rate sheet data and all related analysis.
+
+This action cannot be undone.`"
+      confirm-button-text="Remove File"
+      cancel-button-text="Cancel"
+      :loading="isModalRemoving"
+      @confirm="confirmRemoveFile"
+    />
   </div>
 </template>
 
@@ -276,6 +297,7 @@
   } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import { useUsStore } from '@/stores/us-store';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { USService } from '@/services/us.service';
@@ -339,6 +361,17 @@
   // const showPlusOneModal = ref(false);
   // const plusOneAnalysis = ref<any>(null);
   // const originalFileData = ref<string[][]>([]);
+
+  // Confirmation modal state for file removal
+  const showRemoveConfirmModal = ref(false);
+  const componentToRemove = ref<ComponentId | null>(null);
+  const isRemovingFile = reactive<Record<ComponentId, boolean>>({
+    us1: false,
+    us2: false,
+    az1: false,
+    az2: false,
+  });
+  const isModalRemoving = ref(false);
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
@@ -836,9 +869,20 @@
     activeComponent.value = 'us1';
   }
 
-  async function handleRemoveFile(componentName: ComponentId) {
+  function handleRemoveFile(componentName: ComponentId) {
+    componentToRemove.value = componentName;
+    showRemoveConfirmModal.value = true;
+  }
+
+  async function confirmRemoveFile() {
+    if (!componentToRemove.value) return;
+
+    const component = componentToRemove.value;
+    isModalRemoving.value = true;
+    isRemovingFile[component] = true;
+
     try {
-      const fileName = usStore.getFileNameByComponent(componentName);
+      const fileName = usStore.getFileNameByComponent(component);
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
@@ -857,9 +901,14 @@
 
       // Then, remove the file from the store
       // Note: The removeFile method in the store now handles clearing fileStats
-      usStore.removeFile(componentName);
+      usStore.removeFile(component);
     } catch (error) {
       console.error('Error removing file:', error);
+    } finally {
+      isModalRemoving.value = false;
+      isRemovingFile[component] = false;
+      showRemoveConfirmModal.value = false;
+      componentToRemove.value = null;
     }
   }
 

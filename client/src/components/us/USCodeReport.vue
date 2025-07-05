@@ -78,7 +78,7 @@
               </thead>
               <tbody>
                 <tr class="border-b border-gray-700">
-                  <td class="py-2 px-3 font-medium text-gray-300">Inter-State</td>
+                  <td class="py-2 px-3 font-medium text-gray-300">InterState</td>
                   <td class="py-2 px-3 text-right text-foreground">
                     {{ props.report.zeroMarginDetail.matchInter }}
                   </td>
@@ -87,7 +87,7 @@
                   </td>
                 </tr>
                 <tr>
-                  <td class="py-2 px-3 font-medium text-gray-300">Intra-State</td>
+                  <td class="py-2 px-3 font-medium text-gray-300">IntraState</td>
                   <td class="py-2 px-3 text-right text-foreground">
                     {{ props.report.zeroMarginDetail.matchIntra }}
                   </td>

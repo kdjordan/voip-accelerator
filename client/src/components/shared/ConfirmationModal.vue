@@ -12,9 +12,7 @@
       <h3 class="mb-4 text-xl font-semibold text-fbWhite">
         {{ title }}
       </h3>
-      <p class="mb-6 text-sm text-slate-400 whitespace-pre-line">
-        {{ message }}
-      </p>
+      <p class="mb-6 text-sm text-slate-400" v-html="formattedMessage"></p>
       <div v-if="requiresConfirmationPhrase" class="mb-6">
         <label for="confirmationPhraseInput" class="mb-2 block text-sm font-medium text-slate-300">
           To confirm, type "<strong class="text-accent">{{ confirmationPhrase }}</strong
@@ -31,26 +29,20 @@
         />
       </div>
       <div class="flex justify-end space-x-3">
-        <button
-          type="button"
-          class="rounded-md border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors"
+        <BaseButton
+          variant="secondary"
           @click="closeModal"
         >
           {{ cancelButtonText }}
-        </button>
-        <button
-          type="button"
-          :class="[
-            'rounded-md px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2  focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors',
-            isConfirmDisabled
-              ? 'cursor-not-allowed bg-slate-600 opacity-70'
-              : 'bg-destructive hover:bg-red-500 focus:ring-destructive',
-          ]"
+        </BaseButton>
+        <BaseButton
+          :variant="confirmButtonVariant"
           :disabled="isConfirmDisabled"
+          :loading="loading"
           @click="confirmAction"
         >
           {{ confirmButtonText }}
-        </button>
+        </BaseButton>
       </div>
     </div>
   </div>
@@ -58,6 +50,7 @@
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick } from 'vue';
+  import BaseButton from '@/components/shared/BaseButton.vue';
 
   interface Props {
     modelValue: boolean; // Used for v-model
@@ -67,6 +60,8 @@
     cancelButtonText?: string;
     requiresConfirmationPhrase?: boolean;
     confirmationPhrase?: string;
+    confirmButtonVariant?: 'primary' | 'secondary' | 'destructive' | 'secondary-outline';
+    loading?: boolean;
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -74,6 +69,8 @@
     cancelButtonText: 'Cancel',
     requiresConfirmationPhrase: false,
     confirmationPhrase: 'DELETE',
+    confirmButtonVariant: 'destructive',
+    loading: false,
   });
 
   const emit = defineEmits<{
@@ -90,6 +87,10 @@
       return typedPhrase.value !== props.confirmationPhrase;
     }
     return false;
+  });
+
+  const formattedMessage = computed(() => {
+    return props.message.replace(/\n/g, '<br>');
   });
 
   watch(

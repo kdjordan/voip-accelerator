@@ -59,8 +59,14 @@ export function useUSTableData<T extends USRateSheetEntry | USPricingComparisonR
         regionCodes.push(country.code);
       });
 
-      // Sort the codes
-      availableStates.value = sortRegionCodesByName(regionCodes);
+      // Filter out invalid codes and sort
+      const validCodes = regionCodes.filter(code => {
+        // Exclude common invalid/placeholder codes
+        const invalidCodes = ['NN', 'N/A', 'NA', 'XX', 'UNK', 'UNKNOWN', ''];
+        return !invalidCodes.includes(code.toUpperCase());
+      });
+      
+      availableStates.value = sortRegionCodesByName(validCodes);
     } catch (err: any) {
       availableStates.value = [];
       baseTableData.dataError.value = 'Could not load state/province/country filter options.';

@@ -123,7 +123,7 @@
             >
               <span class="block truncate text-white">{{
                 selectedState
-                  ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
+                  ? getSelectedStateDisplayName(selectedState)
                   : 'All States/Provinces'
               }}</span>
               <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -160,6 +160,30 @@
                   <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
                     {{ group.label }}
                   </li>
+                  <!-- Group-level selection option -->
+                  <ListboxOption
+                    v-slot="{ active, selected }"
+                    :value="'GROUP_' + group.label.replace(/\s+/g, '_').toUpperCase()"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-6 pr-4 font-medium italic',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-bold' : 'font-medium', 'block truncate']"
+                        >All {{ group.label }}</span
+                      >
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-1 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
+                  <!-- Individual region options -->
                   <ListboxOption
                     v-for="regionCode in group.codes"
                     :key="regionCode"
@@ -169,7 +193,7 @@
                   >
                     <li
                       :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'bg-gray-700 text-gray-300',
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
                         'relative cursor-default select-none py-2 pl-10 pr-4',
                       ]"
                     >
@@ -705,8 +729,8 @@
           <tr v-else>
             <td colspan="7" class="text-center text-gray-500 py-10">
               {{
-                totalRecords > 0
-                  ? 'No records match the current filters.'
+                store.hasUsRateSheetData
+                  ? 'No records match the current filters. Try adjusting your search criteria or clearing filters.'
                   : 'No US Rate Sheet data found. Please upload a file.'
               }}
             </td>
@@ -813,6 +837,31 @@
         <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
       </div>
     </div>
+
+    <!-- Clear Data Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showClearDataModal"
+      title="Clear US Rate Sheet Data"
+      message="This will permanently delete all uploaded US rate sheet data, calculated averages, and session tracking.
+
+This action cannot be undone."
+      confirm-button-text="Clear All Data"
+      cancel-button-text="Cancel"
+      @confirm="confirmClearData"
+    />
+
+    <!-- Reset Session Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showResetSessionModal"
+      title="Reset Session Tracking"
+      message="This will clear the list of NPAs that have been adjusted during this session.
+
+All NPAs will be available for adjustment again."
+      confirm-button-text="Reset Session"
+      cancel-button-text="Cancel"
+      confirm-button-variant="primary"
+      @confirm="confirmResetSession"
+    />
   </div>
 </template>
 
@@ -842,6 +891,7 @@
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
@@ -1077,7 +1127,26 @@
 
     // State Filter
     if (selectedState.value) {
-      filters.push((record) => record.stateCode === selectedState.value);
+      filters.push((record) => {
+        // Handle group selections
+        if (selectedState.value === 'GROUP_UNITED_STATES') {
+          // Filter for US states only (not territories) - use LERG store to look up by NPA
+          const npaInfo = lergStore.getNPAInfo(record.npa);
+          return npaInfo?.country_code === 'US' && 
+                 !['PR', 'VI', 'GU', 'AS', 'MP'].includes(npaInfo.state_province_code);
+        } else if (selectedState.value === 'GROUP_CANADA') {
+          // Filter for all Canadian provinces - use LERG store to look up by NPA
+          const npaInfo = lergStore.getNPAInfo(record.npa);
+          return npaInfo?.country_code === 'CA';
+        } else if (selectedState.value === 'GROUP_OTHER_COUNTRIES') {
+          // Filter for all other countries (not US or Canada) - use LERG store to look up by NPA
+          const npaInfo = lergStore.getNPAInfo(record.npa);
+          return npaInfo && npaInfo.country_code !== 'US' && npaInfo.country_code !== 'CA';
+        } else {
+          // Handle individual region selections
+          return record.stateCode === selectedState.value;
+        }
+      });
     }
 
     // Metro Area Filter
@@ -1287,32 +1356,43 @@
     return Number(rate).toFixed(6);
   }
 
+  // Modal state for confirmations
+  const showClearDataModal = ref(false);
+  const showResetSessionModal = ref(false);
+
   function handleClearData() {
-    if (confirm('Are you sure you want to clear all US Rate Sheet data? This cannot be undone.')) {
-      currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
-      adjustedNpasThisSession.value.clear(); // Clear adjusted NPAs
-      store.clearUsRateSheetData();
-    }
+    showClearDataModal.value = true;
+  }
+
+  function confirmClearData() {
+    currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+    adjustedNpasThisSession.value.clear(); // Clear adjusted NPAs
+    store.clearUsRateSheetData();
+    showClearDataModal.value = false;
   }
 
   function handleResetSession() {
-    if (confirm('Reset session tracking? This will allow all NPAs to be adjusted again.')) {
-      console.log(
-        '[USRateSheetTable] Resetting session tracking. Previously adjusted NPAs:',
-        Array.from(adjustedNpasThisSession.value)
-      );
-      adjustedNpasThisSession.value.clear();
-      adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
+    showResetSessionModal.value = true;
+  }
 
-      // Clear the message after a few seconds
-      if (adjustmentStatusTimeoutId) {
-        clearTimeout(adjustmentStatusTimeoutId);
-      }
-      adjustmentStatusTimeoutId = setTimeout(() => {
-        adjustmentStatusMessage.value = null;
-        adjustmentStatusTimeoutId = null;
-      }, 3000);
+  function confirmResetSession() {
+    console.log(
+      '[USRateSheetTable] Resetting session tracking. Previously adjusted NPAs:',
+      Array.from(adjustedNpasThisSession.value)
+    );
+    adjustedNpasThisSession.value.clear();
+    adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
+
+    // Clear the message after a few seconds
+    if (adjustmentStatusTimeoutId) {
+      clearTimeout(adjustmentStatusTimeoutId);
     }
+    adjustmentStatusTimeoutId = setTimeout(() => {
+      adjustmentStatusMessage.value = null;
+      adjustmentStatusTimeoutId = null;
+    }, 3000);
+    
+    showResetSessionModal.value = false;
   }
 
   // Replace isExporting ref with the one from composable
@@ -1628,8 +1708,68 @@
   );
 
   function getRegionDisplayName(code: string): string {
-    return getRegionName(code) || code;
+    // Special handling for US territories and common abbreviations
+    const territoryNames: Record<string, string> = {
+      'PR': 'Puerto Rico',
+      'VI': 'U.S. Virgin Islands', 
+      'GU': 'Guam',
+      'AS': 'American Samoa',
+      'MP': 'Northern Mariana Islands',
+      'DC': 'District of Columbia',
+    };
+
+    // Check territory names first
+    if (territoryNames[code]) {
+      return territoryNames[code];
+    }
+
+    // Try US states
+    const usState = lergStore.getUSStates.find(state => state.code === code);
+    if (usState) {
+      return usState.name;
+    }
+
+    // Try Canadian provinces  
+    const caProvince = lergStore.getCanadianProvinces.find(province => province.code === code);
+    if (caProvince) {
+      return caProvince.name;
+    }
+
+    // Try other countries
+    const country = lergStore.getDistinctCountries.find(country => country.code === code);
+    if (country) {
+      return country.name;
+    }
+
+    // Fall back to the code itself
+    return code;
   }
+
+  // Helper function to get display name for selected state (handles both individual and group selections)
+  function getSelectedStateDisplayName(selectedValue: string): string {
+    // Handle group selections
+    if (selectedValue === 'GROUP_UNITED_STATES') {
+      return 'All United States';
+    } else if (selectedValue === 'GROUP_CANADA') {
+      return 'All Canada';
+    } else if (selectedValue === 'GROUP_OTHER_COUNTRIES') {
+      return 'All Other Countries';
+    } else {
+      // Handle individual selections
+      return getRegionDisplayName(selectedValue) + ' (' + selectedValue + ')';
+    }
+  }
+
+  // Computed property to structure states for the dropdown with optgroup
+  const groupedAvailableStates = computed(() => {
+    const grouped = groupRegionCodes(availableStates.value);
+
+    return [
+      { label: 'United States', codes: grouped['US'] || [] },
+      { label: 'Canada', codes: grouped['CA'] || [] },
+      { label: 'Other Countries', codes: grouped['OTHER'] || [] },
+    ].filter((group) => group.codes.length > 0);
+  });
 
   // --- Sorting Handler ---
   async function handleSort(key: string) {
