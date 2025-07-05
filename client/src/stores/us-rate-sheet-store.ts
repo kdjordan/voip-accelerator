@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import service
+import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import simple service
 import type { USRateSheetEntry, InvalidUsRow } from '@/types/domains/us-types'; // Corrected import
 // Add date-fns for default date calculation
 import { addDays, format } from 'date-fns';
@@ -13,9 +13,10 @@ interface USRateSheetState {
   isUpdatingEffectiveDate: boolean; // Add state for update process
   lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
   invalidRateSheetRows: InvalidUsRow[]; // Updated type usage
+  isUploadInProgress: boolean; // GATE to block table loading during upload
 }
 
-// Instantiate service outside the store definition (singleton pattern)
+// Instantiate simple service outside the store definition (singleton pattern)
 const service = new USRateSheetService();
 
 // Helper to get default effective date (7 days from now)
@@ -33,6 +34,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     isUpdatingEffectiveDate: false, // Add state for update process
     lastDbUpdateTime: Date.now(), // Initialize timestamp
     invalidRateSheetRows: [], // Initialize invalid rows state
+    isUploadInProgress: false, // Initialize upload gate as closed
   }),
 
   getters: {
@@ -43,6 +45,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getCurrentEffectiveDate: (state): string | null => state.currentEffectiveDate, // Getter remains
     getInvalidRateSheetRows: (state): InvalidUsRow[] => state.invalidRateSheetRows, // Added getter
     hasInvalidRateSheetRows: (state): boolean => state.invalidRateSheetRows.length > 0, // Added getter
+    getIsUploadInProgress: (state): boolean => state.isUploadInProgress, // Gate getter
   },
 
   actions: {
@@ -52,6 +55,11 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
 
     setError(error: string | null) {
       this.error = error;
+    },
+
+    setUploadInProgress(inProgress: boolean) {
+      this.isUploadInProgress = inProgress;
+      console.log(`[us-rate-sheet-store] Upload gate ${inProgress ? 'OPENED' : 'CLOSED'}`);
     },
 
     /**

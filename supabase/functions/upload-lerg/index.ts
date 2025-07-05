@@ -1,159 +1,149 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 interface LERGRecord {
   npa: string;
   state: string;
   country: string;
-  last_updated?: Date;
+}
+
+interface UploadRequest {
+  records: LERGRecord[];
 }
 
 serve(async (req) => {
+  // Get the origin from the request headers
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  console.log("[upload-lerg] Function invoked");
+
   try {
+    // Parse request body
+    const { records } = await req.json() as UploadRequest;
+    
+    if (!records || !Array.isArray(records)) {
+      throw new Error("Invalid request: records array is required");
+    }
+
+    console.log(`[upload-lerg] Processing ${records.length} records`);
+
+    // Create a Supabase client with service role key
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    console.log("[upload-lerg] Parsing request body");
-    const body = await req.json();
-    const { records } = body;
-
-    // Validate records array
-    if (!records || !Array.isArray(records)) {
-      console.log("[upload-lerg] No valid records array provided");
-      return new Response(
-        JSON.stringify({ error: "No valid records array provided" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
-
-    // Validate record structure
-    const isValidRecord = (record: any): record is LERGRecord => {
-      return (
-        typeof record === "object" &&
-        typeof record.npa === "string" &&
-        typeof record.state === "string" &&
-        typeof record.country === "string"
-      );
-    };
-
-    if (!records.every(isValidRecord)) {
-      console.log("[upload-lerg] Invalid record structure detected");
-      return new Response(
-        JSON.stringify({ error: "Invalid record structure in array" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
-
-    console.log(`[upload-lerg] Processing ${records.length} records`);
-
-    // Clear existing LERG data using DELETE instead of RPC
-    console.log("[upload-lerg] Truncating existing LERG data");
-    const { error: truncateError } = await supabaseClient
-      .from("lerg_codes")
-      .delete()
-      .neq("npa", "000"); // This will delete all records
-
-    if (truncateError) {
-      console.error("[upload-lerg] Error truncating table:", truncateError);
-      throw truncateError;
-    }
-
-    // Process in chunks of 25 for insertion
-    const CHUNK_SIZE = 25;
-    let totalProcessed = 0;
-
-    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
-      const chunk = records.slice(i, i + CHUNK_SIZE).map((record) => ({
-        ...record,
-        last_updated: new Date(),
-      }));
-
-      console.log(
-        `[upload-lerg] Inserting chunk ${
-          Math.floor(i / CHUNK_SIZE) + 1
-        }/${Math.ceil(records.length / CHUNK_SIZE)}`
-      );
-
-      try {
-        const { error: insertError } = await supabaseClient
-          .from("lerg_codes")
-          .insert(chunk);
-
-        if (insertError) {
-          console.error("[upload-lerg] Error inserting records:", {
-            error: insertError,
-            chunk: chunk.length,
-            firstRecord: chunk[0],
-          });
-          throw insertError;
-        }
-
-        totalProcessed += chunk.length;
-        console.log(
-          `[upload-lerg] Progress: ${totalProcessed}/${records.length} records processed`
-        );
-
-        // Add a small delay between chunks to prevent rate limiting
-        if (i + CHUNK_SIZE < records.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      } catch (err) {
-        console.error("[upload-lerg] Chunk insertion failed:", {
-          chunkIndex: Math.floor(i / CHUNK_SIZE) + 1,
-          error: err,
-        });
-        throw err;
+    // Remove duplicates first based on NPA
+    const seenNPAs = new Set<string>();
+    const uniqueRecords = records.filter((record, i) => {
+      if (seenNPAs.has(record.npa)) {
+        console.log(`[upload-lerg] Skipping duplicate NPA: ${record.npa} at row ${i + 1}`);
+        return false;
       }
+      seenNPAs.add(record.npa);
+      return true;
+    });
+
+    console.log(`[upload-lerg] Removed ${records.length - uniqueRecords.length} duplicates, processing ${uniqueRecords.length} unique NPAs`);
+
+    // Validate and transform records for enhanced_lerg table
+    const validRecords = [];
+    const skippedRows = [];
+
+    for (let i = 0; i < uniqueRecords.length; i++) {
+      const record = uniqueRecords[i];
+      
+      // Validate required fields
+      if (!record.npa || !record.state || !record.country) {
+        skippedRows.push(i + 1);
+        console.log(`[upload-lerg] Skipping row ${i + 1}: missing required fields - npa=${record.npa}, state=${record.state}, country=${record.country}`);
+        continue;
+      }
+
+      // Map country and state codes to full names and categories
+      const countryInfo = getCountryInfo(record.country);
+      const stateInfo = getStateInfo(record.state, record.country);
+      const category = categorizeNPA(record.npa, record.country, record.state);
+
+      validRecords.push({
+        npa: record.npa.trim(),
+        country_code: record.country.trim().toUpperCase(),
+        country_name: countryInfo.name,
+        state_province_code: record.state.trim().toUpperCase(),
+        state_province_name: stateInfo.name,
+        region: stateInfo.region,
+        category: category,
+        source: 'import',
+        confidence_score: 0.95, // High confidence for uploaded data
+        is_active: true,
+        notes: `Uploaded from LERG file on ${new Date().toISOString()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
     }
 
-    const result = {
-      processedRecords: totalProcessed,
-      totalRecords: records.length,
-    };
+    console.log(`[upload-lerg] Validated ${validRecords.length} records, skipped ${skippedRows.length}`);
 
-    console.log("[upload-lerg] Upload completed successfully:", result);
+    if (validRecords.length === 0) {
+      throw new Error("No valid records found in the upload");
+    }
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
-  } catch (err) {
-    console.error("[upload-lerg] Error:", err);
+    // Insert records in batches to avoid timeout
+    const BATCH_SIZE = 100;
+    let insertedCount = 0;
+
+    for (let i = 0; i < validRecords.length; i += BATCH_SIZE) {
+      const batch = validRecords.slice(i, i + BATCH_SIZE);
+      
+      const { data, error } = await supabaseClient
+        .from("enhanced_lerg")
+        .upsert(batch, {
+          onConflict: 'npa',
+          ignoreDuplicates: false
+        })
+        .select();
+
+      if (error) {
+        console.error(`[upload-lerg] Error inserting batch ${i / BATCH_SIZE + 1}:`, error);
+        throw error;
+      }
+
+      insertedCount += data?.length || 0;
+      console.log(`[upload-lerg] Inserted batch ${i / BATCH_SIZE + 1}, total: ${insertedCount}`);
+    }
+
     return new Response(
       JSON.stringify({
-        error:
-          err instanceof Error
-            ? err.message
-            : "An error occurred during upload",
-        details: err,
+        success: true,
+        message: `Successfully uploaded ${insertedCount} LERG records`,
+        recordsProcessed: records.length,
+        recordsInserted: insertedCount,
+        recordsSkipped: skippedRows.length,
+        skippedRows: skippedRows.slice(0, 10), // Return first 10 skipped rows for debugging
+        timestamp: new Date().toISOString()
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
+    );
+
+  } catch (error) {
+    console.error("[upload-lerg] Error uploading LERG data:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+        details: "Failed to upload LERG data"
       }),
       {
         status: 500,
@@ -165,3 +155,85 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to get country information
+function getCountryInfo(countryCode: string): { name: string } {
+  const countries: Record<string, string> = {
+    'US': 'United States',
+    'CA': 'Canada',
+    'BS': 'Bahamas',
+    'BB': 'Barbados',
+    'JM': 'Jamaica',
+    'TT': 'Trinidad and Tobago',
+    'GU': 'Guam',
+    'AS': 'American Samoa',
+    'MP': 'Northern Mariana Islands',
+    'VI': 'Virgin Islands',
+    'PR': 'Puerto Rico',
+    'DO': 'Dominican Republic',
+    'KN': 'Saint Kitts and Nevis',
+    'LC': 'Saint Lucia',
+    'VC': 'Saint Vincent and the Grenadines',
+    'GD': 'Grenada',
+    'AG': 'Antigua and Barbuda',
+    'DM': 'Dominica',
+    'KY': 'Cayman Islands',
+    'BM': 'Bermuda',
+    'TC': 'Turks and Caicos Islands',
+    'VG': 'British Virgin Islands',
+    'AI': 'Anguilla',
+    'MS': 'Montserrat',
+    'SX': 'Sint Maarten'
+  };
+  
+  return { name: countries[countryCode] || countryCode };
+}
+
+// Helper function to get state/province information
+function getStateInfo(stateCode: string, countryCode: string): { name: string; region: string | null } {
+  if (countryCode === 'US') {
+    const usStates: Record<string, string> = {
+      'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+      'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+      'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+      'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+      'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+      'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+      'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+      'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+      'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+      'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+      'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+      'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+      'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia'
+    };
+    return { name: usStates[stateCode] || stateCode, region: null };
+  }
+  
+  if (countryCode === 'CA') {
+    const provinces: Record<string, string> = {
+      'AB': 'Alberta', 'BC': 'British Columbia', 'MB': 'Manitoba',
+      'NB': 'New Brunswick', 'NL': 'Newfoundland and Labrador',
+      'NS': 'Nova Scotia', 'NT': 'Northwest Territories', 'NU': 'Nunavut',
+      'ON': 'Ontario', 'PE': 'Prince Edward Island', 'QC': 'Quebec',
+      'SK': 'Saskatchewan', 'YT': 'Yukon'
+    };
+    return { name: provinces[stateCode] || stateCode, region: null };
+  }
+  
+  return { name: stateCode, region: null };
+}
+
+// Helper function to categorize NPA
+function categorizeNPA(npa: string, countryCode: string, stateCode: string): string {
+  // Check Pacific territories first (they have US as secondary country code)
+  if (['GU', 'AS', 'MP'].includes(countryCode)) {
+    return 'pacific';
+  } else if (countryCode === 'US') {
+    return 'us-domestic';
+  } else if (countryCode === 'CA') {
+    return 'canadian';
+  } else {
+    return 'caribbean';
+  }
+}

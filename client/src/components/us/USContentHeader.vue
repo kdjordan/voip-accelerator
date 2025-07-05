@@ -8,6 +8,7 @@
           :key="type"
           :label="getReportLabel(type)"
           :is-active="usStore.activeReportType === type"
+          :is-loading="type === 'pricing' && usStore.isPricingReportProcessing"
           @click="usStore.setActiveReportType(type)"
         />
 
@@ -16,7 +17,7 @@
             v-if="usStore.filesUploaded.size === 2"
             variant="destructive"
             size="small"
-            @click="handleReset"
+            @click="showResetConfirmModal = true"
             :is-loading="isResetting"
           >
             Reset
@@ -25,6 +26,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Reset Confirmation Modal -->
+  <ConfirmationModal
+    v-model="showResetConfirmModal"
+    title="Reset All US Rate Sheet Data"
+    :message="`This will permanently delete all uploaded rate sheet data, analysis reports, and database records.
+
+This action cannot be undone.`"
+    confirm-button-text="Reset All Data"
+    cancel-button-text="Cancel"
+    :loading="isResetting"
+    @confirm="confirmReset"
+  />
 </template>
 
 <script setup lang="ts">
@@ -35,28 +49,32 @@
   import { computed, watch, ref } from 'vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import ReportTabButton from '@/components/shared/ReportsTabButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
   const usStore = useUsStore();
   const { deleteDatabase } = useDexieDB();
   const isResetting = ref(false);
+  const showResetConfirmModal = ref(false);
 
   // Compute available report types based on the new readiness flags
   const availableReportTypes = computed(() => {
     const types: ReportType[] = [ReportTypes.FILES]; // Files always available
     if (usStore.isCodeReportReady) {
       types.push(ReportTypes.CODE);
-      // Show Pricing tab as soon as Code report is ready
+    }
+    // Show Pricing tab when ready OR when processing (to show spinner)
+    if (usStore.isPricingReportReady || usStore.isPricingReportProcessing) {
       types.push(ReportTypes.PRICING);
     }
     return types;
   });
 
-  // Watch for code report readiness and switch tab
+  // Watch for code report readiness and switch tab only from Files tab
   watch(
     () => usStore.isCodeReportReady,
     (isReady) => {
-      if (isReady && usStore.activeReportType !== ReportTypes.CODE) {
-        console.log('[USContentHeader] Code report ready, switching to Code tab.');
+      if (isReady && usStore.activeReportType === ReportTypes.FILES) {
+        console.log('[USContentHeader] Code report ready, switching from Files to Code tab.');
         usStore.setActiveReportType(ReportTypes.CODE);
       }
     }
@@ -73,7 +91,7 @@
     return type.charAt(0).toUpperCase() + type.slice(1);
   }
 
-  async function handleReset() {
+  async function confirmReset() {
     isResetting.value = true;
     try {
       console.log('Resetting the US report');
@@ -94,6 +112,7 @@
         );
 
       console.log('Reset completed successfully');
+      showResetConfirmModal.value = false;
     } catch (error) {
       console.error('Error during reset:', error);
     } finally {

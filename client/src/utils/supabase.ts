@@ -29,15 +29,15 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /**
- * Check if the current user has the superadmin role
+ * Check if the current user has the admin role
  */
-export async function isSuperAdmin(): Promise<boolean> {
+export async function isAdmin(): Promise<boolean> {
   const session = await getSession();
 
   if (!session) return false;
 
   const { user } = session;
-  return user?.user_metadata?.role === 'superadmin';
+  return user?.user_metadata?.role === 'admin';
 }
 
 /**

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen text-white pt-2 w-full">
+  <div class="min-h-screen text-white pt-2 w-full max-w-full overflow-x-hidden">
     <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
         AZ Rate Deck Analyzer
@@ -18,9 +18,9 @@
     </h1>
     <AZContentHeader />
 
-    <div>
+    <div class="w-full max-w-full overflow-x-hidden">
       <transition name="fade" mode="out-in" appear>
-        <div :key="azStore.getActiveReportType">
+        <div :key="azStore.getActiveReportType" class="w-full max-w-full overflow-x-hidden">
           <AZFileUploads v-if="azStore.getActiveReportType === ReportTypes.FILES" />
           <CodeReportAZ
             v-if="
@@ -56,7 +56,6 @@ import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { useAzStore } from '@/stores/az-store';
 import { ReportTypes } from '@/types/app-types';
 import { onMounted, ref } from 'vue';
-import { loadSampleDecks } from '@/utils/load-sample-data';
 import { DBName } from '@/types/app-types';
 
 const azStore = useAzStore();
@@ -73,16 +72,5 @@ function closeInfoModal() {
   showInfoModal.value = false;
 }
 
-onMounted(async () => {
-  const filesAlreadyUploaded = azStore.getNumberOfFilesUploaded > 0;
 
-  if (filesAlreadyUploaded) {
-    console.log('[AzView] Files already uploaded, skipping sample data loading');
-  } else {
-    const sampleDecks = setTimeout(async () => {
-      // await loadSampleDecks([DBName.AZ]);
-    }, 1000);
-    return () => clearTimeout(sampleDecks);
-  }
-});
 </script>

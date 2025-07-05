@@ -11,9 +11,9 @@
 
         <div class="pb-4 mb-6">
           <!-- Horizontal Layout for Upload Zones -->
-          <div class="flex min-w-max gap-6">
+          <div class="flex w-full max-w-full gap-6 overflow-x-hidden">
             <!-- Left Side: First Upload Zone and Single File Report -->
-            <div class="flex-1">
+            <div class="flex-1 min-w-0 max-w-full overflow-hidden">
               <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
               <template v-if="!azStore.isComponentDisabled('az1')">
                 <!-- First Upload Zone (Only visible when no file is uploaded) -->
@@ -94,7 +94,7 @@
               <!-- Show Code Summary and Remove Button when file IS uploaded -->
               <template v-else>
                 <!-- Single File Report Section - Pass remove handler -->
-                <AZCodeSummary :componentId="'az1'" :on-remove="() => handleRemoveFile('az1')" />
+                <AZCodeSummary :componentId="'az1'" :on-remove="() => showRemoveConfirmation('az1')" />
               </template>
             </div>
 
@@ -102,7 +102,7 @@
             <div class="mx-4 border-l border-gray-700/50"></div>
 
             <!-- Right Side: Second Upload Zone -->
-            <div class="flex-1">
+            <div class="flex-1 min-w-0 max-w-full overflow-hidden">
               <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
               <template v-if="!azStore.isComponentDisabled('az2')">
                 <!-- Second Upload Zone (Only visible when no file is uploaded) -->
@@ -183,7 +183,7 @@
               <!-- Show Code Summary and Remove Button when file IS uploaded -->
               <template v-else>
                 <!-- Single File Report Section - Pass remove handler -->
-                <AZCodeSummary :componentId="'az2'" :on-remove="() => handleRemoveFile('az2')" />
+                <AZCodeSummary :componentId="'az2'" :on-remove="() => showRemoveConfirmation('az2')" />
               </template>
             </div>
           </div>
@@ -225,6 +225,19 @@
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
+
+    <!-- Remove File Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showRemoveConfirmModal"
+      title="Remove AZ Rate Sheet Data"
+      :message="`This will permanently delete the uploaded rate sheet data and all related analysis.
+
+This action cannot be undone.`"
+      confirm-button-text="Remove File"
+      cancel-button-text="Cancel"
+      :loading="isModalRemoving"
+      @confirm="confirmRemoveFile"
+    />
   </div>
 </template>
 
@@ -239,6 +252,7 @@
   } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import { useAzStore } from '@/stores/az-store';
   import { useUserStore } from '@/stores/user-store';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
@@ -271,12 +285,18 @@
 
   const isGeneratingReports = ref(false);
 
+  // Confirmation modal state for file removal
+  const showRemoveConfirmModal = ref(false);
+  const componentToRemove = ref<ComponentId | null>(null);
+  const isModalRemoving = ref(false);
+
   // Preview state
   const showPreviewModal = ref(false);
   const previewData = ref<string[][]>([]);
   const columns = ref<string[]>([]);
   const startLine = ref(1);
   const activeComponent = ref<ComponentId>('az1');
+
 
   // Preview state
   const isModalValid = ref(false);
@@ -366,9 +386,17 @@
     console.log(`File uploaded for ${componentName}: ${fileName}`);
   }
 
-  async function handleRemoveFile(componentName: ComponentId) {
+  function showRemoveConfirmation(componentName: ComponentId) {
+    componentToRemove.value = componentName;
+    showRemoveConfirmModal.value = true;
+  }
+
+  async function confirmRemoveFile() {
+    if (!componentToRemove.value) return;
+    
+    isModalRemoving.value = true;
     try {
-      const fileName = azStore.getFileNameByComponent(componentName);
+      const fileName = azStore.getFileNameByComponent(componentToRemove.value);
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
@@ -380,9 +408,13 @@
       // Note: The removeFile method in the store now handles clearing fileStats
       azStore.removeFile(fileName);
 
-      console.log(`File ${fileName} removed successfully from component ${componentName}`);
+      console.log(`File ${fileName} removed successfully from component ${componentToRemove.value}`);
+      showRemoveConfirmModal.value = false;
+      componentToRemove.value = null;
     } catch (error) {
       console.error('Error removing file:', error);
+    } finally {
+      isModalRemoving.value = false;
     }
   }
 
@@ -436,8 +468,9 @@
     azStore.setTempFile(componentId, file);
 
     Papa.parse(file, {
-      preview: 5,
+      preview: 100,
       complete: (results) => {
+        // Proceed directly to preview modal - no +1 detection needed for AZ
         previewData.value = results.data.slice(1) as string[][];
         columns.value = results.data[0] as string[];
         activeComponent.value = componentId;
@@ -507,6 +540,7 @@
     columnMappings.value = newMappings;
   }
 
+
   // Add this debugging function after the existing handleDragEnter function
   function setTestError(componentId: ComponentId, message: string) {
     // For testing error states
@@ -518,4 +552,5 @@
   function viewSingleFileReport() {
     azStore.setActiveReportType(ReportTypes.CODE);
   }
+  
 </script>

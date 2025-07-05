@@ -777,6 +777,18 @@
       </p>
       <p class="text-gray-400" v-else>No destinations found matching your filters</p>
     </div>
+
+    <!-- Clear Data Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showClearDataModal"
+      title="Clear AZ Rate Sheet Data"
+      message="This will permanently delete all uploaded AZ rate sheet data and calculations.
+
+This action cannot be undone."
+      confirm-button-text="Clear All Data"
+      cancel-button-text="Cancel"
+      @confirm="confirmClearData"
+    />
   </div>
 </template>
 
@@ -796,6 +808,7 @@
     ArrowDownIcon, // Added
     ExclamationTriangleIcon,
   } from '@heroicons/vue/24/outline';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import {
     Listbox,
     ListboxButton,
@@ -825,7 +838,7 @@
   import TableSorterWorker from '@/workers/table-sorter.worker?worker';
 
   // Define emits
-  const emit = defineEmits(['update:discrepancy-count']);
+  const emit = defineEmits(['update:discrepancy-count', 'data-cleared']);
 
   // Initialize store and service
   const store = useAzRateSheetStore();
@@ -1613,10 +1626,38 @@
   }
   // --- End Bulk Update Most Common ---
 
+  // Modal state for clear data confirmation
+  const showClearDataModal = ref(false);
+
   function handleClearData() {
-    if (confirm('Are you sure you want to clear all rate sheet data?')) {
-      store.clearData();
-    }
+    showClearDataModal.value = true;
+  }
+
+  function confirmClearData() {
+    store.clearData();
+    
+    // Reset all local state
+    expandedRows.value = [];
+    selectedRates.value = {};
+    originalRates.value = {};
+    singleRateAdjustments.value = {};
+    directSetRates.value = {};
+    userExplicitlySelectedRate.value = {};
+    expandedRateCodes.value = {};
+    codesCache.value = {};
+    matchingCodes.value = {};
+    searchQuery.value = '';
+    debouncedSearchQuery.value = '';
+    filterStatus.value = 'all';
+    selectedRateBucket.value = 'all';
+    currentPage.value = 1;
+    directPageInput.value = 1;
+    currentDiscrepancyCount.value = 0;
+    
+    showClearDataModal.value = false;
+    
+    // Emit to parent component that data has been cleared
+    emit('data-cleared');
   }
 
   function handleExport() {

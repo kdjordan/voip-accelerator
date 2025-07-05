@@ -30,30 +30,46 @@ export function useUSTableData<T extends USRateSheetEntry | USPricingComparisonR
   // Additional state for US-specific features
   const availableStates = ref<string[]>([]);
 
-  // Fetch unique states from the database
+  // Fetch unique states/provinces/countries from LERG store
   async function fetchUniqueStates() {
-    if (!baseTableData.dbInstance.value) {
-      await baseTableData.initializeDB();
-    }
-
-    if (!baseTableData.dbInstance.value) {
-      availableStates.value = [];
-      return;
-    }
-
     try {
-      const uniqueRegionCodes = (await baseTableData.dbInstance.value
-        .table<T>(config.tableName)
-        .orderBy(stateCodeField as string)
-        .uniqueKeys()) as string[];
+      // Import LERG store dynamically to avoid circular dependencies
+      const { useLergStoreV2 } = await import('@/stores/lerg-store-v2');
+      const lergStore = useLergStoreV2();
 
-      // Use the utility function for sorting
-      availableStates.value = sortRegionCodesByName(
-        uniqueRegionCodes.filter(Boolean) // Remove null/undefined/empty strings
-      );
+      // Ensure LERG data is loaded
+      if (!lergStore.isInitialized) {
+        await lergStore.loadFromSupabase();
+      }
+
+      const regionCodes: string[] = [];
+
+      // Add US states
+      lergStore.getUSStates.forEach(state => {
+        regionCodes.push(state.code);
+      });
+
+      // Add Canadian provinces
+      lergStore.getCanadianProvinces.forEach(province => {
+        regionCodes.push(province.code);
+      });
+
+      // Add other countries
+      lergStore.getDistinctCountries.forEach(country => {
+        regionCodes.push(country.code);
+      });
+
+      // Filter out invalid codes and sort
+      const validCodes = regionCodes.filter(code => {
+        // Exclude common invalid/placeholder codes
+        const invalidCodes = ['NN', 'N/A', 'NA', 'XX', 'UNK', 'UNKNOWN', ''];
+        return !invalidCodes.includes(code.toUpperCase());
+      });
+      
+      availableStates.value = sortRegionCodesByName(validCodes);
     } catch (err: any) {
       availableStates.value = [];
-      baseTableData.dataError.value = 'Could not load state/province filter options.';
+      baseTableData.dataError.value = 'Could not load state/province/country filter options.';
     }
   }
 

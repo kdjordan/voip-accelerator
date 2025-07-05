@@ -1,61 +1,72 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
+  // Get the origin from the request headers
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  console.log("[clear-lerg] Function invoked");
+
   try {
+    // Create a Supabase client with service role key for admin operations
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    console.log("[clear-lerg] Truncating LERG data from database");
+    console.log("[clear-lerg] Supabase client created");
 
-    // Clear existing LERG data using DELETE
-    const { error: truncateError } = await supabaseClient
-      .from("lerg_codes")
-      .delete()
-      .neq("npa", "000"); // This will delete all records
+    // Soft delete all records by setting is_active to false
+    // This preserves data for audit purposes while making it invisible to normal queries
+    console.log("[clear-lerg] Performing soft delete on enhanced_lerg table");
+    const { data, error } = await supabaseClient
+      .from("enhanced_lerg")
+      .update({ 
+        is_active: false,
+        updated_at: new Date().toISOString(),
+        notes: "Cleared via admin interface"
+      })
+      .eq("is_active", true)
+      .select("npa");
 
-    if (truncateError) {
-      console.error("[clear-lerg] Error truncating table:", truncateError);
-      throw truncateError;
+    if (error) {
+      console.error("[clear-lerg] Error clearing enhanced_lerg:", error);
+      throw error;
     }
 
-    console.log("[clear-lerg] Successfully cleared all LERG data");
+    const recordsCleared = data?.length || 0;
+    console.log(`[clear-lerg] Successfully cleared ${recordsCleared} records`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "All LERG data has been cleared from the database",
+        message: `Successfully cleared ${recordsCleared} LERG records`,
+        recordsCleared,
+        timestamp: new Date().toISOString(),
+        operation: "soft_delete"
       }),
       {
-        status: 200,
         headers: {
           "Content-Type": "application/json",
           ...corsHeaders,
         },
       }
     );
-  } catch (err) {
-    console.error("[clear-lerg] Error:", err);
+
+  } catch (error) {
+    console.error("[clear-lerg] Error clearing LERG data:", error);
+
     return new Response(
       JSON.stringify({
-        error:
-          err instanceof Error
-            ? err.message
-            : "An error occurred while clearing LERG data",
-        details: err,
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+        details: "Failed to clear LERG data from enhanced_lerg table"
       }),
       {
         status: 500,

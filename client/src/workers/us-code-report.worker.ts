@@ -14,7 +14,6 @@ import { PROVINCE_CODES } from '@/types/constants/province-codes';
 self.addEventListener('message', (event) => {
   try {
     if (!event.data) {
-      console.error('[Worker] No data received in worker');
       self.postMessage({ error: 'No data received in worker' });
       return;
     }
@@ -22,22 +21,14 @@ self.addEventListener('message', (event) => {
     // Destructure the data from the event
     const { fileName, fileData, lergData } = event.data;
 
-    // Log the received data for debugging
-
-    // Log LERG data structure details
-
     // Validate required inputs
     if (!fileName || !fileData) {
-      console.error('[Worker] Missing required input: fileName or fileData');
       self.postMessage({ error: 'Missing required input: fileName or fileData' });
       return;
     }
 
     // Check if LERG data is present (necessary for full report)
     if (!lergData) {
-      console.warn('[Worker] Missing LERG data - cannot generate full enhanced report.');
-      // Post an error or a minimal report indicating missing LERG data
-      // For now, just posting error, adjust if a specific minimal report is needed
       self.postMessage({ error: 'LERG data was not provided to the worker.' });
       return;
     }
@@ -47,8 +38,6 @@ self.addEventListener('message', (event) => {
       const report = generateEnhancedCodeReport(event.data);
       self.postMessage(report);
     } catch (error) {
-      console.error(`[Worker] Error during generateEnhancedCodeReport for ${fileName}:`, error);
-      // Send back a detailed error message
       self.postMessage({
         error: `Error generating report for ${fileName}: ${
           error instanceof Error ? error.message : 'Unknown error'
@@ -56,14 +45,11 @@ self.addEventListener('message', (event) => {
       });
     }
   } catch (error) {
-    // Catch any top-level errors in the message handler
-    console.error('[Worker] Top-level error in worker message handler:', error);
     self.postMessage({ error: error instanceof Error ? error.message : 'Unknown error in worker' });
   }
 });
 
 function generateEnhancedCodeReport(input: USEnhancedCodeReportInput): USEnhancedCodeReport {
-  console.error('[Worker] Starting generateEnhancedCodeReport');
   const { fileName, fileData, lergData } = input;
 
   if (!fileName || !fileData) {
@@ -91,14 +77,8 @@ function generateEnhancedCodeReport(input: USEnhancedCodeReportInput): USEnhance
       return normalized;
     });
 
-    console.error(`[Worker] Normalized ${normalizedData.length} records`);
-
     // Process the normalized data for a single file
-    console.error('[Worker] Calling processFileData');
     const fileReport = processFileData(fileName, normalizedData, lergData);
-    console.error(
-      `[Worker] File report processed with ${fileReport.countries?.length || 0} countries`
-    );
 
     // Make sure the filename is set correctly
     if (!fileReport.fileName) {
@@ -110,7 +90,6 @@ function generateEnhancedCodeReport(input: USEnhancedCodeReportInput): USEnhance
       file1: fileReport,
     };
   } catch (error) {
-    console.error('[Worker] Error in generateEnhancedCodeReport:', error);
     throw error;
   }
 }
@@ -159,7 +138,7 @@ function processFileData(
         const countryCode = country.country;
         const countryMapping = COUNTRY_CODES[countryCode];
         const countryName = countryMapping ? countryMapping.name : countryCode;
-
+        
         const countryBreakdown = createCountryBreakdown(
           countryCode,
           countryName,
@@ -171,6 +150,15 @@ function processFileData(
         }
       }
     });
+  }
+
+  // Process unknown NPAs (not found in LERG)
+  const unknownNPAs = findUnknownNPAs(npaGroups, lergData);
+  if (unknownNPAs.length > 0) {
+    const unknownCountry = createUnknownCountryBreakdown(unknownNPAs, npaGroups);
+    if (unknownCountry) {
+      countries.push(unknownCountry);
+    }
   }
 
   // --- Calculate OVERALL rate statistics for the entire file --- //
@@ -208,6 +196,7 @@ function createCountryBreakdown(
   const stateBreakdowns: USStateBreakdown[] = [];
 
   if (countryCode === 'US' || countryCode === 'CA') {
+    
     // Get state NPAs from LERG data
     Object.entries(lergData.stateNPAs)
       .filter(([stateCode]) => {
@@ -225,6 +214,7 @@ function createCountryBreakdown(
         const stateNPAsInFile = Array.from(npaGroups.keys()).filter((npa) =>
           stateNPAs.includes(npa)
         );
+        
 
         if (stateNPAsInFile.length > 0) {
           // Calculate state coverage
@@ -352,4 +342,48 @@ function getStateName(code: string, country: string): string {
     return PROVINCE_CODES[code]?.name || code;
   }
   return code;
+}
+
+// Helper function to find NPAs that are not in LERG data
+function findUnknownNPAs(
+  npaGroups: Map<string, USStandardizedData[]>,
+  lergData?: USEnhancedCodeReportInput['lergData']
+): string[] {
+  if (!lergData) return Array.from(npaGroups.keys());
+
+  // Get all NPAs from LERG data
+  const knownNPAs = new Set<string>();
+  
+  // Add all valid NPAs from LERG
+  if (lergData.validNpas) {
+    lergData.validNpas.forEach(npa => knownNPAs.add(npa));
+  }
+
+  // Find NPAs in file that are not in LERG
+  const allFileNPAs = Array.from(npaGroups.keys());
+  const unknownNPAs = allFileNPAs.filter(npa => !knownNPAs.has(npa));
+  
+  return unknownNPAs;
+}
+
+// Helper function to create a country breakdown for unknown NPAs
+function createUnknownCountryBreakdown(
+  unknownNPAs: string[],
+  npaGroups: Map<string, USStandardizedData[]>
+): USCountryBreakdown {
+  // Calculate total entries for unknown NPAs
+  let totalEntries = 0;
+  unknownNPAs.forEach(npa => {
+    const entries = npaGroups.get(npa) || [];
+    totalEntries += entries.length;
+  });
+
+  return {
+    countryCode: 'UNKNOWN',
+    countryName: 'Unknown',
+    npaCoverage: 0, // No coverage calculation for unknown
+    totalNPAs: unknownNPAs.length,
+    npas: unknownNPAs.sort(),
+    // No states breakdown for unknown NPAs
+  };
 }

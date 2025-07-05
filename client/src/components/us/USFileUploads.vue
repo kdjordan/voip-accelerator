@@ -10,7 +10,11 @@
             <div class="w-1/2 pr-6">
               <!-- Conditionally render Drop Zone or Code Summary -->
               <template v-if="usStore.isComponentDisabled('us1')">
-                <USCodeSummary componentId="us1" @remove-file="handleRemoveFile" />
+                <USCodeSummary 
+                  componentId="us1" 
+                  :isRemoving="isRemovingFile.us1"
+                  @remove-file="handleRemoveFile" 
+                />
               </template>
               <template v-else>
                 <!-- Your Rates Upload Zone (Drop Zone Content) -->
@@ -115,7 +119,11 @@
             <div class="w-1/2 pl-6">
               <!-- Conditionally render Drop Zone or Code Summary for us2 -->
               <template v-if="usStore.isComponentDisabled('us2')">
-                <USCodeSummary componentId="us2" @remove-file="handleRemoveFile" />
+                <USCodeSummary 
+                  componentId="us2" 
+                  :isRemoving="isRemovingFile.us2"
+                  @remove-file="handleRemoveFile" 
+                />
               </template>
               <template v-else>
                 <!-- Prospect's Rates Upload Zone (Drop Zone Content) -->
@@ -253,6 +261,28 @@
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
+    
+    <!-- Plus One Handling Modal - REMOVED: Analysis moved to USCodeReport -->
+    <!-- <PlusOneHandlingModal
+      v-if="showPlusOneModal"
+      :showModal="showPlusOneModal"
+      :analysis="plusOneAnalysis"
+      @handle-choice="handlePlusOneChoice"
+      @cancel="cancelPlusOneModal"
+    /> -->
+
+    <!-- Remove File Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showRemoveConfirmModal"
+      title="Remove US Rate Sheet Data"
+      :message="`This will permanently delete the uploaded rate sheet data and all related analysis.
+
+This action cannot be undone.`"
+      confirm-button-text="Remove File"
+      cancel-button-text="Cancel"
+      :loading="isModalRemoving"
+      @confirm="confirmRemoveFile"
+    />
   </div>
 </template>
 
@@ -267,9 +297,10 @@
   } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import { useUsStore } from '@/stores/us-store';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { USService } from '@/services/us.service';
-  import { USNPAAnalyzerService } from '@/services/us-npa-analyzer.service';
   import {
     USReportsInput,
     type USPricingReport,
@@ -287,14 +318,17 @@
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDragDrop } from '@/composables/useDragDrop';
+  // import PlusOneHandlingModal from '@/components/shared/PlusOneHandlingModal.vue';
+  // import { detectPlusOneDestinations, filterByPlusOneChoice } from '@/utils/plus-one-detector';
   import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
-  import { ComponentId, DBName } from '@/types/app-types';
+  import { ComponentId, DBName, ReportTypes } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
   import { useUserStore } from '@/stores/user-store';
+  import useDexieDB from '@/composables/useDexieDB';
 
   const usStore = useUsStore();
   const service = new USService();
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const userStore = useUserStore();
 
   // Computed property for the reports button text
@@ -322,6 +356,22 @@
     az1: null,
     az2: null,
   });
+  
+  // Plus One handling state - DEPRECATED: Analysis moved to USCodeReport
+  // const showPlusOneModal = ref(false);
+  // const plusOneAnalysis = ref<any>(null);
+  // const originalFileData = ref<string[][]>([]);
+
+  // Confirmation modal state for file removal
+  const showRemoveConfirmModal = ref(false);
+  const componentToRemove = ref<ComponentId | null>(null);
+  const isRemovingFile = reactive<Record<ComponentId, boolean>>({
+    us1: false,
+    us2: false,
+    az1: false,
+    az2: false,
+  });
+  const isModalRemoving = ref(false);
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
@@ -430,7 +480,6 @@
       // }
 
       // REMOVED: Analyzer instantiation and call
-      // const analyzer = new USNPAAnalyzerService();
       // const enhancedReport = await analyzer.analyzeTableNPAs(tableName, fileName);
       // console.log(`[USFileUploads] NPA analysis completed:`, enhancedReport);
 
@@ -496,6 +545,9 @@
         // Call the correct function to generate comparison data
         await service.processComparisons(table1Name, table2Name);
         console.log('[USFileUploads] Detailed pricing comparison completed successfully.');
+        // Set pricing report as ready since comparison data is now available
+        usStore.setPricingReportReady();
+        console.log('[USFileUploads] Pricing report marked as ready.');
       } catch (comparisonError) {
         console.error('[USFileUploads] Detailed pricing comparison failed:', comparisonError);
         // Handle comparison-specific error if needed, e.g., show a specific message
@@ -522,8 +574,9 @@
       // usStore.setPricingReport(pricingReportSummary);
       // console.log('[USFileUploads] Pricing report set in store.');
 
-      // Reports are generated, potentially hide upload components
+      // Reports are generated, switch to code report view
       usStore.showUploadComponents = false;
+      usStore.setActiveReportType(ReportTypes.CODE); // Switch to code report view
     } catch (error) {
       console.error('[USFileUploads] Error during report generation process:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -542,25 +595,11 @@
     fileName: string,
     data: USStandardizedData[]
   ): Promise<USEnhancedCodeReport> {
-    console.error(`[Main] Creating worker for ${fileName}`);
     const codeReportWorker = new USCodeReportWorker();
 
     try {
       // Get LERG data efficiently using the optimized preparation
       const lergData = prepareLergWorkerData();
-      console.log(`[Main] LERG data prepared:`, lergData);
-      // Ensure lergData is not null and access properties safely
-      if (lergData) {
-        // Accessing lergData properties that actually exist
-        console.error(
-          `[Main] LERG data prepared with ${lergData.validNpas?.length || 0} valid NPAs and ${
-            Object.keys(lergData.countryGroups || {}).length
-          } country groups.`
-        );
-      } else {
-        console.error(`[Main] LERG data preparation returned null or undefined.`);
-        // Handle the case where LERG data is not available, maybe reject or return default report
-      }
 
       // Continue only if lergData is valid
       if (!lergData) {
@@ -569,24 +608,20 @@
 
       return await new Promise<USEnhancedCodeReport>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.error(`[Main] Worker timeout for ${fileName} after 10 seconds`);
           codeReportWorker.terminate();
           reject(new Error('Worker timeout after 10 seconds'));
         }, 10000);
 
         codeReportWorker.onmessage = (event) => {
           clearTimeout(timeout);
-          console.log(`[Main] Worker message received for ${fileName}`);
 
           if (event.data?.error) {
-            console.error(`[Main] Worker error: ${event.data.error}`);
             codeReportWorker.terminate();
             reject(new Error(event.data.error));
             return;
           }
 
           if (!event.data?.file1) {
-            console.error(`[Main] Invalid report format from worker`);
             codeReportWorker.terminate();
             reject(new Error('Invalid report format received from worker'));
             return;
@@ -603,7 +638,6 @@
 
         codeReportWorker.onerror = (error) => {
           clearTimeout(timeout);
-          console.error(`[Main] Worker error event for ${fileName}:`, error);
           codeReportWorker.terminate();
           reject(error);
         };
@@ -615,11 +649,9 @@
           lergData,
         };
 
-        console.error(`[Main] Sending data to worker for ${fileName}`);
         codeReportWorker.postMessage(input);
       });
     } catch (error) {
-      console.error(`[Main] Error in generateEnhancedCodeReport for ${fileName}:`, error);
       codeReportWorker.terminate();
       throw error;
     }
@@ -837,9 +869,20 @@
     activeComponent.value = 'us1';
   }
 
-  async function handleRemoveFile(componentName: ComponentId) {
+  function handleRemoveFile(componentName: ComponentId) {
+    componentToRemove.value = componentName;
+    showRemoveConfirmModal.value = true;
+  }
+
+  async function confirmRemoveFile() {
+    if (!componentToRemove.value) return;
+
+    const component = componentToRemove.value;
+    isModalRemoving.value = true;
+    isRemovingFile[component] = true;
+
     try {
-      const fileName = usStore.getFileNameByComponent(componentName);
+      const fileName = usStore.getFileNameByComponent(component);
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
@@ -847,11 +890,25 @@
       // First, remove the data from the appropriate storage
       await service.removeTable(tableName);
 
+      // Delete comparison database since comparison data will be obsolete
+      const { deleteDatabase } = useDexieDB();
+      try {
+        await deleteDatabase(DBName.US_PRICING_COMPARISON);
+        console.log('[USFileUploads] Deleted obsolete comparison database after file removal.');
+      } catch (dbError) {
+        console.warn('[USFileUploads] Failed to delete comparison database:', dbError);
+      }
+
       // Then, remove the file from the store
       // Note: The removeFile method in the store now handles clearing fileStats
-      usStore.removeFile(componentName);
+      usStore.removeFile(component);
     } catch (error) {
       console.error('Error removing file:', error);
+    } finally {
+      isModalRemoving.value = false;
+      isRemovingFile[component] = false;
+      showRemoveConfirmModal.value = false;
+      componentToRemove.value = null;
     }
   }
 
@@ -900,8 +957,9 @@
     usStore.setTempFile(componentId, file);
     console.log('[USFileUploads] is launching preview modal');
     Papa.parse(file, {
-      preview: 20,
+      preview: 100, // Preview for column mapping only
       complete: (results) => {
+        // Proceed directly to preview modal - comprehensive +1 analysis moved to USCodeReport
         previewData.value = results.data.slice(1) as string[][];
         columns.value = results.data[0] as string[];
         activeComponent.value = componentId;
@@ -914,4 +972,13 @@
       },
     });
   }
+  
+  // Plus One Modal Handlers - REMOVED: Analysis moved to USCodeReport
+  // function handlePlusOneChoice(choice: 'include-all' | 'filter-plus-one' | 'extract-plus-one') {
+  //   // Implementation moved to USCodeReport.vue
+  // }
+  // 
+  // function cancelPlusOneModal() {
+  //   // Implementation moved to USCodeReport.vue
+  // }
 </script>

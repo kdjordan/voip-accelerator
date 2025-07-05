@@ -77,14 +77,6 @@
             </div>
 
             <!-- Informational note about auto-generated fields -->
-            <!--
-            <div class="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-md">
-              <div class="text-sm text-blue-400">
-                <h3 class="text-lg font-medium">{{ modalMessage.title }}</h3>
-                <span v-html="modalMessage.message"></span>
-              </div>
-            </div>
--->
             <!-- US-specific help text -->
             <!--
             <div
@@ -435,8 +427,16 @@
     return PREVIEW_MODAL_MESSAGES.AZ_RATE_DECK;
   });
 
+  // Detect if this is a LERG file by checking the source prop
+  const isLERGFile = computed(() => {
+    return props.source === 'LERG';
+  });
+
   // Detect if this is a US file by checking for NPA or NPANXX in column options
   const isUSFile = computed(() => {
+    // LERG files should never be treated as US files even if they have NPA column
+    if (isLERGFile.value) return false;
+    
     return props.columnOptions.some(
       (option) => option.value === USColumnRole.NPA || option.value === USColumnRole.NPANXX
     );
@@ -593,6 +593,15 @@
 
   // Add validation for US files
   const isValid = computed(() => {
+    // LERG file validation - only requires NPA, State, and Country
+    if (isLERGFile.value) {
+      const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
+      const hasNPA = mappedRoles.has('npa');
+      const hasState = mappedRoles.has('state');
+      const hasCountry = mappedRoles.has('country');
+      return hasNPA && hasState && hasCountry;
+    }
+
     if (isUSFile.value) {
       const mappedRoles = new Set(Object.values(mappings.value).filter((value) => value !== ''));
 

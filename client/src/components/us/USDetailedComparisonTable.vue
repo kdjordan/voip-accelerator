@@ -124,7 +124,7 @@
         <div class="w-full md:col-span-1">
           <Listbox v-model="selectedState" as="div">
             <ListboxLabel class="block text-sm font-medium text-gray-400 mb-1"
-              >Filter by State/Province</ListboxLabel
+              >Filter by State/Province/Country</ListboxLabel
             >
             <div class="relative mt-1">
               <ListboxButton
@@ -133,8 +133,8 @@
               >
                 <span class="block truncate text-white">{{
                   selectedState
-                    ? getRegionDisplayName(selectedState) + ' (' + selectedState + ')'
-                    : 'All States/Provinces'
+                    ? getSelectedStateDisplayName(selectedState)
+                    : 'All States/Provinces/Countries'
                 }}</span>
                 <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -156,7 +156,7 @@
                       ]"
                     >
                       <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                        >All States/Provinces</span
+                        >All States/Provinces/Countries</span
                       >
                       <span
                         v-if="selected"
@@ -170,6 +170,30 @@
                     <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
                       {{ group.label }}
                     </li>
+                    <!-- Group-level selection option -->
+                    <ListboxOption
+                      v-slot="{ active, selected }"
+                      :value="'GROUP_' + group.label.replace(/\s+/g, '_').toUpperCase()"
+                      as="template"
+                    >
+                      <li
+                        :class="[
+                          active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                          'relative cursor-default select-none py-2 pl-6 pr-4 font-medium italic',
+                        ]"
+                      >
+                        <span :class="[selected ? 'font-bold' : 'font-medium', 'block truncate']"
+                          >All {{ group.label }}</span
+                        >
+                        <span
+                          v-if="selected"
+                          class="absolute inset-y-0 left-0 flex items-center pl-1 text-primary-400"
+                        >
+                          <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                        </span>
+                      </li>
+                    </ListboxOption>
+                    <!-- Individual region options -->
                     <ListboxOption
                       v-for="regionCode in group.codes"
                       :key="regionCode"
@@ -677,7 +701,7 @@
     ChevronDownIcon,
   } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
-  import { useLergStore } from '@/stores/lerg-store';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { DBName } from '@/types/app-types';
   import type { USPricingComparisonRecord } from '@/types/domains/us-types';
   import Papa from 'papaparse';
@@ -694,7 +718,7 @@
     groupRegionCodes,
     RegionType,
   } from '@/types/constants/region-codes';
-  import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
+  import { useCSVExport } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
 
@@ -823,7 +847,7 @@
   ];
 
   const usStore = useUsStore();
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
   const COMPARISON_TABLE_NAME = 'comparison_results';
 
   // Initialize table data composable
@@ -974,12 +998,62 @@
     return [
       { label: 'United States', codes: grouped['US'] || [] },
       { label: 'Canada', codes: grouped['CA'] || [] },
+      { label: 'Other Countries', codes: grouped['OTHER'] || [] },
     ].filter((group) => group.codes.length > 0);
   });
 
-  // Helper function to get display name for state or province
+  // Helper function to get display name for state, province, or country
   function getRegionDisplayName(code: string): string {
-    return getRegionName(code) || code;
+    // Special handling for US territories and common abbreviations
+    const territoryNames: Record<string, string> = {
+      'PR': 'Puerto Rico',
+      'VI': 'U.S. Virgin Islands', 
+      'GU': 'Guam',
+      'AS': 'American Samoa',
+      'MP': 'Northern Mariana Islands',
+      'DC': 'District of Columbia',
+    };
+
+    // Check territory names first
+    if (territoryNames[code]) {
+      return territoryNames[code];
+    }
+
+    // Try US states
+    const usState = lergStore.getUSStates.find(state => state.code === code);
+    if (usState) {
+      return usState.name;
+    }
+
+    // Try Canadian provinces  
+    const caProvince = lergStore.getCanadianProvinces.find(province => province.code === code);
+    if (caProvince) {
+      return caProvince.name;
+    }
+
+    // Try other countries
+    const country = lergStore.getDistinctCountries.find(country => country.code === code);
+    if (country) {
+      return country.name;
+    }
+
+    // Fall back to the code itself
+    return code;
+  }
+
+  // Helper function to get display name for selected state (handles both individual and group selections)
+  function getSelectedStateDisplayName(selectedValue: string): string {
+    // Handle group selections
+    if (selectedValue === 'GROUP_UNITED_STATES') {
+      return 'All United States';
+    } else if (selectedValue === 'GROUP_CANADA') {
+      return 'All Canada';
+    } else if (selectedValue === 'GROUP_OTHER_COUNTRIES') {
+      return 'All Other Countries';
+    } else {
+      // Handle individual selections
+      return getRegionDisplayName(selectedValue) + ' (' + selectedValue + ')';
+    }
   }
 
   // Create filter functions for the composable
@@ -994,9 +1068,39 @@
       });
     }
 
-    // State Filter
+    // State/Province/Country Filter
     if (selectedState.value) {
-      filters.push((record) => record.stateCode === selectedState.value);
+      filters.push((record) => {
+        // Handle group selections
+        if (selectedState.value === 'GROUP_UNITED_STATES') {
+          // Filter for US states only (not territories) - use LERG store to look up by NPA
+          const npaInfo = lergStore.getOptimizedLocationByNPA(record.npa);
+          return npaInfo?.country_code === 'US' && 
+                 !['PR', 'VI', 'GU', 'AS', 'MP'].includes(npaInfo.state_province_code);
+        } else if (selectedState.value === 'GROUP_CANADA') {
+          // Filter for all Canadian provinces - use LERG store to look up by NPA
+          const npaInfo = lergStore.getOptimizedLocationByNPA(record.npa);
+          return npaInfo?.country_code === 'CA';
+        } else if (selectedState.value === 'GROUP_OTHER_COUNTRIES') {
+          // Filter for all other countries (not US or Canada) - use LERG store to look up by NPA
+          const npaInfo = lergStore.getOptimizedLocationByNPA(record.npa);
+          return npaInfo && npaInfo.country_code !== 'US' && npaInfo.country_code !== 'CA';
+        } else {
+          // Handle individual region selections - use LERG store to look up by NPA
+          const npaInfo = lergStore.getOptimizedLocationByNPA(record.npa);
+          if (!npaInfo) return false;
+          
+          // Check if it matches state/province code
+          if (npaInfo.state_province_code === selectedState.value) {
+            return true;
+          }
+          // Check if it matches country code
+          if (npaInfo.country_code === selectedState.value) {
+            return true;
+          }
+        }
+        return false;
+      });
     }
 
     // Metro Area Filter
@@ -1112,7 +1216,6 @@
         file2_indeterm_avg: calculateAvg(totals.file2_indeterm.sum, totals.file2_indeterm.count),
       };
     } catch (err: any) {
-      console.error('[USDetailedComparisonTable] Error calculating full filtered averages:', err);
       // Reset averages on error
       fullFilteredAverages.value = {
         file1_inter_avg: 0,
@@ -1171,15 +1274,15 @@
         record.npanxx,
         record.stateCode,
         record.countryCode,
-        formatRate(record.file1_inter),
-        formatRate(record.file2_inter),
-        formatPercentage(record.diff_inter_pct),
-        formatRate(record.file1_intra),
-        formatRate(record.file2_intra),
-        formatPercentage(record.diff_intra_pct),
-        formatRate(record.file1_indeterm),
-        formatRate(record.file2_indeterm),
-        formatPercentage(record.diff_indeterm_pct),
+        record.file1_inter?.toFixed(6) || 'N/A',
+        record.file2_inter?.toFixed(6) || 'N/A',
+        record.diff_inter_pct?.toFixed(6) || 'N/A',
+        record.file1_intra?.toFixed(6) || 'N/A',
+        record.file2_intra?.toFixed(6) || 'N/A',
+        record.diff_intra_pct?.toFixed(6) || 'N/A',
+        record.file1_indeterm?.toFixed(6) || 'N/A',
+        record.file2_indeterm?.toFixed(6) || 'N/A',
+        record.diff_indeterm_pct?.toFixed(6) || 'N/A',
       ]);
 
       // Build filename parts
@@ -1198,7 +1301,6 @@
         }
       );
     } catch (err: any) {
-      console.error('Error during CSV export:', err);
       error.value = err.message || 'Failed to export data';
     }
   }
@@ -1229,7 +1331,7 @@
       await resetPaginationAndLoad(createFilters()); // Then load initial data (first page)
       await calculateFullFilteredAverages(); // Calculate initial averages
     } catch (err) {
-      console.error('[USDetailedComparisonTable] Error during onMounted: ', err);
+      // Handle error silently or show user-friendly message
     } finally {
       isPageLoading.value = false; // Ensure page loading is set to false after all operations
     }

@@ -153,16 +153,38 @@ export interface NPAEntry {
   };
 }
 
+// Enhanced NPA Entry with complete geographic context from enhanced LERG
+export interface EnhancedNPAEntry {
+  npa: string;
+  country_code: string;
+  country_name: string;
+  state_province_code: string;
+  state_province_name: string;
+  region: string | null;
+  category: 'us-domestic' | 'canadian' | 'caribbean' | 'pacific';
+  source: 'lerg' | 'manual' | 'import' | 'seed' | 'consolidated';
+  confidence_score: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  notes?: string | null;
+}
+
 // Use Maps instead of plain objects for better performance and type safety
 export type USStateNPAMap = Map<string, NPAEntry[]>;
 export type CanadaProvinceNPAMap = Map<string, NPAEntry[]>;
 export type CountryNPAMap = Map<string, NPAEntry[]>;
 
+// Enhanced Map types that preserve complete geographic context
+export type EnhancedUSStateNPAMap = Map<string, EnhancedNPAEntry[]>;
+export type EnhancedCanadaProvinceNPAMap = Map<string, EnhancedNPAEntry[]>;
+export type EnhancedCountryNPAMap = Map<string, EnhancedNPAEntry[]>;
+
 export interface LERGStateInterface {
-  // Core data maps
-  usStates: USStateNPAMap;
-  canadaProvinces: CanadaProvinceNPAMap;
-  otherCountries: CountryNPAMap;
+  // Core data maps - now using enhanced types with complete geographic context
+  usStates: EnhancedUSStateNPAMap;
+  canadaProvinces: EnhancedCanadaProvinceNPAMap;
+  otherCountries: EnhancedCountryNPAMap;
 
   // Status tracking
   isLoaded: boolean;

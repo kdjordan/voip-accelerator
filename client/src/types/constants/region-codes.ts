@@ -2,7 +2,7 @@ import { PROVINCE_CODES, ProvinceMapping } from './province-codes';
 import { STATE_CODES, StateMapping } from './state-codes';
 
 export type RegionCode = keyof typeof STATE_CODES | keyof typeof PROVINCE_CODES;
-export type RegionType = 'US' | 'CA';
+export type RegionType = 'US' | 'CA' | 'OTHER';
 
 export interface RegionInfo extends StateMapping, ProvinceMapping {
   code: RegionCode;
@@ -61,13 +61,15 @@ export function getRegionCodesByType(type: RegionType): string[] {
 export function groupRegionCodes(codes: string[]): Record<RegionType, string[]> {
   return codes.reduce(
     (acc, code) => {
-      const type = getRegionType(code);
-      if (type) {
-        acc[type] = [...(acc[type] || []), code];
+      let type = getRegionType(code);
+      // If not US or CA, classify as OTHER
+      if (!type) {
+        type = 'OTHER';
       }
+      acc[type] = [...(acc[type] || []), code];
       return acc;
     },
-    {} as Record<RegionType, string[]>
+    { US: [], CA: [], OTHER: [] } as Record<RegionType, string[]>
   );
 }
 

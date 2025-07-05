@@ -13,9 +13,7 @@ import type {
 } from '@/types/domains/rate-sheet-types';
 import { classifyRateIntoBucket, isRateInBucket } from '@/constants/rate-buckets';
 
-const STORAGE_KEY = 'voip-accelerator-rate-sheet-data';
-const STORAGE_KEY_SETTINGS = 'voip-accelerator-rate-sheet-settings';
-const STORAGE_KEY_INVALID = 'voip-accelerator-rate-sheet-invalid';
+// Note: AZ Rate Sheet uses memory-only storage (no persistence)
 
 export const useAzRateSheetStore = defineStore('azRateSheet', {
   state: (): RateSheetState => ({
@@ -72,7 +70,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       // Use markRaw to prevent Vue from making the data deeply reactive
       this.originalData = markRaw(processedData) as RateSheetRecord[];
-      this.saveToLocalStorage();
     },
 
     setOptionalFields(mappings: Record<string, string>) {
@@ -80,7 +77,7 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         hasMinDuration: Object.values(mappings).includes('minDuration'),
         hasIncrements: Object.values(mappings).includes('increments'),
       };
-      localStorage.setItem('rate-sheet-optional-fields', JSON.stringify(this.optionalFields));
+      // Memory-only storage - no persistence
     },
 
     // Operation state management
@@ -166,24 +163,25 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       this.isLocallyStored = false;
       this.invalidRows = [];
       this.selectedRateBucket = 'all';
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(STORAGE_KEY_INVALID);
-      localStorage.removeItem('az-rate-bucket-filter');
+      this.excludedDestinations.clear();
+      
+      // Force reactivity update to ensure components are notified
+      this.triggerDataUpdate();
+      
+      // Memory-only storage - no persistence to clear
     },
 
     addInvalidRow(row: InvalidRow) {
       this.invalidRows.push(row);
-      this.saveInvalidRowsToLocalStorage();
     },
 
     clearInvalidRows() {
       this.invalidRows = [];
-      this.saveInvalidRowsToLocalStorage();
     },
 
     setEffectiveDateSettings(settings: EffectiveDateStoreSettings) {
       this.effectiveDateSettings = { ...settings };
-      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.effectiveDateSettings));
+      // Memory-only storage - no persistence
     },
 
     updateEffectiveDates(changeCode: ChangeCodeType, newDate: string) {
@@ -197,7 +195,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
       this.triggerDataUpdate();
-      this.saveToLocalStorage();
     },
 
     // Method to update grouped data with effective dates from worker
@@ -234,7 +231,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       this.groupedData = markRaw(updatedGroupedData) as GroupedRateData[];
       this.triggerDataUpdate();
-      this.saveToLocalStorage();
     },
 
     // Bulk update effective dates for records (replaces the database operation)
@@ -278,7 +274,6 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
       this.originalData = markRaw(updatedOriginalData) as RateSheetRecord[];
       this.triggerDataUpdate();
-      this.saveToLocalStorage();
       console.log(`Successfully updated ${updatedRecords.length} records in store`);
     },
 
@@ -401,37 +396,41 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
 
     // Create a method to process a CSV file directly
     processRateSheetData(records: RateSheetRecord[]): void {
-      // Set the data with markRaw
+      // For chunked processing, accumulate records
+      if (this.originalData.length > 0) {
+        // Accumulate new chunk with existing data
+        const combinedData = [...this.originalData, ...records];
+        this.originalData = markRaw(combinedData) as RateSheetRecord[];
+      } else {
+        // First chunk or single processing
+        this.originalData = markRaw(records) as RateSheetRecord[];
+      }
+
+      // Re-process all data into groups (optimized grouping will be done once at the end)
+      const groupedData = this.processRecordsIntoGroups(this.originalData);
+      this.groupedData = markRaw(groupedData) as GroupedRateData[];
+
+      // Set isLocallyStored to true since we now have data
+      this.isLocallyStored = true;
+
+      // Memory-only storage - no persistence needed
+    },
+
+    // Optimized method for complete data processing (no incremental grouping)
+    processRateSheetDataComplete(records: RateSheetRecord[]): void {
+      // Set all data at once with markRaw for optimal memory usage
       this.originalData = markRaw(records) as RateSheetRecord[];
 
-      // Process the data into groups
+      // Process the data into groups once
       const groupedData = this.processRecordsIntoGroups(records);
       this.groupedData = markRaw(groupedData) as GroupedRateData[];
 
       // Set isLocallyStored to true since we now have data
       this.isLocallyStored = true;
 
-      // Call this for compatibility, but it won't actually save to localStorage
-      this.saveToLocalStorage();
+      // Memory-only storage - no persistence needed
     },
 
-    // Load data from localStorage on app initialization - disabled, no persistence between sessions
-    loadFromLocalStorage() {
-      // Persistence disabled - data will not be loaded from previous sessions
-      console.debug('Data persistence is disabled - starting with fresh state');
-      return false; // Always return false to indicate no data was loaded
-    },
-
-    // Save data to localStorage - disabled, no persistence between sessions
-    saveToLocalStorage() {
-      // Persistence disabled - data will not be saved between browser refreshes
-      console.debug('Data persistence is disabled - changes will not be saved between refreshes');
-    },
-
-    // Save invalid rows to localStorage - disabled, no persistence between sessions
-    saveInvalidRowsToLocalStorage() {
-      // Persistence disabled - invalid rows will not be saved between browser refreshes
-    },
 
     isDestinationExcluded(destinationName: string): boolean {
       return this.excludedDestinations.has(destinationName);
@@ -452,14 +451,12 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     // Add rate bucket filter methods
     setRateBucketFilter(bucket: RateBucketType) {
       this.selectedRateBucket = bucket;
-      localStorage.setItem('az-rate-bucket-filter', bucket);
+      // Memory-only storage - no persistence
     },
 
     loadRateBucketFilter() {
-      const saved = localStorage.getItem('az-rate-bucket-filter') as RateBucketType;
-      if (saved) {
-        this.selectedRateBucket = saved;
-      }
+      // Memory-only storage - filter resets on page refresh
+      // this.selectedRateBucket remains at default 'all'
     },
   },
 

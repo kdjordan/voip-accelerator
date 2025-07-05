@@ -3,8 +3,9 @@ import { DBName } from '@/types/app-types';
 import { useUsStore } from '@/stores/us-store';
 import Papa from 'papaparse';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
-import { useLergStore } from '@/stores/lerg-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
+import { NANPCategorizer } from '@/utils/nanp-categorization';
 import { DBSchemas } from '@/types/app-types';
 
 import type {
@@ -42,6 +43,11 @@ interface UsStore {
       avgInterRate: number;
       avgIntraRate: number;
       avgIndetermRate: number;
+      categorizationQuality?: {
+        totalNPAs: number;
+        highConfidenceNPAs: number;
+        qualityPercentage: number;
+      };
     }
   ) => void;
   getFileNameByComponent: (componentName: string) => string;
@@ -53,7 +59,7 @@ interface UsStore {
 
 export class USService {
   private store: UsStore;
-  private lergStore = useLergStore(); // Add instance of lergStore
+  private lergStore = useLergStoreV2(); // Add instance of lergStore
   private dexieDB = useDexieDB(); // Add instance of dexieDB composable
 
   constructor() {
@@ -72,13 +78,18 @@ export class USService {
     return schemaString.substring(0, schemaString.indexOf(':')).trim();
   }
 
-  // Process file and store directly in Dexie
+  // Process file and store directly in Dexie - OPTIMIZED VERSION
   async processFile(
     file: File,
     columnMapping: Record<string, number>,
     startLine: number,
     indeterminateDefinition?: string
   ): Promise<{ fileName: string; records: USStandardizedData[]; tableName: string }> {
+    // Phase 1 Performance Timing
+    const performanceStart = performance.now();
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+    console.log(`[PERF] US Service - Starting upload processing for ${fileSizeMB}MB file...`);
+
     // Derive table name from file name (removing .csv extension)
     const tableName = file.name.toLowerCase().replace('.csv', '');
     const { storeInDexieDB } = this.dexieDB;
@@ -86,159 +97,316 @@ export class USService {
     // Clear any existing invalid rows for this file
     this.store.clearInvalidRowsForFile(file.name);
 
+    // --- Add Guard: Ensure LERG data is loaded ---
+    if (!this.lergStore.isInitialized) {
+      const errorMsg = 'LERG data is not loaded. Cannot process rate sheet without state information.';
+      console.error(`[USService] ${errorMsg}`);
+      return Promise.reject(new Error(errorMsg));
+    }
+
+    // --- Prepare Database ONCE ---
+    try {
+      // Clear existing data using storeInDexieDB unified pattern
+      await storeInDexieDB([], DBName.US, tableName, { replaceExisting: true });
+    } catch (dbError) {
+      console.error('[USService] Failed to prepare database:', dbError);
+      return Promise.reject(dbError);
+    }
+
+    // Phase 1.2: Optimize storage strategy - collect all data in memory first
+    const allProcessedData: USStandardizedData[] = [];
+    const invalidRows: InvalidUsRow[] = [];
+    let totalRecords = 0;
+    let totalRows = 0;
+
     return new Promise((resolve, reject) => {
+      // Show progress indicators
+      let lastProgressUpdate = Date.now();
+      const PROGRESS_UPDATE_INTERVAL = 5000; // Update progress every 5 seconds
+
+      console.log('[USService] Starting PapaParse streaming...');
       Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
-        complete: async (results: { data: string[][] }) => {
+        worker: true, // Enable worker thread for large files
+        step: (results, parser) => {
+          totalRows++;
+
+          // Skip header rows based on user input
+          if (totalRows < startLine) return;
+
+          // Update progress periodically
+          const now = Date.now();
+          if (now - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+            lastProgressUpdate = now;
+            console.log(`[USService] Processing progress: Row ${totalRows}...`);
+          }
+
           try {
-            // Skip to user-specified start line
-            const dataRows = results.data.slice(startLine - 1);
-            const validRecords: USStandardizedData[] = [];
-
-            dataRows.forEach((row, index) => {
-              // Extract values based on column mapping
-              let npanxx = '';
-              let npa = '';
-              let nxx = '';
-
-              // Handle NPANXX extraction - either directly or from NPA and NXX
-              if (columnMapping.npanxx >= 0) {
-                npanxx = row[columnMapping.npanxx]?.trim() || '';
-
-                // Handle 7-digit NPANXX with leading "1"
-                if (npanxx.length === 7 && npanxx.startsWith('1')) {
-                  npanxx = npanxx.substring(1); // Remove leading "1"
-                }
-
-                // If we have NPANXX but not NPA/NXX, extract them
-                if (npanxx.length === 6) {
-                  npa = npanxx.substring(0, 3);
-                  nxx = npanxx.substring(3, 6);
-                }
-                // Handle abnormal NPANXX values
-                else if (npanxx) {
-                  if (npanxx.length >= 3) {
-                    npa = npanxx.substring(0, Math.min(3, npanxx.length));
-                    nxx = npanxx.length > 3 ? npanxx.substring(3) : '';
-                  }
-                }
-              } else if (columnMapping.npa >= 0 && columnMapping.nxx >= 0) {
-                npa = row[columnMapping.npa]?.trim() || '';
-                nxx = row[columnMapping.nxx]?.trim() || '';
-
-                // Special handling for NPA with country code prefix ("1")
-                if (npa.startsWith('1') && npa.length === 4) {
-                  npa = npa.substring(1); // Remove leading "1"
-                }
-
-                npanxx = npa + nxx;
-              }
-
-              // Extract rate values
-              const interRateStr =
-                columnMapping.interstate >= 0 ? row[columnMapping.interstate] : '';
-              const intraRateStr =
-                columnMapping.intrastate >= 0 ? row[columnMapping.intrastate] : '';
-              const indetermRateStr =
-                columnMapping.indeterminate >= 0 ? row[columnMapping.indeterminate] : '';
-
-              // Parse rates
-              const interRate = parseFloat(interRateStr);
-              const intraRate = parseFloat(intraRateStr);
-              let indetermRate = parseFloat(indetermRateStr);
-
-              // Handle indeterminate rate based on user selection
-              if (isNaN(indetermRate) && indeterminateDefinition) {
-                indetermRate = indeterminateDefinition === 'interstate' ? interRate : intraRate;
-              }
-
-              // --- DEBUGGING STEP 1 START ---
-              // Log parsed rates for the first 5 rows
-              if (index < 5) {
-              }
-              // --- DEBUGGING STEP 1 END ---
-
-              // Validate the data
-              if (
-                !npanxx ||
-                npanxx.length !== 6 ||
-                isNaN(interRate) ||
-                isNaN(intraRate) ||
-                isNaN(indetermRate)
-              ) {
-                const reason = !npanxx
-                  ? 'NPANXX is empty'
-                  : npanxx.length !== 6
-                    ? `NPANXX length (${npanxx.length}) is not 6 digits`
-                    : isNaN(interRate)
-                      ? 'Invalid interstate rate'
-                      : isNaN(intraRate)
-                        ? 'Invalid intrastate rate'
-                        : 'Invalid indeterminate rate';
-
-                const invalidRow: InvalidUsRow = {
-                  rowIndex: startLine + index,
-                  npanxx,
-                  npa,
-                  nxx,
-                  interRate: isNaN(interRate) ? interRateStr : interRate,
-                  intraRate: isNaN(intraRate) ? intraRateStr : intraRate,
-                  indetermRate: isNaN(indetermRate) ? indetermRateStr : indetermRate,
-                  reason,
-                };
-                this.store.addInvalidRow(file.name, invalidRow);
-              } else {
-                validRecords.push({
-                  npanxx,
-                  npa,
-                  nxx,
-                  interRate,
-                  intraRate,
-                  indetermRate,
-                });
-              }
-            });
-
-            // Store directly in Dexie with file source metadata and without replacing existing data
-            if (validRecords.length > 0) {
-              await storeInDexieDB(validRecords, DBName.US, tableName, {
-                sourceFile: file.name,
-                replaceExisting: false, // Append to existing data
-              });
+            const row = results.data as string[];
+            const processRowStartTime = performance.now();
+            
+            const processedRow = this.processRow(
+              row,
+              totalRows,
+              columnMapping,
+              indeterminateDefinition,
+              invalidRows
+            );
+            
+            const processRowEndTime = performance.now();
+            const rowProcessTime = processRowEndTime - processRowStartTime;
+            
+            // Log slow rows for debugging
+            if (rowProcessTime > 5) {
+              console.log(`[PERF] Slow row ${totalRows}: ${rowProcessTime.toFixed(2)}ms`);
             }
 
-            // Determine component ID for file registration
-            let componentId = '';
-
-            // Check if the file is already registered
-            const currentUs1File = this.store.getFileNameByComponent('us1');
-            const currentUs2File = this.store.getFileNameByComponent('us2');
-
-            if (currentUs1File === file.name) {
-              componentId = 'us1';
-            } else if (currentUs2File === file.name) {
-              componentId = 'us2';
-            } else {
-              // If not registered yet, assign to an available slot
-              componentId = !currentUs1File ? 'us1' : 'us2';
+            if (processedRow) {
+              // Phase 1.2: Store in memory first, write to IndexedDB later
+              allProcessedData.push(processedRow);
+              totalRecords++;
+              
+              // Optional: Show progress for large files
+              if (totalRecords % 10000 === 0) {
+                console.log(`[PERF] Processed ${totalRecords} records...`);
+              }
             }
-
-            // Register file with component
-            this.store.addFileUploaded(componentId, file.name);
-
-            // Calculate and store file stats
-            await this.calculateFileStats(componentId, file.name);
-
-            // Resolve with fileName, records, and tableName
-            resolve({ fileName: file.name, records: validRecords, tableName });
           } catch (error) {
-            reject(error);
+            console.error(`[USService] Error processing row ${totalRows}:`, error);
+            this.store.addInvalidRow(file.name, {
+              rowIndex: totalRows,
+              npanxx: '-',
+              npa: '-',
+              nxx: '-',
+              interRate: '-',
+              intraRate: '-',
+              indetermRate: '-',
+              reason: `Row processing error: ${(error as Error).message}`,
+            });
           }
         },
-        error: (error) => reject(new Error(`Failed to process CSV: ${error.message}`)),
+        complete: async () => {
+          console.log(`[PERF] CSV parsing complete. Storing ${allProcessedData.length} records to IndexedDB...`);
+          
+          // Phase 1.3: Store in optimized chunks for better IndexedDB performance
+          if (allProcessedData.length > 0) {
+            const storeStartTime = performance.now();
+            try {
+              await this.storeDataInOptimizedChunks(allProcessedData, tableName, file.name);
+              const storeEndTime = performance.now();
+              const storeDuration = (storeEndTime - storeStartTime) / 1000;
+              console.log(`[PERF] IndexedDB storage completed in ${storeDuration.toFixed(2)}s for ${allProcessedData.length} records`);
+            } catch (storageError) {
+              console.error('[PERF] Storage error:', storageError);
+              throw storageError;
+            }
+          }
+
+          // Register file with component
+          let componentId = '';
+          const currentUs1File = this.store.getFileNameByComponent('us1');
+          const currentUs2File = this.store.getFileNameByComponent('us2');
+
+          if (currentUs1File === file.name) {
+            componentId = 'us1';
+          } else if (currentUs2File === file.name) {
+            componentId = 'us2';
+          } else {
+            componentId = !currentUs1File ? 'us1' : 'us2';
+          }
+
+          this.store.addFileUploaded(componentId, file.name);
+
+          // Add invalid rows to the store
+          invalidRows.forEach(invalidRow => {
+            this.store.addInvalidRow(file.name, invalidRow);
+          });
+
+          // Calculate and store file stats
+          await this.calculateFileStats(componentId, file.name);
+
+          // Phase 1.3 Performance Timing - End
+          const performanceEnd = performance.now();
+          const duration = (performanceEnd - performanceStart) / 1000;
+          const recordsPerSecond = duration > 0 ? Math.round(totalRecords / duration) : 0;
+          console.log(`[PERF] US Service - Total upload completed in ${duration.toFixed(2)}s`);
+          console.log(`[PERF] US Service - Processed ${totalRecords} records at ${recordsPerSecond} records/sec`);
+
+          // Resolve with fileName, records, and tableName - return in-memory data
+          resolve({ fileName: file.name, records: allProcessedData, tableName });
+        },
+        error: (error: Error) => {
+          const performanceEnd = performance.now();
+          const duration = (performanceEnd - performanceStart) / 1000;
+          console.log(`[PERF] US Service - Upload failed after ${duration.toFixed(2)}s`);
+          reject(new Error(`Failed to parse CSV file: ${error.message}`));
+        },
       });
     });
+  }
+
+  // Process a single row of data - copied from USRateSheetService
+  private processRow(
+    row: string[],
+    rowIndex: number,
+    columnMapping: Record<string, number>,
+    indeterminateDefinition: string | undefined,
+    invalidRows: InvalidUsRow[]
+  ): USStandardizedData | null {
+    // Helper function to safely get data from row using index
+    const getData = (index: number): string | undefined => {
+      return row && row.length > index ? row[index]?.trim() : undefined;
+    };
+
+    // Extract data using mapping
+    const rawNpanxx = getData(columnMapping.npanxx);
+    const rawNpa = getData(columnMapping.npa);
+    const rawNxx = getData(columnMapping.nxx);
+    const rawInterstate = getData(columnMapping.interstate);
+    const rawIntrastate = getData(columnMapping.intrastate);
+    const rawIndeterminate = getData(columnMapping.indeterminate);
+
+    let npanxx: string | undefined;
+    let npa: string | undefined;
+    let nxx: string | undefined;
+
+    // Static regex patterns for performance
+    const NUMERIC_REGEX = /^[0-9]+$/;
+    const SIMPLE_RATE_REGEX = /^\d+(\.\d+)?$/;
+
+    // Validate and determine NPANXX, NPA, NXX
+    if (
+      rawNpanxx &&
+      rawNpanxx.length === 7 &&
+      rawNpanxx.startsWith('1') &&
+      NUMERIC_REGEX.test(rawNpanxx)
+    ) {
+      npanxx = rawNpanxx.substring(1); // Remove leading '1'
+      npa = npanxx.substring(0, 3);
+      nxx = npanxx.substring(3, 6);
+    } else if (rawNpanxx && rawNpanxx.length === 6 && NUMERIC_REGEX.test(rawNpanxx)) {
+      npanxx = rawNpanxx;
+      npa = rawNpanxx.substring(0, 3);
+      nxx = rawNpanxx.substring(3, 6);
+    } else if (
+      rawNpa &&
+      rawNpa.length === 3 &&
+      NUMERIC_REGEX.test(rawNpa) &&
+      rawNxx &&
+      rawNxx.length === 3 &&
+      NUMERIC_REGEX.test(rawNxx)
+    ) {
+      npanxx = rawNpa + rawNxx;
+      npa = rawNpa;
+      nxx = rawNxx;
+    } else {
+      invalidRows.push({
+        rowIndex,
+        npanxx: rawNpanxx ?? '-',
+        npa: rawNpa ?? '-',
+        nxx: rawNxx ?? '-',
+        interRate: rawInterstate ?? '-',
+        intraRate: rawIntrastate ?? '-',
+        indetermRate: rawIndeterminate ?? '-',
+        reason: 'Invalid or missing NPANXX/NPA+NXX format',
+      });
+      return null;
+    }
+
+    // Helper to parse rates
+    const parseRate = (rateStr: string | undefined): number | null => {
+      if (!rateStr || rateStr === '' || rateStr === 'null' || rateStr === '-') return 0;
+      
+      if (SIMPLE_RATE_REGEX.test(rateStr)) {
+        const num = Number(rateStr);
+        return num >= 0 ? num : null;
+      }
+      
+      const num = parseFloat(rateStr);
+      return !isNaN(num) && num >= 0 ? num : null;
+    };
+
+    const interRate = parseRate(rawInterstate);
+    const intraRate = parseRate(rawIntrastate);
+    let indetermRate: number | null = null;
+
+    // Handle indeterminate rate based on definition
+    if (indeterminateDefinition === 'intrastate') {
+      indetermRate = intraRate;
+    } else if (indeterminateDefinition === 'interstate') {
+      indetermRate = interRate;
+    } else if (indeterminateDefinition === 'column') {
+      indetermRate = parseRate(rawIndeterminate);
+    } else {
+      indetermRate = 0;
+    }
+
+    if (indetermRate === null) {
+      indetermRate = 0;
+    }
+
+    // Check if essential rates are valid
+    if (interRate === null || intraRate === null) {
+      invalidRows.push({
+        rowIndex,
+        npanxx: npanxx,
+        npa: npa,
+        nxx: nxx,
+        interRate: rawInterstate ?? '-',
+        intraRate: rawIntrastate ?? '-',
+        indetermRate: rawIndeterminate ?? '-',
+        reason: 'Invalid rate format (non-numeric or negative)',
+      });
+      return null;
+    }
+
+    return {
+      npanxx,
+      npa,
+      nxx,
+      interRate,
+      intraRate,
+      indetermRate,
+    };
+  }
+
+  // Store data in optimized chunks - copied from USRateSheetService
+  private async storeDataInOptimizedChunks(data: USStandardizedData[], tableName: string, fileName: string): Promise<void> {
+    const OPTIMAL_CHUNK_SIZE = 2500;
+    const chunks = [];
+    
+    for (let i = 0; i < data.length; i += OPTIMAL_CHUNK_SIZE) {
+      chunks.push(data.slice(i, i + OPTIMAL_CHUNK_SIZE));
+    }
+    
+    console.log(`[PERF] Storing ${data.length} records in ${chunks.length} chunks of ${OPTIMAL_CHUNK_SIZE}`);
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkStartTime = performance.now();
+      
+      try {
+        await this.dexieDB.storeInDexieDB(chunks[i], DBName.US, tableName, { 
+          sourceFile: fileName,
+          replaceExisting: i === 0 
+        });
+        
+        const chunkEndTime = performance.now();
+        const chunkDuration = chunkEndTime - chunkStartTime;
+        
+        if (chunkDuration > 500) {
+          console.log(`[PERF] Chunk ${i + 1}/${chunks.length}: ${chunkDuration.toFixed(2)}ms for ${chunks[i].length} records`);
+        }
+        
+        if (i % 4 === 0 && i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1));
+        }
+        
+      } catch (error) {
+        console.error(`[PERF] Error storing chunk ${i + 1}:`, error);
+        throw error;
+      }
+    }
   }
 
   // Get data directly from Dexie
@@ -290,7 +458,7 @@ export class USService {
       // Calculate unique percentage - for US, we use NPA uniqueness
       const uniquePercentage = ((uniqueNPAs / totalCodes) * 100).toFixed(2);
 
-      // Calculate US NPA coverage using LERG data
+      // Calculate US NPA coverage using enhanced NANP categorization
       if (!this.lergStore.isLoaded) {
         console.warn('[USService] LERG data might not be loaded. Proceeding anyway.');
       }
@@ -298,19 +466,34 @@ export class USService {
       // Create a set of all NPAs from the file
       const allFileNPAs = new Set(data.map((item) => item.npa));
 
-      // Count how many valid US NPAs are in our file (those that exist in LERG data)
+      // Count how many valid US domestic NPAs are in our file using enhanced categorization
       let validUSNPAsInFile = 0;
+      let categorizedNPAs = 0;
+      let highConfidenceNPAs = 0;
+      
       for (const npaFromFile of allFileNPAs) {
-        const location = this.lergStore.getOptimizedLocationByNPA(npaFromFile);
-        if (location && location.country === 'US') {
+        const categorization = NANPCategorizer.categorizeNPA(npaFromFile);
+        categorizedNPAs++;
+        
+        // Count as valid US if it's categorized as US domestic with medium+ confidence
+        if (categorization.category === 'us-domestic' && categorization.confidence !== 'low') {
           validUSNPAsInFile++;
+        }
+        
+        // Track high confidence categorizations for quality metrics
+        if (categorization.confidence === 'high') {
+          highConfidenceNPAs++;
         }
       }
 
       // Calculate coverage based on valid US NPAs found in the file against total US NPAs
-      const totalUSNPAs = this.lergStore.getTotalUSNPAs;
+      const totalUSNPAs = this.lergStore.usTotalNPAs;
       const usNPACoveragePercentage =
         totalUSNPAs > 0 ? ((validUSNPAsInFile / totalUSNPAs) * 100).toFixed(2) : '0.00';
+      
+      // Log enhanced categorization quality for diagnostics
+      const qualityPercentage = categorizedNPAs > 0 ? ((highConfidenceNPAs / categorizedNPAs) * 100).toFixed(1) : '0.0';
+      console.log(`[USService] Enhanced NANP categorization: ${validUSNPAsInFile}/${categorizedNPAs} US domestic NPAs, ${qualityPercentage}% high confidence`);
 
       // Calculate average rates
       const avgInterRate = data.reduce((sum, item) => sum + item.interRate, 0) / totalCodes;
@@ -322,7 +505,7 @@ export class USService {
       const formattedAvgIntraRate = parseFloat(avgIntraRate.toFixed(4));
       const formattedAvgIndetermRate = parseFloat(avgIndetermRate.toFixed(4));
 
-      // Update store
+      // Update store with enhanced metrics
       this.store.setFileStats(componentId, {
         totalCodes,
         totalDestinations: uniqueNPAs,
@@ -331,6 +514,11 @@ export class USService {
         avgInterRate: formattedAvgInterRate,
         avgIntraRate: formattedAvgIntraRate,
         avgIndetermRate: formattedAvgIndetermRate,
+        categorizationQuality: {
+          totalNPAs: categorizedNPAs,
+          highConfidenceNPAs,
+          qualityPercentage: parseFloat(qualityPercentage),
+        },
       });
     } catch (error) {
       console.error('Error calculating file stats:', error);
@@ -394,19 +582,15 @@ export class USService {
     }
   }
 
-  // Get record count for a table
+  // Get record count for a table using unified pattern
   async getRecordCount(tableName: string): Promise<number> {
     try {
-      // Use the instance-level dexieDB
-      const { getDB } = this.dexieDB;
-      const db = await getDB(DBName.US);
-      // Use standard Dexie check
-      if (!db.tables.some((table) => table.name === tableName)) {
-        console.warn(`[USService] Table ${tableName} does not exist in ${DBName.US} for count.`);
-        return 0;
-      }
-      const count = await db.table(tableName).count();
-      return count;
+      // Use unified loadFromDexieDB to get all records and count them
+      // This is less efficient than .count() but follows the unified pattern
+      const { loadFromDexieDB } = this.dexieDB;
+      const data = await loadFromDexieDB<USStandardizedData>(DBName.US, tableName);
+      console.log(`[USService] Got record count ${data.length} for table ${tableName} using unified pattern`);
+      return data.length;
     } catch (error) {
       console.error(`[USService] Failed to get record count for table ${tableName}:`, error);
       return 0;
@@ -421,12 +605,15 @@ export class USService {
       const tableNames = await getAllStoreNamesForDB(DBName.US);
       const tableCounts: Record<string, number> = {};
       for (const name of tableNames) {
-        // Use standard Dexie check before counting (safer)
-        const db = await this.dexieDB.getDB(DBName.US);
-        if (db.tables.some((table) => table.name === name)) {
-          tableCounts[name] = await db.table(name).count();
-        } else {
-          tableCounts[name] = 0; // Should not happen if getAllStoreNamesForDB is accurate
+        // Use unified pattern for counting
+        try {
+          const { loadFromDexieDB } = this.dexieDB;
+          const data = await loadFromDexieDB<USStandardizedData>(DBName.US, name);
+          tableCounts[name] = data.length;
+          console.log(`[USService] Table ${name}: ${data.length} records using unified pattern`);
+        } catch (error) {
+          console.warn(`[USService] Could not count records for table ${name}:`, error);
+          tableCounts[name] = 0;
         }
       }
       return tableCounts;
@@ -438,15 +625,11 @@ export class USService {
 
   async getTableCount(tableName: string): Promise<number> {
     try {
-      // Use the instance-level dexieDB
-      const { getDB } = this.dexieDB;
-      const db = await getDB(DBName.US);
-      // Use standard Dexie check
-      if (!db.tables.some((table) => table.name === tableName)) {
-        console.warn(`[USService] Table ${tableName} does not exist in ${DBName.US} for count.`);
-        return 0;
-      }
-      return await db.table(tableName).count();
+      // Use unified loadFromDexieDB pattern for consistency
+      const { loadFromDexieDB } = this.dexieDB;
+      const data = await loadFromDexieDB<USStandardizedData>(DBName.US, tableName);
+      console.log(`[USService] Got table count ${data.length} for table ${tableName} using unified pattern`);
+      return data.length;
     } catch (error) {
       console.error(`[USService] Error getting record count for table ${tableName}:`, error);
       return 0;
@@ -455,7 +638,7 @@ export class USService {
 
   async processComparisons(file1Name: string, file2Name: string): Promise<void> {
     const { loadFromDexieDB, getDB } = this.dexieDB;
-    const lergStore = useLergStore();
+    const lergStore = useLergStoreV2();
 
     // Derive table names from file names
     const table1Name = file1Name.toLowerCase().replace('.csv', '');
@@ -485,28 +668,19 @@ export class USService {
         return;
       }
 
-      // 2. Prepare the target database and table for comparison results
-      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
-      // No need to define schema locally - getDB handles it
-
-      // Ensure DB is open after potential initialization from getDB
-      if (!comparisonDb.isOpen()) await comparisonDb.open();
-
-      // Ensure the table exists after getDB initialization
-      if (!comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
-        console.error(
-          `[USService] CRITICAL: Table ${comparisonTableName} does not exist in ${comparisonDb.name} even after getDB.`
-        );
-        // Handle this critical error - maybe throw, maybe return
-        this.store.setPricingReportProcessing(false);
-        throw new Error(`Comparison table ${comparisonTableName} could not be initialized.`);
-      }
-
-      // Use the extracted table name here
-      const comparisonTable = comparisonDb.table<USPricingComparisonRecord>(comparisonTableName);
-
-      // 4. Clear existing comparison data
-      await comparisonTable.clear();
+      // 2. Prepare comparison table using unified pattern
+      console.log(`[USService] Preparing comparison table ${comparisonTableName} using unified pattern...`);
+      
+      // Clear existing comparison data using unified pattern
+      const { storeInDexieDB: clearTable } = this.dexieDB;
+      await clearTable(
+        [], // Empty array clears the table
+        DBName.US_PRICING_COMPARISON,
+        comparisonTableName,
+        { replaceExisting: true }
+      );
+      
+      console.log(`[USService] Cleared existing comparison data using unified pattern`);
 
       // 5. Create lookup map for faster processing
       const table2Map = new Map<string, USStandardizedData>();
@@ -626,9 +800,16 @@ export class USService {
         }
       } // End for loop
 
-      // 7. Bulk insert results into the comparison table
+      // 7. Store comparison results using unified storeInDexieDB pattern
       if (comparisonResults.length > 0) {
-        await comparisonTable.bulkPut(comparisonResults);
+        const { storeInDexieDB } = this.dexieDB;
+        await storeInDexieDB(
+          comparisonResults,
+          DBName.US_PRICING_COMPARISON,
+          comparisonTableName,
+          { replaceExisting: true }
+        );
+        console.log(`[USService] Stored ${comparisonResults.length} comparison results using unified pattern`);
       }
     } catch (error) {
       console.error('[USService] Critical error during US pricing comparison process:', error);
@@ -796,13 +977,18 @@ export class USService {
       const table1Name = file1Name.toLowerCase().replace('.csv', '');
       const table2Name = file2Name ? file2Name.toLowerCase().replace('.csv', '') : '';
 
-      const { getDB } = this.dexieDB;
-      const usDb = await getDB(DBName.US);
+      // Use unified loadFromDexieDB pattern instead of direct table access
+      const { loadFromDexieDB } = this.dexieDB;
 
-      const file1Data = await usDb.table<USStandardizedData>(table1Name).toArray();
+      const file1Data = await loadFromDexieDB<USStandardizedData>(DBName.US, table1Name);
       let file2Data: USStandardizedData[] = [];
       if (table2Name) {
-        file2Data = await usDb.table<USStandardizedData>(table2Name).toArray();
+        file2Data = await loadFromDexieDB<USStandardizedData>(DBName.US, table2Name);
+      }
+      
+      console.log(`[USService] Loaded ${file1Data.length} records from ${table1Name} using unified pattern`);
+      if (table2Name) {
+        console.log(`[USService] Loaded ${file2Data.length} records from ${table2Name} using unified pattern`);
       }
 
       // --- Basic File Stats (largely existing logic) ---
@@ -997,13 +1183,9 @@ export class USService {
     }
   }
 
-  // Add method to clear US comparison data
+  // Add method to clear US comparison data using unified pattern
   async clearPricingComparisonData(): Promise<void> {
     try {
-      // Only need getDB from dexieDB
-      const { getDB } = this.dexieDB;
-      const comparisonDb = await getDB(DBName.US_PRICING_COMPARISON);
-
       // Get the specific comparison table name
       const comparisonSchemaString = DBSchemas[DBName.US_PRICING_COMPARISON];
       const comparisonTableName = this._extractTableNameFromSchema(comparisonSchemaString);
@@ -1015,15 +1197,19 @@ export class USService {
         return;
       }
 
-      // Check if the table exists before trying to clear
-      if (comparisonDb.tables.some((t) => t.name === comparisonTableName)) {
-        const comparisonTable = comparisonDb.table(comparisonTableName);
-        await comparisonTable.clear(); // Use clear() instead of deleteTableStore
-      }
+      // Use unified storeInDexieDB to clear data (empty array with replaceExisting: true)
+      const { storeInDexieDB } = this.dexieDB;
+      await storeInDexieDB(
+        [], // Empty array clears the table
+        DBName.US_PRICING_COMPARISON,
+        comparisonTableName,
+        { replaceExisting: true }
+      );
+      
+      console.log(`[USService] Cleared pricing comparison data using unified pattern`);
     } catch (error) {
       console.error('[USService] Failed to clear US pricing comparison data:', error);
-      // Decide if error should be thrown or just logged
-      // throw error;
+      throw error; // Re-throw to maintain error handling contract
     }
   }
 

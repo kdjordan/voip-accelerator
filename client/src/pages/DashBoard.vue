@@ -271,8 +271,8 @@
   import { useUserStore } from '@/stores/user-store';
   import { useAzStore } from '@/stores/az-store';
   import { useUsStore } from '@/stores/us-store';
-  import { useLergStore } from '@/stores/lerg-store';
-  import { useLergData } from '@/composables/useLergData';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+  import { useLergOperations } from '@/composables/useLergOperations';
   import useDexieDB from '@/composables/useDexieDB';
   import { DBName } from '@/types/app-types';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
@@ -542,10 +542,10 @@
   // Stores for accessing memory (Pinia) data and triggering updates
   const azStore = useAzStore();
   const usStore = useUsStore();
-  const lergStore = useLergStore();
+  const lergStore = useLergStoreV2();
 
-  // LERG initialization
-  const { initializeLergData, error: lergError } = useLergData();
+  // LERG initialization - using simplified system
+  const { initializeLergData, error: lergError } = useLergOperations();
 
   // Function to load database information from IndexedDB
   async function loadDatabaseInfo() {
@@ -599,15 +599,22 @@
     }
   }
 
-  // Initialize LERG data and load DB info on component mount
+  // SMART LERG initialization - single point of truth for the entire app
   onMounted(async () => {
+    console.log('[DashBoard] ========== DASHBOARD MOUNTED: SMART LERG INITIALIZATION ==========');
+    
     try {
+      // This is the ONLY place in the app that should call initializeLergData
+      // It will check Pinia first and only download if empty
+      console.log('[DashBoard] Calling smart LERG initialization...');
       await initializeLergData();
+      console.log('[DashBoard] LERG initialization completed successfully');
     } catch (err) {
       console.error('[DashBoard] Failed to initialize LERG:', err);
     }
 
     await loadDatabaseInfo();
+    console.log('[DashBoard] ========== DASHBOARD INITIALIZATION COMPLETE ==========');
   });
 
   watch(

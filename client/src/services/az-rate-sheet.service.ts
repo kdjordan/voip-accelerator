@@ -12,14 +12,12 @@ import Papa from 'papaparse';
 export class RateSheetService {
   private store = useAzRateSheetStore();
 
+  // Pre-compiled regex patterns for performance
+  private static readonly RATE_PATTERN = /^\d+(\.\d+)?$/;
+  private static readonly PREFIX_PATTERN = /^[0-9+\-\s]*$/;
+
   constructor() {
-    console.log('Initializing Rate Sheet service');
-    // Clear any localStorage data that might exist from previous sessions
-    localStorage.removeItem('voip-accelerator-rate-sheet-data');
-    localStorage.removeItem('voip-accelerator-rate-sheet-settings');
-    localStorage.removeItem('voip-accelerator-rate-sheet-invalid');
-    localStorage.removeItem('rate-sheet-optional-fields');
-    console.log('Rate Sheet data persistence is disabled - using in-memory storage only');
+    console.log('Initializing Rate Sheet service - using in-memory storage only');
   }
 
   async clearData(): Promise<void> {
@@ -119,49 +117,158 @@ export class RateSheetService {
     columnMapping: Record<string, number>,
     startLine: number
   ): Promise<{ fileName: string; records: RateSheetRecord[] }> {
+    // Performance timing
+    const performanceStart = performance.now();
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+    console.log(`[PERF] AZ Rate Sheet - Starting upload processing for ${fileSizeMB}MB file...`);
+
     try {
       this.store.clearInvalidRows();
+
+      // Memory accumulation arrays
+      const allValidRecords: RateSheetRecord[] = [];
+      const allInvalidRows: InvalidRow[] = [];
+      let totalRowsProcessed = 0;
+      let currentRowIndex = 0;
 
       return new Promise((resolve, reject) => {
         Papa.parse(file, {
           header: false,
           skipEmptyLines: true,
-          complete: async (results: { data: string[][] }) => {
+          worker: true, // Use Web Worker for better performance
+          step: (results: { data: string[]; errors: any[] }, parser) => {
+            currentRowIndex++;
+            
+            // Skip header rows based on user input
+            if (currentRowIndex < startLine) return;
+
             try {
-              // Skip to user-specified start line
-              const dataRows = results.data.slice(startLine - 1);
+              const row = results.data;
+              if (!row || row.length === 0) return;
 
-              // Process the data using the store's method
-              const { records: validRecords, invalidRows } = this.store.processFileData(
-                dataRows,
-                columnMapping
-              );
-
-              if (validRecords.length > 0) {
-                // Store the data directly in the store
-                this.store.processRateSheetData(validRecords);
-                console.log(`Stored ${validRecords.length} valid records`);
+              // Process row incrementally to avoid blocking
+              const processedRow = this.processRowOptimized(row, currentRowIndex, columnMapping);
+              
+              if (processedRow.isValid) {
+                allValidRecords.push(processedRow.record!);
               } else {
-                console.log('No valid records to store');
+                allInvalidRows.push(processedRow.invalidRow!);
+              }
+              
+              totalRowsProcessed++;
+
+              // Progress logging every 10,000 rows
+              if (totalRowsProcessed % 10000 === 0) {
+                console.log(`[PERF] AZ Rate Sheet - Processed ${totalRowsProcessed} rows...`);
+              }
+            } catch (error) {
+              console.error(`Error processing row ${currentRowIndex}:`, error);
+              allInvalidRows.push({
+                rowIndex: currentRowIndex,
+                invalidValue: row?.join(',') || '',
+                reason: `Processing error: ${(error as Error).message}`,
+              });
+            }
+          },
+          complete: async () => {
+            try {
+              console.log(`[PERF] AZ Rate Sheet - CSV parsing complete. Processing ${allValidRecords.length} valid records...`);
+              
+              // Process in async chunks to avoid blocking the UI
+              if (allValidRecords.length > 0) {
+                await this.processRecordsInChunks(allValidRecords);
+                console.log(`[PERF] AZ Rate Sheet - Stored ${allValidRecords.length} valid records`);
               }
 
-              // Add any invalid rows to the store
-              invalidRows.forEach((row) => {
-                this.store.addInvalidRow(row);
-              });
+              // Add invalid rows efficiently
+              if (allInvalidRows.length > 0) {
+                allInvalidRows.forEach(row => this.store.addInvalidRow(row));
+                console.log(`[PERF] AZ Rate Sheet - Processed ${allInvalidRows.length} invalid rows`);
+              }
 
-              resolve({ fileName: file.name, records: validRecords });
+              // Performance timing - End
+              const performanceEnd = performance.now();
+              const duration = (performanceEnd - performanceStart) / 1000;
+              const recordsPerSecond = duration > 0 ? Math.round(allValidRecords.length / duration) : 0;
+              console.log(`[PERF] AZ Rate Sheet - Memory processing completed in ${duration.toFixed(2)}s`);
+              console.log(`[PERF] AZ Rate Sheet - Processed ${allValidRecords.length} records at ${recordsPerSecond} records/sec`);
+
+              resolve({ fileName: file.name, records: allValidRecords });
             } catch (error) {
-              console.error('Error processing file data:', error);
+              console.error('Error in complete callback:', error);
               reject(error);
             }
           },
-          error: (error) => reject(new Error(`Failed to parse CSV: ${error.message}`)),
+          error: (error) => {
+            const performanceEnd = performance.now();
+            const duration = (performanceEnd - performanceStart) / 1000;
+            console.log(`[PERF] AZ Rate Sheet - Upload failed after ${duration.toFixed(2)}s`);
+            reject(new Error(`Failed to parse CSV: ${error.message}`));
+          },
         });
       });
     } catch (error) {
       console.error('Error in processFile:', error);
       throw error;
     }
+  }
+
+  /**
+   * Optimized row processing with pre-compiled regex patterns
+   */
+  private processRowOptimized(
+    row: string[],
+    rowIndex: number,
+    columnMapping: Record<string, number>
+  ): { isValid: boolean; record?: RateSheetRecord; invalidRow?: InvalidRow } {
+    // Fast validation using pre-compiled patterns
+    const rate = row[columnMapping.rate]?.trim();
+    const prefix = row[columnMapping.prefix]?.trim();
+
+    // Quick validation checks
+    if (!rate || !prefix) {
+      return {
+        isValid: false,
+        invalidRow: {
+          rowIndex,
+          invalidValue: row.join(','),
+          reason: 'Missing required rate or prefix',
+        },
+      };
+    }
+
+    // Use pre-compiled regex for fast validation
+    if (!RateSheetService.RATE_PATTERN.test(rate)) {
+      return {
+        isValid: false,
+        invalidRow: {
+          rowIndex,
+          invalidValue: row.join(','),
+          reason: 'Invalid rate format',
+        },
+      };
+    }
+
+    // Create record efficiently
+    const record: RateSheetRecord = {
+      name: row[columnMapping.name]?.trim() || '',
+      prefix: prefix,
+      rate: parseFloat(rate),
+      effective: row[columnMapping.effective]?.trim() || '',
+      changeCode: ChangeCode.SAME,
+      minDuration: row[columnMapping.minDuration] ? parseInt(row[columnMapping.minDuration]) : undefined,
+      increments: row[columnMapping.increments] ? parseInt(row[columnMapping.increments]) : undefined,
+    };
+
+    return { isValid: true, record };
+  }
+
+  /**
+   * Process records efficiently - store all at once to avoid repeated grouping
+   */
+  private async processRecordsInChunks(records: RateSheetRecord[]): Promise<void> {
+    // For memory-only storage, we can process all records at once
+    // since we don't need to worry about IndexedDB chunking limitations
+    this.store.processRateSheetDataComplete(records);
   }
 }

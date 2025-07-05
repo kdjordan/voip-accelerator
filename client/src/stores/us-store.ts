@@ -33,6 +33,12 @@ export const useUsStore = defineStore('us', {
         avgInterRate: number;
         avgIntraRate: number;
         avgIndetermRate: number;
+        // Enhanced NANP categorization quality metrics
+        categorizationQuality?: {
+          totalNPAs: number;
+          highConfidenceNPAs: number;
+          qualityPercentage: number;
+        };
       }
     >(),
   }),
@@ -116,6 +122,11 @@ export const useUsStore = defineStore('us', {
           avgInterRate: 0,
           avgIntraRate: 0,
           avgIndetermRate: 0,
+          categorizationQuality: {
+            totalNPAs: 0,
+            highConfidenceNPAs: 0,
+            qualityPercentage: 0,
+          },
         }
       );
     },
@@ -188,7 +199,6 @@ export const useUsStore = defineStore('us', {
     },
 
     setCodeReport(code: USCodeReport) {
-      console.log('[US Store] Setting Code Report:', code);
       this.codeReport = code;
       this.isCodeReportReady = true;
       if (this.filesUploaded.size > 0) {
@@ -197,7 +207,6 @@ export const useUsStore = defineStore('us', {
     },
 
     setPricingReport(pricing: USPricingReport) {
-      console.log('[US Store] Setting Pricing Report:', pricing);
       this.pricingReport = pricing;
       this.isPricingReportReady = true;
       if (this.filesUploaded.size > 0) {
@@ -209,13 +218,13 @@ export const useUsStore = defineStore('us', {
       this.isPricingReportProcessing = processing;
     },
 
+    setPricingReportReady() {
+      this.isPricingReportReady = true;
+    },
+
     setEnhancedCodeReport(report: USEnhancedCodeReport) {
       if (report.file1?.fileName) {
-        console.log(`[US Store] Setting enhanced report for file: ${report.file1.fileName}`);
         this.enhancedCodeReports.set(report.file1.fileName, report);
-        console.log(`[US Store] Enhanced reports count: ${this.enhancedCodeReports.size}`);
-      } else {
-        console.error('[US Store] Cannot save report - missing filename', report);
       }
     },
 
@@ -228,9 +237,7 @@ export const useUsStore = defineStore('us', {
           this.inMemoryData.delete(tableName);
         }
 
-        console.log(`[US Store] Removing enhanced report for: ${fileName}`);
         this.enhancedCodeReports.delete(fileName);
-        console.log(`[US Store] Reports after removal: ${this.enhancedCodeReports.size}`);
       }
 
       this.filesUploaded.delete(componentName);
@@ -306,6 +313,11 @@ export const useUsStore = defineStore('us', {
         avgInterRate: number;
         avgIntraRate: number;
         avgIndetermRate: number;
+        categorizationQuality?: {
+          totalNPAs: number;
+          highConfidenceNPAs: number;
+          qualityPercentage: number;
+        };
       }
     ) {
       this.fileStats.set(componentId, stats);

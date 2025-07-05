@@ -97,6 +97,21 @@
           </div>
         </div>
 
+        <!-- Loading indicator for Enhanced Report with Margin Analysis -->
+        <div v-if="showComparisonSection && !enhancedCodeReport && hasTwoFiles" class="mt-8">
+          <div class="text-center py-12">
+            <div class="flex flex-col items-center justify-center space-y-4">
+              <ArrowPathIcon class="animate-spin w-10 h-10 text-accent" />
+              <div class="text-center">
+                <h3 class="text-lg text-white font-medium">Generating Margin Analysis</h3>
+                <p class="text-sm text-gray-400 mt-1">
+                  Creating detailed margin tables and profit analysis...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Enhanced Code Report with Margin Analysis -->
         <div v-if="enhancedCodeReport">
           <!-- Overall Comparison with Enhanced Data -->
@@ -211,7 +226,7 @@
 <script setup lang="ts">
   import { type AzCodeReport, type InvalidAzRow } from '@/types/domains/az-types';
   import { ref, reactive, computed, watch } from 'vue';
-  import { ChevronDownIcon } from '@heroicons/vue/24/outline';
+  import { ChevronDownIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
   import { useAzStore } from '@/stores/az-store';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import MarginAnalysisTableAZ from './MarginAnalysisTableAZ.vue';

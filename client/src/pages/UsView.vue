@@ -57,19 +57,15 @@ import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { useUsStore } from '@/stores/us-store';
 import { ReportTypes } from '@/types/app-types';
 import { onMounted, watch, ref } from 'vue';
-import { useLergData } from '@/composables/useLergData';
-import { loadSampleDecks } from '@/utils/load-sample-data';
+import { useLergOperations } from '@/composables/useLergOperations';
 import { DBName } from '@/types/app-types';
-import { useLergStore } from '@/stores/lerg-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 const usStore = useUsStore();
-const { ping, error } = useLergData();
-const lergStore = useLergStore();
+const lergStore = useLergStoreV2();
 
 // Info Modal state
 const showInfoModal = ref(false);
-
-const { initializeLergData, error: lergError } = useLergData();
 
 // Add watchers to debug state changes
 watch(
@@ -98,40 +94,44 @@ function closeInfoModal() {
 }
 
 onMounted(async () => {
-  // Ensure LERG data is loaded first, before anything else happens
+  console.log('[UsView] ========== US VIEW MOUNTED ==========');
+  
   try {
-    // Ping LERG data to ensure it's available for US operations
-    const pingResult = await ping();
+    // Just ping to validate LERG availability - NO initialization
+    // Dashboard.vue handles all LERG initialization
+    console.log('[UsView] Pinging LERG availability (no initialization)...');
+    console.log('[UsView] LERG store status check');
 
-    await initializeLergData();
-    
-
-    // Check actual LERG data counts
+    // Check actual LERG data counts from Pinia (should be loaded by Dashboard)
     const usStates = lergStore.getUSStates;
     const canadaProvinces = lergStore.getCanadianProvinces;
-    const countryData = lergStore.getCountryData;
-
+    const countryData = lergStore.getDistinctCountries;
     
+    console.log('[UsView] LERG data status from Pinia:');
+    console.log('[UsView] - US States:', usStates.length);
+    console.log('[UsView] - Canada Provinces:', canadaProvinces.length);
+    console.log('[UsView] - Country Data:', countryData.length);
+    console.log('[UsView] - Store loaded:', lergStore.isInitialized);
 
     // Check if files are already loaded before loading sample data
     const filesAlreadyUploaded = usStore.getNumberOfFilesUploaded === 2;
 
     if (filesAlreadyUploaded) {
-      
+      console.log('[UsView] Files already uploaded, skipping sample data');
     } else {
       // Only load sample decks if no files are already uploaded
       // console.log('[UsView] No files uploaded, loading sample data');
-      const sampleDecks = setTimeout(async () => {
-        // await loadSampleDecks([DBName.US]);
-      }, 1000);
-
+    
       // Clear timeout on component unmount
-      return () => clearTimeout(sampleDecks);
+      
     }
   } catch (err) {
-    console.error('[UsView] Error loading LERG data:', err);
-    lergError.value = err instanceof Error ? err.message : 'Failed to initialize LERG service';
+    console.error('[UsView] Error pinging LERG service:', err);
+    // Use error from composable
+    error.value = err instanceof Error ? err.message : 'Failed to ping LERG service';
   }
+  
+  console.log('[UsView] ========== US VIEW INITIALIZATION COMPLETE ==========');
 });
 
 /**

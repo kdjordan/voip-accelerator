@@ -17,7 +17,7 @@ export interface LergCode {
  * User metadata including role information
  */
 export interface UserMetadata {
-  role?: 'user' | 'superadmin';
+  role?: 'user' | 'admin';
 }
 
 /**
@@ -50,7 +50,7 @@ export type Tables = {
  */
 export const Roles = {
   USER: 'user',
-  SUPERADMIN: 'superadmin',
+  ADMIN: 'admin',
 } as const;
 
 export type Role = (typeof Roles)[keyof typeof Roles];

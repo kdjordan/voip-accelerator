@@ -1,6 +1,6 @@
 <template>
   <!-- Use enhancedReport for conditional rendering and data display -->
-  <div v-if="enhancedReport" class="">
+  <div v-if="enhancedReport" class="w-full max-w-full overflow-hidden">
     <!-- Code Report heading with file name pill and remove button -->
     <div class="mb-4 flex items-center justify-between">
       <span class="text-xl text-fbWhite font-secondary">Code Report</span>
@@ -75,13 +75,13 @@
         </div>
 
         <!-- Scrollable List Area -->
-        <div class="max-h-96 overflow-y-auto space-y-1.5 pr-2 bg-gray-900/50 p-2 rounded">
+        <div class="max-h-96 overflow-y-auto overflow-x-hidden space-y-1.5 pr-2 bg-gray-900/50 p-2 rounded w-full">
           <div v-if="filteredCountries.length > 0">
             <!-- Use <details> for native expand/collapse -->
             <details
               v-for="(country, index) in filteredCountries"
               :key="country.isoCode || index"
-              class="bg-gray-800/80 rounded overflow-hidden group"
+              class="bg-gray-800/80 rounded overflow-hidden group w-full max-w-full"
             >
               <!-- Summary Row -->
               <summary
@@ -110,18 +110,25 @@
               </summary>
 
               <!-- Expanded Content: Breakout Details -->
-              <div class="p-3 bg-gray-900/30 border-t border-gray-700/50 text-xs space-y-2">
-                <div v-if="country.breakouts && country.breakouts.length > 0">
+              <div class="p-3 bg-gray-900/30 border-t border-gray-700/50 text-xs space-y-2 w-full max-w-full overflow-hidden">
+                <div v-if="country.breakouts && country.breakouts.length > 0" class="w-full max-w-full">
                   <div
                     v-for="breakout in country.breakouts"
                     :key="breakout.breakoutName"
-                    class="ml-2"
+                    class="ml-2 w-full max-w-full overflow-hidden"
                   >
                     <div class="font-medium text-gray-300 truncate" :title="breakout.breakoutName">
                       {{ breakout.breakoutName }}
                     </div>
-                    <div class="text-gray-400 pl-2 text-xxs break-all">
-                      {{ breakout.dialCodes.join(', ') }}
+                    <div class="text-gray-400 pl-2 text-xxs w-full max-w-full min-w-0">
+                      <div class="w-full overflow-hidden min-w-0">
+                        <span class="block w-full break-all word-break-break-all overflow-wrap-anywhere text-ellipsis overflow-hidden">
+                          {{ breakout.dialCodes.length > 5 ? 
+                              breakout.dialCodes.slice(0, 5).join(', ') + ` ... (+${breakout.dialCodes.length - 5} more)` : 
+                              breakout.dialCodes.join(', ') 
+                          }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

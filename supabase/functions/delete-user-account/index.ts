@@ -1,18 +1,15 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"; // Standard Deno serve
 import { createClient } from "@supabase/supabase-js"; // Matches user's existing pattern
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 console.log("delete-user-account function initializing");
 
-// Define CORS headers directly in the function file, matching get-lerg-data
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // Adjust for production as needed
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS", // Specify allowed methods
-};
-
 serve(async (req: Request) => {
   console.log("delete-user-account function invoked", { method: req.method });
+
+  // Get the origin from the request headers
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
 
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
