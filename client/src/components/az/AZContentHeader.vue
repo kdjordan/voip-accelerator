@@ -16,7 +16,7 @@
             v-if="azStore.filesUploaded.size === 2"
             variant="destructive"
             size="small"
-            @click="handleReset"
+            @click="showResetConfirmModal = true"
             :is-loading="isResetting"
           >
             Reset
@@ -25,6 +25,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Reset Confirmation Modal -->
+  <ConfirmationModal
+    v-model="showResetConfirmModal"
+    title="Reset All AZ Rate Sheet Data"
+    :message="`This will permanently delete all uploaded rate sheet data, analysis reports, and database records.
+
+This action cannot be undone.`"
+    confirm-button-text="Reset All Data"
+    cancel-button-text="Cancel"
+    :loading="isResetting"
+    @confirm="confirmReset"
+  />
 </template>
 
 <script setup lang="ts">
@@ -35,10 +48,12 @@
   import { computed, ref, watchEffect } from 'vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import ReportTabButton from '@/components/shared/ReportsTabButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
   const azStore = useAzStore();
   const { deleteDatabase } = useDexieDB();
   const isResetting = ref(false);
+  const showResetConfirmModal = ref(false);
 
   // Defensive + debugged report types list
   const availableReportTypes = computed((): ReportType[] => {
@@ -64,14 +79,15 @@
     return `${type.charAt(0).toUpperCase()}${type.slice(1)} Report`;
   }
 
-  // Reset logic
-  async function handleReset() {
+  // Reset logic with confirmation
+  async function confirmReset() {
     isResetting.value = true;
     try {
       console.log('Resetting the AZ report...');
       await azStore.resetFiles();
       azStore.setActiveReportType(ReportTypes.FILES);
       console.log('Reset completed successfully');
+      showResetConfirmModal.value = false;
     } catch (error) {
       console.error('Error during reset:', error);
     } finally {

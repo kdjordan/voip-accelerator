@@ -94,7 +94,7 @@
               <!-- Show Code Summary and Remove Button when file IS uploaded -->
               <template v-else>
                 <!-- Single File Report Section - Pass remove handler -->
-                <AZCodeSummary :componentId="'az1'" :on-remove="() => handleRemoveFile('az1')" />
+                <AZCodeSummary :componentId="'az1'" :on-remove="() => showRemoveConfirmation('az1')" />
               </template>
             </div>
 
@@ -183,7 +183,7 @@
               <!-- Show Code Summary and Remove Button when file IS uploaded -->
               <template v-else>
                 <!-- Single File Report Section - Pass remove handler -->
-                <AZCodeSummary :componentId="'az2'" :on-remove="() => handleRemoveFile('az2')" />
+                <AZCodeSummary :componentId="'az2'" :on-remove="() => showRemoveConfirmation('az2')" />
               </template>
             </div>
           </div>
@@ -226,6 +226,18 @@
       @cancel="handleModalCancel"
     />
 
+    <!-- Remove File Confirmation Modal -->
+    <ConfirmationModal
+      v-model="showRemoveConfirmModal"
+      title="Remove AZ Rate Sheet Data"
+      :message="`This will permanently delete the uploaded rate sheet data and all related analysis.
+
+This action cannot be undone.`"
+      confirm-button-text="Remove File"
+      cancel-button-text="Cancel"
+      :loading="isModalRemoving"
+      @confirm="confirmRemoveFile"
+    />
   </div>
 </template>
 
@@ -240,6 +252,7 @@
   } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import { useAzStore } from '@/stores/az-store';
   import { useUserStore } from '@/stores/user-store';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
@@ -271,6 +284,11 @@
   });
 
   const isGeneratingReports = ref(false);
+
+  // Confirmation modal state for file removal
+  const showRemoveConfirmModal = ref(false);
+  const componentToRemove = ref<ComponentId | null>(null);
+  const isModalRemoving = ref(false);
 
   // Preview state
   const showPreviewModal = ref(false);
@@ -368,9 +386,17 @@
     console.log(`File uploaded for ${componentName}: ${fileName}`);
   }
 
-  async function handleRemoveFile(componentName: ComponentId) {
+  function showRemoveConfirmation(componentName: ComponentId) {
+    componentToRemove.value = componentName;
+    showRemoveConfirmModal.value = true;
+  }
+
+  async function confirmRemoveFile() {
+    if (!componentToRemove.value) return;
+    
+    isModalRemoving.value = true;
     try {
-      const fileName = azStore.getFileNameByComponent(componentName);
+      const fileName = azStore.getFileNameByComponent(componentToRemove.value);
       if (!fileName) return;
 
       const tableName = fileName.toLowerCase().replace('.csv', '');
@@ -382,9 +408,13 @@
       // Note: The removeFile method in the store now handles clearing fileStats
       azStore.removeFile(fileName);
 
-      console.log(`File ${fileName} removed successfully from component ${componentName}`);
+      console.log(`File ${fileName} removed successfully from component ${componentToRemove.value}`);
+      showRemoveConfirmModal.value = false;
+      componentToRemove.value = null;
     } catch (error) {
       console.error('Error removing file:', error);
+    } finally {
+      isModalRemoving.value = false;
     }
   }
 
