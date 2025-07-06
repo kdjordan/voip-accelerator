@@ -85,7 +85,7 @@
           <BaseButton
             variant="primary"
             size="small"
-            @click="downloadCsv"
+            @click="handleOpenExportModal"
             :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
             title="Download Filtered Data"
             class="min-w-[160px]"
@@ -676,6 +676,16 @@
         >
       </div>
     </div>
+
+    <!-- Export Modal -->
+    <USExportModal
+      v-model:open="showExportModal"
+      export-type="comparison"
+      :filters="exportFilters"
+      :data="exportData"
+      :total-records="totalExportRecords"
+      :on-export="handleExportWithOptions"
+    />
   </div>
 </template>
 
@@ -721,6 +731,9 @@
   import { useCSVExport } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
+  import USExportModal from '@/components/exports/USExportModal.vue';
+  import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
+  import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
 
   // Type for sortable column definition
   interface SortableUSComparisonColumn {
@@ -1114,6 +1127,23 @@
 
   // Replace isExporting ref with the one from composable
   const { isExporting, exportError, exportToCSV } = useCSVExport();
+  const { transformDataForExport } = useUSExportConfig();
+
+  // Export modal state
+  const showExportModal = ref(false);
+  const exportData = ref<USPricingComparisonRecord[]>([]);
+  const totalExportRecords = ref(0);
+
+  // Export filters for modal
+  const exportFilters = computed<USExportFilters>(() => ({
+    states: selectedState.value ? [selectedState.value] : [],
+    excludeStates: false,
+    npanxxSearch: npanxxFilterTerms.value.join(', '),
+    metroAreas: selectedMetros.value.map(m => m.displayName),
+    countries: [],
+    excludeCountries: false,
+    rateTypes: [],
+  }));
 
   // Debounced function to process NPANXX input
   const debouncedProcessNpanxxInput = useDebounceFn(() => {
@@ -1302,6 +1332,91 @@
       );
     } catch (err: any) {
       error.value = err.message || 'Failed to export data';
+    }
+  }
+
+  // --- Export Modal Handlers ---
+  async function handleOpenExportModal() {
+    if (!dbInstance.value) {
+      await initializeDB();
+      if (!dbInstance.value) {
+        error.value = 'Database not available for export.';
+        return;
+      }
+    }
+
+    try {
+      // Get total record count
+      const totalTable = dbInstance.value.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+      totalExportRecords.value = await totalTable.count();
+
+      // Build query with filters
+      const filters = createFilters();
+      let queryForData = totalTable.toCollection();
+      if (filters.length > 0) {
+        queryForData = queryForData.filter((record) => filters.every((fn) => fn(record)));
+      }
+
+      exportData.value = await queryForData.toArray();
+
+      if (exportData.value.length === 0) {
+        error.value = 'No data matches the current filters to export.';
+        return;
+      }
+
+      // Enhance data with file names for the modal
+      exportData.value = exportData.value.map(record => ({
+        ...record,
+        destinationName: fileName1.value,
+        destinationName2: fileName2.value,
+        rate: record.file1_inter,
+        rate2: record.file2_inter,
+        difference: record.diff_inter_pct ? (record.file2_inter || 0) - (record.file1_inter || 0) : null,
+        differencePercentage: record.diff_inter_pct,
+        cheaperFile: determineCheaperFile(record),
+      }));
+
+      showExportModal.value = true;
+    } catch (err: any) {
+      error.value = err.message || 'Failed to prepare export data';
+    }
+  }
+
+  function determineCheaperFile(record: USPricingComparisonRecord): string {
+    const avgFile1 = ((record.file1_inter || 0) + (record.file1_intra || 0) + (record.file1_indeterm || 0)) / 3;
+    const avgFile2 = ((record.file2_inter || 0) + (record.file2_intra || 0) + (record.file2_indeterm || 0)) / 3;
+    
+    if (avgFile1 === avgFile2) return 'Same';
+    return avgFile1 < avgFile2 ? fileName1.value : fileName2.value;
+  }
+
+  async function handleExportWithOptions(data: USPricingComparisonRecord[], options: USExportFormatOptions) {
+    try {
+      // Transform data for comparison export
+      const comparisonData = data.map(record => ({
+        ...record,
+        destinationName: fileName1.value,
+        destinationName2: fileName2.value,
+      }));
+
+      const transformed = transformDataForExport(comparisonData, options, 'comparison');
+      
+      // Build filename parts
+      const filenameParts = [];
+      if (selectedState.value) filenameParts.push(selectedState.value);
+      if (npanxxFilterTerms.value.length > 0) {
+        filenameParts.push(`search_${npanxxFilterTerms.value.join('-')}`);
+      }
+
+      // Export using the composable
+      await exportToCSV(transformed, {
+        filename: 'us-comparison',
+        additionalNameParts: filenameParts,
+        quoteFields: true,
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
     }
   }
 

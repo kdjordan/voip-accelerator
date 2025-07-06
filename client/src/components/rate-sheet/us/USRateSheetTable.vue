@@ -75,7 +75,7 @@
           :icon="ArrowDownTrayIcon"
           :loading="isExporting"
           :disabled="totalFilteredItems === 0 || isExporting"
-          @click="handleExport"
+          @click="handleOpenExportModal"
           title="Export all loaded data (based on current filters)"
         >
           Export Rates
@@ -862,6 +862,16 @@ All NPAs will be available for adjustment again."
       confirm-button-variant="primary"
       @confirm="confirmResetSession"
     />
+
+    <!-- Export Modal -->
+    <USExportModal
+      v-model:open="showExportModal"
+      export-type="rate-sheet"
+      :filters="exportFilters"
+      :data="exportData"
+      :total-records="totalExportRecords"
+      :on-export="handleExportWithOptions"
+    />
   </div>
 </template>
 
@@ -892,6 +902,7 @@ All NPAs will be available for adjustment again."
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import USExportModal from '@/components/exports/USExportModal.vue';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
@@ -915,6 +926,8 @@ All NPAs will be available for adjustment again."
   import { useCSVExport, type CSVExportOptions } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
+  import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
+  import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
 
   // Type for average values
   interface RateAverages {
@@ -1359,6 +1372,9 @@ All NPAs will be available for adjustment again."
   // Modal state for confirmations
   const showClearDataModal = ref(false);
   const showResetSessionModal = ref(false);
+  const showExportModal = ref(false);
+  const exportData = ref<USRateSheetEntry[]>([]);
+  const totalExportRecords = ref(0);
 
   function handleClearData() {
     showClearDataModal.value = true;
@@ -1397,6 +1413,86 @@ All NPAs will be available for adjustment again."
 
   // Replace isExporting ref with the one from composable
   const { isExporting, exportError, exportToCSV } = useCSVExport();
+  const { transformDataForExport } = useUSExportConfig();
+
+  // Export filters for modal
+  const exportFilters = computed<USExportFilters>(() => ({
+    states: selectedState.value ? [selectedState.value] : [],
+    excludeStates: false,
+    npanxxSearch: debouncedSearchQuery.value.join(', '),
+    metroAreas: selectedMetros.value.map(m => m.displayName),
+    countries: [],
+    excludeCountries: false,
+  }));
+
+  async function handleOpenExportModal() {
+    if (!dbInstance.value) {
+      await initializeDB();
+      if (!dbInstance.value) {
+        alert('Database is not ready. Cannot export.');
+        return;
+      }
+    }
+
+    try {
+      // Get total record count
+      const totalTable = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      totalExportRecords.value = await totalTable.count();
+
+      // Get filtered data
+      let query: Dexie.Collection<USRateSheetEntry, any> = totalTable.toCollection();
+      const currentFilters = createFilters();
+
+      if (currentFilters.length > 0) {
+        query = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      }
+
+      exportData.value = await query.toArray();
+
+      if (exportData.value.length === 0) {
+        alert('No data matches the current filters to export.');
+        return;
+      }
+
+      // Add effective date to each record
+      const effectiveDate = store.getCurrentEffectiveDate || 'N/A';
+      exportData.value = exportData.value.map(entry => ({
+        ...entry,
+        effectiveDate,
+      }));
+
+      showExportModal.value = true;
+    } catch (error) {
+      console.error('Error preparing export data:', error);
+      alert('Failed to prepare export data.');
+    }
+  }
+
+  async function handleExportWithOptions(data: USRateSheetEntry[], options: USExportFormatOptions) {
+    try {
+      const transformed = transformDataForExport(data, options, 'rate-sheet');
+      
+      const exportOptions: CSVExportOptions = {
+        filename: 'us-rate-sheet',
+        additionalNameParts: [],
+        timestamp: true,
+        quoteFields: true,
+      };
+
+      if (selectedState.value) {
+        exportOptions.additionalNameParts?.push(selectedState.value.replace(/\s+/g, '_'));
+      }
+      if (debouncedSearchQuery.value.length > 0) {
+        const queryPart = debouncedSearchQuery.value.join('-');
+        exportOptions.additionalNameParts?.push(`search_${queryPart.replace(/\s+/g, '_')}`);
+      }
+
+      await exportToCSV(transformed, exportOptions);
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
+    }
+  }
 
   async function handleExport() {
     if (isExporting.value) return; // Already handled by useCSVExport, but good for clarity
