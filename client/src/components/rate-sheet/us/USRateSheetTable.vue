@@ -1472,6 +1472,14 @@ All NPAs will be available for adjustment again."
     try {
       const transformed = transformDataForExport(data, options, 'rate-sheet');
       
+      // Apply Excel text formatting to NXX column if in split format
+      if (options.npanxxFormat === 'split') {
+        transformed.rows = transformed.rows.map(row => ({
+          ...row,
+          'NXX': `="${row['NXX']}"` // Excel formula to force text format
+        }));
+      }
+      
       const exportOptions: CSVExportOptions = {
         filename: 'us-rate-sheet',
         additionalNameParts: [],

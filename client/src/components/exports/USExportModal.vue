@@ -1,6 +1,6 @@
 <template>
   <TransitionRoot as="template" :show="open">
-    <Dialog as="div" class="relative z-10" @close="$emit('close')">
+    <Dialog as="div" class="relative z-50" @close="$emit('update:open', false)">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -13,7 +13,7 @@
         <div class="fixed inset-0 bg-black/80 transition-opacity" />
       </TransitionChild>
 
-      <div class="fixed inset-0 z-10 overflow-y-auto">
+      <div class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
           <TransitionChild
             as="template"
@@ -54,10 +54,19 @@
                   <USExportFormatOptions
                     v-model:options="formatOptions"
                     :export-type="exportType"
+                    :data="data"
+                    @update:filtered-count="updateFilteredCount"
                   />
 
                   <!-- Preview -->
                   <USExportPreview
+                    v-if="exportType === 'rate-sheet'"
+                    :data="previewData"
+                    :format-options="formatOptions"
+                    :loading="loadingPreview"
+                  />
+                  <USComparisonExportPreview
+                    v-else
                     :data="previewData"
                     :format-options="formatOptions"
                     :loading="loadingPreview"
@@ -68,7 +77,7 @@
               <div class="bg-fbHover px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                 <BaseButton
                   variant="primary"
-                  :disabled="isExporting"
+                  :disabled="isExporting || currentFilteredCount === 0"
                   :loading="isExporting"
                   @click="handleExport"
                   class="sm:ml-3 sm:w-auto w-full"
@@ -77,7 +86,7 @@
                 </BaseButton>
                 <BaseButton
                   variant="secondary"
-                  @click="$emit('close')"
+                  @click="$emit('update:open', false)"
                   :disabled="isExporting"
                   class="mt-3 sm:mt-0 sm:w-auto w-full"
                 >
@@ -106,6 +115,7 @@ import BaseButton from '@/components/shared/BaseButton.vue';
 import USExportFilters from './USExportFilters.vue';
 import USExportFormatOptions from './USExportFormatOptions.vue';
 import USExportPreview from './USExportPreview.vue';
+import USComparisonExportPreview from './USComparisonExportPreview.vue';
 import type { USExportFilters as USExportFiltersType, USExportFormatOptions as FormatOptionsType } from '@/types/exports';
 
 const props = defineProps<{
@@ -118,14 +128,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  close: [];
+  'update:open': [value: boolean];
 }>();
 
 const formatOptions = ref<FormatOptionsType>({
   npanxxFormat: 'combined',
   includeCountryCode: true,
   includeStateColumn: false,
-  includeMetroColumn: false,
+  includeCountryColumn: false,
   selectedCountries: [],
   excludeCountries: false,
 });
@@ -133,8 +143,13 @@ const formatOptions = ref<FormatOptionsType>({
 const isExporting = ref(false);
 const loadingPreview = ref(false);
 const previewData = ref<any[]>([]);
+const currentFilteredCount = ref(0);
 
-const filteredRecords = computed(() => props.data.length);
+const filteredRecords = computed(() => currentFilteredCount.value);
+
+function updateFilteredCount(count: number) {
+  currentFilteredCount.value = count;
+}
 
 // Generate preview data when format options change
 watch([() => props.data, formatOptions], async () => {
@@ -149,10 +164,16 @@ watch([() => props.data, formatOptions], async () => {
 }, { immediate: true, deep: true, flush: 'post' });
 
 async function handleExport() {
+  // Prevent export if no data would be exported
+  if (currentFilteredCount.value === 0) {
+    console.warn('Export cancelled: No data matches current filters');
+    return;
+  }
+
   isExporting.value = true;
   try {
     await props.onExport(props.data, formatOptions.value);
-    emit('close');
+    emit('update:open', false);
   } catch (error) {
     console.error('Export failed:', error);
   } finally {

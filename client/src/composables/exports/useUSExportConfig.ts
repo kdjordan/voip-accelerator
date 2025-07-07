@@ -1,9 +1,12 @@
 import { ref, watch } from 'vue';
 import type { USExportFormatOptions } from '@/types/exports';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 const STORAGE_KEY = 'us-export-format-preferences';
 
 export function useUSExportConfig() {
+  const lergStore = useLergStoreV2();
+
   // Load saved preferences from localStorage
   const loadSavedPreferences = (): USExportFormatOptions => {
     try {
@@ -20,7 +23,7 @@ export function useUSExportConfig() {
       npanxxFormat: 'combined',
       includeCountryCode: true,
       includeStateColumn: false,
-      includeMetroColumn: false,
+      includeCountryColumn: false,
       selectedCountries: [],
       excludeCountries: false,
     };
@@ -50,7 +53,18 @@ export function useUSExportConfig() {
     let filteredData = data;
     if (options.selectedCountries.length > 0) {
       filteredData = data.filter(row => {
-        const country = row.country || 'US';
+        // First check for direct country fields
+        let country = row.country || row.countryCode || row.country_code;
+        
+        // If no direct country field, derive from NPA using LERG store
+        if (!country && row.npa) {
+          const npaInfo = lergStore.getNPAInfo(row.npa);
+          country = npaInfo?.country_code;
+        }
+        
+        // Fallback to US if still no country
+        country = country || 'US';
+        
         const isInList = options.selectedCountries.includes(country);
         return options.excludeCountries ? !isInList : isInList;
       });
@@ -79,11 +93,10 @@ export function useUSExportConfig() {
         'Cheaper File'
       );
     } else {
-      headers.push('Country', 'Interstate Rate', 'Intrastate Rate', 'Indeterminate Rate', 'Effective Date');
-    }
-
-    if (options.includeMetroColumn) {
-      headers.push('Metro Area');
+      if (options.includeCountryColumn) {
+        headers.push('Country');
+      }
+      headers.push('Interstate Rate', 'Intrastate Rate', 'Indeterminate Rate', 'Effective Date');
     }
 
     // Transform rows
@@ -96,9 +109,9 @@ export function useUSExportConfig() {
         const npa = npanxx.slice(0, 3);
         const nxx = npanxx.slice(3, 6).padStart(3, '0'); // Ensure 3 digits with leading zeros
         
-        // Apply country code to NPA if requested (same as preview logic)
+        // Store both as strings to preserve formatting in Excel
         transformedRow['NPA'] = options.includeCountryCode ? `1${npa}` : npa;
-        transformedRow['NXX'] = `'${nxx}`; // Force Excel to treat as text for consistency
+        transformedRow['NXX'] = nxx; // String with leading zeros preserved
       } else {
         transformedRow['NPANXX'] = options.includeCountryCode 
           ? `1${row.npanxx}` 
@@ -114,22 +127,29 @@ export function useUSExportConfig() {
       if (exportType === 'comparison') {
         transformedRow['Destination Name (File 1)'] = row.destinationName || '';
         transformedRow['Destination Name (File 2)'] = row.destinationName2 || '';
-        transformedRow['Rate (File 1)'] = row.rate;
-        transformedRow['Rate (File 2)'] = row.rate2;
-        transformedRow['Difference'] = row.difference;
-        transformedRow['Difference %'] = row.differencePercentage;
+        // Format rates with 6 decimal places and store as strings for consistency
+        transformedRow['Rate (File 1)'] = typeof row.rate === 'number' ? row.rate.toFixed(6) : row.rate;
+        transformedRow['Rate (File 2)'] = typeof row.rate2 === 'number' ? row.rate2.toFixed(6) : row.rate2;
+        transformedRow['Difference'] = typeof row.difference === 'number' ? row.difference.toFixed(6) : row.difference;
+        transformedRow['Difference %'] = typeof row.differencePercentage === 'number' ? row.differencePercentage.toFixed(2) : row.differencePercentage;
         transformedRow['Cheaper File'] = row.cheaperFile || '';
       } else {
-        transformedRow['Country'] = row.country || 'US';
+        if (options.includeCountryColumn) {
+          // First check for direct country fields
+          let country = row.country || row.countryCode || row.country_code;
+          
+          // If no direct country field, derive from NPA using LERG store
+          if (!country && row.npa) {
+            const npaInfo = lergStore.getNPAInfo(row.npa);
+            country = npaInfo?.country_code;
+          }
+          
+          transformedRow['Country'] = country || 'US';
+        }
         transformedRow['Interstate Rate'] = row.interRate || row.interstateRate || row.inter;
         transformedRow['Intrastate Rate'] = row.intraRate || row.intrastateRate || row.intra;
         transformedRow['Indeterminate Rate'] = row.indetermRate || row.indeterminateRate || row.indeterm;
         transformedRow['Effective Date'] = row.effectiveDate || '';
-      }
-
-      // Add metro area if requested
-      if (options.includeMetroColumn) {
-        transformedRow['Metro Area'] = row.metroArea || '';
       }
 
       rows.push(transformedRow);
@@ -144,7 +164,7 @@ export function useUSExportConfig() {
       npanxxFormat: 'combined',
       includeCountryCode: true,
       includeStateColumn: false,
-      includeMetroColumn: false,
+      includeCountryColumn: false,
       selectedCountries: [],
       excludeCountries: false,
     };

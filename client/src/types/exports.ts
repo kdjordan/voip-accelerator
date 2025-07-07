@@ -12,7 +12,7 @@ export interface USExportFormatOptions {
   npanxxFormat: 'combined' | 'split';
   includeCountryCode: boolean;
   includeStateColumn: boolean;
-  includeMetroColumn: boolean;
+  includeCountryColumn: boolean;
   selectedCountries: string[];
   excludeCountries: boolean;
 }

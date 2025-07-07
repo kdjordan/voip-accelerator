@@ -46,11 +46,16 @@
   import { computed, ref, watch, nextTick } from 'vue';
   import type { USExportFormatOptions } from '@/types/exports';
   import { ArrowPathIcon } from '@heroicons/vue/24/outline';
+  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+  
   const props = defineProps<{
     data: any[];
     formatOptions: USExportFormatOptions;
     loading: boolean;
+    exportType?: 'rate-sheet' | 'comparison';
   }>();
+
+  const lergStore = useLergStoreV2();
 
   // Lightweight formatting state
   const isFormatting = ref(false);
@@ -71,12 +76,11 @@
       headers.push('State');
     }
 
-    // Core rate columns (same for all data)
-    headers.push('Country', 'Interstate Rate', 'Intrastate Rate', 'Indeterminate Rate');
-
-    if (props.formatOptions.includeMetroColumn) {
-      headers.push('Metro Area');
+    // Core rate columns
+    if (props.formatOptions.includeCountryColumn) {
+      headers.push('Country');
     }
+    headers.push('Interstate Rate', 'Intrastate Rate', 'Indeterminate Rate');
 
     return headers;
   });
@@ -95,13 +99,13 @@
         const npa = npanxx.slice(0, 3);
         const nxx = npanxx.slice(3, 6).padStart(3, '0'); // Ensure 3 digits with leading zeros
         
-        // Apply country code to NPA if requested
+        // Store as strings to match export behavior
         formatted['NPA'] = props.formatOptions.includeCountryCode ? `1${npa}` : npa;
-        formatted['NXX'] = `'${nxx}`; // Force Excel to treat as text for consistency
+        formatted['NXX'] = nxx; // String with leading zeros preserved
       } else {
         formatted['NPANXX'] = props.formatOptions.includeCountryCode
           ? `1${row.npanxx}`
-          : row.npanxx;
+          : String(row.npanxx || '');
       }
 
       // Optional columns
@@ -109,15 +113,22 @@
         formatted['State'] = row.stateCode || 'N/A';
       }
 
-      // Core rate data - always the same
-      formatted['Country'] = 'US';
+      // Core rate data
+      if (props.formatOptions.includeCountryColumn) {
+        // First check for direct country fields
+        let country = row.country || row.countryCode || row.country_code;
+        
+        // If no direct country field, derive from NPA using LERG store
+        if (!country && row.npa) {
+          const npaInfo = lergStore.getNPAInfo(row.npa);
+          country = npaInfo?.country_code;
+        }
+        
+        formatted['Country'] = country || 'US';
+      }
       formatted['Interstate Rate'] = formatRate(row.interRate);
       formatted['Intrastate Rate'] = formatRate(row.intraRate);
       formatted['Indeterminate Rate'] = formatRate(row.indetermRate);
-
-      if (props.formatOptions.includeMetroColumn) {
-        formatted['Metro Area'] = row.metroArea || 'N/A';
-      }
 
       return formatted;
     });

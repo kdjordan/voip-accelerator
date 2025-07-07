@@ -177,6 +177,31 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         .sort((a, b) => a.name.localeCompare(b.name));
     },
 
+    // All Countries (including US, CA, and others)
+    getAllCountries(): CountryData[] {
+      const grouped = this.allNPAs.reduce(
+        (acc, npa) => {
+          if (!acc[npa.country_code]) {
+            acc[npa.country_code] = {
+              code: npa.country_code,
+              name: npa.country_name,
+              npas: [],
+            };
+          }
+          acc[npa.country_code].npas.push(npa.npa);
+          return acc;
+        },
+        {} as Record<string, { code: string; name: string; npas: string[] }>
+      );
+
+      return Object.values(grouped)
+        .map((country) => ({
+          ...country,
+          count: country.npas.length,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+
     // Other Countries (Caribbean, Pacific, etc.)
     getDistinctCountries(): CountryData[] {
       const grouped = this.allNPAs

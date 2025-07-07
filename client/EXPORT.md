@@ -234,9 +234,11 @@ Split NPA/NXX format created inconsistent Excel data types:
 - Mixed column types looked unprofessional
 
 **✅ RESOLVED:**
-Added Excel text prefix (`'`) for **split format only**:
-- ALL NXX values now consistently display as text: `'040`, `'353`, `'859`
-- Combined format unchanged (single column, no mixed types)
+Implemented Excel formula syntax `="value"` during CSV export:
+- Preview shows clean values: `040`, `353`, `859`
+- Export uses Excel formula: `="040"`, `="353"`, `="859"`
+- Excel treats all NXX values as text, preserving leading zeros
+- No visible artifacts in either preview or Excel
 
 ### **🎯 FINAL VALIDATION COMPLETE**
 The export modal now produces CSV files with:
@@ -269,7 +271,11 @@ The export modal now produces CSV files with:
 
 3. **Resolved export data mapping problems** where CSV files showed empty rate columns due to property name mismatches (`interRate` vs `interstateRate`), ensuring the actual export matches the preview exactly.
 
-4. **Perfected the NPANXX formatting** by preserving leading zeros and forcing consistent Excel text formatting for split NPA/NXX columns, eliminating the unprofessional mixed data type issue.
+4. **Perfected the NPANXX formatting** by preserving leading zeros with `.padStart(3, '0')` for consistent 3-digit NXX values (040, 002, 095), ensuring professional Excel compatibility without visible formatting artifacts.
+
+5. **Migrated from hardcoded to dynamic country data** by replacing the 18 hardcoded countries with live data from the LERG store via new `getAllCountries()` method, ensuring exports stay synchronized with the actual database content.
+
+6. **Enhanced UI consistency** by replacing radio buttons with toggle-style buttons matching the design pattern used throughout the application, providing a more professional and cohesive user experience.
 
 ### **🔧 REMAINING TASKS (Next Session)**
 - [ ] **Country filtering implementation** - Backend logic to actually filter data by selected countries

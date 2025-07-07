@@ -1,129 +1,125 @@
 <template>
-  <div class="border border-fbWhite/20 rounded-lg p-4">
-    <h4 class="text-sm font-medium text-fbWhite mb-3">Format Options</h4>
+  <div>
+    <h4 class="text-sm font-medium text-fbWhite mb-4">Format Options</h4>
     
-    <div class="space-y-4">
-      <!-- NPANXX Format -->
-      <div>
-        <label class="text-sm font-medium text-fbWhite/70">NPANXX Format</label>
-        <div class="mt-2 space-y-2">
-          <label class="flex items-center">
-            <input
-              type="radio"
-              :checked="formatOptions.npanxxFormat === 'combined'"
-              @change="updateNpanxxFormat('combined')"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Combined NPANXX (e.g., 213555)</span>
-          </label>
-          <label class="flex items-center">
-            <input
-              type="radio"
-              :checked="formatOptions.npanxxFormat === 'split'"
-              @change="updateNpanxxFormat('split')"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Split NPA/NXX columns (e.g., 213 | 555)</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Country Code Options -->
-      <div>
-        <label class="text-sm font-medium text-fbWhite/70">Country Code</label>
-        <div class="mt-2">
-          <label class="flex items-center">
-            <input
-              type="checkbox"
-              :checked="formatOptions.includeCountryCode"
-              @change="updateCountryCode($event.target.checked)"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Include (1) prefix for North American numbers</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Additional Columns -->
-      <div>
-        <label class="text-sm font-medium text-fbWhite/70">Additional Columns</label>
-        <div class="mt-2 space-y-2">
-          <label class="flex items-center">
-            <input
-              type="checkbox"
-              :checked="formatOptions.includeStateColumn"
-              @change="updateStateColumn($event.target.checked)"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Include state abbreviation column</span>
-          </label>
-          <label class="flex items-center">
-            <input
-              type="checkbox"
-              :checked="formatOptions.includeMetroColumn"
-              @change="updateMetroColumn($event.target.checked)"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Include metro area column</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Country Filter -->
-      <div>
-        <label class="text-sm font-medium text-fbWhite/70">Country Filter</label>
-        <div class="mt-2 space-y-2">
-          <label class="flex items-center">
-            <input
-              type="radio"
-              v-model="countryFilterMode"
-              value="all"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Include all countries</span>
-          </label>
-          <label class="flex items-center">
-            <input
-              type="radio"
-              v-model="countryFilterMode"
-              value="include"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Include only selected countries</span>
-          </label>
-          <label class="flex items-center">
-            <input
-              type="radio"
-              v-model="countryFilterMode"
-              value="exclude"
-              class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover"
-            />
-            <span class="ml-2 text-sm text-fbWhite">Exclude selected countries</span>
-          </label>
-        </div>
-
-        <!-- Country Selection -->
-        <div v-if="countryFilterMode !== 'all'" class="mt-3">
-          <label class="block text-xs font-medium text-fbWhite/70 mb-1">
-            Select countries to {{ countryFilterMode }}:
-          </label>
-          <div class="grid grid-cols-3 gap-2 p-3 bg-fbHover rounded max-h-32 overflow-y-auto">
-            <label
-              v-for="country in availableCountries"
-              :key="country"
-              class="flex items-center text-sm"
-            >
+    <!-- 2-column bento grid layout -->
+    <div class="grid grid-cols-2 gap-4">
+      <!-- Left Column -->
+      <div class="space-y-4">
+        <!-- NPANXX Format Bento Box -->
+        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">NPANXX Format</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
               <input
                 type="checkbox"
-                :value="country"
-                :checked="formatOptions.selectedCountries.includes(country)"
-                @change="updateSelectedCountries(country, $event.target.checked)"
-                class="h-3 w-3 text-accent focus:ring-accent border-fbWhite/20 bg-fbBlack rounded"
+                :checked="formatOptions.npanxxFormat === 'combined'"
+                @change="updateNpanxxFormat('combined')"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
               />
-              <span class="ml-1 text-fbWhite">{{ country }}</span>
+              <span class="ml-2 text-sm text-fbWhite">Combined (213555)</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.npanxxFormat === 'split'"
+                @change="updateNpanxxFormat('split')"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Split (213 | 555)</span>
             </label>
           </div>
         </div>
+
+        <!-- Additional Columns Bento Box -->
+        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">Additional Columns</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.includeStateColumn"
+                @change="updateStateColumn($event.target.checked)"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">State column</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.includeCountryColumn"
+                @change="updateCountryColumn($event.target.checked)"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Country column</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="space-y-4">
+        <!-- Country Code Prefix Bento Box -->
+        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">Country Code</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.includeCountryCode"
+                @change="updateCountryCode($event.target.checked)"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Include (1) prefix for North American numbers</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Countries in Current Data Bento Box -->
+        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">
+            Countries in Current Data
+            <span class="text-xs font-normal text-fbWhite/70 block mt-1">
+              Uncheck countries to exclude from export
+            </span>
+          </label>
+          <div class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+            <label
+              v-for="country in filteredCountriesForSelection"
+              :key="country"
+              class="flex items-center text-xs"
+            >
+              <input
+                type="checkbox"
+                :checked="!formatOptions.selectedCountries.includes(country)"
+                @change="updateCountrySelection(country, $event.target.checked)"
+                class="h-3 w-3 text-accent focus:ring-accent border-fbWhite/20 bg-fbBlack rounded"
+              />
+              <span class="ml-1 text-fbWhite">{{ countryDisplayNames.get(country) || country }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning when no data would be exported -->
+    <div v-if="filteredRecordCount === 0" class="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+      <div class="flex items-center">
+        <ExclamationTriangleIcon class="h-5 w-5 text-red-400 mr-2" />
+        <div>
+          <p class="text-sm font-medium text-red-400">No Data to Export</p>
+          <p class="text-xs text-red-300">Your current country selections would exclude all data. Check at least one country to include in the export.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Record count info -->
+    <div v-else class="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+      <div class="flex items-center">
+        <InformationCircleIcon class="h-5 w-5 text-blue-400 mr-2" />
+        <p class="text-sm text-blue-300">
+          <span class="font-medium">{{ filteredRecordCount.toLocaleString() }}</span> records will be exported with current settings
+        </p>
       </div>
     </div>
   </div>
@@ -132,14 +128,18 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import type { USExportFormatOptions } from '@/types/exports';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps<{
   options: USExportFormatOptions;
   exportType: 'rate-sheet' | 'comparison';
+  data: any[];
 }>();
 
 const emit = defineEmits<{
   'update:options': [value: USExportFormatOptions];
+  'update:filtered-count': [count: number];
 }>();
 
 // Use computed for reactive options - eliminates circular updates
@@ -148,34 +148,91 @@ const formatOptions = computed({
   set: (value) => emit('update:options', value)
 });
 
-// Country filter mode for UI
-const countryFilterMode = computed({
-  get: () => {
-    if (props.options.selectedCountries.length > 0) {
-      return props.options.excludeCountries ? 'exclude' : 'include';
-    }
-    return 'all';
-  },
-  set: (mode) => {
-    const newOptions = { ...props.options };
-    if (mode === 'all') {
-      newOptions.selectedCountries = [];
-      newOptions.excludeCountries = false;
-    } else if (mode === 'exclude') {
-      newOptions.excludeCountries = true;
-    } else {
-      newOptions.excludeCountries = false;
-    }
-    emit('update:options', newOptions);
+// Simplified country selection - selectedCountries now represents countries to EXCLUDE
+// Empty array = export all countries
+// Non-empty array = exclude these countries
+
+// Get countries from LERG store
+const lergStore = useLergStoreV2();
+const availableCountries = computed(() => 
+  lergStore.getAllCountries.map(country => country.code)
+);
+
+// Get countries that are actually present in the current filtered data
+const filteredCountriesForSelection = computed(() => {
+  if (props.data && props.data.length > 0) {
+    // Extract unique countries from the actual data
+    const dataCountries = new Set<string>();
+    props.data.forEach(row => {
+      // First check for direct country fields
+      let country = row.country || row.countryCode || row.country_code;
+      
+      // If no direct country field, derive from NPA using LERG store
+      if (!country && row.npa) {
+        const npaInfo = lergStore.getNPAInfo(row.npa);
+        country = npaInfo?.country_code;
+      }
+      
+      if (country) {
+        dataCountries.add(country);
+      }
+    });
+    
+    return Array.from(dataCountries).sort();
   }
+  // Fallback to all available countries if no data
+  return availableCountries.value;
 });
 
-// Common countries in telecom data
-const availableCountries = [
-  'US', 'CA', 'MX', 'PR', 'VI', 'GU', 
-  'AS', 'MP', 'BS', 'BB', 'BM', 'DO',
-  'GD', 'JM', 'KY', 'TC', 'TT', 'VG'
-];
+// Get full country names for display
+const countryDisplayNames = computed(() => {
+  const nameMap = new Map<string, string>();
+  
+  // Build a map of country codes to full names using LERG data
+  lergStore.getAllCountries.forEach(country => {
+    nameMap.set(country.code, country.name);
+  });
+  
+  return nameMap;
+});
+
+// Count how many records would be exported with current filters
+const filteredRecordCount = computed(() => {
+  if (!props.data || props.data.length === 0) return 0;
+  
+  // If no countries are selected for exclusion, return all records
+  if (props.options.selectedCountries.length === 0) {
+    return props.data.length;
+  }
+  
+  // Count records that would NOT be excluded
+  let count = 0;
+  props.data.forEach(row => {
+    // Get the country for this row
+    let country = row.country || row.countryCode || row.country_code;
+    
+    // If no direct country field, derive from NPA using LERG store
+    if (!country && row.npa) {
+      const npaInfo = lergStore.getNPAInfo(row.npa);
+      country = npaInfo?.country_code;
+    }
+    
+    if (country) {
+      // Check if this country is in the exclusion list
+      const isExcluded = props.options.selectedCountries.includes(country);
+      if (!isExcluded) {
+        count++;
+      }
+    }
+  });
+  
+  return count;
+});
+
+// Watch for filtered count changes and emit to parent
+watch(filteredRecordCount, (newCount) => {
+  emit('update:filtered-count', newCount);
+}, { immediate: true });
 
 // Update functions - direct emit without watchers
 function updateNpanxxFormat(format: 'combined' | 'split') {
@@ -190,16 +247,22 @@ function updateStateColumn(checked: boolean) {
   emit('update:options', { ...props.options, includeStateColumn: checked });
 }
 
-function updateMetroColumn(checked: boolean) {
-  emit('update:options', { ...props.options, includeMetroColumn: checked });
+function updateCountryColumn(checked: boolean) {
+  emit('update:options', { ...props.options, includeCountryColumn: checked });
 }
 
-function updateSelectedCountries(country: string, checked: boolean) {
+function updateCountrySelection(country: string, checked: boolean) {
+  // checked = true means country is INCLUDED (not in exclusion list)
+  // checked = false means country is EXCLUDED (add to exclusion list)
   const newCountries = checked 
-    ? [...props.options.selectedCountries, country]
-    : props.options.selectedCountries.filter(c => c !== country);
+    ? props.options.selectedCountries.filter(c => c !== country) // Remove from exclusion list
+    : [...props.options.selectedCountries, country]; // Add to exclusion list
   
-  emit('update:options', { ...props.options, selectedCountries: newCountries });
+  emit('update:options', { 
+    ...props.options, 
+    selectedCountries: newCountries,
+    excludeCountries: true // Always use exclude mode for this simplified approach
+  });
 }
 
 
