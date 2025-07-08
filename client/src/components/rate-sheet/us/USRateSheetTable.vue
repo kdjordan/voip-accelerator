@@ -870,6 +870,14 @@ All NPAs will be available for adjustment again."
       :filters="exportFilters"
       :data="exportData"
       :total-records="totalExportRecords"
+      :adjusted-npas="adjustedNpasThisSession"
+      :adjustment-details="adjustmentDetailsThisSession"
+      :adjustment-settings="{
+        type: adjustmentType,
+        valueType: adjustmentValueType,
+        value: adjustmentValue,
+        targetRate: adjustmentTargetRate
+      }"
       :on-export="handleExportWithOptions"
     />
   </div>
@@ -1095,6 +1103,15 @@ All NPAs will be available for adjustment again."
   const adjustmentStatusMessage = ref<string | null>(null);
   const adjustmentError = ref<string | null>(null);
   const adjustedNpasThisSession = ref(new Set<string>()); // Stores NPAs of records adjusted in this session
+  const adjustmentDetailsThisSession = ref<Map<string, {
+    recordsAffected: number;
+    beforeRates: { inter?: number; intra?: number; indeterm?: number };
+    afterRates: { inter?: number; intra?: number; indeterm?: number };
+    adjustmentType: string;
+    adjustmentValue: number;
+    adjustmentValueType: string;
+    targetRate: string;
+  }>>(new Map()); // Stores detailed adjustment information per NPA
   // --- End Rate Adjustment State ---
 
   // Moved initialization out of hooks/functions
@@ -1295,6 +1312,7 @@ All NPAs will be available for adjustment again."
 
   onMounted(async () => {
     adjustedNpasThisSession.value.clear(); // Clear on mount for a fresh session
+    adjustmentDetailsThisSession.value.clear(); // Clear adjustment details for a fresh session
     if (!lergStore.isLoaded) {
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
@@ -1397,6 +1415,7 @@ All NPAs will be available for adjustment again."
       Array.from(adjustedNpasThisSession.value)
     );
     adjustedNpasThisSession.value.clear();
+    adjustmentDetailsThisSession.value.clear();
     adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
 
     // Clear the message after a few seconds
@@ -1705,9 +1724,32 @@ All NPAs will be available for adjustment again."
         if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'indeterm')
           targets.push('indetermRate');
 
+        // Track adjustment details for this NPA
+        const npaKey = record.npa;
+        if (!adjustmentDetailsThisSession.value.has(npaKey)) {
+          adjustmentDetailsThisSession.value.set(npaKey, {
+            recordsAffected: 0,
+            beforeRates: {},
+            afterRates: {},
+            adjustmentType: adjustmentType.value,
+            adjustmentValue: adjustmentValue.value!,
+            adjustmentValueType: adjustmentValueType.value,
+            targetRate: adjustmentTargetRate.value
+          });
+        }
+        const npaDetails = adjustmentDetailsThisSession.value.get(npaKey)!;
+
         targets.forEach((rateField) => {
           const currentRate = record[rateField];
           if (typeof currentRate !== 'number') return;
+
+          // Store the before rate if we haven't already for this NPA
+          const rateType = rateField === 'interRate' ? 'inter' : 
+                          rateField === 'intraRate' ? 'intra' : 'indeterm';
+          
+          if (npaDetails.beforeRates[rateType] === undefined) {
+            npaDetails.beforeRates[rateType] = currentRate;
+          }
 
           let adjustedRate: number;
           const value = adjustmentValue.value!;
@@ -1727,6 +1769,9 @@ All NPAs will be available for adjustment again."
           if (finalRate !== currentRate) {
             changes[rateField] = finalRate;
             changed = true;
+            
+            // Store the after rate
+            npaDetails.afterRates[rateType] = finalRate;
           }
         });
 
@@ -1734,6 +1779,10 @@ All NPAs will be available for adjustment again."
           allUpdatesToApply.push({ key: record.id, changes });
           // Track this NPA as being adjusted in this round
           npasBeingAdjustedThisRound.add(record.npa);
+          
+          // Increment the record count for this NPA
+          npaDetails.recordsAffected++;
+          
           console.log(
             `[USRateSheetTable] Adding NPA ${record.npa} to npasBeingAdjustedThisRound (will be added to session tracking after successful update)`
           );

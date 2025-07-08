@@ -99,6 +99,40 @@
             </label>
           </div>
         </div>
+
+        <!-- Session History Bento Box (Rate Sheet Only) -->
+        <div v-if="exportType === 'rate-sheet'" class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">
+            Session History
+            <span class="text-xs font-normal text-fbWhite/70 block mt-1">
+              Include record of adjustments made this session
+            </span>
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                v-model="includeSessionHistory"
+                :disabled="adjustedNpasCount === 0"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">
+                <template v-if="adjustedNpasCount > 0">
+                  Include session history ({{ adjustedNpasCount }} NPAs adjusted)
+                </template>
+                <template v-else>
+                  Include session history
+                </template>
+              </span>
+            </label>
+            <p v-if="adjustedNpasCount === 0" class="text-xs text-fbWhite/50">
+              No adjustments made this session
+            </p>
+            <p v-else class="text-xs text-fbWhite/70">
+              Downloads additional .txt file with adjustment details
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -135,11 +169,14 @@ const props = defineProps<{
   options: USExportFormatOptions;
   exportType: 'rate-sheet' | 'comparison';
   data: any[];
+  adjustedNpas?: Set<string>;
+  includeSessionHistory?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:options': [value: USExportFormatOptions];
   'update:filtered-count': [count: number];
+  'update:include-session-history': [value: boolean];
 }>();
 
 // Use computed for reactive options - eliminates circular updates
@@ -228,6 +265,13 @@ const filteredRecordCount = computed(() => {
   
   return count;
 });
+
+// Session history state
+const includeSessionHistory = computed({
+  get: () => props.includeSessionHistory || false,
+  set: (value) => emit('update:include-session-history', value)
+});
+const adjustedNpasCount = computed(() => props.adjustedNpas?.size || 0);
 
 // Watch for filtered count changes and emit to parent
 watch(filteredRecordCount, (newCount) => {

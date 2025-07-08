@@ -53,8 +53,10 @@
                   <!-- Format Options -->
                   <USExportFormatOptions
                     v-model:options="formatOptions"
+                    v-model:include-session-history="includeSessionHistory"
                     :export-type="exportType"
                     :data="data"
+                    :adjusted-npas="adjustedNpas"
                     @update:filtered-count="updateFilteredCount"
                   />
 
@@ -124,6 +126,22 @@ const props = defineProps<{
   filters: USExportFiltersType;
   data: any[];
   totalRecords: number;
+  adjustedNpas?: Set<string>;
+  adjustmentDetails?: Map<string, {
+    recordsAffected: number;
+    beforeRates: { inter?: number; intra?: number; indeterm?: number };
+    afterRates: { inter?: number; intra?: number; indeterm?: number };
+    adjustmentType: string;
+    adjustmentValue: number;
+    adjustmentValueType: string;
+    targetRate: string;
+  }>;
+  adjustmentSettings?: {
+    type: string;
+    valueType: string;
+    value: number | null;
+    targetRate: string;
+  };
   onExport: (data: any[], options: FormatOptionsType) => Promise<void>;
 }>();
 
@@ -144,11 +162,87 @@ const isExporting = ref(false);
 const loadingPreview = ref(false);
 const previewData = ref<any[]>([]);
 const currentFilteredCount = ref(0);
+const includeSessionHistory = ref(false);
 
 const filteredRecords = computed(() => currentFilteredCount.value);
 
 function updateFilteredCount(count: number) {
   currentFilteredCount.value = count;
+}
+
+function exportSessionHistory(adjustedNpas: Set<string>) {
+  console.log('[Session Export] Starting CSV session history export...');
+  console.log('[Session Export] Adjusted NPAs:', adjustedNpas);
+  console.log('[Session Export] Adjustment details:', props.adjustmentDetails);
+  
+  const sessionDate = new Date().toISOString().split('T')[0];
+  
+  if (!props.adjustmentDetails || props.adjustmentDetails.size === 0) {
+    console.warn('[Session Export] No detailed adjustment data available, falling back to basic export');
+    // Fallback to basic CSV if no details available
+    const adjustedNpasList = Array.from(adjustedNpas).sort();
+    
+    const csvRows = [
+      'NPA,Records Affected,Adjustment Type,Adjustment Value,Target Rates',
+      ...adjustedNpasList.map(npa => `${npa},Unknown,Unknown,Unknown,Unknown`)
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `us-rate-session-${sessionDate}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  // Enhanced CSV export with clean, actionable data
+  const sortedNpas = Array.from(props.adjustmentDetails.keys()).sort();
+  const csvRows = ['NPA,Records Affected,Adjustment Type,Adjustment Value,Target Rates'];
+  
+  sortedNpas.forEach(npa => {
+    const details = props.adjustmentDetails!.get(npa)!;
+    
+    // Format adjustment type and value
+    const adjType = details.adjustmentType === 'markup' ? 'Markup' : 
+                   details.adjustmentType === 'markdown' ? 'Markdown' : 'Set To';
+    
+    const adjValue = details.adjustmentValueType === 'percentage' ? 
+                    `${details.adjustmentValue}%` : 
+                    details.adjustmentType === 'set' ? 
+                    `$${details.adjustmentValue}` : 
+                    `$${details.adjustmentValue}`;
+    
+    const targetRates = details.targetRate === 'all' ? 'All' : 
+                       details.targetRate === 'inter' ? 'Interstate' : 
+                       details.targetRate === 'intra' ? 'Intrastate' : 'Indeterminate';
+    
+    csvRows.push(`${npa},${details.recordsAffected},${adjType},${adjValue},${targetRates}`);
+  });
+
+  const csvContent = csvRows.join('\n');
+  console.log('[Session Export] CSV content prepared, rows:', csvRows.length);
+
+  try {
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    console.log('[Session Export] CSV blob created, size:', blob.size);
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `us-rate-session-${sessionDate}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log('[Session Export] CSV export completed');
+  } catch (error) {
+    console.error('[Session Export] Error during CSV export:', error);
+  }
 }
 
 // Generate preview data when format options change
@@ -164,6 +258,10 @@ watch([() => props.data, formatOptions], async () => {
 }, { immediate: true, deep: true, flush: 'post' });
 
 async function handleExport() {
+  console.log('[Export] Starting export process...');
+  console.log('[Export] Include session history?', includeSessionHistory.value);
+  console.log('[Export] Adjusted NPAs available?', props.adjustedNpas?.size);
+  
   // Prevent export if no data would be exported
   if (currentFilteredCount.value === 0) {
     console.warn('Export cancelled: No data matches current filters');
@@ -171,13 +269,40 @@ async function handleExport() {
   }
 
   isExporting.value = true;
+  
+  // Track whether both exports should happen
+  const shouldExportSession = includeSessionHistory.value && props.adjustedNpas?.size > 0;
+  
   try {
+    // Export main CSV first
+    console.log('[Export] Starting main CSV export...');
     await props.onExport(props.data, formatOptions.value);
-    emit('update:open', false);
+    console.log('[Export] Main CSV export completed successfully');
+    
+    // If session history requested, start it immediately but don't wait
+    if (shouldExportSession) {
+      console.log('[Export] Starting session history export immediately...');
+      
+      // Start session export in next tick to avoid blocking
+      setTimeout(() => {
+        exportSessionHistory(props.adjustedNpas);
+      }, 100);
+    }
+    
+    // Close modal after brief delay to allow both downloads to start
+    setTimeout(() => {
+      console.log('[Export] Closing modal...');
+      emit('update:open', false);
+    }, shouldExportSession ? 800 : 100);
+    
   } catch (error) {
-    console.error('Export failed:', error);
+    console.error('[Export] Export failed:', error);
+    emit('update:open', false);
   } finally {
-    isExporting.value = false;
+    // Reset loading state after appropriate delay
+    setTimeout(() => {
+      isExporting.value = false;
+    }, shouldExportSession ? 1000 : 100);
   }
 }
 </script>
