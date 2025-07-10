@@ -136,6 +136,16 @@ const props = defineProps<{
     adjustmentValueType: string;
     targetRate: string;
   }>;
+  adjustmentOperations?: Array<{
+    timestamp: string;
+    filtersApplied: string[];
+    adjustmentType: string;
+    adjustmentValue: number;
+    adjustmentValueType: string;
+    targetRate: string;
+    npasAffected: string[];
+    recordsAffected: number;
+  }>;
   adjustmentSettings?: {
     type: string;
     valueType: string;
@@ -175,7 +185,14 @@ function exportSessionHistory(adjustedNpas: Set<string>) {
   console.log('[Session Export] Adjusted NPAs:', adjustedNpas);
   console.log('[Session Export] Adjustment details:', props.adjustmentDetails);
   
-  const sessionDate = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const sessionDate = now.toISOString().split('T')[0];
+  const sessionTime = now.toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit' 
+  });
   
   if (!props.adjustmentDetails || props.adjustmentDetails.size === 0) {
     console.warn('[Session Export] No detailed adjustment data available, falling back to basic export');
@@ -200,9 +217,116 @@ function exportSessionHistory(adjustedNpas: Set<string>) {
     return;
   }
 
-  // Enhanced CSV export with clean, actionable data
+  // Calculate summary statistics
   const sortedNpas = Array.from(props.adjustmentDetails.keys()).sort();
-  const csvRows = ['NPA,Records Affected,Adjustment Type,Adjustment Value,Target Rates'];
+  let totalRecordsModified = 0;
+  let interRateChanges = 0;
+  let intraRateChanges = 0;
+  let indetermRateChanges = 0;
+  
+  sortedNpas.forEach(npa => {
+    const details = props.adjustmentDetails!.get(npa)!;
+    totalRecordsModified += details.recordsAffected;
+    
+    // Count rate changes by type
+    if (details.targetRate === 'all') {
+      interRateChanges += details.recordsAffected;
+      intraRateChanges += details.recordsAffected;
+      indetermRateChanges += details.recordsAffected;
+    } else if (details.targetRate === 'inter') {
+      interRateChanges += details.recordsAffected;
+    } else if (details.targetRate === 'intra') {
+      intraRateChanges += details.recordsAffected;
+    } else if (details.targetRate === 'indeterm') {
+      indetermRateChanges += details.recordsAffected;
+    }
+  });
+
+  // Build CSV with metadata section at the top
+  const csvRows = [
+    'US RATE SHEET ADJUSTMENT HISTORY',
+    `Session Date:,${sessionDate}`,
+    `Session Time:,${sessionTime}`,
+    `Total Records in Dataset:,${props.totalRecords}`,
+    '',
+    'ACTIVE FILTERS DURING ADJUSTMENTS:',
+  ];
+  
+  // Add filter information
+  const hasActiveFilters = props.filters.states.length > 0 || 
+                          props.filters.npanxxSearch || 
+                          props.filters.metroAreas.length > 0 ||
+                          props.filters.countries.length > 0;
+  
+  if (!hasActiveFilters) {
+    csvRows.push('No filters applied - all data was visible');
+  } else {
+    if (props.filters.npanxxSearch) {
+      csvRows.push(`NPANXX Search:,"${props.filters.npanxxSearch}"`);
+    }
+    
+    if (props.filters.states.length > 0) {
+      const stateAction = props.filters.excludeStates ? 'Excluding States:' : 'Including States:';
+      csvRows.push(`${stateAction},"${props.filters.states.join(', ')}"`);
+    }
+    
+    if (props.filters.metroAreas.length > 0) {
+      csvRows.push(`Metro Areas:,"${props.filters.metroAreas.join(', ')}"`);
+    }
+    
+    if (props.filters.countries.length > 0) {
+      const countryAction = props.filters.excludeCountries ? 'Excluding Countries:' : 'Including Countries:';
+      csvRows.push(`${countryAction},"${props.filters.countries.join(', ')}"`);
+    }
+    
+    if (props.filters.rateTypes && props.filters.rateTypes.length > 0) {
+      csvRows.push(`Rate Types:,"${props.filters.rateTypes.join(', ')}"`);
+    }
+  }
+  
+  csvRows.push(
+    '',
+    'SUMMARY:',
+    `NPAs Adjusted:,${sortedNpas.length}`,
+    `Total Records Modified:,${totalRecordsModified}`,
+    `Interstate Rate Changes:,${interRateChanges}`,
+    `Intrastate Rate Changes:,${intraRateChanges}`,
+    `Indeterminate Rate Changes:,${indetermRateChanges}`,
+    ''
+  );
+  
+  // Add adjustment operations summary
+  if (props.adjustmentOperations && props.adjustmentOperations.length > 0) {
+    csvRows.push('ADJUSTMENT OPERATIONS:');
+    props.adjustmentOperations.forEach((op, index) => {
+      const adjType = op.adjustmentType === 'markup' ? 'Markup' : 
+                     op.adjustmentType === 'markdown' ? 'Markdown' : 'Set To';
+      const adjValue = op.adjustmentValueType === 'percentage' ? 
+                      `${op.adjustmentValue}%` : `$${op.adjustmentValue}`;
+      const targetRates = op.targetRate === 'all' ? 'All Rates' : 
+                         op.targetRate === 'inter' ? 'Interstate' : 
+                         op.targetRate === 'intra' ? 'Intrastate' : 'Indeterminate';
+      
+      const filterSummary = op.filtersApplied.join(' + ');
+      const operationSummary = `${index + 1}. ${adjType} ${adjValue} on ${targetRates} using: ${filterSummary} (${op.recordsAffected} records)`;
+      csvRows.push(operationSummary);
+    });
+  }
+  
+  csvRows.push(
+    '',
+    'DETAILED RATE CHANGES (GROUPED BY ADJUSTMENT):',
+    ''
+  );
+  
+  // Group NPAs by their adjustment parameters
+  const adjustmentGroups = new Map<string, {
+    npas: string[];
+    totalRecords: number;
+    adjType: string;
+    adjValue: string;
+    targetRates: string;
+  }>();
   
   sortedNpas.forEach(npa => {
     const details = props.adjustmentDetails!.get(npa)!;
@@ -221,8 +345,74 @@ function exportSessionHistory(adjustedNpas: Set<string>) {
                        details.targetRate === 'inter' ? 'Interstate' : 
                        details.targetRate === 'intra' ? 'Intrastate' : 'Indeterminate';
     
-    csvRows.push(`${npa},${details.recordsAffected},${adjType},${adjValue},${targetRates}`);
+    // Create a key for grouping
+    const groupKey = `${adjType}|${adjValue}|${targetRates}`;
+    
+    if (!adjustmentGroups.has(groupKey)) {
+      adjustmentGroups.set(groupKey, {
+        npas: [],
+        totalRecords: 0,
+        adjType,
+        adjValue,
+        targetRates
+      });
+    }
+    
+    const group = adjustmentGroups.get(groupKey)!;
+    group.npas.push(npa);
+    group.totalRecords += details.recordsAffected;
   });
+  
+  // Output grouped data
+  let groupIndex = 1;
+  adjustmentGroups.forEach((group) => {
+    csvRows.push(`Group ${groupIndex}: ${group.adjType} ${group.adjValue} on ${group.targetRates} Rates`);
+    csvRows.push(`Total NPAs Affected:,${group.npas.length}`);
+    csvRows.push(`Total Records Modified:,${group.totalRecords}`);
+    
+    // Output NPAs in a more compact format (10 per row)
+    csvRows.push('NPAs:');
+    for (let i = 0; i < group.npas.length; i += 10) {
+      const npaBatch = group.npas.slice(i, i + 10).join(' ');
+      csvRows.push(npaBatch);
+    }
+    
+    csvRows.push(''); // Empty line between groups
+    groupIndex++;
+  });
+  
+  // Add Performance Metrics Tracking Section
+  csvRows.push(
+    '',
+    '================================================================================',
+    'PERFORMANCE METRICS TRACKING',
+    '================================================================================',
+    '',
+    'Use this section to track your key performance indicators before and after rate adjustments.',
+    'Fill in your current metrics below to measure the impact of these rate changes.',
+    '',
+    'BEFORE ADJUSTMENT METRICS:',
+    'Date:,________________',
+    'Total Calls (24hr):,________________',
+    'ASR (Answer-Seizure Ratio %):,________________',
+    'P/L (Profit/Loss $):,________________',
+    'Notes:,________________',
+    '',
+    'AFTER ADJUSTMENT METRICS (Fill in after rates take effect):',
+    'Date:,________________',
+    'Total Calls (24hr):,________________',
+    'ASR (Answer-Seizure Ratio %):,________________',
+    'P/L (Profit/Loss $):,________________',
+    'Notes:,________________',
+    '',
+    'PERFORMANCE IMPACT SUMMARY:',
+    'Call Volume Change:,________________ (calls)',
+    'ASR Change:,________________ (%)',
+    'P/L Change:,________________ ($)',
+    'ROI of Rate Adjustment:,________________ (%)',
+    '',
+    '================================================================================'
+  );
 
   const csvContent = csvRows.join('\n');
   console.log('[Session Export] CSV content prepared, rows:', csvRows.length);

@@ -872,6 +872,7 @@ All NPAs will be available for adjustment again."
       :total-records="totalExportRecords"
       :adjusted-npas="adjustedNpasThisSession"
       :adjustment-details="adjustmentDetailsThisSession"
+      :adjustment-operations="adjustmentOperationsThisSession"
       :adjustment-settings="{
         type: adjustmentType,
         valueType: adjustmentValueType,
@@ -1112,6 +1113,18 @@ All NPAs will be available for adjustment again."
     adjustmentValueType: string;
     targetRate: string;
   }>>(new Map()); // Stores detailed adjustment information per NPA
+  
+  // Session-level tracking for adjustment operations
+  const adjustmentOperationsThisSession = ref<Array<{
+    timestamp: string;
+    filtersApplied: string[];
+    adjustmentType: string;
+    adjustmentValue: number;
+    adjustmentValueType: string;
+    targetRate: string;
+    npasAffected: string[];
+    recordsAffected: number;
+  }>>([]);
   // --- End Rate Adjustment State ---
 
   // Moved initialization out of hooks/functions
@@ -1313,6 +1326,7 @@ All NPAs will be available for adjustment again."
   onMounted(async () => {
     adjustedNpasThisSession.value.clear(); // Clear on mount for a fresh session
     adjustmentDetailsThisSession.value.clear(); // Clear adjustment details for a fresh session
+    adjustmentOperationsThisSession.value = []; // Clear adjustment operations for a fresh session
     if (!lergStore.isLoaded) {
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
@@ -1416,6 +1430,7 @@ All NPAs will be available for adjustment again."
     );
     adjustedNpasThisSession.value.clear();
     adjustmentDetailsThisSession.value.clear();
+    adjustmentOperationsThisSession.value = []; // Clear adjustment operations history
     adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
 
     // Clear the message after a few seconds
@@ -1671,7 +1686,27 @@ All NPAs will be available for adjustment again."
       if (metroAreaCodesToFilter.value.length > 0) {
         const npaSet = new Set(metroAreaCodesToFilter.value);
         collection = collection.filter((record: USRateSheetEntry) => npaSet.has(record.npa));
-        filtersApplied.push(`Metro area NPAs: ${metroAreaCodesToFilter.value.join(', ')}`);
+        
+        // Determine if it's a preset or custom selection
+        let metroFilterDesc = '';
+        const metroCount = metroAreaCodesToFilter.value.length;
+        
+        // Check for common presets (you can adjust these counts based on your actual metro presets)
+        if (metroCount === 10) {
+          metroFilterDesc = 'Metro Filter: Top 10 Metro Areas';
+        } else if (metroCount === 25) {
+          metroFilterDesc = 'Metro Filter: Top 25 Metro Areas';
+        } else if (metroCount === 50) {
+          metroFilterDesc = 'Metro Filter: Top 50 Metro Areas';
+        } else if (metroCount <= 5) {
+          // For small selections, list the NPAs
+          metroFilterDesc = `Metro Filter: NPAs ${metroAreaCodesToFilter.value.join(', ')}`;
+        } else {
+          // For larger custom selections, just show the count
+          metroFilterDesc = `Metro Filter: ${metroCount} Metro Areas Selected`;
+        }
+        
+        filtersApplied.push(metroFilterDesc);
       }
 
       const filteredRecords = await collection.toArray();
@@ -1815,6 +1850,21 @@ All NPAs will be available for adjustment again."
         adjustedNpasThisSession.value.add(npa);
         console.log(`[USRateSheetTable] Added NPA ${npa} to adjustedNpasThisSession`);
       });
+
+      // Track this adjustment operation for session history
+      const adjustmentOperation = {
+        timestamp: new Date().toISOString(),
+        filtersApplied: filtersApplied.length > 0 ? filtersApplied : ['No filters - all data'],
+        adjustmentType: adjustmentType.value,
+        adjustmentValue: adjustmentValue.value!,
+        adjustmentValueType: adjustmentValueType.value,
+        targetRate: adjustmentTargetRate.value,
+        npasAffected: Array.from(npasBeingAdjustedThisRound).sort(),
+        recordsAffected: updatesCount
+      };
+      
+      adjustmentOperationsThisSession.value.push(adjustmentOperation);
+      console.log('[USRateSheetTable] Tracked adjustment operation:', adjustmentOperation);
 
       console.log(
         '[USRateSheetTable] handleApplyAdjustment: End. adjustedNpasThisSession:',
