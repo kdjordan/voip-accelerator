@@ -43,19 +43,16 @@ export function useCSVExport() {
 
     try {
       // Validate input data
-      if (!data.headers.length || !data.rows.length) {
+      if (!data.rows.length) {
         throw new Error('No data to export');
       }
 
       // Generate CSV content using Papa Parse
       const csv = Papa.unparse(
-        {
-          fields: data.headers,
-          data: data.rows,
-        },
+        data.rows,
         {
           quotes: options.quoteFields ?? true, // Default to true for safety
-          header: true,
+          header: false, // We handle headers manually in rows
         }
       );
 
@@ -99,11 +96,11 @@ export function formatRate(rate: number | null | undefined, decimals: number = 6
   if (rate === null || rate === undefined || typeof rate !== 'number' || isNaN(rate)) {
     return 'N/A';
   }
-  return `$${rate.toFixed(decimals)}`;
+  return rate.toFixed(decimals);
 }
 
 // Utility function to format percentage values consistently
 export function formatPercentage(value: number | null | undefined, decimals: number = 6): string {
   if (!isValidNumber(value)) return 'N/A';
-  return `${value.toFixed(decimals)}%`;
+  return value.toFixed(decimals);
 }

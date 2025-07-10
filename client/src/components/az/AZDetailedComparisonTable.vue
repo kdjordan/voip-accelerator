@@ -128,6 +128,28 @@
         </Listbox>
       </div>
 
+      <!-- Expand/Collapse All Buttons -->
+      <div class="flex gap-2">
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="expandAll(groupedDestinations)"
+          :disabled="isDataLoading || isFiltering"
+          title="Expand all grouped destinations"
+        >
+          Expand All
+        </BaseButton>
+        <BaseButton
+          variant="secondary"
+          size="small"
+          @click="collapseAll()"
+          :disabled="isDataLoading || isFiltering"
+          title="Collapse all grouped destinations"
+        >
+          Collapse All
+        </BaseButton>
+      </div>
+
       <!-- Download CSV Button -->
       <div class="ml-auto self-end">
         <BaseButton
@@ -178,121 +200,210 @@
       <span>No matching records found.</span>
     </div>
 
-    <!-- Data Table -->
-    <div v-else class="overflow-x-auto">
-      <div class="max-h-[600px] overflow-y-auto">
-        <table class="min-w-full divide-y divide-gray-700 text-sm">
-          <thead class="bg-gray-800 sticky top-0 z-10">
-            <tr>
-              <th
-                v-for="header in tableHeaders"
-                :key="header.key"
-                scope="col"
-                class="px-4 py-2 text-gray-300 align-bottom whitespace-nowrap"
-                :class="[
-                  header.textAlign || 'text-left',
-                  {
-                    'cursor-pointer hover:bg-gray-700/50': header.sortable,
-                    'min-w-[120px]': ['dialCode', 'matchStatus', 'diff', 'cheaperFile'].includes(
-                      header.key as string
-                    ),
-                    'min-w-[250px]': ['destName1', 'destName2'].includes(header.key as string),
-                    'min-w-[200px]': ['rate1', 'rate2'].includes(header.key as string),
-                    'min-w-[100px]': header.key === 'diffPercent',
-                  },
-                ]"
-                @click="header.sortable ? handleSort(header.key) : undefined"
-                :aria-sort="
-                  header.sortable && currentSortKey === header.key
-                    ? currentSortDirection === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                "
-              >
-                <div class="flex" :class="getHeaderClasses(header)">
-                  <BaseBadge
-                    v-if="header.key === 'destName1' || header.key === 'rate1'"
-                    size="small"
-                    variant="neutral"
-                    class="mb-1 max-w-[150px] truncate"
-                    :title="fileName1"
-                    >{{ fileName1 }}</BaseBadge
-                  >
-                  <BaseBadge
-                    v-if="header.key === 'destName2' || header.key === 'rate2'"
-                    size="small"
-                    variant="neutral"
-                    class="mb-1 max-w-[150px] truncate"
-                    :title="fileName2"
-                    >{{ fileName2 }}</BaseBadge
-                  >
-                  <!-- Wrapper for label and sort icon -->
-                  <div class="flex items-center">
-                    <span>{{
-                      header.label.includes(fileName1) || header.label.includes(fileName2)
-                        ? header.label.split(' (')[0]
-                        : header.label
-                    }}</span>
-                    <template v-if="header.sortable">
-                      <ArrowUpIcon
-                        v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
-                        class="w-4 h-4 ml-1.5 text-accent shrink-0"
-                      />
-                      <ArrowDownIcon
-                        v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'"
-                        class="w-4 h-4 ml-1.5 text-accent shrink-0"
-                      />
-                      <ChevronUpDownIcon
-                        v-else
-                        class="w-4 h-4 ml-1.5 text-gray-400 hover:text-gray-200 shrink-0"
-                      />
-                    </template>
+    <!-- Grouped Data Display -->
+    <div v-else class="overflow-hidden">
+      <div class="max-h-[600px] overflow-y-auto space-y-2 pr-2">
+        <!-- Iterate through grouped destinations -->
+        <div v-for="destination in groupedDestinations" :key="destination.destinationKey" class="border border-gray-700 rounded-lg overflow-hidden mb-2">
+          
+          <!-- Destination Header Row -->
+          <div 
+            class="bg-gray-800 px-4 py-3 cursor-pointer hover:bg-gray-700/50 transition-colors"
+            :class="{ 'border-b border-gray-700': destination.isExpanded }"
+            @click="handleDestinationToggle(destination)"
+          >
+            <div class="flex items-center justify-between">
+              <!-- Left: Destination Info -->
+              <div class="flex items-center space-x-3">
+                <!-- Expansion Icon (for all destinations now) -->
+                <div class="text-gray-400">
+                  <ChevronRightIcon v-if="!destination.isExpanded" class="w-5 h-5" />
+                  <ChevronDownIcon v-else class="w-5 h-5" />
+                </div>
+                
+                <!-- Destination Name -->
+                <div class="flex flex-col">
+                  <div class="font-medium text-white">
+                    {{ destination.destName1 || destination.destName2 || 'Unknown Destination' }}
+                  </div>
+                  <div class="text-sm text-gray-400">
+                    {{ destination.codeCount }} code{{ destination.codeCount !== 1 ? 's' : '' }}
                   </div>
                 </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-800">
-            <tr
-              v-for="record in displayedData"
-              :key="record.id || record.dialCode"
-              class="hover:bg-gray-700/50"
-            >
-              <!-- Populate table cells -->
-              <td class="px-4 py-2 text-gray-400 text-center">{{ record.dialCode }}</td>
-              <!-- Updated Match Status cell -->
-              <td class="px-4 py-2 text-center">
+              </div>
+              
+              <!-- Right: Summary Info -->
+              <div class="flex items-center space-x-4">
+                
+                <!-- Match Status Badge (moved to end) -->
                 <BaseBadge size="small" variant="neutral">
-                  {{ formatMatchStatus(record.matchStatus) }}
+                  {{ formatMatchStatus(destination.matchStatus) }}
                 </BaseBadge>
-              </td>
-              <td class="px-4 py-2 text-gray-400 text-center">{{ record.destName1 ?? 'N/A' }}</td>
-              <td class="px-4 py-2 text-gray-400 text-center">{{ record.destName2 ?? 'N/A' }}</td>
-              <td class="px-4 py-2 text-gray-200 text-center bg-gray-600/40">
-                {{ record.rate1?.toFixed(6) ?? 'N/A' }}
-              </td>
-              <td class="px-4 py-2 text-gray-200 text-center bg-gray-700/40">
-                {{ record.rate2?.toFixed(6) ?? 'N/A' }}
-              </td>
-              <td class="px-4 py-2 text-gray-400 text-center">
-                {{ record.diff?.toFixed(6) ?? 'N/A' }}
-              </td>
-              <td class="px-4 py-2 text-gray-400 text-center">
-                {{ record.diffPercent ? record.diffPercent.toFixed(2) + '%' : 'N/A' }}
-              </td>
-              <td class="px-4 py-2 text-gray-400 text-center">
-                {{ formatCheaperFile(record.cheaperFile) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+            </div>
+            
+            <!-- Rate Distribution Summary (for grouped mode when collapsed) -->
+            <div v-if="destination.displayMode === 'grouped' && !destination.isExpanded" class="mt-2 text-sm text-gray-400">
+              {{ formatRateDistributionSummary(destination) }}
+            </div>
+          </div>
+          
+          <!-- Expanded Content (for all destinations) -->
+          <div v-if="destination.isExpanded" class="bg-gray-900/50">
+            
+            <!-- View Toggle Buttons -->
+            <div class="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+              <div class="flex space-x-2">
+                <BaseButton
+                  variant="secondary"
+                  size="small"
+                  :class="{ 'bg-accent/20': destination.expandedView === 'codes' }"
+                  @click="handleViewChange(destination, 'codes')"
+                >
+                  View All Codes
+                </BaseButton>
+                <BaseButton
+                  variant="secondary"
+                  size="small"
+                  :class="{ 'bg-accent/20': destination.expandedView === 'rate-groups' }"
+                  @click="handleViewChange(destination, 'rate-groups')"
+                >
+                  View Rate Groups
+                </BaseButton>
+              </div>
+            </div>
+            
+            <!-- Codes View -->
+            <div v-if="destination.expandedView === 'codes'" class="p-4">
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-700 text-sm">
+                  <thead class="bg-gray-800">
+                    <tr>
+                      <th class="px-3 py-2 text-gray-300 text-center">Dial Code</th>
+                      <th class="px-3 py-2 text-gray-300 text-center">Rate {{ fileName1 }}</th>
+                      <th class="px-3 py-2 text-gray-300 text-center">Rate {{ fileName2 }}</th>
+                      <th class="px-3 py-2 text-gray-300 text-center">Diff</th>
+                      <th class="px-3 py-2 text-gray-300 text-center">Diff %</th>
+                      <th class="px-3 py-2 text-gray-300 text-center">Cheaper</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-800">
+                    <tr v-for="code in destination.codes" :key="code.dialCode" class="hover:bg-gray-700/50">
+                      <td class="px-3 py-2 text-gray-400 text-center">{{ code.dialCode }}</td>
+                      <td class="px-3 py-2 text-gray-200 text-center">{{ code.rate1?.toFixed(6) ?? 'N/A' }}</td>
+                      <td class="px-3 py-2 text-gray-200 text-center">{{ code.rate2?.toFixed(6) ?? 'N/A' }}</td>
+                      <td class="px-3 py-2 text-center" :class="code.diff && code.diff < 0 ? 'text-green-400' : code.diff && code.diff > 0 ? 'text-red-400' : 'text-gray-400'">
+                        {{ code.diff?.toFixed(6) ?? 'N/A' }}
+                      </td>
+                      <td class="px-3 py-2 text-center" :class="code.diffPercent && code.diffPercent < 0 ? 'text-green-400' : code.diffPercent && code.diffPercent > 0 ? 'text-red-400' : 'text-gray-400'">
+                        {{ code.diffPercent ? code.diffPercent.toFixed(2) + '%' : 'N/A' }}
+                      </td>
+                      <td class="px-3 py-2 text-gray-400 text-center">{{ formatCheaperFile(code.cheaperFile) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Rate Groups View -->
+            <div v-else-if="destination.expandedView === 'rate-groups'" class="p-4 space-y-3">
+              <div v-for="(group, index) in getRateComparisonGroups(destination)" :key="index" class="bg-gray-800/50 rounded-lg p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <!-- Rate Comparison -->
+                  <div class="flex items-center space-x-4">
+                    <div class="text-sm">
+                      <span class="text-gray-400">{{ fileName1 }}:</span>
+                      <span class="text-white font-medium">${{ group.file1Rate?.toFixed(6) ?? 'N/A' }}</span>
+                    </div>
+                    <div class="text-gray-500">|</div>
+                    <div class="text-sm">
+                      <span class="text-gray-400">{{ fileName2 }}:</span>
+                      <span class="text-white font-medium">${{ group.file2Rate?.toFixed(6) ?? 'N/A' }}</span>
+                    </div>
+                    <div v-if="group.diff !== undefined" class="text-sm">
+                      <span class="text-gray-400">Diff:</span>
+                      <span :class="group.diff < 0 ? 'text-green-400' : group.diff > 0 ? 'text-red-400' : 'text-gray-300'">
+                        ${{ group.diff.toFixed(6) }} ({{ group.diffPercent?.toFixed(1) }}%)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Cheaper Indicator -->
+                  <div v-if="group.cheaperFile">
+                    <BaseBadge 
+                      size="small" 
+                      :variant="group.cheaperFile === 'file1' ? 'success' : group.cheaperFile === 'file2' ? 'warning' : 'neutral'"
+                    >
+                      {{ group.cheaperFile === 'file1' ? fileName1 : group.cheaperFile === 'file2' ? fileName2 : 'Same' }} Cheaper
+                    </BaseBadge>
+                  </div>
+                </div>
+                
+                <!-- Code Count and Sample -->
+                <div class="text-sm text-gray-400">
+                  <span class="font-medium">{{ group.count }}</span> code{{ group.count !== 1 ? 's' : '' }} with {{ group.count === 1 ? 'this rate' : 'these rates' }}
+                </div>
+                
+                <!-- Show first few codes -->
+                <div class="mt-2 text-xs text-gray-500">
+                  {{ group.codes.slice(0, 10).join(', ') }}{{ group.codes.length > 10 ? ` ... +${group.codes.length - 10} more` : '' }}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Inline Display (for destinations with < 20 codes) -->
+          <div v-if="destination.displayMode === 'inline' && destination.isExpanded" class="bg-gray-900/50 p-4">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-700 text-sm">
+                <thead class="bg-gray-800">
+                  <tr>
+                    <th class="px-3 py-2 text-gray-300 text-center">Dial Code</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Dest Name {{ fileName1 }}</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Dest Name {{ fileName2 }}</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Rate {{ fileName1 }}</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Rate {{ fileName2 }}</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Diff</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Diff %</th>
+                    <th class="px-3 py-2 text-gray-300 text-center">Cheaper</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr v-for="code in destination.codes" :key="code.dialCode" class="hover:bg-gray-700/50">
+                    <td class="px-3 py-2 text-gray-400 text-center">{{ code.dialCode }}</td>
+                    <td class="px-3 py-2 text-gray-400 text-center">{{ code.destName1 ?? 'N/A' }}</td>
+                    <td class="px-3 py-2 text-gray-400 text-center">{{ code.destName2 ?? 'N/A' }}</td>
+                    <td class="px-3 py-2 text-gray-200 text-center">{{ code.rate1?.toFixed(6) ?? 'N/A' }}</td>
+                    <td class="px-3 py-2 text-gray-200 text-center">{{ code.rate2?.toFixed(6) ?? 'N/A' }}</td>
+                    <td class="px-3 py-2 text-center" :class="code.diff && code.diff < 0 ? 'text-green-400' : code.diff && code.diff > 0 ? 'text-red-400' : 'text-gray-400'">
+                      {{ code.diff?.toFixed(6) ?? 'N/A' }}
+                    </td>
+                    <td class="px-3 py-2 text-center" :class="code.diffPercent && code.diffPercent < 0 ? 'text-green-400' : code.diffPercent && code.diffPercent > 0 ? 'text-red-400' : 'text-gray-400'">
+                      {{ code.diffPercent ? code.diffPercent.toFixed(2) + '%' : 'N/A' }}
+                    </td>
+                    <td class="px-3 py-2 text-gray-400 text-center">{{ formatCheaperFile(code.cheaperFile) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Pagination Controls -->
+    <!-- Results Summary -->
     <div
       v-if="displayedData.length > 0"
+      class="mt-4 flex items-center justify-between"
+    >
+      <div class="text-sm text-gray-400">
+        Total: {{ totalFilteredItems.toLocaleString() }} records in {{ groupedDestinations.length }} destination{{ groupedDestinations.length !== 1 ? 's' : '' }}
+      </div>
+    </div>
+    
+    <!-- Pagination Controls (Hidden - using scroll instead) -->
+    <div
+      v-if="false"
       class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4"
     >
       <!-- Left: Items per page selector -->
@@ -365,7 +476,7 @@
 
       <!-- Right: Total results info -->
       <div class="text-sm text-gray-400">
-        Total: {{ totalFilteredItems.toLocaleString() }} records
+        Total: {{ totalFilteredItems.toLocaleString() }} records ({{ groupedDestinations.length }} destination{{ groupedDestinations.length !== 1 ? 's' : '' }})
       </div>
     </div>
   </div>
@@ -384,6 +495,8 @@
     ArrowPathIcon,
     ArrowUpIcon,
     ArrowDownIcon,
+    ChevronRightIcon,
+    ChevronDownIcon,
   } from '@heroicons/vue/20/solid';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
@@ -397,11 +510,25 @@
   } from '@headlessui/vue';
   import { CheckIcon, ChevronUpDownIcon } from '@heroicons/vue/20/solid';
   import { useCSVExport, formatRate, formatPercentage } from '@/composables/exports/useCSVExport';
+  import { useGroupedAZComparison, type GroupedDestination } from '@/composables/az/useGroupedAZComparison';
 
   const azStore = useAzStore();
 
   // Replace any existing export-related refs with the composable
   const { isExporting, exportError, exportToCSV } = useCSVExport();
+  
+  // Initialize grouped comparison functionality
+  const {
+    groupByDestination,
+    generateRateComparisonGroups,
+    toggleDestinationExpansion,
+    setExpandedView,
+    expandAll,
+    collapseAll,
+    expandedDestinations,
+    expandedViews,
+    GROUPING_THRESHOLD,
+  } = useGroupedAZComparison();
 
   // Filter State
   const searchTerm = ref<string>('');
@@ -535,7 +662,7 @@
   } = useAZTableData<AZDetailedComparisonEntry>({
     dbName: DBName.AZ_PRICING_COMPARISON,
     tableName: 'az_comparison_results',
-    itemsPerPage: 50,
+    itemsPerPage: 10000, // Load all data for grouping
     sortKey: 'dialCode',
     sortDirection: 'asc',
     tableHeaders,
@@ -552,6 +679,22 @@
     if (destName2Header) destName2Header.label = `Dest Name (${newFile2})`;
     if (rate1Header) rate1Header.label = `Rate (${newFile1})`;
     if (rate2Header) rate2Header.label = `Rate (${newFile2})`;
+  });
+
+  // Grouped destinations computed from flat data
+  const groupedDestinations = computed(() => {
+    if (!displayedData.value || displayedData.value.length === 0) {
+      return [];
+    }
+    
+    const grouped = groupByDestination(displayedData.value);
+    
+    // Update expansion states based on current state
+    return grouped.map(dest => ({
+      ...dest,
+      isExpanded: expandedDestinations.value.has(dest.destinationKey),
+      expandedView: expandedViews.value.get(dest.destinationKey) || 'codes',
+    }));
   });
 
   // --- Dynamic Filter Options ---
@@ -601,6 +744,65 @@
   const debouncedResetPaginationAndLoad = useDebounceFn(async () => {
     await resetPaginationAndLoad(createFilters());
   }, 300);
+
+  // --- Helper Functions for Grouped Display ---
+  
+  /**
+   * Formats the predominant cheaper file display
+   */
+  function formatPredominantCheaper(predominant: 'file1' | 'file2' | 'mixed' | 'same'): string {
+    switch (predominant) {
+      case 'file1': return `${fileName1.value} (Cheaper)`;
+      case 'file2': return `${fileName2.value} (Cheaper)`;
+      case 'mixed': return 'Mixed Results';
+      case 'same': return 'Same Rates';
+      default: return 'Unknown';
+    }
+  }
+
+  /**
+   * Formats rate distribution summary for display
+   */
+  function formatRateDistributionSummary(destination: GroupedDestination): string {
+    const file1Rates = destination.rateDistribution.file1;
+    const file2Rates = destination.rateDistribution.file2;
+    
+    if (file1Rates.length === 0 && file2Rates.length === 0) {
+      return 'No rate data';
+    }
+    
+    // Show top 2 rates for each file
+    const file1Summary = file1Rates.slice(0, 2)
+      .map(group => `$${group.rate.toFixed(6)} (${group.count} codes)`)
+      .join(', ');
+    
+    const file2Summary = file2Rates.slice(0, 2)
+      .map(group => `$${group.rate.toFixed(6)} (${group.count} codes)`)
+      .join(', ');
+    
+    return `${fileName1.value}: ${file1Summary || 'N/A'} | ${fileName2.value}: ${file2Summary || 'N/A'}`;
+  }
+
+  /**
+   * Handles expansion toggle for destinations
+   */
+  function handleDestinationToggle(destination: GroupedDestination) {
+    toggleDestinationExpansion(destination.destinationKey);
+  }
+
+  /**
+   * Handles view type change for expanded destinations
+   */
+  function handleViewChange(destination: GroupedDestination, viewType: 'codes' | 'rate-groups') {
+    setExpandedView(destination.destinationKey, viewType);
+  }
+
+  /**
+   * Gets rate comparison groups for a destination
+   */
+  function getRateComparisonGroups(destination: GroupedDestination) {
+    return generateRateComparisonGroups(destination);
+  }
 
   // --- Helper function to format match status ---
   function formatMatchStatus(status: 'both' | 'file1_only' | 'file2_only'): string {
@@ -681,9 +883,43 @@
     }
 
     try {
+      const exportDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      const currentFilters = [];
+      if (searchTerm.value) currentFilters.push(`Search: ${searchTerm.value}`);
+      if (selectedCheaper.value) {
+        const option = rateComparisonOptions.value.find(opt => opt.value === selectedCheaper.value);
+        if (option) currentFilters.push(`Rate Filter: ${option.label}`);
+      }
+      if (selectedMatchStatus.value) {
+        const option = matchStatusOptions.value.find(opt => opt.value === selectedMatchStatus.value);
+        if (option) currentFilters.push(`Match Filter: ${option.label}`);
+      }
+      
+      const rows: string[][] = [];
+      
+      // Add header metadata
+      rows.push(['AZ RATE COMPARISON EXPORT']);
+      rows.push([`Export Date: ${exportDate}`]);
+      rows.push([`File 1: ${fileName1.value}`]);
+      rows.push([`File 2: ${fileName2.value}`]);
+      rows.push([`Total Destinations: ${groupedDestinations.value.length}`]);
+      rows.push([`Total Codes: ${groupedDestinations.value.reduce((sum, dest) => sum + dest.codeCount, 0)}`]);
+      if (currentFilters.length > 0) {
+        rows.push([`Active Filters: ${currentFilters.join(', ')}`]);
+      }
+      rows.push(['Generated by VOIPAccelerator.com']);
+      rows.push(['']); // Empty separator
+      
+      // Add column headers
       const headers = [
         'Dial Code',
-        'Match Status',
         `Dest Name ${fileName1.value}`,
         `Dest Name ${fileName2.value}`,
         `Rate ${fileName1.value}`,
@@ -692,23 +928,28 @@
         'Diff %',
         'Cheaper File',
       ];
-
-      const rows = displayedData.value.map((record) => [
-        record.dialCode,
-        formatMatchStatus(record.matchStatus),
-        record.destName1 ?? 'n/a',
-        record.destName2 ?? 'n/a',
-        formatRate(record.rate1),
-        formatRate(record.rate2),
-        formatRate(record.diff),
-        formatPercentage(record.diffPercent),
-        formatCheaperFile(record.cheaperFile),
-      ]);
+      rows.push(headers);
+      
+      // Export grouped structure showing destination context
+      groupedDestinations.value.forEach(destination => {
+        destination.codes.forEach((record) => {
+          rows.push([
+            record.dialCode,
+            record.destName1 ?? 'n/a',
+            record.destName2 ?? 'n/a',
+            formatRate(record.rate1),
+            formatRate(record.rate2),
+            formatRate(record.diff),
+            formatPercentage(record.diffPercent),
+            formatCheaperFile(record.cheaperFile),
+          ]);
+        });
+      });
 
       exportToCSV(
-        { headers, rows },
+        { headers: [], rows },
         {
-          filename: 'az-compare',
+          filename: 'az-compare-grouped',
           quoteFields: true,
         }
       );
