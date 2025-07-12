@@ -27,9 +27,11 @@
                         : '',
                     azStore.isComponentUploading('az1')
                       ? 'cursor-not-allowed'
-                      : !azStore.isComponentDisabled('az1')
-                        ? 'cursor-pointer'
-                        : '',
+                      : azStore.isComponentUploading('az2')
+                        ? 'opacity-50 cursor-not-allowed border-gray-600' /* Dim if other is uploading */
+                        : !azStore.isComponentDisabled('az1')
+                          ? 'cursor-pointer'
+                          : '',
                     uploadError.az1 ? 'border-red-500 border-solid border-2' : '',
                   ]"
                   @dragenter.prevent="handleDragEnterAz1"
@@ -48,43 +50,55 @@
                     @change="(e) => handleFileInput(e, 'az1')"
                   />
 
-                  <div class="flex flex-col h-full w-full">
-                    <!-- Empty/Processing States -->
-                    <template v-if="!azStore.isComponentUploading('az1')">
-                      <div class="flex items-center justify-center w-full h-full">
-                        <div class="text-center w-full">
-                          <!-- Error notification when there is an error -->
-                          <div
-                            v-if="uploadError.az1"
-                            class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full"
-                          >
-                            <p class="text-red-500 font-medium">{{ uploadError.az1 }}</p>
-                          </div>
-
-                          <ArrowUpTrayIcon
-                            v-if="!uploadError.az1"
-                            class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
-                          />
-                          <p
-                            class="mt-2 text-base"
-                            :class="uploadError.az1 ? 'text-red-500' : 'text-accent'"
-                          >
-                            {{
-                              uploadError.az1
-                                ? 'Please try again'
-                                : 'DRAG & DROP or CLICK to upload'
-                            }}
-                          </p>
-                        </div>
-                      </div>
-                    </template>
-
+                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
+                    <!-- Uploading State -->
                     <template v-if="azStore.isComponentUploading('az1')">
                       <UploadProgressIndicator 
                         :total-rows="uploadingFileRowCount.az1"
                         :rows-per-second="25000"
                         ref="progressIndicators.az1"
                       />
+                    </template>
+
+                    <!-- Waiting State (if other is uploading) -->
+                    <template
+                      v-else-if="
+                        !azStore.isComponentDisabled('az1') && azStore.isComponentUploading('az2')
+                      "
+                    >
+                      <div class="flex-1 flex items-center justify-center w-full">
+                        <p class="text-sizeMd text-accent/80">
+                          Please wait for the other file to finish processing...
+                        </p>
+                      </div>
+                    </template>
+
+                    <!-- Default/Empty State -->
+                    <template v-else>
+                      <!-- Error notification -->
+                      <div
+                        v-if="uploadError.az1"
+                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
+                      >
+                        <p class="text-red-500 font-medium">{{ uploadError.az1 }}</p>
+                      </div>
+
+                      <ArrowUpTrayIcon
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
+                        :class="
+                          uploadError.az1
+                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
+                            : 'text-accent border-accent/50 bg-accent/10'
+                        "
+                      />
+                      <p
+                        class="mt-2 text-base"
+                        :class="uploadError.az1 ? 'text-red-500' : 'text-accent'"
+                      >
+                        {{
+                          uploadError.az1 ? 'Please try again' : 'DRAG & DROP or CLICK to upload'
+                        }}
+                      </p>
                     </template>
                   </div>
                 </div>
@@ -115,9 +129,11 @@
                         : '',
                     azStore.isComponentUploading('az2')
                       ? 'cursor-not-allowed'
-                      : !azStore.isComponentDisabled('az2')
-                        ? 'cursor-pointer'
-                        : '',
+                      : azStore.isComponentUploading('az1')
+                        ? 'opacity-50 cursor-not-allowed border-gray-600' /* Dim if other is uploading */
+                        : !azStore.isComponentDisabled('az2')
+                          ? 'cursor-pointer'
+                          : '',
                     uploadError.az2 ? 'border-red-500 border-solid border-2' : '',
                   ]"
                   @dragenter.prevent="handleDragEnterAz2"
@@ -136,43 +152,55 @@
                     @change="(e) => handleFileInput(e, 'az2')"
                   />
 
-                  <div class="flex flex-col h-full w-full">
-                    <!-- Empty/Processing States -->
-                    <template v-if="!azStore.isComponentUploading('az2')">
-                      <div class="flex items-center justify-center w-full h-full">
-                        <div class="text-center w-full">
-                          <!-- Error notification when there is an error -->
-                          <div
-                            v-if="uploadError.az2"
-                            class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full"
-                          >
-                            <p class="text-red-500 font-medium">{{ uploadError.az2 }}</p>
-                          </div>
-
-                          <ArrowUpTrayIcon
-                            v-if="!uploadError.az2"
-                            class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
-                          />
-                          <p
-                            class="mt-2 text-base"
-                            :class="uploadError.az2 ? 'text-red-500' : 'text-accent'"
-                          >
-                            {{
-                              uploadError.az2
-                                ? 'Please try again'
-                                : 'DRAG & DROP or CLICK to upload'
-                            }}
-                          </p>
-                        </div>
-                      </div>
-                    </template>
-
+                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
+                    <!-- Uploading State -->
                     <template v-if="azStore.isComponentUploading('az2')">
                       <UploadProgressIndicator 
                         :total-rows="uploadingFileRowCount.az2"
                         :rows-per-second="25000"
                         ref="progressIndicators.az2"
                       />
+                    </template>
+
+                    <!-- Waiting State (if other is uploading) -->
+                    <template
+                      v-else-if="
+                        !azStore.isComponentDisabled('az2') && azStore.isComponentUploading('az1')
+                      "
+                    >
+                      <div class="flex-1 flex items-center justify-center w-full">
+                        <p class="text-sizeMd text-accent/80">
+                          Please wait for the other file to finish processing...
+                        </p>
+                      </div>
+                    </template>
+
+                    <!-- Default/Empty State -->
+                    <template v-else>
+                      <!-- Error notification -->
+                      <div
+                        v-if="uploadError.az2"
+                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
+                      >
+                        <p class="text-red-500 font-medium">{{ uploadError.az2 }}</p>
+                      </div>
+
+                      <ArrowUpTrayIcon
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
+                        :class="
+                          uploadError.az2
+                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
+                            : 'text-accent border-accent/50 bg-accent/10'
+                        "
+                      />
+                      <p
+                        class="mt-2 text-base"
+                        :class="uploadError.az2 ? 'text-red-500' : 'text-accent'"
+                      >
+                        {{
+                          uploadError.az2 ? 'Please try again' : 'DRAG & DROP or CLICK to upload'
+                        }}
+                      </p>
                     </template>
                   </div>
                 </div>
