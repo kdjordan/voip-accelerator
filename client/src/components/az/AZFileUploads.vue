@@ -80,12 +80,11 @@
                     </template>
 
                     <template v-if="azStore.isComponentUploading('az1')">
-                      <div
-                        class="flex-1 flex flex-col items-center justify-center w-full space-y-2"
-                      >
-                        <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                        <p class="text-sm text-accent">Processing your file...</p>
-                      </div>
+                      <UploadProgressIndicator 
+                        :total-rows="uploadingFileRowCount.az1"
+                        :rows-per-second="25000"
+                        ref="progressIndicators.az1"
+                      />
                     </template>
                   </div>
                 </div>
@@ -169,12 +168,11 @@
                     </template>
 
                     <template v-if="azStore.isComponentUploading('az2')">
-                      <div
-                        class="flex-1 flex flex-col items-center justify-center w-full space-y-2"
-                      >
-                        <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                        <p class="text-sm text-accent">Processing your file...</p>
-                      </div>
+                      <UploadProgressIndicator 
+                        :total-rows="uploadingFileRowCount.az2"
+                        :rows-per-second="25000"
+                        ref="progressIndicators.az2"
+                      />
                     </template>
                   </div>
                 </div>
@@ -270,6 +268,7 @@ This action cannot be undone.`"
   import { ReportTypes } from '@/types';
   import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
   import { useDragDrop } from '@/composables/useDragDrop';
+  import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -304,6 +303,16 @@ This action cannot be undone.`"
 
   // Add new ref with proper typing
   const uploadError = reactive<Record<ComponentId, string | null>>({
+    az1: null,
+    az2: null,
+  });
+
+  // Progress tracking for both components
+  const uploadingFileRowCount = reactive<Record<ComponentId, number>>({
+    az1: 0,
+    az2: 0,
+  });
+  const progressIndicators = reactive<Record<ComponentId, InstanceType<typeof UploadProgressIndicator> | null>>({
     az1: null,
     az2: null,
   });
@@ -408,6 +417,11 @@ This action cannot be undone.`"
       // Note: The removeFile method in the store now handles clearing fileStats
       azStore.removeFile(fileName);
 
+      // Reset progress tracking for removed component
+      if (componentToRemove.value) {
+        uploadingFileRowCount[componentToRemove.value] = 0;
+      }
+
       console.log(`File ${fileName} removed successfully from component ${componentToRemove.value}`);
       showRemoveConfirmModal.value = false;
       componentToRemove.value = null;
@@ -489,6 +503,22 @@ This action cannot be undone.`"
     const file = azStore.getTempFile(activeComponent.value);
     if (!file) return;
 
+    // Count rows for progress tracking FIRST
+    let rowCount = 0;
+    await new Promise<void>((resolve) => {
+      Papa.parse(file, {
+        step: (results) => {
+          rowCount++;
+        },
+        complete: () => {
+          // Subtract header row(s) based on startLine
+          uploadingFileRowCount[activeComponent.value] = Math.max(0, rowCount - startLine.value);
+          resolve();
+        },
+        skipEmptyLines: true,
+      });
+    });
+
     showPreviewModal.value = false;
     azStore.setComponentUploading(activeComponent.value, true);
 
@@ -525,14 +555,19 @@ This action cannot be undone.`"
       console.error('Error processing file:', error);
       uploadError[activeComponent.value] = 'Error processing file. Please try again.';
     } finally {
+      // Complete progress indicator if it exists
+      progressIndicators[activeComponent.value]?.complete();
+      
       azStore.setComponentUploading(activeComponent.value, false);
       azStore.clearTempFile(activeComponent.value);
+      uploadingFileRowCount[activeComponent.value] = 0; // Reset row count
     }
   }
 
   function handleModalCancel() {
     showPreviewModal.value = false;
     azStore.clearTempFile(activeComponent.value);
+    uploadingFileRowCount[activeComponent.value] = 0; // Reset row count on cancel
     activeComponent.value = 'az1';
   }
 

@@ -154,10 +154,11 @@
 
               <!-- Uploading state -->
               <template v-else>
-                <div class="flex-1 flex flex-col items-center justify-center w-full space-y-2">
-                  <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                  <p class="text-sm text-accent">Processing your file...</p>
-                </div>
+                <UploadProgressIndicator 
+                  :total-rows="uploadingFileRowCount"
+                  :rows-per-second="14000"
+                  ref="progressIndicator"
+                />
               </template>
             </div>
           </div>
@@ -210,6 +211,7 @@
   } from '@heroicons/vue/24/outline';
   import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
@@ -238,6 +240,10 @@
   const columnMappings = ref<Record<string, string>>({});
   const isValid = ref(false);
   const selectedFile = ref<File | null>(null);
+  
+  // Progress tracking
+  const uploadingFileRowCount = ref(0);
+  const progressIndicator = ref<InstanceType<typeof UploadProgressIndicator> | null>(null);
 
   // Effective Date State
   const showEffectiveDateSettings = ref(true); // Default to open
@@ -358,11 +364,27 @@
     uploadError.value = null;
     rfUploadStatus.value = null;
 
-    // --- Hide modal immediately upon confirmation ---
-    showPreviewModal.value = false;
-
     try {
       const fileToProcess = selectedFile.value;
+
+      // Count rows for progress tracking FIRST
+      let rowCount = 0;
+      await new Promise<void>((resolve) => {
+        Papa.parse(fileToProcess, {
+          step: (results) => {
+            rowCount++;
+          },
+          complete: () => {
+            // Subtract header row(s) based on startLine
+            uploadingFileRowCount.value = Math.max(0, rowCount - startLine.value);
+            resolve();
+          },
+          skipEmptyLines: true,
+        });
+      });
+
+      // --- Hide modal AFTER we have row count ---
+      showPreviewModal.value = false;
 
       // Correctly map the roles from the modal to the service's expected keys
       const mappedColumns = Object.entries(mappings).reduce(
@@ -424,14 +446,19 @@
       await store.handleUploadSuccess(processedData);
       userStore.incrementUploadsToday();
       
+      // Complete progress indicator
+      progressIndicator.value?.complete();
+      
       store.setUploadInProgress(false); // ALLOW table loading now
       selectedFile.value = null; // Clear selected file after processing
+      uploadingFileRowCount.value = 0; // Reset row count
       rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
     } catch (error: any) {
       uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
       // Clear potentially inconsistent data on error
       await store.clearUsRateSheetData();
       selectedFile.value = null; // Clear selected file on error
+      uploadingFileRowCount.value = 0; // Reset row count on error
       rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
     } finally {
       store.setLoading(false);
@@ -441,6 +468,7 @@
   function handleModalCancel() {
     showPreviewModal.value = false;
     selectedFile.value = null;
+    uploadingFileRowCount.value = 0; // Reset row count on cancel
   }
 
   function handleMappingUpdate(newMappings: Record<string, string>) {

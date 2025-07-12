@@ -59,12 +59,11 @@
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="usStore.isComponentUploading('us1')">
-                      <div
-                        class="flex-1 flex flex-col items-center justify-center w-full space-y-2"
-                      >
-                        <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                        <p class="text-sm text-accent">Processing your file...</p>
-                      </div>
+                      <UploadProgressIndicator 
+                        :total-rows="uploadingFileRowCount.us1"
+                        :rows-per-second="14000"
+                        ref="progressIndicators.us1"
+                      />
                     </template>
 
                     <!-- Waiting State (if other is uploading) -->
@@ -166,12 +165,11 @@
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="usStore.isComponentUploading('us2')">
-                      <div
-                        class="flex-1 flex flex-col items-center justify-center w-full space-y-2"
-                      >
-                        <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
-                        <p class="text-sm text-accent">Processing your file...</p>
-                      </div>
+                      <UploadProgressIndicator 
+                        :total-rows="uploadingFileRowCount.us2"
+                        :rows-per-second="14000"
+                        ref="progressIndicators.us2"
+                      />
                     </template>
 
                     <!-- Waiting State (if other is uploading) -->
@@ -315,6 +313,7 @@ This action cannot be undone.`"
   import Papa from 'papaparse';
   import USCodeSummary from '@/components/us/USCodeSummary.vue';
   import USComparisonWorker from '@/workers/us-comparison.worker?worker';
+  import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDragDrop } from '@/composables/useDragDrop';
@@ -372,6 +371,20 @@ This action cannot be undone.`"
     az2: false,
   });
   const isModalRemoving = ref(false);
+
+  // Progress tracking for both components
+  const uploadingFileRowCount = reactive<Record<ComponentId, number>>({
+    us1: 0,
+    us2: 0,
+    az1: 0,
+    az2: 0,
+  });
+  const progressIndicators = reactive<Record<ComponentId, InstanceType<typeof UploadProgressIndicator> | null>>({
+    us1: null,
+    us2: null,
+    az1: null,
+    az2: null,
+  });
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
@@ -713,6 +726,22 @@ This action cannot be undone.`"
     const file = usStore.getTempFile(activeComponent.value);
     if (!file) return;
 
+    // Count rows for progress tracking FIRST
+    let rowCount = 0;
+    await new Promise<void>((resolve) => {
+      Papa.parse(file, {
+        step: (results) => {
+          rowCount++;
+        },
+        complete: () => {
+          // Subtract header row(s) based on startLine
+          uploadingFileRowCount[activeComponent.value] = Math.max(0, rowCount - startLine.value);
+          resolve();
+        },
+        skipEmptyLines: true,
+      });
+    });
+
     showPreviewModal.value = false;
     usStore.setComponentUploading(activeComponent.value, true);
     // Clear previous errors for this component
@@ -857,8 +886,12 @@ This action cannot be undone.`"
         error instanceof Error ? error.message : String(error)
       }`;
     } finally {
+      // Complete progress indicator if it exists
+      progressIndicators[activeComponent.value]?.complete();
+      
       usStore.setComponentUploading(activeComponent.value, false);
       usStore.clearTempFile(activeComponent.value);
+      uploadingFileRowCount[activeComponent.value] = 0; // Reset row count
       // console.log(`[DEBUG] Finished handleModalConfirm for component ${activeComponent.value}`);
     }
   }
@@ -866,6 +899,7 @@ This action cannot be undone.`"
   function handleModalCancel() {
     showPreviewModal.value = false;
     usStore.clearTempFile(activeComponent.value);
+    uploadingFileRowCount[activeComponent.value] = 0; // Reset row count on cancel
     activeComponent.value = 'us1';
   }
 
@@ -902,6 +936,9 @@ This action cannot be undone.`"
       // Then, remove the file from the store
       // Note: The removeFile method in the store now handles clearing fileStats
       usStore.removeFile(component);
+      
+      // Reset progress tracking for removed component
+      uploadingFileRowCount[component] = 0;
     } catch (error) {
       console.error('Error removing file:', error);
     } finally {
