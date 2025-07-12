@@ -48,6 +48,7 @@ coverage
 .env.development
 .env.staging
 .env.production
+.env.claude
 !.env.example
 client/.env
 client/.env.local
