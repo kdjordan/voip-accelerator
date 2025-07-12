@@ -58,21 +58,7 @@
       <div class="mt-6">
         <!-- Monthly LERG Upload Tab -->
         <div v-if="activeTab === 'upload'" class="space-y-6">
-          <div class="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-            <div class="flex items-start space-x-3">
-              <span class="text-2xl">📅</span>
-              <div>
-                <h3 class="text-lg font-medium text-blue-400 mb-2">Monthly LERG Update</h3>
-                <p class="text-blue-300 text-sm mb-3">
-                  Upload the latest LERG file to add new NPA records to the database. Existing
-                  records will not be overwritten.
-                </p>
-                <div class="text-xs text-blue-400">
-                  💡 Tip: Download the latest LERG data from your provider monthly
-                </div>
-              </div>
-            </div>
-          </div>
+        
 
           <!-- File Upload Area -->
           <div

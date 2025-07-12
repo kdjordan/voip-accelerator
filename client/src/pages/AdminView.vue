@@ -8,6 +8,9 @@
     <div class="flex flex-col gap-6 bg-gray-800 pb-6">
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
+      
+      <!-- User Management -->
+      <UserManagement />
     </div>
 
     <!-- New Preview Modal -->
@@ -50,6 +53,7 @@
   import { useDragDrop } from '@/composables/useDragDrop';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import UnifiedNANPManagement from '@/components/admin/UnifiedNANPManagement.vue';
+  import UserManagement from '@/components/admin/UserManagement.vue';
 
   const store = useLergStoreV2();
   const {
