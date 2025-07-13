@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { nextTick } from 'vue';
 import { adminRoutes } from './admin-routes';
 import { useUserStore } from '@/stores/user-store';
+import { supabase } from '@/utils/supabase';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -55,6 +56,12 @@ const router = createRouter({
       path: '/privacy-policy',
       name: 'privacyPolicy',
       component: () => import('@/pages/PrivacyView.vue'),
+    },
+    {
+      path: '/billing',
+      name: 'billing',
+      component: () => import('@/pages/BillingPage.vue'),
+      meta: { requiresAuth: true },
     },
 
     // --- Auth Routes ---
@@ -115,7 +122,16 @@ const authRequiredRoutes = [
   '/azview',
   '/usview',
   '/admin/lerg',
+  '/billing',
   // Add any other admin routes from adminRoutes if needed
+];
+
+// Routes that require active subscription (bypass billing page)
+const subscriptionRequiredRoutes = [
+  '/az-rate-sheet',
+  '/us-rate-sheet',
+  '/azview',
+  '/usview',
 ];
 
 // Routes only accessible when logged out
@@ -152,6 +168,23 @@ async function waitForAuthInitialization(
   });
 }
 
+// Helper function to check if user has active subscription or trial
+async function checkSubscriptionStatus(userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('check-subscription-status');
+    
+    if (error) {
+      console.error('Error checking subscription status:', error);
+      return false; // Fail safe - block access if we can't verify
+    }
+    
+    return data?.isActive || false;
+  } catch (err) {
+    console.error('Error checking subscription status:', err);
+    return false; // Fail safe
+  }
+}
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
 
@@ -169,6 +202,7 @@ router.beforeEach(async (to, from, next) => {
   const requiresAuth =
     authRequiredRoutes.some((route) => to.path.startsWith(route)) ||
     to.matched.some((record) => record.meta.requiresAuth);
+  const requiresSubscription = subscriptionRequiredRoutes.some((route) => to.path.startsWith(route));
   const isTransitionalRoute = transitionalAuthRoutes.includes(to.path);
   const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
   const isAdmin = userStore.isAdmin; // Use the isAdmin getter
@@ -179,6 +213,17 @@ router.beforeEach(async (to, from, next) => {
       next({ name: 'dashboard' });
     } else if (requiresAdmin && !isAdmin) {
       next({ name: 'dashboard' }); // Or a specific 'Not Authorized' page
+    } else if (requiresSubscription && to.name !== 'billing') {
+      // Check subscription status for protected routes
+      const hasActiveSubscription = await checkSubscriptionStatus(userStore.getUser?.id || '');
+      
+      if (!hasActiveSubscription) {
+        // Redirect to billing page if no active subscription
+        next({ name: 'billing', query: { redirect: to.fullPath } });
+        return;
+      }
+      
+      next();
     } else {
       next();
     }

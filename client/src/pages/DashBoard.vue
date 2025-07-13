@@ -1,5 +1,8 @@
 <template>
   <div class="min-h-screen text-white pt-2 w-full">
+    <!-- Trial Expiry Banner -->
+    <TrialExpiryBanner />
+    
     <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">Dashboard</h1>
 
     <!-- Dashboard Content -->
@@ -75,6 +78,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Subscription Card -->
+      <SubscriptionCard />
 
       <!-- Account Settings -->
       <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
@@ -289,6 +295,8 @@
   import { useRouter } from 'vue-router';
   import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import TrialExpiryBanner from '@/components/billing/TrialExpiryBanner.vue';
+  import SubscriptionCard from '@/components/billing/SubscriptionCard.vue';
 
   // User store for user info
   const userStore = useUserStore();
