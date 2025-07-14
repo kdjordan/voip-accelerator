@@ -6,6 +6,8 @@ export interface PricingPlan {
   description: string;
   priceMonthly: number | string; // Allow string for 'Custom'
   priceYearly: number | string; // Add yearly price
+  priceIdMonthly?: string; // Stripe price ID for monthly
+  priceIdYearly?: string; // Stripe price ID for yearly
   features: string[];
   isPopular?: boolean;
   ctaText: string;

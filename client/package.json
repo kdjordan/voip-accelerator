@@ -17,6 +17,7 @@
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.1.5",
+    "@stripe/stripe-js": "^7.4.0",
     "@supabase/supabase-js": "^2.49.4",
     "@vueuse/core": "^10.11.0",
     "clsx": "^2.1.1",

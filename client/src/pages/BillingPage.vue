@@ -1,5 +1,21 @@
 <template>
   <div class="min-h-screen bg-zinc-950">
+    <!-- Add Subscription Management for existing customers -->
+    <div v-if="hasActiveSubscription" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <SubscriptionManagement />
+      <div class="text-center mt-8">
+        <BaseButton
+          @click="handleReturnToDashboard"
+          variant="secondary"
+          size="lg"
+        >
+          Return to Dashboard
+        </BaseButton>
+      </div>
+    </div>
+
+    <!-- Show pricing for non-subscribers -->
+    <div v-else>
     <!-- Header -->
     <header class="bg-zinc-900 border-b border-zinc-800">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,8 +139,10 @@
               size="lg"
               class="w-full"
               :loading="loading"
+              :disabled="loading"
             >
-              Choose Monthly
+              <span v-if="loading">Processing...</span>
+              <span v-else>Choose Monthly</span>
             </BaseButton>
           </div>
         </div>
@@ -173,8 +191,10 @@
               size="lg"
               class="w-full"
               :loading="loading"
+              :disabled="loading"
             >
-              Choose Annual
+              <span v-if="loading">Processing...</span>
+              <span v-else>Choose Annual</span>
             </BaseButton>
           </div>
         </div>
@@ -196,32 +216,68 @@
     <footer class="text-center py-8 text-gray-500 text-sm">
       <p>Secure payment processing by Stripe. Cancel anytime.</p>
     </footer>
+    </div> <!-- Close the v-else div -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useBilling } from '@/composables/useBilling';
+import { stripeService } from '@/services/stripe.service';
 import { useUserStore } from '@/stores/user-store';
+import { useToast } from '@/composables/useToast';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import SubscriptionManagement from '@/components/profile/SubscriptionManagement.vue';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
-const { 
-  createCheckoutSession, 
-  getDaysRemainingInTrial, 
-  currentPlan, 
-  loading 
-} = useBilling();
+const { showError } = useToast();
+const loading = ref(false);
 
 const userEmail = computed(() => userStore.getUser?.email || '');
-const daysRemaining = computed(() => getDaysRemainingInTrial());
+const currentPlan = computed(() => userStore.getUserProfile?.subscription_status || 'trial');
+const hasActiveSubscription = computed(() => 
+  currentPlan.value === 'active' || 
+  currentPlan.value === 'past_due'
+);
+
+// Calculate days remaining in trial
+const daysRemaining = computed(() => {
+  const profile = userStore.getUserProfile;
+  if (!profile?.created_at || currentPlan.value !== 'trial') {
+    return 0;
+  }
+  
+  const trialStart = new Date(profile.created_at);
+  const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const now = new Date();
+  
+  const days = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, days);
+});
+
 const isExpired = computed(() => daysRemaining.value <= 0 && currentPlan.value === 'trial');
 
 async function selectPlan(plan: 'monthly' | 'annual') {
-  await createCheckoutSession(plan);
+  try {
+    loading.value = true;
+    
+    const priceId = plan === 'monthly' 
+      ? import.meta.env.VITE_STRIPE_PRICE_MONTHLY 
+      : import.meta.env.VITE_STRIPE_PRICE_ANNUAL;
+    
+    await stripeService.createCheckoutSession({
+      priceId,
+      successUrl: `${window.location.origin}/dashboard?subscription=success`,
+      cancelUrl: `${window.location.origin}/billing?subscription=cancelled`,
+    });
+  } catch (error) {
+    console.error('Checkout error:', error);
+    showError(error instanceof Error ? error.message : 'Failed to start checkout');
+  } finally {
+    loading.value = false;
+  }
 }
 
 function handleReturnToDashboard() {
@@ -234,10 +290,15 @@ async function handleSignOut() {
   router.push('/');
 }
 
-onMounted(() => {
-  // Check if user already has active subscription
-  if (currentPlan.value === 'monthly' || currentPlan.value === 'annual') {
-    handleReturnToDashboard();
+onMounted(async () => {
+  // Refresh user profile to get latest subscription status
+  await userStore.getUserProfile();
+  
+  // Check for subscription success/cancel params
+  if (route.query.subscription === 'success') {
+    showError('Welcome! Your subscription is now active.', 'success');
+  } else if (route.query.subscription === 'cancelled') {
+    showError('Subscription cancelled. You can try again anytime.', 'info');
   }
 });
 </script>
