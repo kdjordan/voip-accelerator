@@ -116,7 +116,10 @@ const usageStats = ref<any>(null);
 
 const isInTrial = computed(() => currentPlan.value === 'trial');
 const daysRemaining = computed(() => getDaysRemainingInTrial());
-const planExpiresAt = computed(() => userStore.getUserProfile?.plan_expires_at);
+const planExpiresAt = computed(() => {
+  const profile = userStore.getUserProfile;
+  return profile?.current_period_end || profile?.plan_expires_at;
+});
 
 const badgeVariant = computed(() => {
   if (isInTrial.value) return 'info';

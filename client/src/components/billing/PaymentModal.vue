@@ -32,7 +32,7 @@
             <div 
               class="bg-zinc-800 rounded-lg p-6 border-2 transition-all cursor-pointer"
               :class="selectedPlan === 'monthly' ? 'border-blue-500' : 'border-zinc-700 hover:border-zinc-600'"
-              @click="selectedPlan = 'monthly'"
+              @click="selectedPlan = 'monthly'; console.log('🔥 FRONTEND: MONTHLY PLAN SELECTED');"
             >
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-semibold text-white">Monthly</h3>
@@ -77,7 +77,7 @@
             <div 
               class="bg-zinc-800 rounded-lg p-6 border-2 transition-all cursor-pointer relative"
               :class="selectedPlan === 'annual' ? 'border-blue-500' : 'border-zinc-700 hover:border-zinc-600'"
-              @click="selectedPlan = 'annual'"
+              @click="selectedPlan = 'annual'; console.log('🔥 FRONTEND: ANNUAL PLAN SELECTED');"
             >
               <!-- Best Value Badge -->
               <div class="absolute -top-3 right-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
@@ -209,7 +209,7 @@ const emit = defineEmits<{
 }>();
 
 const { createCheckoutSession, loading } = useBilling();
-const selectedPlan = ref<'monthly' | 'annual'>('annual'); // Default to annual for better value
+const selectedPlan = ref<'monthly' | 'annual'>('monthly'); // Default to monthly
 
 async function handleSubscribe() {
   if (!selectedPlan.value) return;

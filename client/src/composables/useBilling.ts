@@ -61,10 +61,17 @@ export function useBilling() {
       error.value = null;
 
       const priceId = PRICE_IDS[plan];
+      
+      console.log('💳 USEBILLING: Creating checkout session');
+      console.log('Plan requested:', plan);
+      console.log('Price ID being sent:', priceId);
+      console.log('Monthly price ID:', PRICE_IDS.monthly);
+      console.log('Annual price ID:', PRICE_IDS.annual);
+      
       const successUrl = `${window.location.origin}/dashboard?payment=success`;
       const cancelUrl = `${window.location.origin}/dashboard?payment=cancelled`;
 
-      const { data, error: fnError } = await supabase.functions.invoke('create-stripe-checkout', {
+      const { data, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           priceId,
           successUrl,
@@ -105,7 +112,7 @@ export function useBilling() {
 
       const returnUrl = `${window.location.origin}/dashboard`;
 
-      const { data, error: fnError } = await supabase.functions.invoke('get-billing-portal', {
+      const { data, error: fnError } = await supabase.functions.invoke('create-portal-session', {
         body: { returnUrl },
       });
 

@@ -231,6 +231,7 @@
       // Get the appropriate price ID based on billing cycle
       const priceId = isMonthly.value ? plan.priceIdMonthly : plan.priceIdYearly;
       
+      
       if (!priceId) {
         throw new Error('Price ID not configured');
       }
