@@ -171,14 +171,33 @@ async function waitForAuthInitialization(
 // Helper function to check if user has active subscription or trial
 async function checkSubscriptionStatus(userId: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.functions.invoke('check-subscription-status');
+    // Temporarily bypass edge function and check database directly
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('subscription_status, current_period_end, plan_expires_at')
+      .eq('id', userId)
+      .single();
     
     if (error) {
       console.error('Error checking subscription status:', error);
-      return false; // Fail safe - block access if we can't verify
+      return false;
     }
     
-    return data?.isActive || false;
+    const now = new Date();
+    
+    // Check if user has active subscription
+    if (profile.subscription_status === 'active' || profile.subscription_status === 'monthly' || profile.subscription_status === 'annual') {
+      const expirationDate = profile.current_period_end ? new Date(profile.current_period_end) : null;
+      return !expirationDate || expirationDate > now;
+    }
+    
+    // Check if trial is still active
+    if (profile.subscription_status === 'trial' && profile.plan_expires_at) {
+      const trialEnd = new Date(profile.plan_expires_at);
+      return now < trialEnd;
+    }
+    
+    return false;
   } catch (err) {
     console.error('Error checking subscription status:', err);
     return false; // Fail safe

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useAdminUsersStore, type UserProfile, type UserActivity } from '@/stores/admin-users-store'
-import { supabase } from '@/services/supabase.service'
+import { supabase } from '@/utils/supabase'
 
 interface GetUsersParams {
   page?: number

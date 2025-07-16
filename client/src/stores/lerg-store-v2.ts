@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { supabase } from '@/services/supabase.service';
+import { supabase } from '@/utils/supabase';
 
 // Enhanced NPA Record type matching Supabase enhanced_lerg table
 export interface EnhancedNPARecord {

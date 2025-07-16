@@ -292,7 +292,9 @@ async function handleSignOut() {
 
 onMounted(async () => {
   // Refresh user profile to get latest subscription status
-  await userStore.getUserProfile();
+  if (userStore.getUser?.id) {
+    await userStore.fetchProfile(userStore.getUser.id);
+  }
   
   // Check for subscription success/cancel params
   if (route.query.subscription === 'success') {
