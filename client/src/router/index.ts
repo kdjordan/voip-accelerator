@@ -171,7 +171,7 @@ async function waitForAuthInitialization(
 // Helper function to check if user has active subscription or trial
 async function checkSubscriptionStatus(userId: string): Promise<boolean> {
   try {
-    // Temporarily bypass edge function and check database directly
+    // Direct database query for subscription status - more reliable than edge function
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('subscription_status, current_period_end, plan_expires_at')
