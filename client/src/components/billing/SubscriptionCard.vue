@@ -11,39 +11,15 @@
       />
     </div>
 
-    <!-- Trial Status -->
-    <div v-if="isInTrial" class="mb-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-blue-100 font-medium">Free Trial Active</p>
-          <p class="text-blue-200 text-sm mt-1">
-            {{ daysRemaining }} day{{ daysRemaining !== 1 ? 's' : '' }} remaining
-          </p>
-        </div>
-        <button
-          @click="showUpgradeModal = true"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-        >
-          Upgrade Now
-        </button>
-      </div>
-    </div>
-
-    <!-- Active Subscription -->
-    <div v-else-if="currentPlan !== 'trial'" class="mb-6">
+    <!-- Subscription Details -->
+    <div class="mb-6">
       <div class="space-y-3">
         <div class="flex justify-between">
           <span class="text-gray-400">Current Plan</span>
           <span class="text-white font-medium capitalize">{{ currentPlan }}</span>
         </div>
-        <div class="flex justify-between">
-          <span class="text-gray-400">Price</span>
-          <span class="text-white font-medium">
-            ${{ currentPlan === 'monthly' ? '40' : '400' }}/{{ currentPlan === 'monthly' ? 'month' : 'year' }}
-          </span>
-        </div>
         <div v-if="planExpiresAt" class="flex justify-between">
-          <span class="text-gray-400">Next Billing Date</span>
+          <span class="text-gray-400">{{ currentPlan === 'trial' ? 'Trial Ends' : 'Next Billing Date' }}</span>
           <span class="text-white">{{ formatDate(planExpiresAt) }}</span>
         </div>
       </div>
@@ -67,15 +43,14 @@
     <!-- Action Buttons -->
     <div class="flex gap-3">
       <BaseButton
-        v-if="currentPlan === 'trial' || !currentPlan"
         @click="showUpgradeModal = true"
         variant="primary"
         class="flex-1"
       >
-        Choose Plan
+        {{ currentPlan === 'trial' ? 'Choose Plan' : 'Change Plan' }}
       </BaseButton>
       <BaseButton
-        v-else
+        v-if="currentPlan !== 'trial'"
         @click="openBillingPortal"
         variant="secondary"
         class="flex-1"
@@ -105,7 +80,6 @@ import PaymentModal from './PaymentModal.vue';
 const userStore = useUserStore();
 const { 
   currentPlan, 
-  getDaysRemainingInTrial, 
   getUserUsageStats, 
   openBillingPortal,
   loading 
@@ -114,21 +88,19 @@ const {
 const showUpgradeModal = ref(false);
 const usageStats = ref<any>(null);
 
-const isInTrial = computed(() => currentPlan.value === 'trial');
-const daysRemaining = computed(() => getDaysRemainingInTrial());
 const planExpiresAt = computed(() => {
   const profile = userStore.getUserProfile;
   return profile?.current_period_end || profile?.plan_expires_at;
 });
 
 const badgeVariant = computed(() => {
-  if (isInTrial.value) return 'info';
+  if (currentPlan.value === 'trial') return 'info';
   if (currentPlan.value === 'monthly' || currentPlan.value === 'annual') return 'success';
   return 'warning';
 });
 
 const badgeText = computed(() => {
-  if (isInTrial.value) return 'Trial';
+  if (currentPlan.value === 'trial') return 'Trial';
   if (currentPlan.value === 'monthly') return 'Monthly';
   if (currentPlan.value === 'annual') return 'Annual';
   return 'Inactive';
@@ -149,6 +121,7 @@ async function handlePlanSelection(plan: 'monthly' | 'annual') {
 
 onMounted(async () => {
   // Load usage statistics
-  usageStats.value = await getUserUsageStats();
+  // TODO: Implement user_usage_stats table or remove this feature
+  // usageStats.value = await getUserUsageStats();
 });
 </script>

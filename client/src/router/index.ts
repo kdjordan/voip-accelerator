@@ -87,6 +87,11 @@ const router = createRouter({
     // Spread the admin routes
     ...adminRoutes,
     {
+      path: '/access-denied',
+      name: 'AccessDenied',
+      component: () => import('@/pages/AccessDeniedView.vue'),
+    },
+    {
       path: '/:pathMatch(.*)*', // Catch-all route
       name: 'notFound',
       component: () => import('@/pages/NotFoundView.vue'),
@@ -231,7 +236,7 @@ router.beforeEach(async (to, from, next) => {
       // Avoid redirect loop
       next({ name: 'dashboard' });
     } else if (requiresAdmin && !isAdmin) {
-      next({ name: 'dashboard' }); // Or a specific 'Not Authorized' page
+      next({ name: 'AccessDenied' });
     } else if (requiresSubscription && to.name !== 'billing') {
       // Check subscription status for protected routes
       const hasActiveSubscription = await checkSubscriptionStatus(userStore.getUser?.id || '');

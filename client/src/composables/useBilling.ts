@@ -189,22 +189,6 @@ export function useBilling() {
     }
   }
 
-  /**
-   * Calculate days remaining in trial
-   */
-  function getDaysRemainingInTrial(): number {
-    const profile = userStore.getUserProfile;
-    if (!profile?.trial_started_at || profile.subscription_status !== 'trial') {
-      return 0;
-    }
-
-    const trialStart = new Date(profile.trial_started_at);
-    const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const now = new Date();
-    
-    const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, daysRemaining);
-  }
 
   return {
     loading,
@@ -216,6 +200,5 @@ export function useBilling() {
     openBillingPortal,
     trackUsageMetric,
     getUserUsageStats,
-    getDaysRemainingInTrial,
   };
 }

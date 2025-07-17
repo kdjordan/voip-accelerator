@@ -35,33 +35,16 @@
 
     <!-- Main Content -->
     <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <!-- Trial Expired Message -->
-      <div v-if="isExpired" class="text-center mb-12">
-        <div class="mx-auto w-20 h-20 bg-red-600 rounded-full flex items-center justify-center mb-6">
-          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <h1 class="text-4xl font-bold text-white mb-4">Your Trial Has Expired</h1>
-        <p class="text-xl text-gray-400 max-w-2xl mx-auto">
-          To continue using VoIP Accelerator and access all your rate sheet management tools, 
-          please choose a subscription plan below.
-        </p>
-      </div>
-
-      <!-- Active Trial Message -->
-      <div v-else class="text-center mb-12">
+      <!-- Subscription Plans Header -->
+      <div class="text-center mb-12">
         <div class="mx-auto w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-6">
           <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
-        <h1 class="text-4xl font-bold text-white mb-4">Upgrade Your Account</h1>
-        <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-4">
-          You have {{ daysRemaining }} day{{ daysRemaining !== 1 ? 's' : '' }} remaining in your free trial.
-        </p>
-        <p class="text-lg text-gray-500">
-          Upgrade now to ensure uninterrupted access to all features.
+        <h1 class="text-4xl font-bold text-white mb-4">Choose Your Plan</h1>
+        <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+          Select the perfect plan for your VoIP business and unlock all rate sheet management tools.
         </p>
       </div>
 
@@ -242,22 +225,6 @@ const hasActiveSubscription = computed(() =>
   currentPlan.value === 'past_due'
 );
 
-// Calculate days remaining in trial
-const daysRemaining = computed(() => {
-  const profile = userStore.getUserProfile;
-  if (!profile?.created_at || currentPlan.value !== 'trial') {
-    return 0;
-  }
-  
-  const trialStart = new Date(profile.created_at);
-  const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-  const now = new Date();
-  
-  const days = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(0, days);
-});
-
-const isExpired = computed(() => daysRemaining.value <= 0 && currentPlan.value === 'trial');
 
 async function selectPlan(plan: 'monthly' | 'annual') {
   try {

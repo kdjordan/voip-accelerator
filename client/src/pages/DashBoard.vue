@@ -1,7 +1,10 @@
 <template>
   <div class="min-h-screen text-white pt-2 w-full">
-    <!-- Trial Expiry Banner -->
-    <TrialExpiryBanner />
+    <!-- Service Expiry Banner -->
+    <ServiceExpiryBanner 
+      v-bind="bannerState"
+      @upgrade-clicked="showPaymentModal = true"
+    />
     
     <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">Dashboard</h1>
 
@@ -79,116 +82,20 @@
         </div>
       </div>
 
-      <!-- Subscription Card -->
-      <SubscriptionCard />
+      <!-- Account & Billing -->
+      <AccountBillingCard 
+        @choose-plan="showPaymentModal = true"
+        @manage-billing="handleManageBilling"
+      />
 
-      <!-- Account Settings -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-        <h2 class="text-lg font-semibold mb-6">Account Settings</h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <div class="flex justify-between items-start">
-              <div>
-                <h3 class="text-md font-medium mb-1 text-gray-300">Subscription Plan</h3>
-                <p class="text-sm text-gray-300">
-                  Your current plan is: <span class="font-medium">{{ currentPlanName }}</span>
-                </p>
-              </div>
-              <BaseBadge :variant="currentPlanBadgeVariant" uppercase>
-                {{ currentPlanName }} Plan
-              </BaseBadge>
-            </div>
-          </div>
-          <!-- Plan Expiration Box -->
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <h3 class="text-md font-medium mb-2 text-gray-300">Billing Information</h3>
-            <p v-if="planExpiresAt && planExpiresAt > new Date()" class="text-sm text-gray-300">
-              Your plan ends on:
-              <span class="font-semibold text-accent">{{ formattedPlanExpiresAt }}</span>
-            </p>
-            <p
-              v-else-if="planExpiresAt && planExpiresAt <= new Date()"
-              class="text-sm text-yellow-400"
-            >
-              Your plan has expired.
-            </p>
-            <p v-else class="text-sm text-gray-400">No plan expiration information available.</p>
-          </div>
-
-          <!-- Update Email Form Box -->
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <h3 class="text-md font-medium text-gray-300 mb-2">Update Email</h3>
-            <form
-              @submit.prevent="updateEmail"
-              class="flex flex-col sm:flex-row sm:items-end gap-3"
-            >
-              <div class="flex-grow min-w-0">
-                <label for="new-email" class="block text-sm font-medium text-gray-400 mb-1"
-                  >New Email Address</label
-                >
-                <input
-                  id="new-email"
-                  v-model="newEmail"
-                  type="email"
-                  placeholder="Enter new email"
-                  :disabled="isUpdatingEmail"
-                  class="block w-full rounded-md border-gray-600 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-gray-700/50 py-2 px-3 text-white placeholder-gray-500"
-                  required
-                />
-              </div>
-              <BaseButton
-                type="submit"
-                :variant="isEmailInputValid ? 'primary' : 'secondary'"
-                :disabled="!isEmailInputValid || isUpdatingEmail"
-                :loading="isUpdatingEmail"
-                class="sm:flex-shrink-0 sm:w-auto sm:min-w-[120px]"
-              >
-                Update Email
-              </BaseButton>
-            </form>
-            <p v-if="emailErrorMessage" class="mt-2 text-sm text-error">{{ emailErrorMessage }}</p>
-            <p v-if="emailSuccessMessage" class="mt-2 text-sm text-success">
-              {{ emailSuccessMessage }}
-            </p>
-          </div>
-
-          <!-- Manage Subscription Button Box -->
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <h3 class="text-md font-medium text-gray-300 mb-2">Manage Subscription</h3>
-            <BaseButton
-              variant="secondary-outline"
-              size="standard"
-              @click="manageSubscription"
-              :disabled="isUpdatingEmail"
-            >
-              Manage Billing & Subscription
-            </BaseButton>
-            <p class="text-xs text-gray-400 mt-2">Redirects to external billing portal.</p>
-            <!-- Placeholder for potential errors or status messages -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Delete Account Section -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-        <h2 class="text-lg font-semibold text-destructive mb-4">Delete Account</h2>
-        <p class="text-sm text-slate-400 mb-4">
-          Permanently delete your account and all associated data. <br />This action is
-          irreversible.
-        </p>
-        <BaseButton
-          variant="destructive"
-          @click="openDeleteConfirmModal"
-          :is-loading="isDeletingAccount"
-        >
-          <span v-if="isDeletingAccount">Deleting...</span>
-          <span v-else>Delete My Account</span>
-        </BaseButton>
-        <p v-if="deleteAccountError" class="mt-2 text-sm text-destructive">
-          {{ deleteAccountError }}
-        </p>
-      </div>
+      <!-- Profile Settings -->
+      <ProfileSettingsCard 
+        :is-updating-email="isUpdatingEmail"
+        :email-success-message="emailSuccessMessage"
+        :email-error-message="emailErrorMessage"
+        @update-email="updateEmail"
+        @delete-account="openDeleteConfirmModal"
+      />
 
       <!-- Database Tables Info -->
       <div
@@ -269,6 +176,13 @@
       confirmation-phrase="DELETE"
       @confirm="handleDeleteAccountConfirm"
     />
+
+    <!-- Payment Modal -->
+    <PaymentModal 
+      v-if="showPaymentModal"
+      @close="showPaymentModal = false"
+      @select-plan="handlePlanSelection"
+    />
   </div>
 </template>
 
@@ -295,11 +209,19 @@
   import { useRouter } from 'vue-router';
   import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
-  import TrialExpiryBanner from '@/components/billing/TrialExpiryBanner.vue';
-  import SubscriptionCard from '@/components/billing/SubscriptionCard.vue';
+  import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
+  import PaymentModal from '@/components/billing/PaymentModal.vue';
+  import AccountBillingCard from '@/components/dashboard/AccountBillingCard.vue';
+  import ProfileSettingsCard from '@/components/dashboard/ProfileSettingsCard.vue';
 
   // User store for user info
   const userStore = useUserStore();
+  
+  // Payment modal state
+  const showPaymentModal = ref(false);
+  
+  // Banner state from unified store logic
+  const bannerState = computed(() => userStore.getServiceExpiryBanner);
 
   // User data from store (using root store state directly for simplicity)
   // const userProfile = computed(() => userStore.profile);
@@ -413,10 +335,9 @@
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@\.]{2,}$/; // Stricter email regex
 
-  async function updateEmail() {
-    // Corrected: Only check against user.email
+  async function updateEmail(email: string) {
     const currentEmail = userStore.auth.user?.email;
-    if (!newEmail.value || newEmail.value === currentEmail || isUpdatingEmail.value) {
+    if (!email || email === currentEmail || isUpdatingEmail.value) {
       emailErrorMessage.value =
         'Please enter a new, valid email address different from the current one.';
       return;
@@ -427,10 +348,9 @@
     emailSuccessMessage.value = null;
 
     try {
-      await userStore.updateUserEmail(newEmail.value);
+      await userStore.updateUserEmail(email);
       emailSuccessMessage.value =
         'Email update initiated. Check both email inboxes for confirmation.';
-      newEmail.value = ''; // Clear input on success
     } catch (error: any) {
       console.error('Update email error:', error);
       emailErrorMessage.value = error.message || 'Failed to update email. Please try again.';
@@ -467,6 +387,21 @@
       // Show error message to user
     } finally {
       isUpdatingEmail.value = false;
+    }
+  }
+
+  function handlePlanSelection(plan: 'monthly' | 'annual') {
+    showPaymentModal.value = false;
+    // PaymentModal will handle the checkout redirect
+  }
+
+  async function handleManageBilling() {
+    try {
+      // This would typically call the billing portal
+      console.log('Opening billing portal...');
+      // Replace with actual billing portal logic
+    } catch (error) {
+      console.error('Error opening billing portal:', error);
     }
   }
 
