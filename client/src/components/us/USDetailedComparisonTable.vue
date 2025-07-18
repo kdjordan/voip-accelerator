@@ -85,7 +85,7 @@
           <BaseButton
             variant="primary"
             size="small"
-            @click="downloadCsv"
+            @click="handleOpenExportModal"
             :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
             title="Download Filtered Data"
             class="min-w-[160px]"
@@ -219,6 +219,62 @@
                       </li>
                     </ListboxOption>
                   </template>
+                </ListboxOptions>
+              </transition>
+            </div>
+          </Listbox>
+        </div>
+
+        <!-- Rate Comparison Filter -->
+        <div class="relative">
+          <Listbox v-model="selectedCheaper" as="div">
+            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1">
+              Rate Comparison
+            </ListboxLabel>
+            <div class="relative mt-1">
+              <ListboxButton
+                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
+                :disabled="isLoading || isFiltering"
+              >
+                <span class="block truncate text-white">
+                  {{ rateComparisonOptions.find(opt => opt.value === selectedCheaper)?.label || 'All Comparisons' }}
+                </span>
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </ListboxButton>
+              <transition
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <ListboxOptions
+                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                >
+                  <ListboxOption
+                    v-for="option in rateComparisonOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    v-slot="{ active, selected }"
+                    as="template"
+                  >
+                    <li
+                      :class="[
+                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
+                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                      ]"
+                    >
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">
+                        {{ option.label }}
+                      </span>
+                      <span
+                        v-if="selected"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
+                      >
+                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    </li>
+                  </ListboxOption>
                 </ListboxOptions>
               </transition>
             </div>
@@ -676,6 +732,16 @@
         >
       </div>
     </div>
+
+    <!-- Export Modal -->
+    <USExportModal
+      v-model:open="showExportModal"
+      export-type="comparison"
+      :filters="exportFilters"
+      :data="exportData"
+      :total-records="totalExportRecords"
+      :on-export="handleExportWithOptions"
+    />
   </div>
 </template>
 
@@ -721,6 +787,9 @@
   import { useCSVExport } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
+  import USExportModal from '@/components/exports/USExportModal.vue';
+  import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
+  import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
 
   // Type for sortable column definition
   interface SortableUSComparisonColumn {
@@ -949,6 +1018,7 @@
   const npanxxSearchInput = ref<string>(''); // Renamed from searchTerm
   const npanxxFilterTerms = ref<string[]>([]); // New ref for processed NPANXX terms
   const selectedState = ref<string>('');
+  const selectedCheaper = ref<'' | 'file1' | 'file2' | 'same'>(''); // Rate comparison filter
 
   const scrollContainerRef = ref<HTMLElement | null>(null); // Ref for the scrollable div (still needed for scroll to top)
 
@@ -990,6 +1060,14 @@
     const names = usStore.getFileNames;
     return names.length > 1 ? names[1].replace(/\.csv$/i, '') : 'File 2';
   });
+
+  // Rate comparison filter options
+  const rateComparisonOptions = computed(() => [
+    { value: '', label: 'All Comparisons' },
+    { value: 'file1', label: `${fileName1.value} Cheaper` },
+    { value: 'file2', label: `${fileName2.value} Cheaper` },
+    { value: 'same', label: 'Same Rate' },
+  ]);
 
   // Computed property to structure states for the dropdown with optgroup
   const groupedAvailableStates = computed(() => {
@@ -1109,11 +1187,57 @@
       filters.push((record) => npaSet.has(record.npa));
     }
 
+    // Rate Comparison Filter
+    if (selectedCheaper.value) {
+      filters.push((record) => {
+        // Check if ALL individual rate types are identical (not averages)
+        const interSame = record.file1_inter === record.file2_inter;
+        const intraSame = record.file1_intra === record.file2_intra;
+        const indetermSame = record.file1_indeterm === record.file2_indeterm;
+        const allSame = interSame && intraSame && indetermSame;
+        
+        if (selectedCheaper.value === 'same') {
+          return allSame;
+        }
+        
+        // For "cheaper" comparisons, calculate average rates (but exclude "same" records)
+        if (!allSame) {
+          const avgFile1 = ((record.file1_inter || 0) + (record.file1_intra || 0) + (record.file1_indeterm || 0)) / 3;
+          const avgFile2 = ((record.file2_inter || 0) + (record.file2_intra || 0) + (record.file2_indeterm || 0)) / 3;
+          
+          if (selectedCheaper.value === 'file1') {
+            return avgFile1 < avgFile2;
+          } else if (selectedCheaper.value === 'file2') {
+            return avgFile2 < avgFile1;
+          }
+        }
+        
+        return false; // Exclude "same" records from "cheaper" filters
+      });
+    }
+
     return filters;
   }
 
   // Replace isExporting ref with the one from composable
   const { isExporting, exportError, exportToCSV } = useCSVExport();
+  const { transformDataForExport } = useUSExportConfig();
+
+  // Export modal state
+  const showExportModal = ref(false);
+  const exportData = ref<USPricingComparisonRecord[]>([]);
+  const totalExportRecords = ref(0);
+
+  // Export filters for modal
+  const exportFilters = computed<USExportFilters>(() => ({
+    states: selectedState.value ? [selectedState.value] : [],
+    excludeStates: false,
+    npanxxSearch: npanxxFilterTerms.value.join(', '),
+    metroAreas: selectedMetros.value.map(m => m.displayName),
+    countries: [],
+    excludeCountries: false,
+    rateTypes: [],
+  }));
 
   // Debounced function to process NPANXX input
   const debouncedProcessNpanxxInput = useDebounceFn(() => {
@@ -1134,8 +1258,8 @@
     debouncedProcessNpanxxInput();
   });
 
-  // Watch for processed NPANXX terms, state changes, and metro filter changes
-  watch([npanxxFilterTerms, selectedState, metroAreaCodesToFilter], () => {
+  // Watch for processed NPANXX terms, state changes, metro filter changes, and rate comparison filter
+  watch([npanxxFilterTerms, selectedState, metroAreaCodesToFilter, selectedCheaper], () => {
     debouncedResetPaginationAndLoad();
     // Averages will be recalculated via the watch on displayedData or other explicit calls.
   });
@@ -1305,6 +1429,91 @@
     }
   }
 
+  // --- Export Modal Handlers ---
+  async function handleOpenExportModal() {
+    if (!dbInstance.value) {
+      await initializeDB();
+      if (!dbInstance.value) {
+        error.value = 'Database not available for export.';
+        return;
+      }
+    }
+
+    try {
+      // Get total record count
+      const totalTable = dbInstance.value.table<USPricingComparisonRecord>(COMPARISON_TABLE_NAME);
+      totalExportRecords.value = await totalTable.count();
+
+      // Build query with filters
+      const filters = createFilters();
+      let queryForData = totalTable.toCollection();
+      if (filters.length > 0) {
+        queryForData = queryForData.filter((record) => filters.every((fn) => fn(record)));
+      }
+
+      exportData.value = await queryForData.toArray();
+
+      if (exportData.value.length === 0) {
+        error.value = 'No data matches the current filters to export.';
+        return;
+      }
+
+      // Enhance data with file names for the modal
+      exportData.value = exportData.value.map(record => ({
+        ...record,
+        destinationName: fileName1.value,
+        destinationName2: fileName2.value,
+        rate: record.file1_inter,
+        rate2: record.file2_inter,
+        difference: record.diff_inter_pct ? (record.file2_inter || 0) - (record.file1_inter || 0) : null,
+        differencePercentage: record.diff_inter_pct,
+        cheaperFile: determineCheaperFile(record),
+      }));
+
+      showExportModal.value = true;
+    } catch (err: any) {
+      error.value = err.message || 'Failed to prepare export data';
+    }
+  }
+
+  function determineCheaperFile(record: USPricingComparisonRecord): string {
+    const avgFile1 = ((record.file1_inter || 0) + (record.file1_intra || 0) + (record.file1_indeterm || 0)) / 3;
+    const avgFile2 = ((record.file2_inter || 0) + (record.file2_intra || 0) + (record.file2_indeterm || 0)) / 3;
+    
+    if (avgFile1 === avgFile2) return 'Same';
+    return avgFile1 < avgFile2 ? fileName1.value : fileName2.value;
+  }
+
+  async function handleExportWithOptions(data: USPricingComparisonRecord[], options: USExportFormatOptions) {
+    try {
+      // Transform data for comparison export
+      const comparisonData = data.map(record => ({
+        ...record,
+        destinationName: fileName1.value,
+        destinationName2: fileName2.value,
+      }));
+
+      const transformed = transformDataForExport(comparisonData, options, 'comparison');
+      
+      // Build filename parts
+      const filenameParts = [];
+      if (selectedState.value) filenameParts.push(selectedState.value);
+      if (npanxxFilterTerms.value.length > 0) {
+        filenameParts.push(`search_${npanxxFilterTerms.value.join('-')}`);
+      }
+
+      // Export using the composable
+      await exportToCSV(transformed, {
+        filename: 'us-comparison',
+        additionalNameParts: filenameParts,
+        quoteFields: true,
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
+    }
+  }
+
   // --- Sorting Handler ---
   async function handleSort(key: SortableUSComparisonColumn['key']) {
     const header = tableHeaders.find((h) => h.key === key);
@@ -1341,6 +1550,7 @@
   async function handleClearAllFilters() {
     npanxxSearchInput.value = ''; // Clears the input which triggers npanxxFilterTerms update via watcher
     selectedState.value = '';
+    selectedCheaper.value = ''; // Clear rate comparison filter
     clearAllSelectedMetros(); // This clears selectedMetros and metroSearchQuery from composable
 
     // Reset sorting to default

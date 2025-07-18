@@ -63,6 +63,12 @@ export interface Profile {
   company: string; // text
   billing_address: any; // jsonb
   payment_method: any; // jsonb
+  // Billing fields
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status?: 'trial' | 'monthly' | 'annual' | 'cancelled';
+  plan_expires_at?: string | null;
+  trial_started_at?: string | null;
 }
 
 // Keep Supabase User type for reference in store

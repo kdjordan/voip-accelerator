@@ -6,8 +6,8 @@ const getAllowedOrigins = (): string[] => {
     "http://127.0.0.1:5173",
     
     // Add your actual domains here:
-    "https://staging.d2fnr90mzdyqva.amplifyapp.com/"
-    "https://www.voipaccelerator.com/"
+    "https://staging.d2fnr90mzdyqva.amplifyapp.com",
+    "https://www.voipaccelerator.com"
   ];
   
   // Add environment-specific origins from env vars if available

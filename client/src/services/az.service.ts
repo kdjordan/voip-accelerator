@@ -45,6 +45,8 @@ export class AZService {
     this.store.clearInvalidRowsForFile(file.name);
 
     return new Promise((resolve, reject) => {
+      const performanceStart = performance.now();
+      
       Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
@@ -53,8 +55,10 @@ export class AZService {
             // Skip to user-specified start line
             const dataRows = results.data.slice(startLine - 1);
             const validRecords: AZStandardizedData[] = [];
+            let totalRecords = 0;
 
             dataRows.forEach((row, index) => {
+              totalRecords++;
               const destName = row[columnMapping.destName]?.trim() || '';
               const dialCode = row[columnMapping.code]?.trim() || '';
               const rateStr = row[columnMapping.rate];
@@ -140,6 +144,13 @@ export class AZService {
 
             // Calculate stats after storing data
             await this.calculateFileStats(componentId, file.name);
+
+            // Performance logging
+            const performanceEnd = performance.now();
+            const duration = (performanceEnd - performanceStart) / 1000;
+            const recordsPerSecond = duration > 0 ? Math.round(totalRecords / duration) : 0;
+            console.log(`[PERF] AZ Service - Total upload completed in ${duration.toFixed(2)}s`);
+            console.log(`[PERF] AZ Service - Processed ${totalRecords} records at ${recordsPerSecond} records/sec`);
 
             resolve({ fileName: file.name, records: validRecords });
           } catch (error) {

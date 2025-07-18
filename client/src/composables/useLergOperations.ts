@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { supabase } from '@/services/supabase.service';
+import { supabase } from '@/utils/supabase';
 import { useLergStoreV2, type EnhancedNPARecord } from '@/stores/lerg-store-v2';
 import Papa from 'papaparse';
 

@@ -92,12 +92,14 @@
             </div>
 
             <div class="p-8 md:p-10 rounded-b-3xl mt-auto">
-              <a
-                href="#"
-                class="block w-full rounded-3xl px-6 py-4 text-center text-base md:text-lg font-semibold transition-all duration-300 bg-accent/20 text-accent border border-accent/50 hover:bg-accent/30"
+              <button
+                @click="handleSubscribe(plan)"
+                :disabled="isProcessing"
+                class="block w-full rounded-3xl px-6 py-4 text-center text-base md:text-lg font-semibold transition-all duration-300 bg-accent/20 text-accent border border-accent/50 hover:bg-accent/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ plan.ctaText }}
-              </a>
+                <span v-if="isProcessing">Processing...</span>
+                <span v-else>{{ plan.ctaText }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -112,18 +114,28 @@
   import PricingToggle from './PricingToggle.vue'; // Import the toggle component
   import { useGsap } from '@/composables/useGsap'; // Import useGsap
   import { useTransition } from '@vueuse/core';
+  import { stripeService } from '@/services/stripe.service';
+  import { useRouter } from 'vue-router';
+  import { useToast } from '@/composables/useToast';
+  import { useAuthStore } from '@/stores/auth';
 
   const isMonthly = ref(true); // Default to monthly view
   const savingsCircleRef = ref<HTMLElement | null>(null);
   const { gsap } = useGsap();
+  const router = useRouter();
+  const { showError, showSuccess } = useToast();
+  const authStore = useAuthStore();
+  const isProcessing = ref(false);
 
   const pricingPlans = ref<PricingPlan[]>([
     {
       id: 'pro',
       name: 'The Plan',
       description: 'Unlock advanced features and unlimited comparisons.',
-      priceMonthly: 50,
-      priceYearly: 500, // Added yearly price
+      priceMonthly: 40,
+      priceYearly: 400,
+      priceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_MONTHLY,
+      priceIdYearly: import.meta.env.VITE_STRIPE_PRICE_ANNUAL,
       features: [
         'Unlimited Rate Deck Comparisons',
         'US NPANXX and A-Z formats',
@@ -203,6 +215,40 @@
       }
     }
   });
+
+  // Handle subscription button click
+  async function handleSubscribe(plan: PricingPlan) {
+    try {
+      // Check if user is logged in
+      if (!authStore.user) {
+        showError('Please sign in to subscribe');
+        router.push('/auth/signin?redirect=/pricing');
+        return;
+      }
+
+      isProcessing.value = true;
+
+      // Get the appropriate price ID based on billing cycle
+      const priceId = isMonthly.value ? plan.priceIdMonthly : plan.priceIdYearly;
+      
+      
+      if (!priceId) {
+        throw new Error('Price ID not configured');
+      }
+
+      // Create checkout session
+      await stripeService.createCheckoutSession({
+        priceId,
+      });
+
+      // Stripe will handle the redirect
+    } catch (error) {
+      console.error('Subscription error:', error);
+      showError(error instanceof Error ? error.message : 'Failed to start subscription');
+    } finally {
+      isProcessing.value = false;
+    }
+  }
 </script>
 
 <!-- No <style> block needed as we are using Tailwind -->

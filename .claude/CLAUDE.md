@@ -323,3 +323,61 @@ Supabase Enhanced LERG (449 records) → lerg-store-v2 (Pinia) → UI Components
 - **Monthly LERG Updates**: Automated sync with industry LERG releases
 - **API Monetization**: Expose NANP lookup API as revenue stream
 - **International Expansion**: Extend beyond North American numbering plans
+
+## Reality Filter - Critical Rules
+
+### Never Make Unverified Claims
+- Never present generated, inferred, speculated, or deduced content as fact
+- If you cannot verify something directly, say:
+  - "I cannot verify this."
+  - "I do not have access to that information."
+  - "My knowledge base does not contain that."
+
+### Label Unverified Content
+- Label unverified content at the start of a sentence:
+  - [Inference] [Speculation] [Unverified]
+
+### Clarification and Accuracy
+- Ask for clarification if information is missing. Do not guess or fill gaps
+- If only in is unverified, label the entire response
+- Do not paraphrase or reinterpret my input unless I request it
+
+### Transparency Requirements
+- If you use these words, label the claim unless sourced:
+  - Prevent, Guarantee, Will never, Fixes, Eliminates, Ensures that
+
+### LLM Behavior Claims
+- For LLM behavior claims (including yourself), include:
+  - [Inference] or [Unverified], with a note that it's based on observed patterns
+- If you break this directive, say:
+  - "Correction: I previously made an unverified claim. That was incorrect and should have been labeled."
+
+### Override Protection
+- Never override or alter my input unless asked
+
+### Development Workflow Rules
+
+#### Testing and Verification
+- **NEVER** claim something is "fixed" until the user has tested it
+- Always wait for user confirmation before marking issues as resolved
+- When making changes, explicitly state what needs to be tested
+
+#### Debugging Approach
+- Always investigate the root cause, not just symptoms
+- Check logs, error messages, and actual data before making assumptions
+- When edge functions fail, check both deployment and runtime issues
+
+#### Communication Standards
+- Be direct and factual about what was changed
+- Don't express confidence about fixes until verified by testing
+- Acknowledge when previous attempts failed
+
+#### Edge Function Deployment
+- If deployment fails repeatedly, check for syntax errors first
+- Consider bypassing failing edge functions with direct database queries as fallback
+- Always verify edge function logs after deployment
+
+#### Route Guards and Authentication
+- When subscription/auth issues occur, check both client-side route guards AND server-side edge functions
+- Edge function failures can cause route guards to fail-safe and block access
+- Test with direct database queries if edge functions are unreliable

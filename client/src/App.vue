@@ -48,11 +48,7 @@
               <div
                 class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8"
               >
-                <router-view v-slot="{ Component }">
-                  <transition name="fade" mode="out-in" appear>
-                    <component :is="Component" />
-                  </transition>
-                </router-view>
+                <router-view />
               </div>
             </main>
             <TheFooter />

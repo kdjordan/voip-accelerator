@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { supabase } from '@/services/supabase.service';
+import { supabase } from '@/utils/supabase';
 
 // Enhanced NPA Record type matching Supabase enhanced_lerg table
 export interface EnhancedNPARecord {
@@ -173,6 +173,31 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         .map((province) => ({
           ...province,
           count: province.npas.length,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+
+    // All Countries (including US, CA, and others)
+    getAllCountries(): CountryData[] {
+      const grouped = this.allNPAs.reduce(
+        (acc, npa) => {
+          if (!acc[npa.country_code]) {
+            acc[npa.country_code] = {
+              code: npa.country_code,
+              name: npa.country_name,
+              npas: [],
+            };
+          }
+          acc[npa.country_code].npas.push(npa.npa);
+          return acc;
+        },
+        {} as Record<string, { code: string; name: string; npas: string[] }>
+      );
+
+      return Object.values(grouped)
+        .map((country) => ({
+          ...country,
+          count: country.npas.length,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
     },

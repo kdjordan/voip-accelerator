@@ -69,6 +69,66 @@ export const useUserStore = defineStore('user', {
     getCurrentPlanTier: (state): PlanTierType | null => {
       return (state.auth.profile?.subscription_status as PlanTierType | null) ?? null;
     },
+    getServiceExpiryBanner: (state) => {
+      const profile = state.auth.profile;
+      if (!profile) {
+        return { show: false };
+      }
+
+      const now = new Date();
+      const subscriptionStatus = profile.subscription_status;
+      
+      // Check for trial expiry
+      if (subscriptionStatus === 'trial') {
+        if (profile.plan_expires_at) {
+          const trialEnd = new Date(profile.plan_expires_at);
+          if (now >= trialEnd) {
+            return {
+              show: true,
+              message: "Your free trial has expired. Please choose a plan to continue using VoIP Accelerator.",
+              variant: 'error' as const,
+              buttonText: "Choose Plan"
+            };
+          } else {
+            const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysRemaining <= 3) {
+              return {
+                show: true,
+                message: `Your free trial expires in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Subscribe now to ensure uninterrupted access.`,
+                variant: 'warning' as const,
+                buttonText: "Upgrade"
+              };
+            }
+          }
+        }
+      }
+      
+      // Check for subscription expiry
+      else if ((subscriptionStatus === 'monthly' || subscriptionStatus === 'annual') && profile.current_period_end) {
+        const subscriptionEnd = new Date(profile.current_period_end);
+        if (now >= subscriptionEnd) {
+          const planType = subscriptionStatus === 'monthly' ? 'monthly plan' : 'annual membership';
+          return {
+            show: true,
+            message: `Your ${planType} has expired. Please renew to continue service.`,
+            variant: 'error' as const,
+            buttonText: "Renew Now"
+          };
+        }
+      }
+      
+      // Check for cancelled or other expired states
+      else if (subscriptionStatus === 'cancelled' || !subscriptionStatus) {
+        return {
+          show: true,
+          message: "Your subscription is inactive. Please subscribe to continue using VoIP Accelerator.",
+          variant: 'error' as const,
+          buttonText: "Subscribe Now"
+        };
+      }
+
+      return { show: false };
+    },
   },
 
   actions: {

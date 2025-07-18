@@ -75,7 +75,7 @@
           :icon="ArrowDownTrayIcon"
           :loading="isExporting"
           :disabled="totalFilteredItems === 0 || isExporting"
-          @click="handleExport"
+          @click="handleOpenExportModal"
           title="Export all loaded data (based on current filters)"
         >
           Export Rates
@@ -862,6 +862,25 @@ All NPAs will be available for adjustment again."
       confirm-button-variant="primary"
       @confirm="confirmResetSession"
     />
+
+    <!-- Export Modal -->
+    <USExportModal
+      v-model:open="showExportModal"
+      export-type="rate-sheet"
+      :filters="exportFilters"
+      :data="exportData"
+      :total-records="totalExportRecords"
+      :adjusted-npas="adjustedNpasThisSession"
+      :adjustment-details="adjustmentDetailsThisSession"
+      :adjustment-operations="adjustmentOperationsThisSession"
+      :adjustment-settings="{
+        type: adjustmentType,
+        valueType: adjustmentValueType,
+        value: adjustmentValue,
+        targetRate: adjustmentTargetRate
+      }"
+      :on-export="handleExportWithOptions"
+    />
   </div>
 </template>
 
@@ -892,6 +911,7 @@ All NPAs will be available for adjustment again."
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import USExportModal from '@/components/exports/USExportModal.vue';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
   import Papa from 'papaparse';
@@ -915,6 +935,8 @@ All NPAs will be available for adjustment again."
   import { useCSVExport, type CSVExportOptions } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
+  import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
+  import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
 
   // Type for average values
   interface RateAverages {
@@ -1082,6 +1104,27 @@ All NPAs will be available for adjustment again."
   const adjustmentStatusMessage = ref<string | null>(null);
   const adjustmentError = ref<string | null>(null);
   const adjustedNpasThisSession = ref(new Set<string>()); // Stores NPAs of records adjusted in this session
+  const adjustmentDetailsThisSession = ref<Map<string, {
+    recordsAffected: number;
+    beforeRates: { inter?: number; intra?: number; indeterm?: number };
+    afterRates: { inter?: number; intra?: number; indeterm?: number };
+    adjustmentType: string;
+    adjustmentValue: number;
+    adjustmentValueType: string;
+    targetRate: string;
+  }>>(new Map()); // Stores detailed adjustment information per NPA
+  
+  // Session-level tracking for adjustment operations
+  const adjustmentOperationsThisSession = ref<Array<{
+    timestamp: string;
+    filtersApplied: string[];
+    adjustmentType: string;
+    adjustmentValue: number;
+    adjustmentValueType: string;
+    targetRate: string;
+    npasAffected: string[];
+    recordsAffected: number;
+  }>>([]);
   // --- End Rate Adjustment State ---
 
   // Moved initialization out of hooks/functions
@@ -1282,6 +1325,8 @@ All NPAs will be available for adjustment again."
 
   onMounted(async () => {
     adjustedNpasThisSession.value.clear(); // Clear on mount for a fresh session
+    adjustmentDetailsThisSession.value.clear(); // Clear adjustment details for a fresh session
+    adjustmentOperationsThisSession.value = []; // Clear adjustment operations for a fresh session
     if (!lergStore.isLoaded) {
       console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
     }
@@ -1359,6 +1404,9 @@ All NPAs will be available for adjustment again."
   // Modal state for confirmations
   const showClearDataModal = ref(false);
   const showResetSessionModal = ref(false);
+  const showExportModal = ref(false);
+  const exportData = ref<USRateSheetEntry[]>([]);
+  const totalExportRecords = ref(0);
 
   function handleClearData() {
     showClearDataModal.value = true;
@@ -1381,6 +1429,8 @@ All NPAs will be available for adjustment again."
       Array.from(adjustedNpasThisSession.value)
     );
     adjustedNpasThisSession.value.clear();
+    adjustmentDetailsThisSession.value.clear();
+    adjustmentOperationsThisSession.value = []; // Clear adjustment operations history
     adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
 
     // Clear the message after a few seconds
@@ -1397,6 +1447,94 @@ All NPAs will be available for adjustment again."
 
   // Replace isExporting ref with the one from composable
   const { isExporting, exportError, exportToCSV } = useCSVExport();
+  const { transformDataForExport } = useUSExportConfig();
+
+  // Export filters for modal
+  const exportFilters = computed<USExportFilters>(() => ({
+    states: selectedState.value ? [selectedState.value] : [],
+    excludeStates: false,
+    npanxxSearch: debouncedSearchQuery.value.join(', '),
+    metroAreas: selectedMetros.value.map(m => m.displayName),
+    countries: [],
+    excludeCountries: false,
+  }));
+
+  async function handleOpenExportModal() {
+    if (!dbInstance.value) {
+      await initializeDB();
+      if (!dbInstance.value) {
+        alert('Database is not ready. Cannot export.');
+        return;
+      }
+    }
+
+    try {
+      // Get total record count
+      const totalTable = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      totalExportRecords.value = await totalTable.count();
+
+      // Get filtered data
+      let query: Dexie.Collection<USRateSheetEntry, any> = totalTable.toCollection();
+      const currentFilters = createFilters();
+
+      if (currentFilters.length > 0) {
+        query = query.filter((record) => currentFilters.every((fn) => fn(record)));
+      }
+
+      exportData.value = await query.toArray();
+
+      if (exportData.value.length === 0) {
+        alert('No data matches the current filters to export.');
+        return;
+      }
+
+      // Add effective date to each record
+      const effectiveDate = store.getCurrentEffectiveDate || 'N/A';
+      exportData.value = exportData.value.map(entry => ({
+        ...entry,
+        effectiveDate,
+      }));
+
+      showExportModal.value = true;
+    } catch (error) {
+      console.error('Error preparing export data:', error);
+      alert('Failed to prepare export data.');
+    }
+  }
+
+  async function handleExportWithOptions(data: USRateSheetEntry[], options: USExportFormatOptions) {
+    try {
+      const transformed = transformDataForExport(data, options, 'rate-sheet');
+      
+      // Apply Excel text formatting to NXX column if in split format
+      if (options.npanxxFormat === 'split') {
+        transformed.rows = transformed.rows.map(row => ({
+          ...row,
+          'NXX': `="${row['NXX']}"` // Excel formula to force text format
+        }));
+      }
+      
+      const exportOptions: CSVExportOptions = {
+        filename: 'us-rate-sheet',
+        additionalNameParts: [],
+        timestamp: true,
+        quoteFields: true,
+      };
+
+      if (selectedState.value) {
+        exportOptions.additionalNameParts?.push(selectedState.value.replace(/\s+/g, '_'));
+      }
+      if (debouncedSearchQuery.value.length > 0) {
+        const queryPart = debouncedSearchQuery.value.join('-');
+        exportOptions.additionalNameParts?.push(`search_${queryPart.replace(/\s+/g, '_')}`);
+      }
+
+      await exportToCSV(transformed, exportOptions);
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
+    }
+  }
 
   async function handleExport() {
     if (isExporting.value) return; // Already handled by useCSVExport, but good for clarity
@@ -1548,7 +1686,27 @@ All NPAs will be available for adjustment again."
       if (metroAreaCodesToFilter.value.length > 0) {
         const npaSet = new Set(metroAreaCodesToFilter.value);
         collection = collection.filter((record: USRateSheetEntry) => npaSet.has(record.npa));
-        filtersApplied.push(`Metro area NPAs: ${metroAreaCodesToFilter.value.join(', ')}`);
+        
+        // Determine if it's a preset or custom selection
+        let metroFilterDesc = '';
+        const metroCount = metroAreaCodesToFilter.value.length;
+        
+        // Check for common presets (you can adjust these counts based on your actual metro presets)
+        if (metroCount === 10) {
+          metroFilterDesc = 'Metro Filter: Top 10 Metro Areas';
+        } else if (metroCount === 25) {
+          metroFilterDesc = 'Metro Filter: Top 25 Metro Areas';
+        } else if (metroCount === 50) {
+          metroFilterDesc = 'Metro Filter: Top 50 Metro Areas';
+        } else if (metroCount <= 5) {
+          // For small selections, list the NPAs
+          metroFilterDesc = `Metro Filter: NPAs ${metroAreaCodesToFilter.value.join(', ')}`;
+        } else {
+          // For larger custom selections, just show the count
+          metroFilterDesc = `Metro Filter: ${metroCount} Metro Areas Selected`;
+        }
+        
+        filtersApplied.push(metroFilterDesc);
       }
 
       const filteredRecords = await collection.toArray();
@@ -1601,9 +1759,32 @@ All NPAs will be available for adjustment again."
         if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'indeterm')
           targets.push('indetermRate');
 
+        // Track adjustment details for this NPA
+        const npaKey = record.npa;
+        if (!adjustmentDetailsThisSession.value.has(npaKey)) {
+          adjustmentDetailsThisSession.value.set(npaKey, {
+            recordsAffected: 0,
+            beforeRates: {},
+            afterRates: {},
+            adjustmentType: adjustmentType.value,
+            adjustmentValue: adjustmentValue.value!,
+            adjustmentValueType: adjustmentValueType.value,
+            targetRate: adjustmentTargetRate.value
+          });
+        }
+        const npaDetails = adjustmentDetailsThisSession.value.get(npaKey)!;
+
         targets.forEach((rateField) => {
           const currentRate = record[rateField];
           if (typeof currentRate !== 'number') return;
+
+          // Store the before rate if we haven't already for this NPA
+          const rateType = rateField === 'interRate' ? 'inter' : 
+                          rateField === 'intraRate' ? 'intra' : 'indeterm';
+          
+          if (npaDetails.beforeRates[rateType] === undefined) {
+            npaDetails.beforeRates[rateType] = currentRate;
+          }
 
           let adjustedRate: number;
           const value = adjustmentValue.value!;
@@ -1623,6 +1804,9 @@ All NPAs will be available for adjustment again."
           if (finalRate !== currentRate) {
             changes[rateField] = finalRate;
             changed = true;
+            
+            // Store the after rate
+            npaDetails.afterRates[rateType] = finalRate;
           }
         });
 
@@ -1630,6 +1814,10 @@ All NPAs will be available for adjustment again."
           allUpdatesToApply.push({ key: record.id, changes });
           // Track this NPA as being adjusted in this round
           npasBeingAdjustedThisRound.add(record.npa);
+          
+          // Increment the record count for this NPA
+          npaDetails.recordsAffected++;
+          
           console.log(
             `[USRateSheetTable] Adding NPA ${record.npa} to npasBeingAdjustedThisRound (will be added to session tracking after successful update)`
           );
@@ -1662,6 +1850,21 @@ All NPAs will be available for adjustment again."
         adjustedNpasThisSession.value.add(npa);
         console.log(`[USRateSheetTable] Added NPA ${npa} to adjustedNpasThisSession`);
       });
+
+      // Track this adjustment operation for session history
+      const adjustmentOperation = {
+        timestamp: new Date().toISOString(),
+        filtersApplied: filtersApplied.length > 0 ? filtersApplied : ['No filters - all data'],
+        adjustmentType: adjustmentType.value,
+        adjustmentValue: adjustmentValue.value!,
+        adjustmentValueType: adjustmentValueType.value,
+        targetRate: adjustmentTargetRate.value,
+        npasAffected: Array.from(npasBeingAdjustedThisRound).sort(),
+        recordsAffected: updatesCount
+      };
+      
+      adjustmentOperationsThisSession.value.push(adjustmentOperation);
+      console.log('[USRateSheetTable] Tracked adjustment operation:', adjustmentOperation);
 
       console.log(
         '[USRateSheetTable] handleApplyAdjustment: End. adjustedNpasThisSession:',
