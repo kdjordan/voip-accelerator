@@ -87,6 +87,7 @@ serve(async (req) => {
             stripe_customer_id: session.customer as string,
             subscription_status: subscriptionStatus,
             subscription_id: session.subscription as string,
+            plan_expires_at: null, // Clear trial expiry since user now has paid subscription
             updated_at: new Date().toISOString(),
           };
           
@@ -157,6 +158,7 @@ serve(async (req) => {
             subscription_id: subscription.id,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            plan_expires_at: null, // Clear trial expiry since user now has paid subscription
             cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
             canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
             updated_at: new Date().toISOString(),
