@@ -60,6 +60,16 @@ serve(async (req) => {
               
               // Check the billing interval to determine if monthly or annual
               const price = subscription.items.data[0]?.price;
+              console.log(`🔍 Subscription details:`, {
+                subscriptionId: subscription.id,
+                status: subscription.status,
+                currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+                currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+                priceId: price?.id,
+                interval: price?.recurring?.interval,
+                intervalCount: price?.recurring?.interval_count
+              });
+              
               if (price?.recurring?.interval === 'month') {
                 subscriptionStatus = 'monthly';
               } else if (price?.recurring?.interval === 'year') {
@@ -91,15 +101,19 @@ serve(async (req) => {
             }
           }
 
-          const { error } = await supabase
+          console.log(`🔄 Updating profile for ${customerEmail}:`, updateData);
+          
+          const { error, data } = await supabase
             .from('profiles')
             .update(updateData)
-            .eq('email', customerEmail);
+            .eq('email', customerEmail)
+            .select();
 
           if (error) {
-            console.error('Error updating user profile:', error);
+            console.error('❌ Error updating user profile:', error);
           } else {
             console.log(`✅ Updated profile for ${customerEmail} with status: ${subscriptionStatus}`);
+            console.log(`📊 Updated profile data:`, data?.[0]);
           }
         }
         break;
@@ -116,8 +130,20 @@ serve(async (req) => {
         if ('email' in customer && customer.email) {
           // Determine subscription status based on billing interval
           let subscriptionStatus = subscription.status;
-          if (subscription.status === 'active') {
-            const price = subscription.items.data[0]?.price;
+          const price = subscription.items.data[0]?.price;
+          
+          console.log(`🔍 Subscription update details:`, {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            priceId: price?.id,
+            interval: price?.recurring?.interval,
+            intervalCount: price?.recurring?.interval_count,
+            customerEmail: customer.email
+          });
+          
+          if (subscription.status === 'active' || subscription.status === 'trialing') {
             if (price?.recurring?.interval === 'month') {
               subscriptionStatus = 'monthly';
             } else if (price?.recurring?.interval === 'year') {
@@ -136,15 +162,19 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           };
 
-          const { error } = await supabase
+          console.log(`🔄 Updating subscription for ${customer.email}:`, subscriptionData);
+          
+          const { error, data } = await supabase
             .from('profiles')
             .update(subscriptionData)
-            .eq('email', customer.email);
+            .eq('email', customer.email)
+            .select();
 
           if (error) {
-            console.error('Error updating subscription:', error);
+            console.error('❌ Error updating subscription:', error);
           } else {
             console.log(`✅ Updated subscription for ${customer.email}`);
+            console.log(`📊 Updated profile data:`, data?.[0]);
           }
         }
         break;

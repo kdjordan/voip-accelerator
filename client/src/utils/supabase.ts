@@ -5,6 +5,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 // Log the key for debugging in production
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key (first 20 chars):', supabaseAnonKey?.substring(0, 20));
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check your .env file.');

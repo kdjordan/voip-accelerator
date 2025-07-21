@@ -42,13 +42,21 @@ serve(async (req) => {
     // Get user profile
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('subscription_status, current_period_end, plan_expires_at')
+      .select('subscription_status, current_period_end, plan_expires_at, email')
       .eq('id', user.id)
       .single();
 
     if (profileError) {
+      console.error('Profile fetch error:', profileError);
       throw profileError;
     }
+    
+    console.log(`🔍 Checking subscription for ${profile.email}:`, {
+      subscription_status: profile.subscription_status,
+      current_period_end: profile.current_period_end,
+      plan_expires_at: profile.plan_expires_at,
+      now: now.toISOString()
+    });
 
     // Check subscription status
     const now = new Date();
@@ -61,13 +69,19 @@ serve(async (req) => {
       // Paid subscription - check if not expired
       const expirationDate = profile.current_period_end ? new Date(profile.current_period_end) : null;
       
+      console.log(`💳 Paid subscription check:`, {
+        status: profile.subscription_status,
+        expirationDate: expirationDate?.toISOString(),
+        isExpired: expirationDate ? expirationDate <= now : 'no date'
+      });
+      
       if (expirationDate && expirationDate > now) {
         isActive = true;
         message = `Active ${profile.subscription_status} subscription`;
       } else if (!expirationDate) {
         // No expiration date but has active status (legacy or lifetime)
         isActive = true;
-        message = `Active ${profile.subscription_status} subscription`;
+        message = `Active ${profile.subscription_status} subscription (no expiry)`;
       } else {
         requiresPayment = true;
         message = 'Subscription expired';
@@ -95,16 +109,20 @@ serve(async (req) => {
       message = 'No active subscription';
     }
 
+    const response = {
+      isActive,
+      requiresPayment,
+      subscriptionStatus: profile.subscription_status,
+      planExpiresAt: profile.current_period_end || profile.plan_expires_at,
+      trialStartedAt: null,
+      trialEndsAt,
+      message,
+    };
+    
+    console.log(`✅ Returning subscription status:`, response);
+    
     return new Response(
-      JSON.stringify({
-        isActive,
-        requiresPayment,
-        subscriptionStatus: profile.subscription_status,
-        planExpiresAt: profile.current_period_end || profile.plan_expires_at,
-        trialStartedAt: null,
-        trialEndsAt,
-        message,
-      }),
+      JSON.stringify(response),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
