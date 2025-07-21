@@ -87,7 +87,6 @@ serve(async (req) => {
             stripe_customer_id: session.customer as string,
             subscription_status: subscriptionStatus,
             subscription_id: session.subscription as string,
-            plan_expires_at: null, // Clear trial expiry since user now has paid subscription
             updated_at: new Date().toISOString(),
           };
           
@@ -158,7 +157,6 @@ serve(async (req) => {
             subscription_id: subscription.id,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            plan_expires_at: null, // Clear trial expiry since user now has paid subscription
             cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
             canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
             updated_at: new Date().toISOString(),
@@ -212,19 +210,20 @@ serve(async (req) => {
         const invoice = receivedEvent.data.object as Stripe.Invoice;
         console.log(`✅ Payment succeeded for invoice: ${invoice.id}`);
         
-        // Log successful payment
+        // Log successful payment without overriding subscription_status
         if (invoice.customer_email) {
           const { error } = await supabase
             .from('profiles')
             .update({
               last_payment_date: new Date().toISOString(),
-              subscription_status: 'active',
               updated_at: new Date().toISOString(),
             })
             .eq('email', invoice.customer_email);
 
           if (error) {
             console.error('Error updating payment status:', error);
+          } else {
+            console.log(`✅ Updated payment date for ${invoice.customer_email}`);
           }
         }
         break;
