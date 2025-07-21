@@ -5,8 +5,16 @@
       <p class="text-gray-400 text-sm mt-1">Manage your subscription and billing</p>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="space-y-4 mb-6 border-b border-gray-700 pb-6">
+      <div class="flex justify-center items-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+        <span class="ml-3 text-gray-400">Updating subscription...</span>
+      </div>
+    </div>
+
     <!-- Plan Details -->
-    <div class="space-y-4 mb-6 border-b border-gray-700 pb-6">
+    <div v-else class="space-y-4 mb-6 border-b border-gray-700 pb-6">
       <div class="flex justify-between items-center">
         <span class="text-gray-400">Current Plan</span>
         <BaseBadge :variant="badgeVariant">
@@ -54,6 +62,10 @@ import { computed } from 'vue';
 import { useUserStore } from '@/stores/user-store';
 import BaseButton from '@/components/shared/BaseButton.vue';
 import BaseBadge from '@/components/shared/BaseBadge.vue';
+
+const props = defineProps<{
+  isLoading?: boolean;
+}>();
 
 const emit = defineEmits<{
   'choose-plan': [];

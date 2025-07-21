@@ -84,6 +84,7 @@
 
       <!-- Account & Billing -->
       <AccountBillingCard 
+        :is-loading="isRefreshingSubscription"
         @choose-plan="showPaymentModal = true"
         @manage-billing="handleManageBilling"
       />
@@ -206,7 +207,7 @@
     CalendarDaysIcon,
     ArrowRightOnRectangleIcon,
   } from '@heroicons/vue/24/solid';
-  import { useRouter } from 'vue-router';
+  import { useRouter, useRoute } from 'vue-router';
   import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
@@ -216,12 +217,17 @@
 
   // User store for user info
   const userStore = useUserStore();
+  const router = useRouter();
+  const route = useRoute();
   
   // Payment modal state
   const showPaymentModal = ref(false);
   
   // Banner state from unified store logic
   const bannerState = computed(() => userStore.getServiceExpiryBanner);
+  
+  // Loading state for subscription refresh
+  const isRefreshingSubscription = ref(false);
 
   // User data from store (using root store state directly for simplicity)
   // const userProfile = computed(() => userStore.profile);
@@ -542,9 +548,42 @@
     }
   }
 
+  // Function to refresh user profile after subscription purchase
+  async function refreshUserProfile() {
+    console.log('[DashBoard] Refreshing user profile after subscription purchase...');
+    isRefreshingSubscription.value = true;
+    
+    try {
+      // Wait a bit for webhook to process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Refresh user profile data
+      const userId = userStore.getUser?.id;
+      if (userId) {
+        await userStore.fetchProfile(userId);
+      }
+      console.log('[DashBoard] User profile refreshed successfully');
+      
+      // Clear the subscription success parameter from URL
+      if (route.query.subscription === 'success') {
+        router.replace({ query: {} });
+      }
+    } catch (error) {
+      console.error('[DashBoard] Failed to refresh user profile:', error);
+    } finally {
+      isRefreshingSubscription.value = false;
+    }
+  }
+
   // SMART LERG initialization - single point of truth for the entire app
   onMounted(async () => {
     console.log('[DashBoard] ========== DASHBOARD MOUNTED: SMART LERG INITIALIZATION ==========');
+    
+    // Check if user just completed a subscription purchase
+    if (route.query.subscription === 'success') {
+      console.log('[DashBoard] Detected successful subscription, refreshing profile...');
+      await refreshUserProfile();
+    }
     
     try {
       // This is the ONLY place in the app that should call initializeLergData
@@ -578,7 +617,6 @@
     }
   );
 
-  const router = useRouter();
   const isLoggingOut = ref(false);
 
   async function handleLogout() {
