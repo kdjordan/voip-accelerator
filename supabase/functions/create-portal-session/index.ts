@@ -65,7 +65,7 @@ serve(async (req) => {
 
     if (profileError || !profile?.stripe_customer_id) {
       console.error('No Stripe customer ID found for user:', user.id);
-      throw new Error('No active subscription found');
+      throw new Error('No billing information found. Please subscribe to a plan first.');
     }
 
     console.log('Creating portal session for customer:', profile.stripe_customer_id);

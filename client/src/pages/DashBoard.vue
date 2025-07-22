@@ -208,6 +208,7 @@
     ArrowRightOnRectangleIcon,
   } from '@heroicons/vue/24/solid';
   import { useRouter, useRoute } from 'vue-router';
+  import { useBilling } from '@/composables/useBilling';
   import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
@@ -403,11 +404,16 @@
 
   async function handleManageBilling() {
     try {
-      // This would typically call the billing portal
-      console.log('Opening billing portal...');
-      // Replace with actual billing portal logic
-    } catch (error) {
+      const { openBillingPortal } = useBilling();
+      await openBillingPortal();
+    } catch (error: any) {
       console.error('Error opening billing portal:', error);
+      // Show user-friendly error message
+      if (error.message?.includes('No billing information found')) {
+        alert('Please subscribe to a plan first to manage your billing.');
+      } else {
+        alert('Unable to open billing portal. Please try again later.');
+      }
     }
   }
 

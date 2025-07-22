@@ -72,7 +72,7 @@ export const useUserStore = defineStore('user', {
     getServiceExpiryBanner: (state) => {
       const profile = state.auth.profile;
       if (!profile) {
-        return { show: false };
+        return { show: false, message: '' };
       }
 
       const now = new Date();
@@ -127,7 +127,7 @@ export const useUserStore = defineStore('user', {
         };
       }
 
-      return { show: false };
+      return { show: false, message: '' };
     },
   },
 
