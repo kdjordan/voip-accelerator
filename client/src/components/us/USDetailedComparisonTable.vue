@@ -1220,7 +1220,7 @@
   }
 
   // Replace isExporting ref with the one from composable
-  const { isExporting, exportError, exportToCSV } = useCSVExport();
+  const { isExporting, exportError, exportToCSV, exportToCSVWithContext } = useCSVExport();
   const { transformDataForExport } = useUSExportConfig();
 
   // Export modal state
@@ -1354,6 +1354,30 @@
     }
   }
 
+  // Helper function to build applied filters array for metadata
+  function buildAppliedFiltersArray(): string[] {
+    const appliedFilters: string[] = [];
+    
+    if (npanxxFilterTerms.value.length > 0) {
+      appliedFilters.push(`NPANXX: ${npanxxFilterTerms.value.join(', ')}`);
+    }
+    
+    if (selectedState.value) {
+      appliedFilters.push(`State: ${selectedState.value}`);
+    }
+    
+    if (selectedCheaper.value) {
+      const option = rateComparisonOptions.value.find(opt => opt.value === selectedCheaper.value);
+      appliedFilters.push(`Rate Comparison: ${option?.label || selectedCheaper.value}`);
+    }
+    
+    if (selectedMetros.value.length > 0) {
+      appliedFilters.push(`Metro Areas: ${selectedMetros.value.length} selected`);
+    }
+    
+    return appliedFilters;
+  }
+
   // --- CSV Download Function (Updated) ---
   async function downloadCsv(): Promise<void> {
     if (isExporting.value) return;
@@ -1415,13 +1439,22 @@
       if (npanxxFilterTerms.value.length > 0)
         filenameParts.push(`search_${npanxxFilterTerms.value.join('-')}`);
 
-      // Export using the composable
-      await exportToCSV(
-        { headers, rows },
+      // Export using the new context-aware composable
+      await exportToCSVWithContext(
+        { 
+          headers, 
+          rows,
+          metadata: {
+            exportType: 'comparison',
+            sourceFiles: metadata?.sourceFiles || [fileName1.value, fileName2.value],
+            appliedFilters: buildAppliedFiltersArray(),
+          }
+        },
         {
           filename: 'us-comparison',
           additionalNameParts: filenameParts,
           quoteFields: true,
+          exportContext: 'comparison',
         }
       );
     } catch (err: any) {
@@ -1502,11 +1535,12 @@
         filenameParts.push(`search_${npanxxFilterTerms.value.join('-')}`);
       }
 
-      // Export using the composable
-      await exportToCSV(transformed, {
+      // Export using the new context-aware composable  
+      await exportToCSVWithContext(transformed, {
         filename: 'us-comparison',
         additionalNameParts: filenameParts,
         quoteFields: true,
+        exportContext: 'comparison',
       });
     } catch (error) {
       console.error('Export failed:', error);

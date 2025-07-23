@@ -1,6 +1,6 @@
-# VoIP Accelerator
+# Factor Pricing
 
-A modern web application for managing and analyzing VoIP (Voice over Internet Protocol) data, including LERG (Local Exchange Routing Guide) information, US and AZ rate centers, and related telecommunications data.
+A modern web application for managing and analyzing telecommunications pricing data, including LERG (Local Exchange Routing Guide) information, US and AZ rate centers, and related telecommunications data.
 
 ## Project Structure
 
@@ -22,7 +22,7 @@ A modern web application for managing and analyzing VoIP (Voice over Internet Pr
 
 
 ```
-voip-accelerator
+factor-pricing
 ├─ .cursor
 │  └─ rules
 │     ├─ api-design.mdc

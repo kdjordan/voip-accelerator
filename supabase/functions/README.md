@@ -1,6 +1,6 @@
-# Supabase Edge Functions for VOIP Accelerator
+# Supabase Edge Functions for Factor Pricing
 
-This directory contains Supabase Edge Functions that replace the previous Express.js backend for VOIP Accelerator.
+This directory contains Supabase Edge Functions that replace the previous Express.js backend for Factor Pricing.
 
 ## Functions
 
