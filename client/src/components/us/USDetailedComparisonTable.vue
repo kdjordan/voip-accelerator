@@ -1520,9 +1520,19 @@
         ...record,
         destinationName: fileName1.value,
         destinationName2: fileName2.value,
+        // Add truncated filenames for headers
+        fileName1Truncated: fileName1.value.substring(0, 6),
+        fileName2Truncated: fileName2.value.substring(0, 6),
       }));
 
-      const transformed = transformDataForExport(comparisonData, options, 'comparison');
+      // Force include state and country columns for comparison exports
+      const modifiedOptions = {
+        ...options,
+        includeStateColumn: true,
+        includeCountryColumn: true,
+      };
+
+      const transformed = transformDataForExport(comparisonData, modifiedOptions, 'comparison');
       
       // Build filename parts
       const filenameParts = [];
