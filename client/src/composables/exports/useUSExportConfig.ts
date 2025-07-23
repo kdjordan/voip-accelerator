@@ -86,10 +86,15 @@ export function useUSExportConfig() {
       headers.push(
         'Destination Name (File 1)',
         'Destination Name (File 2)',
-        'Rate (File 1)',
-        'Rate (File 2)',
-        'Difference',
-        'Difference %',
+        'Inter Rate (File 1)',
+        'Inter Rate (File 2)',
+        'Inter Diff %',
+        'Intra Rate (File 1)',
+        'Intra Rate (File 2)',
+        'Intra Diff %',
+        'Indeterm Rate (File 1)',
+        'Indeterm Rate (File 2)',
+        'Indeterm Diff %',
         'Cheaper File'
       );
     } else {
@@ -127,11 +132,22 @@ export function useUSExportConfig() {
       if (exportType === 'comparison') {
         transformedRow['Destination Name (File 1)'] = row.destinationName || '';
         transformedRow['Destination Name (File 2)'] = row.destinationName2 || '';
-        // Format rates with 6 decimal places and store as strings for consistency
-        transformedRow['Rate (File 1)'] = typeof row.rate === 'number' ? row.rate.toFixed(6) : row.rate;
-        transformedRow['Rate (File 2)'] = typeof row.rate2 === 'number' ? row.rate2.toFixed(6) : row.rate2;
-        transformedRow['Difference'] = typeof row.difference === 'number' ? row.difference.toFixed(6) : row.difference;
-        transformedRow['Difference %'] = typeof row.differencePercentage === 'number' ? row.differencePercentage.toFixed(2) : row.differencePercentage;
+        
+        // Inter rates
+        transformedRow['Inter Rate (File 1)'] = typeof row.file1_inter === 'number' ? row.file1_inter.toFixed(6) : (row.file1_inter || 'N/A');
+        transformedRow['Inter Rate (File 2)'] = typeof row.file2_inter === 'number' ? row.file2_inter.toFixed(6) : (row.file2_inter || 'N/A');
+        transformedRow['Inter Diff %'] = typeof row.diff_inter_pct === 'number' ? row.diff_inter_pct.toFixed(2) + '%' : (row.diff_inter_pct || 'N/A');
+        
+        // Intra rates
+        transformedRow['Intra Rate (File 1)'] = typeof row.file1_intra === 'number' ? row.file1_intra.toFixed(6) : (row.file1_intra || 'N/A');
+        transformedRow['Intra Rate (File 2)'] = typeof row.file2_intra === 'number' ? row.file2_intra.toFixed(6) : (row.file2_intra || 'N/A');
+        transformedRow['Intra Diff %'] = typeof row.diff_intra_pct === 'number' ? row.diff_intra_pct.toFixed(2) + '%' : (row.diff_intra_pct || 'N/A');
+        
+        // Indeterm rates
+        transformedRow['Indeterm Rate (File 1)'] = typeof row.file1_indeterm === 'number' ? row.file1_indeterm.toFixed(6) : (row.file1_indeterm || 'N/A');
+        transformedRow['Indeterm Rate (File 2)'] = typeof row.file2_indeterm === 'number' ? row.file2_indeterm.toFixed(6) : (row.file2_indeterm || 'N/A');
+        transformedRow['Indeterm Diff %'] = typeof row.diff_indeterm_pct === 'number' ? row.diff_indeterm_pct.toFixed(2) + '%' : (row.diff_indeterm_pct || 'N/A');
+        
         transformedRow['Cheaper File'] = row.cheaperFile || '';
       } else {
         if (options.includeCountryColumn) {

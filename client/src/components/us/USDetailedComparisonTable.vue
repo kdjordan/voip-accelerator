@@ -1424,13 +1424,13 @@
         record.countryCode,
         record.file1_inter?.toFixed(6) || 'N/A',
         record.file2_inter?.toFixed(6) || 'N/A',
-        record.diff_inter_pct?.toFixed(6) || 'N/A',
+        record.diff_inter_pct?.toFixed(2) + '%' || 'N/A',
         record.file1_intra?.toFixed(6) || 'N/A',
         record.file2_intra?.toFixed(6) || 'N/A',
-        record.diff_intra_pct?.toFixed(6) || 'N/A',
+        record.diff_intra_pct?.toFixed(2) + '%' || 'N/A',
         record.file1_indeterm?.toFixed(6) || 'N/A',
         record.file2_indeterm?.toFixed(6) || 'N/A',
-        record.diff_indeterm_pct?.toFixed(6) || 'N/A',
+        record.diff_indeterm_pct?.toFixed(2) + '%' || 'N/A',
       ]);
 
       // Build filename parts
@@ -1491,15 +1491,11 @@
         return;
       }
 
-      // Enhance data with file names for the modal
+      // Enhance data with file names for the modal - keep all rate types
       exportData.value = exportData.value.map(record => ({
         ...record,
         destinationName: fileName1.value,
         destinationName2: fileName2.value,
-        rate: record.file1_inter,
-        rate2: record.file2_inter,
-        difference: record.diff_inter_pct ? (record.file2_inter || 0) - (record.file1_inter || 0) : null,
-        differencePercentage: record.diff_inter_pct,
         cheaperFile: determineCheaperFile(record),
       }));
 
@@ -1519,7 +1515,7 @@
 
   async function handleExportWithOptions(data: USPricingComparisonRecord[], options: USExportFormatOptions) {
     try {
-      // Transform data for comparison export
+      // Transform data for comparison export - keep all the original rate data
       const comparisonData = data.map(record => ({
         ...record,
         destinationName: fileName1.value,
