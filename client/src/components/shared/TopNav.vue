@@ -6,7 +6,7 @@
           <BoltIcon class="w-8 h-8 glitch-item" />
         </div>
         <div class="glitch-text-container ml-2">
-          <span class="text-sizeLg font-bold font-secondary glitch-text">VOIP Accelerator</span>
+          <span class="text-sizeLg font-bold font-secondary glitch-text">Factor Pricing</span>
         </div>
       </RouterLink>
 

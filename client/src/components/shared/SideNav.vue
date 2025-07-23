@@ -37,7 +37,7 @@
           <span
             v-if="userStore.ui.isSideNavOpen"
             class="font-medium font-pt-mono text-accent whitespace-nowrap tracking-tighter"
-            >VoIP Accelerator</span
+            >Factor Pricing</span
           >
         </RouterLink>
       </div>

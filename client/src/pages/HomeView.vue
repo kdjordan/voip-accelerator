@@ -40,6 +40,7 @@
             >
               Try for Free
             </RouterLink>
+            <!-- Google Sign-in button - Hidden for now
             <button
               @click="handleHeroGoogleSignIn"
               :disabled="isLoadingGoogle"
@@ -61,6 +62,7 @@
               </svg>
               {{ isLoadingGoogle ? 'Signing in...' : 'Sign in with Google' }}
             </button>
+            -->
             <!--
             <a
               href="#pricing"
@@ -142,7 +144,7 @@
         class="container mx-auto mb-2 font-secondary w-full opacity-0 translate-y-[50px]"
       >
         <h2 class="text-3xl md:text-5xl text-center mx-auto mb-4 text-accent uppercase font-">
-          Why You'll Love VOIP Accelerator
+          Why You'll Love Factor Pricing
         </h2>
         <h3 class="text-xl md:text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">
           Efficiency. Accuracy. Insight.
@@ -170,7 +172,7 @@
             <p class="text-accent text-sm mx-auto mb-12 tracking-wider font-secondary">
               GET STARTED
             </p>
-            <h2 class="text-3xl mb-8 text-gray-300">Ready to optimize your VOIP operations?</h2>
+            <h2 class="text-3xl mb-8 text-gray-300">Ready to optimize your PRICING operations?</h2>
             <p class="text-xl mx-auto w-2/3 font-secondary text-accent">
               Get the cheat code for buying and selling in the VOIP market.
             </p>

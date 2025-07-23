@@ -2,7 +2,7 @@
   <footer class="text-muted-foreground py-3 text-sizeSm text-foreground">
     <div class="flex flex-col items-center justify-center">
       <div class="mt-12 text-fbWhite/50 text-sm">
-        &copy; {{ new Date().getFullYear() }} VOIP Accelerator. All rights reserved.
+        &copy; {{ new Date().getFullYear() }} Factor Pricing. All rights reserved.
       </div>
       <div class="flex items-center justify-start space-x-4 mt-4 text-fbWhite/50">
         <RouterLink to="#pricing" class="hover:text-fbWhite/90 transition-colors">
@@ -31,7 +31,7 @@
           rel="noopener noreferrer"
           class="hover:text-fbWhite/90 transition-colors flex items-center"
         >
-          FlatBrim
+          About
           <ArrowTopRightOnSquareIcon class="w-3 h-3 ml-1" />
         </a>
         <template v-if="isHomePage">
