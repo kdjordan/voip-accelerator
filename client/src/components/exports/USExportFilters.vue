@@ -61,25 +61,49 @@
       </div>
     </div>
 
-    <!-- Warning if filtered -->
-    <div v-if="isFiltered" class="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded">
-      <p class="text-sm text-yellow-400">
-        <ExclamationTriangleIcon class="inline h-4 w-4 mr-1" />
-        You are exporting a filtered subset of data. Make sure this is intentional.
-      </p>
+    <!-- Session History Section (Rate Sheet Only) -->
+    <div v-if="exportType === 'rate-sheet'" class="mt-4 pt-3 border-t border-blue-500/20">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-fbWhite">Session History</span>
+        <label class="flex items-center">
+          <input
+            type="checkbox"
+            :checked="includeSessionHistory"
+            :disabled="adjustedNpasCount === 0"
+            @change="$emit('update:include-session-history', $event.target.checked)"
+            class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+          />
+          <span class="ml-2 text-sm text-fbWhite">Include adjustment history</span>
+        </label>
+      </div>
+      <div class="text-xs text-fbWhite/70">
+        <template v-if="adjustedNpasCount > 0">
+          {{ adjustedNpasCount }} NPAs adjusted this session
+        </template>
+        <template v-else>
+          No adjustments made this session
+        </template>
+      </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import type { USExportFilters } from '@/types/exports';
 
 const props = defineProps<{
   filters: USExportFilters;
   totalRecords: number;
   filteredRecords: number;
+  exportType?: 'rate-sheet' | 'comparison';
+  adjustedNpas?: Set<string>;
+  includeSessionHistory?: boolean;
+}>();
+
+const emit = defineEmits<{
+  'update:include-session-history': [value: boolean];
 }>();
 
 const hasActiveFilters = computed(() => {
@@ -95,4 +119,6 @@ const hasActiveFilters = computed(() => {
 const isFiltered = computed(() => {
   return props.filteredRecords < props.totalRecords;
 });
+
+const adjustedNpasCount = computed(() => props.adjustedNpas?.size || 0);
 </script>

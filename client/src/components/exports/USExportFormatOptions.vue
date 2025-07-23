@@ -1,159 +1,132 @@
 <template>
   <div v-if="exportType === 'rate-sheet'">
-    <h4 class="text-sm font-medium text-fbWhite mb-4">Format Options</h4>
-    
-    <!-- 2-column bento grid layout -->
-    <div class="grid grid-cols-2 gap-4">
-      <!-- Left Column -->
-      <div class="space-y-4">
-        <!-- NPANXX Format Bento Box -->
-        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
-          <label class="text-sm font-semibold text-fbWhite mb-3 block">NPANXX Format</label>
-          <div class="space-y-2">
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                :checked="formatOptions.npanxxFormat === 'combined'"
-                @change="updateNpanxxFormat('combined')"
-                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-              />
-              <span class="ml-2 text-sm text-fbWhite">Combined (213555)</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                :checked="formatOptions.npanxxFormat === 'split'"
-                @change="updateNpanxxFormat('split')"
-                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-              />
-              <span class="ml-2 text-sm text-fbWhite">Split (213 | 555)</span>
-            </label>
+    <div class="space-y-4">
+      <!-- First bento box for NPANXX Format, Additional Columns, and Country Code -->
+      <div class="border border-fbWhite/20 rounded-lg p-6 bg-fbBlack/50">
+        <h4 class="text-lg font-semibold text-fbWhite mb-6">Format Options</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- NPANXX Format Section -->
+          <div>
+            <label class="text-sm font-semibold text-fbWhite mb-3 block">NPANXX Format</label>
+            <div class="space-y-2">
+              <label class="flex items-center">
+                <input
+                  type="checkbox"
+                  :checked="formatOptions.npanxxFormat === 'combined'"
+                  @change="updateNpanxxFormat('combined')"
+                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                />
+                <span class="ml-2 text-sm text-fbWhite">Combined (213555)</span>
+              </label>
+              <label class="flex items-center">
+                <input
+                  type="checkbox"
+                  :checked="formatOptions.npanxxFormat === 'split'"
+                  @change="updateNpanxxFormat('split')"
+                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                />
+                <span class="ml-2 text-sm text-fbWhite">Split (213 | 555)</span>
+              </label>
+            </div>
           </div>
-        </div>
 
-        <!-- Additional Columns Bento Box -->
-        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
-          <label class="text-sm font-semibold text-fbWhite mb-3 block">Additional Columns</label>
-          <div class="space-y-2">
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                :checked="formatOptions.includeStateColumn"
-                @change="updateStateColumn($event.target.checked)"
-                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-              />
-              <span class="ml-2 text-sm text-fbWhite">State column</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                :checked="formatOptions.includeCountryColumn"
-                @change="updateCountryColumn($event.target.checked)"
-                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-              />
-              <span class="ml-2 text-sm text-fbWhite">Country column</span>
-            </label>
+          <!-- Additional Columns Section -->
+          <div>
+            <label class="text-sm font-semibold text-fbWhite mb-3 block">Additional Columns</label>
+            <div class="space-y-2">
+              <label class="flex items-center">
+                <input
+                  type="checkbox"
+                  :checked="formatOptions.includeStateColumn"
+                  @change="updateStateColumn($event.target.checked)"
+                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                />
+                <span class="ml-2 text-sm text-fbWhite">State column</span>
+              </label>
+              <label class="flex items-center">
+                <input
+                  type="checkbox"
+                  :checked="formatOptions.includeCountryColumn"
+                  @change="updateCountryColumn($event.target.checked)"
+                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                />
+                <span class="ml-2 text-sm text-fbWhite">Country column</span>
+              </label>
+            </div>
           </div>
+
+          <!-- Country Code Section -->
+          <div>
+            <label class="text-sm font-semibold text-fbWhite mb-3 block">Country Code</label>
+            <div class="space-y-2">
+              <label class="flex items-center">
+                <input
+                  type="checkbox"
+                  :checked="formatOptions.includeCountryCode"
+                  @change="updateCountryCode($event.target.checked)"
+                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                />
+                <span class="ml-2 text-sm text-fbWhite">Include (1) prefix for North American numbers</span>
+              </label>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <!-- Right Column -->
-      <div class="space-y-4">
-        <!-- Country Code Prefix Bento Box -->
-        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
-          <label class="text-sm font-semibold text-fbWhite mb-3 block">Country Code</label>
-          <div class="space-y-2">
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                :checked="formatOptions.includeCountryCode"
-                @change="updateCountryCode($event.target.checked)"
-                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-              />
-              <span class="ml-2 text-sm text-fbWhite">Include (1) prefix for North American numbers</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Countries in Current Data Bento Box -->
-        <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
-          <label class="text-sm font-semibold text-fbWhite mb-3 block">
-            Countries in Current Data
-            <span class="text-xs font-normal text-fbWhite/70 block mt-1">
-              Uncheck countries to exclude from export
-            </span>
-          </label>
-          <div class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-            <label
-              v-for="country in filteredCountriesForSelection"
-              :key="country"
-              class="flex items-center text-xs"
-            >
-              <input
-                type="checkbox"
-                :checked="!formatOptions.selectedCountries.includes(country)"
-                @change="updateCountrySelection(country, $event.target.checked)"
-                class="h-3 w-3 text-accent focus:ring-accent border-fbWhite/20 bg-fbBlack rounded"
-              />
-              <span class="ml-1 text-fbWhite">{{ countryDisplayNames.get(country) || country }}</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Session History Bento Box (Rate Sheet Only) -->
-        <div v-if="exportType === 'rate-sheet'" class="border border-fbWhite/20 rounded-lg p-4 bg-fbBlack/50">
-          <label class="text-sm font-semibold text-fbWhite mb-3 block">
-            Session History
-            <span class="text-xs font-normal text-fbWhite/70 block mt-1">
-              Include record of adjustments made this session
-            </span>
-          </label>
-          <div class="space-y-2">
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                v-model="includeSessionHistory"
-                :disabled="adjustedNpasCount === 0"
-                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
-              />
-              <span class="ml-2 text-sm text-fbWhite">
-                <template v-if="adjustedNpasCount > 0">
-                  Include session history ({{ adjustedNpasCount }} NPAs adjusted)
-                </template>
-                <template v-else>
-                  Include session history
-                </template>
-              </span>
-            </label>
-            <p v-if="adjustedNpasCount === 0" class="text-xs text-fbWhite/50">
-              No adjustments made this session
-            </p>
-            <p v-else class="text-xs text-fbWhite/70">
-              Downloads additional .txt file with adjustment details
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Warning when no data would be exported -->
-    <div v-if="filteredRecordCount === 0" class="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-      <div class="flex items-center">
-        <ExclamationTriangleIcon class="h-5 w-5 text-red-400 mr-2" />
-        <div>
-          <p class="text-sm font-medium text-red-400">No Data to Export</p>
-          <p class="text-xs text-red-300">Your current country selections would exclude all data. Check at least one country to include in the export.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Record count info -->
-    <div v-else class="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-      <div class="flex items-center">
-        <InformationCircleIcon class="h-5 w-5 text-blue-400 mr-2" />
-        <p class="text-sm text-blue-300">
-          <span class="font-medium">{{ filteredRecordCount.toLocaleString() }}</span> records will be exported with current settings
+      <!-- Second full-width bento box for Countries in Current Data -->
+      <div class="border border-fbWhite/20 rounded-lg p-6 bg-fbBlack/50">
+        <h4 class="text-lg font-semibold text-fbWhite block">Countries in Current Data</h4>
+        <p class="text-xs font-normal text-fbWhite/70 mb-6">
+          Uncheck countries to exclude from export
         </p>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+          <label
+            v-for="country in filteredCountriesForSelection"
+            :key="country"
+            class="flex items-center text-xs"
+          >
+            <input
+              type="checkbox"
+              :checked="!formatOptions.selectedCountries.includes(country)"
+              @change="updateCountrySelection(country, $event.target.checked)"
+              class="h-3 w-3 text-accent focus:ring-accent border-fbWhite/20 bg-fbBlack rounded"
+            />
+            <span class="ml-1 text-fbWhite">{{ countryDisplayNames.get(country) || country }}</span>
+          </label>
+        </div>
+
+        <!-- Warning when no data would be exported -->
+        <div v-if="filteredRecordCount === 0" class="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <div class="flex items-center">
+            <ExclamationTriangleIcon class="h-5 w-5 text-red-400 mr-2" />
+            <div>
+              <p class="text-sm font-medium text-red-400">No Data to Export</p>
+              <p class="text-xs text-red-300">Your current country selections would exclude all data. Check at least one country to include in the export.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtered data warning -->
+        <div v-if="isFiltered" class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+          <div class="flex items-center">
+            <ExclamationTriangleIcon class="h-5 w-5 text-yellow-400 mr-2" />
+            <p class="text-sm text-yellow-400">
+              You are exporting a filtered subset of data. Make sure this is intentional.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Record count info -->
+        <div class="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <div class="flex items-center">
+            <InformationCircleIcon class="h-5 w-5 text-blue-400 mr-2" />
+            <p class="text-sm text-blue-300">
+              <span class="font-medium">{{ filteredRecordCount.toLocaleString() }}</span> records will be exported with current settings
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -169,14 +142,13 @@ const props = defineProps<{
   options: USExportFormatOptions;
   exportType: 'rate-sheet' | 'comparison';
   data: any[];
-  adjustedNpas?: Set<string>;
-  includeSessionHistory?: boolean;
+  totalRecords?: number;
+  filteredRecords?: number;
 }>();
 
 const emit = defineEmits<{
   'update:options': [value: USExportFormatOptions];
   'update:filtered-count': [count: number];
-  'update:include-session-history': [value: boolean];
 }>();
 
 // Use computed for reactive options - eliminates circular updates
@@ -219,6 +191,13 @@ const filteredCountriesForSelection = computed(() => {
   }
   // Fallback to all available countries if no data
   return availableCountries.value;
+});
+
+// Check if we're exporting filtered data
+const isFiltered = computed(() => {
+  return props.filteredRecords !== undefined && 
+         props.totalRecords !== undefined && 
+         props.filteredRecords < props.totalRecords;
 });
 
 // Get full country names for display
@@ -266,12 +245,6 @@ const filteredRecordCount = computed(() => {
   return count;
 });
 
-// Session history state
-const includeSessionHistory = computed({
-  get: () => props.includeSessionHistory || false,
-  set: (value) => emit('update:include-session-history', value)
-});
-const adjustedNpasCount = computed(() => props.adjustedNpas?.size || 0);
 
 // Watch for filtered count changes and emit to parent
 watch(filteredRecordCount, (newCount) => {

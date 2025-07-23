@@ -65,9 +65,15 @@ export function useCSVExport() {
         throw new Error('No data to export');
       }
 
+      // Prepare data with headers
+      const csvData = [data.headers, ...data.rows.map(row => {
+        if (Array.isArray(row)) return row;
+        return data.headers.map(header => row[header] || '');
+      })];
+
       // Generate CSV content using Papa Parse
       const csv = Papa.unparse(
-        data.rows,
+        csvData,
         {
           quotes: options.quoteFields ?? true, // Default to true for safety
           header: false, // We handle headers manually in rows
