@@ -1,5 +1,5 @@
 <template>
-  <div class="border border-fbWhite/20 rounded-lg p-4 bg-fbHover">
+  <div class="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
     <h4 class="text-sm font-medium text-fbWhite mb-3">Active Filters</h4>
     
     <div class="space-y-2">

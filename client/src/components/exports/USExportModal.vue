@@ -27,16 +27,26 @@
             <DialogPanel class="relative transform overflow-hidden rounded-lg bg-fbBlack text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
               <div class="bg-fbBlack px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
-                  <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-accent/20 sm:mx-0 sm:h-10 sm:w-10">
+                  <div v-if="exportType === 'rate-sheet'" class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-accent/20 sm:mx-0 sm:h-10 sm:w-10">
                     <DocumentArrowDownIcon class="h-6 w-6 text-accent" aria-hidden="true" />
                   </div>
-                  <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left flex-1">
-                    <DialogTitle as="h3" class="text-lg font-medium leading-6 text-fbWhite">
-                      Export {{ exportType }} Data
+                  <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left flex-1" :class="{ 'sm:ml-0': exportType === 'comparison' }">
+                    <DialogTitle as="h3" :class="exportType === 'comparison' ? 'text-2xl font-secondary uppercase text-accent tracking-wider' : 'text-lg font-medium leading-6 text-fbWhite'">
+                      <template v-if="exportType === 'comparison'">
+                        Export Comparison Data
+                      </template>
+                      <template v-else>
+                        Export {{ exportType }} Data
+                      </template>
                     </DialogTitle>
                     <div class="mt-2">
                       <p class="text-sm text-fbWhite/70">
-                        Review your export settings and filters before downloading. You can customize the format to match your requirements.
+                        <template v-if="exportType === 'comparison'">
+                          Review your export filters before downloading. Comparison exports use optimized formatting for rate analysis.
+                        </template>
+                        <template v-else>
+                          Review your export settings and filters before downloading. You can customize the format to match your requirements.
+                        </template>
                       </p>
                     </div>
                   </div>

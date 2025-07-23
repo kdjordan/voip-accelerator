@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="exportType === 'rate-sheet'">
     <h4 class="text-sm font-medium text-fbWhite mb-4">Format Options</h4>
     
     <!-- 2-column bento grid layout -->
