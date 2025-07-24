@@ -178,41 +178,24 @@
       {{ lastError }}
     </div>
 
-    <!-- Enhanced Preview Section with Distribution -->
+    <!-- Preview Section -->
     <div v-if="previewData.eligibleDestinations > 0" class="mt-4 p-3 bg-gray-800/50 rounded-lg">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Preview Sample -->
-        <div>
-          <div class="text-xs text-gray-400 mb-2">Preview (showing first 5 destinations):</div>
-          <div class="space-y-1">
-            <div
-              v-for="preview in previewData.estimatedNewRates.slice(0, 5)"
-              :key="preview.destinationName"
-              class="text-xs text-gray-300"
-            >
-              {{ preview.destinationName }}: ${{
-                formatRate(getCurrentRate(preview.destinationName))
-              }}
-              → ${{ formatRate(preview.newRate) }}
-            </div>
-            <div v-if="previewData.estimatedNewRates.length > 5" class="text-xs text-gray-400">
-              ... and {{ previewData.estimatedNewRates.length - 5 }} more destinations
-            </div>
+      <!-- Preview Sample -->
+      <div>
+        <div class="text-xs text-gray-400 mb-2">Preview (showing first 5 destinations):</div>
+        <div class="space-y-1">
+          <div
+            v-for="preview in previewData.estimatedNewRates.slice(0, 5)"
+            :key="preview.destinationName"
+            class="text-xs text-gray-300"
+          >
+            {{ preview.destinationName }}: ${{
+              formatRate(getCurrentRate(preview.destinationName))
+            }}
+            → ${{ formatRate(preview.newRate) }}
           </div>
-        </div>
-
-        <!-- Bucket Distribution -->
-        <div>
-          <div class="text-xs text-gray-400 mb-2">Distribution by bucket:</div>
-          <div class="space-y-1">
-            <div
-              v-for="(count, bucket) in bucketDistribution"
-              :key="bucket"
-              class="text-xs text-gray-300 flex justify-between"
-            >
-              <span>{{ getBucketLabel(bucket) }}:</span>
-              <span>{{ count }} destinations</span>
-            </div>
+          <div v-if="previewData.estimatedNewRates.length > 5" class="text-xs text-gray-400">
+            ... and {{ previewData.estimatedNewRates.length - 5 }} more destinations
           </div>
         </div>
       </div>
@@ -245,8 +228,6 @@
   } from '@heroicons/vue/24/outline';
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
   import {
-    RATE_BUCKETS,
-    classifyRateIntoBucket,
     formatRate,
     calculateAdjustedRate,
   } from '@/constants/rate-buckets';
@@ -315,7 +296,6 @@
       return {
         destinationName: group.destinationName,
         newRate,
-        currentBucket: classifyRateIntoBucket(currentRate),
       };
     });
 
@@ -327,16 +307,15 @@
     };
   });
 
-  const bucketDistribution = computed(() => {
-    const distribution: Record<string, number> = {};
-    previewData.value.estimatedNewRates.forEach((item) => {
-      const bucket = item.currentBucket;
-      distribution[bucket] = (distribution[bucket] || 0) + 1;
-    });
-    return distribution;
-  });
 
-  const availableDestinationsCount = computed(() => previewData.value.eligibleDestinations);
+  const availableDestinationsCount = computed(() => {
+    // Always show total available destinations count, regardless of whether adjustment value is entered
+    const allDestinations = store.groupedData.filter((group) => !group.hasDiscrepancy);
+    const eligibleDestinations = allDestinations.filter(
+      (group) => !store.isDestinationExcluded(group.destinationName)
+    );
+    return eligibleDestinations.length;
+  });
 
   const canApplyGlobalAdjustment = computed(() => {
     return (
@@ -352,10 +331,6 @@
     return group?.rates[0]?.rate || 0;
   }
 
-  function getBucketLabel(bucketType: string): string {
-    const bucket = RATE_BUCKETS.find((b) => b.type === bucketType);
-    return bucket?.label || bucketType;
-  }
 
   function getAdjustmentTypeLabel(value: string | undefined): string {
     return adjustmentTypeOptions.find((opt) => opt.value === value)?.label || 'Select Type';

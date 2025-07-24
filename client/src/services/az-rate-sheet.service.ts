@@ -163,10 +163,12 @@ export class RateSheetService {
               }
             } catch (error) {
               console.error(`Error processing row ${currentRowIndex}:`, error);
+              const errorRow = results.data;
               allInvalidRows.push({
-                rowIndex: currentRowIndex,
-                invalidValue: row?.join(',') || '',
-                reason: `Processing error: ${(error as Error).message}`,
+                destinationName: errorRow[columnMapping.name]?.trim() || 'N/A',
+                prefix: errorRow[columnMapping.prefix]?.trim() || 'N/A',
+                invalidRate: errorRow[columnMapping.rate]?.trim() || 'N/A',
+                rowNumber: currentRowIndex + 1,
               });
             }
           },
@@ -224,15 +226,17 @@ export class RateSheetService {
     // Fast validation using pre-compiled patterns
     const rate = row[columnMapping.rate]?.trim();
     const prefix = row[columnMapping.prefix]?.trim();
+    const name = row[columnMapping.name]?.trim() || '';
 
     // Quick validation checks
     if (!rate || !prefix) {
       return {
         isValid: false,
         invalidRow: {
-          rowIndex,
-          invalidValue: row.join(','),
-          reason: 'Missing required rate or prefix',
+          destinationName: name || 'N/A',
+          prefix: prefix || 'N/A',
+          invalidRate: rate || 'N/A',
+          rowNumber: rowIndex + 1,
         },
       };
     }
@@ -242,9 +246,10 @@ export class RateSheetService {
       return {
         isValid: false,
         invalidRow: {
-          rowIndex,
-          invalidValue: row.join(','),
-          reason: 'Invalid rate format',
+          destinationName: name,
+          prefix: prefix,
+          invalidRate: rate,
+          rowNumber: rowIndex + 1,
         },
       };
     }

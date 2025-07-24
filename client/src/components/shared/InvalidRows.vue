@@ -31,14 +31,15 @@
               <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
                 {{ item.rowNumber }}
               </td>
-              <td class="px-4 py-2 text-sm text-gray-300 border-t border-gray-800/50">
+              <td class="px-4 py-2 text-sm border-t border-gray-800/50" :class="item.name === 'N/A' ? 'text-red-400' : 'text-gray-300'">
                 {{ item.name }}
               </td>
-              <td class="px-4 py-2 text-sm text-gray-300 font-mono border-t border-gray-800/50">
+              <td class="px-4 py-2 text-sm font-mono border-t border-gray-800/50" :class="item.identifier === 'N/A' ? 'text-red-400' : 'text-gray-300'">
                 {{ item.identifier }}
               </td>
               <td
-                class="px-4 py-2 text-sm text-red-400 text-right font-mono border-t border-gray-800/50"
+                class="px-4 py-2 text-sm text-right font-mono border-t border-gray-800/50"
+                :class="item.problemValue === 'N/A' ? 'text-red-400' : 'text-gray-300'"
               >
                 {{ item.problemValue }}
               </td>

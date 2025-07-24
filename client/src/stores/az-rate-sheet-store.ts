@@ -28,7 +28,11 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
       increase: 'week',
       decrease: 'today',
       sameCustomDate: new Date().toISOString().split('T')[0],
-      increaseCustomDate: new Date().toISOString().split('T')[0],
+      increaseCustomDate: (() => {
+        const weekFromNow = new Date();
+        weekFromNow.setDate(weekFromNow.getDate() + 7);
+        return weekFromNow.toISOString().split('T')[0];
+      })(),
       decreaseCustomDate: new Date().toISOString().split('T')[0],
     },
     optionalFields: {
@@ -95,12 +99,39 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     // Rate update methods
     async updateDestinationRate(destinationName: string, newRate: number): Promise<boolean> {
       try {
-        // Update original data
+        // Check if this destination has rate conflicts (discrepancy)
+        const destinationGroup = this.groupedData.find(group => group.destinationName === destinationName);
+        const hasDiscrepancy = destinationGroup?.hasDiscrepancy || false;
+
+        // Update original data with change codes and effective dates
         const updatedOriginalData = this.originalData.map((record) => {
           if (record.name === destinationName) {
+            let changeCode: ChangeCodeType;
+            let effectiveDate: string;
+            
+            if (hasDiscrepancy) {
+              // This is conflict resolution/formalization - keep as SAME
+              changeCode = ChangeCode.SAME;
+              effectiveDate = this.effectiveDateSettings.sameCustomDate;
+            } else {
+              // This is a true rate adjustment - determine change code based on rate comparison
+              if (newRate > record.rate) {
+                changeCode = ChangeCode.INCREASE;
+                effectiveDate = this.effectiveDateSettings.increaseCustomDate;
+              } else if (newRate < record.rate) {
+                changeCode = ChangeCode.DECREASE;
+                effectiveDate = this.effectiveDateSettings.decreaseCustomDate;
+              } else {
+                changeCode = ChangeCode.SAME;
+                effectiveDate = this.effectiveDateSettings.sameCustomDate;
+              }
+            }
+
             return {
               ...record,
               rate: newRate,
+              changeCode,
+              effective: effectiveDate,
             };
           }
           return record;
@@ -128,13 +159,42 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
         // Create a map for faster lookups
         const updateMap = new Map(updates.map((update) => [update.name, update.rate]));
 
-        // Update original data
+        // Create a map of destinations with discrepancies for faster lookups
+        const discrepancyMap = new Map(
+          this.groupedData.map(group => [group.destinationName, group.hasDiscrepancy])
+        );
+
+        // Update original data with change codes and effective dates
         const updatedOriginalData = this.originalData.map((record) => {
           const newRate = updateMap.get(record.name);
           if (newRate !== undefined) {
+            const hasDiscrepancy = discrepancyMap.get(record.name) || false;
+            let changeCode: ChangeCodeType;
+            let effectiveDate: string;
+            
+            if (hasDiscrepancy) {
+              // This is conflict resolution/formalization - keep as SAME
+              changeCode = ChangeCode.SAME;
+              effectiveDate = this.effectiveDateSettings.sameCustomDate;
+            } else {
+              // This is a true rate adjustment - determine change code based on rate comparison
+              if (newRate > record.rate) {
+                changeCode = ChangeCode.INCREASE;
+                effectiveDate = this.effectiveDateSettings.increaseCustomDate;
+              } else if (newRate < record.rate) {
+                changeCode = ChangeCode.DECREASE;
+                effectiveDate = this.effectiveDateSettings.decreaseCustomDate;
+              } else {
+                changeCode = ChangeCode.SAME;
+                effectiveDate = this.effectiveDateSettings.sameCustomDate;
+              }
+            }
+
             return {
               ...record,
               rate: newRate,
+              changeCode,
+              effective: effectiveDate,
             };
           }
           return record;

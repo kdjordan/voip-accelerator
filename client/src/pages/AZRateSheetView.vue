@@ -315,10 +315,10 @@
   const azInvalidRowEntries = computed((): InvalidRowEntry[] => {
     if (!store.invalidRows) return [];
     return store.invalidRows.map((row: any) => ({
-      rowNumber: row.rowNumber,
-      name: row.destinationName,
-      identifier: row.prefix,
-      problemValue: row.invalidRate,
+      rowNumber: row.rowNumber || 'N/A',
+      name: row.destinationName || 'N/A',
+      identifier: row.prefix || 'N/A',
+      problemValue: row.invalidRate || 'N/A',
     }));
   });
 
