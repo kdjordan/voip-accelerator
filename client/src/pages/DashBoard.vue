@@ -10,26 +10,20 @@
 
     <!-- Dashboard Content -->
     <div class="flex flex-col gap-6 mb-8">
-      <!-- Welcome Box -->
+      <!-- User Welcome Section -->
       <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
         <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
-          <!-- User Initial Avatar -->
           <div class="flex-shrink-0">
-            <div
-              class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center overflow-hidden border-2 border-accent/30"
-            >
+            <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center overflow-hidden border-2 border-accent/30">
               <span class="text-xl font-medium text-accent">{{ userInitials }}</span>
             </div>
           </div>
-
-          <!-- User Info Section -->
           <div class="flex-grow">
             <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
               <div>
                 <h2 class="text-xl font-semibold">Welcome back,</h2>
                 <p class="text-sm text-gray-400">{{ userStore.auth.user?.email || 'Guest' }}</p>
               </div>
-              <!-- Add Logout Button Here -->
               <BaseButton
                 @click="handleLogout"
                 variant="destructive"
@@ -41,62 +35,169 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Stats Section -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-700/50">
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-gray-400 text-sm">Last Login</p>
-                <p class="text-lg font-medium mt-1">{{ formattedLastLogin }}</p>
-              </div>
-              <div class="p-2 bg-blue-900/30 rounded-lg border border-blue-400/50">
-                <InformationCircleIcon class="h-5 w-5 text-blue-400" />
-              </div>
-            </div>
+      <!-- Account Stats Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Last Login -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
+          <div>
+            <p class="text-gray-400 text-sm">Last Login</p>
+            <p class="text-lg font-medium mt-1">{{ formattedLastLogin }}</p>
           </div>
+        </div>
 
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-gray-400 text-sm">Uploads Today</p>
-                <p class="text-lg font-medium mt-1">{{ userStore.getUploadsToday }}</p>
-              </div>
-              <div class="p-2 bg-yellow-900/30 rounded-lg border border-yellow-400/50">
-                <ArrowUpTrayIcon class="h-5 w-5 text-yellow-400" />
-              </div>
-            </div>
+        <!-- Uploads Today -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
+          <div>
+            <p class="text-gray-400 text-sm">Uploads Today</p>
+            <p class="text-lg font-medium mt-1">{{ userStore.getUploadsToday }}</p>
           </div>
+        </div>
 
-          <div class="bg-gray-900/40 rounded-lg p-4">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-gray-400 text-sm">Account Created</p>
-                <p class="text-lg font-medium mt-1">{{ formattedCreatedAt }}</p>
-              </div>
-              <div class="p-2 bg-accent/30 rounded-lg border border-accent/50">
-                <CalendarDaysIcon class="h-5 w-5 text-accent" />
-              </div>
-            </div>
+        <!-- Account Created -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
+          <div>
+            <p class="text-gray-400 text-sm">Account Created</p>
+            <p class="text-lg font-medium mt-1">{{ formattedCreatedAt }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Account & Billing -->
-      <AccountBillingCard 
-        :is-loading="isRefreshingSubscription"
-        @choose-plan="showPaymentModal = true"
-        @manage-billing="handleManageBilling"
-      />
+      <!-- Profile Settings Bento -->
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-white">Profile Settings</h3>
+        </div>
 
-      <!-- Profile Settings -->
-      <ProfileSettingsCard 
-        :is-updating-email="isUpdatingEmail"
-        :email-success-message="emailSuccessMessage"
-        :email-error-message="emailErrorMessage"
-        @update-email="updateEmail"
-        @delete-account="openDeleteConfirmModal"
-      />
+        <div class="space-y-4 mb-8">
+          <!-- Loading State -->
+          <div v-if="isRefreshingSubscription">
+            <div class="flex justify-center items-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+              <span class="ml-3 text-gray-400">Updating subscription...</span>
+            </div>
+          </div>
+
+          <!-- Plan Details -->
+          <div v-else class="space-y-3">
+            <!-- Next Billing Date (moved to top) -->
+            <div v-if="planExpiresAt" class="flex justify-between items-center">
+              <span class="text-gray-400">{{ currentPlanTier === 'trial' ? 'Trial Ends' : 'Next Billing Date' }}</span>
+              <span class="text-white">{{ formattedPlanExpiresAt }}</span>
+            </div>
+            
+            <!-- Current Plan -->
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Current Plan</span>
+              <BaseBadge :variant="currentPlanBadgeVariant" size="small">
+                {{ currentPlanName }}
+              </BaseBadge>
+            </div>
+
+            <!-- Email Management -->
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-400">Email</span>
+                  <BaseButton
+                    v-if="!isEditingEmail"
+                    @click="isEditingEmail = true"
+                    variant="secondary-outline"
+                    size="small"
+                    :icon="PencilIcon"
+                  />
+                </div>
+                <span class="text-white">{{ displayEmail }}</span>
+              </div>
+              
+              <!-- Collapsible Email Update Form -->
+              <div v-if="isEditingEmail" class="pl-4 border-l-2 border-gray-700 ml-2">
+                <div class="flex gap-2 items-center">
+                  <input
+                    v-model="newEmail"
+                    type="email"
+                    placeholder="Enter new email"
+                    class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm flex-1 max-w-xs"
+                    @keyup.enter="updateEmail(newEmail)"
+                    @keyup.escape="cancelEmailEdit"
+                  />
+                  <BaseButton
+                    @click="updateEmail(newEmail)"
+                    :disabled="!isEmailInputValid"
+                    :loading="isUpdatingEmail"
+                    variant="primary"
+                    size="small"
+                  >
+                    Save
+                  </BaseButton>
+                  <BaseButton
+                    @click="cancelEmailEdit"
+                    variant="destructive"
+                    size="small"
+                  >
+                    Cancel
+                  </BaseButton>
+                </div>
+                
+                <!-- Email Status Messages -->
+                <div v-if="emailSuccessMessage" class="text-green-400 text-sm mt-2">
+                  {{ emailSuccessMessage }}
+                </div>
+                <div v-if="emailErrorMessage" class="text-red-400 text-sm mt-2">
+                  {{ emailErrorMessage }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Price -->
+            <div v-if="currentPlanTier !== 'trial'" class="flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="text-gray-400">Price</span>
+                <BaseButton
+                  @click="handleManageBilling"
+                  variant="secondary-outline"
+                  size="small"
+                  :icon="PencilIcon"
+                />
+              </div>
+              <span class="text-white font-medium">
+                ${{ currentPlanTier === 'monthly' ? '40' : '400' }}/{{ currentPlanTier === 'monthly' ? 'month' : 'year' }}
+              </span>
+            </div>
+            
+            <!-- Trial state - only show choose plan button -->
+            <div v-if="currentPlanTier === 'trial'" class="flex gap-2 mt-4">
+              <BaseButton
+                @click="showPaymentModal = true"
+                variant="primary"
+                size="small"
+              >
+                Choose Plan
+              </BaseButton>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-red-950/20 border border-red-500/50 rounded-lg p-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <h5 class="text-white font-medium">Delete Account</h5>
+              <p class="text-gray-400 text-sm mt-1">
+                Permanently delete your account and all associated data. This action is irreversible.
+              </p>
+            </div>
+            <BaseButton
+              @click="openDeleteConfirmModal"
+              variant="destructive"
+              size="small"
+            >
+              Delete Account
+            </BaseButton>
+          </div>
+        </div>
+      </div>
 
     </div>
 
@@ -130,11 +231,8 @@
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import type { BaseBadgeProps } from '@/types/app-types';
   import BaseButton from '@/components/shared/BaseButton.vue';
-  import { ArrowPathIcon } from '@heroicons/vue/24/outline';
+  import { ArrowPathIcon, PencilIcon } from '@heroicons/vue/24/outline';
   import {
-    InformationCircleIcon,
-    ArrowUpTrayIcon,
-    CalendarDaysIcon,
     ArrowRightOnRectangleIcon,
   } from '@heroicons/vue/24/solid';
   import { useRouter, useRoute } from 'vue-router';
@@ -143,8 +241,6 @@
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
   import PaymentModal from '@/components/billing/PaymentModal.vue';
-  import AccountBillingCard from '@/components/dashboard/AccountBillingCard.vue';
-  import ProfileSettingsCard from '@/components/dashboard/ProfileSettingsCard.vue';
 
   // User store for user info
   const userStore = useUserStore();
@@ -178,7 +274,7 @@
     if (tier === 'trial') {
       return 'warning';
     }
-    return 'accent'; // Default for monthly, annual, or unknown
+    return 'info'; // Blue variant for monthly, annual, or unknown
   });
 
   const userUsage = computed(() => ({ uploadsToday: 0 }));
@@ -267,6 +363,7 @@
   // Email Update State & Logic
   const newEmail = ref('');
   const isUpdatingEmail = ref(false);
+  const isEditingEmail = ref(false);
   const emailErrorMessage = ref<string | null>(null);
   const emailSuccessMessage = ref<string | null>(null);
 
@@ -288,12 +385,24 @@
       await userStore.updateUserEmail(email);
       emailSuccessMessage.value =
         'Email update initiated. Check both email inboxes for confirmation.';
+      // Auto-close the edit form after successful update
+      setTimeout(() => {
+        isEditingEmail.value = false;
+        newEmail.value = '';
+      }, 3000);
     } catch (error: any) {
       console.error('Update email error:', error);
       emailErrorMessage.value = error.message || 'Failed to update email. Please try again.';
     } finally {
       isUpdatingEmail.value = false;
     }
+  }
+
+  function cancelEmailEdit() {
+    isEditingEmail.value = false;
+    newEmail.value = '';
+    emailErrorMessage.value = null;
+    emailSuccessMessage.value = null;
   }
 
   // Plan management logic
