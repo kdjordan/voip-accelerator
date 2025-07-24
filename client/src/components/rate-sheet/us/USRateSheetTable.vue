@@ -74,7 +74,7 @@
           size="small"
           :icon="ArrowDownTrayIcon"
           :loading="isExporting"
-          :disabled="totalFilteredItems === 0 || isExporting"
+          :disabled="totalFilteredItems === 0 || isExporting || isApplyingAdjustment"
           @click="handleOpenExportModal"
           title="Export all loaded data (based on current filters)"
         >

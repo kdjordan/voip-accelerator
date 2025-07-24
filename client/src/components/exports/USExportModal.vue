@@ -86,24 +86,25 @@
                   />
                 </div>
               </div>
-
               <div class="bg-fbHover px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                <BaseButton
-                  variant="primary"
-                  :disabled="isExporting || currentFilteredCount === 0"
-                  :loading="isExporting"
-                  @click="handleExport"
-                  class="sm:ml-3 sm:w-auto w-full"
-                >
-                  Export CSV
-                </BaseButton>
                 <BaseButton
                   variant="secondary"
                   @click="$emit('update:open', false)"
+                  size="small"
                   :disabled="isExporting"
-                  class="mt-3 sm:mt-0 sm:w-auto w-full"
+                  class="mt-3 sm:ml-3 sm:mt-0 sm:w-auto w-full"
                 >
                   Cancel
+                </BaseButton>
+                <BaseButton
+                  variant="primary"
+                  size="small"
+                  :disabled="isExporting || currentFilteredCount === 0"
+                  :loading="isExporting"
+                  @click="handleExport"
+                  class=" sm:w-auto w-full"
+                >
+                  Export CSV
                 </BaseButton>
               </div>
             </DialogPanel>
