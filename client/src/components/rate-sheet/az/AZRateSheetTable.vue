@@ -357,29 +357,17 @@
               >
                 <div class="pl-8">
                   <!-- Header for Expanded Row -->
-                  <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-sm font-medium text-accent text-secondary uppercase">
-                      {{ group.hasDiscrepancy ? 'Resolve Rate Conflict' : 'Adjust Rate' }}
-                    </h4>
-                    <!-- Moved Save Changes button below inputs -->
-                    <div class="flex items-center gap-2">
-                      <!-- Show/Hide All Codes Button (Only for Discrepancies) -->
-                      <!-- REMOVED Show/Hide All Codes Buttons -->
-                      <!-- Save Changes Button REMOVED FROM HERE -->
-                    </div>
-                  </div>
-
-                  <!-- Section 1: Rate Distribution (Only for Multi-Rate) -->
-                  <div v-if="group.hasDiscrepancy" class="mb-4">
-                    <!-- Flex container for horizontal buttons -->
-                    <div class="flex flex-wrap gap-2">
-                      <div
-                        v-for="rate in getSortedRates(group)"
-                        :key="rate.rate"
-                        class="w-full sm:w-1/4"
-                      >
-                        <!-- Rate Button -->
+                  <div class="mb-4">
+                    <div class="flex items-center gap-4 mb-2">
+                      <h4 class="text-sm font-medium text-accent text-secondary uppercase">
+                        {{ group.hasDiscrepancy ? 'Resolve Rate Conflict :' : 'Adjust Rate' }}
+                      </h4>
+                      
+                      <!-- Inline Rate Distribution (Only for Multi-Rate) -->
+                      <div v-if="group.hasDiscrepancy" class="flex gap-2">
                         <BaseButton
+                          v-for="rate in getSortedRates(group)"
+                          :key="rate.rate"
                           :variant="
                             isSelectedRate(group.destinationName, rate.rate) &&
                             userExplicitlySelectedRate[group.destinationName]
@@ -387,7 +375,7 @@
                               : 'secondary-outline'
                           "
                           size="small"
-                          class="w-full justify-start text-left font-mono"
+                          class="justify-start text-left font-mono"
                           @click="selectRate(group.destinationName, rate.rate)"
                         >
                           {{ formatRate(rate.rate) }} ({{ Math.round(rate.percentage) }}%)
@@ -397,12 +385,9 @@
                           >
                             Most Common
                           </span>
-                          <!-- REMOVED Equal Dist. span -->
                         </BaseButton>
-                        <!-- REMOVED Codes count and dropdown chevron div -->
                       </div>
                     </div>
-                    <!-- Removed code details section -->
                   </div>
 
                   <!-- Section 2: Unified Adjustment Controls for ALL destinations -->
