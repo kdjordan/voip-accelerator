@@ -8,10 +8,7 @@ export interface EnhancedNPARecord {
   country_name: string;
   state_province_code: string;
   state_province_name: string;
-  region: string | null;
-  category: 'us-domestic' | 'canadian' | 'caribbean' | 'pacific';
-  source: 'lerg' | 'manual' | 'import' | 'seed';
-  confidence_score: number;
+  region: string;
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -25,11 +22,6 @@ export interface LergStats {
   caribbean: number;
   pacific: number;
   last_updated: string | null;
-  confidence_breakdown: {
-    high: number;
-    medium: number;
-    low: number;
-  };
 }
 
 interface StateProvince {
@@ -66,26 +58,18 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         canadian: 0,
         caribbean: 0,
         pacific: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
       };
 
       const calculatedStats = this.allNPAs.reduce((acc, npa) => {
-        // Simple category increment - just fix the us-domestic mapping
-        if (npa.category === 'us-domestic') {
+        // Map region to stats properties
+        if (npa.region === 'US') {
           acc.us_domestic++;
-        } else if (npa.category && Object.prototype.hasOwnProperty.call(acc, npa.category)) {
-          (acc as any)[npa.category]++;
-        }
-
-        // Increment confidence breakdown
-        if (npa.confidence_score >= 0.9) {
-          acc.high++;
-        } else if (npa.confidence_score >= 0.7) {
-          acc.medium++;
-        } else {
-          acc.low++;
+        } else if (npa.region === 'CA') {
+          acc.canadian++;
+        } else if (npa.region === 'Caribbean') {
+          acc.caribbean++;
+        } else if (npa.region === 'Pacific') {
+          acc.pacific++;
         }
 
         return acc;
@@ -98,11 +82,6 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         caribbean: calculatedStats.caribbean,
         pacific: calculatedStats.pacific,
         last_updated: this.lastUpdated?.toISOString() || null,
-        confidence_breakdown: {
-          high: calculatedStats.high,
-          medium: calculatedStats.medium,
-          low: calculatedStats.low,
-        },
       };
     },
 
@@ -120,7 +99,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
     },
 
     caribbeanTotalNPAs(): number {
-      return this.allNPAs.filter((n) => n.category === 'caribbean').length;
+      return this.allNPAs.filter((n) => n.region === 'Caribbean').length;
     },
 
     // US States
@@ -293,8 +272,6 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         country: record.country_code,
         region: record.state_province_code,
         state: record.state_province_name,
-        category: record.category,
-        confidence: record.confidence_score,
         country_code: record.country_code,
         state_province_code: record.state_province_code,
         state_province_name: record.state_province_name,
@@ -370,7 +347,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         this._npaIndex = null;
 
         console.log(`[LergStoreV2] Successfully loaded ${this.allNPAs.length} NPAs`);
-        console.log('[LergStoreV2] Category breakdown:', {
+        console.log('[LergStoreV2] Region breakdown:', {
           'US Domestic': this.stats.us_domestic,
           Canadian: this.stats.canadian,
           Caribbean: this.stats.caribbean,

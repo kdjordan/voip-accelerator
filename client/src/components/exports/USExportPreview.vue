@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch, nextTick } from 'vue';
+  import { computed, ref, watch, nextTick, onMounted } from 'vue';
   import type { USExportFormatOptions } from '@/types/exports';
   import { ArrowPathIcon } from '@heroicons/vue/24/outline';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
@@ -56,6 +56,13 @@
   }>();
 
   const lergStore = useLergStoreV2();
+
+  // Ensure LERG store is loaded
+  onMounted(async () => {
+    if (!lergStore.isInitialized) {
+      await lergStore.loadData();
+    }
+  });
 
   // Lightweight formatting state
   const isFormatting = ref(false);
@@ -119,9 +126,14 @@
         let country = row.country || row.countryCode || row.country_code;
         
         // If no direct country field, derive from NPA using LERG store
+        // USRateSheetEntry has 'npa' field, not 'npanxx'
         if (!country && row.npa) {
           const npaInfo = lergStore.getNPAInfo(row.npa);
-          country = npaInfo?.country_code;
+          if (!npaInfo) {
+            console.warn(`No LERG info found for NPA: ${row.npa}. LERG initialized: ${lergStore.isInitialized}`);
+          } else {
+            country = npaInfo.country_code;
+          }
         }
         
         formatted['Country'] = country || 'US';

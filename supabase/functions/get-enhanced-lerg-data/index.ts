@@ -8,10 +8,7 @@ interface EnhancedLERGRecord {
   country_name: string;
   state_province_code: string;
   state_province_name: string;
-  region: string | null;
-  category: 'us-domestic' | 'canadian' | 'caribbean' | 'pacific';
-  source: 'lerg' | 'manual' | 'import' | 'seed';
-  confidence_score: number;
+  region: string;
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -25,11 +22,6 @@ interface EnhancedLERGStats {
   caribbean: number;
   pacific: number;
   last_updated: string | null;
-  confidence_breakdown: {
-    high: number;      // >= 0.9
-    medium: number;    // 0.7 - 0.89
-    low: number;       // < 0.7
-  };
 }
 
 serve(async (req) => {
@@ -64,9 +56,6 @@ serve(async (req) => {
         state_province_code,
         state_province_name,
         region,
-        category,
-        source,
-        confidence_score,
         created_at,
         updated_at,
         notes,
@@ -91,40 +80,26 @@ serve(async (req) => {
       canadian: 0,
       caribbean: 0,
       pacific: 0,
-      last_updated: null,
-      confidence_breakdown: {
-        high: 0,
-        medium: 0,
-        low: 0
-      }
+      last_updated: null
     };
 
-    // Calculate category counts and confidence breakdown
+    // Calculate region counts
     if (enhancedLergData) {
       for (const record of enhancedLergData) {
-        // Category counts
-        switch (record.category) {
-          case 'us-domestic':
+        // Region counts
+        switch (record.region) {
+          case 'US':
             stats.us_domestic++;
             break;
-          case 'canadian':
+          case 'CA':
             stats.canadian++;
             break;
-          case 'caribbean':
+          case 'Caribbean':
             stats.caribbean++;
             break;
-          case 'pacific':
+          case 'Pacific':
             stats.pacific++;
             break;
-        }
-
-        // Confidence breakdown
-        if (record.confidence_score >= 0.9) {
-          stats.confidence_breakdown.high++;
-        } else if (record.confidence_score >= 0.7) {
-          stats.confidence_breakdown.medium++;
-        } else {
-          stats.confidence_breakdown.low++;
         }
       }
 
@@ -143,7 +118,7 @@ serve(async (req) => {
       metadata: {
         source: 'enhanced_lerg',
         has_full_geographic_context: true,
-        includes_confidence_scoring: true,
+        includes_confidence_scoring: false,
         timestamp: new Date().toISOString()
       }
     };
