@@ -83,9 +83,7 @@ serve(async (req) => {
         source: 'import',
         confidence_score: 0.95, // High confidence for uploaded data
         is_active: true,
-        notes: `Uploaded from LERG file on ${new Date().toISOString()}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        notes: `Uploaded from LERG file on ${new Date().toISOString()}`
       });
     }
 
@@ -205,9 +203,9 @@ function getStateInfo(stateCode: string, countryCode: string): { name: string; r
       'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
       'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
       'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
-      'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia'
+      'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia', 'VI': 'VI'
     };
-    return { name: usStates[stateCode] || stateCode, region: null };
+    return { name: usStates[stateCode] || stateCode, region: 'US' };
   }
   
   if (countryCode === 'CA') {
@@ -218,10 +216,11 @@ function getStateInfo(stateCode: string, countryCode: string): { name: string; r
       'ON': 'Ontario', 'PE': 'Prince Edward Island', 'QC': 'Quebec',
       'SK': 'Saskatchewan', 'YT': 'Yukon'
     };
-    return { name: provinces[stateCode] || stateCode, region: null };
+    return { name: provinces[stateCode] || stateCode, region: 'CA' };
   }
   
-  return { name: stateCode, region: null };
+  // For Caribbean/Pacific territories, use the country code as region
+  return { name: stateCode, region: countryCode };
 }
 
 // Helper function to categorize NPA
