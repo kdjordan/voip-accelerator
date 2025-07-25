@@ -962,6 +962,7 @@
     // US-specific
     availableStates,
     fetchUniqueStates,
+    fetchUniqueStatesFromData,
   } = useUSTableData<USPricingComparisonRecord>({
     dbName: DBName.US_PRICING_COMPARISON,
     tableName: COMPARISON_TABLE_NAME,
@@ -1576,11 +1577,17 @@
   onMounted(async () => {
     isPageLoading.value = true; // Start with page loading true
     try {
-      await fetchUniqueStates(); // Fetch states first
+      // Initialize DB first if needed
+      if (!dbInstance.value) {
+        await initializeDB();
+      }
+      
+      await fetchUniqueStatesFromData(); // Fetch states from comparison data
       await resetPaginationAndLoad(createFilters()); // Then load initial data (first page)
       await calculateFullFilteredAverages(); // Calculate initial averages
     } catch (err) {
       // Handle error silently or show user-friendly message
+      console.error('[USDetailedComparisonTable] Error during mount:', err);
     } finally {
       isPageLoading.value = false; // Ensure page loading is set to false after all operations
     }
@@ -1612,5 +1619,26 @@
       }
     },
     { immediate: false }
+  );
+
+  // Watcher to refresh available states when data might have changed
+  watch(
+    () => totalFilteredItems.value,
+    async (newTotal, oldTotal) => {
+      // If total items changed significantly (e.g., new comparison generated)
+      if (oldTotal > 0 && newTotal > 0 && Math.abs(newTotal - oldTotal) > 10) {
+        console.log('[USDetailedComparisonTable] Significant data change detected, refreshing available states');
+        await fetchUniqueStatesFromData();
+        
+        // Check if currently selected state still exists
+        if (selectedState.value && !availableStates.value.includes(selectedState.value)) {
+          const isGroupSelection = selectedState.value.startsWith('GROUP_');
+          if (!isGroupSelection) {
+            console.log(`[USDetailedComparisonTable] Selected state ${selectedState.value} no longer exists, resetting filter`);
+            selectedState.value = '';
+          }
+        }
+      }
+    }
   );
 </script>
