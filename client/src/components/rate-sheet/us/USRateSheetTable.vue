@@ -1047,6 +1047,7 @@ All NPAs will be available for adjustment again."
     // US-specific
     availableStates,
     fetchUniqueStates,
+    fetchUniqueStatesFromData,
   } = useUSTableData<USRateSheetEntry>({
     dbName: DBName.US_RATE_SHEET,
     tableName: RATE_SHEET_TABLE_NAME,
@@ -1241,6 +1242,27 @@ All NPAs will be available for adjustment again."
     { deep: true }
   );
 
+  // Watcher to refresh available states when data changes
+  const stopDataChangeWatcher = watch(
+    () => store.lastDbUpdateTime,
+    async () => {
+      if (store.getHasUsRateSheetData && !store.getIsUploadInProgress) {
+        console.log('[USRateSheetTable] Data changed, refreshing available states');
+        await fetchUniqueStatesFromData();
+        
+        // Check if currently selected state still exists in the new data
+        if (selectedState.value && !availableStates.value.includes(selectedState.value)) {
+          // Handle group selections
+          const isGroupSelection = selectedState.value.startsWith('GROUP_');
+          if (!isGroupSelection) {
+            console.log(`[USRateSheetTable] Selected state ${selectedState.value} no longer exists in data, resetting filter`);
+            selectedState.value = '';
+          }
+        }
+      }
+    }
+  );
+
   /**
    * Calculates the average rates for a given state or the entire dataset.
    * Uses Dexie.each for memory efficiency.
@@ -1334,11 +1356,21 @@ All NPAs will be available for adjustment again."
     // RESPECT UPLOAD GATE: Only load data if not currently uploading
     if (store.getHasUsRateSheetData && !store.getIsUploadInProgress) {
       console.log('[USRateSheetTable] Mounting with existing data and upload gate CLOSED - loading table data');
-      await fetchUniqueStates();
+      
+      // Initialize DB first if needed
+      if (!dbInstance.value) {
+        await initializeDB();
+      }
+      
+      await fetchUniqueStatesFromData();
       await resetPaginationAndLoad(createFilters());
       await recalculateAndDisplayAverages();
     } else if (store.getIsUploadInProgress) {
       console.log('[USRateSheetTable] Mounting but upload gate is OPEN - skipping data load');
+    } else {
+      // No data yet, but still load LERG states as fallback
+      console.log('[USRateSheetTable] No data on mount, loading default states from LERG');
+      await fetchUniqueStates();
     }
   });
 
@@ -1349,7 +1381,7 @@ All NPAs will be available for adjustment again."
       // When upload completes (gate closes) and we have data, load it
       if (wasUploading && !isUploading && store.getHasUsRateSheetData) {
         console.log('[USRateSheetTable] Upload gate CLOSED after upload - loading complete data');
-        await fetchUniqueStates();
+        await fetchUniqueStatesFromData();
         await resetPaginationAndLoad(createFilters());
         await recalculateAndDisplayAverages();
       }
@@ -1363,6 +1395,7 @@ All NPAs will be available for adjustment again."
     stopMetroWatcher();
     stopItemsPerPageWatcher();
     stopUploadGateWatcher();
+    stopDataChangeWatcher();
   });
 
   watch(
@@ -1377,7 +1410,7 @@ All NPAs will be available for adjustment again."
           // RESPECT UPLOAD GATE: Only load data if upload is complete
           if (!store.getIsUploadInProgress) {
             console.log('[USRateSheetTable] Data available and upload gate CLOSED - loading table data');
-            await fetchUniqueStates();
+            await fetchUniqueStatesFromData();
             await resetPaginationAndLoad(createFilters());
             await recalculateAndDisplayAverages();
           } else {
