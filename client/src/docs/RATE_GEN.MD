@@ -23,13 +23,14 @@ The Rate Generation feature will enable users to upload multiple provider rate d
 
 ### Integration with Existing System
 
-The Rate Generation feature will integrate seamlessly with the existing architecture by:
+The Rate Generation feature will integrate seamlessly with the existing architecture by leveraging proven patterns:
 
-1. **Following Service Layer Pattern**: Creating `RateGenService` similar to existing `az-rate-sheet.service.ts` and `us-rate-sheet.service.ts`
-2. **Using Pinia Store Management**: Implementing `rate-gen-store.ts` following patterns from `az-rate-sheet-store.ts`
-3. **Leveraging Existing Components**: Reusing file upload components, tables, and modals
-4. **Utilizing Web Workers**: Creating `rate-gen-lcr.worker.ts` for heavy LCR calculations
-5. **IndexedDB with Dexie**: Using the established `useDexieDB` composable for data persistence
+1. **Service Layer Pattern**: Creating `RateGenService` following `USService` patterns with streaming, validation, and chunked storage
+2. **Component Architecture**: Multi-zone upload layout like `USFileUploads.vue` with conditional rendering and mutual exclusion
+3. **Composable Integration**: Full use of `useDexieDB`, `useDragDrop`, and existing progress/error handling patterns
+4. **Store Management**: `rate-gen-store.ts` following `us-store.ts` patterns with component state management
+5. **PreviewModal Integration**: Reuse existing column mapping for rate deck uploads, adapt for LCR configuration
+6. **Storage Strategy**: Unified database with all providers in one table (unlike individual US file storage)
 
 ### Key Design Decisions
 
@@ -43,10 +44,10 @@ The Rate Generation feature will integrate seamlessly with the existing architec
 ### Data Structure
 
 ```typescript
-// Rate record structure
+// Rate record structure - follows existing prefix handling patterns
 interface RateGenRecord {
   id?: number;
-  prefix: string;           // 7-digit prefix (e.g., "1201007")
+  prefix: string;           // 6-digit NPANXX (leading "1" stripped during upload)
   providerId: string;       // Provider identifier
   providerName: string;     // Display name
   rateInter: number;        // Interstate rate
@@ -54,6 +55,16 @@ interface RateGenRecord {
   rateIndeterminate: number; // Indeterminate rate
   uploadSessionId: string;   // Track upload batch
   createdAt: Date;
+}
+
+// Column mapping structure - reuses existing PreviewModal pattern
+interface RateGenColumnMapping {
+  npanxx?: number;          // Combined NPANXX column index
+  npa?: number;             // Separate NPA column index
+  nxx?: number;             // Separate NXX column index
+  rateInter: number;        // Interstate rate column
+  rateIntra: number;        // Intrastate rate column
+  rateIndeterminate?: number; // Optional indeterminate rate column
 }
 
 // Upload session metadata
@@ -123,32 +134,67 @@ interface GeneratedRateDeck {
 
 ## Component Architecture
 
-### Component Hierarchy
+### Component Hierarchy (Following USFileUploads.vue Pattern)
 
 ```
-RateGenView.vue (Main container)
-├── RateGenHeader.vue (Title, actions)
-├── RateGenProviderList.vue (Manage providers)
-│   └── RateGenProviderCard.vue (Individual provider)
-├── RateGenUploadModal.vue (File upload interface)
-│   ├── RateGenFileDropzone.vue
-│   └── RateGenColumnMapper.vue
-├── RateGenConfiguration.vue (LCR & markup settings)
+RateGenView.vue (Main container - similar to US/AZ views)
+├── RateGenFileUploads.vue (Multi-zone upload - like USFileUploads.vue)
+│   ├── RateGenProviderZone.vue (5 upload zones, conditional rendering)
+│   ├── useDragDrop composable (REUSED)
+│   ├── UploadProgressIndicator (REUSED)
+│   └── PreviewModal.vue (REUSED - column mapping)
+├── RateGenConfiguration.vue (LCR & markup settings - shown after uploads)
 │   ├── RateGenLCRSelector.vue
-│   └── RateGenMarkupInput.vue
-├── RateGenPreview.vue (Preview generated rates)
+│   ├── RateGenMarkupInput.vue
+│   └── RateGenGenerateButton.vue (with progress)
+├── RateGenPreview.vue (Generated rates preview)
 │   └── RateGenPreviewTable.vue
 └── RateGenExportModal.vue (Export options)
 ```
 
 ### Component Responsibilities
 
-1. **RateGenView.vue**: Main orchestrator, manages overall state
-2. **RateGenProviderList.vue**: Displays uploaded providers, allows management
-3. **RateGenUploadModal.vue**: Handles file upload and column mapping
-4. **RateGenConfiguration.vue**: LCR strategy and markup configuration
-5. **RateGenPreview.vue**: Shows sample of generated rates
-6. **RateGenExportModal.vue**: Export format and options
+1. **RateGenView.vue**: Main orchestrator (like USView.vue), manages overall state
+2. **RateGenFileUploads.vue**: **FOLLOWS USFileUploads.vue PATTERN** - 5 provider upload zones with mutual exclusion
+3. **RateGenProviderZone.vue**: Individual upload zone with drag/drop, conditional rendering (dropzone ↔ summary)
+4. **PreviewModal.vue**: **REUSED EXISTING** - Column mapping for each provider rate deck
+5. **RateGenConfiguration.vue**: LCR settings, only shown when 2+ providers uploaded
+6. **RateGenPreview.vue**: Generated rates preview with export options
+
+### Integration with Existing Workflow
+
+**Upload Phase (Follows USFileUploads.vue exactly):**
+1. **Multi-zone Layout**: 5 provider zones (similar to us1/us2 pattern)
+2. **Drag & Drop**: `useDragDrop` composable with `.csv` validation
+3. **Mutual Exclusion**: Only one upload at a time, others disabled
+4. **PreviewModal Flow**: File → Column mapping → Confirm → Processing
+5. **Progress Tracking**: `UploadProgressIndicator` for each provider
+6. **Error Handling**: Per-zone error states with detailed messages
+
+**Storage Strategy (Different from US):**
+- US stores files in separate tables: `us-file1.csv`, `us-file2.csv`
+- Rate Gen stores ALL providers in ONE table: `rateGenProviders` with `providerId` field
+- Benefits: Single query for LCR across all providers
+
+**Processing Phase:**
+1. **Configuration UI**: Appears after 2+ providers uploaded
+2. **Generation Progress**: Similar to enhancement progress in US workflow  
+3. **Preview & Export**: Similar to existing report generation patterns
+
+### Reused Components & Composables
+
+**100% Reused:**
+- `PreviewModal.vue` - Column mapping
+- `UploadProgressIndicator.vue` - Upload/generation progress
+- `useDragDrop.ts` - File drag/drop handling
+- `useDexieDB.ts` - Database operations
+- Error handling patterns from USFileUploads.vue
+
+**Adapted Patterns:**
+- Component state management (from us-store.ts)
+- Streaming CSV processing (from us.service.ts)  
+- Multi-zone conditional rendering (from USFileUploads.vue)
+- Worker-based heavy processing (from existing workers)
 
 ## Service Layer Design
 
@@ -306,59 +352,174 @@ import { useDexieDB } from '@/composables/useDexieDB';
 
 export class RateGenService {
   private store: ReturnType<typeof useRateGenStore>;
-  private db: any; // Dexie instance
-  private worker: Worker | null = null;
-
+  
   constructor() {
     this.store = useRateGenStore();
-    this.initializeDB();
   }
 
-  private async initializeDB() {
-    const { getDexieDB } = useDexieDB();
-    this.db = await getDexieDB('rateGen', {
-      rates: '++id, [prefix+providerId], providerId, uploadSessionId',
-      uploadSessions: 'id, providerId, uploadDate',
-      generatedDecks: 'id, generatedDate'
+  // Follow USService pattern for database access
+  private async storeProviderData(
+    data: RateGenRecord[], 
+    providerId: string, 
+    fileName: string
+  ): Promise<void> {
+    // Use existing useDexieDB pattern with unified table storage
+    await storeInDexieDB(
+      data,
+      'RateGenDB' as DBNameType,  // Single database for all providers
+      'providers',                // Single table for all providers
+      { 
+        sourceFile: `${providerId}:${fileName}`,
+        replaceExisting: false,    // Append, don't replace
+        providerId                 // Additional metadata
+      }
+    );
+  }
+
+  private async getProviderData(providerId?: string): Promise<RateGenRecord[]> {
+    const data = await loadFromDexieDB<RateGenRecord>(
+      'RateGenDB' as DBNameType,
+      'providers'
+    );
+    
+    return providerId 
+      ? data.filter(record => record.providerId === providerId)
+      : data;
+  }
+
+  async processProviderFile(
+    file: File, 
+    providerId: string, 
+    providerName: string,
+    columnMapping: RateGenColumnMapping,
+    startLine: number = 1
+  ): Promise<void> {
+    // Follow USService pattern exactly
+    console.log(`[RateGenService] Starting processing for provider ${providerId}:`, file.name);
+    
+    this.store.setComponentUploadingState(providerId, true);
+    this.store.setUploadProgress(providerId, 0);
+    
+    // Clear any previous data for this provider
+    await this.removeProviderData(providerId);
+    
+    const allProcessedData: RateGenRecord[] = [];
+    const invalidRows: InvalidRateGenRow[] = [];
+    let totalRecords = 0;
+    let totalRows = 0;
+    
+    return new Promise((resolve, reject) => {
+      let lastProgressUpdate = Date.now();
+      const PROGRESS_UPDATE_INTERVAL = 5000;
+
+      console.log('[RateGenService] Starting PapaParse streaming...');
+      Papa.parse(file, {
+        header: false,
+        skipEmptyLines: true,
+        worker: true, // Enable worker thread for large files
+        step: (results, parser) => {
+          totalRows++;
+
+          // Skip header rows based on user input
+          if (totalRows < startLine) return;
+
+          // Update progress periodically
+          const now = Date.now();
+          if (now - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+            lastProgressUpdate = now;
+            this.store.setUploadProgress(providerId, (totalRows / 250000) * 90); // Reserve 10% for storage
+          }
+
+          try {
+            const row = results.data as string[];
+            const processedRow = this.transformRow(
+              row,
+              columnMapping,
+              providerId,
+              providerName,
+              file.name
+            );
+            
+            if (processedRow) {
+              allProcessedData.push(processedRow);
+              totalRecords++;
+            } else {
+              invalidRows.push({
+                rowNumber: totalRows,
+                data: row,
+                reason: 'Invalid prefix or rate data'
+              });
+            }
+
+          } catch (error) {
+            invalidRows.push({
+              rowNumber: totalRows,
+              data: results.data as string[],
+              reason: `Processing error: ${error.message}`
+            });
+          }
+        },
+        complete: async () => {
+          try {
+            console.log(`[RateGenService] Parse complete. Processing ${totalRecords} valid records...`);
+            
+            // Store all data using optimized chunks (like USService)
+            this.store.setUploadProgress(providerId, 90);
+            await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name);
+            
+            // Update store with provider info
+            this.store.addProvider({
+              id: providerId,
+              name: providerName,
+              fileName: file.name,
+              rowCount: totalRecords,
+              invalidRowCount: invalidRows.length,
+              uploadDate: new Date()
+            });
+            
+            this.store.setUploadProgress(providerId, 100);
+            this.store.setComponentUploadingState(providerId, false);
+            
+            console.log(`[RateGenService] Successfully processed ${totalRecords} records for ${providerId}`);
+            resolve();
+            
+          } catch (error) {
+            console.error('[RateGenService] Error during final processing:', error);
+            this.store.setComponentUploadingState(providerId, false);
+            this.store.setUploadError(providerId, `Storage error: ${error.message}`);
+            reject(error);
+          }
+        },
+        error: (error) => {
+          console.error('[RateGenService] Papa Parse error:', error);
+          this.store.setComponentUploadingState(providerId, false);
+          this.store.setUploadError(providerId, `CSV parsing error: ${error.message}`);
+          reject(new Error(`CSV parsing error: ${error.message}`));
+        }
+      });
     });
   }
 
-  async processProviderFile(file: File, providerId: string, providerName: string): Promise<void> {
-    const sessionId = uuidv4();
-    this.store.setUploadProgress(providerId, 0);
-
-    try {
-      // Create upload session
-      await this.db.uploadSessions.add({
-        id: sessionId,
-        providerId,
-        providerName,
-        fileName: file.name,
-        uploadDate: new Date(),
-        status: 'processing'
-      });
-
-      // Parse CSV
-      await this.parseAndStoreCSV(file, providerId, providerName, sessionId);
+  // Follow USService optimized chunk storage pattern
+  private async storeDataInOptimizedChunks(
+    data: RateGenRecord[], 
+    providerId: string, 
+    fileName: string
+  ): Promise<void> {
+    const OPTIMAL_CHUNK_SIZE = 2500;
+    const totalChunks = Math.ceil(data.length / OPTIMAL_CHUNK_SIZE);
+    
+    for (let i = 0; i < totalChunks; i++) {
+      const chunkStart = i * OPTIMAL_CHUNK_SIZE;
+      const chunkEnd = Math.min(chunkStart + OPTIMAL_CHUNK_SIZE, data.length);
+      const chunk = data.slice(chunkStart, chunkEnd);
       
-      // Update session status
-      await this.db.uploadSessions.update(sessionId, { status: 'completed' });
+      await this.storeProviderData(chunk, providerId, fileName);
       
-      // Add to store
-      this.store.addProvider({
-        id: providerId,
-        name: providerName,
-        fileName: file.name,
-        rowCount: await this.db.rates.where({ providerId }).count(),
-        uploadDate: new Date()
-      });
-
-    } catch (error) {
-      await this.db.uploadSessions.update(sessionId, { 
-        status: 'error',
-        errorMessage: error.message 
-      });
-      throw error;
+      // Yield control periodically
+      if (i % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
   }
 
@@ -408,23 +569,65 @@ export class RateGenService {
   }
 
   private transformRow(
-    data: any, 
+    row: string[],
+    columnMapping: RateGenColumnMapping,
     providerId: string, 
     providerName: string,
     sessionId: string
   ): RateGenRecord | null {
-    // Validate required fields
-    if (!data.prefix || !data.rate) {
+    // Helper function to get data from row
+    const getData = (index: number) => index >= 0 ? (row[index] || '').toString().trim() : '';
+    
+    // Extract prefix using same logic as existing US service
+    let prefix = '';
+    const NUMERIC_REGEX = /^\d+$/;
+    
+    // Check for combined NPANXX first
+    if (columnMapping.npanxx !== undefined) {
+      const rawNpanxx = getData(columnMapping.npanxx);
+      
+      // Handle 7-digit NPANXX with leading "1" (same as US service)
+      if (rawNpanxx && rawNpanxx.length === 7 && rawNpanxx.startsWith('1') && NUMERIC_REGEX.test(rawNpanxx)) {
+        prefix = rawNpanxx.substring(1); // Remove leading '1'
+      } else if (rawNpanxx && rawNpanxx.length === 6 && NUMERIC_REGEX.test(rawNpanxx)) {
+        prefix = rawNpanxx;
+      }
+    } 
+    // Otherwise, try separate NPA+NXX columns
+    else if (columnMapping.npa !== undefined && columnMapping.nxx !== undefined) {
+      const rawNpa = getData(columnMapping.npa);
+      const rawNxx = getData(columnMapping.nxx);
+      
+      if (rawNpa && rawNpa.length === 3 && NUMERIC_REGEX.test(rawNpa) && 
+          rawNxx && rawNxx.length === 3 && NUMERIC_REGEX.test(rawNxx)) {
+        prefix = rawNpa + rawNxx;
+      }
+    }
+    
+    // Validate prefix
+    if (!prefix || prefix.length !== 6) {
+      return null;
+    }
+    
+    // Extract rates
+    const rateInter = parseFloat(getData(columnMapping.rateInter)) || 0;
+    const rateIntra = parseFloat(getData(columnMapping.rateIntra)) || 0;
+    const rateIndeterminate = columnMapping.rateIndeterminate !== undefined 
+      ? parseFloat(getData(columnMapping.rateIndeterminate)) || 0
+      : rateInter; // Default to interstate if not specified
+
+    // Validate rates
+    if (rateInter === 0 && rateIntra === 0) {
       return null;
     }
 
     return {
-      prefix: String(data.prefix).padStart(7, '0'),
+      prefix,
       providerId,
       providerName,
-      rateInter: parseFloat(data.rate) || 0,
-      rateIntra: parseFloat(data.intrastate) || parseFloat(data.rate) || 0,
-      rateIndeterminate: parseFloat(data.indeterminate) || parseFloat(data.rate) || 0,
+      rateInter,
+      rateIntra,
+      rateIndeterminate,
       uploadSessionId: sessionId,
       createdAt: new Date()
     };
@@ -1386,3 +1589,645 @@ Next steps:
 2. Set up the development branch
 3. Begin Phase 1 implementation
 4. Regular code reviews and testing
+
+
+## Implementation Summary: Leveraging Existing Infrastructure
+
+### ✅ **Complete Integration with Existing Patterns**
+
+After thorough analysis of USFileUploads.vue, USService, and the composable ecosystem, the Rate Generation feature will leverage nearly **100% of existing infrastructure**:
+
+### **Reused Components & Composables:**
+1. **`useDexieDB.ts`** ✅ - Full integration for unified storage strategy  
+2. **`useDragDrop.ts`** ✅ - Complete drag/drop handling with validation
+3. **`PreviewModal.vue`** ✅ - Exact same column mapping workflow
+4. **`UploadProgressIndicator.vue`** ✅ - Multi-stage progress tracking
+5. **USFileUploads.vue patterns** ✅ - Multi-zone layout with conditional rendering
+
+### **Key Architectural Insights Applied:**
+
+**Storage Strategy (Critical Difference):**
+- **US Pattern**: `us-file1.csv` → separate tables per file
+- **Rate Gen Pattern**: ALL providers → single `RateGenDB.providers` table with `providerId` field
+- **Benefit**: Single query retrieves all providers for LCR calculations
+
+**Upload Workflow (100% Reused):**
+```
+File Drop → useDragDrop validation → PreviewModal column mapping → 
+Papa Parse streaming → Chunked storage via useDexieDB → Progress tracking
+```
+
+**Component State Management (Following us-store.ts):**
+- Component uploading states with mutual exclusion  
+- Per-provider error handling and progress tracking
+- Conditional rendering (dropzone ↔ summary components)
+
+### **Development Impact:**
+
+**Significantly Reduced Scope:**
+- ❌ ~~Custom upload modal~~ → ✅ Reuse PreviewModal
+- ❌ ~~Custom drag/drop~~ → ✅ Reuse useDragDrop  
+- ❌ ~~Custom progress tracking~~ → ✅ Reuse UploadProgressIndicator
+- ❌ ~~Custom CSV parsing~~ → ✅ Follow USService streaming patterns
+- ❌ ~~Custom database logic~~ → ✅ Reuse useDexieDB with unified storage
+
+**Implementation Timeline:**
+- **Week 1**: RateGenService (following USService patterns) + Store
+- **Week 2**: RateGenFileUploads.vue (adapt USFileUploads.vue for 5 zones)  
+- **Week 3**: LCR worker + Configuration UI
+- **Week 4**: Export functionality + Testing
+
+**Core Innovation Focus:**
+Instead of rebuilding upload infrastructure, focus on the **unique LCR algorithms** and **generation logic** - the actual business value of this feature.
+
+### **Questions Addressed:**
+
+> "Are we also using useDexieDB.ts and useDragDrop.ts?"
+
+**Yes, 100% integration:**
+- `useDexieDB` for unified table storage across all providers
+- `useDragDrop` for all file upload zones with CSV validation
+- Same error handling, progress tracking, and state management patterns
+
+> "We already have upload, preview, standardizing, and storing working"
+
+**Absolutely correct.** The updated plan leverages all existing patterns:
+- Upload zones with drag/drop → **Reused completely**
+- PreviewModal column mapping → **Reused completely**  
+- Streaming CSV processing → **USService patterns adapted**
+- IndexedDB storage → **useDexieDB with unified strategy**
+- Progress/error handling → **Existing components reused**
+
+The Rate Generation feature becomes a **natural extension** of existing rate sheet tools rather than a separate system.
+
+## ✅ **Refined UX Requirements & Technical Decisions**
+
+Based on detailed requirements discussion, here are the finalized specifications:
+
+### **Upload Zone Progression (Two-Column Layout)**
+
+**Layout Pattern:**
+```
+[Zone 1]     [Zone 2]
+[Zone 3]     [Zone 4]  
+[Zone 5]
+```
+
+**Progressive Flow:**
+1. **Start**: Show only Zone 1 (left column)
+2. **After Zone 1 completes**: Show Zone 2 (right column) + "Generate Rates" button
+3. **After Zone 2 completes**: Show Zone 3 (back to left column)
+4. **Continue pattern**: Up to 5 providers maximum
+5. **Summary Cards**: Each completed zone transforms to simplified summary (unique codes, average cost, metadata)
+
+**Dynamic LCR Options:**
+- 2 providers → LCR1, LCR2 options
+- 3 providers → LCR1, LCR2, LCR3 options  
+- 4 providers → LCR1, LCR2, LCR3, LCR4 options
+- 5 providers → LCR1, LCR2, LCR3, LCR4, LCR5 options
+
+### **Provider Management Requirements**
+
+**Provider Naming:**
+- **User-defined names** (not filenames) during upload
+- **Character limit**: ~20 characters for clean storage
+- **Required field** in PreviewModal extension
+- **Context-aware PreviewModal** modification needed
+
+**Management Features:**
+- Remove/replace providers before generation
+- **Minimum 2 providers** always required
+- Visual indication of provider count vs LCR options
+
+### **Analytics Dashboard Scope**
+
+**Phase 1 (Core Implementation):**
+- **Summary Level**: "Provider A: 45,000 codes, Provider B: 23,000 codes"
+- **Detailed Breakdown**: Interstate vs Intrastate selection counts
+- **Generation Metadata**: Strategy used, markup applied, timestamp
+
+**Future Phases:**
+- State-based NPA mapping with provider percentages
+- Metro area analysis integration
+- Prefix-level search capabilities
+
+### **Export Integration Strategy**
+
+**Pattern Analysis**: Review existing exports in `components/exports/` and `USRateSheetTable.vue`
+**Implementation Options**:
+1. **Bundled Export**: Rate deck + analytics as separate CSV files in ZIP
+2. **Separate Analytics Export**: Dashboard view with export button
+3. **Follow USRateSheetTable.vue**: Similar export UI patterns
+
+### **Backward Compatibility Strategy**
+
+**Composable Extensions:**
+- **Create Rate Gen specific composables** when needed (don't modify existing)
+- **useDexieDBRateGen**: Unified storage variant if needed
+- **useDragDropRateGen**: Provider naming extensions if needed
+- **PreviewModal**: Use existing context-aware features, extend for provider naming
+
+**Service Layer Philosophy:**
+- **Duplicate logic over shared complexity**
+- **RateGenService**: Standalone, clear, debuggable
+- **Copy/adapt USService patterns** rather than inherit
+
+### **Technical Implementation Notes**
+
+**Component Structure (Refined):**
+```
+RateGenView.vue
+├── RateGenFileUploads.vue (Two-column progressive layout)
+│   ├── RateGenProviderZone.vue × 5 (Conditional rendering)
+│   ├── useDragDropRateGen (Provider naming extension)
+│   ├── UploadProgressIndicator (REUSED)
+│   └── PreviewModal (Extended for provider naming)
+├── RateGenConfiguration.vue (Dynamic LCR options)
+├── RateGenAnalytics.vue (Summary + Detailed breakdown)
+└── RateGenExportModal.vue (Rate deck + analytics export)
+```
+
+**Database Schema (Finalized):**
+```typescript
+// Single unified table
+interface RateGenRecord {
+  id?: number;
+  prefix: string;              // 6-digit NPANXX
+  providerId: string;          // UUID
+  providerName: string;        // User-defined name (≤20 chars)
+  fileName: string;            // Original filename for reference
+  rateInter: number;
+  rateIntra: number; 
+  rateIndeterminate: number;
+  uploadDate: Date;
+}
+
+// Analytics tracking
+interface RateGenAnalytics {
+  generationId: string;
+  strategy: 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5';
+  markupPercentage: number;
+  providerStats: {
+    providerId: string;
+    providerName: string;
+    codesSelected: number;
+    percentageOfTotal: number;
+  }[];
+  generatedDate: Date;
+  totalCodes: number;
+}
+```
+
+### **Export Pattern Analysis (From USExportModal.vue)**
+
+**Established Export Structure:**
+```
+RateGenExportModal.vue (Main modal with transitions)
+├── RateGenExportOptions.vue (Rate deck + analytics bundle options)
+├── RateGenExportPreview.vue (Preview generated data)
+└── RateGenExportFilters.vue (LCR strategy, markup, provider selection)
+```
+
+**Export Types for Rate Gen:**
+- `'rate-deck'`: Generated rate deck CSV
+- `'analytics'`: Provider selection analytics CSV  
+- `'bundle'`: ZIP file with both rate deck + analytics
+
+**Following USExport Patterns:**
+- Modal structure with Dialog and transitions
+- Component composition for maintainability
+- Dynamic content based on export type
+- Preview functionality before download
+- Session/generation metadata inclusion options
+
+## 🎯 **Ready for Implementation**
+
+The Rate Generation feature implementation plan is now complete with:
+
+✅ **Clear UX Requirements**: Two-column progressive layout with provider naming  
+✅ **Technical Architecture**: Leveraging existing patterns with minimal extensions  
+✅ **Backward Compatibility**: New composables without breaking existing functionality  
+✅ **Analytics Scope**: Summary and detailed breakdown with export integration  
+✅ **Export Integration**: Following established USExport patterns  
+✅ **Service Strategy**: Duplicate logic for clarity and maintainability  
+
+### **Implementation Priority:**
+1. **Week 1**: RateGenService + Store (core upload/storage functionality)
+2. **Week 2**: Two-column upload UI (progressive zones + provider naming)  
+3. **Week 3**: LCR worker + configuration + analytics dashboard
+4. **Week 4**: Export functionality + testing + polish
+
+The plan successfully balances **innovation** (LCR algorithms, unified storage) with **proven patterns** (upload workflow, export structure) while maintaining **backward compatibility** and **user experience** standards.
+
+## 🧭 **Navigation & Routing Requirements**
+
+### **Sidebar Navigation Structure**
+
+Following the established pattern from `navigation.ts`, add new section:
+
+```typescript
+// Add to appNavigationItems in constants/navigation.ts
+{
+  name: 'Rate Generation',
+  icon: SparklesIcon, // Import from @heroicons/vue/24/outline
+  children: [
+    {
+      name: 'US Rate Generation',
+      href: '/rate-gen/us',
+      icon: GlobeAmericasIcon,
+    },
+    {
+      name: 'International Rate Generation', 
+      href: '/rate-gen/international',
+      icon: GlobeAltIcon,
+    },
+  ],
+}
+```
+
+### **Route Configuration**
+
+Add to router configuration in `router/index.ts`:
+
+```typescript
+// US Rate Generation (Phase 1 - Current Implementation)
+{
+  path: '/rate-gen/us',
+  name: 'RateGenUS',
+  component: () => import('@/pages/RateGenUSView.vue'),
+  meta: { requiresAuth: true },
+},
+
+// International Rate Generation (Phase 2 - Future)
+{
+  path: '/rate-gen/international',
+  name: 'RateGenInternational', 
+  component: () => import('@/pages/RateGenInternationalView.vue'),
+  meta: { requiresAuth: true },
+},
+
+// Redirect base route to US for now
+{
+  path: '/rate-gen',
+  redirect: '/rate-gen/us',
+}
+```
+
+### **Navigation Hierarchy Structure**
+
+```
+📊 Dashboard
+📈 Reporting
+  └── 🌎 US Reporting (/usview)
+  └── 🌍 AZ Reporting (/azview)
+🔧 Rate Wizard  
+  └── ⚙️ US Rate Wizard (/us-rate-sheet)
+  └── ⚙️ AZ Rate Wizard (/az-rate-sheet)
+✨ Rate Generation     ← NEW SECTION
+  └── 🌎 US Rate Generation (/rate-gen/us)     ← Phase 1
+  └── 🌍 International Rate Generation (/rate-gen/international)  ← Phase 2
+⚙️ Admin (/admin/lerg)
+```
+
+### **Icon Import Updates**
+
+Add SparklesIcon import to `constants/navigation.ts`:
+
+```typescript
+import {
+  HomeIcon,
+  DocumentChartBarIcon,
+  GlobeAmericasIcon,
+  GlobeAltIcon,
+  WrenchScrewdriverIcon,
+  AdjustmentsVerticalIcon,
+  SparklesIcon,  // ← NEW IMPORT
+} from '@heroicons/vue/24/outline';
+```
+
+### **File Structure for Phase 1**
+
+```
+pages/
+├── RateGenUSView.vue           ← Main view component
+└── (RateGenInternationalView.vue)  ← Phase 2 placeholder
+
+components/
+└── rate-gen/
+    ├── RateGenFileUploads.vue
+    ├── RateGenProviderZone.vue  
+    ├── RateGenConfiguration.vue
+    ├── RateGenAnalytics.vue
+    └── RateGenExportModal.vue
+
+stores/
+└── rate-gen-store.ts
+
+services/  
+└── rate-gen.service.ts
+```
+
+### **Implementation Notes**
+
+**Phase 1 (Current):**
+- Implement US Rate Generation only
+- International route exists but shows "Coming Soon" placeholder
+- Both routes require authentication (`requiresAuth: true`)
+
+**Phase 2 (Future):**  
+- International Rate Generation uses different rate types/structure
+- May require different LCR strategies for international routing
+- Can leverage same core infrastructure with international-specific adaptations
+
+**Sidebar Integration:**
+- Follows exact same expandable pattern as "Reporting" and "Rate Wizard"
+- SparklesIcon indicates the innovative/AI-like nature of rate generation
+- Maintains consistent GlobeAmericasIcon/GlobeAltIcon for US/International distinction
+
+## ✅ **Final Implementation Specifications**
+
+Based on comprehensive review and clarifications, here are the finalized technical decisions:
+
+### **1. Authentication & Subscription** ✅
+- **Requirement**: Add Rate Gen routes to `subscriptionRequiredRoutes` array
+- **Behavior**: 1-month free trial, then subscription required for all app functions
+- **Implementation**: Add `/rate-gen/us` to existing subscription check logic
+
+### **2. Database Schema** ✅  
+- **Location**: Add to existing `DBSchemas` in `app-types.ts`
+- **Schema**: `[DBName.RATE_GEN]: 'providers: ++id, prefix, providerId, rateInter, rateIntra, rateIndeterminate, providerName, fileName, uploadDate'`
+
+### **3. LCR Strategy Naming** ✅
+- **Consistent Throughout**: `'LCR1', 'LCR2', 'LCR3', 'Average'`
+- **Backend & Frontend**: Same naming convention
+- **User Display**: "LCR 1 (Cheapest)", "LCR 2 (Second Best)", etc.
+
+### **4. Provider Limits** ✅
+- **Hard-coded**: Maximum 5 providers 
+- **Implementation**: `const MAX_PROVIDERS = 5` constant
+
+### **5. Data Persistence** ✅
+- **Pattern**: Follow existing Rate Sheet behavior
+- **Persistence**: Data remains while tab open, clears on browser close
+- **User Control**: Manual delete option available
+- **Storage**: IndexedDB with same cleanup patterns
+
+### **6. PreviewModal Extension Strategy** ✅ **SENIOR ENGINEER RECOMMENDATION**
+
+**Best Approach**: Extend existing PreviewModal with conditional provider naming
+
+**Implementation Strategy:**
+```typescript
+// 1. Extend BasePreviewModalProps in app-types.ts
+interface BasePreviewModalProps {
+  // ... existing props
+  requireProviderName?: boolean;        // NEW: Show provider name input
+  providerName?: string;               // NEW: Default provider name value
+  onProviderNameChange?: (name: string) => void; // NEW: Provider name callback
+}
+
+// 2. In PreviewModal.vue template - conditional rendering
+<!-- Provider Name Input (Rate Gen only) -->
+<div v-if="requireProviderName" class="mb-4">
+  <label class="block text-sm font-medium text-fbWhite/70 mb-2">
+    Provider Name (Required)
+  </label>
+  <input
+    v-model="localProviderName"
+    type="text"
+    maxlength="20"
+    required
+    class="w-full px-3 py-2 bg-fbHover border border-fbWhite/20 rounded-md text-fbWhite"
+    placeholder="Enter provider name (max 20 chars)"
+    @input="onProviderNameChange?.(localProviderName)"
+  />
+</div>
+
+<!-- Existing indeterminate rate dropdown (US only) -->
+<div v-if="isUSFile" class="mb-6">
+  <!-- ... existing indeterminate rate logic ... -->
+</div>
+```
+
+**Why This Approach:**
+- ✅ **Follows existing pattern** (conditional rendering like indeterminate dropdown)
+- ✅ **Backward compatible** (existing calls continue working unchanged)
+- ✅ **Clean separation** (Rate Gen specific logic contained)
+- ✅ **Maintainable** (single component, clear feature flags)
+
+### **7. Export Integration** ✅
+- **Pattern**: Full USExportModal pattern with filters, preview, format options
+- **Bundle Option**: Rate deck + analytics report download
+- **Implementation**: Adapt existing export component architecture
+
+### **8. Error Handling** ✅
+- **Keep Simple**: Console logging (existing pattern)
+- **Future Enhancement**: Toast UI implementation later
+- **Focus**: Don't block Rate Gen development for toast system
+
+### **9. Testing Strategy** ✅
+- **Initial**: No comprehensive testing (consistent with current codebase)
+- **Future**: Add testing in post-launch refactoring phase
+- **Priority**: Ship functionality first, test infrastructure later
+
+### **10. Memory Management** ✅
+- **Pattern**: Exact same as existing Rate Sheet uploads
+- **Strategy**: `markRaw()` for large datasets, manual reactivity triggers
+- **LCR Data**: Keep all provider data in unified table for LCR calculations
+- **Cleanup**: Delete by `providerId` when user replaces providers
+
+## 🚀 **Implementation Ready - 100% Specified**
+
+All technical decisions finalized. The Rate Generation feature can now be implemented with:
+
+- ✅ **Clear authentication requirements**
+- ✅ **Defined database schema location** 
+- ✅ **Consistent naming conventions**
+- ✅ **Backward-compatible component extensions**
+- ✅ **Established persistence patterns**
+- ✅ **Export integration strategy**
+- ✅ **Performance management approach**
+
+**Next Step**: Begin Phase 1 implementation following the 4-week timeline.
+
+## 🎨 **Design System & Visual Consistency Requirements**
+
+**CRITICAL**: Rate Generation must maintain identical visual style to USFileUploads.vue
+
+### **Required Design Patterns:**
+
+**Color Palette (From tailwind.config.js):**
+```css
+/* Background Colors */
+bg-gray-800          /* Upload zone containers */
+bg-fbBlack          /* Main backgrounds (colors.gray.950) */
+bg-fbHover          /* Hover states (colors.slate.800) */
+bg-fbWhite/10       /* Drag hover overlay */
+
+/* Text Colors */
+text-fbWhite        /* Primary text (colors.slate.300) */
+text-accent         /* Accent text (hsl(160, 100%, 40%)) */
+text-gray-300       /* Secondary text */
+text-red-500        /* Error states */
+
+/* Border Colors */
+border-gray-600     /* Default upload zone borders (dashed) */
+border-accent       /* Active/hover borders */
+border-accent/50    /* Icon borders */
+border-gray-700/50  /* Dividers */
+
+/* Accent Colors */
+accent: 'hsl(160, 100%, 40%)'     /* Primary accent */
+bg-accent/10        /* Icon backgrounds */
+bg-accent/20        /* Button backgrounds */
+```
+
+**Typography (From tailwind.config.js):**
+```css
+font-sans: 'Inter'           /* Primary font */
+font-secondary: 'Roboto Mono' /* Monospace font */
+font-pt-mono: 'PT Mono'      /* Alternative mono */
+
+/* Text Sizes */
+text-sm             /* Standard UI text */
+text-base           /* Upload zone text */
+text-xs             /* Small labels */
+```
+
+**Component Usage Requirements:**
+
+**1. BaseButton.vue (REQUIRED):**
+```vue
+<!-- Primary action button -->
+<BaseButton variant="primary" size="standard">
+  Generate Rates
+</BaseButton>
+
+<!-- Secondary actions -->
+<BaseButton variant="secondary" size="standard">
+  Clear All
+</BaseButton>
+
+<!-- Destructive actions -->
+<BaseButton variant="destructive" size="standard">
+  Remove Provider
+</BaseButton>
+```
+
+**2. BaseBadge.vue (REQUIRED):**
+```vue
+<!-- Provider status badges -->
+<BaseBadge variant="success">Uploaded</BaseBadge>
+<BaseBadge variant="warning">Processing</BaseBadge>
+<BaseBadge variant="error">Failed</BaseBadge>
+```
+
+**3. Vue Headless UI (REQUIRED):**
+```vue
+<!-- Modals -->
+<Dialog> <!-- PreviewModal, ExportModal -->
+<DialogPanel>
+<DialogTitle>
+
+<!-- Dropdowns -->
+<Listbox> <!-- LCR strategy selection -->
+<ListboxOptions>
+<ListboxOption>
+
+<!-- Transitions -->
+<TransitionRoot>
+<TransitionChild>
+```
+
+**Layout Patterns (From USFileUploads.vue):**
+
+**Upload Zone Styling:**
+```vue
+<!-- Two-column layout with divider -->
+<div class="flex w-full gap-6">
+  <div class="w-1/2 pr-6">
+    <!-- Upload Zone -->
+    <div class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
+         :class="[
+           isDragging 
+             ? 'border-accent bg-fbWhite/10 border-solid'
+             : 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+         ]">
+      <!-- Zone content -->
+    </div>
+  </div>
+  
+  <!-- Vertical divider -->
+  <div class="mx-4 border-l border-gray-700/50"></div>
+  
+  <div class="w-1/2 pl-6">
+    <!-- Second zone -->
+  </div>
+</div>
+```
+
+**Icon Styling (From USFileUploads.vue):**
+```vue
+<!-- Upload icon with consistent styling -->
+<ArrowUpTrayIcon class="w-10 h-10 mx-auto border rounded-full p-2"
+                 :class="hasError 
+                   ? 'text-red-500 border-red-500/50 bg-red-500/10'
+                   : 'text-accent border-accent/50 bg-accent/10'" />
+```
+
+**Error States (From USFileUploads.vue):**
+```vue
+<!-- Error notification -->
+<div v-if="uploadError" 
+     class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto">
+  <p class="text-red-500 font-medium">{{ uploadError }}</p>
+</div>
+```
+
+**Progress Indicator Integration:**
+```vue
+<!-- Use existing UploadProgressIndicator -->
+<UploadProgressIndicator 
+  :total-rows="uploadingFileRowCount"
+  :rows-per-second="14000" />
+```
+
+### **Mandatory Visual Consistency Checklist:**
+
+**✅ Colors:**
+- [ ] Upload zones use exact same gray-800 background
+- [ ] Drag states use exact same accent/fbWhite color combinations  
+- [ ] Error states use exact same red-500 palette
+- [ ] Text uses exact same fbWhite/accent/gray-300 hierarchy
+
+**✅ Typography:**
+- [ ] All text uses Inter font family (font-sans)
+- [ ] Text sizes match USFileUploads (text-sm, text-base, text-xs)
+- [ ] Font weights match existing patterns (font-medium, etc.)
+
+**✅ Components:**
+- [ ] All buttons use BaseButton with correct variants
+- [ ] All badges use BaseBadge with correct variants  
+- [ ] All modals use Vue Headless UI Dialog components
+- [ ] All dropdowns use Vue Headless UI Listbox components
+
+**✅ Layout:**
+- [ ] Upload zones use exact same dimensions (h-[120px])
+- [ ] Spacing matches USFileUploads (p-6, gap-6, etc.)
+- [ ] Border radius matches (rounded-lg)
+- [ ] Dividers use exact same styling (border-gray-700/50)
+
+**✅ Interactions:**
+- [ ] Hover states match exactly (hover:border-accent-hover, etc.)
+- [ ] Drag states use identical visual feedback
+- [ ] Loading states use same UploadProgressIndicator
+- [ ] Error states use identical styling patterns
+
+### **Visual Reference Mandate:**
+
+**Primary Reference**: `USFileUploads.vue` - Rate Generation must be visually indistinguishable from this component
+**Component Library**: BaseButton, BaseBadge, Vue Headless UI modals/dropdowns
+**Color System**: Custom Tailwind theme with fbBlack/fbWhite/accent colors
+**Typography**: Inter font family throughout
+
+**Implementation Rule**: If it exists in USFileUploads.vue, reuse the exact same Tailwind classes and styling patterns.
