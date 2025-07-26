@@ -162,7 +162,7 @@
                 />
               </div>
               <span class="text-white font-medium">
-                ${{ currentPlanTier === 'monthly' ? '40' : '400' }}/{{ currentPlanTier === 'monthly' ? 'month' : 'year' }}
+                ${{ currentPlanTier === 'monthly' ? '900' : '9000' }}/{{ currentPlanTier === 'monthly' ? 'month' : 'year' }}
               </span>
             </div>
             

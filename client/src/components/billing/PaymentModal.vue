@@ -47,7 +47,7 @@
               </div>
               
               <div class="mb-4">
-                <span class="text-4xl font-bold text-white">$40</span>
+                <span class="text-4xl font-bold text-white">$900</span>
                 <span class="text-gray-400 ml-1">/month</span>
               </div>
               
@@ -81,7 +81,7 @@
             >
               <!-- Best Value Badge -->
               <div class="absolute -top-3 right-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                SAVE 17%
+SAVE 17%
               </div>
 
               <div class="flex items-center justify-between mb-4">
@@ -97,9 +97,9 @@
               </div>
               
               <div class="mb-4">
-                <span class="text-4xl font-bold text-white">$400</span>
+                <span class="text-4xl font-bold text-white">$9000</span>
                 <span class="text-gray-400 ml-1">/year</span>
-                <p class="text-sm text-gray-500 mt-1">$33.33/month</p>
+                <p class="text-sm text-gray-500 mt-1">$750/month</p>
               </div>
               
               <ul class="space-y-2 text-sm text-gray-300">

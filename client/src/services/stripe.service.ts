@@ -124,4 +124,29 @@ export const stripeService = {
       return null;
     }
   },
+
+  /**
+   * Get Stripe account information (admin only)
+   */
+  async getStripeAccountInfo() {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to access account information');
+      }
+
+      // Get account info via edge function
+      const { data, error } = await supabase.functions.invoke('get-stripe-account');
+
+      if (error) {
+        throw error;
+      }
+
+      return data?.account || null;
+    } catch (error) {
+      console.error('Stripe account info error:', error);
+      throw error;
+    }
+  },
 };

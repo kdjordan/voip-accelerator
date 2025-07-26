@@ -132,8 +132,8 @@
       id: 'pro',
       name: 'The Plan',
       description: 'Unlock advanced features and unlimited comparisons.',
-      priceMonthly: 40,
-      priceYearly: 400,
+      priceMonthly: 900,
+      priceYearly: 9000,
       priceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_MONTHLY,
       priceIdYearly: import.meta.env.VITE_STRIPE_PRICE_ANNUAL,
       features: [

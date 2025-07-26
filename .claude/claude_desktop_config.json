@@ -5,10 +5,11 @@
         "args": [
           "-y",
           "@supabase/mcp-server-supabase@latest",
-          "--access-token",
-          "sbp_9e7d61cbff95543a2fdc0d396fa62b5352110914"
-          
-        ]
+          "--access-token"
+        ],
+        "env": {
+          "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+        }
       },
       "stripe": {
         "command": "npx",
@@ -110,7 +111,7 @@
       "Bash(* | wc*)",
       "Bash(* | sort*)",
       "Bash(* | uniq*)"
-    ]
+    ],
       "deny": []
     }
   }
