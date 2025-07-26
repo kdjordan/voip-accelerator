@@ -60,6 +60,28 @@ npm run lint          # Run ESLint
 
 ## Development Guidelines
 
+### Security Best Practices
+- **NEVER hardcode secrets, API keys, or sensitive data in any file**
+- Always use environment variables for sensitive configuration
+- In documentation/session files, use `[REDACTED]` or placeholders instead of actual values
+- Secrets belong ONLY in `.env` files which must be gitignored
+- When referencing environment variables in docs, show the variable name, not the value:
+  ```bash
+  # Correct:
+  STRIPE_SECRET_KEY=[REDACTED]
+  
+  # Wrong:
+  STRIPE_SECRET_KEY=sk_test_actual_secret_key_here
+  ```
+- For scripts that need secrets, always use environment variable access:
+  ```typescript
+  // Correct:
+  const apiKey = process.env.STRIPE_SECRET_KEY || Deno.env.get("STRIPE_SECRET_KEY");
+  
+  // Wrong:
+  const apiKey = "sk_test_hardcoded_secret";
+  ```
+
 ### Code Style
 - Vue 3 Composition API with `<script setup>`
 - TypeScript strict mode enabled
