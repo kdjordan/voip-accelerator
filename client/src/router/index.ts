@@ -42,6 +42,16 @@ const router = createRouter({
       component: () => import('@/pages/UsView.vue'),
     },
     {
+      path: '/rate-gen/us',
+      name: 'RateGenUS',
+      component: () => import('@/pages/RateGenUSView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/rate-gen',
+      redirect: '/rate-gen/us',
+    },
+    {
       path: '/admin/lerg',
       name: 'AdminLerg',
       component: () => import('@/pages/AdminView.vue'),
@@ -126,6 +136,7 @@ const authRequiredRoutes = [
   '/us-rate-sheet',
   '/azview',
   '/usview',
+  '/rate-gen',
   '/admin/lerg',
   '/billing',
   // Add any other admin routes from adminRoutes if needed
@@ -137,6 +148,7 @@ const subscriptionRequiredRoutes = [
   '/us-rate-sheet',
   '/azview',
   '/usview',
+  '/rate-gen',
 ];
 
 // Routes only accessible when logged out

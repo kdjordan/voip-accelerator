@@ -6,6 +6,7 @@ import {
   GlobeAltIcon,
   WrenchScrewdriverIcon,
   AdjustmentsVerticalIcon,
+  SparklesIcon,
   // Cog6ToothIcon, // Keep commented out if not used
 } from '@heroicons/vue/24/outline';
 
@@ -44,6 +45,17 @@ export const appNavigationItems: NavigationItem[] = [
         name: 'AZ Rate Wizard',
         href: '/az-rate-sheet',
         icon: AdjustmentsVerticalIcon,
+      },
+    ],
+  },
+  {
+    name: 'Rate Generation',
+    icon: SparklesIcon,
+    children: [
+      {
+        name: 'US Rate Generation',
+        href: '/rate-gen/us',
+        icon: GlobeAmericasIcon,
       },
     ],
   },

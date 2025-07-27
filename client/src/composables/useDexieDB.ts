@@ -332,6 +332,23 @@ export default function useDexieDB() {
     return db.tables.map((table) => table.name);
   }
 
+  async function clearDexieTable(dbName: DBNameType, storeName: string): Promise<void> {
+    const db = await getDB(dbName);
+    
+    if (!db.tables.some((table) => table.name === storeName)) {
+      console.warn(`[useDexieDB: ${dbName}] Store '${storeName}' does not exist. Nothing to clear.`);
+      return;
+    }
+
+    const table = db.table(storeName);
+    try {
+      await table.clear();
+    } catch (error) {
+      console.error(`[useDexieDB: ${dbName}/${storeName}] Error clearing table:`, error);
+      throw error;
+    }
+  }
+
   return {
     getDB,
     storeInDexieDB,
@@ -341,5 +358,6 @@ export default function useDexieDB() {
     deleteDatabase,
     closeAllConnections,
     getAllStoreNamesForDB,
+    clearDexieTable,
   };
 }

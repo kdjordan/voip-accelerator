@@ -165,6 +165,27 @@
               </p>
             </div>
 
+            <!-- Provider Name Input (Rate Gen only) -->
+            <div v-if="requireProviderName" class="mb-6">
+              <label class="block text-sm font-medium text-fbWhite/70 mb-2">
+                Provider Name (Required)
+              </label>
+              <input
+                v-model="localProviderName"
+                type="text"
+                maxlength="20"
+                required
+                class="w-full max-w-md px-3 py-2 bg-fbHover border border-fbWhite/20 rounded-md text-fbWhite
+                       focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent
+                       placeholder:text-gray-400"
+                placeholder="Enter provider name (max 20 chars)"
+                @input="handleProviderNameChange"
+              />
+              <p class="mt-1 text-xs text-gray-400">
+                This name will be used to identify the provider in reports and analysis
+              </p>
+            </div>
+
             <!-- Column Mapping Section -->
             <div class="mb-8">
               <div class="mt-2 overflow-auto max-h-80">
@@ -383,11 +404,13 @@
     'update:valid': [isValid: boolean];
     'update:start-line': [startLine: number];
     'update:indeterminate-definition': [definition: string];
+    'update:provider-name': [providerName: string];
     // Add optional effectiveDate to confirm payload
     confirm: [
       mappings: Record<string, string>,
       indeterminateDefinition?: string,
       effectiveDate?: string,
+      providerName?: string,
     ];
     cancel: [];
   }>();
@@ -396,6 +419,7 @@
   const indeterminateRateDefinition = ref('column');
   const showValidationErrors = ref(false);
   const effectiveDate = ref(''); // Add ref for effective date
+  const localProviderName = ref(props.providerName || ''); // Add ref for provider name
 
   // Options for Indeterminate Rate Listbox
   const indeterminateOptions = [
@@ -618,7 +642,12 @@
       const hasIntrastate = mappedRoles.has(USColumnRole.INTRASTATE);
 
       // Base validation for required columns (NPA/NXX/NPANXX + Interstate/Intrastate)
-      const baseValid = hasValidNPANXXCombination && hasInterstate && hasIntrastate;
+      let baseValid = hasValidNPANXXCombination && hasInterstate && hasIntrastate;
+
+      // Add provider name validation for Rate Gen US files
+      if (props.requireProviderName) {
+        baseValid = baseValid && localProviderName.value.trim().length > 0;
+      }
 
       // When "Column Role" is selected (default), require an Indeterminate column
       if (indeterminateRateDefinition.value === 'column') {
@@ -631,7 +660,14 @@
     }
 
     // Non-US file validation (default behavior)
-    return allColumnsMapped.value;
+    let baseValid = allColumnsMapped.value;
+    
+    // Add provider name validation for Rate Gen
+    if (props.requireProviderName) {
+      baseValid = baseValid && localProviderName.value.trim().length > 0;
+    }
+    
+    return baseValid;
   });
 
   function handleConfirm() {
@@ -654,11 +690,14 @@
       }
     }
 
-    // Emit all mappings, indeterminate definition, and effective date for US_RATE_DECK
+    // Emit all mappings, indeterminate definition, effective date, and provider name
     if (props.source && props.source === 'US_RATE_DECK') {
-      emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value);
+      emit('confirm', mappings.value, indeterminateRateDefinition.value, effectiveDate.value, localProviderName.value);
+    } else if (props.requireProviderName) {
+      // For Rate Gen, include provider name
+      emit('confirm', mappings.value, indeterminateRateDefinition.value, undefined, localProviderName.value);
     } else {
-      // For non-US_RATE_DECK, exclude the effective date
+      // For standard uploads, exclude extra parameters
       emit('confirm', mappings.value, indeterminateRateDefinition.value);
     }
   }
@@ -671,6 +710,11 @@
     emit('update:mappings', mappings.value);
     emit('update:valid', isValid.value);
   }
+  
+  function handleProviderNameChange() {
+    emit('update:provider-name', localProviderName.value);
+    emit('update:valid', isValid.value);
+  }
 
   // Add a watcher to update validation when mappings change
   watch(
@@ -679,5 +723,13 @@
       handleMappingChange();
     },
     { deep: true }
+  );
+
+  // Add a watcher to update validation when provider name changes
+  watch(
+    localProviderName,
+    () => {
+      handleProviderNameChange();
+    }
   );
 </script>

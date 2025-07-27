@@ -68,6 +68,8 @@ export interface BasePreviewModalProps {
   previewData: string[][];
   columnOptions: Array<{ value: string; label: string; required?: boolean }>;
   validateRequired?: boolean;
+  requireProviderName?: boolean;
+  providerName?: string;
 }
 
 export interface BasePreviewModalEmits {
@@ -75,6 +77,7 @@ export interface BasePreviewModalEmits {
   'update:valid': [isValid: boolean];
   'update:start-line': [startLine: number];
   'update:indeterminate-definition': [definition: string];
+  'update:provider-name': [providerName: string];
   confirm: [mappings: Record<string, string>, ...any[]];
   cancel: [];
 }
@@ -208,6 +211,7 @@ export const DBName = {
   US_RATE_SHEET: 'us_rate_sheet_db',
   US_PRICING_COMPARISON: 'us_pricing_comparison_db',
   AZ_PRICING_COMPARISON: 'az_pricing_comparison_db',
+  RATE_GEN: 'rate_gen_db',
 } as const;
 
 export type DBNameType = (typeof DBName)[keyof typeof DBName];
@@ -229,7 +233,8 @@ export type SchemaDBType =
   | typeof DBName.AZ_RATE_SHEET
   | typeof DBName.US_RATE_SHEET
   | typeof DBName.US_PRICING_COMPARISON
-  | typeof DBName.AZ_PRICING_COMPARISON;
+  | typeof DBName.AZ_PRICING_COMPARISON
+  | typeof DBName.RATE_GEN;
 
 export const DBSchemas = {
   // [DBName.AZ]: '++id, destName, dialCode, rate',
@@ -270,6 +275,7 @@ export const DBSchemas = {
     cheaperFile,
     diffPercent
   `,
+  [DBName.RATE_GEN]: 'providers: ++id, prefix, providerId, providerName, fileName, rateInter, rateIntra, rateIndeterminate, uploadDate',
 } as const;
 
 // Define schemas for dynamically created tables (e.g., filename-based)
@@ -287,7 +293,8 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
     dbName === DBName.US_RATE_SHEET ||
     dbName === DBName.LERG ||
     dbName === DBName.US_PRICING_COMPARISON ||
-    dbName === DBName.AZ_PRICING_COMPARISON
+    dbName === DBName.AZ_PRICING_COMPARISON ||
+    dbName === DBName.RATE_GEN
   );
 }
 
