@@ -4,6 +4,7 @@ import { useRateGenStore } from '@/stores/rate-gen-store';
 import { RateGenService } from '@/services/rate-gen.service';
 import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
+import RateGenProgressIndicator from '@/components/rate-gen/RateGenProgressIndicator.vue';
 import Papa from 'papaparse';
 import { USColumnRole } from '@/types/domains/us-types';
 import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/types/domains/rate-gen-types';
@@ -12,8 +13,23 @@ import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/t
 const store = useRateGenStore();
 const service = new RateGenService();
 
-// Component refs for progress tracking
-const progressIndicators = ref<Record<string, any>>({});
+// Component refs for progress tracking - Rate Gen specific
+const progressIndicators = ref<Record<RateGenComponentId, InstanceType<typeof RateGenProgressIndicator> | null>>({
+  provider1: null,
+  provider2: null,
+  provider3: null,
+  provider4: null,
+  provider5: null,
+});
+
+// Upload progress row count tracking - match USFileUploads pattern
+const uploadingFileRowCount = ref<Record<RateGenComponentId, number>>({
+  provider1: 0,
+  provider2: 0,
+  provider3: 0,
+  provider4: 0,
+  provider5: 0,
+});
 
 // Drag states for each provider zone
 const dragStates = ref<Record<RateGenComponentId, boolean>>({
@@ -95,25 +111,16 @@ const isAnyUploadInProgress = computed(() => {
   return store.isProcessing || showPreviewModal.value;
 });
 
-// Debug progress
-const debugProgress = computed(() => {
-  return {
-    provider1: store.getUploadProgress('provider1'),
-    provider2: store.getUploadProgress('provider2'),
-    provider3: store.getUploadProgress('provider3'),
-    provider4: store.getUploadProgress('provider4'),
-    provider5: store.getUploadProgress('provider5'),
-  };
-});
-
-// Watch progress changes
-watch(debugProgress, (newVal) => {
-  console.log('[DEBUG] Progress state:', newVal);
-}, { deep: true });
+// Note: Debug progress code removed - now using UploadProgressIndicator component
 
 // Get provider info for a zone
 const getProviderForZone = (zoneId: RateGenComponentId): ProviderInfo | undefined => {
   return store.providerList.find(p => p.id === zoneId);
+};
+
+// Check if progress should be shown
+const shouldShowProgress = (zoneId: RateGenComponentId): boolean => {
+  return store.isComponentUploading(zoneId);
 };
 
 // Drag and drop handlers
@@ -199,7 +206,7 @@ const handleFileUpload = async (file: File, zoneId: RateGenComponentId) => {
   }
 };
 
-// Parse file for preview modal
+// Parse file for preview modal and count rows for progress tracking
 const parseFileForPreview = async (file: File): Promise<void> => {
   return new Promise((resolve, reject) => {
     const previewRows: string[][] = [];
@@ -218,6 +225,11 @@ const parseFileForPreview = async (file: File): Promise<void> => {
         if (previewRows.length === 0) {
           reject(new Error('No data found in CSV file'));
           return;
+        }
+        
+        // Store total row count for progress tracking (similar to USFileUploads pattern)
+        if (currentZoneId.value) {
+          uploadingFileRowCount.value[currentZoneId.value] = Math.max(0, rowCount - 1); // Subtract header row
         }
         
         // Set preview data
@@ -333,8 +345,16 @@ const handleModalConfirm = async (mappings: Record<string, string>, indeterminat
       startLine.value
     );
     
+    // Complete progress indicator if it exists (matching USFileUploads pattern)
+    if (currentZoneId.value && progressIndicators.value[currentZoneId.value]) {
+      progressIndicators.value[currentZoneId.value]?.complete();
+    }
+    
     // Reset state after successful processing
     currentFile.value = null;
+    if (currentZoneId.value) {
+      uploadingFileRowCount.value[currentZoneId.value] = 0; // Reset row count
+    }
     currentZoneId.value = null;
     columnMappings.value = {};
     isModalValid.value = false;
@@ -350,6 +370,9 @@ const handleModalConfirm = async (mappings: Record<string, string>, indeterminat
     
     // Reset state on error as well
     currentFile.value = null;
+    if (currentZoneId.value) {
+      uploadingFileRowCount.value[currentZoneId.value] = 0; // Reset row count on error
+    }
     currentZoneId.value = null;
     columnMappings.value = {};
     isModalValid.value = false;
@@ -361,6 +384,10 @@ const handleModalConfirm = async (mappings: Record<string, string>, indeterminat
 const handleModalCancel = () => {
   showPreviewModal.value = false;
   currentFile.value = null;
+  // Reset row count on cancel
+  if (currentZoneId.value) {
+    uploadingFileRowCount.value[currentZoneId.value] = 0;
+  }
   currentZoneId.value = null;
   // Reset all modal state
   columnMappings.value = {};
@@ -380,6 +407,12 @@ watch(() => store.uploadErrors, (newErrors) => {
     }
   });
 }, { deep: true });
+
+// Format rate to 6 decimal places
+const formatRate = (rate: number | undefined): string => {
+  if (rate === undefined || rate === null) return '0.000000';
+  return rate.toFixed(6);
+};
 </script>
 
 <template>
@@ -419,6 +452,7 @@ watch(() => store.uploadErrors, (newErrors) => {
                   <div class="text-xs text-gray-400">
                     <p>{{ getProviderForZone('provider1')?.rowCount.toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider1')?.fileName }}</p>
+                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider1')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider1')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider1')?.avgIndeterminateRate) }}</p>
                   </div>
                 </div>
               </template>
@@ -431,7 +465,7 @@ watch(() => store.uploadErrors, (newErrors) => {
                     dragStates.provider1
                       ? 'border-accent bg-fbWhite/10 border-solid'
                       : canAcceptDrop('provider1')
-                        ? 'hover:border-accent hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
+                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
                         : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                     uploadErrors.provider1 ? 'border-red-500 border-solid' : '',
                   ]"
@@ -452,16 +486,11 @@ watch(() => store.uploadErrors, (newErrors) => {
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="store.isComponentUploading('provider1')">
-                      <div class="w-full max-w-xs mx-auto">
-                        <div class="text-accent text-sm mb-2">Uploading...</div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                          <div 
-                            class="bg-accent h-2 rounded-full transition-all duration-300"
-                            :style="{ width: `${store.getUploadProgress('provider1')}%` }"
-                          ></div>
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">{{ store.getUploadProgress('provider1').toFixed(0) }}%</div>
-                      </div>
+                      <RateGenProgressIndicator 
+                        :total-rows="uploadingFileRowCount.provider1"
+                        :progress="store.getUploadProgress('provider1')"
+                        ref="progressIndicators.provider1"
+                      />
                     </template>
 
                     <!-- Default State -->
@@ -475,15 +504,19 @@ watch(() => store.uploadErrors, (newErrors) => {
                       </div>
 
                       <ArrowUpTrayIcon
-                        class="w-8 h-8 mx-auto border rounded-full p-2 mb-2"
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
                         :class="
                           uploadErrors.provider1
                             ? 'text-red-500 border-red-500/50 bg-red-500/10'
                             : 'text-accent border-accent/50 bg-accent/10'
                         "
                       />
-                      <p class="text-sm text-fbWhite font-medium">{{ getZoneLabel('provider1') }}</p>
-                      <p class="text-xs text-gray-400 mt-1">Drag & drop or click to upload CSV</p>
+                      <p
+                        class="mt-2 text-base"
+                        :class="uploadErrors.provider1 ? 'text-red-500' : 'text-accent'"
+                      >
+                        {{ uploadErrors.provider1 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
+                      </p>
                     </template>
                   </div>
                 </div>
@@ -512,6 +545,7 @@ watch(() => store.uploadErrors, (newErrors) => {
                   <div class="text-xs text-gray-400">
                     <p>{{ getProviderForZone('provider3')?.rowCount.toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider3')?.fileName }}</p>
+                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider3')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider3')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider3')?.avgIndeterminateRate) }}</p>
                   </div>
                 </div>
               </template>
@@ -523,7 +557,7 @@ watch(() => store.uploadErrors, (newErrors) => {
                     dragStates.provider3
                       ? 'border-accent bg-fbWhite/10 border-solid'
                       : canAcceptDrop('provider3')
-                        ? 'hover:border-accent hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
+                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
                         : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                     uploadErrors.provider3 ? 'border-red-500 border-solid' : '',
                   ]"
@@ -543,16 +577,11 @@ watch(() => store.uploadErrors, (newErrors) => {
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="store.isComponentUploading('provider3')">
-                      <div class="w-full max-w-xs mx-auto">
-                        <div class="text-accent text-sm mb-2">Uploading...</div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                          <div 
-                            class="bg-accent h-2 rounded-full transition-all duration-300"
-                            :style="{ width: `${store.getUploadProgress('provider3')}%` }"
-                          ></div>
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">{{ store.getUploadProgress('provider3').toFixed(0) }}%</div>
-                      </div>
+                      <RateGenProgressIndicator 
+                        :total-rows="uploadingFileRowCount.provider3"
+                        :progress="store.getUploadProgress('provider3')"
+                        ref="progressIndicators.provider3"
+                      />
                     </template>
 
                     <!-- Default State -->
@@ -566,15 +595,19 @@ watch(() => store.uploadErrors, (newErrors) => {
                       </div>
 
                       <ArrowUpTrayIcon
-                        class="w-8 h-8 mx-auto border rounded-full p-2 mb-2"
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
                         :class="
                           uploadErrors.provider3
                             ? 'text-red-500 border-red-500/50 bg-red-500/10'
                             : 'text-accent border-accent/50 bg-accent/10'
                         "
                       />
-                      <p class="text-sm text-fbWhite font-medium">{{ getZoneLabel('provider3') }}</p>
-                      <p class="text-xs text-gray-400 mt-1">Drag & drop or click to upload CSV</p>
+                      <p
+                        class="mt-2 text-base"
+                        :class="uploadErrors.provider3 ? 'text-red-500' : 'text-accent'"
+                      >
+                        {{ uploadErrors.provider3 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
+                      </p>
                     </template>
                   </div>
                 </div>
@@ -583,14 +616,39 @@ watch(() => store.uploadErrors, (newErrors) => {
 
             <!-- Provider 5 Zone -->
             <div v-if="visibleZones.includes('provider5')">
-              <!-- Similar structure -->
+              <!-- Completed State -->
+              <template v-if="isZoneCompleted('provider5')">
+                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-fbWhite">
+                      {{ getProviderForZone('provider5')?.name }}
+                    </h3>
+                    <button
+                      @click="handleRemoveProvider('provider5')"
+                      class="text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="text-xs text-gray-400">
+                    <p>{{ getProviderForZone('provider5')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ getProviderForZone('provider5')?.fileName }}</p>
+                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider5')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider5')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider5')?.avgIndeterminateRate) }}</p>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Upload State -->
+              <template v-else>
               <div
                 class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
                 :class="[
                   dragStates.provider5
                     ? 'border-accent bg-fbWhite/10 border-solid'
                     : canAcceptDrop('provider5')
-                      ? 'hover:border-accent hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
+                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
                       : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                   uploadErrors.provider5 ? 'border-red-500 border-solid' : '',
                 ]"
@@ -610,16 +668,11 @@ watch(() => store.uploadErrors, (newErrors) => {
                 <div class="flex flex-col items-center justify-center w-full h-full text-center">
                   <!-- Uploading State -->
                   <template v-if="store.isComponentUploading('provider5')">
-                    <div class="w-full max-w-xs mx-auto">
-                      <div class="text-accent text-sm mb-2">Uploading...</div>
-                      <div class="w-full bg-gray-700 rounded-full h-2">
-                        <div 
-                          class="bg-accent h-2 rounded-full transition-all duration-300"
-                          :style="{ width: `${store.getUploadProgress('provider5')}%` }"
-                        ></div>
-                      </div>
-                      <div class="text-xs text-gray-400 mt-1">{{ store.getUploadProgress('provider5').toFixed(0) }}%</div>
-                    </div>
+                    <RateGenProgressIndicator 
+                      :total-rows="uploadingFileRowCount.provider5"
+                      :progress="store.getUploadProgress('provider5')"
+                      ref="progressIndicators.provider5"
+                    />
                   </template>
 
                   <!-- Default State -->
@@ -633,18 +686,23 @@ watch(() => store.uploadErrors, (newErrors) => {
                     </div>
 
                     <ArrowUpTrayIcon
-                      class="w-8 h-8 mx-auto border rounded-full p-2 mb-2"
+                      class="w-10 h-10 mx-auto border rounded-full p-2"
                       :class="
                         uploadErrors.provider5
                           ? 'text-red-500 border-red-500/50 bg-red-500/10'
                           : 'text-accent border-accent/50 bg-accent/10'
                       "
                     />
-                    <p class="text-sm text-fbWhite font-medium">{{ getZoneLabel('provider5') }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Drag & drop or click to upload CSV</p>
+                    <p
+                      class="mt-2 text-base"
+                      :class="uploadErrors.provider5 ? 'text-red-500' : 'text-accent'"
+                    >
+                      {{ uploadErrors.provider5 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
+                    </p>
                   </template>
                 </div>
               </div>
+              </template>
             </div>
           </div>
 
@@ -671,6 +729,7 @@ watch(() => store.uploadErrors, (newErrors) => {
                   <div class="text-xs text-gray-400">
                     <p>{{ getProviderForZone('provider2')?.rowCount.toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider2')?.fileName }}</p>
+                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider2')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider2')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider2')?.avgIndeterminateRate) }}</p>
                   </div>
                 </div>
               </template>
@@ -681,7 +740,7 @@ watch(() => store.uploadErrors, (newErrors) => {
                     dragStates.provider2
                       ? 'border-accent bg-fbWhite/10 border-solid'
                       : canAcceptDrop('provider2')
-                        ? 'hover:border-accent hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
+                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
                         : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                     uploadErrors.provider2 ? 'border-red-500 border-solid' : '',
                   ]"
@@ -701,16 +760,11 @@ watch(() => store.uploadErrors, (newErrors) => {
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="store.isComponentUploading('provider2')">
-                      <div class="w-full max-w-xs mx-auto">
-                        <div class="text-accent text-sm mb-2">Uploading...</div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                          <div 
-                            class="bg-accent h-2 rounded-full transition-all duration-300"
-                            :style="{ width: `${store.getUploadProgress('provider2')}%` }"
-                          ></div>
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">{{ store.getUploadProgress('provider2').toFixed(0) }}%</div>
-                      </div>
+                      <RateGenProgressIndicator 
+                        :total-rows="uploadingFileRowCount.provider2"
+                        :progress="store.getUploadProgress('provider2')"
+                        ref="progressIndicators.provider2"
+                      />
                     </template>
 
                     <!-- Default State -->
@@ -724,15 +778,19 @@ watch(() => store.uploadErrors, (newErrors) => {
                       </div>
 
                       <ArrowUpTrayIcon
-                        class="w-8 h-8 mx-auto border rounded-full p-2 mb-2"
+                        class="w-10 h-10 mx-auto border rounded-full p-2"
                         :class="
                           uploadErrors.provider2
                             ? 'text-red-500 border-red-500/50 bg-red-500/10'
                             : 'text-accent border-accent/50 bg-accent/10'
                         "
                       />
-                      <p class="text-sm text-fbWhite font-medium">{{ getZoneLabel('provider2') }}</p>
-                      <p class="text-xs text-gray-400 mt-1">Drag & drop or click to upload CSV</p>
+                      <p
+                        class="mt-2 text-base"
+                        :class="uploadErrors.provider2 ? 'text-red-500' : 'text-accent'"
+                      >
+                        {{ uploadErrors.provider2 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
+                      </p>
                     </template>
                   </div>
                 </div>
@@ -741,13 +799,39 @@ watch(() => store.uploadErrors, (newErrors) => {
 
             <!-- Provider 4 Zone -->
             <div v-if="visibleZones.includes('provider4')">
+              <!-- Completed State -->
+              <template v-if="isZoneCompleted('provider4')">
+                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-fbWhite">
+                      {{ getProviderForZone('provider4')?.name }}
+                    </h3>
+                    <button
+                      @click="handleRemoveProvider('provider4')"
+                      class="text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="text-xs text-gray-400">
+                    <p>{{ getProviderForZone('provider4')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ getProviderForZone('provider4')?.fileName }}</p>
+                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider4')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider4')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider4')?.avgIndeterminateRate) }}</p>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Upload State -->
+              <template v-else>
               <div
                 class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
                 :class="[
                   dragStates.provider4
                     ? 'border-accent bg-fbWhite/10 border-solid'
                     : canAcceptDrop('provider4')
-                      ? 'hover:border-accent hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
+                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
                       : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                   uploadErrors.provider4 ? 'border-red-500 border-solid' : '',
                 ]"
@@ -767,16 +851,11 @@ watch(() => store.uploadErrors, (newErrors) => {
                 <div class="flex flex-col items-center justify-center w-full h-full text-center">
                   <!-- Uploading State -->
                   <template v-if="store.isComponentUploading('provider4')">
-                    <div class="w-full max-w-xs mx-auto">
-                      <div class="text-accent text-sm mb-2">Uploading...</div>
-                      <div class="w-full bg-gray-700 rounded-full h-2">
-                        <div 
-                          class="bg-accent h-2 rounded-full transition-all duration-300"
-                          :style="{ width: `${store.getUploadProgress('provider4')}%` }"
-                        ></div>
-                      </div>
-                      <div class="text-xs text-gray-400 mt-1">{{ store.getUploadProgress('provider4').toFixed(0) }}%</div>
-                    </div>
+                    <RateGenProgressIndicator 
+                      :total-rows="uploadingFileRowCount.provider4"
+                      :progress="store.getUploadProgress('provider4')"
+                      ref="progressIndicators.provider4"
+                    />
                   </template>
 
                   <!-- Default State -->
@@ -790,18 +869,23 @@ watch(() => store.uploadErrors, (newErrors) => {
                     </div>
 
                     <ArrowUpTrayIcon
-                      class="w-8 h-8 mx-auto border rounded-full p-2 mb-2"
+                      class="w-10 h-10 mx-auto border rounded-full p-2"
                       :class="
                         uploadErrors.provider4
                           ? 'text-red-500 border-red-500/50 bg-red-500/10'
                           : 'text-accent border-accent/50 bg-accent/10'
                       "
                     />
-                    <p class="text-sm text-fbWhite font-medium">{{ getZoneLabel('provider4') }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Drag & drop or click to upload CSV</p>
+                    <p
+                      class="mt-2 text-base"
+                      :class="uploadErrors.provider4 ? 'text-red-500' : 'text-accent'"
+                    >
+                      {{ uploadErrors.provider4 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
+                    </p>
                   </template>
                 </div>
               </div>
+              </template>
             </div>
           </div>
         </div>

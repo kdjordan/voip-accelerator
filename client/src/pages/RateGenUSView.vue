@@ -6,6 +6,8 @@ import type { GeneratedRateDeck, LCRConfig } from '@/types/domains/rate-gen-type
 
 // Components
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
+import RateGenHeader from '@/components/rate-gen/RateGenHeader.vue';
+import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
 // import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
 // import RateGenAnalytics from '@/components/rate-gen/RateGenAnalytics.vue';
 // import RateGenExportModal from '@/components/rate-gen/RateGenExportModal.vue';
@@ -14,6 +16,7 @@ const store = useRateGenStore();
 const service = new RateGenService();
 
 // State
+const activeTab = ref<'upload' | 'settings' | 'results'>('upload');
 const showExportModal = ref(false);
 const generatedDeck = ref<GeneratedRateDeck | null>(null);
 
@@ -24,15 +27,13 @@ const canGenerate = computed(() =>
   !store.isProcessing
 );
 
-const showConfiguration = computed(() => store.providerList.length >= 2);
-
 // Methods
 const handleGenerateRates = async () => {
   if (!store.currentConfig) return;
   
   try {
     generatedDeck.value = await service.generateRateDeck(store.currentConfig);
-    showExportModal.value = true;
+    // Note: The tab will auto-switch to results via the watch in RateGenHeader
   } catch (error) {
     store.addError(`Failed to generate rates: ${(error as Error).message}`);
   }
@@ -60,20 +61,11 @@ const handleExport = async (format: 'csv' | 'excel') => {
   }
 };
 
-const handleClearAll = async () => {
-  if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-    try {
-      await service.clearAllData();
-      generatedDeck.value = null;
-    } catch (error) {
-      store.addError(`Failed to clear data: ${(error as Error).message}`);
-    }
-  }
+const handleTabChange = (tab: 'upload' | 'settings' | 'results') => {
+  activeTab.value = tab;
+  console.log(`[RateGenUSView] Tab changed to: ${tab}`);
 };
 
-const handleConfigUpdate = (config: LCRConfig) => {
-  store.setConfig(config);
-};
 
 // Lifecycle
 onMounted(() => {
@@ -86,94 +78,50 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="rate-gen-container min-h-screen bg-fbBlack text-fbWhite">
-    <!-- Header -->
-    <div class="bg-gray-800 border-b border-gray-700">
-      <div class="max-w-7xl mx-auto px-4 py-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-3xl font-bold text-fbWhite">US Rate Generation</h1>
-            <p class="mt-1 text-sm text-gray-300">
-              Upload up to 5 provider rate decks and generate optimized rates using Least Cost Routing
-            </p>
-          </div>
-          <div class="flex items-center gap-3">
-            <!-- Generate Button -->
-            <button
-              v-if="showConfiguration"
-              @click="handleGenerateRates"
-              :disabled="!canGenerate"
-              class="px-6 py-2 bg-accent text-fbBlack rounded-lg hover:bg-accent/80 
-                     disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors
-                     text-sm font-medium"
-            >
-              <span v-if="!store.isGenerating">Generate Rate Deck</span>
-              <span v-else>Generating... {{ store.generationProgress.toFixed(0) }}%</span>
-            </button>
-            
-            <!-- Clear All Button -->
-            <button
-              @click="handleClearAll"
-              class="px-4 py-2 bg-gray-700 text-fbWhite rounded-lg hover:bg-gray-600 
-                     transition-colors text-sm font-medium border border-gray-600"
-            >
-              Clear All
-            </button>
-          </div>
-        </div>
-      </div>
+  <!-- Match USFileUploads.vue layout structure exactly -->
+  <div class="flex flex-col w-full min-h-screen bg-fbBlack text-fbWhite">
+    <!-- Page Title - Outside the bento box like reference -->
+    <div class="px-8 pt-8">
+      <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">US Rate Generation</h1>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 py-8">
-      <!-- Upload Section -->
-      <section class="mb-8">
-        <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-          <h2 class="text-xl font-semibold text-fbWhite mb-4">
-            Provider Rate Decks
-          </h2>
-          
-          <RateGenFileUploads />
-        </div>
-      </section>
+    <!-- Tab Header -->
+    <div class="px-8">
+      <RateGenHeader 
+        :active-tab="activeTab"
+        @tab-change="handleTabChange"
+      />
+    </div>
 
-      <!-- Configuration Section -->
-      <section v-if="showConfiguration" class="mb-8">
-        <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-          <h2 class="text-xl font-semibold text-fbWhite mb-4">
+    <!-- Tab Content - Full Width -->
+    <div class="px-8 pb-8 flex-1">
+      <div class="bg-gray-800 rounded-b-lg p-6 h-full">
+        <!-- Upload Tab Content -->
+        <div v-if="activeTab === 'upload'">
+          <div class="pb-4 mb-6">
+            <h2 class="text-xl font-semibold text-fbWhite mb-6">
+              Provider Rate Decks
+            </h2>
+            
+            <!-- Rate Gen File Uploads Component -->
+            <RateGenFileUploads />
+          </div>
+        </div>
+
+        <!-- Settings Tab Content -->
+        <div v-if="activeTab === 'settings'">
+          <h2 class="text-xl font-semibold text-fbWhite mb-6">
             Rate Generation Configuration
           </h2>
           
-          <!-- Placeholder for RateGenConfiguration component -->
-          <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-            <p class="text-gray-400 mb-4">RateGenConfiguration component will be implemented here</p>
-            <p class="text-sm text-gray-500">
-              LCR strategy selection and markup configuration
-            </p>
-            
-            <!-- Simple debug configuration -->
-            <div class="mt-4">
-              <select 
-                @change="handleConfigUpdate({ 
-                  strategy: ($event.target as HTMLSelectElement).value as any, 
-                  markupPercentage: 10, 
-                  providerIds: store.providerList.map(p => p.id) 
-                })"
-                class="bg-gray-700 text-fbWhite px-3 py-2 rounded border border-gray-600"
-              >
-                <option value="">Select LCR Strategy</option>
-                <option value="LCR1">LCR 1 (Cheapest)</option>
-                <option value="LCR2">LCR 2 (Second Best)</option>
-                <option value="LCR3" v-if="store.providerCount >= 3">LCR 3 (Third Best)</option>
-                <option value="Average" v-if="store.providerCount >= 3">Average Top 3</option>
-              </select>
-            </div>
+          <!-- Rate Generation Configuration Component -->
+          <div class="max-w-2xl">
+            <RateGenConfiguration @generate-rates="handleGenerateRates" />
           </div>
         </div>
-      </section>
 
-      <!-- Analytics Section -->
-      <section v-if="generatedDeck" class="mb-8">
-        <div class="bg-gray-800 rounded-lg shadow-sm p-6">
+        <!-- Results Tab Content -->
+        <div v-if="activeTab === 'results' && generatedDeck">
           <h2 class="text-xl font-semibold text-fbWhite mb-4">
             Generated Rate Deck
           </h2>
@@ -186,28 +134,38 @@ onUnmounted(() => {
             </p>
             
             <!-- Basic deck info -->
-            <div v-if="generatedDeck" class="mt-4 text-sm text-gray-300">
+            <div class="mt-4 text-sm text-gray-300">
               <p>Strategy: {{ generatedDeck.lcrStrategy }}</p>
               <p>Total Rates: {{ generatedDeck.rowCount }}</p>
               <p>Generated: {{ generatedDeck.generatedDate.toLocaleString() }}</p>
+              
+              <!-- Export Button -->
+              <button
+                @click="showExportModal = true"
+                class="mt-4 px-4 py-2 bg-accent text-fbBlack rounded-lg hover:bg-accent/80 
+                       transition-colors font-medium"
+              >
+                Export Rate Deck
+              </button>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <!-- Error Display -->
-      <div v-if="store.errors.length > 0" class="mb-8">
-        <div v-for="(error, index) in store.errors" :key="index" 
-             class="bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-2
-                    flex items-center justify-between">
-          <span>{{ error }}</span>
-          <button 
-            @click="store.removeError(index)" 
-            class="ml-4 text-red-400 hover:text-red-300 text-xl font-bold"
-          >
-            ×
-          </button>
-        </div>
+
+    <!-- Error Display -->
+    <div v-if="store.errors.length > 0" class="px-8 pb-8">
+      <div v-for="(error, index) in store.errors" :key="index" 
+           class="bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-2
+                  flex items-center justify-between">
+        <span>{{ error }}</span>
+        <button 
+          @click="store.removeError(index)" 
+          class="ml-4 text-red-400 hover:text-red-300 text-xl font-bold"
+        >
+          ×
+        </button>
       </div>
     </div>
 
@@ -239,8 +197,3 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-.rate-gen-container {
-  min-height: 100vh;
-}
-</style>

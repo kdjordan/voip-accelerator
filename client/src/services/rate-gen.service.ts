@@ -21,14 +21,11 @@ interface RateGenStore {
   addInvalidRow: (providerId: string, row: InvalidRateGenRow) => void;
   clearInvalidRowsForProvider: (providerId: string) => void;
   removeProvider: (providerId: string) => void;
-  storeInMemoryData: (providerId: string, data: RateGenRecord[]) => void;
-  removeInMemoryData: (providerId: string) => void;
   setGenerating: (isGenerating: boolean) => void;
   setGenerationProgress: (progress: number) => void;
   setGeneratedDeck: (deck: GeneratedRateDeck) => void;
   addError: (error: string) => void;
   providerList: ProviderInfo[];
-  getInMemoryData: (providerId: string) => RateGenRecord[];
 }
 
 export class RateGenService {
@@ -36,6 +33,7 @@ export class RateGenService {
   private dexieDB = useDexieDB();
   private worker: Worker | null = null;
   private temporaryGeneratedRates: GeneratedRateRecord[] = [];
+  private progressTimers: Map<string, number> = new Map(); // Store timer IDs by providerId (browser timers return numbers)
 
   constructor() {
     this.store = useRateGenStore() as unknown as RateGenStore;
@@ -81,6 +79,11 @@ export class RateGenService {
     const invalidRows: InvalidRateGenRow[] = [];
     let totalRecords = 0;
     let totalRows = 0;
+    
+    // For calculating averages
+    let sumInterRate = 0;
+    let sumIntraRate = 0;
+    let sumIndeterminateRate = 0;
 
     // Start approximated progress timer
     this.startApproximatedProgress(providerId, fileSizeMB);
@@ -112,6 +115,11 @@ export class RateGenService {
             if (processedRow) {
               allProcessedData.push(processedRow);
               totalRecords++;
+              
+              // Sum rates for averages
+              sumInterRate += processedRow.rateInter;
+              sumIntraRate += processedRow.rateIntra;
+              sumIndeterminateRate += processedRow.rateIndeterminate;
             } else {
               invalidRows.push({
                 rowNumber: totalRows,
@@ -130,7 +138,11 @@ export class RateGenService {
         },
         complete: async () => {
           try {
-            console.log(`[RateGenService] Parse complete. Processing ${totalRecords} valid records...`);
+            console.log(`[RateGenService] *** PAPA PARSE COMPLETE *** Processing ${totalRecords} valid records...`);
+            
+            // Don't clear the timer - let it finish naturally and override with our progress
+            // Just make sure we wait for smooth transition
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Store all data using optimized chunks
             await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name);
@@ -142,6 +154,11 @@ export class RateGenService {
               this.store.addInvalidRow(providerId, row);
             });
             
+            // Calculate averages
+            const avgInterRate = totalRecords > 0 ? sumInterRate / totalRecords : 0;
+            const avgIntraRate = totalRecords > 0 ? sumIntraRate / totalRecords : 0;
+            const avgIndeterminateRate = totalRecords > 0 ? sumIndeterminateRate / totalRecords : 0;
+            
             // Update store with provider info
             const providerInfo = {
               id: providerId,
@@ -149,13 +166,16 @@ export class RateGenService {
               fileName: file.name,
               rowCount: totalRecords,
               invalidRowCount: invalidRows.length,
-              uploadDate: new Date()
+              uploadDate: new Date(),
+              avgInterRate: Math.round(avgInterRate * 1000000) / 1000000, // Round to 6 decimal places
+              avgIntraRate: Math.round(avgIntraRate * 1000000) / 1000000,
+              avgIndeterminateRate: Math.round(avgIndeterminateRate * 1000000) / 1000000
             };
             
+            // Complete the process - set progress beyond 100% to show "Processing complete!"
+            this.store.setUploadProgress(providerId, 110); // Beyond 100% to indicate true completion
             console.log('[DEBUG] Adding provider info:', providerInfo);
             this.store.addProvider(providerInfo);
-            
-            this.store.setUploadProgress(providerId, 100);
             this.store.setComponentUploading(providerId as any, false);
             
             const performanceEnd = performance.now();
@@ -172,6 +192,13 @@ export class RateGenService {
               stack: (error as Error).stack
             });
             
+            // Clear the approximated progress timer on error
+            const timer = this.progressTimers.get(providerId);
+            if (timer) {
+              clearInterval(timer);
+              this.progressTimers.delete(providerId);
+            }
+            
             this.store.setComponentUploading(providerId as any, false);
             this.store.setUploadProgress(providerId, 0);
             this.store.setUploadError(providerId, `Storage error: ${(error as Error).message}`);
@@ -186,6 +213,13 @@ export class RateGenService {
             message: error.message,
             row: error.row
           });
+          
+          // Clear the approximated progress timer on error
+          const timer = this.progressTimers.get(providerId);
+          if (timer) {
+            clearInterval(timer);
+            this.progressTimers.delete(providerId);
+          }
           
           this.store.setComponentUploading(providerId as any, false);
           this.store.setUploadProgress(providerId, 0);
@@ -277,14 +311,56 @@ export class RateGenService {
     const totalIncrements = (estimatedSeconds * 1000) / incrementInterval;
     const progressIncrement = 85 / totalIncrements; // Go from 5% to 90%
     
+    console.log(`[RateGenService] Starting approximated progress timer for ${providerId}:`, {
+      fileSizeMB,
+      estimatedSeconds,
+      progressIncrement,
+      totalIncrements
+    });
+    
     const timer = setInterval(() => {
       currentProgress += progressIncrement;
-      if (currentProgress >= 90) {
-        currentProgress = 90;
+      console.log(`[RateGenService] Timer tick for ${providerId}: ${currentProgress.toFixed(1)}%`);
+      
+      if (currentProgress >= 100) {
+        currentProgress = 100;
+        console.log(`[RateGenService] Timer reached 100% for ${providerId}, clearing timer`);
         clearInterval(timer);
+        this.progressTimers.delete(providerId); // Clean up timer reference
       }
-      this.store.setUploadProgress(providerId, Math.min(currentProgress, 90));
+      
+      try {
+        this.store.setUploadProgress(providerId, Math.min(currentProgress, 100));
+      } catch (error) {
+        console.error(`[RateGenService] Error updating progress for ${providerId}:`, error);
+      }
     }, incrementInterval);
+    
+    // Store timer ID so we can clear it when Papa Parse completes
+    this.progressTimers.set(providerId, timer);
+  }
+
+  /**
+   * Wait for approximated progress to reach minimum threshold
+   */
+  private async waitForMinimumProgress(providerId: string, minProgress: number): Promise<void> {
+    return new Promise((resolve) => {
+      const checkProgress = () => {
+        // Get current progress from store
+        const currentProgress = this.store.getUploadProgress ? this.store.getUploadProgress(providerId) : 0;
+        console.log(`[RateGenService] Waiting for progress - current: ${currentProgress}%, target: ${minProgress}%`);
+        
+        if (currentProgress >= minProgress) {
+          console.log(`[RateGenService] Minimum progress ${minProgress}% reached, proceeding with completion`);
+          resolve();
+        } else {
+          // Check again in 100ms
+          setTimeout(checkProgress, 100);
+        }
+      };
+      
+      checkProgress();
+    });
   }
 
   /**
@@ -327,9 +403,7 @@ export class RateGenService {
       }
     }
 
-    console.log('[DEBUG] All chunks stored, saving to memory');
-    // Also store in memory for quick access
-    this.store.storeInMemoryData(providerId, data);
+    console.log('[DEBUG] All chunks stored successfully');
   }
 
   /**
@@ -391,12 +465,13 @@ export class RateGenService {
    */
   private async getUniquePrefixes(): Promise<string[]> {
     const allPrefixes = new Set<string>();
+    const { loadFromDexieDB } = this.dexieDB;
     
-    // Get prefixes from in-memory data for all providers
-    this.store.providerList.forEach(provider => {
-      const data = this.store.getInMemoryData(provider.id);
-      data.forEach(record => allPrefixes.add(record.prefix));
-    });
+    // Get all data from IndexedDB
+    const allData = await loadFromDexieDB<RateGenRecord>(DBName.RATE_GEN, 'providers');
+    
+    // Get unique prefixes from all providers
+    allData.forEach(record => allPrefixes.add(record.prefix));
     
     return Array.from(allPrefixes);
   }
@@ -409,16 +484,27 @@ export class RateGenService {
     config: LCRConfig
   ): Promise<GeneratedRateRecord[]> {
     const results: GeneratedRateRecord[] = [];
+    const { loadFromDexieDB } = this.dexieDB;
+    
+    // Load all data once for this batch
+    const allData = await loadFromDexieDB<RateGenRecord>(DBName.RATE_GEN, 'providers');
+    
+    // Create a map for quick lookup by prefix
+    const dataByPrefix = new Map<string, RateGenRecord[]>();
+    allData.forEach(record => {
+      if (!dataByPrefix.has(record.prefix)) {
+        dataByPrefix.set(record.prefix, []);
+      }
+      dataByPrefix.get(record.prefix)!.push(record);
+    });
     
     for (const prefix of prefixes) {
       // Get rates for this prefix from all providers
+      const records = dataByPrefix.get(prefix) || [];
       const providerRates: Array<{ rate: number; intraRate: number; indeterminateRate: number; provider: string }> = [];
       
-      this.store.providerList.forEach(provider => {
-        const data = this.store.getInMemoryData(provider.id);
-        const record = data.find(r => r.prefix === prefix);
-        
-        if (record) {
+      records.forEach(record => {
+        if (config.providerIds.includes(record.providerId)) {
           providerRates.push({
             rate: record.rateInter,
             intraRate: record.rateIntra,
@@ -530,7 +616,6 @@ export class RateGenService {
       
       // Update store
       this.store.removeProvider(providerId);
-      this.store.removeInMemoryData(providerId);
       
     } catch (error) {
       console.error('[RateGenService] Error removing provider:', error);
@@ -543,7 +628,6 @@ export class RateGenService {
    */
   private async removeProviderData(providerId: string): Promise<void> {
     this.store.clearInvalidRowsForProvider(providerId);
-    this.store.removeInMemoryData(providerId);
   }
 
   /**

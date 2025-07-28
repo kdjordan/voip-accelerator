@@ -28,6 +28,9 @@ export interface ProviderInfo {
   rowCount: number;         // Number of valid records
   invalidRowCount: number;  // Number of invalid records
   uploadDate: Date;
+  avgInterRate: number;     // Average interstate rate
+  avgIntraRate: number;     // Average intrastate rate
+  avgIndeterminateRate: number; // Average indeterminate rate
 }
 
 export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'Average';
@@ -36,7 +39,9 @@ export interface LCRConfig {
   name?: string;
   strategy: LCRStrategy;
   markupPercentage: number;
+  markupFixed?: number;
   providerIds: string[];
+  effectiveDate?: Date;
 }
 
 export interface GeneratedRateDeck {

@@ -27,7 +27,6 @@ export const useRateGenStore = defineStore('rateGen', {
     // Data management
     tempFiles: {} as Record<string, File>,
     invalidRows: {} as Record<string, InvalidRateGenRow[]>,
-    inMemoryData: {} as Record<string, RateGenRecord[]>,
     
     // UI states
     showUploadComponents: true,
@@ -73,11 +72,6 @@ export const useRateGenStore = defineStore('rateGen', {
       return !!(rows && rows.length > 0);
     },
     
-    getInMemoryData: (state) => (providerId: string): RateGenRecord[] => 
-      state.inMemoryData[providerId] || [],
-    
-    getInMemoryDataCount: (state) => (providerId: string): number => 
-      state.inMemoryData[providerId]?.length || 0,
     
     // Configuration getters
     availableLCRStrategies: (state) => {
@@ -95,6 +89,8 @@ export const useRateGenStore = defineStore('rateGen', {
     // Generation getters
     isProcessing: (state): boolean => 
       state.isGenerating || Object.values(state.uploadingComponents).some(Boolean),
+    
+    hasGeneratedRates: (state): boolean => state.generatedDeckId !== null,
   },
 
   actions: {
@@ -109,7 +105,6 @@ export const useRateGenStore = defineStore('rateGen', {
       delete this.uploadErrors[providerId];
       delete this.tempFiles[providerId];
       delete this.invalidRows[providerId];
-      delete this.inMemoryData[providerId];
       
       // Reset generation state if we have less than 2 providers
       if (Object.keys(this.providers).length < 2) {
@@ -124,7 +119,6 @@ export const useRateGenStore = defineStore('rateGen', {
       this.uploadErrors = {};
       this.tempFiles = {};
       this.invalidRows = {};
-      this.inMemoryData = {};
       this.currentConfig = null;
       this.generatedDeck = null;
       this.showUploadComponents = true;
@@ -136,7 +130,8 @@ export const useRateGenStore = defineStore('rateGen', {
     },
     
     setUploadProgress(providerId: string, progress: number) {
-      const clampedProgress = Math.max(0, Math.min(100, progress));
+      // Allow progress above 100% for metadata stages (102%, 110%)
+      const clampedProgress = Math.max(0, progress);
       this.uploadProgress[providerId] = clampedProgress;
     },
     
@@ -172,13 +167,6 @@ export const useRateGenStore = defineStore('rateGen', {
       delete this.invalidRows[providerId];
     },
     
-    storeInMemoryData(providerId: string, data: RateGenRecord[]) {
-      this.inMemoryData[providerId] = data;
-    },
-    
-    removeInMemoryData(providerId: string) {
-      delete this.inMemoryData[providerId];
-    },
     
     // Configuration actions
     setConfig(config: LCRConfig) {
@@ -200,10 +188,12 @@ export const useRateGenStore = defineStore('rateGen', {
     
     setGeneratedDeck(deck: GeneratedRateDeck) {
       this.generatedDeck = deck;
+      this.generatedDeckId = deck.id;
     },
     
     clearGeneratedDeck() {
       this.generatedDeck = null;
+      this.generatedDeckId = null;
       this.generationProgress = 0;
     },
     
