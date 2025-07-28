@@ -23,6 +23,7 @@ export const useRateGenStore = defineStore('rateGen', {
     generationProgress: 0,
     currentConfig: null as LCRConfig | null,
     generatedDeck: null as GeneratedRateDeck | null,
+    generatedDeckId: null as string | null,
     
     // Data management
     tempFiles: {} as Record<string, File>,

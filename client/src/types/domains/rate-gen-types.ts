@@ -49,6 +49,7 @@ export interface GeneratedRateDeck {
   name: string;
   lcrStrategy: LCRStrategy;
   markupPercentage: number;
+  markupFixed?: number;
   providerIds: string[];
   generatedDate: Date;
   rowCount: number;

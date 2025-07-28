@@ -8,9 +8,7 @@ import type { GeneratedRateDeck, LCRConfig } from '@/types/domains/rate-gen-type
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
 import RateGenHeader from '@/components/rate-gen/RateGenHeader.vue';
 import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
-// import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
-// import RateGenAnalytics from '@/components/rate-gen/RateGenAnalytics.vue';
-// import RateGenExportModal from '@/components/rate-gen/RateGenExportModal.vue';
+import RateGenResults from '@/components/rate-gen/RateGenResults.vue';
 
 const store = useRateGenStore();
 const service = new RateGenService();
@@ -18,7 +16,6 @@ const service = new RateGenService();
 // State
 const activeTab = ref<'upload' | 'settings' | 'results'>('upload');
 const showExportModal = ref(false);
-const generatedDeck = ref<GeneratedRateDeck | null>(null);
 
 // Computed
 const canGenerate = computed(() => 
@@ -32,24 +29,25 @@ const handleGenerateRates = async () => {
   if (!store.currentConfig) return;
   
   try {
-    generatedDeck.value = await service.generateRateDeck(store.currentConfig);
+    await service.generateRateDeck(store.currentConfig);
     // Note: The tab will auto-switch to results via the watch in RateGenHeader
+    // and the store will be updated by the service
   } catch (error) {
     store.addError(`Failed to generate rates: ${(error as Error).message}`);
   }
 };
 
 const handleExport = async (format: 'csv' | 'excel') => {
-  if (!generatedDeck.value) return;
+  if (!store.generatedDeck) return;
   
   try {
-    const blob = await service.exportRateDeck(generatedDeck.value.id, format);
+    const blob = await service.exportRateDeck(store.generatedDeck.id, format);
     
     // Trigger download
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rate-deck-${generatedDeck.value.lcrStrategy}-${Date.now()}.${format}`;
+    a.download = `rate-deck-${store.generatedDeck.lcrStrategy}-${Date.now()}.${format}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -121,34 +119,16 @@ onUnmounted(() => {
         </div>
 
         <!-- Results Tab Content -->
-        <div v-if="activeTab === 'results' && generatedDeck">
-          <h2 class="text-xl font-semibold text-fbWhite mb-4">
-            Generated Rate Deck
+        <div v-if="activeTab === 'results' && store.generatedDeck">
+          <h2 class="text-xl font-semibold text-fbWhite mb-6">
+            Generated Rate Deck: {{ store.generatedDeck.name }}
           </h2>
           
-          <!-- Placeholder for RateGenAnalytics component -->
-          <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-            <p class="text-gray-400 mb-4">RateGenAnalytics component will be implemented here</p>
-            <p class="text-sm text-gray-500">
-              Analytics and preview of generated rate deck
-            </p>
-            
-            <!-- Basic deck info -->
-            <div class="mt-4 text-sm text-gray-300">
-              <p>Strategy: {{ generatedDeck.lcrStrategy }}</p>
-              <p>Total Rates: {{ generatedDeck.rowCount }}</p>
-              <p>Generated: {{ generatedDeck.generatedDate.toLocaleString() }}</p>
-              
-              <!-- Export Button -->
-              <button
-                @click="showExportModal = true"
-                class="mt-4 px-4 py-2 bg-accent text-fbBlack rounded-lg hover:bg-accent/80 
-                       transition-colors font-medium"
-              >
-                Export Rate Deck
-              </button>
-            </div>
-          </div>
+          <!-- Rate Generation Results Component -->
+          <RateGenResults 
+            :deck="store.generatedDeck" 
+            @export="handleExport"
+          />
         </div>
       </div>
     </div>
@@ -170,7 +150,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Export Modal Placeholder -->
-    <div v-if="showExportModal && generatedDeck" 
+    <div v-if="showExportModal && store.generatedDeck" 
          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-lg font-semibold text-fbWhite mb-4">Export Rate Deck</h3>

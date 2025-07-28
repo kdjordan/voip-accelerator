@@ -437,12 +437,14 @@ export class RateGenService {
         name: config.name || `Generated Deck ${new Date().toLocaleString()}`,
         lcrStrategy: config.strategy,
         markupPercentage: config.markupPercentage,
+        markupFixed: config.markupFixed,
         providerIds: config.providerIds,
         generatedDate: new Date(),
         rowCount: generatedRates.length
       };
 
-      // Store generated rates temporarily for export
+      // Store generated rates in IndexedDB and temporarily for export
+      await this.storeGeneratedRates(deck.id, generatedRates);
       this.temporaryGeneratedRates = generatedRates;
       
       this.store.setGeneratedDeck(deck);
@@ -532,16 +534,18 @@ export class RateGenService {
         config.strategy
       );
       
-      // Apply markup
-      const markupMultiplier = 1 + (config.markupPercentage / 100);
+      // Apply markup (either percentage or fixed)
+      const finalInterRate = this.applyMarkupToRate(selectedInterRate.rate, config);
+      const finalIntraRate = this.applyMarkupToRate(selectedIntraRate.rate, config);
+      const finalIndeterminateRate = this.applyMarkupToRate(selectedIndeterminateRate.rate, config);
       
       results.push({
         prefix,
-        rate: this.applyMarkup(selectedInterRate.rate, markupMultiplier),
-        intrastate: this.applyMarkup(selectedIntraRate.rate, markupMultiplier),
-        indeterminate: this.applyMarkup(selectedIndeterminateRate.rate, markupMultiplier),
+        rate: finalInterRate,
+        intrastate: finalIntraRate,
+        indeterminate: finalIndeterminateRate,
         selectedProvider: selectedInterRate.provider,
-        appliedMarkup: config.markupPercentage
+        appliedMarkup: config.markupFixed ? config.markupFixed : config.markupPercentage
       });
     }
     
@@ -588,11 +592,63 @@ export class RateGenService {
   }
 
   /**
-   * Apply markup to rate
+   * Apply markup to rate based on config (percentage or fixed)
+   */
+  private applyMarkupToRate(rate: number, config: LCRConfig): number {
+    let finalRate: number;
+    
+    if (config.markupFixed && config.markupFixed > 0) {
+      // Fixed markup - add the fixed amount
+      finalRate = rate + config.markupFixed;
+    } else {
+      // Percentage markup - multiply by percentage
+      finalRate = rate * (1 + config.markupPercentage / 100);
+    }
+    
+    // Round to 6 decimal places (typical for telecom rates)
+    return Math.round(finalRate * 1000000) / 1000000;
+  }
+
+  /**
+   * Apply markup to rate (deprecated - kept for backward compatibility)
    */
   private applyMarkup(rate: number, markupMultiplier: number): number {
     // Round to 6 decimal places (typical for telecom rates)
     return Math.round(rate * markupMultiplier * 1000000) / 1000000;
+  }
+
+  /**
+   * Store generated rates in IndexedDB
+   */
+  private async storeGeneratedRates(deckId: string, rates: GeneratedRateRecord[]): Promise<void> {
+    try {
+      const { storeInDexieDB } = this.dexieDB;
+      
+      // Transform rates to include deckId and generatedDate
+      const ratesWithMetadata = rates.map(rate => ({
+        ...rate,
+        deckId,
+        generatedDate: new Date()
+      }));
+      
+      // Store in chunks for better performance
+      const CHUNK_SIZE = 5000;
+      for (let i = 0; i < ratesWithMetadata.length; i += CHUNK_SIZE) {
+        const chunk = ratesWithMetadata.slice(i, i + CHUNK_SIZE);
+        await storeInDexieDB(
+          chunk,
+          DBName.RATE_GEN_RESULTS,
+          'generated_rates',
+          { replaceExisting: false }
+        );
+      }
+      
+      console.log(`[RateGenService] Stored ${rates.length} generated rates for deck ${deckId}`);
+      
+    } catch (error) {
+      console.error('[RateGenService] Error storing generated rates:', error);
+      throw new Error('Failed to store generated rates');
+    }
   }
 
   /**
