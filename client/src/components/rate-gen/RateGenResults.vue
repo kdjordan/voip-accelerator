@@ -1,28 +1,28 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4 sm:space-y-6">
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-        <h3 class="text-sm font-medium text-gray-400 mb-1">Total Rates Generated</h3>
-        <p class="text-2xl font-bold text-fbWhite">{{ deck.rowCount.toLocaleString() }}</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div class="bg-gray-700/50 rounded-lg p-3 sm:p-4 border border-gray-600">
+        <h3 class="text-xs sm:text-sm font-medium text-gray-400 mb-1">Total Rates Generated</h3>
+        <p class="text-xl sm:text-2xl font-bold text-fbWhite">{{ deck.rowCount.toLocaleString() }}</p>
       </div>
       
-      <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-        <h3 class="text-sm font-medium text-gray-400 mb-1">LCR Strategy</h3>
-        <p class="text-lg font-semibold text-accent">{{ getStrategyLabel(deck.lcrStrategy) }}</p>
+      <div class="bg-gray-700/50 rounded-lg p-3 sm:p-4 border border-gray-600">
+        <h3 class="text-xs sm:text-sm font-medium text-gray-400 mb-1">LCR Strategy</h3>
+        <p class="text-base sm:text-lg font-semibold text-accent">{{ getStrategyLabel(deck.lcrStrategy) }}</p>
       </div>
       
-      <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-        <h3 class="text-sm font-medium text-gray-400 mb-1">Markup Applied</h3>
-        <p class="text-lg font-semibold text-fbWhite">
+      <div class="bg-gray-700/50 rounded-lg p-3 sm:p-4 border border-gray-600 sm:col-span-2 lg:col-span-1">
+        <h3 class="text-xs sm:text-sm font-medium text-gray-400 mb-1">Markup Applied</h3>
+        <p class="text-base sm:text-lg font-semibold text-fbWhite">
           {{ deck.markupPercentage > 0 ? `${deck.markupPercentage}%` : `$${deck.markupFixed?.toFixed(4) || '0.0000'}` }}
         </p>
       </div>
     </div>
 
     <!-- Provider Summary -->
-    <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-      <h3 class="text-lg font-semibold text-fbWhite mb-3">Providers Used</h3>
+    <div class="bg-gray-700/50 rounded-lg p-3 sm:p-4 border border-gray-600">
+      <h3 class="text-base sm:text-lg font-semibold text-fbWhite mb-2 sm:mb-3">Providers Used</h3>
       <div class="flex flex-wrap gap-2">
         <BaseBadge 
           v-for="provider in providerNames"
@@ -36,14 +36,14 @@
     </div>
 
     <!-- Rate Preview Table -->
-    <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-fbWhite">Rate Preview</h3>
-        <p class="text-sm text-gray-400">Showing first 20 rates</p>
+    <div class="bg-gray-700/50 rounded-lg p-3 sm:p-4 border border-gray-600">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 space-y-1 sm:space-y-0">
+        <h3 class="text-base sm:text-lg font-semibold text-fbWhite">Rate Preview</h3>
+        <p class="text-xs sm:text-sm text-gray-400">Showing first 20 rates</p>
       </div>
       
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+      <div class="overflow-x-auto -mx-3 sm:-mx-4">
+        <table class="w-full text-xs sm:text-sm min-w-[600px]">
           <thead>
             <tr class="border-b border-gray-600">
               <th class="text-left py-2 text-gray-300 font-medium">Prefix</th>
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Export Actions -->
-    <div class="flex justify-center gap-4">
+    <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
       <BaseButton
         variant="primary"
         :icon="ArrowDownTrayIcon"
@@ -97,7 +97,7 @@
     </div>
 
     <!-- Analytics Section (Expandable) -->
-    <div v-if="showAnalytics" class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+    <div v-if="showAnalytics" class="bg-gray-700/50 rounded-lg p-3 sm:p-4 border border-gray-600">
       <h3 class="text-lg font-semibold text-fbWhite mb-4">Rate Analytics</h3>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

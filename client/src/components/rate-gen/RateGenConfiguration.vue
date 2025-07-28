@@ -10,6 +10,8 @@
         v-model="config.name"
         type="text"
         placeholder="Enter rate deck name"
+        aria-label="Rate deck name"
+        aria-required="true"
         class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite 
                placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-1 
                focus:ring-accent transition-colors"
@@ -24,6 +26,8 @@
       <select
         id="lcr-strategy"
         v-model="config.strategy"
+        aria-label="LCR strategy selection"
+        aria-required="true"
         class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite 
                focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent 
                transition-colors cursor-pointer"
@@ -84,6 +88,8 @@
           :placeholder="config.markupType === 'percentage' ? 'Enter percentage (e.g., 10)' : 'Enter amount (e.g., 0.01)'"
           :step="config.markupType === 'percentage' ? '1' : '0.0001'"
           :min="0"
+          :aria-label="config.markupType === 'percentage' ? 'Markup percentage' : 'Markup fixed amount'"
+          aria-required="true"
           class="w-full pl-8 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg 
                  text-fbWhite placeholder-gray-400 focus:outline-none focus:border-accent 
                  focus:ring-1 focus:ring-accent transition-colors"
@@ -101,6 +107,7 @@
         v-model="config.effectiveDate"
         type="date"
         :min="minDate"
+        aria-label="Effective date"
         class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite 
                focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent 
                transition-colors cursor-pointer"
@@ -108,7 +115,7 @@
     </div>
 
     <!-- Summary Card -->
-    <div class="mt-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+    <div class="mt-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600" role="region" aria-label="Configuration summary">
       <h3 class="text-sm font-medium text-fbWhite mb-2">Configuration Summary</h3>
       <ul class="space-y-1 text-sm text-gray-300">
         <li v-if="config.name">

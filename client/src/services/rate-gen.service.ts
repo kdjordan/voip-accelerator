@@ -201,7 +201,8 @@ export class RateGenService {
             
             this.store.setComponentUploading(providerId as any, false);
             this.store.setUploadProgress(providerId, 0);
-            this.store.setUploadError(providerId, `Storage error: ${(error as Error).message}`);
+            const userMessage = this.getUserFriendlyError(error as Error, 'storage');
+            this.store.setUploadError(providerId, userMessage);
             reject(error);
           }
         },
@@ -223,7 +224,10 @@ export class RateGenService {
           
           this.store.setComponentUploading(providerId as any, false);
           this.store.setUploadProgress(providerId, 0);
-          this.store.setUploadError(providerId, `CSV parsing error: ${error.message}`);
+          const userMessage = error.message.includes('Too few fields') 
+            ? 'Invalid file format. Please ensure your CSV has the required columns (prefix, rate, provider).'
+            : `File parsing error: ${error.message}`;
+          this.store.setUploadError(providerId, userMessage);
           reject(new Error(`CSV parsing error: ${error.message}`));
         }
       });
@@ -407,6 +411,35 @@ export class RateGenService {
   }
 
   /**
+   * Convert technical errors to user-friendly messages
+   */
+  private getUserFriendlyError(error: Error, context: 'storage' | 'parse' | 'generate'): string {
+    const message = error.message.toLowerCase();
+    
+    if (message.includes('quota') || message.includes('storage')) {
+      return 'Storage limit reached. Please clear some browser data or reduce the file size.';
+    }
+    
+    if (message.includes('network') || message.includes('offline')) {
+      return 'Network connection error. Please check your internet connection.';
+    }
+    
+    if (message.includes('permission')) {
+      return 'Permission denied. Please check your browser settings.';
+    }
+    
+    if (context === 'storage') {
+      return `Unable to save data: ${error.message}`;
+    }
+    
+    if (context === 'parse') {
+      return `Invalid file format: ${error.message}`;
+    }
+    
+    return `Operation failed: ${error.message}`;
+  }
+
+  /**
    * Generate rate deck using LCR strategy
    */
   async generateRateDeck(config: LCRConfig): Promise<GeneratedRateDeck> {
@@ -455,7 +488,10 @@ export class RateGenService {
 
     } catch (error) {
       console.error('[RateGenService] Error generating rate deck:', error);
-      this.store.addError(`Failed to generate rates: ${(error as Error).message}`);
+      const userMessage = (error as Error).message.includes('QuotaExceededError')
+        ? 'Not enough storage space. Please clear some browser data or use a smaller dataset.'
+        : `Rate generation failed: ${(error as Error).message}`;
+      this.store.addError(userMessage);
       throw error;
     } finally {
       this.store.setGenerating(false);
