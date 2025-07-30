@@ -18,9 +18,8 @@
           @click="$emit('tab-change', 'settings')"
         />
         
-        <!-- Generated Rates Tab (Only visible after actual generation) -->
+        <!-- Generated Rates Tab (Always visible) -->
         <ReportTabButton
-          v-if="store.generatedDeck !== null"
           label="Generated Rates"
           :is-active="activeTab === 'results'"
           @click="$emit('tab-change', 'results')"
@@ -28,7 +27,7 @@
 
         <!-- Right side actions -->
         <div class="ml-auto flex items-center space-x-2">
-          <!-- Clear All Button -->
+          <!-- Clear Providers Button -->
           <BaseButton
             v-if="store.providerCount > 0"
             variant="destructive"
@@ -36,7 +35,7 @@
             @click="showResetConfirmModal = true"
             :is-loading="isResetting"
           >
-            Clear All
+            Clear Providers
           </BaseButton>
         </div>
       </div>
@@ -46,11 +45,13 @@
   <!-- Reset Confirmation Modal -->
   <ConfirmationModal
     v-model="showResetConfirmModal"
-    title="Clear All Rate Generation Data"
-    :message="`This will permanently delete all uploaded provider rate decks and any generated rates.
+    title="Clear Provider Data"
+    :message="`This will permanently delete all uploaded provider rate decks.
+
+Your generated rate decks will be preserved.
 
 This action cannot be undone.`"
-    confirm-button-text="Clear All Data"
+    confirm-button-text="Clear Provider Data"
     cancel-button-text="Cancel"
     :loading="isResetting"
     @confirm="confirmReset"
@@ -84,16 +85,7 @@ const isResetting = ref(false);
 const showResetConfirmModal = ref(false);
 
 
-// Watch for 2+ files uploaded and auto-switch to settings
-watch(
-  () => store.providerCount,
-  (count) => {
-    if (count >= 2 && props.activeTab === 'upload') {
-      console.log('[RateGenHeader] 2+ providers uploaded, switching to Settings tab');
-      emit('tab-change', 'settings');
-    }
-  }
-);
+// Removed automatic tab switching - let users control navigation
 
 // Watch for generation completion and auto-switch to results
 watch(
@@ -110,15 +102,15 @@ watch(
 async function confirmReset() {
   isResetting.value = true;
   try {
-    console.log('[RateGenHeader] Clearing all rate generation data');
+    console.log('[RateGenHeader] Clearing provider data only');
     
-    // Clear all data through service
-    await service.clearAllData();
+    // Clear only provider data, keep generated decks
+    await service.clearProvidersOnly();
     
     // Return to upload tab
     emit('tab-change', 'upload');
     
-    console.log('[RateGenHeader] Reset completed successfully');
+    console.log('[RateGenHeader] Provider data cleared successfully');
     showResetConfirmModal.value = false;
   } catch (error) {
     console.error('[RateGenHeader] Error during reset:', error);

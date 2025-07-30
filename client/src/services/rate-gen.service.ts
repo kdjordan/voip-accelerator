@@ -476,6 +476,9 @@ export class RateGenService {
         rowCount: generatedRates.length
       };
 
+      // Store deck metadata first
+      await this.storeDeckMetadata(deck);
+      
       // Store generated rates in IndexedDB and temporarily for export
       await this.storeGeneratedRates(deck.id, generatedRates);
       this.temporaryGeneratedRates = generatedRates;
@@ -483,6 +486,23 @@ export class RateGenService {
       this.store.setGeneratedDeck(deck);
       
       console.log(`[RateGenService] Generated ${generatedRates.length} rates using ${config.strategy} strategy`);
+      
+      // Log sample calculations for validation
+      const sampleRates = generatedRates.slice(0, 3);
+      console.log('[RateGenService] Sample LCR calculations for validation:', sampleRates.map(r => ({
+        prefix: r.prefix,
+        strategy: r.debug?.strategy,
+        finalRate: r.rate,
+        selectedProvider: r.selectedProvider,
+        providerInputs: r.debug?.providerRates?.map(p => `${p.provider}: $${p.interRate.toFixed(6)}`),
+        selectedRate: r.debug?.selectedRates?.inter,
+        markup: r.debug?.appliedMarkup
+      })));
+      
+      // Run validation tests if in development mode
+      if (import.meta.env.DEV) {
+        this.runLCRValidationTests(config).catch(console.warn);
+      }
       
       return deck;
 
@@ -581,7 +601,31 @@ export class RateGenService {
         intrastate: finalIntraRate,
         indeterminate: finalIndeterminateRate,
         selectedProvider: selectedInterRate.provider,
-        appliedMarkup: config.markupFixed ? config.markupFixed : config.markupPercentage
+        appliedMarkup: config.markupFixed ? config.markupFixed : config.markupPercentage,
+        // Debug information for LCR validation
+        debug: {
+          strategy: config.strategy,
+          providerRates: providerRates.map(p => ({ 
+            provider: p.provider, 
+            interRate: p.rate,
+            intraRate: p.intraRate,
+            indeterminateRate: p.indeterminateRate
+          })),
+          selectedRates: {
+            inter: { rate: selectedInterRate.rate, provider: selectedInterRate.provider },
+            intra: { rate: selectedIntraRate.rate, provider: selectedIntraRate.provider },
+            indeterminate: { rate: selectedIndeterminateRate.rate, provider: selectedIndeterminateRate.provider }
+          },
+          appliedMarkup: {
+            type: config.markupFixed ? 'fixed' : 'percentage',
+            value: config.markupFixed || config.markupPercentage,
+            originalRates: {
+              inter: selectedInterRate.rate,
+              intra: selectedIntraRate.rate,
+              indeterminate: selectedIndeterminateRate.rate
+            }
+          }
+        }
       });
     }
     
@@ -614,12 +658,17 @@ export class RateGenService {
       case 'LCR3':
         return sorted[2] || sorted[1] || sorted[0];
         
+      case 'LCR4':
+        return sorted[3] || sorted[2] || sorted[1] || sorted[0];
+        
+      case 'LCR5':
+        return sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
+        
       case 'Average':
-        const top3 = sorted.slice(0, 3);
-        const avgRate = top3.reduce((sum, r) => sum + r.rate, 0) / top3.length;
+        const avgRate = sorted.reduce((sum, r) => sum + r.rate, 0) / sorted.length;
         return {
           rate: avgRate,
-          provider: top3.map(r => r.provider).join(', ')
+          provider: sorted.map(r => r.provider).join(', ')
         };
         
       default:
@@ -651,6 +700,44 @@ export class RateGenService {
   private applyMarkup(rate: number, markupMultiplier: number): number {
     // Round to 6 decimal places (typical for telecom rates)
     return Math.round(rate * markupMultiplier * 1000000) / 1000000;
+  }
+
+  /**
+   * Store deck metadata in IndexedDB
+   */
+  private async storeDeckMetadata(deck: GeneratedRateDeck): Promise<void> {
+    try {
+      const { storeInDexieDB } = this.dexieDB;
+      
+      // Store deck metadata
+      const deckMetadata = {
+        id: deck.id,
+        name: deck.name,
+        strategy: deck.lcrStrategy,
+        rowCount: deck.rowCount,
+        providerCount: deck.providerIds.length,
+        markupType: deck.markupFixed ? 'fixed' : 'percentage',
+        markupValue: deck.markupFixed || deck.markupPercentage,
+        generatedAt: deck.generatedDate,
+        providerNames: this.store.providerList
+          .filter(p => deck.providerIds.includes(p.id))
+          .map(p => p.name)
+          .join(', ')
+      };
+      
+      await storeInDexieDB(
+        [deckMetadata],
+        DBName.RATE_GEN_DECKS,
+        'rate_decks',
+        { replaceExisting: false }
+      );
+      
+      console.log(`[RateGenService] Stored deck metadata for ${deck.id}`);
+      
+    } catch (error) {
+      console.error('[RateGenService] Error storing deck metadata:', error);
+      throw new Error('Failed to store rate deck metadata');
+    }
   }
 
   /**
@@ -738,11 +825,49 @@ export class RateGenService {
    */
   private exportAsCSV(rates: GeneratedRateRecord[]): Blob {
     const csv = Papa.unparse(rates, {
-      columns: ['prefix', 'rate', 'intrastate', 'indeterminate', 'selectedProvider', 'appliedMarkup'],
+      columns: ['prefix', 'rate', 'intrastate', 'indeterminate'],
       header: true
     });
     
     return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  }
+
+  /**
+   * Run LCR validation tests in development mode
+   */
+  private async runLCRValidationTests(config: LCRConfig): Promise<void> {
+    try {
+      const { LCR_TEST_CASES, validateTestCase, manualLCRCalculation } = await import('@/utils/lcr-validation-tests');
+      
+      console.log('[RateGenService] Running LCR validation tests...');
+      let passedTests = 0;
+      let totalTests = 0;
+      
+      for (const testCase of LCR_TEST_CASES) {
+        // Skip tests that don't match current strategy
+        if (testCase.strategy !== config.strategy) continue;
+        
+        totalTests++;
+        const manual = manualLCRCalculation(testCase);
+        const validation = validateTestCase(testCase, {
+          selectedProvider: manual.selectedProvider,
+          selectedRate: manual.selectedRate,
+          finalRate: manual.finalRate
+        });
+        
+        if (validation.passed) {
+          passedTests++;
+          console.log(`✓ ${testCase.name}: PASSED`);
+        } else {
+          console.warn(`✗ ${testCase.name}: FAILED`, validation.errors);
+        }
+      }
+      
+      console.log(`[RateGenService] LCR validation: ${passedTests}/${totalTests} tests passed`);
+      
+    } catch (error) {
+      console.warn('[RateGenService] Could not run LCR validation tests:', error);
+    }
   }
 
   /**
@@ -759,6 +884,116 @@ export class RateGenService {
     } catch (error) {
       console.error('[RateGenService] Error clearing data:', error);
       throw new Error('Failed to clear all data');
+    }
+  }
+
+  /**
+   * Get all generated rate decks
+   */
+  async getAllDecks(): Promise<any[]> {
+    try {
+      const { loadFromDexieDB } = this.dexieDB;
+      const decks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
+      return decks.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+    } catch (error) {
+      console.error('[RateGenService] Error loading decks:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Load a specific rate deck
+   */
+  async loadDeck(deckId: string): Promise<void> {
+    try {
+      const { loadFromDexieDB } = this.dexieDB;
+      
+      // Load deck metadata
+      const decks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
+      const deckMetadata = decks.find((d: any) => d.id === deckId);
+      
+      if (!deckMetadata) {
+        throw new Error('Rate deck not found');
+      }
+      
+      // Load the rates for this deck
+      const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
+      const deckRates = allRates.filter((r: any) => r.deckId === deckId);
+      
+      // Update temporary rates for export
+      this.temporaryGeneratedRates = deckRates;
+      
+      // Create GeneratedRateDeck from metadata
+      const deck: GeneratedRateDeck = {
+        id: deckMetadata.id,
+        name: deckMetadata.name,
+        lcrStrategy: deckMetadata.strategy,
+        markupPercentage: deckMetadata.markupType === 'percentage' ? deckMetadata.markupValue : 0,
+        markupFixed: deckMetadata.markupType === 'fixed' ? deckMetadata.markupValue : 0,
+        providerIds: [], // We'll need to store this in metadata if needed
+        generatedDate: new Date(deckMetadata.generatedAt),
+        rowCount: deckMetadata.rowCount
+      };
+      
+      this.store.setGeneratedDeck(deck);
+      
+      console.log(`[RateGenService] Loaded deck ${deckId} with ${deckRates.length} rates`);
+      
+    } catch (error) {
+      console.error('[RateGenService] Error loading deck:', error);
+      throw new Error('Failed to load rate deck');
+    }
+  }
+
+  /**
+   * Delete a specific rate deck
+   */
+  async deleteDeck(deckId: string): Promise<void> {
+    try {
+      const { getDexieDB } = this.dexieDB;
+      
+      // Delete deck metadata from decks database
+      const decksDB = getDexieDB(DBName.RATE_GEN_DECKS);
+      if (!decksDB) {
+        throw new Error('Decks database not initialized');
+      }
+      await decksDB.table('rate_decks').delete(deckId);
+      
+      // Delete all rates for this deck from results database
+      const resultsDB = getDexieDB(DBName.RATE_GEN_RESULTS);
+      if (!resultsDB) {
+        throw new Error('Results database not initialized');
+      }
+      await resultsDB.table('generated_rates').where('deckId').equals(deckId).delete();
+      
+      console.log(`[RateGenService] Deleted deck ${deckId}`);
+      
+      // If this was the currently loaded deck, clear it from the store
+      if (this.store.generatedDeck?.id === deckId) {
+        this.store.clearGeneratedDeck();
+        this.temporaryGeneratedRates = [];
+      }
+      
+    } catch (error) {
+      console.error('[RateGenService] Error deleting deck:', error);
+      throw new Error('Failed to delete rate deck');
+    }
+  }
+
+  /**
+   * Clear only provider data, keeping generated decks
+   */
+  async clearProvidersOnly(): Promise<void> {
+    try {
+      const { clearDexieTable } = this.dexieDB;
+      await clearDexieTable(DBName.RATE_GEN, 'providers');
+      
+      // Reset provider-related store data but keep generated decks
+      this.store.clearAllProviders();
+      
+    } catch (error) {
+      console.error('[RateGenService] Error clearing providers:', error);
+      throw new Error('Failed to clear provider data');
     }
   }
 }

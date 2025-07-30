@@ -119,35 +119,19 @@ onUnmounted(() => {
           </h2>
           
           <!-- Rate Generation Configuration Component -->
-          <div class="max-w-2xl">
-            <RateGenConfiguration @generate-rates="handleGenerateRates" />
-          </div>
+          <RateGenConfiguration @generate-rates="handleGenerateRates" />
         </div>
 
         <!-- Results Tab Content -->
         <div v-if="activeTab === 'results'">
-          <div v-if="store.generatedDeck">
-            <h2 class="text-xl font-semibold text-fbWhite mb-6">
-              Generated Rate Deck: {{ store.generatedDeck.name }}
-            </h2>
-            
-            <!-- Rate Generation Results Component -->
-            <RateGenResults 
-              :deck="store.generatedDeck" 
-              @export="handleExport"
-            />
-          </div>
-          <div v-else class="text-center py-12">
-            <p class="text-gray-400 mb-4">No rates have been generated yet.</p>
-            <BaseButton
-              variant="primary"
-              size="standard"
-              @click="activeTab = 'settings'"
-              aria-label="Navigate to rate generation settings"
-            >
-              Go to Settings
-            </BaseButton>
-          </div>
+          <h2 class="text-xl font-semibold text-fbWhite mb-6">
+            Rate Generation History
+          </h2>
+          
+          <!-- Rate Generation Results Component -->
+          <RateGenResults 
+            @generate-new="activeTab = 'settings'"
+          />
         </div>
       </div>
     </div>
@@ -196,53 +180,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Rate Generation Progress Modal -->
-    <div v-if="store.isGenerating" 
-         class="fixed inset-0 bg-black/75 flex items-center justify-center z-50"
-         role="dialog"
-         aria-modal="true"
-         aria-labelledby="progress-modal-title"
-         aria-describedby="progress-modal-desc">
-      <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
-        <h3 id="progress-modal-title" class="text-xl font-semibold text-fbWhite mb-6 text-center">
-          Generating Rate Deck
-        </h3>
-        
-        <div class="space-y-4">
-          <!-- Progress Bar -->
-          <div class="relative">
-            <div class="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
-              <div 
-                class="h-full bg-accent transition-all duration-300 ease-out rounded-full"
-                :style="{ width: `${store.generationProgress}%` }"
-              >
-                <div class="h-full bg-white/20 animate-pulse"></div>
-              </div>
-            </div>
-            <p class="text-center mt-2 text-sm text-gray-400">
-              {{ store.generationProgress.toFixed(0) }}%
-            </p>
-          </div>
-          
-          <!-- Status Message -->
-          <div id="progress-modal-desc" class="text-center">
-            <p class="text-gray-300">
-              Processing {{ store.providerCount }} provider{{ store.providerCount > 1 ? 's' : '' }}...
-            </p>
-            <p class="text-sm text-gray-400 mt-1">
-              This may take a few moments for large datasets
-            </p>
-          </div>
-          
-          <!-- Animated Loading Dots -->
-          <div class="flex justify-center space-x-2 mt-6">
-            <div class="w-2 h-2 bg-accent rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-            <div class="w-2 h-2 bg-accent rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-            <div class="w-2 h-2 bg-accent rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 

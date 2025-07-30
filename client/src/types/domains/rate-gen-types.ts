@@ -33,7 +33,7 @@ export interface ProviderInfo {
   avgIndeterminateRate: number; // Average indeterminate rate
 }
 
-export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'Average';
+export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5' | 'Average';
 
 export interface LCRConfig {
   name?: string;
@@ -63,6 +63,29 @@ export interface GeneratedRateRecord {
   indeterminate: number;    // Final indeterminate rate with markup
   selectedProvider?: string; // Provider name that was selected
   appliedMarkup: number;    // Markup percentage applied
+  debug?: {                 // Debug information for LCR validation
+    strategy: LCRStrategy;
+    providerRates: Array<{
+      provider: string;
+      interRate: number;
+      intraRate: number;
+      indeterminateRate: number;
+    }>;
+    selectedRates: {
+      inter: { rate: number; provider: string };
+      intra: { rate: number; provider: string };
+      indeterminate: { rate: number; provider: string };
+    };
+    appliedMarkup: {
+      type: 'fixed' | 'percentage';
+      value: number;
+      originalRates: {
+        inter: number;
+        intra: number;
+        indeterminate: number;
+      };
+    };
+  };
 }
 
 export interface RateGenAnalytics {

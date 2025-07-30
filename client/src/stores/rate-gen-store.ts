@@ -24,6 +24,7 @@ export const useRateGenStore = defineStore('rateGen', {
     currentConfig: null as LCRConfig | null,
     generatedDeck: null as GeneratedRateDeck | null,
     generatedDeckId: null as string | null,
+    generatedDecks: [] as GeneratedRateDeck[], // Track multiple decks
     
     // Data management
     tempFiles: {} as Record<string, File>,
@@ -190,12 +191,27 @@ export const useRateGenStore = defineStore('rateGen', {
     setGeneratedDeck(deck: GeneratedRateDeck) {
       this.generatedDeck = deck;
       this.generatedDeckId = deck.id;
+      // Add to list of decks if not already there
+      if (!this.generatedDecks.find(d => d.id === deck.id)) {
+        this.generatedDecks.push(deck);
+      }
     },
     
     clearGeneratedDeck() {
       this.generatedDeck = null;
       this.generatedDeckId = null;
       this.generationProgress = 0;
+    },
+    
+    setGeneratedDecks(decks: GeneratedRateDeck[]) {
+      this.generatedDecks = decks;
+    },
+    
+    removeGeneratedDeck(deckId: string) {
+      this.generatedDecks = this.generatedDecks.filter(d => d.id !== deckId);
+      if (this.generatedDeckId === deckId) {
+        this.clearGeneratedDeck();
+      }
     },
     
     // Error management

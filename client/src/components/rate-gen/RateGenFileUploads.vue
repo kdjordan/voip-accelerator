@@ -5,6 +5,7 @@ import { RateGenService } from '@/services/rate-gen.service';
 import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import RateGenProgressIndicator from '@/components/rate-gen/RateGenProgressIndicator.vue';
+import TestDataLoader from '@/components/rate-gen/TestDataLoader.vue';
 import Papa from 'papaparse';
 import { USColumnRole } from '@/types/domains/us-types';
 import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/types/domains/rate-gen-types';
@@ -417,6 +418,9 @@ const formatRate = (rate: number | undefined): string => {
 
 <template>
   <div class="flex flex-col gap-8 w-full">
+    <!-- Test Data Loader (Development Only) -->
+    <TestDataLoader />
+    
     <!-- Upload Zones Container -->
     <div class="overflow-x-auto">
       <div class="bg-gray-800 rounded-lg p-6">
@@ -450,7 +454,7 @@ const formatRate = (rate: number | undefined): string => {
                     </button>
                   </div>
                   <div class="text-xs text-gray-400">
-                    <p>{{ getProviderForZone('provider1')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ (getProviderForZone('provider1')?.rowCount || getProviderForZone('provider1')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider1')?.fileName }}</p>
                     <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider1')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider1')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider1')?.avgIndeterminateRate) }}</p>
                   </div>
@@ -543,7 +547,7 @@ const formatRate = (rate: number | undefined): string => {
                     </button>
                   </div>
                   <div class="text-xs text-gray-400">
-                    <p>{{ getProviderForZone('provider3')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ (getProviderForZone('provider3')?.rowCount || getProviderForZone('provider3')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider3')?.fileName }}</p>
                     <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider3')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider3')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider3')?.avgIndeterminateRate) }}</p>
                   </div>
@@ -633,7 +637,7 @@ const formatRate = (rate: number | undefined): string => {
                     </button>
                   </div>
                   <div class="text-xs text-gray-400">
-                    <p>{{ getProviderForZone('provider5')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ (getProviderForZone('provider5')?.rowCount || getProviderForZone('provider5')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider5')?.fileName }}</p>
                     <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider5')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider5')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider5')?.avgIndeterminateRate) }}</p>
                   </div>
@@ -727,7 +731,7 @@ const formatRate = (rate: number | undefined): string => {
                     </button>
                   </div>
                   <div class="text-xs text-gray-400">
-                    <p>{{ getProviderForZone('provider2')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ (getProviderForZone('provider2')?.rowCount || getProviderForZone('provider2')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider2')?.fileName }}</p>
                     <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider2')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider2')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider2')?.avgIndeterminateRate) }}</p>
                   </div>
@@ -816,7 +820,7 @@ const formatRate = (rate: number | undefined): string => {
                     </button>
                   </div>
                   <div class="text-xs text-gray-400">
-                    <p>{{ getProviderForZone('provider4')?.rowCount.toLocaleString() }} rates uploaded</p>
+                    <p>{{ (getProviderForZone('provider4')?.rowCount || getProviderForZone('provider4')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
                     <p>{{ getProviderForZone('provider4')?.fileName }}</p>
                     <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider4')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider4')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider4')?.avgIndeterminateRate) }}</p>
                   </div>

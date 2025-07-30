@@ -1,10 +1,12 @@
 <template>
-  <div class="space-y-6">
-    <!-- Rate Deck Name -->
-    <div>
-      <label for="rate-deck-name" class="block text-sm font-medium text-fbWhite mb-2">
-        Rate Deck Name
-      </label>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+    <!-- Left Column: Configuration Settings -->
+    <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600 space-y-6">
+      <!-- Rate Deck Name -->
+      <div>
+        <label for="rate-deck-name" class="block text-sm font-medium text-fbWhite mb-2">
+          Rate Deck Name
+        </label>
       <input
         id="rate-deck-name"
         v-model="config.name"
@@ -18,30 +20,32 @@
       />
     </div>
 
-    <!-- LCR Strategy -->
-    <div>
-      <label for="lcr-strategy" class="block text-sm font-medium text-fbWhite mb-2">
-        LCR Strategy
-      </label>
-      <select
-        id="lcr-strategy"
-        v-model="config.strategy"
-        aria-label="LCR strategy selection"
-        aria-required="true"
-        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite 
-               focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent 
-               transition-colors cursor-pointer"
-      >
-        <option value="">Select LCR Strategy</option>
-        <option value="LCR1">LCR 1 (Cheapest Provider)</option>
-        <option value="LCR2">LCR 2 (Second Cheapest)</option>
-        <option value="LCR3" v-if="providerCount >= 3">LCR 3 (Third Cheapest)</option>
-        <option value="Average" v-if="providerCount >= 3">Average of Top 3</option>
-      </select>
+      <!-- LCR Depth -->
+      <div>
+        <label for="lcr-depth" class="block text-sm font-medium text-fbWhite mb-2">
+          LCR Depth
+        </label>
+        <select
+          id="lcr-depth"
+          v-model="config.strategy"
+          aria-label="LCR depth selection"
+          aria-required="true"
+          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite 
+                 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent 
+                 transition-colors cursor-pointer"
+        >
+          <option value="">Select LCR Depth</option>
+          <option value="LCR1">LCR 1</option>
+          <option value="LCR2" v-if="providerCount >= 2">LCR 2</option>
+          <option value="LCR3" v-if="providerCount >= 3">LCR 3</option>
+          <option value="LCR4" v-if="providerCount >= 4">LCR 4</option>
+          <option value="LCR5" v-if="providerCount >= 5">LCR 5</option>
+          <option value="Average" v-if="providerCount >= 3">Average of All {{ providerCount }}</option>
+        </select>
     </div>
 
-    <!-- Markup Configuration -->
-    <div>
+      <!-- Markup Configuration -->
+      <div>
       <label class="block text-sm font-medium text-fbWhite mb-2">
         Markup Configuration
       </label>
@@ -97,8 +101,8 @@
       </div>
     </div>
 
-    <!-- Effective Date -->
-    <div>
+      <!-- Effective Date -->
+      <div>
       <label for="effective-date" class="block text-sm font-medium text-fbWhite mb-2">
         Effective Date
       </label>
@@ -112,41 +116,82 @@
                focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent 
                transition-colors cursor-pointer"
       />
+      </div>
+
     </div>
 
-    <!-- Summary Card -->
-    <div class="mt-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600" role="region" aria-label="Configuration summary">
-      <h3 class="text-sm font-medium text-fbWhite mb-2">Configuration Summary</h3>
-      <ul class="space-y-1 text-sm text-gray-300">
+    <!-- Right Column: Configuration Summary -->
+    <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600" role="region" aria-label="Configuration summary">
+      <h3 class="text-lg font-semibold text-fbWhite mb-4">Configuration Summary</h3>
+      <ul class="space-y-3 text-sm text-gray-300">
         <li v-if="config.name">
-          <span class="text-gray-400">Name:</span> {{ config.name }}
+          <span class="block text-gray-400 text-xs uppercase tracking-wide mb-1">Rate Deck Name</span>
+          <span class="text-fbWhite font-medium">{{ config.name }}</span>
         </li>
         <li v-if="config.strategy">
-          <span class="text-gray-400">Strategy:</span> {{ getStrategyLabel(config.strategy) }}
+          <span class="block text-gray-400 text-xs uppercase tracking-wide mb-1">LCR Depth</span>
+          <span class="text-accent font-medium">{{ config.strategy }}</span>
         </li>
         <li v-if="config.markupValue">
-          <span class="text-gray-400">Markup:</span> 
-          {{ config.markupType === 'percentage' ? `${config.markupValue}%` : `$${config.markupValue.toFixed(4)}` }}
+          <span class="block text-gray-400 text-xs uppercase tracking-wide mb-1">Markup</span>
+          <span class="text-fbWhite font-medium">
+            {{ config.markupType === 'percentage' ? `${config.markupValue}%` : `$${config.markupValue.toFixed(4)}` }}
+          </span>
         </li>
-        <li v-if="config.effectiveDate">
-          <span class="text-gray-400">Effective:</span> {{ formatDate(config.effectiveDate) }}
+        <li>
+          <span class="block text-gray-400 text-xs uppercase tracking-wide mb-1">Effective Date</span>
+          <span class="text-fbWhite font-medium">{{ formatDate(config.effectiveDate) }}</span>
+        </li>
+        <li>
+          <div class="bg-gray-800/50 rounded-lg overflow-hidden">
+            <!-- Provider Table Header -->
+            <div class="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-700/50 text-xs font-medium text-gray-400 uppercase tracking-wide">
+              <div>Provider</div>
+              <div class="text-right">Inter</div>
+              <div class="text-right">Intra</div>
+              <div class="text-right">Indeterm</div>
+            </div>
+            <!-- Provider Table Rows -->
+            <div v-for="provider in store.providerList" :key="provider.id" 
+                 class="grid grid-cols-4 gap-2 px-3 py-2 border-t border-gray-700/50 text-xs hover:bg-gray-700/30 transition-colors">
+              <div class="text-fbWhite font-medium truncate" :title="provider.name">
+                {{ provider.name }}
+              </div>
+              <div class="text-right text-gray-300 font-mono">
+                ${{ formatRate(provider.avgInterRate) }}
+              </div>
+              <div class="text-right text-gray-300 font-mono">
+                ${{ formatRate(provider.avgIntraRate) }}
+              </div>
+              <div class="text-right text-gray-300 font-mono">
+                ${{ formatRate(provider.avgIndeterminateRate) }}
+              </div>
+            </div>
+          </div>
         </li>
       </ul>
+      
+      <!-- Inline Generation Progress -->
+      <InlineGenerationProgress 
+        :is-generating="store.isGenerating"
+        :progress="store.generationProgress"
+        :provider-count="providerCount"
+      />
     </div>
+  </div>
 
-    <!-- Generate Button -->
-    <div class="mt-6 flex justify-end">
-      <BaseButton
-        variant="primary"
-        size="standard"
-        :icon="ArrowRightIcon"
-        :disabled="!isConfigValid"
-        :loading="store.isGenerating"
-        @click="$emit('generate-rates')"
-      >
-        {{ store.isGenerating ? `Generating... ${store.generationProgress.toFixed(0)}%` : 'Generate' }}
-      </BaseButton>
-    </div>
+  <!-- Generate Button - Outside the grid -->
+  <div class="flex justify-end mt-6">
+    <BaseButton
+      variant="primary"
+      size="standard"
+      :icon="ArrowRightIcon"
+      :disabled="!isConfigValid"
+      :loading="store.isGenerating"
+      @click="$emit('generate-rates')"
+    >
+      {{ store.isGenerating ? `Generating... ${store.generationProgress.toFixed(0)}%` : 'Generate' }}
+    </BaseButton>
   </div>
 </template>
 
@@ -156,6 +201,7 @@ import { useRateGenStore } from '@/stores/rate-gen-store';
 import type { LCRConfig } from '@/types/domains/rate-gen-types';
 import { ArrowRightIcon } from '@heroicons/vue/24/outline';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import InlineGenerationProgress from '@/components/rate-gen/InlineGenerationProgress.vue';
 
 // Emits
 const emit = defineEmits<{
@@ -164,13 +210,20 @@ const emit = defineEmits<{
 
 const store = useRateGenStore();
 
+// Helper to get date 7 days from now
+const getDefaultEffectiveDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().split('T')[0];
+};
+
 // Local configuration state
 const config = ref({
   name: '',
   strategy: '',
   markupType: 'percentage' as 'percentage' | 'fixed',
   markupValue: 0,
-  effectiveDate: new Date().toISOString().split('T')[0], // Today's date
+  effectiveDate: getDefaultEffectiveDate(), // 7 days from today
 });
 
 // Computed
@@ -199,23 +252,21 @@ watch(config, (newConfig) => {
   }
 }, { deep: true });
 
-// Helper functions
-function getStrategyLabel(strategy: string): string {
-  const labels: Record<string, string> = {
-    'LCR1': 'Cheapest Provider',
-    'LCR2': 'Second Cheapest',
-    'LCR3': 'Third Cheapest',
-    'Average': 'Average of Top 3',
-  };
-  return labels[strategy] || strategy;
-}
+// Helper functions (getStrategyLabel removed as it's no longer needed)
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  // Parse the date string manually to avoid timezone issues
+  const [year, month, day] = dateString.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   return date.toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'short', 
     day: 'numeric' 
   });
+}
+
+function formatRate(rate: number): string {
+  if (!rate || rate === 0) return '0.000000';
+  return rate.toFixed(6);
 }
 </script>

@@ -213,6 +213,7 @@ export const DBName = {
   AZ_PRICING_COMPARISON: 'az_pricing_comparison_db',
   RATE_GEN: 'rate_gen_db',
   RATE_GEN_RESULTS: 'rate_gen_results_db',
+  RATE_GEN_DECKS: 'rate_gen_decks_db',
 } as const;
 
 export type DBNameType = (typeof DBName)[keyof typeof DBName];
@@ -236,7 +237,8 @@ export type SchemaDBType =
   | typeof DBName.US_PRICING_COMPARISON
   | typeof DBName.AZ_PRICING_COMPARISON
   | typeof DBName.RATE_GEN
-  | typeof DBName.RATE_GEN_RESULTS;
+  | typeof DBName.RATE_GEN_RESULTS
+  | typeof DBName.RATE_GEN_DECKS;
 
 export const DBSchemas = {
   // [DBName.AZ]: '++id, destName, dialCode, rate',
@@ -279,6 +281,7 @@ export const DBSchemas = {
   `,
   [DBName.RATE_GEN]: 'providers: ++id, prefix, providerId, providerName, fileName, rateInter, rateIntra, rateIndeterminate, uploadDate',
   [DBName.RATE_GEN_RESULTS]: 'generated_rates: ++id, deckId, prefix, rate, intrastate, indeterminate, selectedProvider, appliedMarkup, generatedDate',
+  [DBName.RATE_GEN_DECKS]: 'rate_decks: &id, name, strategy, rowCount, providerCount, markupType, markupValue, generatedAt, providerNames',
 } as const;
 
 // Define schemas for dynamically created tables (e.g., filename-based)
@@ -298,7 +301,8 @@ export function isSchemaSupported(dbName: DBNameType): dbName is SchemaDBType {
     dbName === DBName.US_PRICING_COMPARISON ||
     dbName === DBName.AZ_PRICING_COMPARISON ||
     dbName === DBName.RATE_GEN ||
-    dbName === DBName.RATE_GEN_RESULTS
+    dbName === DBName.RATE_GEN_RESULTS ||
+    dbName === DBName.RATE_GEN_DECKS
   );
 }
 
