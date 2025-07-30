@@ -88,6 +88,38 @@ export interface GeneratedRateRecord {
   };
 }
 
+// Export Types
+export interface RateGenExportOptions {
+  // Format options
+  npanxxFormat: 'combined' | 'split';     // 213555 vs 213|555
+  includeCountryCode: boolean;             // Include +1 prefix
+  
+  // Geographic columns
+  includeStateColumn: boolean;             // Add state column
+  includeCountryColumn: boolean;           // Add country column
+  includeRegionColumn: boolean;            // Add region column
+  
+  // Filtering
+  selectedCountries: string[];             // Countries to exclude
+  excludeCountries: boolean;               // Exclusion mode
+  
+  // Provider information
+  includeProviderColumn: boolean;          // Show selected provider
+  includeCalculationDetails: boolean;      // Debug information
+}
+
+// Enhanced rate record with geographic data
+export interface EnhancedGeneratedRate extends GeneratedRateRecord {
+  npa?: string;           // First 3 digits of prefix
+  state?: string;         // State/Province name
+  stateCode?: string;     // State/Province code
+  country?: string;       // Country name
+  countryCode?: string;   // Country code
+  region?: string;        // Geographic region
+  deckId?: string;        // Associated deck ID
+  generatedDate?: Date;   // When rate was generated
+}
+
 export interface RateGenAnalytics {
   generationId: string;
   strategy: LCRStrategy;

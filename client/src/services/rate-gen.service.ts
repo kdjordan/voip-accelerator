@@ -10,8 +10,12 @@ import type {
   GeneratedRateDeck,
   GeneratedRateRecord,
   InvalidRateGenRow,
-  LCRStrategy
+  LCRStrategy,
+  RateGenExportOptions,
+  EnhancedGeneratedRate
 } from '@/types/domains/rate-gen-types';
+
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 interface RateGenStore {
   setComponentUploading: (componentId: any, isUploading: boolean) => void;
@@ -812,23 +816,168 @@ export class RateGenService {
   /**
    * Export rate deck as CSV
    */
-  async exportRateDeck(deckId: string, format: 'csv' | 'excel'): Promise<Blob> {
+  /**
+   * Export generated rate deck with options
+   */
+  async exportRateDeck(deckId: string, format: 'csv' | 'excel', options?: RateGenExportOptions): Promise<Blob> {
+    console.log(`[RateGenService] Exporting deck ${deckId} as ${format}`);
+    
+    // Load rates from IndexedDB instead of using temporary storage
+    const rates = await this.loadRatesForDeck(deckId);
+    
+    if (rates.length === 0) {
+      throw new Error('No rates found for this deck');
+    }
+    
+    console.log(`[RateGenService] Found ${rates.length} rates for export`);
+    
     if (format === 'csv') {
-      return this.exportAsCSV(this.temporaryGeneratedRates);
+      return this.exportAsCSV(rates, options);
     } else {
       throw new Error('Excel export not yet implemented');
     }
   }
 
   /**
-   * Export generated rates as CSV
+   * Load rates for a specific deck from IndexedDB
    */
-  private exportAsCSV(rates: GeneratedRateRecord[]): Blob {
-    const csv = Papa.unparse(rates, {
-      columns: ['prefix', 'rate', 'intrastate', 'indeterminate'],
+  private async loadRatesForDeck(deckId: string): Promise<GeneratedRateRecord[]> {
+    try {
+      const { loadFromDexieDB } = this.dexieDB;
+      const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
+      
+      // Filter rates for this specific deck
+      const deckRates = allRates.filter((rate: any) => rate.deckId === deckId);
+      
+      console.log(`[RateGenService] Loaded ${deckRates.length} rates for deck ${deckId}`);
+      return deckRates;
+    } catch (error) {
+      console.error('[RateGenService] Error loading rates:', error);
+      throw new Error('Failed to load rates from database');
+    }
+  }
+
+  /**
+   * Enrich rates with geographic data from LERG
+   */
+  private enrichWithGeographicData(rates: GeneratedRateRecord[]): EnhancedGeneratedRate[] {
+    const lergStore = useLergStoreV2();
+    
+    return rates.map(rate => {
+      // Extract NPA from prefix (first 3 digits)
+      const npa = rate.prefix?.substring(0, 3);
+      
+      // O(1) LERG lookup
+      const npaInfo = npa ? lergStore.getNPAInfo(npa) : null;
+      
+      return {
+        ...rate,
+        npa,
+        state: npaInfo?.state_province_name,
+        stateCode: npaInfo?.state_province_code,
+        country: npaInfo?.country_name || 'United States',
+        countryCode: npaInfo?.country_code || 'US',
+        region: npaInfo?.region
+      };
+    });
+  }
+
+  /**
+   * Filter rates by country if specified in options
+   */
+  private filterRatesByCountry(rates: EnhancedGeneratedRate[], options: RateGenExportOptions): EnhancedGeneratedRate[] {
+    // If no countries are selected for exclusion, return all records
+    if (!options.excludeCountries || options.selectedCountries.length === 0) {
+      return rates;
+    }
+    
+    // Filter out excluded countries
+    return rates.filter(rate => {
+      const country = rate.countryCode || 'US';
+      return !options.selectedCountries.includes(country);
+    });
+  }
+
+  /**
+   * Export generated rates as CSV with options
+   */
+  private exportAsCSV(rates: GeneratedRateRecord[], options?: RateGenExportOptions): Blob {
+    // Enrich with geographic data if needed
+    const shouldEnrichGeo = options?.includeStateColumn || options?.includeCountryColumn || options?.includeRegionColumn;
+    const enrichedRates = shouldEnrichGeo ? this.enrichWithGeographicData(rates) : rates;
+    
+    // Filter by country if specified
+    const filteredRates = options ? this.filterRatesByCountry(enrichedRates as EnhancedGeneratedRate[], options) : enrichedRates;
+    
+    // Build headers based on options
+    let headers: string[] = [];
+    
+    // NPANXX format
+    if (options?.npanxxFormat === 'split') {
+      headers.push('npa', 'nxx');
+    } else {
+      const prefixHeader = options?.includeCountryCode ? 'npanxx_with_country' : 'prefix';
+      headers.push(prefixHeader);
+    }
+    
+    // Rate columns
+    headers.push('rate', 'intrastate', 'indeterminate');
+    
+    // Optional columns
+    if (options?.includeProviderColumn) {
+      headers.push('selectedProvider');
+    }
+    if (options?.includeStateColumn) {
+      headers.push('state');
+    }
+    if (options?.includeCountryColumn) {
+      headers.push('country');
+    }
+    if (options?.includeRegionColumn) {
+      headers.push('region');
+    }
+    
+    // Transform data for CSV export
+    const csvData = filteredRates.map(rate => {
+      const row: any = {};
+      
+      // Handle NPANXX format
+      if (options?.npanxxFormat === 'split') {
+        row.npa = rate.prefix?.substring(0, 3) || '';
+        row.nxx = rate.prefix?.substring(3, 6) || '';
+      } else {
+        const prefixHeader = options?.includeCountryCode ? 'npanxx_with_country' : 'prefix';
+        row[prefixHeader] = options?.includeCountryCode ? `1${rate.prefix}` : rate.prefix;
+      }
+      
+      // Rate columns
+      row.rate = rate.rate;
+      row.intrastate = rate.intrastate;
+      row.indeterminate = rate.indeterminate;
+      
+      // Optional columns
+      if (options?.includeProviderColumn) {
+        row.selectedProvider = rate.selectedProvider;
+      }
+      if (options?.includeStateColumn && 'state' in rate) {
+        row.state = (rate as EnhancedGeneratedRate).state;
+      }
+      if (options?.includeCountryColumn && 'country' in rate) {
+        row.country = (rate as EnhancedGeneratedRate).country;
+      }
+      if (options?.includeRegionColumn && 'region' in rate) {
+        row.region = (rate as EnhancedGeneratedRate).region;
+      }
+      
+      return row;
+    });
+    
+    const csv = Papa.unparse(csvData, {
+      columns: headers,
       header: true
     });
     
+    console.log(`[RateGenService] Generated CSV with ${filteredRates.length} rows, ${headers.length} columns`);
     return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   }
 

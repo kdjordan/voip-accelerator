@@ -136,6 +136,14 @@
       :deck="validatingDeck"
       @close="showValidationModal = false"
     />
+    
+    <!-- Export Modal -->
+    <RateGenExportModal
+      :open="showExportModal"
+      :deck="exportingDeck"
+      :on-export="handleExportWithOptions"
+      @update:open="showExportModal = $event"
+    />
   </div>
 </template>
 
@@ -143,7 +151,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import { RateGenService } from '@/services/rate-gen.service';
-import type { GeneratedRateDeck } from '@/types/domains/rate-gen-types';
+import type { GeneratedRateDeck, RateGenExportOptions } from '@/types/domains/rate-gen-types';
 import { 
   ArrowDownTrayIcon, 
   TrashIcon,
@@ -152,6 +160,7 @@ import {
 import BaseButton from '@/components/shared/BaseButton.vue';
 import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 import LCRValidationModal from './LCRValidationModal.vue';
+import RateGenExportModal from './RateGenExportModal.vue';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
 
@@ -172,6 +181,8 @@ const deletingDeckId = ref<string | null>(null);
 const deletingDeckName = ref('');
 const showValidationModal = ref(false);
 const validatingDeck = ref<GeneratedRateDeck | null>(null);
+const showExportModal = ref(false);
+const exportingDeck = ref<GeneratedRateDeck | null>(null);
 const deckProviderStats = ref<Map<string, Map<string, number>>>(new Map());
 
 // Computed
@@ -214,10 +225,30 @@ async function loadAllDecks() {
 
 
 
-// Handle deck export
-async function handleExportDeck(deckId: string) {
+// Handle deck export - open export modal
+function handleExportDeck(deckId: string) {
+  const deck = allDecks.value.find(d => d.id === deckId);
+  if (deck) {
+    // Convert to GeneratedRateDeck format
+    exportingDeck.value = {
+      id: deck.id,
+      name: deck.name,
+      lcrStrategy: deck.strategy,
+      markupPercentage: deck.markupType === 'percentage' ? deck.markupValue : 0,
+      markupFixed: deck.markupType === 'fixed' ? deck.markupValue : 0,
+      providerIds: [],
+      generatedDate: new Date(deck.generatedAt),
+      rowCount: deck.rowCount
+    };
+    showExportModal.value = true;
+  }
+}
+
+// Handle export with options
+async function handleExportWithOptions(deckId: string, options: RateGenExportOptions) {
   try {
-    const blob = await service.exportRateDeck(deckId, 'csv');
+    console.log('[RateGenResults] Exporting deck with options:', deckId, options);
+    const blob = await service.exportRateDeck(deckId, 'csv', options);
     
     // Trigger download
     const url = URL.createObjectURL(blob);
@@ -229,8 +260,12 @@ async function handleExportDeck(deckId: string) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    console.log('[RateGenResults] Export completed successfully');
   } catch (error) {
+    console.error('[RateGenResults] Export failed:', error);
     store.addError('Failed to export rate deck');
+    throw error; // Re-throw to let modal handle it
   }
 }
 
