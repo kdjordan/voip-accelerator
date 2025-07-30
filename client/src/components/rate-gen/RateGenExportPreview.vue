@@ -21,13 +21,12 @@
             <!-- Dynamic headers based on format options -->
             <th v-if="formatOptions.npanxxFormat === 'split'" class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">NPA</th>
             <th v-if="formatOptions.npanxxFormat === 'split'" class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">NXX</th>
-            <th v-if="formatOptions.npanxxFormat === 'combined'" class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-              {{ formatOptions.includeCountryCode ? 'NPANXX (+1)' : 'NPANXX' }}
-            </th>
+            <th v-if="formatOptions.npanxxFormat === 'combined'" class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">NPANXX</th>
             
             <th class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Interstate</th>
             <th class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Intrastate</th>
             <th class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Indeterminate</th>
+            <th class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Effective Date</th>
             
             <th v-if="formatOptions.includeProviderColumn" class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Provider</th>
             <th v-if="formatOptions.includeStateColumn" class="text-left py-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wide">State</th>
@@ -42,7 +41,9 @@
             class="border-b border-gray-700/30 hover:bg-fbWhite/5"
           >
             <!-- NPANXX columns -->
-            <td v-if="formatOptions.npanxxFormat === 'split'" class="py-2 px-3 text-fbWhite font-mono">{{ row.prefix?.substring(0, 3) || '---' }}</td>
+            <td v-if="formatOptions.npanxxFormat === 'split'" class="py-2 px-3 text-fbWhite font-mono">
+              {{ formatOptions.includeCountryCode ? `1${row.prefix?.substring(0, 3) || ''}` : (row.prefix?.substring(0, 3) || '---') }}
+            </td>
             <td v-if="formatOptions.npanxxFormat === 'split'" class="py-2 px-3 text-fbWhite font-mono">{{ row.prefix?.substring(3, 6) || '---' }}</td>
             <td v-if="formatOptions.npanxxFormat === 'combined'" class="py-2 px-3 text-fbWhite font-mono">
               {{ formatOptions.includeCountryCode ? `1${row.prefix}` : row.prefix }}
@@ -52,19 +53,20 @@
             <td class="py-2 px-3 text-fbWhite font-mono">${{ formatRate(row.rate) }}</td>
             <td class="py-2 px-3 text-fbWhite font-mono">${{ formatRate(row.intrastate) }}</td>
             <td class="py-2 px-3 text-fbWhite font-mono">${{ formatRate(row.indeterminate) }}</td>
+            <td class="py-2 px-3 text-fbWhite font-mono">{{ formatEffectiveDate() }}</td>
             
             <!-- Optional columns -->
             <td v-if="formatOptions.includeProviderColumn" class="py-2 px-3 text-fbWhite/80 text-xs">{{ row.selectedProvider || 'Unknown' }}</td>
-            <td v-if="formatOptions.includeStateColumn" class="py-2 px-3 text-fbWhite/80 text-xs">{{ row.state || getStateFromNPA(row.prefix) || 'Unknown' }}</td>
-            <td v-if="formatOptions.includeCountryColumn" class="py-2 px-3 text-fbWhite/80 text-xs">{{ row.country || getCountryFromNPA(row.prefix) || 'Unknown' }}</td>
+            <td v-if="formatOptions.includeStateColumn" class="py-2 px-3 text-fbWhite/80 text-xs">{{ row.stateCode || getStateFromNPA(row.prefix) || 'Unknown' }}</td>
+            <td v-if="formatOptions.includeCountryColumn" class="py-2 px-3 text-fbWhite/80 text-xs">{{ row.countryCode || getCountryFromNPA(row.prefix) || 'Unknown' }}</td>
             <td v-if="formatOptions.includeRegionColumn" class="py-2 px-3 text-fbWhite/80 text-xs">{{ row.region || getRegionFromNPA(row.prefix) || 'Unknown' }}</td>
           </tr>
         </tbody>
       </table>
       
       <div class="mt-4 flex items-center justify-between text-xs text-fbWhite/50">
-        <span>Showing {{ Math.min(10, data.length) }} of {{ data.length }} records</span>
-        <span>Actual export will include all {{ data.length.toLocaleString() }} records</span>
+        <span>Showing {{ Math.min(10, props.data.length) }} of {{ (props.totalRecords || 0).toLocaleString() }} records</span>
+        <span>Actual export will include all {{ (props.totalRecords || 0).toLocaleString() }} records</span>
       </div>
     </div>
   </div>
@@ -74,10 +76,11 @@
 import type { RateGenExportOptions } from '@/types/domains/rate-gen-types';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
-defineProps<{
+const props = defineProps<{
   data: any[];
   formatOptions: RateGenExportOptions;
   loading: boolean;
+  totalRecords?: number;
 }>();
 
 const lergStore = useLergStoreV2();
@@ -87,13 +90,18 @@ function formatRate(rate: number | undefined): string {
   return rate.toFixed(6);
 }
 
+function formatEffectiveDate(): string {
+  const now = new Date();
+  return `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}/${now.getFullYear()}`;
+}
+
 // Helper functions for geographic data (will be enhanced when LERG integration is complete)
 function getStateFromNPA(prefix: string | undefined): string | null {
   if (!prefix || prefix.length < 3) return null;
   
   const npa = prefix.substring(0, 3);
   const npaInfo = lergStore.getNPAInfo(npa);
-  return npaInfo?.state_province_name || null;
+  return npaInfo?.state_province_code || null;
 }
 
 function getCountryFromNPA(prefix: string | undefined): string | null {
@@ -101,7 +109,7 @@ function getCountryFromNPA(prefix: string | undefined): string | null {
   
   const npa = prefix.substring(0, 3);
   const npaInfo = lergStore.getNPAInfo(npa);
-  return npaInfo?.country_name || 'United States';
+  return npaInfo?.country_code || 'US';
 }
 
 function getRegionFromNPA(prefix: string | undefined): string | null {

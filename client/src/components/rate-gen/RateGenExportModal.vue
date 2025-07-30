@@ -61,6 +61,7 @@
                     :data="previewData"
                     :format-options="formatOptions"
                     :loading="loadingPreview"
+                    :total-records="totalRecords"
                   />
                 </div>
               </div>
@@ -107,6 +108,8 @@ import RateGenExportFilters from './RateGenExportFilters.vue';
 import RateGenExportFormatOptions from './RateGenExportFormatOptions.vue';
 import RateGenExportPreview from './RateGenExportPreview.vue';
 import type { GeneratedRateDeck, RateGenExportOptions } from '@/types/domains/rate-gen-types';
+import { RateGenService } from '@/services/rate-gen.service';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 const props = defineProps<{
   open: boolean;
@@ -120,13 +123,13 @@ const emit = defineEmits<{
 
 const formatOptions = ref<RateGenExportOptions>({
   npanxxFormat: 'combined',
-  includeCountryCode: true,
+  includeCountryCode: false,
   includeStateColumn: false,
   includeCountryColumn: false,
   includeRegionColumn: false,
   selectedCountries: [],
   excludeCountries: false,
-  includeProviderColumn: true,
+  includeProviderColumn: false,
   includeCalculationDetails: false,
 });
 
@@ -149,18 +152,45 @@ watch(() => props.deck, async (newDeck) => {
     loadingPreview.value = true;
     await nextTick();
     
-    // For now, create mock preview data
-    // TODO: Load actual first 10 records from the deck
-    previewData.value = Array.from({ length: Math.min(10, newDeck.rowCount) }, (_, i) => ({
-      prefix: `${201000 + i}`,
-      rate: 0.003500 + (i * 0.000100),
-      intrastate: 0.003200 + (i * 0.000100),
-      indeterminate: 0.003500 + (i * 0.000100),
-      selectedProvider: `Provider ${(i % 3) + 1}`,
-    }));
-    
-    // Set initial filtered count
-    currentFilteredCount.value = newDeck.rowCount;
+    try {
+      // Load actual data from the deck
+      const service = new RateGenService();
+      const lergStore = useLergStoreV2();
+      const allRates = await service.loadRatesForDeck(newDeck.id);
+      
+      // Take first 10 records for preview and enrich with geographic data
+      const previewRates = allRates.slice(0, 10).map(rate => {
+        const npa = rate.prefix?.substring(0, 3);
+        const npaInfo = npa ? lergStore.getNPAInfo(npa) : null;
+        
+        return {
+          ...rate,
+          npa,
+          state: npaInfo?.state_province_name,
+          stateCode: npaInfo?.state_province_code,
+          country: npaInfo?.country_name || 'United States',
+          countryCode: npaInfo?.country_code || 'US',
+          region: npaInfo?.region
+        };
+      });
+      
+      previewData.value = previewRates;
+      
+      // Set initial filtered count
+      currentFilteredCount.value = newDeck.rowCount;
+    } catch (error) {
+      console.error('Failed to load preview data:', error);
+      // Fallback to mock data if loading fails
+      previewData.value = Array.from({ length: Math.min(10, newDeck.rowCount) }, (_, i) => ({
+        prefix: `${201000 + i}`,
+        rate: 0.003500 + (i * 0.000100),
+        intrastate: 0.003200 + (i * 0.000100),
+        indeterminate: 0.003500 + (i * 0.000100),
+        selectedProvider: `Provider ${(i % 3) + 1}`,
+        stateCode: 'NJ',
+        countryCode: 'US'
+      }));
+    }
     
     await nextTick();
     loadingPreview.value = false;

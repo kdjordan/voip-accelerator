@@ -215,6 +215,7 @@ async function loadAllDecks() {
       markupFixed: d.markupType === 'fixed' ? d.markupValue : 0,
       providerIds: [],
       generatedDate: new Date(d.generatedAt),
+      effectiveDate: d.effectiveDate ? new Date(d.effectiveDate) : undefined,
       rowCount: d.rowCount
     })));
   } catch (error) {
@@ -238,6 +239,7 @@ function handleExportDeck(deckId: string) {
       markupFixed: deck.markupType === 'fixed' ? deck.markupValue : 0,
       providerIds: [],
       generatedDate: new Date(deck.generatedAt),
+      effectiveDate: deck.effectiveDate ? new Date(deck.effectiveDate) : undefined,
       rowCount: deck.rowCount
     };
     showExportModal.value = true;
@@ -280,6 +282,7 @@ function handleValidateDeck(deck: any) {
     markupFixed: deck.markupType === 'fixed' ? deck.markupValue : 0,
     providerIds: [],
     generatedDate: new Date(deck.generatedAt),
+    effectiveDate: deck.effectiveDate ? new Date(deck.effectiveDate) : undefined,
     rowCount: deck.rowCount
   };
   showValidationModal.value = true;

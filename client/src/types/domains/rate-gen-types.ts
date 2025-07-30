@@ -52,6 +52,7 @@ export interface GeneratedRateDeck {
   markupFixed?: number;
   providerIds: string[];
   generatedDate: Date;
+  effectiveDate?: Date;
   rowCount: number;
   exportFormat?: 'csv' | 'excel';
 }

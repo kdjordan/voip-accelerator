@@ -477,6 +477,7 @@ export class RateGenService {
         markupFixed: config.markupFixed,
         providerIds: config.providerIds,
         generatedDate: new Date(),
+        effectiveDate: config.effectiveDate,
         rowCount: generatedRates.length
       };
 
@@ -829,10 +830,16 @@ export class RateGenService {
       throw new Error('No rates found for this deck');
     }
     
+    // Get deck metadata for effective date
+    const { loadFromDexieDB } = this.dexieDB;
+    const decks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
+    const deck = decks.find((d: any) => d.id === deckId);
+    const effectiveDate = deck?.effectiveDate || deck?.generatedAt || new Date();
+    
     console.log(`[RateGenService] Found ${rates.length} rates for export`);
     
     if (format === 'csv') {
-      return this.exportAsCSV(rates, options);
+      return this.exportAsCSV(rates, options, effectiveDate);
     } else {
       throw new Error('Excel export not yet implemented');
     }
@@ -841,7 +848,7 @@ export class RateGenService {
   /**
    * Load rates for a specific deck from IndexedDB
    */
-  private async loadRatesForDeck(deckId: string): Promise<GeneratedRateRecord[]> {
+  async loadRatesForDeck(deckId: string): Promise<GeneratedRateRecord[]> {
     try {
       const { loadFromDexieDB } = this.dexieDB;
       const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
@@ -901,7 +908,7 @@ export class RateGenService {
   /**
    * Export generated rates as CSV with options
    */
-  private exportAsCSV(rates: GeneratedRateRecord[], options?: RateGenExportOptions): Blob {
+  private exportAsCSV(rates: GeneratedRateRecord[], options?: RateGenExportOptions, effectiveDate?: Date): Blob {
     // Enrich with geographic data if needed
     const shouldEnrichGeo = options?.includeStateColumn || options?.includeCountryColumn || options?.includeRegionColumn;
     const enrichedRates = shouldEnrichGeo ? this.enrichWithGeographicData(rates) : rates;
@@ -916,12 +923,15 @@ export class RateGenService {
     if (options?.npanxxFormat === 'split') {
       headers.push('npa', 'nxx');
     } else {
-      const prefixHeader = options?.includeCountryCode ? 'npanxx_with_country' : 'prefix';
-      headers.push(prefixHeader);
+      // Always use 'npanxx' as the header name
+      headers.push('npanxx');
     }
     
-    // Rate columns
-    headers.push('rate', 'intrastate', 'indeterminate');
+    // Rate columns - 'rate' is the interstate rate
+    headers.push('interstate', 'intrastate', 'indeterminate');
+    
+    // Always include effective date
+    headers.push('effective_date');
     
     // Optional columns
     if (options?.includeProviderColumn) {
@@ -943,27 +953,35 @@ export class RateGenService {
       
       // Handle NPANXX format
       if (options?.npanxxFormat === 'split') {
-        row.npa = rate.prefix?.substring(0, 3) || '';
-        row.nxx = rate.prefix?.substring(3, 6) || '';
+        const npa = rate.prefix?.substring(0, 3) || '';
+        const nxx = rate.prefix?.substring(3, 6) || '';
+        row.npa = options?.includeCountryCode ? `1${npa}` : npa;
+        row.nxx = nxx;
       } else {
-        const prefixHeader = options?.includeCountryCode ? 'npanxx_with_country' : 'prefix';
-        row[prefixHeader] = options?.includeCountryCode ? `1${rate.prefix}` : rate.prefix;
+        // Use npanxx as the field name, optionally add country code
+        row.npanxx = options?.includeCountryCode ? `1${rate.prefix}` : rate.prefix;
       }
       
-      // Rate columns
-      row.rate = rate.rate;
+      // Rate columns - 'rate' field is the interstate rate
+      row.interstate = rate.rate;
       row.intrastate = rate.intrastate;
       row.indeterminate = rate.indeterminate;
+      
+      // Effective date - format as MM/DD/YYYY
+      const dateStr = effectiveDate ? 
+        `${(effectiveDate.getMonth() + 1).toString().padStart(2, '0')}/${effectiveDate.getDate().toString().padStart(2, '0')}/${effectiveDate.getFullYear()}` : 
+        `${(new Date().getMonth() + 1).toString().padStart(2, '0')}/${new Date().getDate().toString().padStart(2, '0')}/${new Date().getFullYear()}`;
+      row.effective_date = dateStr;
       
       // Optional columns
       if (options?.includeProviderColumn) {
         row.selectedProvider = rate.selectedProvider;
       }
-      if (options?.includeStateColumn && 'state' in rate) {
-        row.state = (rate as EnhancedGeneratedRate).state;
+      if (options?.includeStateColumn && 'stateCode' in rate) {
+        row.state = (rate as EnhancedGeneratedRate).stateCode;
       }
-      if (options?.includeCountryColumn && 'country' in rate) {
-        row.country = (rate as EnhancedGeneratedRate).country;
+      if (options?.includeCountryColumn && 'countryCode' in rate) {
+        row.country = (rate as EnhancedGeneratedRate).countryCode;
       }
       if (options?.includeRegionColumn && 'region' in rate) {
         row.region = (rate as EnhancedGeneratedRate).region;
