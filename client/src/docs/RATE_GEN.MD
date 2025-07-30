@@ -147,7 +147,18 @@ The Rate Generation feature will enable users to upload multiple provider rate d
 - ✅ **Memory Efficient**: Chunked storage prevents memory overflow
 - ✅ **UI Responsive**: Non-blocking algorithm execution
 
-### ✅ **LATEST SESSION COMPLETION: VALIDATION & DEBUGGING TOOLS**
+### ✅ **LATEST SESSION COMPLETION: UI IMPROVEMENTS & EXPORT PLANNING**
+
+**🎨 UI Polish Complete (July 29, 2025 - 8:30 AM):**
+- ✅ **Removed Preview Section** - Eliminated confusing rate preview table providing no actionable value
+- ✅ **Provider Contribution Percentages** - Shows what % of rates each provider contributed to generated decks
+- ✅ **Enhanced Provider Display** - Stacked provider names with percentages instead of generic count text
+- ✅ **Removed Eyeball/Load Icon** - Eliminated confusing "load deck" functionality that served no purpose
+- ✅ **Renamed Column Headers** - Changed "LCR STRATEGY" to "STRATEGY" to account for Average option
+- ✅ **Improved Button Placement** - Moved Generate New Deck button to bottom right for better visual flow
+- ✅ **Code Cleanup** - Removed ~60 lines of unused code, imports, and state variables
+
+## ✅ **PREVIOUS SESSION COMPLETION: VALIDATION & DEBUGGING TOOLS**
 
 **🔍 LCR Validation System (July 28, 2025 - 4:45 PM):**
 - ✅ **Debug Information Added** - Each generated rate includes full calculation details
@@ -169,9 +180,177 @@ The Rate Generation feature will enable users to upload multiple provider rate d
 - ✅ **Updated RateGenService** - Includes calculation validation and test runner
 - ✅ **Test Case Library** - Known calculation examples for verification
 
-### 🔮 **FUTURE ENHANCEMENTS** (Validated Core Ready)
+## 🚀 **NEXT PRIORITY: PROFESSIONAL EXPORT SYSTEM WITH GEOGRAPHIC DATA**
 
-**Phase 4 - Geographic Data Integration (NEXT PRIORITY):**
+### **Export Issue Identified**
+**Problem**: Current CSV export functionality is returning empty files
+**Root Cause**: Missing export implementation in rate generation service
+**User Need**: Professional export modal matching USRateSheetView.vue functionality with LERG geographic data integration
+
+### **Export System Implementation Plan**
+
+**Phase 1: Core Export Modal (Week 1)**
+1. **Create RateGenExportModal.vue** - Professional modal matching USExportModal.vue design patterns
+2. **Implement Export Service Integration** - Fix empty CSV issue and add proper rate deck export functionality
+3. **Add Format Options Component** - NPANXX format, country code, and column selection options
+4. **Create Export Preview** - Show sample exported data before download
+
+**Phase 2: LERG Geographic Integration (Week 1-2)**
+1. **Geographic Data Enrichment** - Integrate LERG store for state/country data
+2. **Enhanced Rate Record Structure** - Add NPA, state, country fields to generated rates
+3. **Geographic Export Options** - Include/exclude state and country columns
+4. **Geographic Filtering** - Country selection for export (matching US pattern)
+
+**Phase 3: Advanced Export Features (Week 2)**
+1. **Export Filters** - Record count validation and filtering options
+2. **Multiple Format Support** - CSV with future Excel support
+3. **Export Analytics** - Track export usage and optimize performance
+4. **Professional Styling** - Match existing design system exactly
+
+### **Technical Architecture**
+
+**Component Structure:**
+```
+RateGenExportModal.vue (Main modal - reuses USExportModal patterns)
+├── RateGenExportFilters.vue (Active filters summary)
+├── RateGenExportFormatOptions.vue (NPANXX format, geographic columns)
+├── RateGenExportPreview.vue (Sample data preview)
+└── LERG Integration (Geographic data enrichment)
+```
+
+**Service Layer Enhancement:**
+```typescript
+// Enhanced export with geographic data
+interface EnhancedGeneratedRate {
+  prefix: string;
+  rate: number;
+  intrastate: number;
+  indeterminate: number;
+  selectedProvider: string;
+  
+  // NEW: Geographic data from LERG
+  npa?: string;           // First 3 digits of prefix
+  state?: string;         // State/Province name
+  stateCode?: string;     // State/Province code
+  country?: string;       // Country name
+  countryCode?: string;   // Country code
+  region?: string;        // Geographic region
+}
+```
+
+**Export Options Interface:**
+```typescript
+interface RateGenExportOptions {
+  // Format options
+  npanxxFormat: 'combined' | 'split';     // 213555 vs 213|555
+  includeCountryCode: boolean;             // Include +1 prefix
+  
+  // Geographic columns
+  includeStateColumn: boolean;             // Add state column
+  includeCountryColumn: boolean;           // Add country column
+  includeRegionColumn: boolean;            // Add region column
+  
+  // Filtering
+  selectedCountries: string[];             // Countries to exclude
+  excludeCountries: boolean;               // Exclusion mode
+  
+  // Provider information
+  includeProviderColumn: boolean;          // Show selected provider
+  includeCalculationDetails: boolean;      // Debug information
+}
+```
+
+### **LERG Integration Strategy**
+
+**Geographic Lookup Implementation:**
+```typescript
+// In RateGenService.generateRateDeck()
+private async enrichWithGeographicData(rates: GeneratedRateRecord[]): Promise<EnhancedGeneratedRate[]> {
+  const lergStore = useLergStoreV2();
+  
+  return rates.map(rate => {
+    // Extract NPA from prefix (first 3 digits)
+    const npa = rate.prefix.substring(0, 3);
+    
+    // O(1) LERG lookup
+    const npaInfo = lergStore.getNPAInfo(npa);
+    
+    return {
+      ...rate,
+      npa,
+      state: npaInfo?.state_province_name,
+      stateCode: npaInfo?.state_province_code,
+      country: npaInfo?.country_name || 'United States',
+      countryCode: npaInfo?.country_code || 'US',
+      region: npaInfo?.region
+    };
+  });
+}
+```
+
+**Export Service Enhancement:**
+```typescript
+// Enhanced CSV export with geographic options
+async exportRateDeckWithOptions(
+  deckId: string, 
+  options: RateGenExportOptions
+): Promise<Blob> {
+  const rates = await this.getRatesForDeck(deckId);
+  const enhancedRates = await this.enrichWithGeographicData(rates);
+  
+  // Build headers based on options
+  const headers = ['prefix', 'rate', 'intrastate', 'indeterminate'];
+  
+  if (options.includeProviderColumn) headers.push('provider');
+  if (options.includeStateColumn) headers.push('state');
+  if (options.includeCountryColumn) headers.push('country');
+  if (options.includeRegionColumn) headers.push('region');
+  
+  // Filter by country if specified
+  const filteredRates = this.filterRatesByCountry(enhancedRates, options);
+  
+  // Generate CSV with proper formatting
+  return this.generateCSVBlob(filteredRates, headers, options);
+}
+```
+
+### **Files to Create/Modify**
+
+**New Components:**
+1. `/client/src/components/rate-gen/RateGenExportModal.vue`
+2. `/client/src/components/rate-gen/RateGenExportFilters.vue`
+3. `/client/src/components/rate-gen/RateGenExportFormatOptions.vue`
+4. `/client/src/components/rate-gen/RateGenExportPreview.vue`
+
+**Enhanced Services:**
+1. `/client/src/services/rate-gen.service.ts` - Add proper export functionality
+2. `/client/src/types/domains/rate-gen-types.ts` - Add geographic fields and export options
+
+**Integration Points:**
+1. `/client/src/components/rate-gen/RateGenResults.vue` - Replace simple export with modal
+2. `/client/src/stores/rate-gen-store.ts` - Add export state management
+
+### **Success Metrics**
+- ✅ **Export Functionality**: CSV files download with actual rate data
+- ✅ **Geographic Enrichment**: State and country data included when selected
+- ✅ **Professional UI**: Modal matches existing design system
+- ✅ **User Control**: Full customization of export format and columns
+- ✅ **Performance**: Handles large datasets (250K+ records) efficiently
+
+### **Development Timeline**
+- **Week 1**: Core export modal and service fixes
+- **Week 2**: LERG integration and geographic features
+- **Week 3**: Advanced options and polish
+
+### 🔮 **FUTURE ENHANCEMENTS** (Export System Complete)
+
+**Phase 4 - Advanced Export Features:**
+- [ ] **Excel Export** - Add XLSX format support
+- [ ] **Export Templates** - Save common export configurations
+- [ ] **Batch Export** - Export multiple decks simultaneously
+- [ ] **Export Analytics** - Track export usage and performance
+
+**Phase 5 - Geographic Data Integration (Integrated into Export System):**
 - [ ] **LERG Integration** - Add state/country/region data to generated rates
 - [ ] **Export Options** - Include/exclude geographic columns in CSV
 - [ ] **Geographic Grouping** - Sort by state/country in exports
