@@ -5,14 +5,14 @@
       <!-- Status Text -->
       <div class="flex justify-between items-center text-sm">
         <span class="text-gray-400">{{ progressText }}</span>
-        <span class="text-accent font-medium">{{ Math.min(100, Math.round(progress)) }}%</span>
+        <span class="font-medium" style="color: hsl(160, 100%, 40%);">{{ Math.min(100, Math.round(progress)) }}%</span>
       </div>
       
       <!-- Progress Bar -->
       <div class="w-full bg-gray-700/50 rounded-full h-2.5 overflow-hidden">
         <div 
-          class="bg-accent h-full rounded-full transition-all duration-300 ease-out"
-          :style="`width: ${Math.min(100, progress)}%`"
+          class="h-full rounded-full transition-all duration-300 ease-out"
+          :style="`width: ${Math.min(100, progress)}%; background-color: hsl(160, 100%, 40%);`"
         />
       </div>
       

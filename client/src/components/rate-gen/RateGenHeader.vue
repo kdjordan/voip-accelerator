@@ -18,8 +18,9 @@
           @click="$emit('tab-change', 'settings')"
         />
         
-        <!-- Generated Rates Tab (Always visible) -->
+        <!-- Generated Rates Tab (Only visible when there are generated decks) -->
         <ReportTabButton
+          v-if="store.hasGeneratedDecks"
           label="Generated Rates"
           :is-active="activeTab === 'results'"
           @click="$emit('tab-change', 'results')"

@@ -99,7 +99,7 @@ onUnmounted(() => {
 
     <!-- Tab Content - Full Width -->
     <div class="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1">
-      <div class="bg-gray-800 rounded-b-lg p-4 sm:p-6 h-full" role="tabpanel" :aria-labelledby="`${activeTab}-tab`">
+      <div class="bg-gray-800 rounded-b-lg p-4 sm:p-6" role="tabpanel" :aria-labelledby="`${activeTab}-tab`">
         <!-- Upload Tab Content -->
         <div v-if="activeTab === 'upload'">
           <div class="pb-4 mb-6">

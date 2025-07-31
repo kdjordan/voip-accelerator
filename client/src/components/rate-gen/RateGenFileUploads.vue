@@ -6,6 +6,7 @@ import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import RateGenProgressIndicator from '@/components/rate-gen/RateGenProgressIndicator.vue';
 import TestDataLoader from '@/components/rate-gen/TestDataLoader.vue';
+import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 import Papa from 'papaparse';
 import { USColumnRole } from '@/types/domains/us-types';
 import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/types/domains/rate-gen-types';
@@ -60,6 +61,11 @@ const columnMappings = ref<Record<string, string>>({});
 const isModalValid = ref(false);
 const startLine = ref(1);
 const providerName = ref('');
+
+// Confirmation modal state
+const showConfirmModal = ref(false);
+const confirmingRemovalZoneId = ref<RateGenComponentId | null>(null);
+const confirmingProviderName = ref('');
 
 // Rate Gen specific column options - match USFileUploads exactly
 const rateGenColumnOptions = [
@@ -258,18 +264,34 @@ const parseFileForPreview = async (file: File): Promise<void> => {
   });
 };
 
-// Remove provider
-const handleRemoveProvider = async (zoneId: RateGenComponentId) => {
+// Remove provider - show confirmation modal
+const handleRemoveProvider = (zoneId: RateGenComponentId) => {
   const provider = getProviderForZone(zoneId);
   if (!provider) return;
   
-  if (confirm(`Are you sure you want to remove ${provider.name}?`)) {
-    try {
-      await service.removeProvider(provider.id);
-      uploadErrors.value[zoneId] = null;
-    } catch (error) {
-      store.addError(`Failed to remove provider: ${(error as Error).message}`);
-    }
+  confirmingRemovalZoneId.value = zoneId;
+  confirmingProviderName.value = provider.name;
+  showConfirmModal.value = true;
+};
+
+// Confirm provider removal
+const confirmRemoveProvider = async () => {
+  if (!confirmingRemovalZoneId.value) return;
+  
+  const provider = getProviderForZone(confirmingRemovalZoneId.value);
+  if (!provider) return;
+  
+  try {
+    await service.removeProvider(provider.id);
+    uploadErrors.value[confirmingRemovalZoneId.value] = null;
+    
+    // Reset confirmation state
+    showConfirmModal.value = false;
+    confirmingRemovalZoneId.value = null;
+    confirmingProviderName.value = '';
+  } catch (error) {
+    store.addError(`Failed to remove provider: ${(error as Error).message}`);
+    // Keep modal open on error
   }
 };
 
@@ -423,7 +445,7 @@ const formatRate = (rate: number | undefined): string => {
     
     <!-- Upload Zones Container -->
     <div class="overflow-x-auto">
-      <div class="bg-gray-800 rounded-lg p-6">
+      <div class="bg-gray-800 rounded-lg p-6 w-full">
         <div class="grid grid-cols-2 gap-6">
           <!-- Left Column -->
           <div class="space-y-6">
@@ -470,7 +492,9 @@ const formatRate = (rate: number | undefined): string => {
                       ? 'border-accent bg-fbWhite/10 border-solid'
                       : canAcceptDrop('provider1')
                         ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                        : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
+                        : store.isComponentUploading('provider1')
+                          ? 'border-gray-600 border-dashed cursor-not-allowed'
+                          : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                     uploadErrors.provider1 ? 'border-red-500 border-solid' : '',
                   ]"
                   @dragenter.prevent="handleDragEnter('provider1')"
@@ -562,7 +586,9 @@ const formatRate = (rate: number | undefined): string => {
                       ? 'border-accent bg-fbWhite/10 border-solid'
                       : canAcceptDrop('provider3')
                         ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                        : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
+                        : store.isComponentUploading('provider3')
+                          ? 'border-gray-600 border-dashed cursor-not-allowed'
+                          : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                     uploadErrors.provider3 ? 'border-red-500 border-solid' : '',
                   ]"
                   @dragenter.prevent="handleDragEnter('provider3')"
@@ -745,7 +771,9 @@ const formatRate = (rate: number | undefined): string => {
                       ? 'border-accent bg-fbWhite/10 border-solid'
                       : canAcceptDrop('provider2')
                         ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                        : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
+                        : store.isComponentUploading('provider2')
+                          ? 'border-gray-600 border-dashed cursor-not-allowed'
+                          : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                     uploadErrors.provider2 ? 'border-red-500 border-solid' : '',
                   ]"
                   @dragenter.prevent="handleDragEnter('provider2')"
@@ -836,7 +864,9 @@ const formatRate = (rate: number | undefined): string => {
                     ? 'border-accent bg-fbWhite/10 border-solid'
                     : canAcceptDrop('provider4')
                       ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                      : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
+                      : store.isComponentUploading('provider4')
+                        ? 'border-gray-600 border-dashed cursor-not-allowed'
+                        : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
                   uploadErrors.provider4 ? 'border-red-500 border-solid' : '',
                 ]"
                 @dragenter.prevent="handleDragEnter('provider4')"
@@ -928,6 +958,17 @@ const formatRate = (rate: number | undefined): string => {
       @update:provider-name="providerName = $event"
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
+    />
+
+    <!-- Confirmation Modal for Provider Removal -->
+    <ConfirmationModal
+      v-model="showConfirmModal"
+      title="Remove Provider"
+      :message="`Are you sure you want to remove '${confirmingProviderName}'? This action cannot be undone.`"
+      confirm-button-text="Remove"
+      cancel-button-text="Cancel"
+      variant="destructive"
+      @confirm="confirmRemoveProvider"
     />
   </div>
 </template>
