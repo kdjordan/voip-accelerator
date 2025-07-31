@@ -8,7 +8,7 @@
             <th class="px-4 py-3 text-left">Rate Deck</th>
             <th class="px-4 py-3 text-left">Strategy</th>
             <th class="px-4 py-3 text-left">Markup</th>
-            <th class="px-4 py-3 text-left">Total Rates</th>
+            <th class="px-4 py-3 text-left">Total Codes</th>
             <th class="px-4 py-3 text-left">Providers</th>
             <th class="px-4 py-3 text-left">Actions</th>
           </tr>
@@ -39,7 +39,7 @@
               </span>
             </td>
             
-            <!-- Total Rates -->
+            <!-- Total Codes -->
             <td class="px-4 py-4">
               <span class="text-sm text-fbWhite font-bold">{{ deck.rowCount.toLocaleString() }}</span>
             </td>

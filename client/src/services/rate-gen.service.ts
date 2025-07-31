@@ -481,10 +481,15 @@ export class RateGenService {
         rowCount: generatedRates.length
       };
 
+      // Set progress to 100% to trigger "Finalizing" message
+      this.store.setGenerationProgress(100);
+      
       // Store deck metadata first
+      console.log(`[RateGenService] Storing deck metadata...`);
       await this.storeDeckMetadata(deck);
       
       // Store generated rates in IndexedDB and temporarily for export
+      console.log(`[RateGenService] Storing ${generatedRates.length} rates to database...`);
       await this.storeGeneratedRates(deck.id, generatedRates);
       this.temporaryGeneratedRates = generatedRates;
       
@@ -761,8 +766,14 @@ export class RateGenService {
       
       // Store in chunks for better performance
       const CHUNK_SIZE = 5000;
+      const totalChunks = Math.ceil(ratesWithMetadata.length / CHUNK_SIZE);
+      console.log(`[RateGenService] Storing rates in ${totalChunks} chunks of ${CHUNK_SIZE} each...`);
+      
       for (let i = 0; i < ratesWithMetadata.length; i += CHUNK_SIZE) {
         const chunk = ratesWithMetadata.slice(i, i + CHUNK_SIZE);
+        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1;
+        console.log(`[RateGenService] Storing chunk ${chunkNumber}/${totalChunks}...`);
+        
         await storeInDexieDB(
           chunk,
           DBName.RATE_GEN_RESULTS,

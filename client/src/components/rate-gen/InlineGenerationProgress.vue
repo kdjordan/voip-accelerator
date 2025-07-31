@@ -17,7 +17,12 @@
       <!-- Status Message -->
       <div class="text-center">
         <p class="text-xs text-gray-300">
-          Processing {{ providerCount }} provider{{ providerCount > 1 ? 's' : '' }}...
+          <template v-if="progress >= 100">
+            Finalizing Rate Deck...
+          </template>
+          <template v-else>
+            Processing {{ providerCount }} provider{{ providerCount > 1 ? 's' : '' }}...
+          </template>
         </p>
       </div>
     </div>
