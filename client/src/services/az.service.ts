@@ -20,6 +20,7 @@ import Dexie from 'dexie';
 import { INT_COUNTRY_CODES } from '@/types/constants/int-country-codes';
 import AzAnalyzerWorker from '@/workers/az-analyzer.worker.ts?worker';
 import AzComparisonWorker from '@/workers/az-comparison.worker.ts?worker';
+import { UploadStage } from '@/types/components/upload-progress-types';
 
 export class AZService {
   private store = useAzStore();
@@ -34,7 +35,8 @@ export class AZService {
     file: File,
     columnMapping: { destName: number; code: number; rate: number },
     startLine: number,
-    componentId: string
+    componentId: string,
+    progressCallback?: (progress: number, stage: import('@/types/components/upload-progress-types').UploadStage, rowsProcessed: number, totalRows?: number) => void
   ): Promise<{ fileName: string; records: AZStandardizedData[] }> {
     // Use a consistent table name instead of creating a new table for each file
     // const tableName = 'az_codes'; // Revert to original incorrect table name for now
@@ -47,6 +49,9 @@ export class AZService {
     return new Promise((resolve, reject) => {
       const performanceStart = performance.now();
       
+      // Start progress tracking
+      progressCallback?.(0, UploadStage.PARSING, 0);
+      
       Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
@@ -56,6 +61,9 @@ export class AZService {
             const dataRows = results.data.slice(startLine - 1);
             const validRecords: AZStandardizedData[] = [];
             let totalRecords = 0;
+            
+            // Update progress after parsing
+            progressCallback?.(30, UploadStage.VALIDATING, 0, dataRows.length);
 
             dataRows.forEach((row, index) => {
               totalRecords++;
@@ -63,6 +71,12 @@ export class AZService {
               const dialCode = row[columnMapping.code]?.trim() || '';
               const rateStr = row[columnMapping.rate];
               const rate = parseFloat(rateStr);
+
+              // Update progress during validation (30-70%)
+              if (index % 1000 === 0) {
+                const validationProgress = 30 + ((index / dataRows.length) * 40);
+                progressCallback?.(validationProgress, UploadStage.VALIDATING, index, dataRows.length);
+              }
 
               // Validate the rate - if not a valid number, add to invalid rows
               if (isNaN(rate) || !destName || !dialCode) {
@@ -89,6 +103,9 @@ export class AZService {
 
             // Store directly in Dexie - this uses the incorrect schema via addStore
             if (validRecords.length > 0) {
+              // Update progress to storing stage
+              progressCallback?.(85, UploadStage.STORING, totalRecords, dataRows.length);
+              
               await storeInDexieDB(validRecords, DBName.AZ, derivedTableName, {
                 replaceExisting: true,
               });
@@ -144,6 +161,9 @@ export class AZService {
 
             // Calculate stats after storing data
             await this.calculateFileStats(componentId, file.name);
+
+            // Final progress update
+            progressCallback?.(100, UploadStage.FINALIZING, totalRecords, dataRows.length);
 
             // Performance logging
             const performanceEnd = performance.now();

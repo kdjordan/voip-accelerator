@@ -97,6 +97,7 @@ export interface RateSheetState {
   selectedRateBucket: RateBucketType;
   operationInProgress: boolean;
   excludedDestinations: Set<string>;
+  uploadProgress?: import('@/types/components/upload-progress-types').UploadProgressState;
 }
 
 export const RequiredRFColumnRole = {

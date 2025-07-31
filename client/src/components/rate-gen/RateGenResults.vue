@@ -47,9 +47,9 @@
             <!-- Providers -->
             <td class="px-4 py-4">
               <div class="text-xs space-y-1">
-                <div v-for="provider in getProviderBreakdown(deck.id).slice(0, 3)" :key="provider.name" class="flex items-center justify-between">
-                  <span class="text-gray-300 truncate mr-2 max-w-[120px]" :title="provider.name">{{ provider.name }}</span>
-                  <span class="text-gray-400 font-medium whitespace-nowrap">{{ provider.percentage.toFixed(1) }}%</span>
+                <div v-for="provider in getProviderBreakdown(deck.id).slice(0, 3)" :key="provider.name" class="flex items-center">
+                  <span class="text-gray-300 truncate max-w-[120px]" :title="provider.name">{{ provider.name }}</span>
+                  <span class="text-gray-400 font-medium whitespace-nowrap">:&nbsp;{{ provider.percentage.toFixed(1) }}%</span>
                 </div>
                 <div v-if="getProviderBreakdown(deck.id).length > 3" class="text-gray-500 text-xs mt-1">
                   +{{ getProviderBreakdown(deck.id).length - 3 }} more
@@ -65,7 +65,7 @@
               <div class="flex items-center space-x-2">
                 <button
                   @click="handleExportDeck(deck.id)"
-                  class="p-1.5 rounded bg-accent/20 hover:bg-accent/30 text-accent transition-colors"
+                  class="p-1.5 rounded-md bg-accent/10 border border-accent/50 text-accent hover:bg-accent/20 transition-colors"
                   title="Export as CSV"
                 >
                   <ArrowDownTrayIcon class="w-4 h-4" />
@@ -73,7 +73,7 @@
                 
                 <button
                   @click="handleValidateDeck(deck)"
-                  class="p-1.5 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors"
+                  class="p-1.5 rounded-md bg-blue-900/30 border border-blue-700/50 text-blue-300 hover:bg-blue-900/50 transition-colors"
                   title="Validate calculations"
                 >
                   <CheckCircleIcon class="w-4 h-4" />
@@ -81,7 +81,7 @@
                 
                 <button
                   @click="handleDeleteDeck(deck.id, deck.name)"
-                  class="p-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                  class="p-1.5 rounded-md bg-red-950/50 border border-red-500/50 text-red-400 hover:bg-red-950/70 transition-colors"
                   title="Delete deck"
                 >
                   <TrashIcon class="w-4 h-4" />

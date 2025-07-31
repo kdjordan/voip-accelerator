@@ -8,6 +8,7 @@ import type {
 } from '@/types/domains/rate-sheet-types';
 import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
 import Papa from 'papaparse';
+import { UploadStage } from '@/types/components/upload-progress-types';
 
 export class RateSheetService {
   private store = useAzRateSheetStore();
@@ -115,7 +116,8 @@ export class RateSheetService {
   async processFile(
     file: File,
     columnMapping: Record<string, number>,
-    startLine: number
+    startLine: number,
+    progressCallback?: (progress: number, stage: import('@/types/components/upload-progress-types').UploadStage, rowsProcessed: number, totalRows?: number) => void
   ): Promise<{ fileName: string; records: RateSheetRecord[] }> {
     // Performance timing
     const performanceStart = performance.now();
@@ -132,6 +134,9 @@ export class RateSheetService {
       let currentRowIndex = 0;
 
       return new Promise((resolve, reject) => {
+        // Start progress tracking
+        progressCallback?.(0, UploadStage.PARSING, 0);
+        
         Papa.parse(file, {
           header: false,
           skipEmptyLines: true,
@@ -157,8 +162,11 @@ export class RateSheetService {
               
               totalRowsProcessed++;
 
-              // Progress logging every 10,000 rows
-              if (totalRowsProcessed % 10000 === 0) {
+              // Progress logging every 1,000 rows with real progress callback
+              if (totalRowsProcessed % 1000 === 0) {
+                // Estimate parsing progress (0-70%)
+                const parsingProgress = Math.min(70, (totalRowsProcessed / 1000) * 5); // Rough estimate
+                progressCallback?.(parsingProgress, UploadStage.PARSING, totalRowsProcessed);
                 console.log(`[PERF] AZ Rate Sheet - Processed ${totalRowsProcessed} rows...`);
               }
             } catch (error) {
@@ -176,8 +184,14 @@ export class RateSheetService {
             try {
               console.log(`[PERF] AZ Rate Sheet - CSV parsing complete. Processing ${allValidRecords.length} valid records...`);
               
+              // Update progress to validation stage
+              progressCallback?.(75, UploadStage.VALIDATING, totalRowsProcessed, totalRowsProcessed);
+              
               // Process in async chunks to avoid blocking the UI
               if (allValidRecords.length > 0) {
+                // Update progress to storing stage
+                progressCallback?.(85, UploadStage.STORING, totalRowsProcessed, totalRowsProcessed);
+                
                 await this.processRecordsInChunks(allValidRecords);
                 console.log(`[PERF] AZ Rate Sheet - Stored ${allValidRecords.length} valid records`);
               }
@@ -187,6 +201,9 @@ export class RateSheetService {
                 allInvalidRows.forEach(row => this.store.addInvalidRow(row));
                 console.log(`[PERF] AZ Rate Sheet - Processed ${allInvalidRows.length} invalid rows`);
               }
+              
+              // Final progress update
+              progressCallback?.(100, UploadStage.FINALIZING, totalRowsProcessed, totalRowsProcessed);
 
               // Performance timing - End
               const performanceEnd = performance.now();

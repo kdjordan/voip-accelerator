@@ -53,10 +53,12 @@
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="azStore.isComponentUploading('az1')">
-                      <UploadProgressIndicator 
-                        :total-rows="uploadingFileRowCount.az1"
-                        :rows-per-second="25000"
-                        ref="progressIndicators.az1"
+                      <RealTimeProgressIndicator 
+                        :is-uploading="azStore.uploadProgress?.isUploading || false"
+                        :progress="azStore.uploadProgress?.progress || 0"
+                        :stage="azStore.uploadProgress?.stage || 'parsing'"
+                        :rows-processed="azStore.uploadProgress?.rowsProcessed || 0"
+                        :total-rows="azStore.uploadProgress?.totalRows"
                       />
                     </template>
 
@@ -155,10 +157,12 @@
                   <div class="flex flex-col items-center justify-center w-full h-full text-center">
                     <!-- Uploading State -->
                     <template v-if="azStore.isComponentUploading('az2')">
-                      <UploadProgressIndicator 
-                        :total-rows="uploadingFileRowCount.az2"
-                        :rows-per-second="25000"
-                        ref="progressIndicators.az2"
+                      <RealTimeProgressIndicator 
+                        :is-uploading="azStore.uploadProgress?.isUploading || false"
+                        :progress="azStore.uploadProgress?.progress || 0"
+                        :stage="azStore.uploadProgress?.stage || 'parsing'"
+                        :rows-processed="azStore.uploadProgress?.rowsProcessed || 0"
+                        :total-rows="azStore.uploadProgress?.totalRows"
                       />
                     </template>
 
@@ -296,7 +300,7 @@ This action cannot be undone.`"
   import { ReportTypes } from '@/types';
   import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
   import { useDragDrop } from '@/composables/useDragDrop';
-  import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
+  import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -339,10 +343,6 @@ This action cannot be undone.`"
   const uploadingFileRowCount = reactive<Record<ComponentId, number>>({
     az1: 0,
     az2: 0,
-  });
-  const progressIndicators = reactive<Record<ComponentId, InstanceType<typeof UploadProgressIndicator> | null>>({
-    az1: null,
-    az2: null,
   });
 
   // Update the useDragDrop implementation with custom validator for AZ
@@ -549,6 +549,9 @@ This action cannot be undone.`"
 
     showPreviewModal.value = false;
     azStore.setComponentUploading(activeComponent.value, true);
+    
+    // Start upload progress tracking
+    azStore.startUploadProgress(uploadingFileRowCount[activeComponent.value]);
 
     try {
       // Convert mappings to column indices (correct property names)
@@ -571,21 +574,28 @@ This action cannot be undone.`"
         file,
         columnMapping,
         startLine.value,
-        activeComponent.value
+        activeComponent.value,
+        // Progress callback - update store with real progress
+        (progress, stage, rowsProcessed, totalRows) => {
+          azStore.setUploadProgress(progress, stage, rowsProcessed, totalRows);
+        }
       );
 
       // Calculate stats AFTER processing is complete
       await azService.calculateFileStats(activeComponent.value, result.fileName);
 
       userStore.incrementUploadsToday();
+      
+      // Complete upload progress tracking
+      azStore.completeUploadProgress();
+      
       await handleFileUploaded(activeComponent.value, result.fileName);
     } catch (error) {
       console.error('Error processing file:', error);
       uploadError[activeComponent.value] = 'Error processing file. Please try again.';
+      // Reset progress on error
+      azStore.resetUploadProgress();
     } finally {
-      // Complete progress indicator if it exists
-      progressIndicators[activeComponent.value]?.complete();
-      
       azStore.setComponentUploading(activeComponent.value, false);
       azStore.clearTempFile(activeComponent.value);
       uploadingFileRowCount[activeComponent.value] = 0; // Reset row count
@@ -596,6 +606,8 @@ This action cannot be undone.`"
     showPreviewModal.value = false;
     azStore.clearTempFile(activeComponent.value);
     uploadingFileRowCount[activeComponent.value] = 0; // Reset row count on cancel
+    // Reset progress on cancel
+    azStore.resetUploadProgress();
     activeComponent.value = 'az1';
   }
 

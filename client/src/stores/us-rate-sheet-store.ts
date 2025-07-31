@@ -3,6 +3,7 @@ import { USRateSheetService } from '@/services/us-rate-sheet.service'; // Import
 import type { USRateSheetEntry, InvalidUsRow } from '@/types/domains/us-types'; // Corrected import
 // Add date-fns for default date calculation
 import { addDays, format } from 'date-fns';
+import { UploadStage, type UploadProgressState } from '@/types/components/upload-progress-types';
 
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
@@ -14,6 +15,7 @@ interface USRateSheetState {
   lastDbUpdateTime: number; // Timestamp to trigger reactive updates in components
   invalidRateSheetRows: InvalidUsRow[]; // Updated type usage
   isUploadInProgress: boolean; // GATE to block table loading during upload
+  uploadProgress: UploadProgressState; // Real upload progress tracking
 }
 
 // Instantiate simple service outside the store definition (singleton pattern)
@@ -35,6 +37,13 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     lastDbUpdateTime: Date.now(), // Initialize timestamp
     invalidRateSheetRows: [], // Initialize invalid rows state
     isUploadInProgress: false, // Initialize upload gate as closed
+    uploadProgress: {
+      isUploading: false,
+      progress: 0,
+      stage: UploadStage.PARSING,
+      rowsProcessed: 0,
+      totalRows: undefined
+    }
   }),
 
   getters: {
@@ -46,6 +55,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getInvalidRateSheetRows: (state): InvalidUsRow[] => state.invalidRateSheetRows, // Added getter
     hasInvalidRateSheetRows: (state): boolean => state.invalidRateSheetRows.length > 0, // Added getter
     getIsUploadInProgress: (state): boolean => state.isUploadInProgress, // Gate getter
+    getUploadProgress: (state): UploadProgressState => state.uploadProgress, // Real progress getter
   },
 
   actions: {
@@ -167,6 +177,58 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
       console.log(
         `[us-rate-sheet-store] Global effective date updated successfully to ${newDate} and timestamp updated.`
       );
+    },
+
+    /**
+     * Updates upload progress state
+     */
+    setUploadProgress(progress: number, stage: UploadStage, rowsProcessed: number, totalRows?: number) {
+      this.uploadProgress = {
+        isUploading: true,
+        progress: Math.min(100, Math.max(0, progress)),
+        stage,
+        rowsProcessed,
+        totalRows
+      };
+    },
+
+    /**
+     * Starts upload progress tracking
+     */
+    startUploadProgress(totalRows?: number) {
+      this.uploadProgress = {
+        isUploading: true,
+        progress: 0,
+        stage: UploadStage.PARSING,
+        rowsProcessed: 0,
+        totalRows
+      };
+    },
+
+    /**
+     * Completes upload progress tracking
+     */
+    completeUploadProgress() {
+      this.uploadProgress = {
+        isUploading: false,
+        progress: 100,
+        stage: UploadStage.FINALIZING,
+        rowsProcessed: this.uploadProgress.rowsProcessed,
+        totalRows: this.uploadProgress.totalRows
+      };
+    },
+
+    /**
+     * Resets upload progress state
+     */
+    resetUploadProgress() {
+      this.uploadProgress = {
+        isUploading: false,
+        progress: 0,
+        stage: UploadStage.PARSING,
+        rowsProcessed: 0,
+        totalRows: undefined
+      };
     },
   },
 });

@@ -154,10 +154,12 @@
 
               <!-- Uploading state -->
               <template v-else>
-                <UploadProgressIndicator 
-                  :total-rows="uploadingFileRowCount"
-                  :rows-per-second="14000"
-                  ref="progressIndicator"
+                <RealTimeProgressIndicator 
+                  :is-uploading="store.getUploadProgress.isUploading"
+                  :progress="store.getUploadProgress.progress"
+                  :stage="store.getUploadProgress.stage"
+                  :rows-processed="store.getUploadProgress.rowsProcessed"
+                  :total-rows="store.getUploadProgress.totalRows"
                 />
               </template>
             </div>
@@ -211,7 +213,7 @@
   } from '@heroicons/vue/24/outline';
   import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
-  import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
+  import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
@@ -243,7 +245,6 @@
   
   // Progress tracking
   const uploadingFileRowCount = ref(0);
-  const progressIndicator = ref<InstanceType<typeof UploadProgressIndicator> | null>(null);
 
   // Effective Date State
   const showEffectiveDateSettings = ref(true); // Default to open
@@ -385,6 +386,9 @@
 
       // --- Hide modal AFTER we have row count ---
       showPreviewModal.value = false;
+      
+      // Start upload progress tracking
+      store.startUploadProgress(uploadingFileRowCount.value);
 
       // Correctly map the roles from the modal to the service's expected keys
       const mappedColumns = Object.entries(mappings).reduce(
@@ -440,14 +444,18 @@
         mappedColumns,
         startLine.value,
         indeterminateDefinition,
-        effectiveDate
+        effectiveDate,
+        // Progress callback - update store with real progress
+        (progress, stage, rowsProcessed, totalRows) => {
+          store.setUploadProgress(progress, stage, rowsProcessed, totalRows);
+        }
       );
 
       await store.handleUploadSuccess(processedData);
       userStore.incrementUploadsToday();
       
-      // Complete progress indicator
-      progressIndicator.value?.complete();
+      // Complete progress tracking
+      store.completeUploadProgress();
       
       store.setUploadInProgress(false); // ALLOW table loading now
       selectedFile.value = null; // Clear selected file after processing
@@ -457,6 +465,8 @@
       uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
       // Clear potentially inconsistent data on error
       await store.clearUsRateSheetData();
+      // Reset progress on error
+      store.resetUploadProgress();
       selectedFile.value = null; // Clear selected file on error
       uploadingFileRowCount.value = 0; // Reset row count on error
       rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
@@ -469,6 +479,8 @@
     showPreviewModal.value = false;
     selectedFile.value = null;
     uploadingFileRowCount.value = 0; // Reset row count on cancel
+    // Reset progress on cancel
+    store.resetUploadProgress();
   }
 
   function handleMappingUpdate(newMappings: Record<string, string>) {

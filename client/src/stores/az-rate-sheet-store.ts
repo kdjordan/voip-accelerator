@@ -12,6 +12,7 @@ import type {
   RateBucketType,
 } from '@/types/domains/rate-sheet-types';
 import { classifyRateIntoBucket, isRateInBucket } from '@/constants/rate-buckets';
+import { UploadStage, type UploadProgressState } from '@/types/components/upload-progress-types';
 
 // Note: AZ Rate Sheet uses memory-only storage (no persistence)
 
@@ -42,6 +43,13 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     selectedRateBucket: 'all' as RateBucketType,
     operationInProgress: false,
     excludedDestinations: new Set<string>(),
+    uploadProgress: {
+      isUploading: false,
+      progress: 0,
+      stage: UploadStage.PARSING,
+      rowsProcessed: 0,
+      totalRows: undefined
+    }
   }),
 
   actions: {
@@ -517,6 +525,47 @@ export const useAzRateSheetStore = defineStore('azRateSheet', {
     loadRateBucketFilter() {
       // Memory-only storage - filter resets on page refresh
       // this.selectedRateBucket remains at default 'all'
+    },
+
+    // Upload progress methods
+    setUploadProgress(progress: number, stage: UploadStage, rowsProcessed: number, totalRows?: number) {
+      this.uploadProgress = {
+        isUploading: true,
+        progress: Math.min(100, Math.max(0, progress)),
+        stage,
+        rowsProcessed,
+        totalRows
+      };
+    },
+
+    startUploadProgress(totalRows?: number) {
+      this.uploadProgress = {
+        isUploading: true,
+        progress: 0,
+        stage: UploadStage.PARSING,
+        rowsProcessed: 0,
+        totalRows
+      };
+    },
+
+    completeUploadProgress() {
+      this.uploadProgress = {
+        isUploading: false,
+        progress: 100,
+        stage: UploadStage.FINALIZING,
+        rowsProcessed: this.uploadProgress?.rowsProcessed || 0,
+        totalRows: this.uploadProgress?.totalRows
+      };
+    },
+
+    resetUploadProgress() {
+      this.uploadProgress = {
+        isUploading: false,
+        progress: 0,
+        stage: UploadStage.PARSING,
+        rowsProcessed: 0,
+        totalRows: undefined
+      };
     },
   },
 

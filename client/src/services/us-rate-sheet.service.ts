@@ -6,6 +6,7 @@ import type { DBNameType } from '@/types';
 import type { DexieDBBase } from '@/composables/useDexieDB';
 import Dexie, { type Table } from 'dexie';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+import { UploadStage, UPLOAD_STAGE_WEIGHTS } from '@/types/components/upload-progress-types';
 
 // Define the structure for column mapping indices
 interface USRateSheetColumnMapping {
@@ -119,7 +120,8 @@ export class USRateSheetService {
     columnMapping: USRateSheetColumnMapping,
     startLine: number,
     indeterminateDefinition: string | undefined,
-    effectiveDate?: string // Added effectiveDate parameter
+    effectiveDate?: string, // Added effectiveDate parameter
+    progressCallback?: (progress: number, stage: import('@/types/components/upload-progress-types').UploadStage, rowsProcessed: number, totalRows?: number) => void
   ): Promise<ProcessFileResult> {
     // Phase 1 Performance Timing
     const performanceStart = performance.now();
@@ -156,9 +158,12 @@ export class USRateSheetService {
     const allProcessedData: USRateSheetEntry[] = []; // Store all data in memory first
 
     return new Promise((resolve, reject) => {
+      // Start progress tracking
+      progressCallback?.(0, UploadStage.PARSING, 0);
+      
       // Show progress indicators
       let lastProgressUpdate = Date.now();
-      const PROGRESS_UPDATE_INTERVAL = 5000; // Update progress every 5 seconds
+      const PROGRESS_UPDATE_INTERVAL = 1000; // Update progress every 1 second for real-time feel
 
       // console.log('[USRateSheetService] Starting PapaParse streaming...');
       Papa.parse(file, {
@@ -171,10 +176,16 @@ export class USRateSheetService {
           // Skip header rows based on user input
           if (totalChunks < startLine) return;
 
-          // Update progress periodically
+          // Update progress periodically with real progress
           const now = Date.now();
           if (now - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
             lastProgressUpdate = now;
+            
+            // Calculate parsing progress (first 60% of total progress)
+            // We don't know total rows yet, so estimate based on file size and time
+            const parsingProgress = Math.min(60, (totalChunks / 1000) * 10); // Rough estimate
+            progressCallback?.(parsingProgress, UploadStage.PARSING, totalChunks);
+            
             // console.log(`[USRateSheetService] Processing progress: Row ${totalChunks}...`); // Progress log
           }
 
@@ -225,11 +236,17 @@ export class USRateSheetService {
         complete: async () => {
           console.log(`[PERF] CSV parsing complete. Storing ${allProcessedData.length} records to IndexedDB...`);
           
+          // Update progress to validation stage
+          progressCallback?.(70, UploadStage.VALIDATING, totalRecords, totalRecords);
+          
           // Phase 1.3: Store in optimized chunks for better IndexedDB performance
           if (allProcessedData.length > 0) {
             const storeStartTime = performance.now();
             try {
-              await this.storeDataInOptimizedChunks(allProcessedData);
+              // Update progress to storing stage
+              progressCallback?.(85, UploadStage.STORING, totalRecords, totalRecords);
+              
+              await this.storeDataInOptimizedChunks(allProcessedData, progressCallback);
               const storeEndTime = performance.now();
               const storeDuration = (storeEndTime - storeStartTime) / 1000;
               console.log(`[PERF] IndexedDB storage completed in ${storeDuration.toFixed(2)}s for ${allProcessedData.length} records`);
@@ -238,6 +255,9 @@ export class USRateSheetService {
               // Could add recovery logic here
             }
           }
+          
+          // Final progress update
+          progressCallback?.(100, UploadStage.FINALIZING, totalRecords, totalRecords);
 
           // Phase 1.3 Performance Timing - End
           const performanceEnd = performance.now();
@@ -428,7 +448,10 @@ export class USRateSheetService {
   /**
    * Phase 1.3: Store data in optimized chunks for better IndexedDB performance
    */
-  private async storeDataInOptimizedChunks(data: USRateSheetEntry[]): Promise<void> {
+  private async storeDataInOptimizedChunks(
+    data: USRateSheetEntry[], 
+    progressCallback?: (progress: number, stage: UploadStage, rowsProcessed: number, totalRows?: number) => void
+  ): Promise<void> {
     const OPTIMAL_CHUNK_SIZE = 2500; // Sweet spot for IndexedDB performance
     const chunks = [];
     
@@ -445,6 +468,11 @@ export class USRateSheetService {
       
       try {
         await this.storeInDexieDB(chunks[i], this.dbName, 'entries', { replaceExisting: i === 0 });
+        
+        // Update storage progress (85% to 98%)
+        const storageProgress = 85 + ((i + 1) / chunks.length) * 13;
+        const recordsStored = (i + 1) * OPTIMAL_CHUNK_SIZE;
+        progressCallback?.(storageProgress, UploadStage.STORING, Math.min(recordsStored, data.length), data.length);
         
         const chunkEndTime = performance.now();
         const chunkDuration = chunkEndTime - chunkStartTime;
