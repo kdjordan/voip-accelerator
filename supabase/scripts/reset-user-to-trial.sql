@@ -1,4 +1,4 @@
--- Reset user k.dean.jordan@gmail.com to trial plan for testing
+-- Reset user admin@voipaccelerator.com to trial plan for testing
 -- This script resets all subscription-related fields to trial state
 
 UPDATE auth.users 
@@ -7,7 +7,7 @@ SET raw_user_meta_data = jsonb_set(
   '{plan_tier}',
   '"trial"'::jsonb
 )
-WHERE email = 'k.dean.jordan@gmail.com';
+WHERE email = 'admin@voipaccelerator.com';
 
 UPDATE profiles 
 SET 
@@ -29,7 +29,7 @@ SET
   
   -- Update timestamp
   updated_at = CURRENT_TIMESTAMP
-WHERE email = 'k.dean.jordan@gmail.com';
+WHERE email = 'admin@voipaccelerator.com';
 
 -- Verify the update
 SELECT 
@@ -41,4 +41,4 @@ SELECT
   stripe_customer_id,
   subscription_id
 FROM profiles 
-WHERE email = 'k.dean.jordan@gmail.com';
+WHERE email = 'admin@voipaccelerator.com';

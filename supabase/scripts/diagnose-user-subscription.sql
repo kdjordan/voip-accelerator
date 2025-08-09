@@ -9,7 +9,7 @@ SELECT
   created_at,
   updated_at
 FROM auth.users 
-WHERE email = 'k.dean.jordan@gmail.com';
+WHERE email = 'admin@voipaccelerator.com';
 
 -- Check profiles table data
 SELECT 
@@ -45,7 +45,7 @@ SELECT
     ELSE 'null'
   END as plan_expires_is_future
 FROM profiles 
-WHERE email = 'k.dean.jordan@gmail.com';
+WHERE email = 'admin@voipaccelerator.com';
 
 -- Show timezone info
 SHOW timezone;

@@ -7,6 +7,7 @@ const getAllowedOrigins = (): string[] => {
     
     // Add your actual domains here:
     "https://staging.d2fnr90mzdyqva.amplifyapp.com",
+    "https://voipaccelerator.com",
     "https://www.voipaccelerator.com"
   ];
   

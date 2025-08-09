@@ -297,7 +297,7 @@
         <h2 class="text-accent">10. Contact Us</h2>
         <p>If you have any questions about this Privacy Policy, please contact us:</p>
         <ul>
-          <li>By email: k.dean.jordan@gmail.com</li>
+          <li>By email: admin@voipaccelerator.com</li>
         </ul>
       </div>
     </main>
