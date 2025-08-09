@@ -5,7 +5,7 @@
       <!-- Placeholder for Logo/Icon -->
       <div class="flex items-center space-x-2 text-2xl text-accent bg-accent/20 border border-accent/50 px-6 py-2 rounded-lg">
         <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
-        <span>Factor Pricing</span>
+        <span>VOIP Accelerator</span>
       </div>
     </header>
 
@@ -19,7 +19,7 @@
 
         <p>
           Please read these Terms and Conditions ("Terms", "Terms and Conditions") carefully before
-          using the Factor Pricing website and service (the "Service") operated by Factor Pricing ("us", "we", or "our").
+          using the VOIP Accelerator website and service (the "Service") operated by VOIP Accelerator ("us", "we", or "our").
         </p>
 
         <p>
@@ -32,7 +32,7 @@
 
         <h2 class="text-accent">1. Description of Service</h2>
         <p>
-          Factor Pricing provides tools for analyzing, comparing, and managing Voice over IP
+          VOIP Accelerator provides tools for analyzing, comparing, and managing Voice over IP
           (VOIP) rate decks and related telecommunications data. The Service allows users to upload
           data, perform comparisons, leverage LERG lookups, and export reports, primarily operating
           within the user's browser for enhanced data privacy.
@@ -61,26 +61,26 @@
         </p>
         <p>
           At the end of each Billing Cycle, your subscription will automatically renew under the
-          exact same conditions unless you cancel it or Factor Pricing cancels it. You may cancel
+          exact same conditions unless you cancel it or VOIP Accelerator cancels it. You may cancel
           your subscription renewal either through your online account management page or by
-          contacting Factor Pricing customer support team.
+          contacting VOIP Accelerator customer support team.
         </p>
         <p>
           A valid payment method, including credit card, is required to process the payment for your
-          subscription. You shall provide Factor Pricing with accurate and complete billing
+          subscription. You shall provide VOIP Accelerator with accurate and complete billing
           information including full name, address, state, zip code, telephone number, and a valid
           payment method information. By submitting such payment information, you automatically
-          authorize Factor Pricing to charge all subscription fees incurred through your account
+          authorize VOIP Accelerator to charge all subscription fees incurred through your account
           to any such payment instruments.
         </p>
         <p>
-          Should automatic billing fail to occur for any reason, Factor Pricing will issue an
+          Should automatic billing fail to occur for any reason, VOIP Accelerator will issue an
           electronic invoice indicating that you must proceed manually, within a certain deadline
           date, with the full payment corresponding to the billing period as indicated on the
           invoice.
         </p>
         <p>
-          <strong>Fee Changes:</strong> Factor Pricing in its sole discretion and at any time, may
+          <strong>Fee Changes:</strong> VOIP Accelerator in its sole discretion and at any time, may
           modify the subscription fees. Any subscription fee change will become effective at the end
           of the then-current Billing Cycle. We will provide you with reasonable prior notice of any
           change in subscription fees to give you an opportunity to terminate your subscription
@@ -96,7 +96,7 @@
 
         <h2 class="text-accent">4. Data Privacy and Security</h2>
         <p>
-          Factor Pricing is designed with user privacy in mind. Most data processing, including
+          VOIP Accelerator is designed with user privacy in mind. Most data processing, including
           rate deck analysis and comparisons, occurs locally within your browser using IndexedDB.
           Uploaded files and derived data are generally not transmitted to our servers, except where
           necessary for specific features explicitly indicated (e.g., account management). Account
@@ -106,7 +106,7 @@
         </p>
         <div class="my-4">
           <a
-            href="https://factorpricing.com/privacy-policy"
+            href="https://voipaccelerator.com/privacy-policy"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-block bg-accent/20 border border-accent/50 text-accent font-medium px-6 py-2 rounded-3xl hover:bg-accent/20 transition-colors text-center"
@@ -124,7 +124,7 @@
         <h2 class="text-accent">5. Intellectual Property</h2>
         <p>
           The Service and its original content (excluding Content provided by users), features and
-          functionality are and will remain the exclusive property of Factor Pricing and its
+          functionality are and will remain the exclusive property of VOIP Accelerator and its
           licensors. The Service is protected by copyright, trademark, and other laws of both the
           United States and foreign countries. Our trademarks and trade dress may not be used in
           connection with any product or service without the prior written consent of VOIP
@@ -151,7 +151,7 @@
             including any "junk mail", "chain letter," "spam," or any other similar solicitation.
           </li>
           <li>
-            To impersonate or attempt to impersonate Factor Pricing, a Factor Pricing employee,
+            To impersonate or attempt to impersonate VOIP Accelerator, a VOIP Accelerator employee,
             another user, or any other person or entity.
           </li>
           <li>
@@ -161,7 +161,7 @@
           </li>
           <li>
             To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of
-            the Service, or which, as determined by us, may harm or offend Factor Pricing or users
+            the Service, or which, as determined by us, may harm or offend VOIP Accelerator or users
             of the Service or expose them to liability.
           </li>
         </ul>
@@ -174,7 +174,7 @@
           fitness for a particular purpose, non-infringement, or course of performance.
         </p>
         <p>
-          Factor Pricing, its subsidiaries, affiliates, and its licensors do not warrant that a)
+          VOIP Accelerator, its subsidiaries, affiliates, and its licensors do not warrant that a)
           the Service will function uninterrupted, secure or available at any particular time or
           location; b) any errors or defects will be corrected; c) the Service is free of viruses or
           other harmful components; or d) the results of using the Service will meet your
@@ -192,7 +192,7 @@
 
         <h2 class="text-accent">8. Limitation of Liability</h2>
         <p>
-          In no event shall Factor Pricing, nor its directors, employees, partners, agents,
+          In no event shall VOIP Accelerator, nor its directors, employees, partners, agents,
           suppliers, or affiliates, be liable for any indirect, incidental, special, consequential
           or punitive damages, including without limitation, loss of profits, data, use, goodwill,
           or other intangible losses, resulting from (i) your access to or use of or inability to
@@ -207,7 +207,7 @@
 
         <h2 class="text-accent">9. Indemnification</h2>
         <p>
-          You agree to defend, indemnify and hold harmless Factor Pricing and its licensee and
+          You agree to defend, indemnify and hold harmless VOIP Accelerator and its licensee and
           licensors, and their employees, contractors, agents, officers and directors, from and
           against any and all claims, damages, obligations, losses, liabilities, costs or debt, and
           expenses (including but not limited to attorney's fees), resulting from or arising out of
@@ -263,7 +263,7 @@
         <h2 class="text-accent">13. Contact Us</h2>
         <p>If you have any questions about these Terms, please contact us:</p>
         <ul>
-          <li>By email: admin@factorpricing.com</li>
+          <li>By email: admin@voipaccelerator.com</li>
         </ul>
       </div>
     </main>

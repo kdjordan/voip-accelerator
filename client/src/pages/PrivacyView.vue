@@ -7,7 +7,7 @@
         class="flex items-center space-x-2 text-2xl text-accent bg-accent/20 border border-accent/50 px-6 py-2 rounded-lg"
       >
         <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
-        <span>Factor Pricing</span>
+        <span>VOIP Accelerator</span>
       </div>
     </header>
 
@@ -20,7 +20,7 @@
         <p class="text-fbWhite/70 italic">Last Updated: May 3, 2025</p>
 
         <p>
-          Factor Pricing ("us", "we", or "our") operates the Factor Pricing website and service (the
+          VOIP Accelerator ("us", "we", or "our") operates the VOIP Accelerator website and service (the
           "Service"). This page informs you of our policies regarding the collection, use, and
           disclosure of personal data when you use our Service and the choices you have associated
           with that data.
@@ -58,7 +58,7 @@
 
         <h4>User Content (Rate Decks, LERG Data, Reports)</h4>
         <p>
-          A core feature of Factor Pricing involves processing data you upload, such as VOIP rate
+          A core feature of VOIP Accelerator involves processing data you upload, such as VOIP rate
           decks, and data generated through the service, like comparisons and reports ("User
           Content").
           <strong
@@ -114,7 +114,7 @@
         </ul>
 
         <h2 class="text-accent">2. Use of Data</h2>
-        <p>Factor Pricing uses the collected data for various purposes:</p>
+        <p>VOIP Accelerator uses the collected data for various purposes:</p>
         <ul>
           <li>
             To provide and maintain our Service (including processing data locally in your browser)
@@ -179,7 +179,7 @@
           represents your agreement to that transfer.
         </p>
         <p>
-          Factor Pricing will take all steps reasonably necessary to ensure that your data is
+          VOIP Accelerator will take all steps reasonably necessary to ensure that your data is
           treated securely and in accordance with this Privacy Policy and no transfer of your
           Personal Data will take place to an organization or a country unless there are adequate
           controls in place including the security of your data and other personal information.
@@ -198,12 +198,12 @@
 
         <h2 class="text-accent">5. Disclosure of Data</h2>
         <p>
-          Factor Pricing may disclose your Personal Data in the good faith belief that such action
+          VOIP Accelerator may disclose your Personal Data in the good faith belief that such action
           is necessary to:
         </p>
         <ul>
           <li>To comply with a legal obligation</li>
-          <li>To protect and defend the rights or property of Factor Pricing</li>
+          <li>To protect and defend the rights or property of VOIP Accelerator</li>
           <li>To prevent or investigate possible wrongdoing in connection with the Service</li>
           <li>To protect the personal safety of users of the Service or the public</li>
           <li>To protect against legal liability</li>
@@ -211,13 +211,13 @@
 
         <h2 class="text-accent">6. Your Data Protection Rights</h2>
         <p>
-          Depending on your location, you may have certain data protection rights. Factor Pricing
+          Depending on your location, you may have certain data protection rights. VOIP Accelerator
           aims to take reasonable steps to allow you to correct, amend, delete, or limit the use of
           your Personal Data.
         </p>
         <p>
           If you wish to be informed what Personal Data we hold about you and if you want it to be
-          removed from our systems, please contact us at admin@factorpricing.com You can typically
+          removed from our systems, please contact us at admin@voipaccelerator.com You can typically
           manage your account information through your account settings page.
         </p>
         <p>
@@ -249,7 +249,7 @@
           </li>
           <li>
             <strong>The right to withdraw consent.</strong> You also have the right to withdraw your
-            consent at any time where Factor Pricing relied on your consent to process your personal
+            consent at any time where VOIP Accelerator relied on your consent to process your personal
             information.
           </li>
         </ul>

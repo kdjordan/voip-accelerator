@@ -144,7 +144,7 @@
         class="container mx-auto mb-2 font-secondary w-full opacity-0 translate-y-[50px]"
       >
         <h2 class="text-3xl md:text-5xl text-center mx-auto mb-4 text-accent uppercase font-">
-          Why You'll Love Factor Pricing
+          Why You'll Love VOIP Accelerator
         </h2>
         <h3 class="text-xl md:text-3xl text-fbWhite max-w-3xl text-center mx-auto mb-2">
           Efficiency. Accuracy. Insight.
