@@ -30,7 +30,7 @@
       <div v-if="currentPlan !== 'trial'" class="flex justify-between items-center">
         <span class="text-gray-400">Price</span>
         <span class="text-white font-medium">
-          ${{ currentPlan === 'monthly' ? '40' : '400' }}/{{ currentPlan === 'monthly' ? 'month' : 'year' }}
+          ${{ currentPlan === 'monthly' ? '99' : '1089' }}/{{ currentPlan === 'monthly' ? 'month' : 'year' }}
         </span>
       </div>
     </div>

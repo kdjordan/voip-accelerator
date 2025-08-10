@@ -91,7 +91,7 @@
           <div class="text-center">
             <h3 class="text-2xl font-bold text-white mb-2">Monthly</h3>
             <div class="mb-6">
-              <span class="text-5xl font-bold text-white">$40</span>
+              <span class="text-5xl font-bold text-white">$99</span>
               <span class="text-gray-400 text-xl">/month</span>
             </div>
             
@@ -135,17 +135,17 @@
           <!-- Best Value Badge -->
           <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
             <span class="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-full">
-              BEST VALUE - SAVE 17%
+              BEST VALUE - SAVE $99
             </span>
           </div>
           
           <div class="text-center">
             <h3 class="text-2xl font-bold text-white mb-2">Annual</h3>
             <div class="mb-2">
-              <span class="text-5xl font-bold text-white">$400</span>
+              <span class="text-5xl font-bold text-white">$1089</span>
               <span class="text-gray-400 text-xl">/year</span>
             </div>
-            <p class="text-blue-400 text-lg mb-6">Just $33.33/month</p>
+            <p class="text-blue-400 text-lg mb-6">Just $90.75/month</p>
             
             <ul class="space-y-3 text-left mb-8">
               <li class="flex items-center text-gray-300">

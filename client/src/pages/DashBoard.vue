@@ -80,101 +80,127 @@
           </div>
 
           <!-- Plan Details -->
-          <div v-else class="space-y-3">
-            <!-- Next Billing Date (moved to top) -->
-            <div v-if="planExpiresAt" class="flex justify-between items-center">
-              <span class="text-gray-400">{{ currentPlanTier === 'trial' ? 'Trial Ends' : 'Next Billing Date' }}</span>
-              <span class="text-white">{{ formattedPlanExpiresAt }}</span>
-            </div>
-            
-            <!-- Current Plan -->
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400">Current Plan</span>
-              <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-                {{ currentPlanName }}
-              </BaseBadge>
+          <div v-else class="space-y-4">
+            <!-- Trial Alert Banner (for trial users only) -->
+            <div v-if="currentPlanTier === 'trial'" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-yellow-400 font-semibold">Free Trial Active</span>
+                    <BaseBadge variant="warning" size="small">Trial</BaseBadge>
+                  </div>
+                  <p class="text-gray-300 text-sm mb-3">
+                    Your trial ends on <span class="font-semibold text-white">{{ formattedPlanExpiresAt }}</span>
+                  </p>
+                  <BaseButton
+                    @click="showPaymentModal = true"
+                    variant="primary"
+                    size="standard"
+                    class="w-full sm:w-auto"
+                  >
+                    Choose Plan
+                  </BaseButton>
+                </div>
+              </div>
             </div>
 
-            <!-- Email Management -->
-            <div class="space-y-3">
-              <div class="flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-400">Email</span>
-                  <BaseButton
-                    v-if="!isEditingEmail"
-                    @click="isEditingEmail = true"
-                    variant="secondary-outline"
-                    size="small"
-                    :icon="PencilIcon"
-                  />
+            <!-- Active Subscription Banner (for paid users) -->
+            <div v-else class="bg-accent/10 border border-accent/30 rounded-lg p-4">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-accent font-semibold">Active Subscription</span>
+                    <BaseBadge :variant="currentPlanBadgeVariant" size="small">
+                      {{ currentPlanName }}
+                    </BaseBadge>
+                  </div>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-400">Next billing date:</span>
+                      <span class="text-white">{{ formattedPlanExpiresAt }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-400">Monthly cost:</span>
+                      <span class="text-white font-medium">
+                        ${{ currentPlanTier === 'monthly' ? '99' : '90.75' }}{{ currentPlanTier === 'annual' ? ' (billed annually)' : '' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex gap-2 mt-3">
+                    <BaseButton
+                      @click="showPaymentModal = true"
+                      variant="secondary"
+                      size="small"
+                    >
+                      Change Plan
+                    </BaseButton>
+                    <BaseButton
+                      @click="handleManageBilling"
+                      variant="secondary-outline"
+                      size="small"
+                    >
+                      Manage Billing
+                    </BaseButton>
+                  </div>
                 </div>
-                <span class="text-white">{{ displayEmail }}</span>
               </div>
-              
-              <!-- Collapsible Email Update Form -->
-              <div v-if="isEditingEmail" class="pl-4 border-l-2 border-gray-700 ml-2">
-                <div class="flex gap-2 items-center">
-                  <input
-                    v-model="newEmail"
-                    type="email"
-                    placeholder="Enter new email"
-                    class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm flex-1 max-w-xs"
-                    @keyup.enter="updateEmail(newEmail)"
-                    @keyup.escape="cancelEmailEdit"
-                  />
-                  <BaseButton
-                    @click="updateEmail(newEmail)"
-                    :disabled="!isEmailInputValid"
-                    :loading="isUpdatingEmail"
-                    variant="primary"
-                    size="small"
-                  >
-                    Save
-                  </BaseButton>
-                  <BaseButton
-                    @click="cancelEmailEdit"
-                    variant="destructive"
-                    size="small"
-                  >
-                    Cancel
-                  </BaseButton>
+            </div>
+
+            <!-- Email Management Section -->
+            <div class="border-t border-gray-700 pt-4">
+              <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="text-gray-400">Email</span>
+                    <BaseButton
+                      v-if="!isEditingEmail"
+                      @click="isEditingEmail = true"
+                      variant="secondary-outline"
+                      size="small"
+                      :icon="PencilIcon"
+                    />
+                  </div>
+                  <span class="text-white">{{ displayEmail }}</span>
                 </div>
                 
-                <!-- Email Status Messages -->
-                <div v-if="emailSuccessMessage" class="text-green-400 text-sm mt-2">
-                  {{ emailSuccessMessage }}
-                </div>
-                <div v-if="emailErrorMessage" class="text-red-400 text-sm mt-2">
-                  {{ emailErrorMessage }}
+                <!-- Collapsible Email Update Form -->
+                <div v-if="isEditingEmail" class="pl-4 border-l-2 border-gray-700 ml-2">
+                  <div class="flex gap-2 items-center">
+                    <input
+                      v-model="newEmail"
+                      type="email"
+                      placeholder="Enter new email"
+                      class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm flex-1 max-w-xs"
+                      @keyup.enter="updateEmail(newEmail)"
+                      @keyup.escape="cancelEmailEdit"
+                    />
+                    <BaseButton
+                      @click="updateEmail(newEmail)"
+                      :disabled="!isEmailInputValid"
+                      :loading="isUpdatingEmail"
+                      variant="primary"
+                      size="small"
+                    >
+                      Save
+                    </BaseButton>
+                    <BaseButton
+                      @click="cancelEmailEdit"
+                      variant="destructive"
+                      size="small"
+                    >
+                      Cancel
+                    </BaseButton>
+                  </div>
+                  
+                  <!-- Email Status Messages -->
+                  <div v-if="emailSuccessMessage" class="text-green-400 text-sm mt-2">
+                    {{ emailSuccessMessage }}
+                  </div>
+                  <div v-if="emailErrorMessage" class="text-red-400 text-sm mt-2">
+                    {{ emailErrorMessage }}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <!-- Price -->
-            <div v-if="currentPlanTier !== 'trial'" class="flex justify-between items-center">
-              <div class="flex items-center gap-2">
-                <span class="text-gray-400">Price</span>
-                <BaseButton
-                  @click="handleManageBilling"
-                  variant="secondary-outline"
-                  size="small"
-                  :icon="PencilIcon"
-                />
-              </div>
-              <span class="text-white font-medium">
-                ${{ currentPlanTier === 'monthly' ? '900' : '9000' }}/{{ currentPlanTier === 'monthly' ? 'month' : 'year' }}
-              </span>
-            </div>
-            
-            <!-- Trial state - only show choose plan button -->
-            <div v-if="currentPlanTier === 'trial'" class="flex gap-2 mt-4">
-              <BaseButton
-                @click="showPaymentModal = true"
-                variant="primary"
-                size="small"
-              >
-                Choose Plan
-              </BaseButton>
             </div>
           </div>
         </div>
