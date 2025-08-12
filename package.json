@@ -1,6 +1,7 @@
 {
   "name": "voip-accelerator",
   "dependencies": {
+    "@supabase/stripe-sync-engine": "^0.40.1",
     "stripe": "^18.3.0"
   }
 }

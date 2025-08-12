@@ -320,6 +320,7 @@
 
       <!-- Collapsible Metro list display area -->
       <transition name="slide-fade">
+        
         <div
           v-if="isMetroAreaVisible"
           class="overflow-y-auto max-h-96 border border-gray-700 rounded-md bg-gray-700/30 p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
@@ -625,7 +626,7 @@
           </p>
           <BaseButton
             variant="secondary"
-            size="small"
+            size="standard"
             @click="handleResetSession"
             class="text-xs"
             title="Reset session tracking to allow re-adjusting all NPAs"
