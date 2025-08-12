@@ -1,13 +1,33 @@
 import type { User } from '@supabase/supabase-js';
 
-// User Tiers
+// User Tiers - Updated for Three-Tier System
 export const PlanTier = {
   TRIAL: 'trial',
-  MONTHLY: 'monthly',
-  ANNUAL: 'annual',
+  ACCELERATOR: 'accelerator',
+  OPTIMIZER: 'optimizer', 
+  ENTERPRISE: 'enterprise',
+  // Legacy support
+  MONTHLY: 'optimizer', // Map legacy monthly to optimizer
+  ANNUAL: 'optimizer',  // Map legacy annual to optimizer
 } as const;
 
-export type PlanTierType = (typeof PlanTier)[keyof typeof PlanTier];
+export type PlanTierType = 'trial' | 'accelerator' | 'optimizer' | 'enterprise' | 'monthly' | 'annual';
+
+// Subscription Tier Types (new)
+export type SubscriptionTier = 'accelerator' | 'optimizer' | 'enterprise';
+
+// Plan Selection Types
+export interface TierOption {
+  id: SubscriptionTier;
+  name: string;
+  price: number;
+  priceId: string;
+  description: string;
+  features: string[];
+  uploadLimit?: number;
+  seats: number;
+  popular?: boolean;
+}
 
 // Feature Limits
 export interface PlanLimits {
@@ -59,16 +79,31 @@ export interface Profile {
   full_name: string; // text
   avatar_url: string; // text
   website: string; // text
-  role: 'user' | 'admin' | 'superadmin'; // text, 'user', 'admin', or 'superadmin'
+  role: 'user' | 'admin' | 'super_admin'; // Updated to match database
   company: string; // text
   billing_address: any; // jsonb
   payment_method: any; // jsonb
-  // Billing fields
+  
+  // Billing fields (updated for three-tier system)
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
-  subscription_status?: 'trial' | 'monthly' | 'annual' | 'cancelled';
+  subscription_status?: 'trial' | 'accelerator' | 'optimizer' | 'enterprise' | 'cancelled';
+  subscription_tier?: SubscriptionTier | null; // New field
+  selected_tier?: SubscriptionTier | null; // Tier selected during signup
+  trial_tier?: SubscriptionTier | null; // Which tier they're trialing
+  
+  // Plan timing
   plan_expires_at?: string | null;
+  current_period_end?: string | null;
   trial_started_at?: string | null;
+  
+  // Upload tracking (for Accelerator tier)
+  uploads_this_month?: number;
+  uploads_reset_date?: string | null;
+  
+  // Organization support (for Enterprise)
+  organization_id?: string | null;
+  email?: string; // Add email field
 }
 
 // Keep Supabase User type for reference in store

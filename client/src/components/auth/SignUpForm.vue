@@ -1,5 +1,11 @@
 <template>
-  <form class="space-y-6" @submit.prevent="handleSignUp">
+  <!-- Step 1: Tier Selection -->
+  <div v-if="currentStep === 'tier'">
+    <TierSelectionStep @tier-selected="handleTierSelected" />
+  </div>
+  
+  <!-- Step 2: Account Creation -->
+  <form v-else-if="currentStep === 'account'" class="space-y-6" @submit.prevent="handleSignUp">
     <div>
       <label for="email" class="block text-sm font-medium leading-6 text-gray-300"
         >Email address</label
@@ -76,7 +82,7 @@
         :loading="isLoading"
         :disabled="isLoading || isSignupFormSuccessfullySubmitted"
       >
-        Create Account
+        Create Account - {{ selectedTier || 'Free' }} Plan
       </BaseButton>
     </div>
 
@@ -102,6 +108,16 @@
       </BaseButton>
     </div> -->
     
+    <!-- Back to Tier Selection -->
+    <div class="mt-4">
+      <button
+        type="button"
+        @click="goBackToTierSelection"
+        class="text-sm text-gray-400 hover:text-white transition-colors"
+      >
+        ← Back to plan selection
+      </button>
+    </div>
   </form>
 </template>
 
@@ -110,9 +126,22 @@
   import { useRouter } from 'vue-router';
   import { useUserStore } from '@/stores/user-store';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import TierSelectionStep from '@/components/auth/TierSelectionStep.vue';
+  import type { SubscriptionTier } from '@/types/user-types';
 
   const userStore = useUserStore();
   const router = useRouter();
+  
+  // Multi-step form state
+  const currentStep = ref<'tier' | 'account'>('tier');
+  const selectedTier = ref<SubscriptionTier | null>(null);
+  
+  // Expose currentStep for parent component
+  defineExpose({
+    currentStep
+  });
+  
+  // Account creation form state
   const email = ref('');
   const password = ref('');
   const confirmPassword = ref('');
@@ -121,6 +150,18 @@
   const isLoading = ref(false);
   const isLoadingGoogle = ref(false);
   const isSignupFormSuccessfullySubmitted = ref(false);
+
+  // Step navigation methods
+  function handleTierSelected(tier: SubscriptionTier) {
+    selectedTier.value = tier;
+    currentStep.value = 'account';
+    console.log(`Tier selected: ${tier}`);
+  }
+  
+  function goBackToTierSelection() {
+    currentStep.value = 'tier';
+    clearMessages();
+  }
 
   async function handleSignUp() {
     clearMessages(); // Clear messages at the start of a new attempt
@@ -135,23 +176,27 @@
       return;
     }
 
+    if (!selectedTier.value) {
+      errorMessage.value = 'Please select a plan first.';
+      return;
+    }
+
     isLoading.value = true;
     const userAgent = navigator.userAgent;
 
     try {
-      const { error: signUpError } = await userStore.signUp(email.value, password.value, userAgent);
+      const { error: signUpError } = await userStore.signUp(email.value, password.value, userAgent, selectedTier.value);
 
       if (signUpError) {
         console.error('Sign up error object:', signUpError);
         errorMessage.value = signUpError.message || 'Failed to create account. Please try again.';
       } else {
-        // Success
-        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your account.`;
+        // Success - include tier info in success message
+        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your ${selectedTier.value} plan trial.`;
         isSignupFormSuccessfullySubmitted.value = true; // Disable button on success
-        // Optionally clear form fields, though user might want to see the email they used
-        // email.value = '';
-        // password.value = '';
-        // confirmPassword.value = '';
+        
+        // TODO: Store the selected tier in user's profile after email confirmation
+        // This will need to be handled in the auth callback or profile creation
       }
     } catch (error) {
       // Catch any unexpected errors from the signUp action itself

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { User, Profile, PlanTierType } from '../types/user-types';
+import type { User, Profile, PlanTierType, SubscriptionTier } from '../types/user-types';
 import { supabase } from '@/utils/supabase';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
@@ -67,7 +67,28 @@ export const useUserStore = defineStore('user', {
       }
     },
     getCurrentPlanTier: (state): PlanTierType | null => {
-      return (state.auth.profile?.subscription_status as PlanTierType | null) ?? null;
+      // Check subscription_tier first (new field), then fall back to subscription_status
+      const tier = state.auth.profile?.subscription_tier || state.auth.profile?.subscription_status;
+      return (tier as PlanTierType | null) ?? null;
+    },
+    
+    getSubscriptionTier: (state): SubscriptionTier | null => {
+      return state.auth.profile?.subscription_tier ?? null;
+    },
+    
+    getTrialTier: (state): SubscriptionTier | null => {
+      return state.auth.profile?.trial_tier ?? null;
+    },
+    
+    getUploadUsage: (state) => {
+      const profile = state.auth.profile;
+      if (!profile) return null;
+      
+      return {
+        used: profile.uploads_this_month || 0,
+        limit: profile.subscription_tier === 'accelerator' ? 100 : null,
+        resetDate: profile.uploads_reset_date
+      };
     },
     getServiceExpiryBanner: (state) => {
       const profile = state.auth.profile;
@@ -284,6 +305,29 @@ export const useUserStore = defineStore('user', {
               event === 'INITIAL_SESSION' // Treat INITIAL_SESSION here as well for profile consistency
             ) {
               try {
+                // Check for pending tier after successful signin (email confirmation)
+                if (event === 'SIGNED_IN') {
+                  const pendingTier = localStorage.getItem(`pendingTier_${currentUser.id}`);
+                  if (pendingTier && ['accelerator', 'optimizer', 'enterprise'].includes(pendingTier)) {
+                    console.log(`Found pending tier ${pendingTier} for user ${currentUser.id}, applying...`);
+                    
+                    // Try to set the trial tier
+                    try {
+                      const { error: tierError } = await supabase.functions.invoke('set-trial-tier', {
+                        body: { selectedTier: pendingTier }
+                      });
+                      if (tierError) {
+                        console.error('Failed to set pending trial tier:', tierError);
+                      } else {
+                        console.log(`Successfully applied pending tier ${pendingTier}`);
+                        localStorage.removeItem(`pendingTier_${currentUser.id}`);
+                      }
+                    } catch (error) {
+                      console.error('Error applying pending tier:', error);
+                    }
+                  }
+                }
+                
                 // Don't make the entire onAuthStateChange handler wait for fetchProfile if it's not INITIAL_SESSION
                 // For INITIAL_SESSION, it might be okay, but generally, let it be async.
                 this.fetchProfile(currentUser.id).catch((profileError) => {
@@ -366,7 +410,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async signUp(email: string, password: string, userAgent: string) {
+    async signUp(email: string, password: string, userAgent: string, selectedTier?: SubscriptionTier) {
       this.auth.isLoading = true;
       this.auth.error = null;
       try {
@@ -389,6 +433,13 @@ export const useUserStore = defineStore('user', {
             data.user.id,
             'Check email for confirmation.'
           );
+          
+          // Store selected tier in localStorage for use after email confirmation
+          if (selectedTier) {
+            localStorage.setItem(`pendingTier_${data.user.id}`, selectedTier);
+            console.log(`Stored pending tier ${selectedTier} for user ${data.user.id}`);
+          }
+          
           // Indicate confirmation needed to the UI if desired
           return { user: data.user, error: null };
         } else if (data.session && data.user) {
@@ -397,6 +448,25 @@ export const useUserStore = defineStore('user', {
           this.auth.user = data.user;
           this.auth.isAuthenticated = true;
           await this.fetchProfile(data.user.id);
+          
+          // Set trial tier if provided
+          if (selectedTier) {
+            try {
+              const { error: tierError } = await supabase.functions.invoke('set-trial-tier', {
+                body: { selectedTier }
+              });
+              if (tierError) {
+                console.error('Failed to set trial tier:', tierError);
+              } else {
+                console.log(`Trial tier set to: ${selectedTier}`);
+                // Refresh profile to get updated tier
+                await this.fetchProfile(data.user.id);
+              }
+            } catch (error) {
+              console.error('Error setting trial tier:', error);
+            }
+          }
+          
           return { user: data.user, error: null }; // Successful return
         } else {
           // Handle unexpected cases where neither user nor session is returned,
