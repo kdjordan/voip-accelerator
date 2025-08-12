@@ -51,15 +51,15 @@ serve(async (req) => {
       throw profileError;
     }
     
+    // Check subscription status
+    const now = new Date();
+    
     console.log(`🔍 Checking subscription for ${profile.email}:`, {
       subscription_status: profile.subscription_status,
       current_period_end: profile.current_period_end,
       plan_expires_at: profile.plan_expires_at,
       now: now.toISOString()
     });
-
-    // Check subscription status
-    const now = new Date();
     let isActive = false;
     let requiresPayment = false;
     let trialEndsAt = null;

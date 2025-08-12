@@ -53,7 +53,7 @@ export const useUserStore = defineStore('user', {
     getAuthError: (state) => state.auth.error,
     getAuthIsInitialized: (state) => state.auth.isInitialized,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
-    isAdmin: (state) => state.auth.profile?.role === 'admin',
+    isAdmin: (state) => state.auth.profile?.role === 'admin' || state.auth.profile?.role === 'super_admin',
     getUploadsToday: (state) => state.usage.uploadsToday,
     isPlanActive: (state) => {
       if (!state.auth.profile?.plan_expires_at) {
@@ -291,21 +291,11 @@ export const useUserStore = defineStore('user', {
                     `[Auth Listener] Background profile fetch for user ${currentUser.id} (event ${event}) failed:`,
                     profileError
                   );
-                  // If profile fetch fails for an authenticated user, consider sign out
-                  if (this.auth.isAuthenticated && this.auth.user?.id === currentUser.id) {
-                    console.warn(
-                      `[Auth Listener] Signing out user ${currentUser.id} due to profile fetch failure after ${event}.`
-                    );
-                    supabase.auth
-                      .signOut()
-                      .catch((e) =>
-                        console.error(
-                          '[Auth Listener] Error signing out after profile fetch failure:',
-                          e
-                        )
-                      );
-                    // clearAuthData() will be handled by the SIGNED_OUT event
-                  }
+                  // Don't sign out on profile fetch failure - it causes infinite recursion
+                  // Just log the error and continue
+                  console.warn(
+                    `[Auth Listener] Profile fetch failed for user ${currentUser.id} but keeping them signed in`
+                  );
                 });
               } catch (profileError) {
                 // This catch might be redundant if fetchProfile itself handles its errors and doesn't throw to here.

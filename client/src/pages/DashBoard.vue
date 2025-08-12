@@ -81,73 +81,73 @@
 
           <!-- Plan Details -->
           <div v-else class="space-y-4">
-            <!-- Trial Alert Banner (for trial users only) -->
-            <div v-if="currentPlanTier === 'trial'" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-yellow-400 font-semibold">Free Trial Active</span>
-                    <BaseBadge variant="warning" size="small">Trial</BaseBadge>
-                  </div>
-                  <p class="text-gray-300 text-sm mb-3">
-                    Your trial ends on <span class="font-semibold text-white">{{ formattedPlanExpiresAt }}</span>
-                  </p>
-                  <BaseButton
-                    @click="showPaymentModal = true"
-                    variant="primary"
-                    size="standard"
-                    class="w-full sm:w-auto"
-                  >
-                    Choose Plan
-                  </BaseButton>
+            <!-- Trial Alert (for trial users only) - No colored background -->
+            <div v-if="currentPlanTier === 'trial'" class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-yellow-400 font-semibold">Free Trial Active</span>
                 </div>
+                <BaseButton
+                  @click="showPaymentModal = true"
+                  variant="primary"
+                  size="standard"
+                  class="w-full sm:w-auto"
+                >
+                  Choose Plan
+                </BaseButton>
+              </div>
+              <div class="text-right">
+                <BaseBadge variant="warning" size="small">Trial</BaseBadge>
+                <p class="text-gray-300 text-sm mt-2">
+                  {{ formattedPlanExpiresAt }}
+                </p>
               </div>
             </div>
 
-            <!-- Active Subscription Banner (for paid users) -->
-            <div v-else class="bg-accent/10 border border-accent/30 rounded-lg p-4">
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-accent font-semibold">Active Subscription</span>
-                    <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-                      {{ currentPlanName }}
-                    </BaseBadge>
+            <!-- Active Subscription (for paid users) - No colored background -->
+            <div v-else class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-accent font-semibold">Active Subscription</span>
+                </div>
+                <div class="space-y-1 text-sm">
+                  <div class="flex justify-between items-center max-w-md">
+                    <span class="text-gray-400">Next billing date:</span>
+                    <span class="text-white">{{ formattedPlanExpiresAt }}</span>
                   </div>
-                  <div class="space-y-1 text-sm">
-                    <div class="flex justify-between items-center">
-                      <span class="text-gray-400">Next billing date:</span>
-                      <span class="text-white">{{ formattedPlanExpiresAt }}</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                      <span class="text-gray-400">Monthly cost:</span>
-                      <span class="text-white font-medium">
-                        ${{ currentPlanTier === 'monthly' ? '99' : '90.75' }}{{ currentPlanTier === 'annual' ? ' (billed annually)' : '' }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="flex gap-2 mt-3">
-                    <BaseButton
-                      @click="showPaymentModal = true"
-                      variant="secondary"
-                      size="small"
-                    >
-                      Change Plan
-                    </BaseButton>
-                    <BaseButton
-                      @click="handleManageBilling"
-                      variant="secondary-outline"
-                      size="small"
-                    >
-                      Manage Billing
-                    </BaseButton>
+                  <div class="flex justify-between items-center max-w-md">
+                    <span class="text-gray-400">Monthly cost:</span>
+                    <span class="text-white font-medium">
+                      ${{ currentPlanTier === 'monthly' ? '99' : '90.75' }}{{ currentPlanTier === 'annual' ? ' (billed annually)' : '' }}
+                    </span>
                   </div>
                 </div>
+                <div class="flex gap-2 mt-3">
+                  <BaseButton
+                    @click="showPaymentModal = true"
+                    variant="secondary"
+                    size="small"
+                  >
+                    Change Plan
+                  </BaseButton>
+                  <BaseButton
+                    @click="handleManageBilling"
+                    variant="secondary-outline"
+                    size="small"
+                  >
+                    Manage Billing
+                  </BaseButton>
+                </div>
+              </div>
+              <div class="text-right">
+                <BaseBadge :variant="currentPlanBadgeVariant" size="small">
+                  {{ currentPlanName }}
+                </BaseBadge>
               </div>
             </div>
 
             <!-- Email Management Section -->
-            <div class="border-t border-gray-700 pt-4">
+            <div class="pt-4">
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
                   <div class="flex items-center gap-2">
