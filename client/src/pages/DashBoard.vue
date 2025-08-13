@@ -82,42 +82,46 @@
           <!-- Plan Details -->
           <div v-else class="space-y-4">
             <!-- Trial Alert (for trial users only) - No colored background -->
-            <div v-if="currentPlanTier === 'trial'" class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-yellow-400 font-semibold">Free Trial Active</span>
+            <div v-if="currentPlanTier === 'trial'">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="text-gray-400 text-sm">Current Plan:</span>
+                    <span class="text-yellow-400 font-semibold">Free Trial</span>
+                  </div>
+                  <BaseBadge variant="warning" size="small">Trial</BaseBadge>
                 </div>
-                <BaseButton
-                  @click="showPaymentModal = true"
-                  variant="primary"
-                  size="standard"
-                  class="w-full sm:w-auto"
-                >
-                  Choose Plan
-                </BaseButton>
-              </div>
-              <div class="text-right">
-                <BaseBadge variant="warning" size="small">Trial</BaseBadge>
-                <p class="text-gray-300 text-sm mt-2">
-                  {{ formattedPlanExpiresAt }}
-                </p>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Expires At:</span>
+                  <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
+                </div>
+                <div class="flex justify-end mt-3">
+                  <BaseButton
+                    @click="showPaymentModal = true"
+                    variant="primary"
+                    size="small"
+                  >
+                    Choose Plan
+                  </BaseButton>
+                </div>
               </div>
             </div>
 
             <!-- Active Subscription (for paid users) - No colored background -->
             <div v-else class="flex items-start justify-between">
               <div class="flex-1">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-accent font-semibold">Active Subscription</span>
-                </div>
-                <div class="space-y-1 text-sm">
-                  <div class="flex justify-between items-center max-w-md">
-                    <span class="text-gray-400">Next billing date:</span>
-                    <span class="text-white">{{ formattedPlanExpiresAt }}</span>
+                <div class="space-y-2">
+                  <div class="flex items-center gap-3">
+                    <span class="text-gray-400 text-sm">Current Plan:</span>
+                    <span class="text-accent font-semibold">{{ currentPlanName }}</span>
                   </div>
-                  <div class="flex justify-between items-center max-w-md">
-                    <span class="text-gray-400">Monthly cost:</span>
-                    <span class="text-white font-medium">
+                  <div class="flex items-center gap-3">
+                    <span class="text-gray-400 text-sm">Next Billing:</span>
+                    <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-gray-400 text-sm">Monthly Cost:</span>
+                    <span class="text-white text-sm font-medium">
                       ${{ currentPlanTier === 'monthly' ? '99' : '90.75' }}{{ currentPlanTier === 'annual' ? ' (billed annually)' : '' }}
                     </span>
                   </div>
@@ -241,6 +245,7 @@
     <!-- Payment Modal -->
     <PaymentModal 
       v-if="showPaymentModal"
+      :preselected-tier="userStore.getTrialTier || userStore.getSubscriptionTier"
       @close="showPaymentModal = false"
       @select-plan="handlePlanSelection"
     />

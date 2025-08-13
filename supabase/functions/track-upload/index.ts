@@ -13,9 +13,9 @@ interface UploadRequest {
 
 // Upload limits by tier
 const UPLOAD_LIMITS = {
-  starter: 100,
-  professional: -1, // Unlimited
-  enterprise: -1   // Unlimited
+  accelerator: 100,
+  optimizer: -1,    // Unlimited
+  enterprise: -1    // Unlimited
 };
 
 serve(async (req) => {
@@ -92,8 +92,8 @@ serve(async (req) => {
       currentUploads = 0;
     }
 
-    // Check upload limits for Starter tier
-    const limit = UPLOAD_LIMITS[subscription_tier] || UPLOAD_LIMITS.starter;
+    // Check upload limits for user's tier
+    const limit = UPLOAD_LIMITS[subscription_tier] || UPLOAD_LIMITS.accelerator;
     const newUploadTotal = currentUploads + uploadCount;
     
     if (limit > 0 && newUploadTotal > limit) {
@@ -108,7 +108,7 @@ serve(async (req) => {
           remaining: Math.max(0, limit - currentUploads),
           tier: subscription_tier,
           message: `Upload limit exceeded. You have used ${currentUploads}/${limit} uploads this month.`,
-          upgradeRequired: subscription_tier === 'starter',
+          upgradeRequired: subscription_tier === 'accelerator',
           nextResetDate: getNextResetDate()
         }),
         {

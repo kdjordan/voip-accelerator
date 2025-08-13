@@ -63,6 +63,7 @@
     <!-- Upgrade Modal -->
     <PaymentModal 
       v-if="showUpgradeModal"
+      :preselected-tier="userStore.getTrialTier || userStore.getSubscriptionTier"
       @close="showUpgradeModal = false"
       @select-plan="handlePlanSelection"
     />
