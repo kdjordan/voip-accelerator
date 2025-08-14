@@ -8,19 +8,19 @@
 
     <!-- Pricing Cards -->
     <div class="grid md:grid-cols-3 gap-4">
-      <!-- Accelerator Plan -->
+      <!-- Optimizer Plan -->
       <div 
         class="bg-gray-800 rounded-lg p-6 border-2 transition-all cursor-pointer"
-        :class="selectedTier === 'accelerator' ? 'border-accent ring-2 ring-accent/20' : 'border-gray-700 hover:border-gray-600'"
-        @click="selectTier('accelerator')"
+        :class="selectedTier === 'optimizer' ? 'border-accent ring-2 ring-accent/20' : 'border-gray-700 hover:border-gray-600'"
+        @click="selectTier('optimizer')"
       >
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-white">Accelerator</h3>
+          <h3 class="text-lg font-semibold text-white">Optimizer</h3>
           <div 
             class="w-5 h-5 rounded-full border-2 transition-colors"
-            :class="selectedTier === 'accelerator' ? 'bg-accent border-accent' : 'border-gray-400'"
+            :class="selectedTier === 'optimizer' ? 'bg-accent border-accent' : 'border-gray-400'"
           >
-            <svg v-if="selectedTier === 'accelerator'" class="w-3 h-3 text-white m-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <svg v-if="selectedTier === 'optimizer'" class="w-3 h-3 text-white m-0.5" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
             </svg>
           </div>
@@ -53,11 +53,11 @@
         </ul>
       </div>
 
-      <!-- Optimizer Plan (Most Popular) -->
+      <!-- Accelerator Plan (Most Popular) -->
       <div 
         class="bg-gray-800 rounded-lg p-6 border-2 transition-all cursor-pointer relative"
-        :class="selectedTier === 'optimizer' ? 'border-accent ring-2 ring-accent/20' : 'border-gray-700 hover:border-gray-600'"
-        @click="selectTier('optimizer')"
+        :class="selectedTier === 'accelerator' ? 'border-accent ring-2 ring-accent/20' : 'border-gray-700 hover:border-gray-600'"
+        @click="selectTier('accelerator')"
       >
         <!-- Most Popular Badge -->
         <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">
@@ -65,12 +65,12 @@
         </div>
 
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-white">Optimizer</h3>
+          <h3 class="text-lg font-semibold text-white">Accelerator</h3>
           <div 
             class="w-5 h-5 rounded-full border-2 transition-colors"
-            :class="selectedTier === 'optimizer' ? 'bg-accent border-accent' : 'border-gray-400'"
+            :class="selectedTier === 'accelerator' ? 'bg-accent border-accent' : 'border-gray-400'"
           >
-            <svg v-if="selectedTier === 'optimizer'" class="w-3 h-3 text-white m-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <svg v-if="selectedTier === 'accelerator'" class="w-3 h-3 text-white m-0.5" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
             </svg>
           </div>

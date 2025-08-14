@@ -23,16 +23,21 @@ const getAllowedOrigins = (): string[] => {
 export const getCorsHeaders = (requestOrigin?: string): Record<string, string> => {
   const allowedOrigins = getAllowedOrigins();
   
+  console.log('🔍 CORS Debug - Request origin:', requestOrigin);
+  console.log('🔍 CORS Debug - Allowed origins:', allowedOrigins);
+  
   // Check if the request origin is in our allowed list
   const origin = requestOrigin && allowedOrigins.includes(requestOrigin) 
     ? requestOrigin 
-    : allowedOrigins[0]; // fallback to first allowed origin
+    : "*"; // Allow all origins temporarily for debugging
+  
+  console.log('🔍 CORS Debug - Using origin:', origin);
   
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Credentials": origin === "*" ? "false" : "true",
   };
 };
 

@@ -10,6 +10,12 @@ export interface CheckoutOptions {
   cancelUrl?: string;
 }
 
+export interface UpgradeOptions {
+  subscriptionId: string;
+  newTier: string;
+  currentTier: string;
+}
+
 export const stripeService = {
   /**
    * Create a Stripe checkout session and redirect to checkout
@@ -92,6 +98,38 @@ export const stripeService = {
       window.location.href = data.url;
     } catch (error) {
       console.error('Portal session error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Upgrade subscription with prorating
+   */
+  async upgradeSubscription(options: UpgradeOptions) {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to upgrade your subscription');
+      }
+
+      // Call upgrade edge function
+      const { data, error } = await supabase.functions.invoke('upgrade-subscription', {
+        body: {
+          subscriptionId: options.subscriptionId,
+          newTier: options.newTier,
+          currentTier: options.currentTier,
+          userId: user.id,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Upgrade error:', error);
       throw error;
     }
   },
