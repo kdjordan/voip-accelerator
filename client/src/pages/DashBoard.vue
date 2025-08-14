@@ -83,19 +83,16 @@
           <div v-else class="space-y-4">
             <!-- Trial Alert (for trial users only) - No colored background -->
             <div v-if="currentPlanTier === 'trial'">
-              <div class="space-y-2">
+              <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <span class="text-gray-400 text-sm">Current Plan:</span>
-                    <span class="text-yellow-400 font-semibold">Free Trial</span>
-                  </div>
+                  <span class="text-gray-400 text-sm">Current Plan:</span>
                   <BaseBadge variant="warning" size="small">Trial</BaseBadge>
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-gray-400 text-sm">Expires At:</span>
                   <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
                 </div>
-                <div class="flex justify-end mt-3">
+                <div class="flex justify-end mt-4">
                   <BaseButton
                     @click="showPaymentModal = true"
                     variant="primary"
@@ -154,8 +151,9 @@
             <div class="pt-4">
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
+                  <span class="text-gray-400">Email</span>
                   <div class="flex items-center gap-2">
-                    <span class="text-gray-400">Email</span>
+                    <span class="text-white">{{ displayEmail }}</span>
                     <BaseButton
                       v-if="!isEditingEmail"
                       @click="isEditingEmail = true"
@@ -164,7 +162,6 @@
                       :icon="PencilIcon"
                     />
                   </div>
-                  <span class="text-white">{{ displayEmail }}</span>
                 </div>
                 
                 <!-- Collapsible Email Update Form -->
