@@ -5,9 +5,9 @@
 
 echo "🚀 Deploying subscription fix edge functions to staging..."
 
-# Deploy stripe-webhook with enhanced logging
-echo "📦 Deploying stripe-webhook v2..."
-supabase functions deploy stripe-webhook --project-ref odnwqnmgftgjrdkotlro
+# Deploy stripe-sync with enhanced logging
+echo "📦 Deploying stripe-sync v2..."
+supabase functions deploy stripe-sync --project-ref odnwqnmgftgjrdkotlro
 
 # Deploy check-subscription-status with enhanced logging  
 echo "📦 Deploying check-subscription-status v5..."

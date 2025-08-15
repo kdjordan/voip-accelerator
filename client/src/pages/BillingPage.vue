@@ -304,6 +304,7 @@ const isCurrentSubscriber = computed(() => {
 });
 
 async function selectPlan(tier: SubscriptionTier) {
+  console.log('selectPlan called with tier:', tier);
   try {
     loading.value = true;
     
@@ -311,6 +312,7 @@ async function selectPlan(tier: SubscriptionTier) {
     let priceId = '';
     if (tier === 'optimizer') {
       priceId = import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER;
+      console.log('Optimizer price ID from env:', priceId);
     } else if (tier === 'accelerator') {
       priceId = import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR;
     } else if (tier === 'enterprise') {

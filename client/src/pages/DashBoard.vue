@@ -105,45 +105,38 @@
             </div>
 
             <!-- Active Subscription (for paid users) - No colored background -->
-            <div v-else class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="space-y-2">
-                  <div class="flex items-center gap-3">
-                    <span class="text-gray-400 text-sm">Current Plan:</span>
-                    <span class="text-accent font-semibold">{{ currentPlanName }}</span>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <span class="text-gray-400 text-sm">Next Billing:</span>
-                    <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <span class="text-gray-400 text-sm">Monthly Cost:</span>
-                    <span class="text-white text-sm font-medium">
-                      ${{ currentPlanTier === 'monthly' ? '99' : '90.75' }}{{ currentPlanTier === 'annual' ? ' (billed annually)' : '' }}
-                    </span>
-                  </div>
+            <div v-else class="space-y-4">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Current Plan:</span>
+                  <BaseBadge :variant="currentPlanBadgeVariant" size="small">
+                    {{ currentPlanName }}
+                  </BaseBadge>
                 </div>
-                <div class="flex gap-2 mt-3">
-                  <BaseButton
-                    @click="showPaymentModal = true"
-                    variant="secondary"
-                    size="small"
-                  >
-                    Change Plan
-                  </BaseButton>
-                  <BaseButton
-                    @click="handleManageBilling"
-                    variant="secondary-outline"
-                    size="small"
-                  >
-                    Manage Billing
-                  </BaseButton>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Next Billing:</span>
+                  <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Monthly Cost:</span>
+                  <span class="text-white text-sm font-medium">${{ getMonthlyPrice() }}</span>
                 </div>
               </div>
-              <div class="text-right">
-                <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-                  {{ currentPlanName }}
-                </BaseBadge>
+              <div class="flex gap-2">
+                <BaseButton
+                  @click="showPaymentModal = true"
+                  variant="secondary"
+                  size="small"
+                >
+                  Change Plan
+                </BaseButton>
+                <BaseButton
+                  @click="handleManageBilling"
+                  variant="secondary-outline"
+                  size="small"
+                >
+                  Manage Billing
+                </BaseButton>
               </div>
             </div>
 
@@ -304,6 +297,20 @@
     }
     return 'info'; // Blue variant for monthly, annual, or unknown
   });
+
+  function getMonthlyPrice() {
+    const tier = currentPlanTier.value;
+    switch (tier) {
+      case 'optimizer':
+        return '99.00';
+      case 'accelerator':
+        return '249.00';
+      case 'enterprise':
+        return '499.00';
+      default:
+        return '0.00';
+    }
+  }
 
   const userUsage = computed(() => ({ uploadsToday: 0 }));
 
