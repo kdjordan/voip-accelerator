@@ -301,6 +301,7 @@ This action cannot be undone.`"
   import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
   import { useDragDrop } from '@/composables/useDragDrop';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
+  import { useUploadTracking } from '@/composables/useUploadTracking';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -308,6 +309,7 @@ This action cannot be undone.`"
   const azStore = useAzStore();
   const azService = new AZService();
   const userStore = useUserStore();
+  const uploadTracking = useUploadTracking();
 
   // Computed property for button text
   const reportsButtonText = computed(() => {
@@ -500,6 +502,24 @@ This action cannot be undone.`"
     // Clear any previous errors
     uploadError[componentId] = null;
 
+    // Check upload limits BEFORE file validation
+    try {
+      const uploadValidation = await uploadTracking.validateBeforeUpload(1);
+      if (!uploadValidation.canUpload) {
+        uploadError[componentId] = uploadValidation.message;
+        return;
+      }
+      
+      // Show warning if near limit
+      if (uploadValidation.message && uploadValidation.canUpload) {
+        console.warn('Upload warning:', uploadValidation.message);
+      }
+    } catch (error) {
+      console.error('Error checking upload limit:', error);
+      uploadError[componentId] = 'Unable to verify upload limit. Please try again.';
+      return;
+    }
+
     // Use our validation logic
     const validationResult = validateAzFile(file, componentId);
     if (!validationResult.valid) {
@@ -584,7 +604,20 @@ This action cannot be undone.`"
       // Calculate stats AFTER processing is complete
       await azService.calculateFileStats(activeComponent.value, result.fileName);
 
-      userStore.incrementUploadsToday();
+      // Track the upload in the new system
+      try {
+        const trackingResult = await uploadTracking.incrementUploadCount(1);
+        if (trackingResult.success) {
+          console.log('Upload tracked successfully:', trackingResult.message);
+          // Update legacy counter for backwards compatibility
+          userStore.incrementUploadsToday();
+        } else {
+          console.warn('Upload tracking failed:', trackingResult.message);
+        }
+      } catch (error) {
+        console.error('Error tracking upload:', error);
+        // Continue anyway - don't block the user experience
+      }
       
       // Complete upload progress tracking
       azStore.completeUploadProgress();

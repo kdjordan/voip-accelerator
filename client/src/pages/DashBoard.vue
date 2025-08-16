@@ -47,11 +47,48 @@
           </div>
         </div>
 
-        <!-- Uploads Today -->
+        <!-- Upload Usage -->
         <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-          <div>
-            <p class="text-gray-400 text-sm">Uploads Today</p>
-            <p class="text-lg font-medium mt-1">{{ userStore.getUploadsToday }}</p>
+          <div class="space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-gray-400 text-sm">Monthly Uploads</p>
+                <p class="text-lg font-medium mt-1">
+                  <template v-if="uploadStats.isUnlimited">
+                    {{ uploadStats.uploads }} uploaded
+                  </template>
+                  <template v-else>
+                    {{ uploadStats.uploads }}/{{ uploadStats.limit }}
+                  </template>
+                </p>
+              </div>
+              <BaseBadge 
+                :variant="uploadStats.isUnlimited ? 'success' : 'info'" 
+                size="small"
+              >
+                {{ uploadTracking.getTierDisplayName(uploadStats.tier) }}
+              </BaseBadge>
+            </div>
+            
+            <!-- Progress bar (only for limited tiers) -->
+            <div v-if="!uploadStats.isUnlimited" class="w-full">
+              <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <span>{{ uploadStatusMessage }}</span>
+                <span>{{ uploadStats.percentage }}%</span>
+              </div>
+              <div class="w-full bg-gray-700 rounded-full h-2">
+                <div 
+                  :class="uploadProgressColor"
+                  class="h-2 rounded-full transition-all duration-300"
+                  :style="{ width: `${Math.min(uploadStats.percentage, 100)}%` }"
+                ></div>
+              </div>
+            </div>
+            
+            <!-- Status message for unlimited tiers -->
+            <div v-else class="text-sm text-green-400">
+              {{ uploadStatusMessage }}
+            </div>
           </div>
         </div>
 
@@ -92,6 +129,10 @@
                   <span class="text-gray-400 text-sm">Expires At:</span>
                   <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
                 </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Trial Uploads:</span>
+                  <span class="text-white text-sm">{{ uploadStats.uploads }}/{{ uploadStats.limit }}</span>
+                </div>
                 <div class="flex justify-end mt-4">
                   <BaseButton
                     @click="showPaymentModal = true"
@@ -120,6 +161,18 @@
                 <div class="flex items-center justify-between">
                   <span class="text-gray-400 text-sm">Monthly Cost:</span>
                   <span class="text-white text-sm font-medium">${{ getMonthlyPrice() }}</span>
+                </div>
+                
+                <!-- Upload Limits for Accelerator Tier -->
+                <div v-if="currentPlanTier === 'accelerator'" class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Upload Limit:</span>
+                  <span class="text-white text-sm">{{ uploadStats.uploads }}/{{ uploadStats.limit }} this month</span>
+                </div>
+                
+                <!-- Upload Status for Unlimited Tiers -->
+                <div v-else-if="uploadStats.isUnlimited" class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Uploads:</span>
+                  <span class="text-green-400 text-sm">{{ uploadStats.uploads }} (Unlimited)</span>
                 </div>
               </div>
               <div class="flex gap-2">
@@ -262,11 +315,15 @@
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
   import PaymentModal from '@/components/billing/PaymentModal.vue';
+  import { useUploadTracking } from '@/composables/useUploadTracking';
 
   // User store for user info
   const userStore = useUserStore();
   const router = useRouter();
   const route = useRoute();
+  
+  // Upload tracking composable
+  const uploadTracking = useUploadTracking();
   
   // Payment modal state
   const showPaymentModal = ref(false);
@@ -311,6 +368,35 @@
         return '0.00';
     }
   }
+
+  // Upload tracking computeds
+  const uploadStats = computed(() => {
+    const tier = uploadTracking.currentTier.value;
+    const uploads = uploadTracking.uploadsThisMonth.value;
+    const remaining = uploadTracking.uploadsRemaining.value;
+    const percentage = uploadTracking.percentageUsed.value;
+    const isUnlimited = uploadTracking.isUnlimited.value;
+    
+    return {
+      tier,
+      uploads,
+      remaining,
+      percentage,
+      isUnlimited,
+      limit: uploadTracking.UPLOAD_LIMIT
+    };
+  });
+
+  const uploadProgressColor = computed(() => {
+    const percentage = uploadStats.value.percentage;
+    if (percentage >= 90) return 'bg-red-500';
+    if (percentage >= 80) return 'bg-yellow-500';
+    return 'bg-accent';
+  });
+
+  const uploadStatusMessage = computed(() => {
+    return uploadTracking.formatRemainingMessage();
+  });
 
   const userUsage = computed(() => ({ uploadsToday: 0 }));
 
@@ -562,6 +648,15 @@
       console.log('[DashBoard] LERG initialization completed successfully');
     } catch (err) {
       console.error('[DashBoard] Failed to initialize LERG:', err);
+    }
+
+    // Initialize upload statistics for dashboard display
+    try {
+      console.log('[DashBoard] Loading upload statistics...');
+      await uploadTracking.getUploadStatistics();
+      console.log('[DashBoard] Upload statistics loaded successfully');
+    } catch (err) {
+      console.error('[DashBoard] Failed to load upload statistics:', err);
     }
 
     console.log('[DashBoard] ========== DASHBOARD INITIALIZATION COMPLETE ==========');

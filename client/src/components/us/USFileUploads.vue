@@ -324,11 +324,13 @@ This action cannot be undone.`"
   import type { RateStats } from '@/types/domains/us-types';
   import { useUserStore } from '@/stores/user-store';
   import useDexieDB from '@/composables/useDexieDB';
+  import { useUploadTracking } from '@/composables/useUploadTracking';
 
   const usStore = useUsStore();
   const service = new USService();
   const lergStore = useLergStoreV2();
   const userStore = useUserStore();
+  const uploadTracking = useUploadTracking();
 
   // Computed property for the reports button text
   const reportsButtonText = computed(() => {
@@ -393,6 +395,24 @@ This action cannot be undone.`"
 
     // Clear any previous errors
     uploadError[componentId] = null;
+
+    // Check upload limits BEFORE file validation
+    try {
+      const uploadValidation = await uploadTracking.validateBeforeUpload(1);
+      if (!uploadValidation.canUpload) {
+        uploadError[componentId] = uploadValidation.message;
+        return;
+      }
+      
+      // Show warning if near limit
+      if (uploadValidation.message && uploadValidation.canUpload) {
+        console.warn('Upload warning:', uploadValidation.message);
+      }
+    } catch (error) {
+      console.error('Error checking upload limit:', error);
+      uploadError[componentId] = 'Unable to verify upload limit. Please try again.';
+      return;
+    }
 
     // Check if OTHER component is uploading (not this one)
     const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
@@ -504,7 +524,20 @@ This action cannot be undone.`"
         `[USFileUploads] File ${fileName} processed and registered for component ${componentName}.`
       );
 
-      userStore.incrementUploadsToday();
+      // Track the upload in the new system
+      try {
+        const trackingResult = await uploadTracking.incrementUploadCount(1);
+        if (trackingResult.success) {
+          console.log('Upload tracked successfully:', trackingResult.message);
+          // Update legacy counter for backwards compatibility
+          userStore.incrementUploadsToday();
+        } else {
+          console.warn('Upload tracking failed:', trackingResult.message);
+        }
+      } catch (error) {
+        console.error('Error tracking upload:', error);
+        // Continue anyway - don't block the user experience
+      }
     } catch (error) {
       // Updated error message context
       console.error(`[Main] Error during post-upload processing for ${fileName}:`, error);
