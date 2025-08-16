@@ -1,8 +1,35 @@
-import { ref, computed } from 'vue';
+import { ref, computed, type Ref } from 'vue';
 import { useUserStore } from '@/stores/user-store';
 import { supabase } from '@/utils/supabase';
 
 export type UploadType = 'rate_sheet' | 'comparison' | 'rate_deck' | 'bulk_adjustment';
+
+interface UploadCheckResult {
+  allowed: boolean;
+  remaining: number | null;
+  message: string;
+  uploads_this_month: number;
+  total_uploads: number;
+  tier: string;
+}
+
+interface UploadIncrementResult {
+  success: boolean;
+  uploads_this_month: number;
+  total_uploads: number;
+  remaining: number | null;
+  message: string;
+}
+
+interface UploadStatistics {
+  uploads_this_month: number;
+  total_uploads: number;
+  upload_limit: number | null;
+  percentage_used: number;
+  tier: string;
+  reset_date: string;
+  days_until_reset: number;
+}
 
 interface UploadTrackingResponse {
   success: boolean;
@@ -21,6 +48,13 @@ export function useUploadTracking() {
   const userStore = useUserStore();
   const isTracking = ref(false);
   const trackingError = ref<string | null>(null);
+  const lastCheck = ref<UploadCheckResult | null>(null);
+  const statistics = ref<UploadStatistics | null>(null);
+  
+  // Get upload limit from environment variable
+  const UPLOAD_LIMIT = import.meta.env.VITE_ACCELERATOR_UPLOAD_LIMIT 
+    ? parseInt(import.meta.env.VITE_ACCELERATOR_UPLOAD_LIMIT) 
+    : 100;
   
   // Get current tier and upload usage from user store
   const currentTier = computed(() => userStore.getSubscriptionTier || userStore.getTrialTier);
@@ -61,47 +95,198 @@ export function useUploadTracking() {
   });
   
   /**
+   * Check if user can upload files based on their tier and current usage
+   * Uses new database function for accurate checking
+   */
+  async function checkUploadLimitAsync(): Promise<UploadCheckResult> {
+    isTracking.value = true;
+    trackingError.value = null;
+
+    try {
+      const userId = userStore.getUser?.id;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
+        .rpc('check_upload_limit', { p_user_id: userId })
+        .single();
+
+      if (error) throw error;
+
+      lastCheck.value = data;
+      return data;
+    } catch (err: any) {
+      console.error('Error checking upload limit:', err);
+      trackingError.value = err.message || 'Failed to check upload limit';
+      
+      // Return a safe default that blocks uploads
+      return {
+        allowed: false,
+        remaining: 0,
+        message: 'Unable to verify upload limit. Please try again.',
+        uploads_this_month: uploadUsage.value?.used || 0,
+        total_uploads: 0,
+        tier: currentTier.value || 'accelerator'
+      };
+    } finally {
+      isTracking.value = false;
+    }
+  }
+
+  /**
+   * Increment upload count after successful file upload
+   * Uses new database function for atomic increment
+   */
+  async function incrementUploadCount(fileCount: number = 1): Promise<UploadIncrementResult> {
+    isTracking.value = true;
+    trackingError.value = null;
+
+    try {
+      const userId = userStore.getUser?.id;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
+        .rpc('increment_upload_count', { 
+          p_user_id: userId,
+          p_file_count: fileCount 
+        })
+        .single();
+
+      if (error) throw error;
+
+      // Update local store with new values
+      if (data.success && userStore.getUserProfile) {
+        userStore.getUserProfile.uploads_this_month = data.uploads_this_month;
+        
+        // Update total_uploads if it exists on the profile
+        if ('total_uploads' in userStore.getUserProfile) {
+          (userStore.getUserProfile as any).total_uploads = data.total_uploads;
+        }
+      }
+
+      return data;
+    } catch (err: any) {
+      console.error('Error incrementing upload count:', err);
+      trackingError.value = err.message || 'Failed to track upload';
+      
+      // Return failure result
+      return {
+        success: false,
+        uploads_this_month: uploadUsage.value?.used || 0,
+        total_uploads: 0,
+        remaining: remainingUploads.value,
+        message: 'Failed to track upload'
+      };
+    } finally {
+      isTracking.value = false;
+    }
+  }
+
+  /**
+   * Get detailed upload statistics for dashboard display
+   */
+  async function getUploadStatistics(): Promise<UploadStatistics | null> {
+    try {
+      const userId = userStore.getUser?.id;
+      if (!userId) return null;
+
+      const { data, error } = await supabase
+        .rpc('get_upload_statistics', { p_user_id: userId })
+        .single();
+
+      if (error) throw error;
+
+      statistics.value = data;
+      return data;
+    } catch (err: any) {
+      console.error('Error getting upload statistics:', err);
+      trackingError.value = err.message || 'Failed to get upload statistics';
+      return null;
+    }
+  }
+
+  /**
+   * Pre-upload validation helper
+   * Returns true if upload should proceed, false if blocked
+   */
+  async function validateBeforeUpload(fileCount: number = 1): Promise<{
+    canUpload: boolean;
+    message: string;
+    remaining: number | null;
+  }> {
+    // For unlimited tiers, always allow
+    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+      return {
+        canUpload: true,
+        message: 'Unlimited uploads available',
+        remaining: null
+      };
+    }
+
+    // Check current limit
+    const result = await checkUploadLimitAsync();
+    
+    if (!result.allowed) {
+      return {
+        canUpload: false,
+        message: result.message,
+        remaining: result.remaining
+      };
+    }
+
+    // Check if this upload would exceed the limit
+    if (result.remaining !== null && fileCount > result.remaining) {
+      return {
+        canUpload: false,
+        message: `You can only upload ${result.remaining} more file(s) this month. You're trying to upload ${fileCount} file(s).`,
+        remaining: result.remaining
+      };
+    }
+
+    // Show warning if near limit
+    if (result.remaining !== null && result.remaining <= 20) {
+      return {
+        canUpload: true,
+        message: `Warning: Only ${result.remaining} uploads remaining this month`,
+        remaining: result.remaining
+      };
+    }
+
+    return {
+      canUpload: true,
+      message: '',
+      remaining: result.remaining
+    };
+  }
+
+  /**
    * Track an upload and check if it's within limits
    * @param uploadType - Type of upload being tracked
    * @param uploadCount - Number of uploads (default 1)
    * @returns Promise with tracking response
+   * @deprecated Use incrementUploadCount instead for better database integration
    */
   async function trackUpload(
     uploadType: UploadType, 
     uploadCount: number = 1
   ): Promise<UploadTrackingResponse> {
-    isTracking.value = true;
-    trackingError.value = null;
+    // Use the new increment function but return backwards-compatible response
+    const result = await incrementUploadCount(uploadCount);
     
-    try {
-      const { data, error } = await supabase.functions.invoke('track-upload', {
-        body: { uploadType, uploadCount }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Update local upload count if successful
-      if (data?.success && uploadUsage.value) {
-        // Refresh user profile to get updated counts
-        await userStore.fetchUserProfile();
-      }
-      
-      return data as UploadTrackingResponse;
-      
-    } catch (error: any) {
-      console.error('Upload tracking error:', error);
-      trackingError.value = error.message || 'Failed to track upload';
-      
-      // Return error response
-      return {
-        success: false,
-        message: trackingError.value
-      };
-    } finally {
-      isTracking.value = false;
-    }
+    return {
+      success: result.success,
+      limitExceeded: !result.success && result.remaining === 0,
+      currentUploads: result.uploads_this_month,
+      uploadLimit: currentTier.value === 'accelerator' ? UPLOAD_LIMIT : undefined,
+      remaining: result.remaining || undefined,
+      tier: currentTier.value || undefined,
+      message: result.message,
+      upgradeRequired: result.remaining === 0 && currentTier.value === 'accelerator',
+      isUnlimited: currentTier.value === 'optimizer' || currentTier.value === 'enterprise'
+    };
   }
   
   /**
@@ -155,18 +340,69 @@ export function useUploadTracking() {
     return '';
   }
   
+  /**
+   * Helper to get user-friendly tier display name
+   */
+  function getTierDisplayName(tier: string | null): string {
+    switch (tier) {
+      case 'accelerator':
+        return 'Accelerator';
+      case 'optimizer':
+        return 'Optimizer';
+      case 'enterprise':
+        return 'Enterprise';
+      case 'trial':
+        return 'Free Trial';
+      default:
+        return 'Basic';
+    }
+  }
+
+  /**
+   * Helper to format remaining uploads message
+   */
+  function formatRemainingMessage(): string {
+    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+      return 'Unlimited uploads';
+    }
+    
+    const remaining = remainingUploads.value;
+    if (remaining === null) return '';
+    
+    if (remaining === 0) {
+      return 'Monthly upload limit reached';
+    } else if (remaining <= 10) {
+      return `⚠️ Only ${remaining} upload${remaining === 1 ? '' : 's'} remaining`;
+    } else {
+      return `${remaining} upload${remaining === 1 ? '' : 's'} remaining`;
+    }
+  }
+
   return {
     // State
     isTracking,
     trackingError,
+    lastCheck,
+    statistics,
     currentTier,
     uploadUsage,
     canUpload,
     remainingUploads,
+    UPLOAD_LIMIT,
     
-    // Methods
+    // Enhanced Methods (recommended)
+    checkUploadLimitAsync,
+    incrementUploadCount,
+    getUploadStatistics,
+    validateBeforeUpload,
+    
+    // Legacy Methods (backwards compatible)
     trackUpload,
     checkUploadLimit,
-    getUploadLimitMessage
+    getUploadLimitMessage,
+    
+    // Helpers
+    getTierDisplayName,
+    formatRemainingMessage
   };
 }
