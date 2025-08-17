@@ -163,8 +163,8 @@
                   <span class="text-white text-sm font-medium">${{ getMonthlyPrice() }}</span>
                 </div>
                 
-                <!-- Upload Limits for Accelerator Tier -->
-                <div v-if="currentPlanTier === 'accelerator'" class="flex items-center justify-between">
+                <!-- Upload Limits for Optimizer Tier -->
+                <div v-if="currentPlanTier === 'optimizer'" class="flex items-center justify-between">
                   <span class="text-gray-400 text-sm">Upload Limit:</span>
                   <span class="text-white text-sm">{{ uploadStats.uploads }}/{{ uploadStats.limit }} this month</span>
                 </div>
@@ -358,9 +358,9 @@
   function getMonthlyPrice() {
     const tier = currentPlanTier.value;
     switch (tier) {
-      case 'optimizer':
-        return '99.00';
       case 'accelerator':
+        return '99.00';
+      case 'optimizer':
         return '249.00';
       case 'enterprise':
         return '499.00';

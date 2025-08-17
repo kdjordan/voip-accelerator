@@ -51,9 +51,9 @@ export function useUploadTracking() {
   const lastCheck = ref<UploadCheckResult | null>(null);
   const statistics = ref<UploadStatistics | null>(null);
   
-  // Get upload limit from environment variable
-  const UPLOAD_LIMIT = import.meta.env.VITE_ACCELERATOR_UPLOAD_LIMIT 
-    ? parseInt(import.meta.env.VITE_ACCELERATOR_UPLOAD_LIMIT) 
+  // Get upload limit from environment variable (for Optimizer tier)
+  const UPLOAD_LIMIT = import.meta.env.VITE_OPTIMIZER_UPLOAD_LIMIT 
+    ? parseInt(import.meta.env.VITE_OPTIMIZER_UPLOAD_LIMIT) 
     : 100;
   
   // Get current tier and upload usage from user store
@@ -65,12 +65,12 @@ export function useUploadTracking() {
     if (!uploadUsage.value) return true;
     
     // Unlimited tiers
-    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
       return true;
     }
     
-    // Accelerator tier - check limit
-    if (currentTier.value === 'accelerator') {
+    // Optimizer tier - check limit
+    if (currentTier.value === 'optimizer') {
       return uploadUsage.value.used < (uploadUsage.value.limit || 100);
     }
     
@@ -81,12 +81,12 @@ export function useUploadTracking() {
     if (!uploadUsage.value) return null;
     
     // Unlimited tiers
-    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
       return null; // null indicates unlimited
     }
     
-    // Accelerator tier
-    if (currentTier.value === 'accelerator') {
+    // Optimizer tier
+    if (currentTier.value === 'optimizer') {
       const limit = uploadUsage.value.limit || 100;
       return Math.max(0, limit - uploadUsage.value.used);
     }
@@ -127,7 +127,7 @@ export function useUploadTracking() {
         message: 'Unable to verify upload limit. Please try again.',
         uploads_this_month: uploadUsage.value?.used || 0,
         total_uploads: 0,
-        tier: currentTier.value || 'accelerator'
+        tier: currentTier.value || 'optimizer'
       };
     } finally {
       isTracking.value = false;
@@ -218,7 +218,7 @@ export function useUploadTracking() {
     remaining: number | null;
   }> {
     // For unlimited tiers, always allow
-    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
       return {
         canUpload: true,
         message: 'Unlimited uploads available',
@@ -280,12 +280,12 @@ export function useUploadTracking() {
       success: result.success,
       limitExceeded: !result.success && result.remaining === 0,
       currentUploads: result.uploads_this_month,
-      uploadLimit: currentTier.value === 'accelerator' ? UPLOAD_LIMIT : undefined,
+      uploadLimit: currentTier.value === 'optimizer' ? UPLOAD_LIMIT : undefined,
       remaining: result.remaining || undefined,
       tier: currentTier.value || undefined,
       message: result.message,
-      upgradeRequired: result.remaining === 0 && currentTier.value === 'accelerator',
-      isUnlimited: currentTier.value === 'optimizer' || currentTier.value === 'enterprise'
+      upgradeRequired: result.remaining === 0 && currentTier.value === 'optimizer',
+      isUnlimited: currentTier.value === 'accelerator' || currentTier.value === 'enterprise'
     };
   }
   
@@ -298,12 +298,12 @@ export function useUploadTracking() {
     if (!uploadUsage.value) return true;
     
     // Unlimited tiers
-    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
       return true;
     }
     
-    // Accelerator tier
-    if (currentTier.value === 'accelerator') {
+    // Optimizer tier
+    if (currentTier.value === 'optimizer') {
       const limit = uploadUsage.value.limit || 100;
       return (uploadUsage.value.used + uploadCount) <= limit;
     }
@@ -318,18 +318,18 @@ export function useUploadTracking() {
     if (!uploadUsage.value) return '';
     
     // Unlimited tiers
-    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
       return 'Unlimited uploads available';
     }
     
-    // Accelerator tier
-    if (currentTier.value === 'accelerator') {
+    // Optimizer tier
+    if (currentTier.value === 'optimizer') {
       const limit = uploadUsage.value.limit || 100;
       const used = uploadUsage.value.used;
       const remaining = limit - used;
       
       if (remaining <= 0) {
-        return `Upload limit reached (${limit}/${limit}). Upgrade to Optimizer for unlimited uploads.`;
+        return `Upload limit reached (${limit}/${limit}). Upgrade to Enterprise for unlimited uploads.`;
       } else if (remaining <= 20) {
         return `⚠️ Only ${remaining} uploads remaining this month`;
       } else {
@@ -362,7 +362,7 @@ export function useUploadTracking() {
    * Helper to format remaining uploads message
    */
   function formatRemainingMessage(): string {
-    if (currentTier.value === 'optimizer' || currentTier.value === 'enterprise') {
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
       return 'Unlimited uploads';
     }
     
@@ -378,6 +378,37 @@ export function useUploadTracking() {
     }
   }
 
+  // Additional computed properties for Dashboard
+  const uploadsThisMonth = computed(() => {
+    return statistics.value?.uploadsThisMonth || uploadUsage.value?.used || 0;
+  });
+
+  const uploadsRemaining = computed(() => {
+    return remainingUploads.value;
+  });
+
+  const percentageUsed = computed(() => {
+    if (!uploadUsage.value) return 0;
+    
+    // For unlimited tiers, return 0
+    if (currentTier.value === 'accelerator' || currentTier.value === 'enterprise') {
+      return 0;
+    }
+    
+    // For Optimizer tier
+    if (currentTier.value === 'optimizer') {
+      const limit = uploadUsage.value.limit || UPLOAD_LIMIT;
+      const used = uploadUsage.value.used || 0;
+      return Math.round((used / limit) * 100);
+    }
+    
+    return 0;
+  });
+
+  const isUnlimited = computed(() => {
+    return currentTier.value === 'accelerator' || currentTier.value === 'enterprise';
+  });
+
   return {
     // State
     isTracking,
@@ -389,6 +420,12 @@ export function useUploadTracking() {
     canUpload,
     remainingUploads,
     UPLOAD_LIMIT,
+    
+    // Dashboard specific computed properties
+    uploadsThisMonth,
+    uploadsRemaining,
+    percentageUsed,
+    isUnlimited,
     
     // Enhanced Methods (recommended)
     checkUploadLimitAsync,

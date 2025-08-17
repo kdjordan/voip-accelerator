@@ -49,7 +49,7 @@
               </div>
               
               <div class="mb-4">
-                <span class="text-4xl font-bold text-white">$99</span>
+                <span class="text-4xl font-bold text-white">$249</span>
                 <span class="text-gray-400 ml-1">/month</span>
               </div>
               
@@ -105,7 +105,7 @@
               </div>
               
               <div class="mb-4">
-                <span class="text-4xl font-bold text-white">$249</span>
+                <span class="text-4xl font-bold text-white">$99</span>
                 <span class="text-gray-400 ml-1">/month</span>
               </div>
               
