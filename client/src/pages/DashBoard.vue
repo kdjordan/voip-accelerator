@@ -142,7 +142,7 @@
                 </div>
                 <div class="flex justify-end mt-4">
                   <BaseButton
-                    @click="showAllPlansInModal = false; showPaymentModal = true"
+                    @click="showPlanSelectorModal = true"
                     variant="primary"
                     size="small"
                   >
@@ -158,7 +158,7 @@
                 <div class="flex items-center justify-between">
                   <span class="text-gray-400 text-sm">Current Plan:</span>
                   <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-                    {{ currentPlanName }}
+                    {{ currentPlanTier === 'trial' ? 'Free Trial' : currentPlanName }}
                   </BaseBadge>
                 </div>
                 <div class="flex items-center justify-between">
@@ -366,6 +366,7 @@
   const currentPlanName = computed(() => {
     const tier = currentPlanTier.value;
     if (!tier) return 'Unknown';
+    if (tier === 'trial') return 'Free Trial';
     return tier.charAt(0).toUpperCase() + tier.slice(1);
   });
 
@@ -380,9 +381,11 @@
   function getMonthlyPrice() {
     const tier = currentPlanTier.value;
     switch (tier) {
-      case 'accelerator':
-        return '99.00';
+      case 'trial':
+        return '0.00'; // Trial is free
       case 'optimizer':
+        return '99.00';
+      case 'accelerator':
         return '249.00';
       case 'enterprise':
         return '499.00';

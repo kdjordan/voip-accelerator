@@ -67,7 +67,11 @@ export const useUserStore = defineStore('user', {
       }
     },
     getCurrentPlanTier: (state): PlanTierType | null => {
-      // Check subscription_tier first (new field), then fall back to subscription_status
+      // For trial users, always return 'trial' regardless of subscription_tier
+      if (state.auth.profile?.subscription_status === 'trial') {
+        return 'trial';
+      }
+      // For non-trial users, check subscription_tier first, then fall back to subscription_status
       const tier = state.auth.profile?.subscription_tier || state.auth.profile?.subscription_status;
       return (tier as PlanTierType | null) ?? null;
     },
