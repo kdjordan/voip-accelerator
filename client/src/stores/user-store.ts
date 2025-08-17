@@ -77,7 +77,11 @@ export const useUserStore = defineStore('user', {
     },
     
     getTrialTier: (state): SubscriptionTier | null => {
-      return state.auth.profile?.trial_tier ?? null;
+      // All trials are optimizer tier
+      if (state.auth.profile?.subscription_status === 'trial') {
+        return 'optimizer';
+      }
+      return null;
     },
     
     getUploadUsage: (state) => {
@@ -146,6 +150,25 @@ export const useUserStore = defineStore('user', {
           variant: 'error' as const,
           buttonText: "Subscribe Now"
         };
+      }
+
+      // Check for upload limit reached (Optimizer tier only)
+      const isOptimizerUser = profile.subscription_tier === 'optimizer' || 
+                             (subscriptionStatus === 'trial' && !profile.subscription_tier);
+      
+      if (isOptimizerUser) {
+        const uploadsThisMonth = profile.uploads_this_month || 0;
+        console.log(`[Banner Debug] Optimizer user - uploads: ${uploadsThisMonth}, tier: ${profile.subscription_tier}, status: ${subscriptionStatus}`);
+        if (uploadsThisMonth >= 100) {
+          console.log('[Banner Debug] Showing upload limit banner');
+          return {
+            show: true,
+            message: "You've reached your monthly upload limit (100/100). Upgrade to continue uploading files.",
+            variant: 'warning' as const,
+            buttonText: "Compare all plans",
+            reason: 'upload-limit' as const
+          };
+        }
       }
 
       return { show: false, message: '' };
@@ -246,11 +269,18 @@ export const useUserStore = defineStore('user', {
           this.auth.error = supabaseError;
           this.auth.profile = null;
         } else if (data) {
-          this.auth.profile = data as Profile;
+          // Safely assign profile data with error handling
+          try {
+            this.auth.profile = data as Profile;
+          } catch (assignError) {
+            console.error(`[UserStore] Error assigning profile data:`, assignError);
+            this.auth.profile = null;
+          }
         } else {
           console.warn(
             `[UserStore] No profile data found for user ID: ${userId}. (Status: ${status})`
           );
+          console.warn(`[UserStore] This might be a new account - profile may not exist yet`);
           this.auth.profile = null;
         }
       } catch (err: any) {

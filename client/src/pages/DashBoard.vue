@@ -3,7 +3,7 @@
     <!-- Service Expiry Banner -->
     <ServiceExpiryBanner 
       v-bind="bannerState"
-      @upgrade-clicked="showPaymentModal = true"
+      @upgrade-clicked="handleUpgradeFromExpiry"
     />
     
     <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">Dashboard</h1>
@@ -52,10 +52,17 @@
           <div class="space-y-3">
             <div class="flex justify-between items-start">
               <div>
-                <p class="text-gray-400 text-sm">Monthly Uploads</p>
+                <p class="text-gray-400 text-sm">
+                  <template v-if="uploadStats.isUnlimited">
+                    All-Time Uploads
+                  </template>
+                  <template v-else>
+                    Monthly Uploads
+                  </template>
+                </p>
                 <p class="text-lg font-medium mt-1">
                   <template v-if="uploadStats.isUnlimited">
-                    {{ uploadStats.uploads }} uploaded
+                    {{ uploadStats.allTimeUploads || uploadStats.uploads }} total
                   </template>
                   <template v-else>
                     {{ uploadStats.uploads }}/{{ uploadStats.limit }}
@@ -135,7 +142,7 @@
                 </div>
                 <div class="flex justify-end mt-4">
                   <BaseButton
-                    @click="showPaymentModal = true"
+                    @click="showAllPlansInModal = false; showPaymentModal = true"
                     variant="primary"
                     size="small"
                   >
@@ -177,7 +184,7 @@
               </div>
               <div class="flex gap-2">
                 <BaseButton
-                  @click="showPaymentModal = true"
+                  @click="showAllPlansInModal = true; showPaymentModal = true"
                   variant="secondary"
                   size="small"
                 >
@@ -274,6 +281,7 @@
 
     </div>
 
+
     <ConfirmationModal
       v-model="showDeleteConfirmModal"
       title="Delete Account Confirmation"
@@ -289,8 +297,17 @@
     <PaymentModal 
       v-if="showPaymentModal"
       :preselected-tier="userStore.getTrialTier || userStore.getSubscriptionTier"
-      @close="showPaymentModal = false"
+      :show-all-plans="showAllPlansInModal"
+      @close="showPaymentModal = false; showAllPlansInModal = false"
       @select-plan="handlePlanSelection"
+    />
+    
+    <!-- Plan Selector Modal -->
+    <PlanSelectorModal
+      v-if="showPlanSelectorModal"
+      :is-trial-expired="true"
+      @close="showPlanSelectorModal = false"
+      @select-plan="handlePlanSelectorSelection"
     />
   </div>
 </template>
@@ -311,11 +328,13 @@
   } from '@heroicons/vue/24/solid';
   import { useRouter, useRoute } from 'vue-router';
   import { useBilling } from '@/composables/useBilling';
-  import type { PlanTierType } from '@/types/user-types'; // Import PlanTierType
+  import type { PlanTierType, SubscriptionTier } from '@/types/user-types'; // Import PlanTierType
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
   import PaymentModal from '@/components/billing/PaymentModal.vue';
+  import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
   import { useUploadTracking } from '@/composables/useUploadTracking';
+  
 
   // User store for user info
   const userStore = useUserStore();
@@ -327,6 +346,9 @@
   
   // Payment modal state
   const showPaymentModal = ref(false);
+  const showAllPlansInModal = ref(false); // Track if modal should show all plans
+  
+  const showPlanSelectorModal = ref(false);
   
   // Banner state from unified store logic
   const bannerState = computed(() => userStore.getServiceExpiryBanner);
@@ -377,13 +399,18 @@
     const percentage = uploadTracking.percentageUsed.value;
     const isUnlimited = uploadTracking.isUnlimited.value;
     
+    // For unlimited plans (Accelerator/Enterprise), we still show monthly uploads
+    // but could track all-time if we add that to the database later
+    const allTimeUploads = uploads; // TODO: Add total_uploads to profiles table
+    
     return {
       tier,
       uploads,
       remaining,
       percentage,
       isUnlimited,
-      limit: uploadTracking.UPLOAD_LIMIT
+      limit: uploadTracking.UPLOAD_LIMIT,
+      allTimeUploads
     };
   });
 
@@ -561,6 +588,43 @@
     showPaymentModal.value = false;
     // PaymentModal will handle the checkout redirect
   }
+  
+  // Handler for upgrade clicked from expiry banner
+  function handleUpgradeFromExpiry() {
+    showPlanSelectorModal.value = true; // Use PlanSelectorModal for expiry upgrades
+  }
+  
+  // Handler for plan selection from PlanSelectorModal
+  async function handlePlanSelectorSelection(tier: SubscriptionTier) {
+    showPlanSelectorModal.value = false;
+    
+    try {
+      const { createCheckoutSession } = useBilling();
+      
+      // Get the correct price ID based on selected tier
+      const priceIds = {
+        optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
+        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR,
+        enterprise: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE,
+      };
+      
+      const priceId = priceIds[tier];
+      
+      if (!priceId) {
+        throw new Error(`Price ID not found for ${tier} plan`);
+      }
+      
+      console.log(`🚀 Creating checkout session for ${tier} upgrade`);
+      await createCheckoutSession(priceId, tier);
+      
+    } catch (error: any) {
+      console.error('Upgrade checkout error:', error);
+      alert(`Failed to start checkout: ${error.message}`);
+      // Reopen modal on error
+      showPlanSelectorModal.value = true;
+    }
+  }
+  
 
   async function handleManageBilling() {
     try {
@@ -638,6 +702,17 @@
     if (route.query.subscription === 'success') {
       console.log('[DashBoard] Detected successful subscription, refreshing profile...');
       await refreshUserProfile();
+    }
+    
+    // Check if user was redirected due to upload limit
+    if (route.query.uploadLimitReached === 'true') {
+      console.log('[DashBoard] User redirected due to upload limit, refreshing profile to show banner...');
+      const userId = userStore.getUser?.id;
+      if (userId) {
+        await userStore.fetchProfile(userId);
+      }
+      // Clear the query parameter
+      router.replace({ query: {} });
     }
     
     try {

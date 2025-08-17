@@ -3,6 +3,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import { RateGenService } from '@/services/rate-gen.service';
 import type { GeneratedRateDeck, LCRConfig } from '@/types/domains/rate-gen-types';
+import type { SubscriptionTier } from '@/types/user-types';
+import { useUserStore } from '@/stores/user-store';
+import { useBilling } from '@/composables/useBilling';
 
 // Components
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
@@ -10,9 +13,16 @@ import RateGenHeader from '@/components/rate-gen/RateGenHeader.vue';
 import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
 import RateGenResults from '@/components/rate-gen/RateGenResults.vue';
 import BaseButton from '@/components/shared/BaseButton.vue';
+import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
+import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
+import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
+import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
 
 const store = useRateGenStore();
 const service = new RateGenService();
+const globalUploadLimit = useGlobalUploadLimit();
+const userStore = useUserStore();
+const showPlanSelectorModal = ref(false);
 
 // State
 const activeTab = ref<'upload' | 'settings' | 'results'>('upload');
@@ -70,6 +80,45 @@ const handleTabChange = (tab: 'upload' | 'settings' | 'results') => {
   console.log(`[RateGenUSView] Tab changed to: ${tab}`);
 };
 
+// Banner state from unified store logic
+const bannerState = computed(() => userStore.getServiceExpiryBanner);
+
+// Handler for upgrade clicked from expiry banner
+function handleUpgradeFromExpiry() {
+  showPlanSelectorModal.value = true;
+}
+
+// Handler for plan selection from PlanSelectorModal  
+async function handlePlanSelectorSelection(tier: SubscriptionTier) {
+  showPlanSelectorModal.value = false;
+  
+  try {
+    const { createCheckoutSession } = useBilling();
+    
+    // Get the correct price ID based on selected tier
+    const priceIds = {
+      optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
+      accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR,
+      enterprise: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE,
+    };
+    
+    const priceId = priceIds[tier];
+    
+    if (!priceId) {
+      throw new Error(`Price ID not found for ${tier} plan`);
+    }
+    
+    console.log(`🚀 Creating checkout session for ${tier} upgrade`);
+    await createCheckoutSession(priceId, tier);
+    
+  } catch (error: any) {
+    console.error('Upgrade checkout error:', error);
+    alert(`Failed to start checkout: ${error.message}`);
+    // Reopen modal on error
+    showPlanSelectorModal.value = true;
+  }
+}
+
 
 // Lifecycle
 onMounted(() => {
@@ -82,8 +131,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Match USFileUploads.vue layout structure exactly -->
+  <!-- Upload Limit Fullscreen Modal -->
+  <!-- Main Page Content (No longer blocked) -->
   <div class="flex flex-col w-full min-h-screen bg-fbBlack text-fbWhite">
+    
+    <!-- Service Expiry Banner -->
+    <ServiceExpiryBanner 
+      v-bind="bannerState"
+      @upgrade-clicked="handleUpgradeFromExpiry"
+    />
+    
     <!-- Page Title - Outside the bento box like reference -->
     <div class="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
       <h1 class="text-2xl sm:text-3xl text-accent uppercase rounded-lg px-2 sm:px-4 py-2 font-secondary" role="heading" aria-level="1">US Rate Generation</h1>
@@ -180,6 +237,20 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Plan Selector Modal -->
+    <PlanSelectorModal
+      v-if="showPlanSelectorModal"
+      :is-trial-expired="true"
+      @close="showPlanSelectorModal = false"
+      @select-plan="handlePlanSelectorSelection"
+    />
+    
+    <!-- Plan Selection Modal -->
+    <PlanSelectionModal
+      :show="globalUploadLimit.showPlanSelectionModal.value"
+      @close="globalUploadLimit.closePlanSelectionModal"
+      @select-plan="globalUploadLimit.handlePlanSelection"
+    />
   </div>
 </template>
 

@@ -1,11 +1,11 @@
 <template>
   <!-- Step 1: Tier Selection -->
-  <div v-if="currentStep === 'tier'">
+  <div v-if="props.currentStep === 'tier'">
     <TierSelectionStep @tier-selected="handleTierSelected" />
   </div>
   
   <!-- Step 2: Account Creation -->
-  <form v-else-if="currentStep === 'account'" class="space-y-6" @submit.prevent="handleSignUp">
+  <form v-else-if="props.currentStep === 'account'" class="space-y-6" @submit.prevent="handleSignUp">
     <div>
       <label for="email" class="block text-sm font-medium leading-6 text-gray-300"
         >Email address</label
@@ -82,7 +82,7 @@
         :loading="isLoading"
         :disabled="isLoading || isSignupFormSuccessfullySubmitted"
       >
-        Create Account - {{ selectedTier || 'Free' }} Plan
+        {{ getSignupButtonText() }}
       </BaseButton>
     </div>
 
@@ -132,14 +132,17 @@
   const userStore = useUserStore();
   const router = useRouter();
   
-  // Multi-step form state
-  const currentStep = ref<'tier' | 'account'>('tier');
-  const selectedTier = ref<SubscriptionTier | null>(null);
+  // Props
+  const props = defineProps<{
+    currentStep: 'tier' | 'account';
+  }>();
   
-  // Expose currentStep for parent component
-  defineExpose({
-    currentStep
-  });
+  // Emits
+  const emit = defineEmits<{
+    stepChange: [step: 'tier' | 'account'];
+  }>();
+  const selectedTier = ref<SubscriptionTier | null>(null);
+  const isTrialSignup = ref(true); // Track if user selected trial path
   
   // Account creation form state
   const email = ref('');
@@ -152,15 +155,36 @@
   const isSignupFormSuccessfullySubmitted = ref(false);
 
   // Step navigation methods
-  function handleTierSelected(tier: SubscriptionTier) {
+  function handleTierSelected(tier: SubscriptionTier, isTrial = false) {
     selectedTier.value = tier;
-    currentStep.value = 'account';
-    console.log(`Tier selected: ${tier}`);
+    isTrialSignup.value = isTrial;
+    console.log(`Tier selected: ${tier}, isTrial: ${isTrial}`);
+    
+    // Emit step change to parent
+    emit('stepChange', 'account');
+  }
+
+  function getSignupButtonText() {
+    if (!selectedTier.value) return 'Create Account';
+    
+    if (isTrialSignup.value) {
+      return 'Start Free Trial';
+    }
+    
+    const tierNames = {
+      optimizer: 'Create Account - $99/month',
+      accelerator: 'Create Account - $249/month',
+      enterprise: 'Create Account - $499/month'
+    };
+    
+    return tierNames[selectedTier.value] || 'Create Account';
   }
   
   function goBackToTierSelection() {
-    currentStep.value = 'tier';
     clearMessages();
+    
+    // Emit step change to parent
+    emit('stepChange', 'tier');
   }
 
   async function handleSignUp() {
@@ -185,18 +209,38 @@
     const userAgent = navigator.userAgent;
 
     try {
+      // For paid subscriptions, redirect directly to billing instead of creating account first
+      if (!isTrialSignup.value && selectedTier.value) {
+        // Store the signup data for later use after payment
+        sessionStorage.setItem('pendingSignup', JSON.stringify({
+          email: email.value,
+          password: password.value,
+          tier: selectedTier.value,
+          userAgent
+        }));
+        
+        // Redirect to billing page with tier selection
+        router.push({
+          path: '/billing',
+          query: { 
+            tier: selectedTier.value,
+            signup: 'true',
+            email: email.value
+          }
+        });
+        return;
+      }
+
+      // For trial users, proceed with normal account creation
       const { error: signUpError } = await userStore.signUp(email.value, password.value, userAgent, selectedTier.value);
 
       if (signUpError) {
         console.error('Sign up error object:', signUpError);
         errorMessage.value = signUpError.message || 'Failed to create account. Please try again.';
       } else {
-        // Success - include tier info in success message
-        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your ${selectedTier.value} plan trial.`;
+        // Success - show trial confirmation message
+        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to start your 7-day free trial.`;
         isSignupFormSuccessfullySubmitted.value = true; // Disable button on success
-        
-        // TODO: Store the selected tier in user's profile after email confirmation
-        // This will need to be handled in the auth callback or profile creation
       }
     } catch (error) {
       // Catch any unexpected errors from the signUp action itself

@@ -36,19 +36,8 @@ serve(async (req: Request) => {
       )
     }
 
-    const { selectedTier } = await req.json()
-    
-    if (!selectedTier || !['accelerator', 'optimizer', 'enterprise'].includes(selectedTier)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid tier selection' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-
-    console.log(`🎯 Setting trial tier for user ${user.id}: ${selectedTier}`)
+    // No need to parse body anymore - all trials are optimizer
+    console.log(`🎯 Setting trial status for user ${user.id} (Optimizer tier)`)
 
     // Create admin client for profile updates
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -57,11 +46,11 @@ serve(async (req: Request) => {
     const trialEndDate = new Date()
     trialEndDate.setDate(trialEndDate.getDate() + 7)
     
-    // Update user profile with selected tier
+    // Update user profile with trial status (all trials are optimizer tier)
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        trial_tier: selectedTier,
+        subscription_tier: 'optimizer', // All trials are optimizer tier
         subscription_status: 'trial',
         plan_expires_at: trialEndDate.toISOString(),
         updated_at: new Date().toISOString()
@@ -79,12 +68,12 @@ serve(async (req: Request) => {
       )
     }
 
-    console.log(`✅ Successfully set trial tier ${selectedTier} for user ${user.id}`)
+    console.log(`✅ Successfully set trial status (Optimizer) for user ${user.id}`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        trialTier: selectedTier,
+        trialTier: 'optimizer',
         trialExpiresAt: trialEndDate.toISOString()
       }),
       {

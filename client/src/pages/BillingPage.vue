@@ -20,11 +20,6 @@
     <div class="bg-gray-800 rounded-lg p-8 shadow-lg border border-gray-700 max-w-lg">
       <!-- Subscription Plans Header -->
       <div class="text-center mb-8">
-        <div class="mx-auto w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mb-4 border-2 border-accent/30">
-          <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
         <h1 class="text-3xl font-bold text-white mb-2">
           {{ userTier ? 'Complete Your Subscription' : 'Choose Your Plan' }}
         </h1>
@@ -287,10 +282,14 @@ const hasActiveSubscription = computed(() =>
   currentPlan.value === 'past_due'
 );
 
-// Get the user's selected tier (from trial signup)
+// Get the user's current tier
 const userTier = computed(() => {
   const profile = userStore.getUserProfile;
-  return profile?.selected_tier || profile?.trial_tier || null;
+  // For trial users, they're always on optimizer
+  if (profile?.subscription_status === 'trial') {
+    return 'optimizer';
+  }
+  return profile?.subscription_tier || null;
 });
 
 const isExpired = computed(() => {

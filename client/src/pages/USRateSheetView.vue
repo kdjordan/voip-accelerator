@@ -1,5 +1,13 @@
 <template>
+  <!-- Main Page Content (No longer blocked) -->
   <div class="min-h-screen text-white pt-2 w-full">
+    
+    <!-- Service Expiry Banner -->
+    <ServiceExpiryBanner 
+      v-bind="bannerState"
+      @upgrade-clicked="handleUpgradeFromExpiry"
+    />
+    
     <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >US Rate Sheet Wizard
@@ -87,7 +95,7 @@
         </div>
 
         <!-- File Upload Section -->
-        <div v-if="!isLocallyStored" class="mt-6">
+        <div v-if="!isLocallyStored && !globalUploadLimit.isUploadBlocked.value" class="mt-6">
           <div
             @dragenter.prevent="handleDragEnter"
             @dragleave.prevent="handleDragLeave"
@@ -120,8 +128,8 @@
               type="file"
               accept=".csv"
               class="absolute inset-0 opacity-0 w-full h-full"
-              :class="{ 'pointer-events-none': isProcessing || showPreviewModal }"
-              :disabled="isProcessing || showPreviewModal"
+              :class="{ 'pointer-events-none': isProcessing || showPreviewModal || globalUploadLimit.isUploadBlocked.value }"
+              :disabled="isProcessing || showPreviewModal || globalUploadLimit.isUploadBlocked.value"
               @change="handleFileChange"
             />
             <div class="flex flex-col h-full w-full">
@@ -192,6 +200,21 @@
 
     <!-- Info Modal -->
     <InfoModal :show-modal="showInfoModal" :type="'us_rate_sheet'" @close="closeInfoModal" />
+    
+    <!-- Plan Selector Modal -->
+    <PlanSelectorModal
+      v-if="showPlanSelectorModal"
+      :is-trial-expired="true"
+      @close="showPlanSelectorModal = false"
+      @select-plan="handlePlanSelectorSelection"
+    />
+    
+    <!-- Plan Selection Modal -->
+    <PlanSelectionModal
+      :show="globalUploadLimit.showPlanSelectionModal.value"
+      @close="globalUploadLimit.closePlanSelectionModal"
+      @select-plan="globalUploadLimit.handlePlanSelection"
+    />
   </div>
 </template>
 
@@ -199,8 +222,12 @@
   import { computed, ref, onMounted, watch } from 'vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
+  import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
+  import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
+  import type { SubscriptionTier } from '@/types/user-types';
+import { useBilling } from '@/composables/useBilling';
 
   import {
     ArrowUpTrayIcon,
@@ -216,6 +243,9 @@
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
+import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
+import UploadLimitBanner from '@/components/shared/UploadLimitBanner.vue';
+import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
   import type { ParseResult } from 'papaparse';
   import { USRateSheetService } from '@/services/us-rate-sheet.service';
   import { USColumnRole } from '@/types/domains/us-types';
@@ -233,6 +263,8 @@
   const uploadError = ref<string | null>(store.getError);
   const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
   const isProcessing = computed(() => store.isLoading);
+  const globalUploadLimit = useGlobalUploadLimit();
+  const showPlanSelectorModal = ref(false);
 
   // Preview Modal state
   const showPreviewModal = ref(false);
@@ -278,7 +310,13 @@
   const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, clearError } =
     useDragDrop({
       acceptedExtensions: ['.csv'],
-      onDropCallback: (file: File) => {
+      onDropCallback: async (file: File) => {
+        // Check global upload limit first
+        const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+        if (!canUpload) {
+          return;
+        }
+        
         uploadError.value = null;
         clearError();
         processFile(file);
@@ -298,9 +336,16 @@
     store.setLoading(false);
   });
 
-  function handleFileChange(event: Event) {
+  async function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
+
+    // Check global upload limit first
+    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+    if (!canUpload) {
+      input.value = ''; // Reset the input
+      return;
+    }
 
     uploadError.value = null;
     clearError();
@@ -510,6 +555,45 @@
   // --- Info Modal Functions ---
   function openInfoModal() {
     showInfoModal.value = true;
+  }
+
+  // Banner state from unified store logic
+  const bannerState = computed(() => userStore.getServiceExpiryBanner);
+  
+  // Handler for upgrade clicked from expiry banner
+  function handleUpgradeFromExpiry() {
+    showPlanSelectorModal.value = true;
+  }
+  
+  // Handler for plan selection from PlanSelectorModal  
+  async function handlePlanSelectorSelection(tier: SubscriptionTier) {
+    showPlanSelectorModal.value = false;
+    
+    try {
+      const { createCheckoutSession } = useBilling();
+      
+      // Get the correct price ID based on selected tier
+      const priceIds = {
+        optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
+        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR,
+        enterprise: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE,
+      };
+      
+      const priceId = priceIds[tier];
+      
+      if (!priceId) {
+        throw new Error(`Price ID not found for ${tier} plan`);
+      }
+      
+      console.log(`🚀 Creating checkout session for ${tier} upgrade`);
+      await createCheckoutSession(priceId, tier);
+      
+    } catch (error: any) {
+      console.error('Upgrade checkout error:', error);
+      alert(`Failed to start checkout: ${error.message}`);
+      // Reopen modal on error
+      showPlanSelectorModal.value = true;
+    }
   }
 
   function closeInfoModal() {

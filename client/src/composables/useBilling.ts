@@ -55,21 +55,35 @@ export function useBilling() {
   /**
    * Create Stripe checkout session
    */
-  async function createCheckoutSession(plan: 'monthly' | 'annual') {
+  // Updated function to handle both old and new patterns
+  async function createCheckoutSession(planOrPriceId: string, tierName?: string) {
     try {
       loading.value = true;
       error.value = null;
 
-      const priceId = PRICE_IDS[plan];
+      let priceId: string;
       
-      console.log('💳 USEBILLING: Creating checkout session');
-      console.log('Plan requested:', plan);
-      console.log('Price ID being sent:', priceId);
-      console.log('Monthly price ID:', PRICE_IDS.monthly);
-      console.log('Annual price ID:', PRICE_IDS.annual);
+      // Handle old pattern: createCheckoutSession('monthly') 
+      if (planOrPriceId === 'monthly' || planOrPriceId === 'annual') {
+        priceId = PRICE_IDS[planOrPriceId as 'monthly' | 'annual'];
+        console.log('💳 USEBILLING: Creating checkout session (old pattern)');
+        console.log('Plan requested:', planOrPriceId);
+        console.log('Price ID being sent:', priceId);
+      } 
+      // Handle new pattern: createCheckoutSession(priceId, 'accelerator')
+      else {
+        priceId = planOrPriceId;
+        console.log('💳 USEBILLING: Creating checkout session (new pattern)');
+        console.log('Tier requested:', tierName);
+        console.log('Price ID being sent:', priceId);
+      }
       
-      const successUrl = `${window.location.origin}/dashboard?payment=success`;
-      const cancelUrl = `${window.location.origin}/dashboard?payment=cancelled`;
+      if (!priceId) {
+        throw new Error(`Price ID not found for plan/tier`);
+      }
+      
+      const successUrl = `${window.location.origin}/dashboard?subscription=success`;
+      const cancelUrl = `${window.location.origin}/dashboard?subscription=cancelled`;
 
       const { data, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
         body: {

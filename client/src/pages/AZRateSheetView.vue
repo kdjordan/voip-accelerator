@@ -1,5 +1,13 @@
 <template>
+  <!-- Main Page Content (No longer blocked) -->
   <div class="min-h-screen text-white pt-2 w-full">
+    
+    <!-- Service Expiry Banner -->
+    <ServiceExpiryBanner 
+      v-bind="bannerState"
+      @upgrade-clicked="handleUpgradeFromExpiry"
+    />
+    
     <h1 class="mb-2 relative">
       <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >AZ Rate Sheet Wizard
@@ -123,27 +131,34 @@
         </div>
 
         <!-- File Upload Section -->
-        <div v-if="!isLocallyStored" class="mt-6">
+        <div v-if="!isLocallyStored && !globalUploadLimit.isUploadBlocked.value" class="mt-6">
           <div
             @dragenter.prevent="
               (e) => {
+                if (globalUploadLimit.isUploadBlocked.value) return;
                 console.log('dragenter event');
                 isDragging = true;
               }
             "
             @dragleave.prevent="
               (e) => {
+                if (globalUploadLimit.isUploadBlocked.value) return;
                 console.log('dragleave event');
                 isDragging = false;
               }
             "
             @dragover.prevent="
               (e) => {
+                if (globalUploadLimit.isUploadBlocked.value) return;
                 console.log('dragover event');
               }
             "
             @drop.prevent="
               (e) => {
+                if (globalUploadLimit.isUploadBlocked.value) {
+                  isDragging = false;
+                  return;
+                }
                 console.log('drop event');
                 isDragging = false;
                 handleFileDrop(e);
@@ -170,8 +185,8 @@
               type="file"
               accept=".csv"
               class="absolute inset-0 opacity-0"
-              :class="{ 'pointer-events-none': isProcessing }"
-              :disabled="isProcessing"
+              :class="{ 'pointer-events-none': isProcessing || globalUploadLimit.isUploadBlocked.value }"
+              :disabled="isProcessing || globalUploadLimit.isUploadBlocked.value"
               @change="handleFileChange"
             />
 
@@ -243,14 +258,33 @@
 
     <!-- Info Modal (Added) -->
     <InfoModal :show-modal="showInfoModal" :type="'az_rate_sheet'" @close="closeInfoModal" />
+    
+    <!-- Plan Selector Modal -->
+    <PlanSelectorModal
+      v-if="showPlanSelectorModal"
+      :is-trial-expired="true"
+      @close="showPlanSelectorModal = false"
+      @select-plan="handlePlanSelectorSelection"
+    />
+    
+    <!-- Plan Selection Modal -->
+    <PlanSelectionModal
+      :show="globalUploadLimit.showPlanSelectionModal.value"
+      @close="globalUploadLimit.closePlanSelectionModal"
+      @select-plan="globalUploadLimit.handlePlanSelection"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, ref, onMounted } from 'vue';
   import InfoModal from '@/components/shared/InfoModal.vue'; // Import InfoModal
+  import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
+  import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
+  import type { SubscriptionTier } from '@/types/user-types';
+  import { useBilling } from '@/composables/useBilling';
 
   import { useAzRateSheetStore } from '@/stores/az-rate-sheet-store';
   import { useUserStore } from '@/stores/user-store'; // Import user store
@@ -266,7 +300,10 @@
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
   import Papa from 'papaparse';
-  import type { ParseResult } from 'papaparse';
+  import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
+  import UploadLimitBanner from '@/components/shared/UploadLimitBanner.vue';
+  import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
+    import type { ParseResult } from 'papaparse';
   import { RateSheetService } from '@/services/az-rate-sheet.service';
 
   // Import memory monitoring utilities for Phase 1 testing
@@ -282,6 +319,8 @@
   const isRFRemoving = ref(false);
   const uploadError = ref<string | null>('');
   const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+  const globalUploadLimit = useGlobalUploadLimit();
+  const showPlanSelectorModal = ref(false);
   const currentDiscrepancyCount = ref(0);
   const isProcessing = computed(() => isRFUploading.value || isRFRemoving.value);
 
@@ -334,20 +373,33 @@
     }
   });
 
-  function handleFileChange(event: Event) {
+  async function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
+
+    // Check global upload limit first
+    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+    if (!canUpload) {
+      input.value = ''; // Reset the input
+      return;
+    }
 
     uploadError.value = '';
     const file = input.files[0];
     processFile(file);
   }
 
-  function handleFileDrop(event: DragEvent) {
+  async function handleFileDrop(event: DragEvent) {
     if (!event.dataTransfer) return;
 
     const file = event.dataTransfer.files?.[0];
     if (!file) return;
+
+    // Check global upload limit first
+    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+    if (!canUpload) {
+      return;
+    }
 
     uploadError.value = '';
     processFile(file);
@@ -506,6 +558,45 @@
   // Function to handle opening the information modal
   function openInfoModal() {
     showInfoModal.value = true;
+  }
+
+  // Banner state from unified store logic
+  const bannerState = computed(() => userStore.getServiceExpiryBanner);
+  
+  // Handler for upgrade clicked from expiry banner
+  function handleUpgradeFromExpiry() {
+    showPlanSelectorModal.value = true;
+  }
+  
+  // Handler for plan selection from PlanSelectorModal  
+  async function handlePlanSelectorSelection(tier: SubscriptionTier) {
+    showPlanSelectorModal.value = false;
+    
+    try {
+      const { createCheckoutSession } = useBilling();
+      
+      // Get the correct price ID based on selected tier
+      const priceIds = {
+        optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
+        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR,
+        enterprise: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE,
+      };
+      
+      const priceId = priceIds[tier];
+      
+      if (!priceId) {
+        throw new Error(`Price ID not found for ${tier} plan`);
+      }
+      
+      console.log(`🚀 Creating checkout session for ${tier} upgrade`);
+      await createCheckoutSession(priceId, tier);
+      
+    } catch (error: any) {
+      console.error('Upgrade checkout error:', error);
+      alert(`Failed to start checkout: ${error.message}`);
+      // Reopen modal on error
+      showPlanSelectorModal.value = true;
+    }
   }
 
   // Function to handle closing the information modal

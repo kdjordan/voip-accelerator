@@ -151,6 +151,15 @@ const subscriptionRequiredRoutes = [
   '/rate-gen',
 ];
 
+// Routes that require upload capability (blocked for Optimizer users at limit)
+const uploadRequiredRoutes = [
+  '/az-rate-sheet',
+  '/us-rate-sheet',
+  '/azview',
+  '/usview', 
+  '/rate-gen',
+];
+
 // Routes only accessible when logged out
 const publicOnlyRoutes = [
   '/login',
@@ -183,6 +192,39 @@ async function waitForAuthInitialization(
       resolve();
     }
   });
+}
+
+// Helper function to check if Optimizer user has reached upload limit
+async function checkUploadLimit(userId: string): Promise<boolean> {
+  try {
+    // Get user's current tier and upload count
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('subscription_tier, subscription_status, uploads_this_month')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error checking upload limit:', error);
+      return false; // Allow access on error (fail-safe)
+    }
+    
+    // Only check limits for Optimizer tier users (trial or paid)
+    const isOptimizerUser = profile.subscription_tier === 'optimizer' || 
+                           (profile.subscription_status === 'trial' && !profile.subscription_tier);
+    
+    if (!isOptimizerUser) {
+      return true; // Unlimited users can always upload
+    }
+    
+    // Check if Optimizer user has reached their 100 upload limit
+    const uploadsThisMonth = profile.uploads_this_month || 0;
+    return uploadsThisMonth < 100;
+    
+  } catch (err) {
+    console.error('Error checking upload limit:', err);
+    return true; // Allow access on error (fail-safe)
+  }
 }
 
 // Helper function to check if user has active subscription or trial
@@ -239,6 +281,7 @@ router.beforeEach(async (to, from, next) => {
     authRequiredRoutes.some((route) => to.path.startsWith(route)) ||
     to.matched.some((record) => record.meta.requiresAuth);
   const requiresSubscription = subscriptionRequiredRoutes.some((route) => to.path.startsWith(route));
+  const requiresUpload = uploadRequiredRoutes.some((route) => to.path.startsWith(route));
   const isTransitionalRoute = transitionalAuthRoutes.includes(to.path);
   const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
   const isAdmin = userStore.isAdmin; // Use the isAdmin getter
@@ -257,6 +300,17 @@ router.beforeEach(async (to, from, next) => {
         // Redirect to billing page if no active subscription
         next({ name: 'billing', query: { redirect: to.fullPath } });
         return;
+      }
+      
+      // Additional check for upload routes - ensure Optimizer users haven't hit their limit
+      if (requiresUpload && to.name !== 'dashboard') {
+        const canUpload = await checkUploadLimit(userStore.getUser?.id || '');
+        
+        if (!canUpload) {
+          // Redirect to dashboard where ServiceExpiryBanner will show upload limit message
+          next({ name: 'dashboard', query: { uploadLimitReached: 'true' } });
+          return;
+        }
       }
       
       next();

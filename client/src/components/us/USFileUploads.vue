@@ -49,9 +49,8 @@
                     :disabled="
                       usStore.isComponentUploading('us1') ||
                       usStore.isComponentUploading('us2') ||
-                      usStore.isComponentDisabled(
-                        'us1'
-                      ) /* Should not be reachable if disabled, but for safety */
+                      usStore.isComponentDisabled('us1') ||
+                      globalUploadLimit.isUploadBlocked.value
                     "
                     @change="(e) => handleFileChange(e, 'us1')"
                   />
@@ -81,29 +80,17 @@
 
                     <!-- Default/Empty State -->
                     <template v-else>
-                      <!-- Error notification -->
-                      <div
-                        v-if="uploadError.us1"
-                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                      >
-                        <p class="text-red-500 font-medium">{{ uploadError.us1 }}</p>
-                      </div>
-
                       <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2"
-                        :class="
-                          uploadError.us1
-                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                            : 'text-accent border-accent/50 bg-accent/10'
-                        "
+                        class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
                       />
+                      <p class="mt-2 text-base text-accent">
+                        DRAG & DROP or CLICK to upload
+                      </p>
                       <p
-                        class="mt-2 text-base"
-                        :class="uploadError.us1 ? 'text-red-500' : 'text-accent'"
+                        v-if="uploadError.us1"
+                        class="mt-1 text-sm text-red-400"
                       >
-                        {{
-                          uploadError.us1 ? 'Please try again' : 'DRAG & DROP or CLICK to upload'
-                        }}
+                        {{ uploadError.us1 }}
                       </p>
                     </template>
                   </div>
@@ -157,7 +144,8 @@
                     :disabled="
                       usStore.isComponentUploading('us2') ||
                       usStore.isComponentUploading('us1') ||
-                      usStore.isComponentDisabled('us2')
+                      usStore.isComponentDisabled('us2') ||
+                      globalUploadLimit.isUploadBlocked.value
                     "
                     @change="(e) => handleFileChange(e, 'us2')"
                   />
@@ -187,29 +175,17 @@
 
                     <!-- Default/Empty State -->
                     <template v-else>
-                      <!-- Error notification -->
-                      <div
-                        v-if="uploadError.us2"
-                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                      >
-                        <p class="text-red-500 font-medium">{{ uploadError.us2 }}</p>
-                      </div>
-
                       <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2"
-                        :class="
-                          uploadError.us2
-                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                            : 'text-accent border-accent/50 bg-accent/10'
-                        "
+                        class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
                       />
+                      <p class="mt-2 text-base text-accent">
+                        DRAG & DROP or CLICK to upload
+                      </p>
                       <p
-                        class="mt-2 text-base"
-                        :class="uploadError.us2 ? 'text-red-500' : 'text-accent'"
+                        v-if="uploadError.us2"
+                        class="mt-1 text-sm text-red-400"
                       >
-                        {{
-                          uploadError.us2 ? 'Please try again' : 'DRAG & DROP or CLICK to upload'
-                        }}
+                        {{ uploadError.us2 }}
                       </p>
                     </template>
                   </div>
@@ -281,6 +257,7 @@ This action cannot be undone.`"
       :loading="isModalRemoving"
       @confirm="confirmRemoveFile"
     />
+
   </div>
 </template>
 
@@ -325,17 +302,20 @@ This action cannot be undone.`"
   import { useUserStore } from '@/stores/user-store';
   import useDexieDB from '@/composables/useDexieDB';
   import { useUploadTracking } from '@/composables/useUploadTracking';
+import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
 
   const usStore = useUsStore();
   const service = new USService();
   const lergStore = useLergStoreV2();
   const userStore = useUserStore();
   const uploadTracking = useUploadTracking();
+const globalUploadLimit = useGlobalUploadLimit();
 
   // Computed property for the reports button text
   const reportsButtonText = computed(() => {
     return isGeneratingReports.value ? 'GENERATING REPORTS' : 'Get Reports';
   });
+
 
   // Component state
   const isGeneratingReports = ref<boolean>(false);
@@ -390,29 +370,13 @@ This action cannot be undone.`"
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
-    if (usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId))
+    // Check global upload limit first
+    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+    if (!canUpload || usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId))
       return;
 
     // Clear any previous errors
     uploadError[componentId] = null;
-
-    // Check upload limits BEFORE file validation
-    try {
-      const uploadValidation = await uploadTracking.validateBeforeUpload(1);
-      if (!uploadValidation.canUpload) {
-        uploadError[componentId] = uploadValidation.message;
-        return;
-      }
-      
-      // Show warning if near limit
-      if (uploadValidation.message && uploadValidation.canUpload) {
-        console.warn('Upload warning:', uploadValidation.message);
-      }
-    } catch (error) {
-      console.error('Error checking upload limit:', error);
-      uploadError[componentId] = 'Unable to verify upload limit. Please try again.';
-      return;
-    }
 
     // Check if OTHER component is uploading (not this one)
     const otherComponent = componentId === 'us1' ? 'us2' : 'us1';
@@ -1051,4 +1015,7 @@ This action cannot be undone.`"
   // function cancelPlusOneModal() {
   //   // Implementation moved to USCodeReport.vue
   // }
+
+  // Keep existing error handling for other types of errors (not upload limit)
+  // Upload limit errors are now handled globally
 </script>

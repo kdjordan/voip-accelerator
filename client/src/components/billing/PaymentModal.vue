@@ -266,6 +266,7 @@ import type { SubscriptionTier } from '@/types/user-types';
 // Component props and emits
 interface Props {
   preselectedTier?: SubscriptionTier;
+  showAllPlans?: boolean; // Force showing all plans even if user has a tier
 }
 
 const props = defineProps<Props>();
@@ -280,6 +281,9 @@ const userStore = useUserStore();
 
 // Computed - Get user's selected tier from their profile
 const userTier = computed(() => {
+  // If showAllPlans is true, return null to show all plans
+  if (props.showAllPlans) return null;
+  
   // First check if there's a preselected tier passed as prop
   if (props.preselectedTier) return props.preselectedTier;
   

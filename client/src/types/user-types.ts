@@ -87,10 +87,8 @@ export interface Profile {
   // Billing fields (updated for three-tier system)
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
-  subscription_status?: 'trial' | 'accelerator' | 'optimizer' | 'enterprise' | 'cancelled';
-  subscription_tier?: SubscriptionTier | null; // New field
-  selected_tier?: SubscriptionTier | null; // Tier selected during signup
-  trial_tier?: SubscriptionTier | null; // Which tier they're trialing
+  subscription_status?: 'trial' | 'active' | 'past_due' | 'cancelled' | 'incomplete';
+  subscription_tier?: SubscriptionTier | null; // The user's current tier (optimizer/accelerator/enterprise)
   
   // Plan timing
   plan_expires_at?: string | null;

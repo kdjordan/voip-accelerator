@@ -43,9 +43,9 @@
                     type="file"
                     accept=".csv"
                     class="absolute inset-0 opacity-0"
-                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
+                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') || globalUploadLimit.isUploadBlocked.value }"
                     :disabled="
-                      azStore.isComponentUploading('az1') || azStore.isComponentUploading('az2')
+                      azStore.isComponentUploading('az1') || azStore.isComponentUploading('az2') || globalUploadLimit.isUploadBlocked.value
                     "
                     @change="(e) => handleFileInput(e, 'az1')"
                   />
@@ -147,9 +147,9 @@
                     type="file"
                     accept=".csv"
                     class="absolute inset-0 opacity-0"
-                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
+                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') || globalUploadLimit.isUploadBlocked.value }"
                     :disabled="
-                      azStore.isComponentUploading('az2') || azStore.isComponentUploading('az1')
+                      azStore.isComponentUploading('az2') || azStore.isComponentUploading('az1') || globalUploadLimit.isUploadBlocked.value
                     "
                     @change="(e) => handleFileInput(e, 'az2')"
                   />
@@ -268,6 +268,7 @@ This action cannot be undone.`"
       :loading="isModalRemoving"
       @confirm="confirmRemoveFile"
     />
+
   </div>
 </template>
 
@@ -302,6 +303,7 @@ This action cannot be undone.`"
   import { useDragDrop } from '@/composables/useDragDrop';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
   import { useUploadTracking } from '@/composables/useUploadTracking';
+  import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -310,6 +312,7 @@ This action cannot be undone.`"
   const azService = new AZService();
   const userStore = useUserStore();
   const uploadTracking = useUploadTracking();
+  const globalUploadLimit = useGlobalUploadLimit();
 
   // Computed property for button text
   const reportsButtonText = computed(() => {
@@ -402,7 +405,9 @@ This action cannot be undone.`"
 
   // Now update the handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
-    if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId))
+    // Check global upload limit first
+    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+    if (!canUpload || azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId))
       return;
 
     // Clear any previous errors
@@ -502,21 +507,10 @@ This action cannot be undone.`"
     // Clear any previous errors
     uploadError[componentId] = null;
 
-    // Check upload limits BEFORE file validation
-    try {
-      const uploadValidation = await uploadTracking.validateBeforeUpload(1);
-      if (!uploadValidation.canUpload) {
-        uploadError[componentId] = uploadValidation.message;
-        return;
-      }
-      
-      // Show warning if near limit
-      if (uploadValidation.message && uploadValidation.canUpload) {
-        console.warn('Upload warning:', uploadValidation.message);
-      }
-    } catch (error) {
-      console.error('Error checking upload limit:', error);
-      uploadError[componentId] = 'Unable to verify upload limit. Please try again.';
+    // Check global upload limits FIRST
+    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
+    if (!canUpload) {
+      // Global upload limit handles its own state, no need to set component-specific error
       return;
     }
 
@@ -660,5 +654,8 @@ This action cannot be undone.`"
   function viewSingleFileReport() {
     azStore.setActiveReportType(ReportTypes.CODE);
   }
+
+  // Keep existing error handling for other types of errors (not upload limit)
+  // Upload limit errors are now handled globally
   
 </script>
