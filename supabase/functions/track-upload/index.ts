@@ -1,178 +1,186 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
 
-interface UploadRequest {
-  uploadType: 'rate_sheet' | 'comparison' | 'rate_deck' | 'bulk_adjustment';
-  uploadCount?: number; // For batch uploads, default 1
+interface RequestBody {
+  action: 'check' | 'increment' | 'statistics' | 'reset';
+  fileCount?: number;
+  migrationVersion?: string;
 }
 
-// Upload limits by tier
-const UPLOAD_LIMITS = {
-  accelerator: 100,
-  optimizer: -1,    // Unlimited
-  enterprise: -1    // Unlimited
-};
+interface UploadCheckResult {
+  canUpload: boolean;
+  remaining: number | null;
+  message: string;
+  tier: string;
+}
 
-serve(async (req) => {
-  // Handle CORS
+interface UploadIncrementResult {
+  success: boolean;
+  uploadsThisMonth: number;
+  totalUploads: number;
+  remaining: number | null;
+  message: string;
+}
+
+interface UploadStatistics {
+  uploadsThisMonth: number;
+  totalUploads: number;
+  tier: string;
+  remaining: number | null;
+  percentage: number;
+  isUnlimited: boolean;
+}
+
+Deno.serve(async (req: Request) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
+    // Initialize Supabase client with service role for bypassing RLS
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
       }
-    );
+    });
 
-    // Get user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-      throw new Error('Authentication required');
-    }
-
-    // Parse request body
-    const body: UploadRequest = await req.json();
-    const { uploadType, uploadCount = 1 } = body;
-
-    console.log(`📊 Upload tracking - User: ${user.email}, Type: ${uploadType}, Count: ${uploadCount}`);
-
-    // Get user profile
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('subscription_tier, uploads_this_month, uploads_reset_date')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) {
-      throw new Error(`Failed to get user profile: ${profileError.message}`);
-    }
-
-    const { subscription_tier, uploads_this_month, uploads_reset_date } = profile;
-    
-    // Check if upload reset is needed (monthly reset based on UTC)
-    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    const resetDate = uploads_reset_date ? new Date(uploads_reset_date).toISOString().split('T')[0] : currentDate;
-    const currentMonth = new Date().getUTCMonth();
-    const resetMonth = new Date(resetDate + 'T00:00:00Z').getUTCMonth();
-    
-    let currentUploads = uploads_this_month;
-    
-    // Reset uploads if we're in a new month
-    if (currentMonth !== resetMonth) {
-      console.log(`🔄 Resetting uploads for new month - was ${uploads_this_month}, now 0`);
-      
-      const { error: resetError } = await supabaseClient
-        .from('profiles')
-        .update({
-          uploads_this_month: 0,
-          uploads_reset_date: currentDate
-        })
-        .eq('id', user.id);
-
-      if (resetError) {
-        throw new Error(`Failed to reset upload counter: ${resetError.message}`);
-      }
-      
-      currentUploads = 0;
-    }
-
-    // Check upload limits for user's tier
-    const limit = UPLOAD_LIMITS[subscription_tier] || UPLOAD_LIMITS.accelerator;
-    const newUploadTotal = currentUploads + uploadCount;
-    
-    if (limit > 0 && newUploadTotal > limit) {
-      console.log(`🚫 Upload limit exceeded - Current: ${currentUploads}, Limit: ${limit}, Requested: ${uploadCount}`);
-      
+    // Get the authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          limitExceeded: true,
-          currentUploads,
-          uploadLimit: limit,
-          remaining: Math.max(0, limit - currentUploads),
-          tier: subscription_tier,
-          message: `Upload limit exceeded. You have used ${currentUploads}/${limit} uploads this month.`,
-          upgradeRequired: subscription_tier === 'accelerator',
-          nextResetDate: getNextResetDate()
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 429, // Too Many Requests
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
-    // Update upload counter
-    const { error: updateError } = await supabaseClient
-      .from('profiles')
-      .update({
-        uploads_this_month: newUploadTotal
-      })
-      .eq('id', user.id);
-
-    if (updateError) {
-      throw new Error(`Failed to update upload counter: ${updateError.message}`);
+    // Verify the JWT token to get user ID
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    console.log(`✅ Upload tracked - Type: ${uploadType}, New total: ${newUploadTotal}/${limit > 0 ? limit : '∞'}`);
+    const userId = userData.user.id;
 
-    // Calculate remaining uploads
-    const remaining = limit > 0 ? limit - newUploadTotal : -1; // -1 for unlimited
+    // Parse request body
+    const body: RequestBody = await req.json();
+    const { action, fileCount = 1, migrationVersion } = body;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        uploadType,
-        uploadCount,
-        totalUploads: newUploadTotal,
-        uploadLimit: limit,
-        remaining,
-        tier: subscription_tier,
-        isUnlimited: limit === -1,
-        nextResetDate: getNextResetDate(),
-        message: limit > 0 
-          ? `${remaining} uploads remaining this month`
-          : 'Unlimited uploads available'
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+    switch (action) {
+      case 'check': {
+        const { data, error } = await supabase.rpc('check_upload_limit', {
+          user_id: userId,
+          file_count: fileCount
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(
+          JSON.stringify(data as UploadCheckResult),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
       }
-    );
+
+      case 'increment': {
+        const { data, error } = await supabase.rpc('increment_upload_count', {
+          user_id: userId,
+          file_count: fileCount
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(
+          JSON.stringify(data as UploadIncrementResult),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      case 'statistics': {
+        const { data, error } = await supabase.rpc('get_upload_statistics', {
+          user_id: userId
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(
+          JSON.stringify(data as UploadStatistics),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      case 'reset': {
+        const { data, error } = await supabase.rpc('reset_monthly_uploads', {
+          user_id: userId,
+          migration_version: migrationVersion
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Monthly uploads reset successfully',
+            data
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      default:
+        return new Response(
+          JSON.stringify({ error: `Invalid action: ${action}` }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+    }
 
   } catch (error) {
-    console.error('Upload tracking error:', error);
+    console.error('Edge function error:', error);
+    
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: error.message 
+        error: 'Internal server error',
+        details: error.message 
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
-
-function getNextResetDate(): string {
-  const now = new Date();
-  const nextMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
-  return nextMonth.toISOString().split('T')[0];
-}
