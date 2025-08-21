@@ -1,4 +1,4 @@
-# VoIP Accelerator User Flow Testing Plan
+~# VoIP Accelerator User Flow Testing Plan
 
 ## Overview
 This document outlines comprehensive testing scenarios for the VoIP Accelerator application to ensure all user flows work correctly across different subscription states and upload limits.

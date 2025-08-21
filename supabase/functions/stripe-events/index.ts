@@ -75,6 +75,7 @@ async function handleCheckoutCompleted(session: any) {
   console.log('📧 Processing checkout for:', customerEmail);
   console.log('💳 Subscription ID:', session.subscription);
   console.log('👤 Customer ID:', session.customer);
+  console.log('🔍 Full session object:', JSON.stringify(session, null, 2));
 
   // Determine subscription tier from session amount_total (in cents)
   let subscriptionTier = 'optimizer'; // default
@@ -99,31 +100,64 @@ async function handleCheckoutCompleted(session: any) {
 
   console.log('🔧 Updating user profile...');
   
-  // Calculate next billing date (30 days from payment date)
+  // Calculate billing dates
   const paymentDate = new Date();
-  const nextBillingDate = new Date(paymentDate);
-  nextBillingDate.setDate(paymentDate.getDate() + 30);
+  const currentPeriodStart = new Date(paymentDate);
+  const currentPeriodEnd = new Date(paymentDate);
+  currentPeriodEnd.setDate(paymentDate.getDate() + 30); // 30-day billing cycle
   
   console.log('💳 Payment date:', paymentDate.toISOString());
-  console.log('📅 Next billing date calculated:', nextBillingDate.toISOString());
+  console.log('📅 Current period start:', currentPeriodStart.toISOString());
+  console.log('📅 Current period end:', currentPeriodEnd.toISOString());
   
-  // Update user profile
+  // First, get user ID for the reset function
+  const { data: userData, error: userError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', customerEmail)
+    .single();
+
+  if (userError || !userData) {
+    console.error('❌ Error finding user:', userError);
+    return;
+  }
+
+  console.log('👤 Found user ID:', userData.id);
+
+  // Update user profile with all Stripe metadata
+  const updateData = {
+    subscription_tier: subscriptionTier,
+    subscription_status: 'active',
+    stripe_customer_id: session.customer,
+    subscription_id: session.subscription,
+    last_payment_date: paymentDate.toISOString(),
+    current_period_start: currentPeriodStart.toISOString(),
+    current_period_end: currentPeriodEnd.toISOString(),
+    plan_expires_at: currentPeriodEnd.toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  console.log('📝 Update data:', JSON.stringify(updateData, null, 2));
+
   const { error } = await supabase
     .from('profiles')
-    .update({
-      subscription_tier: subscriptionTier,
-      subscription_status: 'active',
-      stripe_customer_id: session.customer,
-      subscription_id: session.subscription,
-      last_payment_date: paymentDate.toISOString(),
-      plan_expires_at: nextBillingDate.toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('email', customerEmail);
 
   if (error) {
     console.error('❌ Error updating user profile:', error);
   } else {
     console.log(`✅ Updated user ${customerEmail} to ${subscriptionTier} tier`);
+    
+    // Reset monthly uploads when upgrading to paid plan
+    console.log('🔄 Resetting monthly uploads for new subscriber...');
+    const { data: resetData, error: resetError } = await supabase
+      .rpc('reset_monthly_uploads', { p_user_id: userData.id });
+
+    if (resetError) {
+      console.error('❌ Error resetting monthly uploads:', resetError);
+    } else {
+      console.log('✅ Monthly uploads reset successfully:', resetData);
+    }
   }
 }

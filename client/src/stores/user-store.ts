@@ -168,7 +168,7 @@ export const useUserStore = defineStore('user', {
           return {
             show: true,
             message: "You've reached your monthly upload limit (100/100). Upgrade to continue uploading files.",
-            variant: 'warning' as const,
+            variant: 'error' as const,
             buttonText: "Compare all plans",
             reason: 'upload-limit' as const
           };

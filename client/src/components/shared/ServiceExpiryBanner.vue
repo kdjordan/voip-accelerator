@@ -55,7 +55,7 @@ const displayMessage = computed(() => {
     case 'trial-expired':
       return 'Your free trial has expired. Please choose a plan to continue using VoIP Accelerator.';
     case 'upload-limit':
-      return 'Monthly upload limit reached (100/100). Upgrade to Accelerator or Enterprise for unlimited uploads.';
+      return "You've reached your monthly upload limit (100/100). Upgrade to continue uploading files.";
     case 'subscription-expired':
       return 'Your subscription has expired. Please renew to continue service.';
     default:
@@ -69,7 +69,6 @@ const displayVariant = computed(() => {
   
   switch (props.reason) {
     case 'upload-limit':
-      return 'warning';
     case 'trial-expired':
     case 'subscription-expired':
     default:
@@ -85,7 +84,7 @@ const displayButtonText = computed(() => {
     case 'trial-expired':
       return 'Choose Plan';
     case 'upload-limit':
-      return 'Upgrade Plan';
+      return 'Compare all plans';
     case 'subscription-expired':
       return 'Renew Now';
     default:
