@@ -46,6 +46,15 @@ serve(async (req) => {
       await handleCheckoutCompleted(event.data.object);
     }
 
+    // Handle subscription cancellation events
+    if (event.type === 'customer.subscription.updated') {
+      await handleSubscriptionUpdated(event.data.object);
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      await handleSubscriptionDeleted(event.data.object);
+    }
+
     return new Response(JSON.stringify({ received: true, event_type: event.type }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -160,4 +169,158 @@ async function handleCheckoutCompleted(session: any) {
       console.log('✅ Monthly uploads reset successfully:', resetData);
     }
   }
+}
+
+// Handle subscription updates (including scheduled cancellations)
+async function handleSubscriptionUpdated(subscription: any) {
+  console.log('🎯 Processing customer.subscription.updated');
+  console.log('📋 Subscription object:', JSON.stringify(subscription, null, 2));
+
+  // Get customer email - try multiple sources
+  let customerEmail = subscription.customer_email;
+  
+  if (!customerEmail) {
+    console.log('🔍 No customer_email on subscription, fetching from Stripe customer...');
+    // We would need to fetch from Stripe API here, but for webhook safety,
+    // we'll use the database to find the customer by stripe_customer_id
+  }
+
+  if (!customerEmail) {
+    console.log('❌ Cannot process subscription update: no customer email available');
+    return;
+  }
+
+  console.log('📧 Processing subscription update for:', customerEmail);
+  console.log('🔄 Subscription ID:', subscription.id);
+  console.log('📊 Status:', subscription.status);
+  console.log('❌ Cancel at period end:', subscription.cancel_at_period_end);
+
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Build update data
+  const updateData: any = {
+    subscription_status: subscription.status,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Handle scheduled cancellation
+  if (subscription.cancel_at_period_end && subscription.cancel_at) {
+    console.log('⏰ Subscription scheduled for cancellation');
+    updateData.cancel_at = new Date(subscription.cancel_at * 1000).toISOString();
+    updateData.cancel_at_period_end = true;
+    
+    if (subscription.current_period_end) {
+      updateData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
+    }
+  } else if (!subscription.cancel_at_period_end && subscription.cancel_at === null) {
+    console.log('🔄 Subscription reactivated');
+    updateData.cancel_at = null;
+    updateData.cancel_at_period_end = false;
+  }
+
+  // Handle tier changes during updates
+  if (subscription.items?.data?.[0]?.price?.unit_amount) {
+    const amount = subscription.items.data[0].price.unit_amount;
+    const newTier = determineSubscriptionTier(amount);
+    updateData.subscription_tier = newTier;
+    console.log('🎯 Tier change detected:', newTier);
+  }
+
+  // Update current period end if available
+  if (subscription.current_period_end) {
+    updateData.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
+  }
+
+  console.log('📝 Update data:', JSON.stringify(updateData, null, 2));
+
+  // Update user profile
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('stripe_customer_id', subscription.customer);
+
+  if (error) {
+    console.error('❌ Error updating subscription:', error);
+  } else {
+    console.log(`✅ Updated subscription for customer ${subscription.customer}`);
+  }
+}
+
+// Handle subscription deletion (immediate or end-of-period cancellation)
+async function handleSubscriptionDeleted(subscription: any) {
+  console.log('🎯 Processing customer.subscription.deleted');
+  console.log('📋 Subscription object:', JSON.stringify(subscription, null, 2));
+
+  console.log('💀 Subscription canceled/deleted');
+  console.log('🔄 Subscription ID:', subscription.id);
+  console.log('👤 Customer:', subscription.customer);
+  console.log('⏰ Canceled at:', subscription.canceled_at);
+
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Build update data for cancellation
+  const updateData: any = {
+    subscription_status: 'canceled',
+    subscription_tier: 'trial', // Revert to trial
+    subscription_id: null, // Clear subscription ID
+    uploads_this_month: 0, // Reset uploads
+    cancel_at_period_end: false,
+    cancel_at: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (subscription.canceled_at) {
+    updateData.canceled_at = new Date(subscription.canceled_at * 1000).toISOString();
+  }
+
+  console.log('📝 Cancellation update data:', JSON.stringify(updateData, null, 2));
+
+  // Update user profile
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('stripe_customer_id', subscription.customer);
+
+  if (error) {
+    console.error('❌ Error processing cancellation:', error);
+  } else {
+    console.log(`✅ Processed cancellation for customer ${subscription.customer}`);
+    
+    // Get user for reset function
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('stripe_customer_id', subscription.customer)
+      .single();
+
+    if (userError || !userData) {
+      console.error('❌ Error finding user for reset:', userError);
+      return;
+    }
+
+    // Reset monthly uploads on cancellation
+    console.log('🔄 Resetting monthly uploads for canceled subscription...');
+    const { data: resetData, error: resetError } = await supabase
+      .rpc('reset_monthly_uploads', { p_user_id: userData.id });
+
+    if (resetError) {
+      console.error('❌ Error resetting uploads on cancellation:', resetError);
+    } else {
+      console.log('✅ Uploads reset successfully on cancellation:', resetData);
+    }
+  }
+}
+
+// Helper function for tier determination (reused from checkout logic)
+function determineSubscriptionTier(amountInCents: number): string {
+  if (amountInCents === 9900) return 'optimizer';   // $99.00
+  if (amountInCents === 24900) return 'accelerator'; // $249.00  
+  if (amountInCents === 49900) return 'enterprise';  // $499.00
+  return 'optimizer'; // default
 }

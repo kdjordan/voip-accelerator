@@ -3,5 +3,12 @@
   "dependencies": {
     "@supabase/stripe-sync-engine": "^0.40.1",
     "stripe": "^18.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/vue": "^8.1.0",
+    "happy-dom": "^18.0.1",
+    "msw": "^2.10.5"
   }
 }

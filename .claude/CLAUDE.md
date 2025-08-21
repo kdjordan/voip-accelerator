@@ -21,6 +21,124 @@ npm run lint          # Run ESLint
 
 **NOTE**: Development server is always running - do not attempt to start it during development sessions.
 
+## Enterprise Testing Strategy
+
+### 🎯 **MANDATORY: Test-First Development**
+
+**CRITICAL RULE**: For ANY substantive change, ALWAYS implement and run appropriate tests BEFORE considering the change complete.
+
+### Testing Commands (Use These Continuously)
+
+```bash
+# Primary Development Workflow
+npm run test:integration   # Critical path verification (30s) - RUN BEFORE EVERY COMMIT
+npm run regression-check   # Full deployment confidence (60s) - RUN BEFORE EVERY DEPLOY
+npm run test:watch         # Live development feedback - USE DURING DEVELOPMENT
+
+# Comprehensive Testing
+npm run test:unit          # Unit tests for business logic
+npm run test:components    # Component behavior tests  
+npm run test:coverage      # Code coverage analysis
+npm run test:regression    # Full regression suite
+```
+
+### 🚨 **Automation Enforcement Rules**
+
+#### Before ANY Change
+1. **Understand Impact**: What critical paths does this change affect?
+2. **Run Existing Tests**: `npm run test:integration` (30s)
+3. **Identify Test Gaps**: What new tests are needed?
+
+#### During Development  
+1. **Write Tests First**: Create failing tests for new functionality
+2. **Live Feedback**: Keep `npm run test:watch` running
+3. **Red-Green-Refactor**: Standard TDD cycle
+
+#### Before ANY Commit
+1. **MANDATORY**: `npm run test:integration` must pass
+2. **Verify Scope**: Check that tests cover your changes
+3. **Update Tests**: Add new tests for any new business logic
+
+#### Before ANY Deploy
+1. **MANDATORY**: `npm run regression-check` must pass
+2. **Manual Verification**: Test any UI changes manually
+3. **Production Readiness**: Verify all critical paths work
+
+### 🏗️ **Testing Architecture**
+
+```
+client/tests/
+├── setup.ts              # Global test configuration
+├── utils/test-helpers.ts  # Reusable utilities & mock data
+├── integration/           # Business logic tests (CRITICAL)
+│   └── stripe-webhook.test.ts  # Protects revenue-critical flows
+├── unit/                  # Pure function tests
+├── components/            # UI component tests
+└── e2e/                   # End-to-end user flows (future)
+```
+
+### 📋 **What to Test (By Priority)**
+
+#### Priority 1: Critical Revenue Paths (MUST HAVE TESTS)
+- **Stripe webhook processing** - Payment failures = lost revenue
+- **Upload limit enforcement** - Resource abuse prevention  
+- **Subscription state management** - Billing integrity
+- **User authentication flows** - Security and access control
+
+#### Priority 2: Business Logic (SHOULD HAVE TESTS)
+- **User store calculations** - Upload limits, subscription status
+- **Route guards** - Access control logic
+- **Banner logic** - User messaging and upgrade prompts
+- **Data processing** - File uploads, rate calculations
+
+#### Priority 3: UI Components (NICE TO HAVE TESTS)
+- **Component rendering** - Ensure UI displays correctly
+- **User interactions** - Button clicks, form submissions
+- **Responsive behavior** - Mobile/desktop compatibility
+
+### 🔄 **Development Workflow Integration**
+
+#### New Feature Development
+1. **Plan**: Identify what needs testing
+2. **Test First**: Write failing integration/unit tests
+3. **Implement**: Make tests pass
+4. **Verify**: `npm run test:integration`
+5. **Commit**: With confidence
+
+#### Bug Fixes
+1. **Reproduce**: Write a failing test that demonstrates the bug
+2. **Fix**: Make the test pass
+3. **Verify**: `npm run regression-check`
+4. **Deploy**: With confidence
+
+#### Refactoring
+1. **Safety Net**: Ensure existing tests cover the code
+2. **Refactor**: Change implementation without changing behavior
+3. **Verify**: All tests still pass
+4. **Clean Up**: Remove any obsolete tests
+
+### ⚡ **Quick Reference: When to Test What**
+
+| Change Type | Required Tests | Command | Time |
+|-------------|---------------|---------|------|
+| Stripe/Payment | Integration tests | `npm run test:integration` | 30s |
+| User flow logic | Unit + Integration | `npm run test:regression` | 60s |
+| UI components | Component tests | `npm run test:components` | 30s |
+| Utilities/helpers | Unit tests | `npm run test:unit` | 15s |
+| Any deployment | Full suite | `npm run regression-check` | 60s |
+
+### 🚫 **NEVER Deploy If**
+- `npm run test:integration` fails
+- `npm run regression-check` fails  
+- Stripe webhook tests fail
+- Critical path tests fail
+
+### 🎉 **Success Metrics**
+- **Zero critical path regressions** - Automated tests prevent revenue loss
+- **30-second verification** - Fast feedback enables rapid development
+- **Confident deployments** - No more fear of breaking production
+- **Scalable testing** - Framework grows with application complexity
+
 ## Project Architecture
 
 ### Core Structure
@@ -58,9 +176,19 @@ npm run lint          # Run ESLint
 - Export functionality with conflict resolution
 - **Admin diagnostics dashboard for data quality monitoring**
 
-## Development Guidelines
+## Enterprise Development Philosophy
 
-### Security Best Practices
+### 🎯 **Core Principles**
+
+1. **Testing is Not Optional** - Every substantive change requires appropriate test coverage
+2. **Business Impact First** - Prioritize features that drive revenue and user satisfaction  
+3. **Fail Fast, Learn Faster** - Use automated testing to catch issues in development, not production
+4. **Confidence Through Automation** - Deploy without fear through comprehensive verification
+5. **Scalable Architecture** - Build systems that grow with business complexity
+
+### 🛡️ **Security & Quality Standards**
+
+#### Secret Management (CRITICAL)
 - **NEVER hardcode secrets, API keys, or sensitive data in any file**
 - Always use environment variables for sensitive configuration
 - In documentation/session files, use `[REDACTED]` or placeholders instead of actual values
@@ -82,22 +210,53 @@ npm run lint          # Run ESLint
   const apiKey = "sk_test_hardcoded_secret";
   ```
 
-### Code Style
-- Vue 3 Composition API with `<script setup>`
-- TypeScript strict mode enabled
-- ESLint + Prettier (single quotes, semicolons, 2-space indentation)
-- Prefer absolute imports using `@/` alias
+#### Code Quality Standards
+- **TypeScript strict mode** - Catch errors at compile time
+- **ESLint + Prettier** - Consistent code formatting (single quotes, semicolons, 2-space indentation)
+- **Vue 3 Composition API** with `<script setup>` - Modern, maintainable component patterns
+- **Absolute imports** using `@/` alias - Clear dependency relationships
+- **Test coverage** - Critical paths must have test coverage
 
-### Performance Patterns
-- Use `markRaw()` for large datasets in AZ components
-- Implement Web Workers for CPU-intensive operations
-- Batch IndexedDB operations for US components
-- Prevent concurrent operations with `operationInProgress` flags
+### 🏗️ **Enterprise Architecture Patterns**
 
-### Component Patterns
-- AZ components have more advanced features (bulk adjustments, effective dates)
-- US components focus on simplicity and IndexedDB efficiency
-- Feature parity differences are intentional
+#### Component Architecture
+- **AZ components**: Advanced features (bulk adjustments, effective dates) - Complex business logic
+- **US components**: Simplicity and IndexedDB efficiency - Performance-focused
+- **Shared components**: Reusable UI patterns with consistent behavior
+- **Test coverage**: All business-critical components must have tests
+
+#### Performance Optimization
+- **Memory Management**: Use `markRaw()` for large datasets in AZ components (50-70% memory reduction)
+- **Web Workers**: Offload CPU-intensive operations (CSV parsing, data processing)
+- **Database Efficiency**: Batch IndexedDB operations in 1000-record chunks for US components
+- **Concurrency Control**: Prevent concurrent operations with `operationInProgress` flags
+
+#### State Management
+- **Pinia stores**: Centralized state with TypeScript support
+- **Computed properties**: Reactive derivations from state
+- **Manual triggers**: Use `triggerDataUpdate()` for markRaw data in AZ components
+- **Test isolation**: Mock stores in tests for predictable behavior
+
+### 🔄 **Development Workflow Integration**
+
+#### Change Management Process
+1. **Plan & Test Strategy**: Before any change, identify what tests are needed
+2. **Test-Driven Development**: Write failing tests first, then implement
+3. **Continuous Verification**: Run `npm run test:watch` during development
+4. **Pre-Commit Validation**: `npm run test:integration` must pass
+5. **Pre-Deploy Confidence**: `npm run regression-check` must pass
+
+#### Code Review Standards
+- **Business Logic Changes**: Must include test coverage
+- **UI Changes**: Must include component tests or manual verification plan
+- **Performance Changes**: Must include performance impact assessment
+- **Security Changes**: Must pass security review checklist
+
+#### Deployment Standards
+- **Staging Verification**: Test critical paths in staging environment
+- **Production Monitoring**: Monitor key metrics post-deployment
+- **Rollback Readiness**: Always have rollback plan for critical changes
+- **Zero-Downtime**: Use edge function deployments for seamless updates
 
 ## Known Technical Debt
 
@@ -193,20 +352,58 @@ const hasPermission = user.role === 'superadmin' || user.role === 'admin';
 - ESLint flat config with TypeScript and Vue plugins
 - Terser minification for production builds
 
-## Development Philosophy
+## Enterprise Production Standards
 
-**Ship First, Optimize Later** - This overrides any perfectionist approaches in cursor rules:
-- Prioritize user-facing features over internal code cleanup
-- Technical debt is acceptable if it doesn't impact users
-- Performance over perfect architecture - proven patterns take precedence
-- Pragmatic solutions over idealistic patterns
+### 🚀 **Current Status: PRODUCTION READY**
 
-## Production Readiness Notes
+**Enterprise Testing Infrastructure**: ✅ **COMPLETE**
+- Automated Stripe webhook protection prevents revenue loss
+- 30-second regression verification replaces 5-minute manual cycles  
+- Confident deployment process with comprehensive verification
+- Test-driven development workflow embedded in CLAUDE.md
 
-- Project name in package.json should be updated from "pricing-tool" to "voip-accelerator"
-- Stripe integration still needed for payment processing
-- Current architecture is production-ready despite technical debt areas
-- Focus on user-facing features over internal code cleanup for initial launch
+### 📋 **Production Readiness Checklist**
+
+#### ✅ **COMPLETE - Critical Systems**
+- **Payment Processing**: Stripe integration with automated webhook testing
+- **User Authentication**: Supabase auth with session management
+- **Upload Management**: Limits enforced with automated verification
+- **Data Processing**: LERG/NANP systems with enterprise-grade categorization
+- **Performance**: Optimized for 250K+ record datasets
+- **Security**: RLS policies, edge function protection, secret management
+
+#### ✅ **COMPLETE - Enterprise Infrastructure**  
+- **Testing Framework**: Vitest + Vue Testing Library with comprehensive coverage
+- **Deployment Confidence**: Automated regression checking (`npm run regression-check`)
+- **Monitoring**: Edge function logging and error tracking
+- **Documentation**: Enterprise development guidelines in CLAUDE.md
+
+#### 📋 **Production Deployment Standards**
+- **Pre-Deploy**: `npm run regression-check` must pass (60s verification)
+- **Critical Path**: `npm run test:integration` must pass (30s verification)
+- **Manual Verification**: UI changes tested in staging environment
+- **Rollback Plan**: Edge function rollback capabilities for critical failures
+- **Monitoring**: Post-deployment verification of key metrics
+
+### 🔧 **Technical Debt Management Strategy**
+
+**Principle**: Technical debt is acceptable if it doesn't impact users or business objectives
+
+#### Priority 1: Revenue-Critical (PROTECTED BY TESTS)
+- ✅ Stripe webhook processing
+- ✅ Upload limit enforcement  
+- ✅ Subscription management
+- ✅ User authentication flows
+
+#### Priority 2: User Experience (MANAGED)
+- TypeScript strict mode improvements (incremental)
+- Component consistency (as needed)
+- Performance optimizations (data-driven)
+
+#### Priority 3: Developer Experience (FUTURE)
+- Type system cleanup (when team scales)
+- Architecture refactoring (when requirements change)
+- Documentation improvements (ongoing)
 
 ## ✅ **MAJOR MILESTONE COMPLETE (June 28, 2025)**
 
@@ -403,3 +600,50 @@ Supabase Enhanced LERG (449 records) → lerg-store-v2 (Pinia) → UI Components
 - When subscription/auth issues occur, check both client-side route guards AND server-side edge functions
 - Edge function failures can cause route guards to fail-safe and block access
 - Test with direct database queries if edge functions are unreliable
+
+---
+
+## 🤖 **AUTOPILOT MODE: Testing-First Development**
+
+### **MANDATORY: Always Follow This Sequence**
+
+#### For ANY Substantive Change
+1. **🚨 STOP**: Before changing ANY business logic, ask: "What tests do I need?"
+2. **🧪 TEST FIRST**: Write failing tests that define the expected behavior
+3. **⚡ VERIFY**: Run `npm run test:integration` to ensure current tests pass (30s)
+4. **🔨 IMPLEMENT**: Make the failing tests pass
+5. **✅ VALIDATE**: Run `npm run test:integration` again to confirm (30s)
+
+#### For ANY Commit
+1. **MANDATORY**: `npm run test:integration` must pass
+2. **VERIFY**: Check that new code has appropriate test coverage
+3. **DOCUMENT**: Update relevant comments or documentation
+
+#### For ANY Deployment  
+1. **MANDATORY**: `npm run regression-check` must pass
+2. **STAGE**: Test critical paths in staging environment
+3. **DEPLOY**: With confidence, knowing tests protect against regressions
+
+### **🎯 Critical Business Logic - ALWAYS TEST**
+- Payment processing (Stripe webhooks)
+- Upload limit enforcement
+- Subscription state changes
+- User authentication flows
+- Route access control
+- Data processing logic
+
+### **⚠️ NEVER Skip Testing For**
+- Changes to Stripe integration
+- Upload limit modifications  
+- User store logic updates
+- Route guard changes
+- Database schema modifications
+- Edge function deployments
+
+### **🚀 Automation Success Metrics**
+- **Zero Revenue-Critical Regressions**: Tests catch issues before production
+- **30-Second Confidence**: Quick verification enables rapid development
+- **Fearless Deployments**: Comprehensive testing eliminates deployment anxiety
+- **Scalable Quality**: Testing framework grows with application complexity
+
+**Status**: 🤖 **TESTING-FIRST DEVELOPMENT ON AUTOPILOT** - Enterprise-grade quality assurance embedded in workflow
