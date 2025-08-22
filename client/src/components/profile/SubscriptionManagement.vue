@@ -14,13 +14,24 @@
         <span class="text-fbWhite/70">Status</span>
         <span :class="statusClasses">
           {{ formatStatus(subscription.subscription_status) }}
+          <span v-if="subscription.cancel_at_period_end" class="text-yellow-400 text-sm ml-2">
+            (Canceling)
+          </span>
+        </span>
+      </div>
+
+      <!-- Plan Tier -->
+      <div v-if="subscription.subscription_tier" class="flex items-center justify-between">
+        <span class="text-fbWhite/70">Plan</span>
+        <span class="text-fbWhite capitalize">
+          {{ subscription.subscription_tier }}
         </span>
       </div>
 
       <!-- Current Period End -->
       <div v-if="subscription.current_period_end" class="flex items-center justify-between">
         <span class="text-fbWhite/70">
-          {{ subscription.cancel_at ? 'Expires' : 'Renews' }}
+          {{ subscription.cancel_at_period_end ? 'Access Until' : 'Renews' }}
         </span>
         <span class="text-fbWhite">
           {{ formatDate(subscription.current_period_end) }}
@@ -28,11 +39,20 @@
       </div>
 
       <!-- Cancellation Notice -->
-      <div v-if="subscription.cancel_at" class="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-        <p class="text-yellow-300 text-sm">
-          Your subscription will end on {{ formatDate(subscription.cancel_at) }}.
-          You'll retain access until then.
+      <div v-if="subscription.cancel_at_period_end && subscription.cancel_at" class="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+        <p class="text-yellow-300 text-sm font-medium mb-2">
+          Subscription Scheduled for Cancellation
         </p>
+        <p class="text-yellow-300/80 text-sm">
+          Your subscription will end on {{ formatDate(subscription.cancel_at) }}.
+          You'll retain full access to your {{ subscription.subscription_tier }} plan features until then.
+        </p>
+        <button
+          @click="handleReactivate"
+          class="mt-3 text-sm bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded px-3 py-1 hover:bg-yellow-500/30 transition-colors"
+        >
+          Reactivate Subscription
+        </button>
       </div>
 
       <!-- Manage Button -->
@@ -69,6 +89,8 @@ interface SubscriptionData {
   subscription_status: string | null;
   current_period_end: string | null;
   cancel_at: string | null;
+  cancel_at_period_end?: boolean;
+  subscription_tier?: string | null;
 }
 
 const { showError } = useToast();
@@ -122,6 +144,19 @@ async function handleManageSubscription() {
   } catch (error) {
     console.error('Portal error:', error);
     showError(error instanceof Error ? error.message : 'Failed to open customer portal');
+  } finally {
+    isProcessingPortal.value = false;
+  }
+}
+
+async function handleReactivate() {
+  try {
+    isProcessingPortal.value = true;
+    // Open Stripe portal where user can reactivate their subscription
+    await stripeService.createPortalSession();
+  } catch (error) {
+    console.error('Reactivation error:', error);
+    showError(error instanceof Error ? error.message : 'Failed to open customer portal for reactivation');
   } finally {
     isProcessingPortal.value = false;
   }

@@ -132,11 +132,26 @@ export const useUserStore = defineStore('user', {
         }
       }
       
+      // Check for scheduled cancellation
+      else if (subscriptionStatus === 'active' && profile.cancel_at_period_end && profile.cancel_at) {
+        const cancelDate = new Date(profile.cancel_at);
+        if (now < cancelDate) {
+          const daysRemaining = Math.ceil((cancelDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            show: true,
+            message: `Your subscription is scheduled to cancel in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. You can continue using the service until then or reactivate your subscription.`,
+            variant: 'warning' as const,
+            buttonText: "Reactivate Subscription"
+          };
+        }
+      }
+      
       // Check for subscription expiry
-      else if ((subscriptionStatus === 'monthly' || subscriptionStatus === 'annual') && profile.current_period_end) {
+      else if ((subscriptionStatus === 'monthly' || subscriptionStatus === 'annual' || subscriptionStatus === 'active') && profile.current_period_end) {
         const subscriptionEnd = new Date(profile.current_period_end);
         if (now >= subscriptionEnd) {
-          const planType = subscriptionStatus === 'monthly' ? 'monthly plan' : 'annual membership';
+          const planType = subscriptionStatus === 'monthly' ? 'monthly plan' : 
+                          subscriptionStatus === 'annual' ? 'annual membership' : 'subscription';
           return {
             show: true,
             message: `Your ${planType} has expired. Please renew to continue service.`,
@@ -147,10 +162,10 @@ export const useUserStore = defineStore('user', {
       }
       
       // Check for cancelled or other expired states
-      else if (subscriptionStatus === 'cancelled' || !subscriptionStatus) {
+      else if (subscriptionStatus === 'cancelled' || subscriptionStatus === 'canceled' || !subscriptionStatus) {
         return {
           show: true,
-          message: "Your subscription is inactive. Please subscribe to continue using VoIP Accelerator.",
+          message: "Your subscription has been canceled. Please subscribe to continue using VoIP Accelerator.",
           variant: 'error' as const,
           buttonText: "Subscribe Now"
         };
@@ -176,6 +191,25 @@ export const useUserStore = defineStore('user', {
       }
 
       return { show: false, message: '' };
+    },
+    
+    shouldRedirectToBilling: (state) => {
+      const profile = state.auth.profile;
+      
+      if (!profile) return false;
+      
+      // Don't redirect if status is 'active' (payment completed)
+      if (profile.subscription_status === 'active') return false;
+      
+      // Don't redirect if status is 'trial'
+      if (profile.subscription_status === 'trial') return false;
+      
+      // Check if user has a paid tier but no stripe_customer_id (hasn't actually paid)
+      const hasPaidTier = profile.subscription_tier && 
+                         ['accelerator', 'optimizer', 'enterprise'].includes(profile.subscription_tier);
+      const hasNoStripeCustomer = !profile.stripe_customer_id;
+      
+      return hasPaidTier && hasNoStripeCustomer;
     },
   },
 
@@ -206,6 +240,14 @@ export const useUserStore = defineStore('user', {
 
     resetUploadsToday() {
       this.usage.uploadsToday = 0;
+    },
+    
+    clearBillingRedirect() {
+      const userId = this.auth.user?.id;
+      if (userId) {
+        localStorage.removeItem(`pendingBillingRedirect_${userId}`);
+        console.log(`Cleared billing redirect flag for user ${userId}`);
+      }
     },
 
     async fetchProfile(userId: string): Promise<void> {
@@ -339,25 +381,67 @@ export const useUserStore = defineStore('user', {
               event === 'INITIAL_SESSION' // Treat INITIAL_SESSION here as well for profile consistency
             ) {
               try {
-                // Check for pending tier after successful signin (email confirmation)
-                if (event === 'SIGNED_IN') {
-                  const pendingTier = localStorage.getItem(`pendingTier_${currentUser.id}`);
-                  if (pendingTier && ['accelerator', 'optimizer', 'enterprise'].includes(pendingTier)) {
-                    console.log(`Found pending tier ${pendingTier} for user ${currentUser.id}, applying...`);
+                // Check for pending signup processing after successful signin (email confirmation)
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                  const userMetadata = currentUser.user_metadata;
+                  const selectedTier = userMetadata?.selected_tier;
+                  const isTrialSignup = userMetadata?.is_trial_signup;
+                  
+                  if (selectedTier && ['accelerator', 'optimizer', 'enterprise'].includes(selectedTier)) {
+                    console.log(`Found signup metadata: tier ${selectedTier}, isTrialSignup: ${isTrialSignup}`);
                     
-                    // Try to set the trial tier
+                    if (isTrialSignup === false) {
+                      // For paid signups, set the subscription tier in database (no stripe_customer_id yet)
+                      console.log('Paid signup detected, setting subscription tier in database');
+                      try {
+                        const { error: updateError } = await supabase
+                          .from('profiles')
+                          .update({
+                            subscription_tier: selectedTier,
+                            subscription_status: 'inactive', // Will become 'active' after payment
+                            // stripe_customer_id remains null until payment
+                          })
+                          .eq('id', currentUser.id);
+                        
+                        if (updateError) {
+                          console.error('Failed to set paid subscription tier:', updateError);
+                        } else {
+                          console.log(`Successfully set paid subscription tier ${selectedTier}`);
+                        }
+                      } catch (error) {
+                        console.error('Error setting paid subscription tier:', error);
+                      }
+                    } else {
+                      // For trial users, set the trial tier as before
+                      try {
+                        const { error: tierError } = await supabase.functions.invoke('set-trial-tier', {
+                          body: { selectedTier }
+                        });
+                        if (tierError) {
+                          console.error('Failed to set trial tier:', tierError);
+                        } else {
+                          console.log(`Successfully applied trial tier ${selectedTier}`);
+                        }
+                      } catch (error) {
+                        console.error('Error applying trial tier:', error);
+                      }
+                    }
+                    
+                    // Clear the signup metadata since we've processed it
                     try {
-                      const { error: tierError } = await supabase.functions.invoke('set-trial-tier', {
-                        body: { selectedTier: pendingTier }
+                      const { error: updateError } = await supabase.auth.updateUser({
+                        data: {
+                          selected_tier: null,
+                          is_trial_signup: null,
+                        }
                       });
-                      if (tierError) {
-                        console.error('Failed to set pending trial tier:', tierError);
+                      if (updateError) {
+                        console.error('Failed to clear signup metadata:', updateError);
                       } else {
-                        console.log(`Successfully applied pending tier ${pendingTier}`);
-                        localStorage.removeItem(`pendingTier_${currentUser.id}`);
+                        console.log('Cleared signup metadata from user');
                       }
                     } catch (error) {
-                      console.error('Error applying pending tier:', error);
+                      console.error('Error clearing signup metadata:', error);
                     }
                   }
                 }
@@ -444,7 +528,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async signUp(email: string, password: string, userAgent: string, selectedTier?: SubscriptionTier) {
+    async signUp(email: string, password: string, userAgent: string, selectedTier?: SubscriptionTier, isTrialSignup: boolean = true) {
       this.auth.isLoading = true;
       this.auth.error = null;
       try {
@@ -456,6 +540,8 @@ export const useUserStore = defineStore('user', {
             emailRedirectTo: callbackUrl,
             data: {
               user_agent: userAgent,
+              selected_tier: selectedTier,
+              is_trial_signup: isTrialSignup,
             },
           },
         });
@@ -468,11 +554,8 @@ export const useUserStore = defineStore('user', {
             'Check email for confirmation.'
           );
           
-          // Store selected tier in localStorage for use after email confirmation
-          if (selectedTier) {
-            localStorage.setItem(`pendingTier_${data.user.id}`, selectedTier);
-            console.log(`Stored pending tier ${selectedTier} for user ${data.user.id}`);
-          }
+          // Tier and signup type are now stored in user metadata, no localStorage needed
+          console.log(`User signup completed with tier ${selectedTier} (${isTrialSignup ? 'trial' : 'paid'})`);
           
           // Indicate confirmation needed to the UI if desired
           return { user: data.user, error: null };

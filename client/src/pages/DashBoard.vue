@@ -154,15 +154,70 @@
 
             <!-- Active Subscription (for paid users) - No colored background -->
             <div v-else class="space-y-4">
+              <!-- Cancellation Status Warning -->
+              <div v-if="isCancellationScheduled" class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <p class="text-yellow-300 text-sm font-medium">Subscription Canceling</p>
+                    <p class="text-yellow-300/80 text-xs mt-1">
+                      Your subscription will end on {{ formatCancelDate() }}. 
+                      You'll keep access until then.
+                    </p>
+                  </div>
+                  <BaseButton
+                    @click="handleReactivateSubscription"
+                    variant="secondary"
+                    size="small"
+                  >
+                    Reactivate
+                  </BaseButton>
+                </div>
+              </div>
+
               <div class="space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="text-gray-400 text-sm">Current Plan:</span>
-                  <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-                    {{ currentPlanTier === 'trial' ? 'Free Trial' : currentPlanName }}
-                  </BaseBadge>
+                  <div class="flex items-center gap-2">
+                    <BaseBadge :variant="currentPlanBadgeVariant" size="small">
+                      {{ currentPlanTier === 'trial' ? 'Free Trial' : currentPlanName }}
+                    </BaseBadge>
+                    <span v-if="isCancellationScheduled" class="text-yellow-400 text-xs">
+                      (Canceling)
+                    </span>
+                  </div>
                 </div>
+                
+                <!-- Plan Management Buttons -->
+                <div class="flex gap-2 pt-2">
+                  <BaseButton
+                    @click="showAllPlansInModal = true; showPaymentModal = true"
+                    variant="secondary"
+                    size="small"
+                  >
+                    Change Plan
+                  </BaseButton>
+                  <BaseButton
+                    v-if="!isCancellationScheduled"
+                    @click="handleManageBilling"
+                    variant="secondary-outline"
+                    size="small"
+                  >
+                    Manage Billing
+                  </BaseButton>
+                  <BaseButton
+                    v-if="!isCancellationScheduled"
+                    @click="handleCancelSubscription"
+                    variant="destructive"
+                    size="small"
+                  >
+                    Cancel Subscription
+                  </BaseButton>
+                </div>
+                
                 <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Next Billing:</span>
+                  <span class="text-gray-400 text-sm">
+                    {{ isCancellationScheduled ? 'Access Until:' : 'Next Billing:' }}
+                  </span>
                   <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
                 </div>
                 <div class="flex items-center justify-between">
@@ -181,22 +236,6 @@
                   <span class="text-gray-400 text-sm">Uploads:</span>
                   <span class="text-green-400 text-sm">{{ uploadStats.uploads }} (Unlimited)</span>
                 </div>
-              </div>
-              <div class="flex gap-2">
-                <BaseButton
-                  @click="showAllPlansInModal = true; showPaymentModal = true"
-                  variant="secondary"
-                  size="small"
-                >
-                  Change Plan
-                </BaseButton>
-                <BaseButton
-                  @click="handleManageBilling"
-                  variant="secondary-outline"
-                  size="small"
-                >
-                  Manage Billing
-                </BaseButton>
               </div>
             </div>
 
@@ -291,6 +330,18 @@
       :requires-confirmation-phrase="true"
       confirmation-phrase="DELETE"
       @confirm="handleDeleteAccountConfirm"
+    />
+
+    <!-- Cancel Subscription Modal -->
+    <ConfirmationModal
+      v-model="showCancelSubscriptionModal"
+      title="Cancel Subscription"
+      message="Are you sure you want to cancel your subscription? Your subscription will remain active until the end of your current billing period, and you'll continue to have access to all features until then."
+      confirm-button-text="Yes, Cancel Subscription"
+      cancel-button-text="Keep Subscription"
+      :loading="isCancellingSubscription"
+      @confirm="confirmCancelSubscription"
+      @cancel="cancelCancelSubscription"
     />
 
     <!-- Payment Modal -->
@@ -452,6 +503,27 @@
       return 'Invalid Date';
     }
   });
+
+  // Cancellation status
+  const isCancellationScheduled = computed(() => {
+    const profile = userStore.getUserProfile;
+    return profile?.cancel_at_period_end && profile?.cancel_at;
+  });
+
+  function formatCancelDate() {
+    const profile = userStore.getUserProfile;
+    if (!profile?.cancel_at) return 'N/A';
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(new Date(profile.cancel_at));
+    } catch (e) {
+      console.error('Error formatting cancel_at date:', profile.cancel_at, e);
+      return 'Invalid Date';
+    }
+  }
 
   // Computed properties for user display
   const userInitials = computed(() => {
@@ -644,6 +716,42 @@
     }
   }
 
+  function handleCancelSubscription() {
+    showCancelSubscriptionModal.value = true;
+  }
+
+  async function confirmCancelSubscription() {
+    try {
+      isCancellingSubscription.value = true;
+      const { openBillingPortal } = useBilling();
+      await openBillingPortal();
+      // TODO: Add direct cancellation API call when edge functions are working
+      // For now, redirect to Stripe portal where users can cancel
+      showCancelSubscriptionModal.value = false;
+    } catch (error: any) {
+      console.error('Error opening cancellation portal:', error);
+      alert('Unable to open cancellation portal. Please try again later.');
+    } finally {
+      isCancellingSubscription.value = false;
+    }
+  }
+
+  function cancelCancelSubscription() {
+    showCancelSubscriptionModal.value = false;
+  }
+
+  async function handleReactivateSubscription() {
+    try {
+      const { openBillingPortal } = useBilling();
+      await openBillingPortal();
+      // TODO: Add direct reactivation API call when edge functions are working
+      // For now, redirect to Stripe portal where users can reactivate
+    } catch (error: any) {
+      console.error('Error opening reactivation portal:', error);
+      alert('Unable to open reactivation portal. Please try again later.');
+    }
+  }
+
   // Watch for user/profile changes if needed
   watch(
     () => userStore.auth.user,
@@ -705,6 +813,37 @@
     if (route.query.subscription === 'success') {
       console.log('[DashBoard] Detected successful subscription, refreshing profile...');
       await refreshUserProfile();
+    }
+    
+    // Ensure profile is loaded before checking billing redirect
+    const userId = userStore.getUser?.id;
+    if (userId && !userStore.getUserProfile) {
+      console.log('[DashBoard] Profile not loaded yet, fetching...');
+      await userStore.fetchProfile(userId);
+    }
+    
+    // Check if user needs to be redirected to billing (paid signup after email confirmation)
+    console.log('[DashBoard] Checking billing redirect...');
+    console.log('[DashBoard] Profile:', userStore.getUserProfile);
+    console.log('[DashBoard] Should redirect to billing:', userStore.shouldRedirectToBilling);
+    
+    if (userStore.shouldRedirectToBilling) {
+      console.log('[DashBoard] Detected paid signup, redirecting to billing...');
+      userStore.clearBillingRedirect();
+      
+      // Redirect directly to Stripe checkout with the selected tier
+      const tier = userStore.getUserProfile?.subscription_tier;
+      if (tier) {
+        await router.push({
+          path: '/billing',
+          query: { tier, autoCheckout: 'true' }
+        });
+      } else {
+        await router.push('/billing');
+      }
+      return; // Exit early since we're redirecting
+    } else {
+      console.log('[DashBoard] No billing redirect needed');
     }
     
     // Check if user was redirected due to upload limit
@@ -785,6 +924,10 @@
   const showDeleteConfirmModal = ref(false);
   const isDeletingAccount = ref(false); // Added for loading state
   const deleteAccountError = ref<string | null>(null); // Added for error message
+
+  // Cancel Subscription Modal State
+  const showCancelSubscriptionModal = ref(false);
+  const isCancellingSubscription = ref(false);
 
   // Functions for Delete Account Modal
   function openDeleteConfirmModal() {

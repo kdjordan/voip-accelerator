@@ -1,6 +1,6 @@
--- /supabase/migrations/20230101000000_create_profile_on_signup.sql
+-- Update handle_new_user function to support paid signups
+-- This migration updates the trigger function to check user metadata for subscription tier
 
--- Function to handle new user signup and create a profile
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -54,8 +54,3 @@ begin
   return new;
 end;
 $$;
-
--- Trigger to call handle_new_user after a new user is created in auth.users
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user(); 

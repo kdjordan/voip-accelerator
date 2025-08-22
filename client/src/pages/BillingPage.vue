@@ -25,7 +25,9 @@
         </h1>
         <p class="text-gray-400 max-w-xl mx-auto">
           {{ userTier 
-            ? `Your 7-day trial has ended. Subscribe to ${getTierDisplayName(userTier)} to continue.`
+            ? isAutoCheckout
+              ? `Complete your ${getTierDisplayName(userTier)} subscription to get started.`
+              : `Your 7-day trial has ended. Subscribe to ${getTierDisplayName(userTier)} to continue.`
             : 'Select the perfect plan for your VoIP business and unlock all rate sheet management tools.'
           }}
         </p>
@@ -59,7 +61,7 @@
                 <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
-                7-day free trial ended
+                {{ isAutoCheckout ? 'Get started today' : '7-day free trial ended' }}
               </li>
             </ul>
             
@@ -139,7 +141,7 @@
                 <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
-                7-day free trial ended
+                {{ isAutoCheckout ? 'Get started today' : '7-day free trial ended' }}
               </li>
             </ul>
             
@@ -218,8 +220,8 @@
         </div>
       </div>
 
-      <!-- Delete Account Option -->
-      <div class="text-center mt-6">
+      <!-- Delete Account Option (only show for trial users, not paid signups) -->
+      <div v-if="!isAutoCheckout" class="text-center mt-6">
         <p class="text-gray-400 text-sm mb-3">Changed your mind?</p>
         <BaseButton
           @click="handleDeleteAccount"
@@ -274,6 +276,9 @@ const { showError, showSuccess } = useToast();
 const loading = ref(false);
 const showUpgradeModal = ref(false);
 const showPlanSelector = ref(false);
+
+// Check if this is a paid signup (redirected from router guard)
+const isAutoCheckout = computed(() => route.query.autoCheckout === 'true');
 
 const userEmail = computed(() => userStore.getUser?.email || '');
 const currentPlan = computed(() => userStore.getUserProfile?.subscription_status || 'trial');

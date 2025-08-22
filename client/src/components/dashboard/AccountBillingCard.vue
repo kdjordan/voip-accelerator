@@ -35,6 +35,26 @@
       </div>
     </div>
 
+    <!-- Cancellation Status -->
+    <div v-if="isCancellationScheduled" class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-yellow-300 text-sm font-medium">Subscription Canceling</p>
+          <p class="text-yellow-300/80 text-xs mt-1">
+            Your subscription will end on {{ formatDate(cancelAt) }}. 
+            You'll keep access until then.
+          </p>
+        </div>
+        <BaseButton
+          @click="$emit('reactivate-subscription')"
+          variant="secondary"
+          size="small"
+        >
+          Reactivate
+        </BaseButton>
+      </div>
+    </div>
+
     <!-- Action Buttons -->
     <div class="flex justify-end gap-3 pt-2">
       <BaseButton
@@ -46,12 +66,21 @@
       </BaseButton>
       
       <BaseButton
-        v-if="currentPlan !== 'trial'"
+        v-if="currentPlan !== 'trial' && !isCancellationScheduled"
         @click="$emit('manage-billing')"
         variant="secondary"
         size="standard"
       >
         Manage Billing
+      </BaseButton>
+
+      <BaseButton
+        v-if="currentPlan !== 'trial' && !isCancellationScheduled"
+        @click="$emit('cancel-subscription')"
+        variant="destructive"
+        size="standard"
+      >
+        Cancel Subscription
       </BaseButton>
     </div>
   </div>
@@ -70,6 +99,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'choose-plan': [];
   'manage-billing': [];
+  'cancel-subscription': [];
+  'reactivate-subscription': [];
 }>();
 
 const userStore = useUserStore();
@@ -92,6 +123,16 @@ const badgeText = computed(() => {
   if (currentPlan.value === 'monthly') return 'Monthly';
   if (currentPlan.value === 'annual') return 'Annual';
   return 'Inactive';
+});
+
+const isCancellationScheduled = computed(() => {
+  const profile = userStore.getUserProfile;
+  return profile?.cancel_at_period_end && profile?.cancel_at;
+});
+
+const cancelAt = computed(() => {
+  const profile = userStore.getUserProfile;
+  return profile?.cancel_at;
 });
 
 function formatDate(dateString: string) {

@@ -1,19 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@13.10.0?target=deno";
-import { getCorsHeaders } from "../_shared/cors.ts";
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
-  apiVersion: '2023-10-16',
-  httpClient: Stripe.createFetchHttpClient(),
-});
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Credentials': 'false',
+};
 
 serve(async (req) => {
-  // Get the origin from the request headers
-  const origin = req.headers.get('origin');
-  const corsHeaders = getCorsHeaders(origin);
-  
-  // Handle CORS preflight requests
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     console.log('Handling OPTIONS preflight request');
     return new Response('ok', { headers: corsHeaders });
@@ -28,34 +25,34 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Processing portal session request');
-    
-    // Get the authorization header
+    // Initialize Stripe
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
+      apiVersion: '2023-10-16',
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+
+    // Get auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify the user
+    // Verify user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error('User verification failed:', userError);
       throw new Error('Unauthorized');
     }
 
-    console.log('User verified:', user.email);
-
-    // Get request body
+    // Parse request body
     const { returnUrl } = await req.json();
-
+    
     // Get user's Stripe customer ID from profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -63,35 +60,58 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
+    console.log('Profile query result:', { profile, profileError });
+
     if (profileError || !profile?.stripe_customer_id) {
-      console.error('No Stripe customer ID found for user:', user.id);
+      console.error('Profile error or missing customer ID:', { profileError, hasCustomerId: !!profile?.stripe_customer_id });
       throw new Error('No billing information found. Please subscribe to a plan first.');
     }
 
-    console.log('Creating portal session for customer:', profile.stripe_customer_id);
+    console.log('About to create portal session for customer:', profile.stripe_customer_id);
 
     // Create portal session
-    const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
-      return_url: returnUrl || `${origin || 'http://localhost:5173'}/profile`,
-    });
-
-    console.log('Portal session created');
+    let session;
+    try {
+      session = await stripe.billingPortal.sessions.create({
+        customer: profile.stripe_customer_id,
+        return_url: returnUrl || `${req.headers.get('origin') || 'http://localhost:5173'}/dashboard`,
+      });
+      console.log('Portal session created successfully:', session.id);
+    } catch (stripeError) {
+      console.error('Stripe API error:', {
+        message: stripeError.message,
+        type: stripeError.type,
+        code: stripeError.code,
+        statusCode: stripeError.statusCode,
+        requestId: stripeError.requestId
+      });
+      throw new Error(`Stripe Error: ${stripeError.message} (${stripeError.type || stripeError.code})`);
+    }
 
     return new Response(
       JSON.stringify({ url: session.url }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
-    console.error('Error creating portal session:', error);
+    console.error('Full error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      type: error.type,
+      code: error.code,
+      request_id: error.request_id,
+      statusCode: error.statusCode,
+      raw: error
+    });
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+      JSON.stringify({ 
+        error: error.message,
+        details: error.type || error.code || 'unknown_error'
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 400 
       }
     );
   }

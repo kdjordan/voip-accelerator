@@ -200,13 +200,29 @@ async function checkUploadLimit(userId: string): Promise<boolean> {
     // Get user's current tier and upload count
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('subscription_tier, subscription_status, uploads_this_month')
+      .select('subscription_tier, subscription_status, uploads_this_month, cancel_at_period_end, cancel_at')
       .eq('id', userId)
       .single();
     
     if (error) {
       console.error('Error checking upload limit:', error);
       return false; // Allow access on error (fail-safe)
+    }
+    
+    // Check if subscription is scheduled for cancellation and past the cancel date
+    if (profile.cancel_at_period_end && profile.cancel_at) {
+      const cancelDate = new Date(profile.cancel_at);
+      const now = new Date();
+      if (now >= cancelDate) {
+        console.log('Upload blocked: subscription cancellation date has passed');
+        return false; // Block uploads after cancellation date
+      }
+    }
+    
+    // Check if subscription is already canceled
+    if (profile.subscription_status === 'canceled') {
+      console.log('Upload blocked: subscription is canceled');
+      return false; // Block uploads for canceled subscriptions
     }
     
     // Only check limits for Optimizer tier users (trial or paid)
@@ -233,7 +249,7 @@ async function checkSubscriptionStatus(userId: string): Promise<boolean> {
     // Direct database query for subscription status - more reliable than edge function
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('subscription_status, current_period_end, plan_expires_at')
+      .select('subscription_status, current_period_end, plan_expires_at, cancel_at_period_end, cancel_at')
       .eq('id', userId)
       .single();
     
@@ -244,8 +260,26 @@ async function checkSubscriptionStatus(userId: string): Promise<boolean> {
     
     const now = new Date();
     
+    // Check if subscription is already canceled
+    if (profile.subscription_status === 'canceled') {
+      console.log('Access blocked: subscription is canceled');
+      return false;
+    }
+    
     // Check if user has active subscription
     if (profile.subscription_status === 'active' || profile.subscription_status === 'monthly' || profile.subscription_status === 'annual') {
+      // If scheduled for cancellation, check if we're still within the paid period
+      if (profile.cancel_at_period_end && profile.cancel_at) {
+        const cancelDate = new Date(profile.cancel_at);
+        if (now >= cancelDate) {
+          console.log('Access blocked: subscription cancellation date has passed');
+          return false;
+        }
+        // Still within paid period, allow access
+        return true;
+      }
+      
+      // Normal active subscription check
       const expirationDate = profile.current_period_end ? new Date(profile.current_period_end) : null;
       return !expirationDate || expirationDate > now;
     }
@@ -287,6 +321,20 @@ router.beforeEach(async (to, from, next) => {
   const isAdmin = userStore.isAdmin; // Use the isAdmin getter
 
   if (isAuthenticated) {
+    // Check if user needs to complete billing (paid tier but no stripe_customer_id)
+    // Skip this check if already going to billing page or returning from Stripe
+    const isReturningFromStripe = to.query.subscription === 'success' || from.name === 'billing';
+    
+    if (to.name !== 'billing' && !isReturningFromStripe && userStore.shouldRedirectToBilling) {
+      console.log('[Router] User needs to complete billing, redirecting...');
+      const tier = userStore.getUserProfile?.subscription_tier;
+      next({ 
+        name: 'billing', 
+        query: { tier, autoCheckout: 'true' } 
+      });
+      return;
+    }
+    
     if (isTransitionalRoute && to.name !== 'dashboard') {
       // Avoid redirect loop
       next({ name: 'dashboard' });

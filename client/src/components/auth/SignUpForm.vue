@@ -209,37 +209,25 @@
     const userAgent = navigator.userAgent;
 
     try {
-      // For paid subscriptions, redirect directly to billing instead of creating account first
-      if (!isTrialSignup.value && selectedTier.value) {
-        // Store the signup data for later use after payment
-        sessionStorage.setItem('pendingSignup', JSON.stringify({
-          email: email.value,
-          password: password.value,
-          tier: selectedTier.value,
-          userAgent
-        }));
-        
-        // Redirect to billing page with tier selection
-        router.push({
-          path: '/billing',
-          query: { 
-            tier: selectedTier.value,
-            signup: 'true',
-            email: email.value
-          }
-        });
-        return;
-      }
-
-      // For trial users, proceed with normal account creation
-      const { error: signUpError } = await userStore.signUp(email.value, password.value, userAgent, selectedTier.value);
+      // For both trial and paid users, create account first (they'll be redirected to billing after email confirmation for paid)
+      const { error: signUpError } = await userStore.signUp(
+        email.value, 
+        password.value, 
+        userAgent, 
+        selectedTier.value, 
+        isTrialSignup.value
+      );
 
       if (signUpError) {
         console.error('Sign up error object:', signUpError);
         errorMessage.value = signUpError.message || 'Failed to create account. Please try again.';
       } else {
-        // Success - show trial confirmation message
-        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to start your 7-day free trial.`;
+        // Success - show appropriate confirmation message based on signup type
+        if (isTrialSignup.value) {
+          signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to start your 7-day free trial.`;
+        } else {
+          signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to complete your account setup and proceed to billing.`;
+        }
         isSignupFormSuccessfullySubmitted.value = true; // Disable button on success
       }
     } catch (error) {
