@@ -188,30 +188,37 @@
                 </div>
                 
                 <!-- Plan Management Buttons -->
-                <div class="flex gap-2 pt-2">
-                  <BaseButton
-                    @click="showAllPlansInModal = true; showPaymentModal = true"
-                    variant="secondary"
-                    size="small"
-                  >
-                    Change Plan
-                  </BaseButton>
-                  <BaseButton
-                    v-if="!isCancellationScheduled"
-                    @click="handleManageBilling"
-                    variant="secondary-outline"
-                    size="small"
-                  >
-                    Manage Billing
-                  </BaseButton>
-                  <BaseButton
-                    v-if="!isCancellationScheduled"
-                    @click="handleCancelSubscription"
-                    variant="destructive"
-                    size="small"
-                  >
-                    Cancel Subscription
-                  </BaseButton>
+                <div class="w-1/4 pt-2">
+                  <div class="flex flex-col gap-2">
+                    <div class="flex gap-2">
+                      <BaseButton
+                        @click="showAllPlansInModal = true; showPaymentModal = true"
+                        variant="secondary"
+                        size="small"
+                        class="flex-1"
+                      >
+                        Change Plan
+                      </BaseButton>
+                      <BaseButton
+                        v-if="!isCancellationScheduled"
+                        @click="handleManageBilling"
+                        variant="secondary-outline"
+                        size="small"
+                        class="flex-1"
+                      >
+                        Manage Billing
+                      </BaseButton>
+                    </div>
+                    <BaseButton
+                      v-if="!isCancellationScheduled"
+                      @click="handleCancelSubscription"
+                      variant="destructive"
+                      size="small"
+                      class="w-full"
+                    >
+                      Cancel Subscription
+                    </BaseButton>
+                  </div>
                 </div>
                 
                 <div class="flex items-center justify-between">
