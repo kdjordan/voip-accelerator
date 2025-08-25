@@ -154,58 +154,6 @@ export function useSessionManagement() {
     }
   };
 
-  // Clear session on logout using robust edge function
-  const clearSession = async (): Promise<void> => {
-    try {
-      const sessionId = getSessionId();
-      if (!sessionId) return;
-
-      // Get current user for cleanup (if still available)
-      let userId = null;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        userId = session?.user?.id || null;
-      } catch (authError) {
-        console.log('Auth context invalid, proceeding with cleanup anyway');
-      }
-
-      // Call cleanup-session directly via HTTP to avoid auth requirements
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/cleanup-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionId,
-          userId
-        })
-      });
-
-      if (!response.ok) {
-        console.error('Cleanup session error:', response.status, response.statusText);
-        // Fallback: try direct database cleanup if edge function fails
-        try {
-          await supabase
-            .from('active_sessions')
-            .delete()
-            .eq('session_token', sessionId);
-        } catch (fallbackError) {
-          console.error('Fallback cleanup failed:', fallbackError);
-        }
-      } else {
-        const data = await response.json();
-        console.log('Session cleanup successful:', data);
-      }
-
-      // Always clear local session ID regardless of database cleanup success
-      sessionStorage.removeItem('voip_session_id');
-    } catch (error) {
-      console.error('Clear session error:', error);
-      // Still clear local session even if cleanup failed
-      sessionStorage.removeItem('voip_session_id');
-    }
-  };
 
   // Format session info for display
   const formatSessionInfo = (session: SessionInfo): string => {
@@ -234,7 +182,6 @@ export function useSessionManagement() {
     sessionConflict,
     checkSession,
     forceLogout,
-    clearSession,
     formatSessionInfo,
     getSessionId
   };
