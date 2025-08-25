@@ -75,6 +75,15 @@
       </BaseButton>
     </div> -->
   </form>
+
+  <!-- Session Conflict Modal -->
+  <SessionConflictModal
+    :is-open="showSessionConflict"
+    :session-info="conflictingSession"
+    :is-loading="isResolvingConflict"
+    @force-logout="handleForceLogout"
+    @cancel="handleCancelLogin"
+  />
 </template>
 
 <script setup lang="ts">
@@ -82,15 +91,22 @@
   import { useRouter } from 'vue-router';
   import { useUserStore } from '@/stores/user-store';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import SessionConflictModal from '@/components/auth/SessionConflictModal.vue';
+  import { useSessionManagement } from '@/composables/useSessionManagement';
+import { supabase } from '@/utils/supabase';
 
   const email = ref('');
   const password = ref('');
   const isLoading = ref(false);
   const isLoadingGoogle = ref(false);
   const errorMessage = ref<string | null>(null);
+  const showSessionConflict = ref(false);
+  const conflictingSession = ref<any>(null);
+  const isResolvingConflict = ref(false);
 
   const userStore = useUserStore();
   const router = useRouter();
+  const { checkSession, forceLogout, sessionConflict } = useSessionManagement();
 
   async function handleSignIn() {
     isLoading.value = true;
@@ -98,8 +114,89 @@
     try {
       const { error } = await userStore.signInWithPassword(email.value, password.value);
       if (error) throw error;
-      // Login successful, onAuthStateChange in store should handle profile loading
-      // Redirect logic is handled by the router guard
+      
+      // Check for conflicts BEFORE creating any session
+      console.log('Checking for existing sessions before login...');
+      try {
+        const response = await supabase.functions.invoke('pre-login-check', {});
+        
+        if (response.error) {
+          throw response.error;
+        }
+
+        const result = response.data;
+        
+        if (result.hasConflict) {
+          // Show conflict modal WITHOUT creating a new session yet
+          console.log('🚨 CONFLICT DETECTED! Showing modal for existing session:', result.existingSession);
+          conflictingSession.value = result.existingSession;
+          showSessionConflict.value = true;
+          console.log('🚨 Modal state set - showSessionConflict:', showSessionConflict.value);
+          console.log('🚨 conflictingSession value:', conflictingSession.value);
+          // Don't redirect or create session - wait for user to resolve conflict
+          return;
+        }
+        
+        console.log('No conflicts found, safe to create session');
+      } catch (conflictCheckError) {
+        console.error('Pre-login conflict check failed:', conflictCheckError);
+        // Proceed anyway - better to allow login than block it
+      }
+
+      // No conflicts detected, create the session
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user after login');
+      
+      // First ensure the user has a profile (in case it's a new user)
+      console.log('Ensuring user profile exists...');
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        });
+      
+      if (profileError) {
+        console.error('Profile upsert error:', profileError);
+        // Don't fail login if profile can't be created, just log it
+      }
+      
+      // Generate a NEW session ID for each login to avoid duplicates
+      const sessionId = Date.now() + '-' + Math.random().toString(36).substring(2);
+      sessionStorage.setItem('voip_session_id', sessionId);
+      
+      // Create the session in database
+      console.log('Creating session...');
+      const { data, error: createError } = await supabase
+        .from('active_sessions')
+        .insert({
+          user_id: user.id,
+          session_token: sessionId,
+          user_agent: navigator.userAgent,
+          ip_address: null,
+          browser_info: {
+            browser: 'Chrome',
+            os: 'Unknown', 
+            device: 'Desktop'
+          },
+          is_active: true,
+          created_at: new Date().toISOString(),
+          last_heartbeat: new Date().toISOString()
+        });
+      
+      if (createError) {
+        console.error('Session creation error:', createError);
+        // Don't fail the login completely if session tracking fails
+        console.log('⚠️ Session tracking failed but proceeding with login');
+      } else {
+        console.log('✅ Session created successfully!');
+      }
+
+      // Success - proceed with redirect
       router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -107,6 +204,29 @@
     } finally {
       isLoading.value = false;
     }
+  }
+
+  async function handleForceLogout() {
+    isResolvingConflict.value = true;
+    try {
+      await forceLogout();
+      showSessionConflict.value = false;
+      // Proceed with redirect after forcing logout
+      router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
+    } catch (error: any) {
+      console.error('Force logout error:', error);
+      errorMessage.value = 'Failed to resolve session conflict. Please try again.';
+      showSessionConflict.value = false;
+    } finally {
+      isResolvingConflict.value = false;
+    }
+  }
+
+  function handleCancelLogin() {
+    showSessionConflict.value = false;
+    // Sign out the user since they chose not to force logout
+    userStore.signOut();
+    errorMessage.value = 'Login cancelled. Please resolve the session conflict to continue.';
   }
 
   async function handleGoogleSignIn() {

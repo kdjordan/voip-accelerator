@@ -24,14 +24,24 @@
                 <h2 class="text-xl font-semibold">Welcome back,</h2>
                 <p class="text-sm text-gray-400">{{ userStore.auth.user?.email || 'Guest' }}</p>
               </div>
-              <BaseButton
-                @click="handleLogout"
-                variant="destructive"
-                size="small"
-                :is-loading="isLoggingOut"
-              >
-                <span>Logout</span>
-              </BaseButton>
+              <div class="flex gap-2">
+                <BaseButton
+                  @click="testAuthFunction"
+                  variant="secondary"
+                  size="small"
+                  :is-loading="isTestingAuth"
+                >
+                  <span>Test Auth</span>
+                </BaseButton>
+                <BaseButton
+                  @click="handleLogout"
+                  variant="destructive"
+                  size="small"
+                  :is-loading="isLoggingOut"
+                >
+                  <span>Logout</span>
+                </BaseButton>
+              </div>
             </div>
           </div>
         </div>
@@ -377,6 +387,7 @@
   import { useUsStore } from '@/stores/us-store';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useLergOperations } from '@/composables/useLergOperations';
+  import { useSessionHeartbeat } from '@/composables/useSessionHeartbeat';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import type { BaseBadgeProps } from '@/types/app-types';
   import BaseButton from '@/components/shared/BaseButton.vue';
@@ -392,12 +403,16 @@
   import PaymentModal from '@/components/billing/PaymentModal.vue';
   import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
   import { useUploadTracking } from '@/composables/useUploadTracking';
+  import { supabase } from '@/utils/supabase';
   
 
   // User store for user info
   const userStore = useUserStore();
   const router = useRouter();
   const route = useRoute();
+  
+  // Session heartbeat to detect force logouts
+  const { checkSessionValidity } = useSessionHeartbeat();
   
   // Upload tracking composable
   const uploadTracking = useUploadTracking();
@@ -903,6 +918,50 @@
   );
 
   const isLoggingOut = ref(false);
+  const isTestingAuth = ref(false);
+
+  async function testAuthFunction() {
+    isTestingAuth.value = true;
+    try {
+      // First check what session we have
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current session:', session);
+      console.log('Access token preview:', session?.access_token?.substring(0, 50));
+      
+      if (!session) {
+        alert('No session found! Please login first.');
+        return;
+      }
+      
+      console.log('Testing auth status...');
+      
+      // Show session info
+      if (session) {
+        console.log('✅ Auth working - User:', session.user.email);
+      } else {
+        console.log('❌ No auth session');
+      }
+      
+      // For debugging - log and copy to clipboard
+      const debugOutput = `Session exists: ${!!session}\nUser: ${session?.user?.email}\nAccess token: ${session?.access_token?.substring(0, 20)}...\n`;
+      
+      console.log('Full debug output:', debugOutput);
+      
+      // Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(debugOutput);
+        alert('Debug info copied to clipboard! Check console for full output.');
+      } catch (err) {
+        alert('Debug info logged to console (clipboard copy failed)');
+      }
+      
+    } catch (error) {
+      console.error('Test auth error:', error);
+      alert(`Test Auth Error: ${error.message}`);
+    } finally {
+      isTestingAuth.value = false;
+    }
+  }
 
   async function handleLogout() {
     isLoggingOut.value = true;

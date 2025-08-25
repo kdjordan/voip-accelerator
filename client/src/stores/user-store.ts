@@ -161,14 +161,20 @@ export const useUserStore = defineStore('user', {
         }
       }
       
-      // Check for cancelled or other expired states
-      else if (subscriptionStatus === 'cancelled' || subscriptionStatus === 'canceled' || !subscriptionStatus) {
+      // Check for explicitly cancelled states (NOT null/undefined)
+      else if (subscriptionStatus === 'cancelled' || subscriptionStatus === 'canceled') {
         return {
           show: true,
           message: "Your subscription has been canceled. Please subscribe to continue using VoIP Accelerator.",
           variant: 'error' as const,
           buttonText: "Subscribe Now"
         };
+      }
+      
+      // Check for no subscription (null/undefined means never had one, not cancelled)
+      else if (!subscriptionStatus) {
+        // New user without subscription - don't show error banner
+        return { show: false, message: '' };
       }
 
       // Check for upload limit reached (Optimizer tier only)
@@ -269,7 +275,7 @@ export const useUserStore = defineStore('user', {
           .from('profiles')
           .select('*')
           .eq('id', userId)
-          .single()
+          .maybeSingle()
           .then(
             (response) => {
               // The response from .single() is directly { data, error, status, etc. }
@@ -648,16 +654,51 @@ export const useUserStore = defineStore('user', {
     async signOut() {
       this.auth.isLoading = true;
       this.auth.error = null;
-      try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        this.clearAuthData();
-      } catch (err) {
-        console.error('Error signing out:', err);
-        this.auth.error = err as Error;
-      } finally {
-        this.auth.isLoading = false;
+      
+      // 1. Try to cleanup database session
+      const sessionId = sessionStorage.getItem('voip_session_id');
+      if (sessionId) {
+        try {
+          await supabase
+            .from('active_sessions')
+            .delete()
+            .eq('session_token', sessionId);
+          console.log('Database session cleanup attempted');
+        } catch (e) {
+          console.log('Database session cleanup failed (expected if auth invalid)');
+        }
       }
+      
+      // 2. Try Supabase signOut (may fail if auth already invalid)
+      try {
+        await supabase.auth.signOut();
+        console.log('Supabase auth signOut successful');
+      } catch (e) {
+        console.log('Supabase auth signOut failed (expected if already signed out)');
+      }
+      
+      // 3. FORCE clear ALL auth data from storage
+      // Clear all localStorage items related to Supabase
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase') || key.includes('sb-'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('Removed localStorage:', key);
+      });
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      // 4. Clear store state
+      this.clearAuthData();
+      
+      this.auth.isLoading = false;
+      console.log('✅ Logout complete - all storage cleared');
     },
 
     async resetPasswordForEmail(email: string) {
