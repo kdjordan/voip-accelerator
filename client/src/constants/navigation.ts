@@ -7,6 +7,7 @@ import {
   WrenchScrewdriverIcon,
   AdjustmentsVerticalIcon,
   SparklesIcon,
+  BuildingOfficeIcon,
   // Cog6ToothIcon, // Keep commented out if not used
 } from '@heroicons/vue/24/outline';
 
@@ -60,10 +61,16 @@ export const appNavigationItems: NavigationItem[] = [
     ],
   },
   {
-    name: 'Admin',
-    href: '/admin/lerg',
-    icon: AdjustmentsVerticalIcon,
+    name: 'Enterprise',
+    href: '/enterprise',
+    icon: BuildingOfficeIcon,
     meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    name: 'Admin',
+    href: '/admin',
+    icon: AdjustmentsVerticalIcon,
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
   },
   // {
   //   name: 'Lerg Admin',

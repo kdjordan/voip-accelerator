@@ -5,9 +5,11 @@ The session file should begin with:
 2. Session overview section with start time
 3. Goals section (ask user for goals if not clear)
 4. Empty progress section ready for updates
+5. Sections for individaul agents to track their porgressi individaully: Agent #1 and Agent #2.~
 
 After creating the file, create or update `.claude/sessions/.current-session` to track the active session filename.
 
 Confirm the session has started and remind the user they can:
 - Update it with `/project:session-update`
 - End it with `/project:session-end`
+- Refer to Agents #1 and #2 individually for seperation concerns.

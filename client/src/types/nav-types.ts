@@ -10,6 +10,7 @@ export interface NavigationItem {
     // Optional meta information for routing logic
     requiresAuth?: boolean;
     requiresAdmin?: boolean;
+    requiresSuperAdmin?: boolean;
     hideWhenAuthed?: boolean;
   };
 }

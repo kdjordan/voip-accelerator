@@ -171,8 +171,10 @@
 
   // Corrected: Use getter for isAuthenticated
   const isAuthenticated = computed(() => userStore.getIsAuthenticated);
-  // Corrected: Access profile via auth state
-  const isAdmin = computed(() => userStore.auth.profile?.role === 'admin');
+  // Access profile via auth state and use store getters
+  const isAdmin = computed(() => userStore.isAdmin);
+  const isSuperAdmin = computed(() => userStore.isSuperAdmin);
+  const isEnterpriseAdmin = computed(() => userStore.isEnterpriseAdmin);
 
   const props = defineProps<{ navigation: NavigationItem[] }>();
 
@@ -182,10 +184,12 @@
       // Added optional chaining for meta, matching updated type
       const requiresAuth = item.meta?.requiresAuth;
       const requiresAdmin = item.meta?.requiresAdmin;
+      const requiresSuperAdmin = item.meta?.requiresSuperAdmin;
       const hideWhenAuthed = item.meta?.hideWhenAuthed;
 
       if (hideWhenAuthed && isAuthenticated.value) return false;
       if (requiresAuth && !isAuthenticated.value) return false;
+      if (requiresSuperAdmin && !isSuperAdmin.value) return false;
       if (requiresAdmin && !isAdmin.value) return false;
 
       // Filter children recursively if needed
@@ -193,10 +197,12 @@
         item.children = item.children.filter((child) => {
           const childRequiresAuth = child.meta?.requiresAuth;
           const childRequiresAdmin = child.meta?.requiresAdmin;
+          const childRequiresSuperAdmin = child.meta?.requiresSuperAdmin;
           const childHideWhenAuthed = child.meta?.hideWhenAuthed;
 
           if (childHideWhenAuthed && isAuthenticated.value) return false;
           if (childRequiresAuth && !isAuthenticated.value) return false;
+          if (childRequiresSuperAdmin && !isSuperAdmin.value) return false;
           if (childRequiresAdmin && !isAdmin.value) return false;
           return true;
         });
