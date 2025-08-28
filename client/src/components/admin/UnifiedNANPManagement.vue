@@ -410,8 +410,8 @@
                       </div>
                     </td>
                     <td class="px-4 py-3">
-                      <BaseBadge :variant="getCategoryBadgeVariant(npa.category)" size="small">
-                        {{ formatCategory(npa.category) }}
+                      <BaseBadge :variant="getCategoryBadgeVariant(getNPACategory(npa))" size="small">
+                        {{ formatCategory(getNPACategory(npa)) }}
                       </BaseBadge>
                     </td>
                   </tr>
@@ -474,7 +474,7 @@
     ListboxOption,
     ListboxOptions,
   } from '@headlessui/vue';
-  import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+  import { useLergStoreV2, type EnhancedNPARecord } from '@/stores/lerg-store-v2';
   import { useLergOperations } from '@/composables/useLergOperations';
   import { useDragDrop } from '@/composables/useDragDrop';
   import { usePingStatus } from '@/composables/usePingStatus';
@@ -591,9 +591,12 @@
       console.log('After search filter:', filtered.length);
     }
 
-    // Apply category filter
+    // Apply category filter based on country_code and region
     if (selectedCategory.value) {
-      filtered = filtered.filter((npa) => npa.category === selectedCategory.value);
+      filtered = filtered.filter((npa) => {
+        const category = getNPACategory(npa);
+        return category === selectedCategory.value;
+      });
       console.log('After category filter:', filtered.length);
     }
 
@@ -849,6 +852,35 @@
         return 'violet';
       default:
         return 'neutral';
+    }
+  }
+
+  function getNPACategory(npa: EnhancedNPARecord): string {
+    // Determine category based on country_code, state_province_code, and region
+    
+    // Check for US territories first (before general US check)
+    if (npa.country_code === 'US') {
+      // Pacific territories: American Samoa, Guam, Northern Mariana Islands
+      const pacificTerritories = ['AS', 'GU', 'MP', 'NN'];
+      // Caribbean territories: Puerto Rico, US Virgin Islands
+      const caribbeanTerritories = ['PR', 'VI'];
+      
+      if (pacificTerritories.includes(npa.state_province_code)) {
+        return 'pacific';
+      } else if (caribbeanTerritories.includes(npa.state_province_code)) {
+        return 'caribbean';
+      }
+      // Otherwise it's US domestic (continental US states)
+      return 'us-domestic';
+    } else if (npa.country_code === 'CA') {
+      return 'canadian';
+    } else if (npa.region === 'Caribbean') {
+      return 'caribbean';
+    } else if (npa.region === 'Pacific') {
+      return 'pacific';
+    } else {
+      // Default to caribbean for other countries (most are Caribbean)
+      return 'caribbean';
     }
   }
 

@@ -7,10 +7,11 @@ export interface UserProfile {
   updated_at: string | null
   role: string
   plan_expires_at: string | null
-  user_agent: string | null
-  signup_method: string | null
   stripe_customer_id: string | null
   subscription_status: string | null
+  total_uploads: number | null
+  uploads_this_month: number | null
+  uploads_reset_date: string | null
   email?: string
 }
 

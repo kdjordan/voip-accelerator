@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 console.log("get-all-users function initializing");
@@ -18,10 +18,11 @@ interface UserProfile {
   updated_at: string | null;
   role: string;
   plan_expires_at: string | null;
-  user_agent: string | null;
-  signup_method: string | null;
   stripe_customer_id: string | null;
   subscription_status: string | null;
+  total_uploads: number | null;
+  uploads_this_month: number | null;
+  uploads_reset_date: string | null;
   email?: string; // From auth.users
 }
 
@@ -104,10 +105,10 @@ serve(async (req: Request) => {
       .eq('id', requestingUser.id)
       .single();
 
-    if (profileError || !requestingUserProfile || !['admin', 'superadmin'].includes(requestingUserProfile.role)) {
-      console.error("Access denied: User is not an admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
+    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'super_admin') {
+      console.error("Access denied: User is not a super admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
       return new Response(
-        JSON.stringify({ error: "Access denied. Admin role required." }),
+        JSON.stringify({ error: "Access denied. Super admin role required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
@@ -151,14 +152,15 @@ serve(async (req: Request) => {
         updated_at,
         role,
         plan_expires_at,
-        user_agent,
-        signup_method,
         stripe_customer_id,
-        subscription_status
+        subscription_status,
+        total_uploads,
+        uploads_this_month,
+        uploads_reset_date
       `);
 
     // Apply filters
-    if (role && ['user', 'admin', 'superadmin'].includes(role)) {
+    if (role && ['user', 'admin', 'super_admin'].includes(role)) {
       query = query.eq('role', role);
     }
 
@@ -206,7 +208,7 @@ serve(async (req: Request) => {
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    if (role && ['user', 'admin', 'superadmin'].includes(role)) {
+    if (role && ['user', 'admin', 'super_admin'].includes(role)) {
       countQuery = countQuery.eq('role', role);
     }
     if (userIds) {
@@ -285,8 +287,15 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error("Critical error in get-all-users function:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Error message:", error.message);
+    console.error("Error name:", error.name);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal Server Error" }),
+      JSON.stringify({ 
+        error: error.message || "Internal Server Error",
+        stack: error.stack,
+        name: error.name 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

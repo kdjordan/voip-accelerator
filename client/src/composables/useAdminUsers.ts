@@ -21,9 +21,12 @@ interface GetUsersResponse {
 interface UpdateUserRequest {
   userId: string
   updates: {
-    role?: 'user' | 'admin' | 'superadmin'
+    role?: 'user' | 'admin' | 'super_admin'
     subscription_status?: string
     plan_expires_at?: string
+    total_uploads?: number
+    uploads_this_month?: number
+    uploads_reset_date?: string
   }
 }
 
@@ -123,7 +126,7 @@ export function useAdminUsers() {
   }
 
   // Update user role or other profile data
-  async function updateUserRole(userId: string, role: 'user' | 'admin' | 'superadmin'): Promise<void> {
+  async function updateUserRole(userId: string, role: 'user' | 'admin' | 'super_admin'): Promise<void> {
     try {
       isLoading.value = true
       error.value = null
@@ -172,6 +175,37 @@ export function useAdminUsers() {
       store.updateUser(userId, { ...updates, updated_at: new Date().toISOString() })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update user subscription'
+      error.value = errorMessage
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Update user upload statistics
+  async function updateUserUploads(userId: string, updates: {
+    total_uploads?: number
+    uploads_this_month?: number
+    uploads_reset_date?: string
+  }): Promise<void> {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const request: UpdateUserRequest = {
+        userId,
+        updates
+      }
+
+      await callEdgeFunction('update-user-profile', {
+        method: 'POST',
+        body: request,
+      })
+
+      // Update local store
+      store.updateUser(userId, { ...updates, updated_at: new Date().toISOString() })
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update user uploads'
       error.value = errorMessage
       throw err
     } finally {
@@ -266,7 +300,7 @@ export function useAdminUsers() {
       const allUsers = await fetchUsers({ limit: 1000 })
       
       // Create CSV content
-      const headers = ['ID', 'Email', 'Role', 'Subscription Status', 'Plan Expires', 'Created At', 'Last Updated']
+      const headers = ['ID', 'Email', 'Role', 'Subscription Status', 'Plan Expires', 'Total Uploads', 'Uploads This Month', 'Uploads Reset Date', 'Created At', 'Last Updated']
       const csvContent = [
         headers.join(','),
         ...allUsers.users.map(user => [
@@ -275,6 +309,9 @@ export function useAdminUsers() {
           user.role,
           user.subscription_status || '',
           user.plan_expires_at || '',
+          user.total_uploads || 0,
+          user.uploads_this_month || 0,
+          user.uploads_reset_date || '',
           user.created_at,
           user.updated_at || ''
         ].join(','))
@@ -330,6 +367,7 @@ export function useAdminUsers() {
     fetchUsers,
     updateUserRole,
     updateUserSubscription,
+    updateUserUploads,
     toggleUserStatus,
     deleteUser,
     getUserActivity,

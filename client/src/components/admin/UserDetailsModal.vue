@@ -251,34 +251,87 @@
             </div>
 
             <!-- Activity Statistics -->
-            <div v-if="userActivity" class="space-y-4">
-              <h3 class="text-lg font-medium text-white border-b border-gray-700 pb-2">
-                Activity Statistics
-              </h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-white border-b border-gray-700 pb-2 flex-1">
+                  Activity Statistics
+                </h3>
+                <BaseButton
+                  @click="toggleUploadsEditMode"
+                  variant="secondary-outline"
+                  size="small"
+                  :icon="isEditingUploads ? XMarkIcon : PencilIcon"
+                >
+                  {{ isEditingUploads ? 'Cancel' : 'Edit' }}
+                </BaseButton>
+              </div>
               
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div v-if="!isEditingUploads" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-gray-900/50 p-4 rounded-lg">
-                  <div class="text-2xl font-bold text-white">{{ userActivity.totalLogins }}</div>
-                  <div class="text-sm text-gray-400">Total Logins</div>
+                  <div class="text-2xl font-bold text-white">{{ user?.uploads_this_month || 0 }}</div>
+                  <div class="text-sm text-gray-400">Uploads This Month</div>
                 </div>
                 
                 <div class="bg-gray-900/50 p-4 rounded-lg">
-                  <div class="text-2xl font-bold text-accent">{{ userActivity.rateSheetUploads }}</div>
-                  <div class="text-sm text-gray-400">Rate Sheets</div>
+                  <div class="text-2xl font-bold text-accent">{{ user?.total_uploads || 0 }}</div>
+                  <div class="text-sm text-gray-400">Total Uploads</div>
                 </div>
                 
                 <div class="bg-gray-900/50 p-4 rounded-lg">
-                  <div class="text-2xl font-bold" :class="userActivity.isActive ? 'text-green-400' : 'text-red-400'">
-                    {{ userActivity.isActive ? 'Active' : 'Inactive' }}
+                  <div class="text-2xl font-bold" :class="userActivity?.isActive ? 'text-green-400' : 'text-red-400'">
+                    {{ userActivity?.isActive ? 'Active' : 'Inactive' }}
                   </div>
                   <div class="text-sm text-gray-400">Current Status</div>
                 </div>
                 
                 <div class="bg-gray-900/50 p-4 rounded-lg">
                   <div class="text-2xl font-bold text-blue-400">
-                    {{ getDaysSinceCreated(userActivity.createdAt) }}
+                    {{ getLastActivityDisplay() }}
                   </div>
-                  <div class="text-sm text-gray-400">Days Active</div>
+                  <div class="text-sm text-gray-400">Last Activity</div>
+                </div>
+              </div>
+
+              <!-- Edit Uploads Form -->
+              <div v-else class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Uploads This Month</label>
+                    <input
+                      v-model.number="uploadsEditForm.uploads_this_month"
+                      type="number"
+                      min="0"
+                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Total Uploads</label>
+                    <input
+                      v-model.number="uploadsEditForm.total_uploads"
+                      type="number"
+                      min="0"
+                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                  <BaseButton
+                    @click="cancelUploadsEdit"
+                    variant="secondary-outline"
+                    size="small"
+                  >
+                    Cancel
+                  </BaseButton>
+                  <BaseButton
+                    @click="saveUploadsChanges"
+                    :loading="isSavingUploads"
+                    variant="primary"
+                    size="small"
+                  >
+                    Save Changes
+                  </BaseButton>
                 </div>
               </div>
             </div>
@@ -345,7 +398,7 @@ const emit = defineEmits<{
 }>()
 
 // Composables
-const { getUserActivity, updateUserRole, toggleUserStatus, updateUserSubscription } = useAdminUsers()
+const { getUserActivity, updateUserRole, toggleUserStatus, updateUserSubscription, updateUserUploads } = useAdminUsers()
 
 // Local state
 const modalRef = ref<HTMLDivElement>()
@@ -353,11 +406,19 @@ const isLoadingActivity = ref(false)
 const userActivity = ref<UserActivity | null>(null)
 const isEditing = ref(false)
 const isSaving = ref(false)
+const isEditingUploads = ref(false)
+const isSavingUploads = ref(false)
 
 // Edit form
 const editForm = ref({
   subscription_status: '',
   plan_expires_at: ''
+})
+
+// Uploads edit form
+const uploadsEditForm = ref({
+  uploads_this_month: 0,
+  total_uploads: 0
 })
 
 // Subscription status options
@@ -534,15 +595,119 @@ function getSubscriptionStatusDisplayName(value: string): string {
   return option?.name || 'None'
 }
 
+function getLastActivityDisplay(): string {
+  if (userActivity.value?.lastLogin) {
+    return formatRelativeTime(userActivity.value.lastLogin)
+  } else if (props.user?.updated_at) {
+    return formatRelativeTime(props.user.updated_at)
+  }
+  return 'Never'
+}
+
+function formatRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) {
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60))
+      if (diffHours === 0) {
+        const diffMinutes = Math.floor(diffTime / (1000 * 60))
+        return `${diffMinutes}m ago`
+      }
+      return `${diffHours}h ago`
+    } else if (diffDays < 7) {
+      return `${diffDays}d ago`
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7)
+      return `${weeks}w ago`
+    } else {
+      const months = Math.floor(diffDays / 30)
+      return `${months}mo ago`
+    }
+  } catch {
+    return 'Never'
+  }
+}
+
+function toggleUploadsEditMode() {
+  if (isEditingUploads.value) {
+    cancelUploadsEdit()
+  } else {
+    startUploadsEdit()
+  }
+}
+
+function startUploadsEdit() {
+  if (!props.user) return
+  
+  isEditingUploads.value = true
+  uploadsEditForm.value = {
+    uploads_this_month: props.user.uploads_this_month || 0,
+    total_uploads: props.user.total_uploads || 0
+  }
+}
+
+function cancelUploadsEdit() {
+  isEditingUploads.value = false
+  uploadsEditForm.value = {
+    uploads_this_month: 0,
+    total_uploads: 0
+  }
+}
+
+async function saveUploadsChanges() {
+  if (!props.user) return
+  
+  try {
+    isSavingUploads.value = true
+    
+    const updates: { uploads_this_month?: number; total_uploads?: number } = {}
+    
+    // Only include changed fields
+    if (uploadsEditForm.value.uploads_this_month !== (props.user.uploads_this_month || 0)) {
+      updates.uploads_this_month = uploadsEditForm.value.uploads_this_month
+    }
+    
+    if (uploadsEditForm.value.total_uploads !== (props.user.total_uploads || 0)) {
+      updates.total_uploads = uploadsEditForm.value.total_uploads
+    }
+    
+    // Only make API call if there are changes
+    if (Object.keys(updates).length > 0) {
+      await updateUserUploads(props.user.id, updates)
+      
+      // Update the user object
+      const updatedUser = {
+        ...props.user,
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
+      
+      emit('update-user', updatedUser)
+    }
+    
+    isEditingUploads.value = false
+  } catch (error) {
+    console.error('Failed to update uploads:', error)
+  } finally {
+    isSavingUploads.value = false
+  }
+}
+
 // Watchers
 watch(() => props.show, (show) => {
   if (show && props.user) {
     loadUserActivity()
-    // Reset edit mode when opening modal
+    // Reset edit modes when opening modal
     isEditing.value = false
+    isEditingUploads.value = false
   } else {
     userActivity.value = null
     isEditing.value = false
+    isEditingUploads.value = false
   }
 })
 

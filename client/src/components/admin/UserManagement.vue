@@ -1,15 +1,32 @@
 <template>
   <div class="bg-gray-900/50">
-    <div class="px-6 py-4 border-b border-gray-700/50">
-      <div class="flex justify-between items-center">
-        <h2 class="text-xl font-semibold">User Management</h2>
-        <div class="flex items-center space-x-3">
-          <BaseBadge v-if="store.state.totalUsers > 0" variant="accent" size="small">
-            {{ store.state.totalUsers }} users total
-          </BaseBadge>
+    <!-- Access Denied for Non-Super Admins -->
+    <div v-if="!isSuperAdmin" class="px-6 py-4 border-b border-gray-700/50">
+      <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+        <div class="flex items-start space-x-3">
+          <div class="flex-shrink-0">
+            <XMarkIcon class="h-6 w-6 text-red-400" />
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-medium text-red-400 mb-2">Access Denied</h3>
+            <p class="text-red-300 text-sm">Super admin privileges are required to access User Management.</p>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Super Admin Content -->
+    <div v-else>
+      <div class="px-6 py-4 border-b border-gray-700/50">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold">User Management</h2>
+          <div class="flex items-center space-x-3">
+            <BaseBadge v-if="store.state.totalUsers > 0" variant="accent" size="small">
+              {{ store.state.totalUsers }} users total
+            </BaseBadge>
+          </div>
+        </div>
+      </div>
 
     <div class="p-6 space-y-6">
       <!-- Loading State -->
@@ -285,6 +302,7 @@
         </div>
       </div>
     </div>
+    </div>
 
     <!-- User Details Modal -->
     <UserDetailsModal
@@ -302,6 +320,7 @@ import { ArrowPathIcon, MagnifyingGlassIcon, XMarkIcon, ChevronUpDownIcon, Check
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue'
 import { useAdminUsers } from '@/composables/useAdminUsers'
 import { type UserProfile } from '@/stores/admin-users-store'
+import { useUserStore } from '@/stores/user-store'
 import UserTable from './UserTable.vue'
 import UserDetailsModal from './UserDetailsModal.vue'
 import BaseButton from '@/components/shared/BaseButton.vue'
@@ -309,6 +328,10 @@ import BaseBadge from '@/components/shared/BaseBadge.vue'
 
 // Composables
 const { store, isLoading, error, fetchUsers, updateUserRole, toggleUserStatus, exportUsers: exportUsersComposable, searchUsers, filterByRole: filterByRoleComposable, changePage: changePageComposable } = useAdminUsers()
+const userStore = useUserStore()
+
+// Check if user is super admin
+const isSuperAdmin = computed(() => userStore.isSuperAdmin)
 
 // Local state
 const searchQuery = ref('')
@@ -320,7 +343,7 @@ const selectedUser = ref<UserProfile | null>(null)
 
 // Computed
 const adminCount = computed(() => {
-  return store.state.users.filter(user => ['admin', 'superadmin'].includes(user.role)).length
+  return store.state.users.filter(user => ['admin', 'super_admin'].includes(user.role)).length
 })
 
 const activeCount = computed(() => {
@@ -332,8 +355,8 @@ const activeCount = computed(() => {
 const roleFilterOptions = [
   { value: '', name: 'All Roles' },
   { value: 'user', name: 'Users' },
-  { value: 'admin', name: 'Admins' },
-  { value: 'superadmin', name: 'Super Admins' }
+  { value: 'admin', name: 'Enterprise Admins' },
+  { value: 'super_admin', name: 'Super Admins' }
 ]
 
 const statusFilterOptions = [

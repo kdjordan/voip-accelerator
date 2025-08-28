@@ -83,10 +83,10 @@ serve(async (req: Request) => {
       .eq('id', requestingUser.id)
       .single();
 
-    if (profileError || !requestingUserProfile || !['admin', 'superadmin'].includes(requestingUserProfile.role)) {
-      console.error("Access denied: User is not an admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
+    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'super_admin') {
+      console.error("Access denied: User is not a super admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
       return new Response(
-        JSON.stringify({ error: "Access denied. Admin role required." }),
+        JSON.stringify({ error: "Access denied. Super admin role required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
@@ -95,7 +95,7 @@ serve(async (req: Request) => {
     }
 
     // Get request body
-    const { userId, status } = await req.json();
+    const { userId, isActive } = await req.json();
 
     if (!userId) {
       return new Response(
@@ -107,9 +107,9 @@ serve(async (req: Request) => {
       );
     }
 
-    if (status === undefined) {
+    if (isActive === undefined) {
       return new Response(
-        JSON.stringify({ error: "Status is required." }),
+        JSON.stringify({ error: "isActive is required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
@@ -121,7 +121,7 @@ serve(async (req: Request) => {
     const { data: updatedProfile, error: updateError } = await supabaseAdminClient
       .from('profiles')
       .update({
-        status: status ? 'active' : 'inactive',
+        status: isActive ? 'active' : 'inactive',
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
@@ -139,7 +139,7 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Successfully toggled user status for user ${userId} to ${status ? 'active' : 'inactive'}`);
+    console.log(`Successfully toggled user status for user ${userId} to ${isActive ? 'active' : 'inactive'}`);
 
     return new Response(
       JSON.stringify({

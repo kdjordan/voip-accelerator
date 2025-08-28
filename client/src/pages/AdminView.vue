@@ -9,8 +9,8 @@
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
       
-      <!-- User Management -->
-      <UserManagement />
+      <!-- User Management (Super Admin Only) -->
+      <UserManagement v-if="isSuperAdmin" />
     </div>
 
     <!-- New Preview Modal -->
@@ -37,6 +37,7 @@
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useLergOperations } from '@/composables/useLergOperations';
   import { usePingStatus } from '@/composables/usePingStatus';
+  import { useUserStore } from '@/stores/user-store';
   import {
     TrashIcon,
     ArrowUpTrayIcon,
@@ -56,6 +57,7 @@
   import UserManagement from '@/components/admin/UserManagement.vue';
 
   const store = useLergStoreV2();
+  const userStore = useUserStore();
   const {
     uploadLerg,
     downloadLerg,
@@ -76,6 +78,9 @@
   const showCountryDetails = ref(false);
   const showLergSection = ref(false);
   const showAddLergSection = ref(true);
+
+  // Check if user is super_admin
+  const isSuperAdmin = computed(() => userStore.isSuperAdmin);
 
   const isLergLocallyStored = computed(() => {
     return store.$state.isLoaded;

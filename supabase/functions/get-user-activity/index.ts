@@ -75,10 +75,10 @@ serve(async (req: Request) => {
       .eq('id', requestingUser.id)
       .single();
 
-    if (profileError || !requestingUserProfile || !['admin', 'superadmin'].includes(requestingUserProfile.role)) {
-      console.error("Access denied: User is not an admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
+    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'super_admin') {
+      console.error("Access denied: User is not a super admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
       return new Response(
-        JSON.stringify({ error: "Access denied. Admin role required." }),
+        JSON.stringify({ error: "Access denied. Super admin role required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
@@ -120,15 +120,18 @@ serve(async (req: Request) => {
 
     console.log(`Successfully fetched user activity for user ${userId}`);
 
+    // Return UserActivity structure expected by frontend
+    const userActivity = {
+      userId: userId,
+      lastLogin: userProfile.updated_at || new Date().toISOString(),
+      loginCount: 1, // Placeholder
+      isActive: userProfile.status !== 'inactive',
+      banDuration: null, // Placeholder
+      // Add more activity data as needed
+    };
+
     return new Response(
-      JSON.stringify({
-        user: userProfile,
-        activity: {
-          lastLogin: userProfile.updated_at,
-          loginCount: 1, // Placeholder
-          // Add more activity data as needed
-        }
-      }),
+      JSON.stringify(userActivity),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
