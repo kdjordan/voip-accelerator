@@ -129,23 +129,24 @@
 
   const pricingPlans = ref<PricingPlan[]>([
     {
-      id: 'pro',
-      name: 'The Plan',
-      description: 'Unlock advanced features and unlimited comparisons.',
-      priceMonthly: 900,
-      priceYearly: 9000,
-      priceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_MONTHLY,
-      priceIdYearly: import.meta.env.VITE_STRIPE_PRICE_ANNUAL,
+      id: 'accelerator',
+      name: 'Accelerator Plan',
+      description: 'Everything you need to accelerate your VoIP business.',
+      priceMonthly: 99,
+      priceYearly: 999,
+      priceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR,
+      priceIdYearly: import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR,
       features: [
+        'Unlimited Uploads',
         'Unlimited Rate Deck Comparisons',
         'US NPANXX and A-Z formats',
-        'Advanced Code & Pricing Reports',
+        'Advanced Analytics & Reports',
         'Updated LERG on a monthly basis',
         'US & A-Z Rate Sheet Wizards',
         'Export Refined Rate Sheets',
-        'Local Browser Storage - no data leaks ever',
+        '7-Day Free Trial',
       ],
-      ctaText: 'Get Started Now',
+      ctaText: 'Start Free Trial',
     },
   ]);
 
@@ -158,7 +159,7 @@
   });
   const animatedPrice = useTransition(priceSource, transitionConfig);
 
-  // Calculate Yearly Savings
+  // Calculate Yearly Savings ($99 x 12 = $1188, yearly is $999 = save $189)
   const yearlyFullPrice = computed(() => {
     const monthlyPrice = pricingPlans.value[0]?.priceMonthly;
     return typeof monthlyPrice === 'number' ? monthlyPrice * 12 : 0;
@@ -170,7 +171,7 @@
   });
 
   const yearlySavings = computed(() => {
-    return yearlyFullPrice.value - yearlyDiscountedPrice.value;
+    return yearlyFullPrice.value - yearlyDiscountedPrice.value; // Should be $189
   });
 
   // Computed function to display the correct price

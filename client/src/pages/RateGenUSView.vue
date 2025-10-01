@@ -13,14 +13,11 @@ import RateGenHeader from '@/components/rate-gen/RateGenHeader.vue';
 import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
 import RateGenResults from '@/components/rate-gen/RateGenResults.vue';
 import BaseButton from '@/components/shared/BaseButton.vue';
-import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
 import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
 import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
-import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
 
 const store = useRateGenStore();
 const service = new RateGenService();
-const globalUploadLimit = useGlobalUploadLimit();
 const userStore = useUserStore();
 const showPlanSelectorModal = ref(false);
 
@@ -243,13 +240,6 @@ onUnmounted(() => {
       :is-trial-expired="true"
       @close="showPlanSelectorModal = false"
       @select-plan="handlePlanSelectorSelection"
-    />
-    
-    <!-- Plan Selection Modal -->
-    <PlanSelectionModal
-      :show="globalUploadLimit.showPlanSelectionModal.value"
-      @close="globalUploadLimit.closePlanSelectionModal"
-      @select-plan="globalUploadLimit.handlePlanSelection"
     />
   </div>
 </template>

@@ -1,7 +1,7 @@
 <template>
   <div class="bg-gray-900/50">
-    <!-- Access Denied for Non-Super Admins -->
-    <div v-if="!isSuperAdmin" class="px-6 py-4 border-b border-gray-700/50">
+    <!-- Access Denied for Non-Admins -->
+    <div v-if="!isAdmin" class="px-6 py-4 border-b border-gray-700/50">
       <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
         <div class="flex items-start space-x-3">
           <div class="flex-shrink-0">
@@ -9,13 +9,13 @@
           </div>
           <div class="flex-1">
             <h3 class="text-lg font-medium text-red-400 mb-2">Access Denied</h3>
-            <p class="text-red-300 text-sm">Super admin privileges are required to access User Management.</p>
+            <p class="text-red-300 text-sm">Admin privileges are required to access User Management.</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Super Admin Content -->
+    <!-- Admin Content -->
     <div v-else>
       <div class="px-6 py-4 border-b border-gray-700/50">
         <div class="flex justify-between items-center">
@@ -330,8 +330,8 @@ import BaseBadge from '@/components/shared/BaseBadge.vue'
 const { store, isLoading, error, fetchUsers, updateUserRole, toggleUserStatus, exportUsers: exportUsersComposable, searchUsers, filterByRole: filterByRoleComposable, changePage: changePageComposable } = useAdminUsers()
 const userStore = useUserStore()
 
-// Check if user is super admin
-const isSuperAdmin = computed(() => userStore.isSuperAdmin)
+// Check if user is admin
+const isAdmin = computed(() => userStore.isAdmin)
 
 // Local state
 const searchQuery = ref('')

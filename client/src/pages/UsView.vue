@@ -61,13 +61,6 @@
       @close="showPlanSelectorModal = false"
       @select-plan="handlePlanSelectorSelection"
     />
-    
-    <!-- Plan Selection Modal -->
-    <PlanSelectionModal
-      :show="globalUploadLimit.showPlanSelectionModal.value"
-      @close="globalUploadLimit.closePlanSelectionModal"
-      @select-plan="globalUploadLimit.handlePlanSelection"
-    />
   </div>
 </template>
 
@@ -87,15 +80,12 @@ import { DBName } from '@/types/app-types';
 import type { SubscriptionTier } from '@/types/user-types';
 import { useBilling } from '@/composables/useBilling';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
-import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
-import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
 import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
 import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
 
 const usStore = useUsStore();
 const userStore = useUserStore();
 const lergStore = useLergStoreV2();
-const globalUploadLimit = useGlobalUploadLimit();
 
 // Info Modal state
 const showInfoModal = ref(false);

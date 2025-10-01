@@ -95,7 +95,7 @@
         </div>
 
         <!-- File Upload Section -->
-        <div v-if="!isLocallyStored && !globalUploadLimit.isUploadBlocked.value" class="mt-6">
+        <div v-if="!isLocallyStored" class="mt-6">
           <div
             @dragenter.prevent="handleDragEnter"
             @dragleave.prevent="handleDragLeave"
@@ -128,8 +128,8 @@
               type="file"
               accept=".csv"
               class="absolute inset-0 opacity-0 w-full h-full"
-              :class="{ 'pointer-events-none': isProcessing || showPreviewModal || globalUploadLimit.isUploadBlocked.value }"
-              :disabled="isProcessing || showPreviewModal || globalUploadLimit.isUploadBlocked.value"
+              :class="{ 'pointer-events-none': isProcessing || showPreviewModal }"
+              :disabled="isProcessing || showPreviewModal"
               @change="handleFileChange"
             />
             <div class="flex flex-col h-full w-full">
@@ -208,13 +208,6 @@
       @close="showPlanSelectorModal = false"
       @select-plan="handlePlanSelectorSelection"
     />
-    
-    <!-- Plan Selection Modal -->
-    <PlanSelectionModal
-      :show="globalUploadLimit.showPlanSelectionModal.value"
-      @close="globalUploadLimit.closePlanSelectionModal"
-      @select-plan="globalUploadLimit.handlePlanSelection"
-    />
   </div>
 </template>
 
@@ -243,9 +236,6 @@ import { useBilling } from '@/composables/useBilling';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
-import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
-import UploadLimitBanner from '@/components/shared/UploadLimitBanner.vue';
-import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
   import type { ParseResult } from 'papaparse';
   import { USRateSheetService } from '@/services/us-rate-sheet.service';
   import { USColumnRole } from '@/types/domains/us-types';
@@ -263,8 +253,6 @@ import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
   const uploadError = ref<string | null>(store.getError);
   const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
   const isProcessing = computed(() => store.isLoading);
-  const globalUploadLimit = useGlobalUploadLimit();
-  const showPlanSelectorModal = ref(false);
 
   // Preview Modal state
   const showPreviewModal = ref(false);
@@ -311,12 +299,6 @@ import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
     useDragDrop({
       acceptedExtensions: ['.csv'],
       onDropCallback: async (file: File) => {
-        // Check global upload limit first
-        const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-        if (!canUpload) {
-          return;
-        }
-        
         uploadError.value = null;
         clearError();
         processFile(file);
@@ -339,13 +321,6 @@ import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
   async function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
-
-    // Check global upload limit first
-    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-    if (!canUpload) {
-      input.value = ''; // Reset the input
-      return;
-    }
 
     uploadError.value = null;
     clearError();

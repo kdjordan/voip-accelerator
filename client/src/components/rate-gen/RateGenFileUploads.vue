@@ -11,15 +11,11 @@ import Papa from 'papaparse';
 import { USColumnRole } from '@/types/domains/us-types';
 import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/types/domains/rate-gen-types';
 import { useUploadTracking } from '@/composables/useUploadTracking';
-import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
-import UploadLimitBanner from '@/components/shared/UploadLimitBanner.vue';
-import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
 
 // Store and service
 const store = useRateGenStore();
 const service = new RateGenService();
 const uploadTracking = useUploadTracking();
-const globalUploadLimit = useGlobalUploadLimit();
 
 // Component refs for progress tracking - Rate Gen specific
 const progressIndicators = ref<Record<RateGenComponentId, InstanceType<typeof RateGenProgressIndicator> | null>>({
@@ -177,25 +173,16 @@ const handleFileChange = async (event: Event, zoneId: RateGenComponentId) => {
 
 // Check if zone can accept drops/uploads
 const canAcceptDrop = (zoneId: RateGenComponentId): boolean => {
-  // Prevent any drops/uploads if global upload limit is reached
-  if (globalUploadLimit.isUploadBlocked.value) return false;
-  
   // Prevent any drops/uploads if modal is open or any upload is in progress
   if (isAnyUploadInProgress.value) return false;
-  
-  return !store.isComponentUploading(zoneId) && 
-         !isZoneCompleted(zoneId) && 
+
+  return !store.isComponentUploading(zoneId) &&
+         !isZoneCompleted(zoneId) &&
          !store.isProcessing;
 };
 
 // Handle file upload - show PreviewModal for column mapping and provider naming
 const handleFileUpload = async (file: File, zoneId: RateGenComponentId) => {
-  // Check global upload limit first
-  const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-  if (!canUpload) {
-    return;
-  }
-  
   // Prevent upload if already in progress
   if (store.isComponentUploading(zoneId) || showPreviewModal.value) {
     return;
@@ -455,12 +442,6 @@ const formatRate = (rate: number | undefined): string => {
 
 <template>
   <div class="flex flex-col gap-8 w-full">
-    <!-- Global Upload Limit Banner -->
-    <UploadLimitBanner
-      :show="globalUploadLimit.showUploadLimitBanner.value"
-      @upgrade="globalUploadLimit.handleUpgradeClick"
-    />
-    
     <!-- Test Data Loader (Development Only) -->
     <TestDataLoader />
     
@@ -990,13 +971,6 @@ const formatRate = (rate: number | undefined): string => {
       cancel-button-text="Cancel"
       variant="destructive"
       @confirm="confirmRemoveProvider"
-    />
-
-    <!-- Plan Selection Modal -->
-    <PlanSelectionModal
-      :show="globalUploadLimit.showPlanSelectionModal.value"
-      @close="globalUploadLimit.closePlanSelectionModal"
-      @select-plan="globalUploadLimit.handlePlanSelection"
     />
   </div>
 </template>

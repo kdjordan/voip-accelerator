@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { User, Profile, PlanTierType, SubscriptionTier } from '../types/user-types';
+import type { User, Profile, PlanTierType, BillingPeriod } from '../types/user-types';
 import { supabase } from '@/utils/supabase';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
@@ -53,9 +53,7 @@ export const useUserStore = defineStore('user', {
     getAuthError: (state) => state.auth.error,
     getAuthIsInitialized: (state) => state.auth.isInitialized,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
-    isAdmin: (state) => state.auth.profile?.role === 'admin' || state.auth.profile?.role === 'super_admin',
-    isSuperAdmin: (state) => state.auth.profile?.role === 'super_admin',
-    isEnterpriseAdmin: (state) => state.auth.profile?.role === 'admin',
+    isAdmin: (state) => state.auth.profile?.role === 'admin',
     getUploadsToday: (state) => state.usage.uploadsToday,
     isPlanActive: (state) => {
       if (!state.auth.profile?.plan_expires_at) {
@@ -69,36 +67,30 @@ export const useUserStore = defineStore('user', {
       }
     },
     getCurrentPlanTier: (state): PlanTierType | null => {
-      // For trial users, always return 'trial' regardless of subscription_tier
+      // Simplified: trial or active based on subscription_status
       if (state.auth.profile?.subscription_status === 'trial') {
         return 'trial';
       }
-      // For non-trial users, check subscription_tier first, then fall back to subscription_status
-      const tier = state.auth.profile?.subscription_tier || state.auth.profile?.subscription_status;
-      return (tier as PlanTierType | null) ?? null;
-    },
-    
-    getSubscriptionTier: (state): SubscriptionTier | null => {
-      return state.auth.profile?.subscription_tier ?? null;
-    },
-    
-    getTrialTier: (state): SubscriptionTier | null => {
-      // All trials are optimizer tier
-      if (state.auth.profile?.subscription_status === 'trial') {
-        return 'optimizer';
+      if (state.auth.profile?.subscription_status === 'active') {
+        return 'active';
       }
       return null;
     },
-    
-    getUploadUsage: (state) => {
-      const profile = state.auth.profile;
-      if (!profile) return null;
-      
-      return {
-        used: profile.uploads_this_month || 0,
-        limit: profile.subscription_tier === 'accelerator' ? 100 : null,
-        resetDate: profile.uploads_reset_date
-      };
+
+    getBillingPeriod: (state): BillingPeriod => {
+      return state.auth.profile?.billing_period ?? null;
+    },
+
+    isAnnualBilling: (state): boolean => {
+      return state.auth.profile?.billing_period === 'annual';
+    },
+
+    getCurrentPrice: (state): number => {
+      // Return price based on billing period
+      if (state.auth.profile?.billing_period === 'annual') {
+        return 999;
+      }
+      return 99; // monthly default
     },
     getServiceExpiryBanner: (state) => {
       const profile = state.auth.profile;
@@ -179,45 +171,26 @@ export const useUserStore = defineStore('user', {
         return { show: false, message: '' };
       }
 
-      // Check for upload limit reached (Optimizer tier only)
-      const isOptimizerUser = profile.subscription_tier === 'optimizer' || 
-                             (subscriptionStatus === 'trial' && !profile.subscription_tier);
-      
-      if (isOptimizerUser) {
-        const uploadsThisMonth = profile.uploads_this_month || 0;
-        console.log(`[Banner Debug] Optimizer user - uploads: ${uploadsThisMonth}, tier: ${profile.subscription_tier}, status: ${subscriptionStatus}`);
-        if (uploadsThisMonth >= 100) {
-          console.log('[Banner Debug] Showing upload limit banner');
-          return {
-            show: true,
-            message: "You've reached your monthly upload limit (100/100). Upgrade to continue uploading files.",
-            variant: 'error' as const,
-            buttonText: "Compare all plans",
-            reason: 'upload-limit' as const
-          };
-        }
-      }
-
+      // No upload limits - all plans unlimited
       return { show: false, message: '' };
     },
     
     shouldRedirectToBilling: (state) => {
       const profile = state.auth.profile;
-      
+
       if (!profile) return false;
-      
+
       // Don't redirect if status is 'active' (payment completed)
       if (profile.subscription_status === 'active') return false;
-      
+
       // Don't redirect if status is 'trial'
       if (profile.subscription_status === 'trial') return false;
-      
-      // Check if user has a paid tier but no stripe_customer_id (hasn't actually paid)
-      const hasPaidTier = profile.subscription_tier && 
-                         ['accelerator', 'optimizer', 'enterprise'].includes(profile.subscription_tier);
+
+      // Simplified: Check if user has billing_period but no stripe_customer_id
+      const hasBillingPeriod = profile.billing_period !== null;
       const hasNoStripeCustomer = !profile.stripe_customer_id;
-      
-      return hasPaidTier && hasNoStripeCustomer;
+
+      return hasBillingPeriod && hasNoStripeCustomer;
     },
   },
 

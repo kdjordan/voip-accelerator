@@ -23,28 +23,28 @@ describe('Stripe Webhook Integration', () => {
   })
 
   describe('checkout.session.completed', () => {
-    it('updates user profile with complete subscription data for Optimizer plan', async () => {
+    it('updates user profile with complete subscription data for Monthly plan', async () => {
       // Skip database operations and test the webhook logic directly
       const mockSession = {
-        ...mockStripeSessionObjects.optimizerCheckout,
+        ...mockStripeSessionObjects.monthlyCheckout,
         customer_email: testEmail
       }
 
       // Test the webhook logic without database operations
       const result = await testWebhookLogic(mockSession)
-      
+
       // Assert: Verify webhook processes data correctly
-      expect(result.subscriptionTier).toBe('optimizer')
-      expect(result.updateData.subscription_tier).toBe('optimizer')
+      expect(result.billingPeriod).toBe('monthly')
+      expect(result.updateData.billing_period).toBe('monthly')
       expect(result.updateData.subscription_status).toBe('active')
       expect(result.updateData.stripe_customer_id).toBe(mockSession.customer)
       expect(result.updateData.subscription_id).toBe(mockSession.subscription)
-      
+
       // Billing period fields should be calculated
       expect(result.updateData.current_period_start).toBeDefined()
       expect(result.updateData.current_period_end).toBeDefined()
       expect(result.updateData.last_payment_date).toBeDefined()
-      
+
       // Dates should be reasonable
       const periodStart = new Date(result.updateData.current_period_start)
       const periodEnd = new Date(result.updateData.current_period_end)
@@ -52,27 +52,33 @@ describe('Stripe Webhook Integration', () => {
       expect(daysDiff).toBeCloseTo(30, 1) // ~30 day billing cycle
     })
 
-    it('updates user profile with complete subscription data for Accelerator plan', async () => {
-      // Mock the Stripe session object for Accelerator upgrade
+    it('updates user profile with complete subscription data for Annual plan', async () => {
+      // Mock the Stripe session object for Annual plan
       const mockSession = {
-        ...mockStripeSessionObjects.acceleratorCheckout,
+        ...mockStripeSessionObjects.annualCheckout,
         customer_email: testEmail
       }
 
       // Test the webhook logic without database operations
       const result = await testWebhookLogic(mockSession)
-      
-      // Assert: Verify Accelerator-specific updates
-      expect(result.subscriptionTier).toBe('accelerator')
-      expect(result.updateData.subscription_tier).toBe('accelerator')
+
+      // Assert: Verify Annual-specific updates
+      expect(result.billingPeriod).toBe('annual')
+      expect(result.updateData.billing_period).toBe('annual')
       expect(result.updateData.subscription_status).toBe('active')
       expect(result.updateData.stripe_customer_id).toBe(mockSession.customer)
       expect(result.updateData.subscription_id).toBe(mockSession.subscription)
+
+      // Dates should be reasonable for annual billing
+      const periodStart = new Date(result.updateData.current_period_start)
+      const periodEnd = new Date(result.updateData.current_period_end)
+      const daysDiff = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)
+      expect(daysDiff).toBeCloseTo(365, 1) // ~365 day billing cycle
     })
 
     it('handles missing customer email gracefully', async () => {
       const mockSession = {
-        ...mockStripeSessionObjects.optimizerCheckout,
+        ...mockStripeSessionObjects.monthlyCheckout,
         customer_email: null
       }
 
@@ -83,7 +89,7 @@ describe('Stripe Webhook Integration', () => {
 
     it('handles missing subscription ID gracefully', async () => {
       const mockSession = {
-        ...mockStripeSessionObjects.optimizerCheckout,
+        ...mockStripeSessionObjects.monthlyCheckout,
         customer_email: testEmail,
         subscription: null
       }
@@ -94,12 +100,11 @@ describe('Stripe Webhook Integration', () => {
     })
   })
 
-  describe('Tier determination logic', () => {
-    it('correctly determines subscription tier from amount_total', () => {
-      expect(determineSubscriptionTier(9900)).toBe('optimizer')   // $99.00
-      expect(determineSubscriptionTier(24900)).toBe('accelerator') // $249.00
-      expect(determineSubscriptionTier(49900)).toBe('enterprise')  // $499.00
-      expect(determineSubscriptionTier(1000)).toBe('optimizer')    // Default fallback
+  describe('Billing period determination logic', () => {
+    it('correctly determines billing period from amount_total', () => {
+      expect(determineBillingPeriod(9900)).toBe('monthly')   // $99.00
+      expect(determineBillingPeriod(99900)).toBe('annual')   // $999.00
+      expect(determineBillingPeriod(1000)).toBe('monthly')   // Default fallback
     })
   })
 })
@@ -107,7 +112,7 @@ describe('Stripe Webhook Integration', () => {
 // Helper function that tests the Stripe webhook business logic without database operations
 async function testWebhookLogic(session: any) {
   const customerEmail = session.customer_email || session.customer_details?.email
-  
+
   if (!customerEmail || !session.subscription) {
     return {
       shouldSkip: true,
@@ -115,18 +120,24 @@ async function testWebhookLogic(session: any) {
     }
   }
 
-  // Determine subscription tier
-  const subscriptionTier = determineSubscriptionTier(session.amount_total)
-  
+  // Determine billing period
+  const billingPeriod = determineBillingPeriod(session.amount_total)
+
   // Calculate billing dates
   const paymentDate = new Date()
   const currentPeriodStart = new Date(paymentDate)
   const currentPeriodEnd = new Date(paymentDate)
-  currentPeriodEnd.setDate(paymentDate.getDate() + 30)
+
+  // Set period end based on billing period
+  if (billingPeriod === 'annual') {
+    currentPeriodEnd.setFullYear(paymentDate.getFullYear() + 1)
+  } else {
+    currentPeriodEnd.setDate(paymentDate.getDate() + 30)
+  }
 
   // Build update data object (same as the real webhook)
   const updateData = {
-    subscription_tier: subscriptionTier,
+    billing_period: billingPeriod,
     subscription_status: 'active',
     stripe_customer_id: session.customer,
     subscription_id: session.subscription,
@@ -139,18 +150,15 @@ async function testWebhookLogic(session: any) {
 
   return {
     shouldSkip: false,
-    subscriptionTier,
+    billingPeriod,
     updateData,
-    customerEmail,
-    // In real webhook, we would also call reset_monthly_uploads
-    shouldResetUploads: true
+    customerEmail
   }
 }
 
-// Helper function for tier determination
-function determineSubscriptionTier(amountTotal: number): string {
-  if (amountTotal === 9900) return 'optimizer'   // $99.00
-  if (amountTotal === 24900) return 'accelerator' // $249.00  
-  if (amountTotal === 49900) return 'enterprise'  // $499.00
-  return 'optimizer' // default
+// Helper function for billing period determination
+function determineBillingPeriod(amountTotal: number): string {
+  if (amountTotal === 9900) return 'monthly'   // $99.00
+  if (amountTotal === 99900) return 'annual'   // $999.00
+  return 'monthly' // default
 }

@@ -49,8 +49,7 @@
                     :disabled="
                       usStore.isComponentUploading('us1') ||
                       usStore.isComponentUploading('us2') ||
-                      usStore.isComponentDisabled('us1') ||
-                      globalUploadLimit.isUploadBlocked.value
+                      usStore.isComponentDisabled('us1')
                     "
                     @change="(e) => handleFileChange(e, 'us1')"
                   />
@@ -144,8 +143,7 @@
                     :disabled="
                       usStore.isComponentUploading('us2') ||
                       usStore.isComponentUploading('us1') ||
-                      usStore.isComponentDisabled('us2') ||
-                      globalUploadLimit.isUploadBlocked.value
+                      usStore.isComponentDisabled('us2')
                     "
                     @change="(e) => handleFileChange(e, 'us2')"
                   />
@@ -302,14 +300,12 @@ This action cannot be undone.`"
   import { useUserStore } from '@/stores/user-store';
   import useDexieDB from '@/composables/useDexieDB';
   import { useUploadTracking } from '@/composables/useUploadTracking';
-import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
 
   const usStore = useUsStore();
   const service = new USService();
   const lergStore = useLergStoreV2();
   const userStore = useUserStore();
   const uploadTracking = useUploadTracking();
-const globalUploadLimit = useGlobalUploadLimit();
 
   // Computed property for the reports button text
   const reportsButtonText = computed(() => {
@@ -370,9 +366,7 @@ const globalUploadLimit = useGlobalUploadLimit();
 
   // Replace the existing handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
-    // Check global upload limit first
-    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-    if (!canUpload || usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId))
+    if (usStore.isComponentUploading(componentId) || usStore.isComponentDisabled(componentId))
       return;
 
     // Clear any previous errors

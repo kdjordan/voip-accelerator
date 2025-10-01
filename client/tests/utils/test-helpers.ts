@@ -13,59 +13,46 @@ export const mockProfiles = {
     id: '550e8400-e29b-41d4-a716-446655440001',
     email: 'trial@test.com',
     subscription_status: 'trial',
-    subscription_tier: null,
-    uploads_this_month: 50,
+    billing_period: null,
     total_uploads: 50,
     plan_expires_at: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
-  },
-  trialUserAtLimit: {
-    id: '550e8400-e29b-41d4-a716-446655440002',
-    email: 'trial-limit@test.com',
-    subscription_status: 'trial',
-    subscription_tier: null,
-    uploads_this_month: 100,
-    total_uploads: 100,
-    plan_expires_at: new Date(Date.now() + 86400000).toISOString(),
   },
   expiredTrialUser: {
     id: '550e8400-e29b-41d4-a716-446655440003',
     email: 'expired@test.com',
     subscription_status: 'trial',
-    subscription_tier: null,
-    uploads_this_month: 25,
+    billing_period: null,
     total_uploads: 25,
     plan_expires_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
   },
-  optimizerUser: {
+  monthlyUser: {
     id: '550e8400-e29b-41d4-a716-446655440004',
-    email: 'optimizer@test.com',
+    email: 'monthly@test.com',
     subscription_status: 'active',
-    subscription_tier: 'optimizer',
-    uploads_this_month: 50,
+    billing_period: 'monthly',
     total_uploads: 200,
     stripe_customer_id: 'cus_test123',
     subscription_id: 'sub_test123',
     current_period_start: new Date().toISOString(),
     current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(), // 30 days
   },
-  acceleratorUser: {
+  annualUser: {
     id: '550e8400-e29b-41d4-a716-446655440005',
-    email: 'accelerator@test.com',
+    email: 'annual@test.com',
     subscription_status: 'active',
-    subscription_tier: 'accelerator',
-    uploads_this_month: 150,
+    billing_period: 'annual',
     total_uploads: 500,
     stripe_customer_id: 'cus_test456',
     subscription_id: 'sub_test456',
     current_period_start: new Date().toISOString(),
-    current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
+    current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(), // 365 days
   }
 }
 
 // Mock Stripe checkout session objects
 export const mockStripeSessionObjects = {
-  optimizerCheckout: {
-    id: 'cs_test_optimizer',
+  monthlyCheckout: {
+    id: 'cs_test_monthly',
     customer: 'cus_test123',
     customer_email: 'test-upgrade@test.com',
     subscription: 'sub_test123',
@@ -73,12 +60,12 @@ export const mockStripeSessionObjects = {
     payment_status: 'paid',
     status: 'complete'
   },
-  acceleratorCheckout: {
-    id: 'cs_test_accelerator',
+  annualCheckout: {
+    id: 'cs_test_annual',
     customer: 'cus_test456',
     customer_email: 'test-upgrade@test.com',
     subscription: 'sub_test456',
-    amount_total: 24900, // $249.00
+    amount_total: 99900, // $999.00
     payment_status: 'paid',
     status: 'complete'
   }

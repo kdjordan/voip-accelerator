@@ -11,18 +11,18 @@ describe('Paid Signup Flow', () => {
   });
 
   describe('Profile Creation', () => {
-    it('should create profile with correct fields for paid signup', async () => {
-      // Test that paid signup creates profile with:
-      // - subscription_tier: 'accelerator'
-      // - subscription_status: 'inactive' 
+    it('should create profile with correct fields for trial signup', async () => {
+      // Test that trial signup creates profile with:
+      // - subscription_status: 'trial'
+      // - billing_period: null (no billing yet)
       // - stripe_customer_id: null
       // - email: from auth.users
-      
+
       const mockProfile = {
         id: 'test-user-id',
         email: 'test@example.com',
-        subscription_tier: 'accelerator',
-        subscription_status: 'inactive',
+        subscription_status: 'trial',
+        billing_period: null,
         stripe_customer_id: null,
         role: 'user'
       };
@@ -30,8 +30,8 @@ describe('Paid Signup Flow', () => {
       // Set the profile in store
       userStore.auth.profile = mockProfile;
 
-      expect(userStore.getUserProfile?.subscription_tier).toBe('accelerator');
-      expect(userStore.getUserProfile?.subscription_status).toBe('inactive');
+      expect(userStore.getUserProfile?.subscription_status).toBe('trial');
+      expect(userStore.getUserProfile?.billing_period).toBeNull();
       expect(userStore.getUserProfile?.stripe_customer_id).toBeNull();
       expect(userStore.getUserProfile?.email).toBe('test@example.com');
     });
@@ -40,85 +40,87 @@ describe('Paid Signup Flow', () => {
       const mockProfile = {
         id: 'test-user-id',
         email: 'test@example.com',
-        subscription_tier: 'accelerator',
-        subscription_status: 'inactive'
+        subscription_status: 'trial',
+        billing_period: null
       };
 
       userStore.auth.profile = mockProfile;
-      
+
       expect(userStore.getUserProfile?.email).toBeDefined();
       expect(userStore.getUserProfile?.email).not.toBeNull();
     });
   });
 
   describe('Billing Redirect Logic', () => {
-    it('should redirect to billing for paid tier with no stripe_customer_id', () => {
+    it('should NOT redirect to billing for trial users', () => {
       const mockProfile = {
-        subscription_tier: 'accelerator',
-        subscription_status: 'inactive',
+        subscription_status: 'trial',
+        billing_period: null,
         stripe_customer_id: null
       };
 
       userStore.auth.profile = mockProfile;
-      
-      expect(userStore.shouldRedirectToBilling).toBe(true);
+
+      expect(userStore.shouldRedirectToBilling).toBe(false);
     });
 
     it('should NOT redirect to billing after payment (active status)', () => {
       const mockProfile = {
-        subscription_tier: 'accelerator',
         subscription_status: 'active',
+        billing_period: 'monthly',
         stripe_customer_id: 'cus_123456'
       };
 
       userStore.auth.profile = mockProfile;
-      
+
       expect(userStore.shouldRedirectToBilling).toBe(false);
     });
 
-    it('should NOT redirect to billing for trial users', () => {
+    it('should redirect to billing if trial expired and no active subscription', () => {
       const mockProfile = {
-        subscription_tier: null,
-        subscription_status: 'trial',
-        stripe_customer_id: null
+        subscription_status: 'expired',
+        billing_period: null,
+        stripe_customer_id: null,
+        plan_expires_at: new Date(Date.now() - 86400000).toISOString() // Yesterday
       };
 
       userStore.auth.profile = mockProfile;
-      
-      expect(userStore.shouldRedirectToBilling).toBe(false);
+
+      expect(userStore.shouldRedirectToBilling).toBe(true);
     });
 
-    it('should NOT redirect if status is active even without stripe_customer_id', () => {
-      // Edge case: status is active but no customer ID (shouldn't happen but be defensive)
+    it('should NOT redirect if status is active even without billing_period', () => {
+      // Edge case: status is active but no billing period (shouldn't happen but be defensive)
       const mockProfile = {
-        subscription_tier: 'accelerator',
         subscription_status: 'active',
-        stripe_customer_id: null
+        billing_period: null,
+        stripe_customer_id: 'cus_123456'
       };
 
       userStore.auth.profile = mockProfile;
-      
+
       expect(userStore.shouldRedirectToBilling).toBe(false);
     });
   });
 
   describe('Webhook Processing', () => {
-    it('should update profile with stripe_customer_id after webhook', () => {
-      // Initial state: paid tier, inactive, no customer ID
+    it('should update profile with stripe_customer_id and billing_period after webhook', () => {
+      // Initial state: trial user
       const beforeWebhook = {
-        subscription_tier: 'accelerator',
-        subscription_status: 'inactive',
+        subscription_status: 'trial',
+        billing_period: null,
         stripe_customer_id: null,
         email: 'test@example.com'
       };
 
       userStore.auth.profile = beforeWebhook;
-      expect(userStore.shouldRedirectToBilling).toBe(true);
+      expect(userStore.shouldRedirectToBilling).toBe(false);
 
-      // Simulate webhook update
+      // Simulate webhook update for monthly subscription
       const afterWebhook = {
         ...beforeWebhook,
         subscription_status: 'active',
+        billing_period: 'monthly',
         stripe_customer_id: 'cus_test123',
         subscription_id: 'sub_test456',
         current_period_start: '2025-08-22T00:00:00Z',
@@ -126,66 +128,70 @@ describe('Paid Signup Flow', () => {
       };
 
       userStore.auth.profile = afterWebhook;
-      
+
       expect(userStore.getUserProfile?.stripe_customer_id).toBe('cus_test123');
+      expect(userStore.getUserProfile?.billing_period).toBe('monthly');
       expect(userStore.getUserProfile?.subscription_status).toBe('active');
       expect(userStore.shouldRedirectToBilling).toBe(false);
     });
 
-    it('should handle webhook failure gracefully', () => {
-      // If webhook fails, user should still be redirected to billing
-      const profileWithoutWebhook = {
-        subscription_tier: 'accelerator',
-        subscription_status: 'inactive',
-        stripe_customer_id: null,
+    it('should handle annual billing period correctly', () => {
+      const annualProfile = {
+        subscription_status: 'active',
+        billing_period: 'annual',
+        stripe_customer_id: 'cus_test123',
+        subscription_id: 'sub_test456',
+        current_period_start: '2025-08-22T00:00:00Z',
+        current_period_end: '2026-08-22T00:00:00Z',
         email: 'test@example.com'
       };
 
-      userStore.auth.profile = profileWithoutWebhook;
-      
-      expect(userStore.shouldRedirectToBilling).toBe(true);
+      userStore.auth.profile = annualProfile;
+
+      expect(userStore.getUserProfile?.billing_period).toBe('annual');
+      expect(userStore.shouldRedirectToBilling).toBe(false);
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle missing email in profile', () => {
       const profileWithoutEmail = {
-        subscription_tier: 'accelerator',
-        subscription_status: 'inactive',
+        subscription_status: 'trial',
+        billing_period: null,
         stripe_customer_id: null,
-        email: null // This was our bug!
+        email: null
       };
 
       userStore.auth.profile = profileWithoutEmail;
-      
-      // Should still redirect to billing
-      expect(userStore.shouldRedirectToBilling).toBe(true);
-      
-      // But webhook won't be able to update without email
-      // This is what we fixed by ensuring email is always set
+
+      // Trial users should not redirect to billing even without email
+      expect(userStore.shouldRedirectToBilling).toBe(false);
     });
 
-    it('should handle enterprise tier correctly', () => {
-      const enterpriseProfile = {
-        subscription_tier: 'enterprise',
-        subscription_status: 'inactive',
-        stripe_customer_id: null
+    it('should handle expired trial without email', () => {
+      const expiredProfile = {
+        subscription_status: 'expired',
+        billing_period: null,
+        stripe_customer_id: null,
+        email: null,
+        plan_expires_at: new Date(Date.now() - 86400000).toISOString()
       };
 
-      userStore.auth.profile = enterpriseProfile;
-      
+      userStore.auth.profile = expiredProfile;
+
+      // Should redirect to billing even without email
       expect(userStore.shouldRedirectToBilling).toBe(true);
     });
 
-    it('should handle optimizer tier correctly', () => {
-      const optimizerProfile = {
-        subscription_tier: 'optimizer',
-        subscription_status: 'inactive',
-        stripe_customer_id: null
+    it('should handle canceled subscription correctly', () => {
+      const canceledProfile = {
+        subscription_status: 'canceled',
+        billing_period: 'monthly',
+        stripe_customer_id: 'cus_123456'
       };
 
-      userStore.auth.profile = optimizerProfile;
-      
+      userStore.auth.profile = canceledProfile;
+
       expect(userStore.shouldRedirectToBilling).toBe(true);
     });
   });

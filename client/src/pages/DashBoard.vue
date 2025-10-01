@@ -79,11 +79,11 @@
                   </template>
                 </p>
               </div>
-              <BaseBadge 
-                :variant="uploadStats.isUnlimited ? 'success' : 'info'" 
+              <BaseBadge
+                :variant="uploadStats.isUnlimited ? 'success' : 'info'"
                 size="small"
               >
-                {{ uploadTracking.getTierDisplayName(uploadStats.tier) }}
+                All-Time Analytics
               </BaseBadge>
             </div>
             
@@ -402,7 +402,6 @@
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
   import PaymentModal from '@/components/billing/PaymentModal.vue';
   import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
-  import { useUploadTracking } from '@/composables/useUploadTracking';
   import { supabase } from '@/utils/supabase';
   
 
@@ -410,12 +409,9 @@
   const userStore = useUserStore();
   const router = useRouter();
   const route = useRoute();
-  
+
   // Session heartbeat to detect force logouts
   const { checkSessionValidity } = useSessionHeartbeat();
-  
-  // Upload tracking composable
-  const uploadTracking = useUploadTracking();
   
   // Payment modal state
   const showPaymentModal = ref(false);
@@ -469,24 +465,19 @@
 
   // Upload tracking computeds
   const uploadStats = computed(() => {
-    const tier = uploadTracking.currentTier.value;
-    const uploads = uploadTracking.uploadsThisMonth.value;
-    const remaining = uploadTracking.uploadsRemaining.value;
-    const percentage = uploadTracking.percentageUsed.value;
-    const isUnlimited = uploadTracking.isUnlimited.value;
-    
-    // For unlimited plans (Accelerator/Enterprise), we still show monthly uploads
-    // but could track all-time if we add that to the database later
-    const allTimeUploads = uploads; // TODO: Add total_uploads to profiles table
-    
+    const profile = userStore.getUserProfile;
+    const tier = userStore.getCurrentPlanTier;
+    const totalUploads = profile?.total_uploads ?? 0;
+
+    // Simplified: All plans are unlimited now, just track total uploads for analytics
     return {
       tier,
-      uploads,
-      remaining,
-      percentage,
-      isUnlimited,
-      limit: uploadTracking.UPLOAD_LIMIT,
-      allTimeUploads
+      uploads: totalUploads,
+      remaining: null, // No limits anymore
+      percentage: 0, // No limits anymore
+      isUnlimited: true, // All plans unlimited
+      limit: null, // No limits anymore
+      allTimeUploads: totalUploads
     };
   });
 
@@ -498,7 +489,8 @@
   });
 
   const uploadStatusMessage = computed(() => {
-    return uploadTracking.formatRemainingMessage();
+    // Simplified: No limits, just show total uploads
+    return `${uploadStats.value.uploads} total uploads`;
   });
 
   const userUsage = computed(() => ({ uploadsToday: 0 }));
@@ -889,14 +881,8 @@
       console.error('[DashBoard] Failed to initialize LERG:', err);
     }
 
-    // Initialize upload statistics for dashboard display
-    try {
-      console.log('[DashBoard] Loading upload statistics...');
-      await uploadTracking.getUploadStatistics();
-      console.log('[DashBoard] Upload statistics loaded successfully');
-    } catch (err) {
-      console.error('[DashBoard] Failed to load upload statistics:', err);
-    }
+    // Upload statistics now come directly from user profile (no initialization needed)
+    console.log('[DashBoard] Upload stats available from user profile:', userStore.getUserProfile?.total_uploads ?? 0);
 
     console.log('[DashBoard] ========== DASHBOARD INITIALIZATION COMPLETE ==========');
   });

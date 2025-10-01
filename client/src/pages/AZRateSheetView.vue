@@ -131,34 +131,27 @@
         </div>
 
         <!-- File Upload Section -->
-        <div v-if="!isLocallyStored && !globalUploadLimit.isUploadBlocked.value" class="mt-6">
+        <div v-if="!isLocallyStored" class="mt-6">
           <div
             @dragenter.prevent="
               (e) => {
-                if (globalUploadLimit.isUploadBlocked.value) return;
                 console.log('dragenter event');
                 isDragging = true;
               }
             "
             @dragleave.prevent="
               (e) => {
-                if (globalUploadLimit.isUploadBlocked.value) return;
                 console.log('dragleave event');
                 isDragging = false;
               }
             "
             @dragover.prevent="
               (e) => {
-                if (globalUploadLimit.isUploadBlocked.value) return;
                 console.log('dragover event');
               }
             "
             @drop.prevent="
               (e) => {
-                if (globalUploadLimit.isUploadBlocked.value) {
-                  isDragging = false;
-                  return;
-                }
                 console.log('drop event');
                 isDragging = false;
                 handleFileDrop(e);
@@ -185,8 +178,8 @@
               type="file"
               accept=".csv"
               class="absolute inset-0 opacity-0"
-              :class="{ 'pointer-events-none': isProcessing || globalUploadLimit.isUploadBlocked.value }"
-              :disabled="isProcessing || globalUploadLimit.isUploadBlocked.value"
+              :class="{ 'pointer-events-none': isProcessing }"
+              :disabled="isProcessing"
               @change="handleFileChange"
             />
 
@@ -267,12 +260,6 @@
       @select-plan="handlePlanSelectorSelection"
     />
     
-    <!-- Plan Selection Modal -->
-    <PlanSelectionModal
-      :show="globalUploadLimit.showPlanSelectionModal.value"
-      @close="globalUploadLimit.closePlanSelectionModal"
-      @select-plan="globalUploadLimit.handlePlanSelection"
-    />
   </div>
 </template>
 
@@ -300,9 +287,6 @@
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import { RF_COLUMN_ROLE_OPTIONS } from '@/types/domains/rate-sheet-types';
   import Papa from 'papaparse';
-  import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
-  import UploadLimitBanner from '@/components/shared/UploadLimitBanner.vue';
-  import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
     import type { ParseResult } from 'papaparse';
   import { RateSheetService } from '@/services/az-rate-sheet.service';
 
@@ -319,8 +303,6 @@
   const isRFRemoving = ref(false);
   const uploadError = ref<string | null>('');
   const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
-  const globalUploadLimit = useGlobalUploadLimit();
-  const showPlanSelectorModal = ref(false);
   const currentDiscrepancyCount = ref(0);
   const isProcessing = computed(() => isRFUploading.value || isRFRemoving.value);
 
@@ -377,13 +359,6 @@
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
 
-    // Check global upload limit first
-    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-    if (!canUpload) {
-      input.value = ''; // Reset the input
-      return;
-    }
-
     uploadError.value = '';
     const file = input.files[0];
     processFile(file);
@@ -394,12 +369,6 @@
 
     const file = event.dataTransfer.files?.[0];
     if (!file) return;
-
-    // Check global upload limit first
-    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-    if (!canUpload) {
-      return;
-    }
 
     uploadError.value = '';
     processFile(file);

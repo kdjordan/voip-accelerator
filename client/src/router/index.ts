@@ -55,7 +55,7 @@ const router = createRouter({
       path: '/admin/lerg',
       name: 'AdminLerg',
       component: () => import('@/pages/AdminView.vue'),
-      meta: { requiresAuth: true, requiresSuperAdmin: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
       path: '/terms-and-conditions',
@@ -318,9 +318,7 @@ router.beforeEach(async (to, from, next) => {
   const requiresUpload = uploadRequiredRoutes.some((route) => to.path.startsWith(route));
   const isTransitionalRoute = transitionalAuthRoutes.includes(to.path);
   const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
-  const requiresSuperAdmin = to.matched.some((record) => record.meta.requiresSuperAdmin);
   const isAdmin = userStore.isAdmin; // Use the isAdmin getter
-  const isSuperAdmin = userStore.isSuperAdmin; // Use the isSuperAdmin getter
 
   if (isAuthenticated) {
     // Check if user needs to complete billing (paid tier but no stripe_customer_id)
@@ -340,8 +338,6 @@ router.beforeEach(async (to, from, next) => {
     if (isTransitionalRoute && to.name !== 'dashboard') {
       // Avoid redirect loop
       next({ name: 'dashboard' });
-    } else if (requiresSuperAdmin && !isSuperAdmin) {
-      next({ name: 'AccessDenied' });
     } else if (requiresAdmin && !isAdmin) {
       next({ name: 'AccessDenied' });
     } else if (requiresSubscription && to.name !== 'billing') {
@@ -372,8 +368,8 @@ router.beforeEach(async (to, from, next) => {
   } else {
     // Not authenticated
     // if (authIsInitialized) { // This check might be redundant due to waitForAuthInitialization
-    if (requiresAuth || requiresAdmin || requiresSuperAdmin) {
-      // If route requires auth or specifically admin/super_admin and user is not logged in
+    if (requiresAuth || requiresAdmin) {
+      // If route requires auth or specifically admin and user is not logged in
       next({ name: 'Login', query: { redirect: to.fullPath } });
     } else {
       next();

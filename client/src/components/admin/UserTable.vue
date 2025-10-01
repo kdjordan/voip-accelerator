@@ -46,6 +46,9 @@
               Subscription
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              Uploads
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
               Status
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -109,6 +112,16 @@
               </div>
               <div v-if="user.plan_expires_at" class="text-xs text-gray-400">
                 Expires: {{ formatDate(user.plan_expires_at) }}
+              </div>
+            </td>
+
+            <!-- Total Uploads (Analytics) -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-white font-mono">
+                {{ user.total_uploads || 0 }}
+              </div>
+              <div class="text-xs text-gray-400">
+                uploads
               </div>
             </td>
 

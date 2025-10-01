@@ -1,51 +1,22 @@
 import type { User } from '@supabase/supabase-js';
 
-// User Tiers - Updated for Three-Tier System
+// Simplified Plan System - Single Accelerator Plan
 export const PlanTier = {
   TRIAL: 'trial',
-  ACCELERATOR: 'accelerator',
-  OPTIMIZER: 'optimizer', 
-  ENTERPRISE: 'enterprise',
-  // Legacy support
-  MONTHLY: 'optimizer', // Map legacy monthly to optimizer
-  ANNUAL: 'optimizer',  // Map legacy annual to optimizer
+  ACTIVE: 'active',
 } as const;
 
-export type PlanTierType = 'trial' | 'accelerator' | 'optimizer' | 'enterprise' | 'monthly' | 'annual';
+export type PlanTierType = 'trial' | 'active';
 
-// Subscription Tier Types (new)
-export type SubscriptionTier = 'accelerator' | 'optimizer' | 'enterprise';
+// Billing Period Types
+export type BillingPeriod = 'monthly' | 'annual' | null;
 
-// Plan Selection Types
-export interface TierOption {
-  id: SubscriptionTier;
+// Simplified Plan - All users get same features (unlimited)
+export interface PlanInfo {
   name: string;
+  billingPeriod: BillingPeriod;
   price: number;
   priceId: string;
-  description: string;
-  features: string[];
-  uploadLimit?: number;
-  seats: number;
-  popular?: boolean;
-}
-
-// Feature Limits
-export interface PlanLimits {
-  maxRateDeckSize: number;
-  maxCDRSize: number;
-  maxStorageGB: number;
-  maxComparisonsPerDay: number;
-}
-
-// Features available per plan
-export interface PlanFeatures {
-  unlimitedUploads: boolean;
-  advancedAnalytics: boolean;
-  prioritySupport: boolean;
-  cdrProcessing: boolean;
-  rateDeckBuilder: boolean;
-  batchProcessing: boolean;
-  exportFormats: string[];
 }
 
 // User information
@@ -62,14 +33,7 @@ export interface UserInfo {
 export interface UserState {
   info: UserInfo | null;
   currentPlan: PlanTierType;
-  features: PlanFeatures;
-  limits: PlanLimits;
   sideNavOpen: boolean;
-  usage?: {
-    uploadsToday: number;
-    storageUsed: number;
-    comparisonsToday: number;
-  };
 }
 
 export interface Profile {
@@ -79,34 +43,30 @@ export interface Profile {
   full_name: string; // text
   avatar_url: string; // text
   website: string; // text
-  role: 'user' | 'admin' | 'super_admin'; // Updated to match database
+  role: 'user' | 'admin'; // Simplified: removed super_admin
   company: string; // text
   billing_address: any; // jsonb
   payment_method: any; // jsonb
-  
-  // Billing fields (updated for three-tier system)
+  email?: string; // Add email field
+
+  // Billing fields (simplified single-plan system)
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   subscription_status?: 'trial' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete';
-  subscription_tier?: SubscriptionTier | null; // The user's current tier (optimizer/accelerator/enterprise)
-  
+  billing_period?: BillingPeriod; // Monthly or Annual
+
   // Plan timing
   plan_expires_at?: string | null;
   current_period_end?: string | null;
   trial_started_at?: string | null;
-  
+
   // Cancellation tracking
   cancel_at_period_end?: boolean;
   cancel_at?: string | null;
   canceled_at?: string | null;
-  
-  // Upload tracking (for Accelerator tier)
-  uploads_this_month?: number;
-  uploads_reset_date?: string | null;
-  
-  // Organization support (for Enterprise)
-  organization_id?: string | null;
-  email?: string; // Add email field
+
+  // Upload tracking (admin analytics only, hidden from users)
+  total_uploads?: number;
 }
 
 // Keep Supabase User type for reference in store

@@ -43,9 +43,9 @@
                     type="file"
                     accept=".csv"
                     class="absolute inset-0 opacity-0"
-                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') || globalUploadLimit.isUploadBlocked.value }"
+                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az1') }"
                     :disabled="
-                      azStore.isComponentUploading('az1') || azStore.isComponentUploading('az2') || globalUploadLimit.isUploadBlocked.value
+                      azStore.isComponentUploading('az1') || azStore.isComponentUploading('az2')
                     "
                     @change="(e) => handleFileInput(e, 'az1')"
                   />
@@ -147,9 +147,9 @@
                     type="file"
                     accept=".csv"
                     class="absolute inset-0 opacity-0"
-                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') || globalUploadLimit.isUploadBlocked.value }"
+                    :class="{ 'pointer-events-none': azStore.isComponentDisabled('az2') }"
                     :disabled="
-                      azStore.isComponentUploading('az2') || azStore.isComponentUploading('az1') || globalUploadLimit.isUploadBlocked.value
+                      azStore.isComponentUploading('az2') || azStore.isComponentUploading('az1')
                     "
                     @change="(e) => handleFileInput(e, 'az2')"
                   />
@@ -303,7 +303,6 @@ This action cannot be undone.`"
   import { useDragDrop } from '@/composables/useDragDrop';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
   import { useUploadTracking } from '@/composables/useUploadTracking';
-  import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
@@ -312,7 +311,6 @@ This action cannot be undone.`"
   const azService = new AZService();
   const userStore = useUserStore();
   const uploadTracking = useUploadTracking();
-  const globalUploadLimit = useGlobalUploadLimit();
 
   // Computed property for button text
   const reportsButtonText = computed(() => {
@@ -405,9 +403,7 @@ This action cannot be undone.`"
 
   // Now update the handleFileSelected function to work with our composable
   async function handleFileSelected(file: File, componentId: ComponentId) {
-    // Check global upload limit first
-    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-    if (!canUpload || azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId))
+    if (azStore.isComponentUploading(componentId) || azStore.isComponentDisabled(componentId))
       return;
 
     // Clear any previous errors
@@ -506,13 +502,6 @@ This action cannot be undone.`"
 
     // Clear any previous errors
     uploadError[componentId] = null;
-
-    // Check global upload limits FIRST
-    const canUpload = await globalUploadLimit.checkGlobalUploadLimit();
-    if (!canUpload) {
-      // Global upload limit handles its own state, no need to set component-specific error
-      return;
-    }
 
     // Use our validation logic
     const validationResult = validateAzFile(file, componentId);

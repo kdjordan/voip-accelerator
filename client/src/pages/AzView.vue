@@ -60,13 +60,6 @@
       @close="showPlanSelectorModal = false"
       @select-plan="handlePlanSelectorSelection"
     />
-    
-    <!-- Plan Selection Modal -->
-    <PlanSelectionModal
-      :show="globalUploadLimit.showPlanSelectionModal.value"
-      @close="globalUploadLimit.closePlanSelectionModal"
-      @select-plan="globalUploadLimit.handlePlanSelection"
-    />
   </div>
 </template>
 
@@ -84,14 +77,11 @@ import { onMounted, ref, computed } from 'vue';
 import { DBName } from '@/types/app-types';
 import type { SubscriptionTier } from '@/types/user-types';
 import { useBilling } from '@/composables/useBilling';
-import { useGlobalUploadLimit } from '@/composables/useGlobalUploadLimit';
-import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue';
 import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
 import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
 
 const azStore = useAzStore();
 const userStore = useUserStore();
-const globalUploadLimit = useGlobalUploadLimit();
 
 // Info Modal state
 const showInfoModal = ref(false);
