@@ -53,9 +53,9 @@ Deno.serve(async (req: Request) => {
       `[upgrade-subscription] Authenticated user: ${authenticatedUser.id}`
     );
 
-    const { subscriptionId, newTier, currentTier, userId } = await req.json();
+    const { subscriptionId, newBillingPeriod, currentBillingPeriod, userId } = await req.json();
 
-    if (!subscriptionId || !newTier || !currentTier) {
+    if (!subscriptionId || !newBillingPeriod || !currentBillingPeriod) {
       return new Response(
         JSON.stringify({ error: "Missing required parameters" }),
         {
@@ -123,17 +123,16 @@ Deno.serve(async (req: Request) => {
       throw new Error("Subscription not found");
     }
 
-    // Map tier to price ID
-    const tierToPriceId = {
-      optimizer: Deno.env.get("STRIPE_PRICE_OPTIMIZER"),
-      accelerator: Deno.env.get("STRIPE_PRICE_ACCELERATOR"),
-      enterprise: Deno.env.get("STRIPE_PRICE_ENTERPRISE"),
+    // Map billing period to price ID
+    const billingPeriodToPriceId = {
+      monthly: Deno.env.get("VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR"),
+      annual: Deno.env.get("VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR"),
     };
 
-    const newPriceId = tierToPriceId[newTier as keyof typeof tierToPriceId];
+    const newPriceId = billingPeriodToPriceId[newBillingPeriod as keyof typeof billingPeriodToPriceId];
 
     if (!newPriceId) {
-      throw new Error("Invalid tier specified");
+      throw new Error("Invalid billing period specified");
     }
 
     // Update the subscription with the new price
@@ -155,7 +154,7 @@ Deno.serve(async (req: Request) => {
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
-        subscription_tier: newTier,
+        billing_period: newBillingPeriod,
         updated_at: new Date().toISOString(),
       })
       .eq("id", authenticatedUser.id);
@@ -167,15 +166,15 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(
-      `✅ Successfully upgraded user ${authenticatedUser.id} from ${currentTier} to ${newTier}`
+      `✅ Successfully changed billing for user ${authenticatedUser.id} from ${currentBillingPeriod} to ${newBillingPeriod}`
     );
 
     return new Response(
       JSON.stringify({
         success: true,
         subscriptionId: updatedSubscription.id,
-        newTier,
-        message: "Subscription upgraded successfully",
+        newBillingPeriod,
+        message: "Billing period updated successfully",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

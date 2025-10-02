@@ -85,9 +85,18 @@ ADD CONSTRAINT profiles_role_check
 CHECK (role IN ('user', 'admin'));
 
 -- =====================================================
--- STEP 6: DROP ORGANIZATION TABLES
+-- STEP 6: DROP ORGANIZATION RLS POLICIES AND TABLES
 -- =====================================================
 
+-- Drop RLS policies that depend on organization_id
+DROP POLICY IF EXISTS org_members_can_view ON organizations;
+DROP POLICY IF EXISTS org_members_can_update ON organizations;
+DROP POLICY IF EXISTS org_members_view_invitations ON organization_invitations;
+DROP POLICY IF EXISTS org_admins_create_invitations ON organization_invitations;
+DROP POLICY IF EXISTS org_members_manage_invitations ON organization_invitations;
+DROP POLICY IF EXISTS org_admin_full_access ON organization_invitations;
+
+-- Now drop the tables
 DROP TABLE IF EXISTS organization_invitations CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 

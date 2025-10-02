@@ -5,7 +5,8 @@
         "args": [
           "-y",
           "@supabase/mcp-server-supabase@latest",
-          "--access-token"
+          "--access-token",
+          "${SUPABASE_ACCESS_TOKEN}"
         ],
         "env": {
           "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"

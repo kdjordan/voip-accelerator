@@ -86,21 +86,19 @@ async function handleCheckoutCompleted(session: any) {
   console.log('👤 Customer ID:', session.customer);
   console.log('🔍 Full session object:', JSON.stringify(session, null, 2));
 
-  // Determine subscription tier from session amount_total (in cents)
-  let subscriptionTier = 'optimizer'; // default
-  
+  // Determine billing period from session amount_total (in cents)
+  let billingPeriod = 'monthly'; // default
+
   const amountTotal = session.amount_total;
   console.log('💰 Amount total:', amountTotal);
-  
+
   if (amountTotal === 9900) { // $99.00
-    subscriptionTier = 'optimizer';
-  } else if (amountTotal === 24900) { // $249.00
-    subscriptionTier = 'accelerator';
-  } else if (amountTotal === 49900) { // $499.00
-    subscriptionTier = 'enterprise';
+    billingPeriod = 'monthly';
+  } else if (amountTotal === 99900) { // $999.00
+    billingPeriod = 'annual';
   }
-  
-  console.log('🎯 Determined tier:', subscriptionTier);
+
+  console.log('🎯 Determined billing period:', billingPeriod);
 
   // Initialize Supabase client
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -108,13 +106,18 @@ async function handleCheckoutCompleted(session: any) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   console.log('🔧 Updating user profile...');
-  
-  // Calculate billing dates
+
+  // Calculate billing dates based on billing period
   const paymentDate = new Date();
   const currentPeriodStart = new Date(paymentDate);
   const currentPeriodEnd = new Date(paymentDate);
-  currentPeriodEnd.setDate(paymentDate.getDate() + 30); // 30-day billing cycle
-  
+
+  if (billingPeriod === 'annual') {
+    currentPeriodEnd.setFullYear(paymentDate.getFullYear() + 1); // 365-day billing cycle
+  } else {
+    currentPeriodEnd.setDate(paymentDate.getDate() + 30); // 30-day billing cycle
+  }
+
   console.log('💳 Payment date:', paymentDate.toISOString());
   console.log('📅 Current period start:', currentPeriodStart.toISOString());
   console.log('📅 Current period end:', currentPeriodEnd.toISOString());
@@ -135,7 +138,7 @@ async function handleCheckoutCompleted(session: any) {
 
   // Update user profile with all Stripe metadata
   const updateData = {
-    subscription_tier: subscriptionTier,
+    billing_period: billingPeriod,
     subscription_status: 'active',
     stripe_customer_id: session.customer,
     subscription_id: session.subscription,
@@ -156,18 +159,7 @@ async function handleCheckoutCompleted(session: any) {
   if (error) {
     console.error('❌ Error updating user profile:', error);
   } else {
-    console.log(`✅ Updated user ${customerEmail} to ${subscriptionTier} tier`);
-    
-    // Reset monthly uploads when upgrading to paid plan
-    console.log('🔄 Resetting monthly uploads for new subscriber...');
-    const { data: resetData, error: resetError } = await supabase
-      .rpc('reset_monthly_uploads', { p_user_id: userData.id });
-
-    if (resetError) {
-      console.error('❌ Error resetting monthly uploads:', resetError);
-    } else {
-      console.log('✅ Monthly uploads reset successfully:', resetData);
-    }
+    console.log(`✅ Updated user ${customerEmail} to ${billingPeriod} billing`);
   }
 }
 
@@ -221,12 +213,12 @@ async function handleSubscriptionUpdated(subscription: any) {
     updateData.cancel_at_period_end = false;
   }
 
-  // Handle tier changes during updates
+  // Handle billing period changes during updates
   if (subscription.items?.data?.[0]?.price?.unit_amount) {
     const amount = subscription.items.data[0].price.unit_amount;
-    const newTier = determineSubscriptionTier(amount);
-    updateData.subscription_tier = newTier;
-    console.log('🎯 Tier change detected:', newTier);
+    const newBillingPeriod = determineBillingPeriod(amount);
+    updateData.billing_period = newBillingPeriod;
+    console.log('🎯 Billing period change detected:', newBillingPeriod);
   }
 
   // Update current period end if available
@@ -267,9 +259,8 @@ async function handleSubscriptionDeleted(subscription: any) {
   // Build update data for cancellation
   const updateData: any = {
     subscription_status: 'canceled',
-    subscription_tier: 'trial', // Revert to trial
+    billing_period: null, // Clear billing period
     subscription_id: null, // Clear subscription ID
-    uploads_this_month: 0, // Reset uploads
     cancel_at_period_end: false,
     cancel_at: null,
     updated_at: new Date().toISOString(),
@@ -291,36 +282,12 @@ async function handleSubscriptionDeleted(subscription: any) {
     console.error('❌ Error processing cancellation:', error);
   } else {
     console.log(`✅ Processed cancellation for customer ${subscription.customer}`);
-    
-    // Get user for reset function
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('stripe_customer_id', subscription.customer)
-      .single();
-
-    if (userError || !userData) {
-      console.error('❌ Error finding user for reset:', userError);
-      return;
-    }
-
-    // Reset monthly uploads on cancellation
-    console.log('🔄 Resetting monthly uploads for canceled subscription...');
-    const { data: resetData, error: resetError } = await supabase
-      .rpc('reset_monthly_uploads', { p_user_id: userData.id });
-
-    if (resetError) {
-      console.error('❌ Error resetting uploads on cancellation:', resetError);
-    } else {
-      console.log('✅ Uploads reset successfully on cancellation:', resetData);
-    }
   }
 }
 
-// Helper function for tier determination (reused from checkout logic)
-function determineSubscriptionTier(amountInCents: number): string {
-  if (amountInCents === 9900) return 'optimizer';   // $99.00
-  if (amountInCents === 24900) return 'accelerator'; // $249.00  
-  if (amountInCents === 49900) return 'enterprise';  // $499.00
-  return 'optimizer'; // default
+// Helper function for billing period determination (reused from checkout logic)
+function determineBillingPeriod(amountInCents: number): string {
+  if (amountInCents === 9900) return 'monthly';   // $99.00
+  if (amountInCents === 99900) return 'annual';   // $999.00
+  return 'monthly'; // default
 }

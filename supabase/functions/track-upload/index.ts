@@ -4,33 +4,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 interface RequestBody {
-  action: 'check' | 'increment' | 'statistics' | 'reset';
+  action: 'increment';
   fileCount?: number;
-  migrationVersion?: string;
-}
-
-interface UploadCheckResult {
-  canUpload: boolean;
-  remaining: number | null;
-  message: string;
-  tier: string;
 }
 
 interface UploadIncrementResult {
   success: boolean;
-  uploadsThisMonth: number;
-  totalUploads: number;
-  remaining: number | null;
+  total_uploads: number;
   message: string;
-}
-
-interface UploadStatistics {
-  uploadsThisMonth: number;
-  totalUploads: number;
-  tier: string;
-  remaining: number | null;
-  percentage: number;
-  isUnlimited: boolean;
 }
 
 Deno.serve(async (req: Request) => {
@@ -81,93 +62,34 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const body: RequestBody = await req.json();
-    const { action, fileCount = 1, migrationVersion } = body;
+    const { action, fileCount = 1 } = body;
 
-    switch (action) {
-      case 'check': {
-        const { data, error } = await supabase.rpc('check_upload_limit', {
-          user_id: userId,
-          file_count: fileCount
-        });
+    // Only increment action supported now (no limits to check)
+    if (action === 'increment') {
+      const { data, error } = await supabase.rpc('increment_upload_count', {
+        p_user_id: userId,
+        p_file_count: fileCount
+      });
 
-        if (error) {
-          throw error;
-        }
-
-        return new Response(
-          JSON.stringify(data as UploadCheckResult),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+      if (error) {
+        throw error;
       }
 
-      case 'increment': {
-        const { data, error } = await supabase.rpc('increment_upload_count', {
-          user_id: userId,
-          file_count: fileCount
-        });
-
-        if (error) {
-          throw error;
+      return new Response(
+        JSON.stringify(data as UploadIncrementResult),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-
-        return new Response(
-          JSON.stringify(data as UploadIncrementResult),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      case 'statistics': {
-        const { data, error } = await supabase.rpc('get_upload_statistics', {
-          user_id: userId
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        return new Response(
-          JSON.stringify(data as UploadStatistics),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      case 'reset': {
-        const { data, error } = await supabase.rpc('reset_monthly_uploads', {
-          user_id: userId,
-          migration_version: migrationVersion
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'Monthly uploads reset successfully',
-            data
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      default:
-        return new Response(
-          JSON.stringify({ error: `Invalid action: ${action}` }),
-          { 
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+      );
     }
+
+    return new Response(
+      JSON.stringify({ error: `Invalid action: ${action}` }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
 
   } catch (error) {
     console.error('Edge function error:', error);
