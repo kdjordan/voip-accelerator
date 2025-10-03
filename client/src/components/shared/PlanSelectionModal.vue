@@ -81,62 +81,6 @@
             </button>
           </div>
 
-          <!-- Enterprise Plan -->
-          <div class="relative bg-gradient-to-br from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-lg p-6 hover:border-amber-400/50 transition-all duration-200">
-            <div class="absolute top-4 right-4">
-              <span class="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-xs font-medium">
-                Teams
-              </span>
-            </div>
-            
-            <div class="mb-4">
-              <h3 class="text-xl font-bold text-white mb-2">Enterprise</h3>
-              <div class="flex items-baseline">
-                <span class="text-3xl font-bold text-amber-400">$499</span>
-                <span class="text-gray-400 ml-2">/month</span>
-              </div>
-            </div>
-
-            <div class="space-y-3 mb-6">
-              <div class="flex items-center text-sm">
-                <svg class="w-4 h-4 text-green-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-gray-300">Everything in Accelerator</span>
-              </div>
-              <div class="flex items-center text-sm">
-                <svg class="w-4 h-4 text-green-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-gray-300">Team collaboration</span>
-              </div>
-              <div class="flex items-center text-sm">
-                <svg class="w-4 h-4 text-green-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-gray-300">Organization management</span>
-              </div>
-              <div class="flex items-center text-sm">
-                <svg class="w-4 h-4 text-green-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-gray-300">Dedicated support</span>
-              </div>
-              <div class="flex items-center text-sm">
-                <svg class="w-4 h-4 text-green-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-gray-300">Custom integrations</span>
-              </div>
-            </div>
-
-            <button
-              @click="$emit('select-plan', 'enterprise')"
-              class="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Choose Enterprise
-            </button>
-          </div>
         </div>
 
         <!-- Footer Note -->
@@ -159,7 +103,7 @@ interface Props {
 
 interface Emits {
   (e: 'close'): void;
-  (e: 'select-plan', tier: 'accelerator' | 'enterprise'): void;
+  (e: 'select-plan', tier: 'accelerator'): void;
 }
 
 defineProps<Props>();

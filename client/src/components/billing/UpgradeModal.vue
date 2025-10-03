@@ -100,46 +100,6 @@
               </div>
             </div>
 
-            <!-- Enterprise Plan -->
-            <div 
-              v-if="canUpgradeTo('enterprise')"
-              class="bg-gray-800 rounded-lg p-6 border-2 transition-all cursor-pointer relative"
-              :class="selectedUpgrade === 'enterprise' ? 'border-accent ring-2 ring-accent/20' : 'border-gray-600 hover:border-gray-500'"
-              @click="selectedUpgrade = 'enterprise'"
-            >
-              <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span class="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  PREMIUM
-                </span>
-              </div>
-              
-              <div class="text-center">
-                <h3 class="text-lg font-semibold text-white mb-2">Enterprise</h3>
-                <div class="mb-2">
-                  <span class="text-3xl font-bold text-white">$499</span>
-                  <span class="text-gray-400">+/month</span>
-                </div>
-                <p class="text-accent text-sm mb-4">+${{ upgradePrice('enterprise') }}/month</p>
-                
-                <ul class="space-y-2 text-sm text-gray-300 mb-6">
-                  <li v-for="feature in getTierFeatures('enterprise')" :key="feature" class="flex items-center">
-                    <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                    {{ feature }}
-                  </li>
-                </ul>
-
-                <div 
-                  class="w-6 h-6 rounded-full border-2 mx-auto transition-colors"
-                  :class="selectedUpgrade === 'enterprise' ? 'bg-accent border-accent' : 'border-gray-400'"
-                >
-                  <svg v-if="selectedUpgrade === 'enterprise'" class="w-4 h-4 text-white m-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- Upgrade Benefits -->
@@ -211,8 +171,7 @@ const getTierDisplayName = (tier: SubscriptionTier | null) => {
   if (!tier) return 'Unknown';
   const names = {
     optimizer: 'Optimizer',
-    accelerator: 'Accelerator',
-    enterprise: 'Enterprise'
+    accelerator: 'Accelerator'
   };
   return names[tier] || tier;
 };
@@ -221,8 +180,7 @@ const getTierPrice = (tier: SubscriptionTier | null) => {
   if (!tier) return '0';
   const prices = {
     optimizer: '99',
-    accelerator: '249',
-    enterprise: '499'
+    accelerator: '249'
   };
   return prices[tier] || '0';
 };
@@ -240,12 +198,6 @@ const getTierFeatures = (tier: SubscriptionTier | null) => {
       '1 user account',
       'Best for growing businesses',
       'Priority support'
-    ],
-    enterprise: [
-      'Everything in Accelerator',
-      'Multiple user accounts',
-      'Custom solutions available',
-      'Dedicated support'
     ]
   };
   return features[tier] || [];
@@ -253,13 +205,12 @@ const getTierFeatures = (tier: SubscriptionTier | null) => {
 
 const canUpgradeTo = (targetTier: SubscriptionTier) => {
   if (!props.currentTier) return false;
-  
+
   const tierHierarchy = {
     optimizer: 1,
-    accelerator: 2,
-    enterprise: 3
+    accelerator: 2
   };
-  
+
   return tierHierarchy[targetTier] > tierHierarchy[props.currentTier];
 };
 

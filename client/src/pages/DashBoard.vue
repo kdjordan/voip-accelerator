@@ -6,333 +6,226 @@
       @upgrade-clicked="handleUpgradeFromExpiry"
     />
     
-    <h1 class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">Dashboard</h1>
-
     <!-- Dashboard Content -->
-    <div class="flex flex-col gap-6 mb-8">
-      <!-- User Welcome Section -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-        <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
-          <div class="flex-shrink-0">
-            <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center overflow-hidden border-2 border-accent/30">
-              <span class="text-xl font-medium text-accent">{{ userInitials }}</span>
+    <div class="flex flex-col gap-6 mb-8 px-4">
+      <!-- Three Column Account Section -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Bento 1: Account Information -->
+        <div class="bg-gray-800 rounded-lg p-5 border border-gray-700/50 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-white">Account Information</h3>
+            <div class="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center border border-accent/50 flex-shrink-0">
+              <span class="text-xs font-medium text-accent">{{ userInitials }}</span>
             </div>
           </div>
-          <div class="flex-grow">
-            <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
-              <div>
-                <h2 class="text-xl font-semibold">Welcome back,</h2>
-                <p class="text-sm text-gray-400">{{ userStore.auth.user?.email || 'Guest' }}</p>
-              </div>
-              <div class="flex gap-2">
-                <BaseButton
-                  @click="testAuthFunction"
-                  variant="secondary"
-                  size="small"
-                  :is-loading="isTestingAuth"
-                >
-                  <span>Test Auth</span>
-                </BaseButton>
-                <BaseButton
-                  @click="handleLogout"
-                  variant="destructive"
-                  size="small"
-                  :is-loading="isLoggingOut"
-                >
-                  <span>Logout</span>
-                </BaseButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Account Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Last Login -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-          <div>
-            <p class="text-gray-400 text-sm">Last Login</p>
-            <p class="text-lg font-medium mt-1">{{ formattedLastLogin }}</p>
+          <!-- Email -->
+          <div class="text-sm mb-3">
+            <span class="text-gray-400 block mb-1">Email:</span>
+            <span class="text-gray-300">{{ displayEmail }}</span>
           </div>
-        </div>
 
-        <!-- Upload Usage -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-          <div class="space-y-3">
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="text-gray-400 text-sm">
-                  <template v-if="uploadStats.isUnlimited">
-                    All-Time Uploads
-                  </template>
-                  <template v-else>
-                    Monthly Uploads
-                  </template>
-                </p>
-                <p class="text-lg font-medium mt-1">
-                  <template v-if="uploadStats.isUnlimited">
-                    {{ uploadStats.allTimeUploads || uploadStats.uploads }} total
-                  </template>
-                  <template v-else>
-                    {{ uploadStats.uploads }}/{{ uploadStats.limit }}
-                  </template>
-                </p>
-              </div>
-              <BaseBadge
-                :variant="uploadStats.isUnlimited ? 'success' : 'info'"
+          <!-- Email Edit Form -->
+          <div v-if="isEditingEmail" class="w-full space-y-2 mb-3">
+            <input
+              v-model="newEmail"
+              type="email"
+              placeholder="Enter new email"
+              class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+              @keyup.enter="updateEmail(newEmail)"
+              @keyup.escape="cancelEmailEdit"
+            />
+            <div class="flex gap-2">
+              <BaseButton
+                @click="updateEmail(newEmail)"
+                :disabled="!isEmailInputValid"
+                :loading="isUpdatingEmail"
+                variant="primary"
                 size="small"
+                class="flex-1"
               >
-                All-Time Analytics
-              </BaseBadge>
+                Save
+              </BaseButton>
+              <BaseButton
+                @click="cancelEmailEdit"
+                variant="destructive"
+                size="small"
+                class="flex-1"
+              >
+                Cancel
+              </BaseButton>
             </div>
-            
-            <!-- Progress bar (only for limited tiers) -->
-            <div v-if="!uploadStats.isUnlimited" class="w-full">
-              <div class="flex justify-between text-xs text-gray-400 mb-1">
-                <span>{{ uploadStatusMessage }}</span>
-                <span>{{ uploadStats.percentage }}%</span>
-              </div>
-              <div class="w-full bg-gray-700 rounded-full h-2">
-                <div 
-                  :class="uploadProgressColor"
-                  class="h-2 rounded-full transition-all duration-300"
-                  :style="{ width: `${Math.min(uploadStats.percentage, 100)}%` }"
-                ></div>
-              </div>
+            <div v-if="emailSuccessMessage" class="text-green-400 text-xs">
+              {{ emailSuccessMessage }}
             </div>
-            
-            <!-- Status message for unlimited tiers -->
-            <div v-else class="text-sm text-green-400">
-              {{ uploadStatusMessage }}
-            </div>
-          </div>
-        </div>
-
-        <!-- Account Created -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-          <div>
-            <p class="text-gray-400 text-sm">Account Created</p>
-            <p class="text-lg font-medium mt-1">{{ formattedCreatedAt }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Profile Settings Bento -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-white">Profile Settings</h3>
-        </div>
-
-        <div class="space-y-4 mb-8">
-          <!-- Loading State -->
-          <div v-if="isRefreshingSubscription">
-            <div class="flex justify-center items-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
-              <span class="ml-3 text-gray-400">Updating subscription...</span>
+            <div v-if="emailErrorMessage" class="text-red-400 text-xs">
+              {{ emailErrorMessage }}
             </div>
           </div>
 
-          <!-- Plan Details -->
-          <div v-else class="space-y-4">
-            <!-- Trial Alert (for trial users only) - No colored background -->
-            <div v-if="currentPlanTier === 'trial'">
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Current Plan:</span>
-                  <BaseBadge variant="warning" size="small">Trial</BaseBadge>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Expires At:</span>
-                  <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Trial Uploads:</span>
-                  <span class="text-white text-sm">{{ uploadStats.uploads }}/{{ uploadStats.limit }}</span>
-                </div>
-                <div class="flex justify-end mt-4">
-                  <BaseButton
-                    @click="showPlanSelectorModal = true"
-                    variant="primary"
-                    size="small"
-                  >
-                    Choose Plan
-                  </BaseButton>
-                </div>
-              </div>
-            </div>
-
-            <!-- Active Subscription (for paid users) - No colored background -->
-            <div v-else class="space-y-4">
-              <!-- Cancellation Status Warning -->
-              <div v-if="isCancellationScheduled" class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <p class="text-yellow-300 text-sm font-medium">Subscription Canceling</p>
-                    <p class="text-yellow-300/80 text-xs mt-1">
-                      Your subscription will end on {{ formatCancelDate() }}. 
-                      You'll keep access until then.
-                    </p>
-                  </div>
-                  <BaseButton
-                    @click="handleReactivateSubscription"
-                    variant="secondary"
-                    size="small"
-                  >
-                    Reactivate
-                  </BaseButton>
-                </div>
-              </div>
-
-              <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Current Plan:</span>
-                  <div class="flex items-center gap-2">
-                    <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-                      {{ currentPlanTier === 'trial' ? 'Free Trial' : currentPlanName }}
-                    </BaseBadge>
-                    <span v-if="isCancellationScheduled" class="text-yellow-400 text-xs">
-                      (Canceling)
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Plan Management Buttons -->
-                <div class="w-1/4 pt-2">
-                  <div class="flex flex-col gap-2">
-                    <div class="flex gap-2">
-                      <BaseButton
-                        @click="showAllPlansInModal = true; showPaymentModal = true"
-                        variant="secondary"
-                        size="small"
-                        class="flex-1"
-                      >
-                        Change Plan
-                      </BaseButton>
-                      <BaseButton
-                        v-if="!isCancellationScheduled"
-                        @click="handleManageBilling"
-                        variant="secondary-outline"
-                        size="small"
-                        class="flex-1"
-                      >
-                        Manage Billing
-                      </BaseButton>
-                    </div>
-                    <BaseButton
-                      v-if="!isCancellationScheduled"
-                      @click="handleCancelSubscription"
-                      variant="destructive"
-                      size="small"
-                      class="w-full"
-                    >
-                      Cancel Subscription
-                    </BaseButton>
-                  </div>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">
-                    {{ isCancellationScheduled ? 'Access Until:' : 'Next Billing:' }}
-                  </span>
-                  <span class="text-white text-sm">{{ formattedPlanExpiresAt }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Monthly Cost:</span>
-                  <span class="text-white text-sm font-medium">${{ getMonthlyPrice() }}</span>
-                </div>
-                
-                <!-- Upload Limits for Optimizer Tier -->
-                <div v-if="currentPlanTier === 'optimizer'" class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Upload Limit:</span>
-                  <span class="text-white text-sm">{{ uploadStats.uploads }}/{{ uploadStats.limit }} this month</span>
-                </div>
-                
-                <!-- Upload Status for Unlimited Tiers -->
-                <div v-else-if="uploadStats.isUnlimited" class="flex items-center justify-between">
-                  <span class="text-gray-400 text-sm">Uploads:</span>
-                  <span class="text-green-400 text-sm">{{ uploadStats.uploads }} (Unlimited)</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Email Management Section -->
-            <div class="pt-4">
-              <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                  <span class="text-gray-400">Email</span>
-                  <div class="flex items-center gap-2">
-                    <span class="text-white">{{ displayEmail }}</span>
-                    <BaseButton
-                      v-if="!isEditingEmail"
-                      @click="isEditingEmail = true"
-                      variant="secondary-outline"
-                      size="small"
-                      :icon="PencilIcon"
-                    />
-                  </div>
-                </div>
-                
-                <!-- Collapsible Email Update Form -->
-                <div v-if="isEditingEmail" class="pl-4 border-l-2 border-gray-700 ml-2">
-                  <div class="flex gap-2 items-center">
-                    <input
-                      v-model="newEmail"
-                      type="email"
-                      placeholder="Enter new email"
-                      class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm flex-1 max-w-xs"
-                      @keyup.enter="updateEmail(newEmail)"
-                      @keyup.escape="cancelEmailEdit"
-                    />
-                    <BaseButton
-                      @click="updateEmail(newEmail)"
-                      :disabled="!isEmailInputValid"
-                      :loading="isUpdatingEmail"
-                      variant="primary"
-                      size="small"
-                    >
-                      Save
-                    </BaseButton>
-                    <BaseButton
-                      @click="cancelEmailEdit"
-                      variant="destructive"
-                      size="small"
-                    >
-                      Cancel
-                    </BaseButton>
-                  </div>
-                  
-                  <!-- Email Status Messages -->
-                  <div v-if="emailSuccessMessage" class="text-green-400 text-sm mt-2">
-                    {{ emailSuccessMessage }}
-                  </div>
-                  <div v-if="emailErrorMessage" class="text-red-400 text-sm mt-2">
-                    {{ emailErrorMessage }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="bg-red-950/20 border border-red-500/50 rounded-lg p-4">
-          <div class="flex justify-between items-start">
-            <div>
-              <h5 class="text-white font-medium">Delete Account</h5>
-              <p class="text-gray-400 text-sm mt-1">
-                Permanently delete your account and all associated data. This action is irreversible.
-              </p>
-            </div>
+          <!-- Buttons at bottom -->
+          <div class="flex justify-between mt-auto">
+            <!-- Update Email Button -->
             <BaseButton
-              @click="openDeleteConfirmModal"
+              v-if="!isEditingEmail"
+              @click="isEditingEmail = true"
+              variant="secondary"
+              size="small"
+              style="width: 33.333%;"
+            >
+              Update Email
+            </BaseButton>
+
+            <!-- Logout Button -->
+            <BaseButton
+              @click="handleLogout"
               variant="destructive"
               size="small"
+              :is-loading="isLoggingOut"
+              style="width: 33.333%;"
             >
-              Delete Account
+              Logout
             </BaseButton>
           </div>
         </div>
+
+        <!-- Bento 2: Plan Information -->
+        <div class="bg-gray-800 rounded-lg p-5 border border-gray-700/50 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-white">Plan Information</h3>
+            <BaseBadge :variant="currentPlanBadgeVariant" size="small">
+              {{ currentPlanTier === 'trial' ? 'Trial Plan' : `${currentPlanName} Plan` }}
+            </BaseBadge>
+          </div>
+
+          <!-- Expires -->
+          <div class="text-sm mb-3">
+            <span class="text-gray-400 block mb-1">Expires:</span>
+            <span class="text-gray-300">{{ formattedPlanExpiresAt }}</span>
+          </div>
+
+          <!-- Button -->
+          <div class="mt-auto" style="width: 33.333%;">
+            <BaseButton
+              @click="showPlanSelectorModal = true"
+              variant="secondary"
+              size="small"
+            >
+              Manage Plan
+            </BaseButton>
+          </div>
+        </div>
+
+        <!-- Bento 3: Activity -->
+        <div class="bg-gray-800 rounded-lg p-5 border border-gray-700/50">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-white">Activity</h3>
+            <div class="w-6 h-6 rounded-full border border-accent/50 bg-accent/20 flex items-center justify-center flex-shrink-0">
+              <ClockIcon class="w-4 h-4 text-accent" />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3">
+            <!-- Last Login -->
+            <div class="text-sm">
+              <span class="text-gray-400 block mb-1">Last Login</span>
+              <span class="text-gray-300">{{ formattedLastLogin }}</span>
+            </div>
+
+            <!-- Member Since -->
+            <div class="text-sm">
+              <span class="text-gray-400 block mb-1">Member Since</span>
+              <span class="text-gray-300">{{ formattedCreatedAt }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
+        <h3 class="text-lg font-semibold text-white mb-5">Quick Actions</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- US Reporting -->
+          <button
+            @click="$router.push('/usview')"
+            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+                <GlobeAmericasIcon class="w-6 h-6 text-accent" />
+              </div>
+              <h4 class="text-base font-semibold text-white">US Reporting</h4>
+            </div>
+            <p class="text-sm text-gray-400">View US rate reports and analytics</p>
+          </button>
+
+          <!-- AZ Reporting -->
+          <button
+            @click="$router.push('/azview')"
+            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+                <GlobeAltIcon class="w-6 h-6 text-accent" />
+              </div>
+              <h4 class="text-base font-semibold text-white">AZ Reporting</h4>
+            </div>
+            <p class="text-sm text-gray-400">View AZ rate reports and analytics</p>
+          </button>
+
+          <!-- US Rate Wizard -->
+          <button
+            @click="$router.push('/us-rate-sheet')"
+            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+                <AdjustmentsVerticalIcon class="w-6 h-6 text-accent" />
+              </div>
+              <h4 class="text-base font-semibold text-white">US Rate Wizard</h4>
+            </div>
+            <p class="text-sm text-gray-400">Manage and edit US rate sheets</p>
+          </button>
+
+          <!-- AZ Rate Wizard -->
+          <button
+            @click="$router.push('/az-rate-sheet')"
+            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+                <AdjustmentsVerticalIcon class="w-6 h-6 text-accent" />
+              </div>
+              <h4 class="text-base font-semibold text-white">AZ Rate Wizard</h4>
+            </div>
+            <p class="text-sm text-gray-400">Manage and edit AZ rate sheets</p>
+          </button>
+
+          <!-- Rate Generation -->
+          <button
+            @click="$router.push('/rate-gen/us')"
+            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+                <SparklesIcon class="w-6 h-6 text-accent" />
+              </div>
+              <h4 class="text-base font-semibold text-white">Rate Generation</h4>
+            </div>
+            <p class="text-sm text-gray-400">Generate new rate sheets and comparisons</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Delete Account Button -->
+      <div class="flex justify-end">
+        <BaseButton
+          @click="openDeleteConfirmModal"
+          variant="destructive"
+          size="small"
+        >
+          Delete Account
+        </BaseButton>
       </div>
 
     </div>
@@ -391,7 +284,15 @@
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import type { BaseBadgeProps } from '@/types/app-types';
   import BaseButton from '@/components/shared/BaseButton.vue';
-  import { ArrowPathIcon, PencilIcon } from '@heroicons/vue/24/outline';
+  import {
+    ArrowPathIcon,
+    PencilIcon,
+    GlobeAmericasIcon,
+    GlobeAltIcon,
+    AdjustmentsVerticalIcon,
+    SparklesIcon,
+    ClockIcon
+  } from '@heroicons/vue/24/outline';
   import {
     ArrowRightOnRectangleIcon,
   } from '@heroicons/vue/24/solid';
@@ -456,8 +357,6 @@
         return '99.00';
       case 'accelerator':
         return '249.00';
-      case 'enterprise':
-        return '499.00';
       default:
         return '0.00';
     }
@@ -693,8 +592,7 @@
       // Get the correct price ID based on selected tier
       const priceIds = {
         optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
-        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR,
-        enterprise: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE,
+        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR
       };
       
       const priceId = priceIds[tier];

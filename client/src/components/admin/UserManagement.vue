@@ -355,7 +355,7 @@ const activeCount = computed(() => {
 const roleFilterOptions = [
   { value: '', name: 'All Roles' },
   { value: 'user', name: 'Users' },
-  { value: 'admin', name: 'Enterprise Admins' },
+  { value: 'admin', name: 'Admins' },
   { value: 'super_admin', name: 'Super Admins' }
 ]
 

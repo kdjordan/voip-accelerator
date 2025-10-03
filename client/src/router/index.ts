@@ -194,21 +194,21 @@ async function waitForAuthInitialization(
   });
 }
 
-// Helper function to check if Optimizer user has reached upload limit
+// Helper function to check if user has valid subscription (no upload limits, just subscription status check)
 async function checkUploadLimit(userId: string): Promise<boolean> {
   try {
-    // Get user's current tier and upload count
+    // All paid users have unlimited uploads - only check subscription status
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('subscription_tier, subscription_status, uploads_this_month, cancel_at_period_end, cancel_at')
+      .select('subscription_status, cancel_at_period_end, cancel_at')
       .eq('id', userId)
       .single();
-    
+
     if (error) {
-      console.error('Error checking upload limit:', error);
-      return false; // Allow access on error (fail-safe)
+      console.error('Error checking subscription status:', error);
+      return true; // Allow access on error (fail-safe)
     }
-    
+
     // Check if subscription is scheduled for cancellation and past the cancel date
     if (profile.cancel_at_period_end && profile.cancel_at) {
       const cancelDate = new Date(profile.cancel_at);
@@ -218,27 +218,18 @@ async function checkUploadLimit(userId: string): Promise<boolean> {
         return false; // Block uploads after cancellation date
       }
     }
-    
-    // Check if subscription is already canceled
+
+    // Check if subscription is canceled
     if (profile.subscription_status === 'canceled') {
       console.log('Upload blocked: subscription is canceled');
       return false; // Block uploads for canceled subscriptions
     }
-    
-    // Only check limits for Optimizer tier users (trial or paid)
-    const isOptimizerUser = profile.subscription_tier === 'optimizer' || 
-                           (profile.subscription_status === 'trial' && !profile.subscription_tier);
-    
-    if (!isOptimizerUser) {
-      return true; // Unlimited users can always upload
-    }
-    
-    // Check if Optimizer user has reached their 100 upload limit
-    const uploadsThisMonth = profile.uploads_this_month || 0;
-    return uploadsThisMonth < 100;
-    
+
+    // All active/trial users have unlimited uploads
+    return true;
+
   } catch (err) {
-    console.error('Error checking upload limit:', err);
+    console.error('Error checking subscription status:', err);
     return true; // Allow access on error (fail-safe)
   }
 }

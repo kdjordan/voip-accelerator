@@ -547,8 +547,7 @@
       // Get the correct price ID based on selected tier
       const priceIds = {
         optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
-        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR,
-        enterprise: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE,
+        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR
       };
       
       const priceId = priceIds[tier];

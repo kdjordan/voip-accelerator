@@ -362,70 +362,9 @@ export const useUserStore = defineStore('user', {
               event === 'INITIAL_SESSION' // Treat INITIAL_SESSION here as well for profile consistency
             ) {
               try {
-                // Check for pending signup processing after successful signin (email confirmation)
-                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                  const userMetadata = currentUser.user_metadata;
-                  const selectedTier = userMetadata?.selected_tier;
-                  const isTrialSignup = userMetadata?.is_trial_signup;
-                  
-                  if (selectedTier && ['accelerator', 'optimizer', 'enterprise'].includes(selectedTier)) {
-                    console.log(`Found signup metadata: tier ${selectedTier}, isTrialSignup: ${isTrialSignup}`);
-                    
-                    if (isTrialSignup === false) {
-                      // For paid signups, set the subscription tier in database (no stripe_customer_id yet)
-                      console.log('Paid signup detected, setting subscription tier in database');
-                      try {
-                        const { error: updateError } = await supabase
-                          .from('profiles')
-                          .update({
-                            subscription_tier: selectedTier,
-                            subscription_status: 'inactive', // Will become 'active' after payment
-                            // stripe_customer_id remains null until payment
-                          })
-                          .eq('id', currentUser.id);
-                        
-                        if (updateError) {
-                          console.error('Failed to set paid subscription tier:', updateError);
-                        } else {
-                          console.log(`Successfully set paid subscription tier ${selectedTier}`);
-                        }
-                      } catch (error) {
-                        console.error('Error setting paid subscription tier:', error);
-                      }
-                    } else {
-                      // For trial users, set the trial tier as before
-                      try {
-                        const { error: tierError } = await supabase.functions.invoke('set-trial-tier', {
-                          body: { selectedTier }
-                        });
-                        if (tierError) {
-                          console.error('Failed to set trial tier:', tierError);
-                        } else {
-                          console.log(`Successfully applied trial tier ${selectedTier}`);
-                        }
-                      } catch (error) {
-                        console.error('Error applying trial tier:', error);
-                      }
-                    }
-                    
-                    // Clear the signup metadata since we've processed it
-                    try {
-                      const { error: updateError } = await supabase.auth.updateUser({
-                        data: {
-                          selected_tier: null,
-                          is_trial_signup: null,
-                        }
-                      });
-                      if (updateError) {
-                        console.error('Failed to clear signup metadata:', updateError);
-                      } else {
-                        console.log('Cleared signup metadata from user');
-                      }
-                    } catch (error) {
-                      console.error('Error clearing signup metadata:', error);
-                    }
-                  }
-                }
+                // Simplified signup processing - no tier selection needed
+                // All signups start as trial, users choose billing period (monthly/annual) when upgrading
+                // User profile is created with trial status by database trigger
                 
                 // Don't make the entire onAuthStateChange handler wait for fetchProfile if it's not INITIAL_SESSION
                 // For INITIAL_SESSION, it might be okay, but generally, let it be async.

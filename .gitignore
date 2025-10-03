@@ -41,6 +41,9 @@ coverage
 # TypeScript artifacts
 *.tsbuildinfo
 
+# Vite HMR temporary files
+*.timestamp-*.mjs
+
 # Environment variables
 .env
 .env.local

@@ -157,65 +157,6 @@
               <span v-else>{{ userTier === 'accelerator' ? 'Continue with Accelerator' : 'Choose Accelerator' }}</span>
             </BaseButton>
             
-            <!-- Upgrade Hint for Current Subscribers -->
-            <div v-if="isCurrentSubscriber && userTier === 'accelerator'" class="mt-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm text-purple-400 font-medium">Scale your team?</p>
-                  <p class="text-xs text-gray-400">Upgrade to Enterprise for multiple users</p>
-                </div>
-                <BaseButton
-                  @click="showUpgradeModal = true"
-                  variant="secondary"
-                  size="small"
-                >
-                  Upgrade
-                </BaseButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Enterprise Plan -->
-      <div v-if="!userTier || userTier === 'enterprise'">
-        <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600 mb-6">
-          <div class="text-center">
-            <h3 class="text-xl font-bold text-white mb-2">Enterprise</h3>
-            <div class="mb-6">
-              <span class="text-4xl font-bold text-white">$499</span>
-              <span class="text-gray-400">+/month</span>
-            </div>
-            
-            <ul class="space-y-2 text-left mb-6 text-sm">
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <strong>Everything in Accelerator</strong>
-              </li>
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                Multiple user accounts
-              </li>
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                Custom solutions available
-              </li>
-            </ul>
-            
-            <BaseButton
-              @click="handleContactSales"
-              variant="secondary"
-              size="standard"
-              class="w-full"
-            >
-              Contact Sales
-            </BaseButton>
           </div>
         </div>
       </div>
@@ -319,10 +260,6 @@ async function selectPlan(tier: SubscriptionTier) {
       console.log('Optimizer price ID from env:', priceId);
     } else if (tier === 'accelerator') {
       priceId = import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR;
-    } else if (tier === 'enterprise') {
-      // Handle enterprise differently
-      handleContactSales();
-      return;
     }
     
     if (!priceId) {
@@ -342,16 +279,10 @@ async function selectPlan(tier: SubscriptionTier) {
   }
 }
 
-function handleContactSales() {
-  loading.value = false;
-  showSuccess('Please email support@voipaccelerator.com for Enterprise pricing');
-}
-
 function getTierDisplayName(tier: SubscriptionTier) {
   const names = {
     optimizer: 'Optimizer',
-    accelerator: 'Accelerator',
-    enterprise: 'Enterprise'
+    accelerator: 'Accelerator'
   };
   return names[tier] || tier;
 }

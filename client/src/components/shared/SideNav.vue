@@ -174,7 +174,6 @@
   // Access profile via auth state and use store getters
   const isAdmin = computed(() => userStore.isAdmin);
   const isSuperAdmin = computed(() => userStore.isSuperAdmin);
-  const isEnterpriseAdmin = computed(() => userStore.isEnterpriseAdmin);
 
   const props = defineProps<{ navigation: NavigationItem[] }>();
 
