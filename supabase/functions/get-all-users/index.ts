@@ -21,8 +21,7 @@ interface UserProfile {
   stripe_customer_id: string | null;
   subscription_status: string | null;
   total_uploads: number | null;
-  uploads_this_month: number | null;
-  uploads_reset_date: string | null;
+  billing_period: string | null;
   email?: string; // From auth.users
 }
 
@@ -98,17 +97,17 @@ serve(async (req: Request) => {
       );
     }
 
-    // Verify admin role
+    // Verify admin role (updated to use 'admin' after simplification)
     const { data: requestingUserProfile, error: profileError } = await supabaseAdminClient
       .from('profiles')
       .select('role')
       .eq('id', requestingUser.id)
       .single();
 
-    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'super_admin') {
-      console.error("Access denied: User is not a super admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
+    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'admin') {
+      console.error("Access denied: User is not an admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
       return new Response(
-        JSON.stringify({ error: "Access denied. Super admin role required." }),
+        JSON.stringify({ error: "Access denied. Admin role required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
@@ -143,7 +142,7 @@ serve(async (req: Request) => {
 
     console.log("Fetching users with params:", { page, limit, search, role, status });
 
-    // Build query for profiles with auth.users data
+    // Build query for profiles with auth.users data (updated after subscription simplification)
     let query = supabaseAdminClient
       .from('profiles')
       .select(`
@@ -155,12 +154,11 @@ serve(async (req: Request) => {
         stripe_customer_id,
         subscription_status,
         total_uploads,
-        uploads_this_month,
-        uploads_reset_date
+        billing_period
       `);
 
-    // Apply filters
-    if (role && ['user', 'admin', 'super_admin'].includes(role)) {
+    // Apply filters (updated to remove 'super_admin' role)
+    if (role && ['user', 'admin'].includes(role)) {
       query = query.eq('role', role);
     }
 
@@ -208,7 +206,7 @@ serve(async (req: Request) => {
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    if (role && ['user', 'admin', 'super_admin'].includes(role)) {
+    if (role && ['user', 'admin'].includes(role)) {
       countQuery = countQuery.eq('role', role);
     }
     if (userIds) {
@@ -290,11 +288,10 @@ serve(async (req: Request) => {
     console.error("Error stack:", error.stack);
     console.error("Error message:", error.message);
     console.error("Error name:", error.name);
+    // 🔒 SECURITY: Don't expose error details in production
     return new Response(
-      JSON.stringify({ 
-        error: error.message || "Internal Server Error",
-        stack: error.stack,
-        name: error.name 
+      JSON.stringify({
+        error: "Internal server error"
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

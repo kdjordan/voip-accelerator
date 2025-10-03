@@ -76,17 +76,17 @@ serve(async (req: Request) => {
       );
     }
 
-    // Verify admin role
+    // Verify admin role (updated to use 'admin' after simplification)
     const { data: requestingUserProfile, error: profileError } = await supabaseAdminClient
       .from('profiles')
       .select('role')
       .eq('id', requestingUser.id)
       .single();
 
-    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'super_admin') {
-      console.error("Access denied: User is not a super admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
+    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'admin') {
+      console.error("Access denied: User is not an admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
       return new Response(
-        JSON.stringify({ error: "Access denied. Super admin role required." }),
+        JSON.stringify({ error: "Access denied. Admin role required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
@@ -117,14 +117,13 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validate allowed fields for updates
+    // Validate allowed fields for updates (updated after subscription simplification)
     const allowedFields = [
-      'role', 
-      'subscription_status', 
+      'role',
+      'subscription_status',
       'plan_expires_at',
       'total_uploads',
-      'uploads_this_month',
-      'uploads_reset_date'
+      'billing_period'
     ];
     
     const filteredUpdates = Object.keys(updates)

@@ -9,7 +9,7 @@
     />
     
     <h1 class="mb-2 relative">
-      <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
+      <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
         US Rate Deck Analyzer
       </span>
       <!-- Info Icon Button -->

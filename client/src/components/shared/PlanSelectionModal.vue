@@ -8,7 +8,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-700">
         <div>
-          <h2 class="text-2xl font-bold text-white">Upgrade Your Subscription</h2>
+          <h2 class="text-2xl font-bold text-white">Upgrade Your Subscription</h2>  
           <p class="text-gray-400 mt-1">Choose the perfect plan for your needs</p>
         </div>
         <button

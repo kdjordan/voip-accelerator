@@ -1,13 +1,13 @@
 <template>
   <div class="flex flex-col gap-8 w-full">
     <!-- Upload Zones Box -->
-    <div class="overflow-x-auto">
-      <div class="bg-gray-800 rounded-b-lg p-6">
+    <div class="w-full">
+      <div class="bg-gray-800 rounded-b-lg p-4 md:p-6">
         <div class="pb-4 mb-6">
-          <!-- Change from grid to flex layout -->
-          <div class="flex w-full gap-6">
+          <!-- Responsive: stack vertically on mobile, side-by-side on desktop -->
+          <div class="flex flex-col md:flex-row w-full gap-6">
             <!-- Left Side: First Upload Zone and Single File Report -->
-            <div class="w-1/2 pr-6">
+            <div class="w-full md:w-1/2 md:pr-6">
               <!-- Conditionally render Drop Zone or Code Summary -->
               <template v-if="usStore.isComponentDisabled('us1')">
                 <USCodeSummary 
@@ -97,11 +97,11 @@
               </template>
             </div>
 
-            <!-- Vertical Divider -->
-            <div class="mx-4 border-l border-gray-700/50"></div>
+            <!-- Vertical Divider - hidden on mobile, shown on desktop -->
+            <div class="hidden md:block mx-4 border-l border-gray-700/50"></div>
 
             <!-- Right Side: Second Upload Zone -->
-            <div class="w-1/2 pl-6">
+            <div class="w-full md:w-1/2 md:pl-6">
               <!-- Conditionally render Drop Zone or Code Summary for us2 -->
               <template v-if="usStore.isComponentDisabled('us2')">
                 <USCodeSummary 

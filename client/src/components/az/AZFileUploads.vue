@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col gap-8 w-full">
     <!-- Upload Zones Box -->
-    <div class="overflow-x-auto">
-      <div class="bg-gray-800 rounded-b-lg p-6">
+    <div class="w-full">
+      <div class="bg-gray-800 rounded-b-lg p-4 md:p-6">
         <!-- Single File Analysis Section (Only visible when one file is uploaded) -->
         <div
           v-if="azStore.hasSingleFileReport && !azStore.isFull && !azStore.reportsGenerated"
@@ -10,10 +10,10 @@
         ></div>
 
         <div class="pb-4 mb-6">
-          <!-- Horizontal Layout for Upload Zones -->
-          <div class="flex w-full max-w-full gap-6 overflow-x-hidden">
+          <!-- Responsive: stack vertically on mobile, side-by-side on desktop -->
+          <div class="flex flex-col md:flex-row w-full gap-6">
             <!-- Left Side: First Upload Zone and Single File Report -->
-            <div class="flex-1 min-w-0 max-w-full overflow-hidden">
+            <div class="w-full md:w-1/2 md:pr-6">
               <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
               <template v-if="!azStore.isComponentDisabled('az1')">
                 <!-- First Upload Zone (Only visible when no file is uploaded) -->
@@ -113,11 +113,11 @@
               </template>
             </div>
 
-            <!-- Vertical Divider -->
-            <div class="mx-4 border-l border-gray-700/50"></div>
+            <!-- Vertical Divider - hidden on mobile, shown on desktop -->
+            <div class="hidden md:block mx-4 border-l border-gray-700/50"></div>
 
             <!-- Right Side: Second Upload Zone -->
-            <div class="flex-1 min-w-0 max-w-full overflow-hidden">
+            <div class="w-full md:w-1/2 md:pl-6">
               <!-- Conditionally show Drop Zone OR Code Summary + Remove Button -->
               <template v-if="!azStore.isComponentDisabled('az2')">
                 <!-- Second Upload Zone (Only visible when no file is uploaded) -->

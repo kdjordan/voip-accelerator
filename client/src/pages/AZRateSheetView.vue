@@ -9,7 +9,7 @@
     />
     
     <h1 class="mb-2 relative">
-      <span class="text-3xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
+      <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >AZ Rate Sheet Wizard
       </span>
       <!-- Info Icon Button -->
@@ -332,6 +332,7 @@
 
   // Info Modal state
   const showInfoModal = ref(false);
+  const showPlanSelectorModal = ref(false);
 
   const azInvalidRowEntries = computed((): InvalidRowEntry[] => {
     if (!store.invalidRows) return [];

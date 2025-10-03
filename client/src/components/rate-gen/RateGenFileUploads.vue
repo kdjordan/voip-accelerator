@@ -446,9 +446,9 @@ const formatRate = (rate: number | undefined): string => {
     <TestDataLoader />
     
     <!-- Upload Zones Container -->
-    <div class="overflow-x-auto">
-      <div class="bg-gray-800 rounded-lg p-6 w-full">
-        <div class="grid grid-cols-2 gap-6">
+    <div class="w-full">
+      <div class="bg-gray-800 rounded-lg p-4 md:p-6 w-full">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Left Column -->
           <div class="space-y-6">
             <!-- Provider 1 Zone -->

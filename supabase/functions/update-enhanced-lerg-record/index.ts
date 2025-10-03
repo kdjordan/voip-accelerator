@@ -107,7 +107,7 @@ serve(async (req: Request) => {
   // Get the origin from the request headers
   const origin = req.headers.get('origin');
   const corsHeaders = getCorsHeaders(origin);
-  
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -115,20 +115,14 @@ serve(async (req: Request) => {
   console.log("[update-enhanced-lerg-record] Function invoked");
 
   try {
-    const payload: UpdateEnhancedLergRecordPayload = await req.json();
-    console.log(`[update-enhanced-lerg-record] Updating NPA ${payload.npa}`);
-
-    // Validate the payload
-    const { valid, errors } = await validateUpdatePayload(payload);
-    if (!valid) {
-      console.log("[update-enhanced-lerg-record] Validation failed:", errors);
+    // 🔒 SECURITY: Verify authentication before allowing LERG modifications
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("[update-enhanced-lerg-record] Missing Authorization header");
       return new Response(
-        JSON.stringify({ 
-          error: "Validation failed", 
-          details: errors 
-        }),
+        JSON.stringify({ error: "Missing Authorization header" }),
         {
-          status: 400,
+          status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -138,6 +132,63 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace(/^Bearer\s+/, "");
+    const { data: { user }, error: userError } = await serviceClient.auth.getUser(jwt);
+
+    if (userError || !user) {
+      console.error("[update-enhanced-lerg-record] Authentication failed:", userError);
+      return new Response(
+        JSON.stringify({ error: "Authentication failed" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 🔒 CRITICAL: Verify admin role
+    const { data: userProfile, error: profileError } = await serviceClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !userProfile || userProfile.role !== 'admin') {
+      console.error("[update-enhanced-lerg-record] Access denied: User is not an admin", {
+        userId: user.id,
+        role: userProfile?.role
+      });
+      return new Response(
+        JSON.stringify({ error: "Access denied. Admin role required." }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log(`[update-enhanced-lerg-record] Admin user ${user.id} authenticated`);
+
+    const payload: UpdateEnhancedLergRecordPayload = await req.json();
+    console.log(`[update-enhanced-lerg-record] Updating NPA ${payload.npa}`);
+
+    // Validate the payload
+    const { valid, errors } = await validateUpdatePayload(payload);
+    if (!valid) {
+      console.log("[update-enhanced-lerg-record] Validation failed:", errors);
+      return new Response(
+        JSON.stringify({
+          error: "Validation failed",
+          details: errors
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Check if the record exists first
     console.log(`[update-enhanced-lerg-record] Checking if NPA ${payload.npa} exists`);
@@ -243,7 +294,11 @@ serve(async (req: Request) => {
 
 /* 
 To deploy:
-supabase functions deploy update-enhanced-lerg-record --no-verify-jwt
+supabase functions deploy update-enhanced-lerg-record
+
+🔒 SECURITY UPDATE: JWT verification now required (removed --no-verify-jwt flag)
+- Admin authentication required to update LERG records
+- Prevents unauthorized data manipulation
 
 This function updates existing records in the enhanced_lerg table:
 - Partial updates (only update fields that are provided)
