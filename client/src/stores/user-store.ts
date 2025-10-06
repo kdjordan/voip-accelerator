@@ -141,11 +141,11 @@ export const useUserStore = defineStore('user', {
       }
       
       // Check for subscription expiry
-      else if ((subscriptionStatus === 'monthly' || subscriptionStatus === 'annual' || subscriptionStatus === 'active') && profile.current_period_end) {
+      else if (subscriptionStatus === 'active' && profile.current_period_end) {
         const subscriptionEnd = new Date(profile.current_period_end);
         if (now >= subscriptionEnd) {
-          const planType = subscriptionStatus === 'monthly' ? 'monthly plan' : 
-                          subscriptionStatus === 'annual' ? 'annual membership' : 'subscription';
+          const planType = profile.billing_period === 'monthly' ? 'monthly plan' :
+                          profile.billing_period === 'annual' ? 'annual membership' : 'subscription';
           return {
             show: true,
             message: `Your ${planType} has expired. Please renew to continue service.`,
@@ -448,7 +448,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async signUp(email: string, password: string, userAgent: string, selectedTier?: SubscriptionTier, isTrialSignup: boolean = true) {
+    async signUp(email: string, password: string, userAgent: string) {
       this.auth.isLoading = true;
       this.auth.error = null;
       try {
@@ -460,8 +460,6 @@ export const useUserStore = defineStore('user', {
             emailRedirectTo: callbackUrl,
             data: {
               user_agent: userAgent,
-              selected_tier: selectedTier,
-              is_trial_signup: isTrialSignup,
             },
           },
         });
@@ -473,10 +471,10 @@ export const useUserStore = defineStore('user', {
             data.user.id,
             'Check email for confirmation.'
           );
-          
-          // Tier and signup type are now stored in user metadata, no localStorage needed
-          console.log(`User signup completed with tier ${selectedTier} (${isTrialSignup ? 'trial' : 'paid'})`);
-          
+
+          // All signups start with 7-day trial
+          console.log('User signup completed - 7-day trial will start after email confirmation');
+
           // Indicate confirmation needed to the UI if desired
           return { user: data.user, error: null };
         } else if (data.session && data.user) {
@@ -485,25 +483,7 @@ export const useUserStore = defineStore('user', {
           this.auth.user = data.user;
           this.auth.isAuthenticated = true;
           await this.fetchProfile(data.user.id);
-          
-          // Set trial tier if provided
-          if (selectedTier) {
-            try {
-              const { error: tierError } = await supabase.functions.invoke('set-trial-tier', {
-                body: { selectedTier }
-              });
-              if (tierError) {
-                console.error('Failed to set trial tier:', tierError);
-              } else {
-                console.log(`Trial tier set to: ${selectedTier}`);
-                // Refresh profile to get updated tier
-                await this.fetchProfile(data.user.id);
-              }
-            } catch (error) {
-              console.error('Error setting trial tier:', error);
-            }
-          }
-          
+
           return { user: data.user, error: null }; // Successful return
         } else {
           // Handle unexpected cases where neither user nor session is returned,

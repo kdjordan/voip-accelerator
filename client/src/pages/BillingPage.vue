@@ -18,159 +18,102 @@
     <div v-else class="flex justify-center p-6">
     <!-- Main Content -->
     <div class="bg-gray-800 rounded-lg p-8 shadow-lg border border-gray-700 max-w-lg">
-      <!-- Subscription Plans Header -->
+      <!-- Header -->
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-white mb-2">
-          {{ userTier ? 'Complete Your Subscription' : 'Choose Your Plan' }}
+          {{ userTier ? 'Complete Your Subscription' : 'Choose Your Billing' }}
         </h1>
         <p class="text-gray-400 max-w-xl mx-auto">
-          {{ userTier 
+          {{ userTier
             ? isAutoCheckout
-              ? `Complete your ${getTierDisplayName(userTier)} subscription to get started.`
-              : `Your 7-day trial has ended. Subscribe to ${getTierDisplayName(userTier)} to continue.`
-            : 'Select the perfect plan for your VoIP business and unlock all rate sheet management tools.'
+              ? `Accelerator Plan - Unlimited Everything`
+              : `Your 7-day trial has ended. Subscribe to continue.`
+            : 'Accelerator Plan - Unlimited Everything'
           }}
         </p>
       </div>
 
-      <!-- Pricing Cards -->
-      <!-- Optimizer Plan -->
-      <div v-if="!userTier || userTier === 'optimizer'">
-        <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600 mb-6">
-          <div class="text-center">
-            <h3 class="text-xl font-bold text-white mb-2">Optimizer</h3>
-            <div class="mb-6">
-              <span class="text-4xl font-bold text-white">$99</span>
-              <span class="text-gray-400">/month</span>
-            </div>
-            
-            <ul class="space-y-2 text-left mb-6 text-sm">
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                100 uploads per month
-              </li>
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                Perfect for getting started
-              </li>
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                {{ isAutoCheckout ? 'Get started today' : '7-day free trial ended' }}
-              </li>
-            </ul>
-            
-            <BaseButton
-              @click="selectPlan('optimizer')"
-              variant="primary"
-              size="standard"
-              class="w-full"
-              :loading="loading"
-              :disabled="loading"
-            >
-              <span v-if="loading">Processing...</span>
-              <span v-else>{{ userTier === 'optimizer' ? 'Continue with Optimizer' : 'Choose Optimizer' }}</span>
-            </BaseButton>
-            
-            <!-- Plan selection for trial users -->
-            <div v-if="!isCurrentSubscriber" class="mt-4 text-center">
-              <button 
-                @click="showPlanSelector = true"
-                class="text-sm text-gray-400 hover:text-accent transition-colors underline"
-              >
-                Want more features? Compare all plans
-              </button>
-            </div>
-            
-            <!-- Upgrade Hint for Current Subscribers -->
-            <div v-if="isCurrentSubscriber && userTier === 'optimizer'" class="mt-4 p-3 bg-accent/10 border border-accent/30 rounded-lg">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm text-accent font-medium">Need more power?</p>
-                  <p class="text-xs text-gray-400">Upgrade to Accelerator for unlimited uploads</p>
-                </div>
-                <BaseButton
-                  @click="showUpgradeModal = true"
-                  variant="secondary"
-                  size="small"
-                >
-                  Upgrade
-                </BaseButton>
-              </div>
-            </div>
-          </div>
+      <!-- Billing Period Toggle -->
+      <div class="flex justify-center mb-8">
+        <div class="bg-gray-700 rounded-lg p-1 inline-flex">
+          <button
+            @click="selectedBillingPeriod = 'monthly'"
+            class="px-6 py-2 rounded-md text-sm font-medium transition-all"
+            :class="selectedBillingPeriod === 'monthly'
+              ? 'bg-accent text-white shadow-lg'
+              : 'text-gray-300 hover:text-white'"
+          >
+            Monthly
+          </button>
+          <button
+            @click="selectedBillingPeriod = 'annual'"
+            class="px-6 py-2 rounded-md text-sm font-medium transition-all relative"
+            :class="selectedBillingPeriod === 'annual'
+              ? 'bg-accent text-white shadow-lg'
+              : 'text-gray-300 hover:text-white'"
+          >
+            Annual
+            <span class="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+              Save $189
+            </span>
+          </button>
         </div>
       </div>
 
-      <!-- Accelerator Plan -->
-      <div v-if="!userTier || userTier === 'accelerator'">
-        <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600 mb-6 relative">
-          <!-- Most Popular Badge -->
-          <div v-if="!userTier" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
-            <span class="bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">
-              MOST POPULAR
+      <!-- Accelerator Plan Card -->
+      <div class="bg-gray-700/50 rounded-lg p-6 border-2 border-accent/30 mb-6 relative">
+        <!-- Most Popular Badge -->
+        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+          <span class="bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">
+            MOST POPULAR
+          </span>
+        </div>
+
+        <div class="text-center">
+          <h3 class="text-2xl font-bold text-white mb-2">Accelerator</h3>
+          <div class="mb-6">
+            <span class="text-4xl font-bold text-white">
+              {{ selectedBillingPeriod === 'monthly' ? '$99' : '$999' }}
+            </span>
+            <span class="text-gray-400">
+              {{ selectedBillingPeriod === 'monthly' ? '/month' : '/year' }}
             </span>
           </div>
-          
-          <div class="text-center">
-            <h3 class="text-xl font-bold text-white mb-2">Accelerator</h3>
-            <div class="mb-6">
-              <span class="text-4xl font-bold text-white">$249</span>
-              <span class="text-gray-400">/month</span>
-            </div>
-            
-            <ul class="space-y-2 text-left mb-6 text-sm">
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <strong>Unlimited uploads</strong>
-              </li>
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                Best for growing businesses
-              </li>
-              <li class="flex items-center text-gray-300">
-                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                {{ isAutoCheckout ? 'Get started today' : '7-day free trial ended' }}
-              </li>
-            </ul>
-            
-            <BaseButton
-              @click="selectPlan('accelerator')"
-              variant="primary"
-              size="standard"
-              class="w-full"
-              :loading="loading"
-              :disabled="loading"
-            >
-              <span v-if="loading">Processing...</span>
-              <span v-else>{{ userTier === 'accelerator' ? 'Continue with Accelerator' : 'Choose Accelerator' }}</span>
-            </BaseButton>
-            
-          </div>
-        </div>
-      </div>
 
-      <!-- Delete Account Option (only show for trial users, not paid signups) -->
-      <div v-if="!isAutoCheckout" class="text-center mt-6">
-        <p class="text-gray-400 text-sm mb-3">Changed your mind?</p>
-        <BaseButton
-          @click="handleDeleteAccount"
-          variant="destructive"
-          size="small"
-        >
-          Delete Account
-        </BaseButton>
+          <ul class="space-y-3 text-left mb-6">
+            <li class="flex items-center text-gray-300">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <span class="font-medium">Unlimited uploads</span>
+            </li>
+            <li class="flex items-center text-gray-300">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              Best for growing businesses
+            </li>
+            <li class="flex items-center text-gray-300">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              {{ isAutoCheckout ? 'Get started today' : '7-day free trial ended' }}
+            </li>
+          </ul>
+
+          <BaseButton
+            @click="selectPlan()"
+            variant="primary"
+            size="standard"
+            class="w-full"
+            :loading="loading"
+            :disabled="loading"
+          >
+            <span v-if="loading">Processing...</span>
+            <span v-else>Subscribe {{ selectedBillingPeriod === 'monthly' ? 'Monthly' : 'Annually' }}</span>
+          </BaseButton>
+
+        </div>
       </div>
 
       <!-- Footer -->
@@ -180,15 +123,7 @@
     </div> <!-- Close the bento div -->
     </div> <!-- Close the v-else div -->
 
-    <!-- Upgrade Modal -->
-    <UpgradeModal 
-      v-if="showUpgradeModal"
-      :current-tier="userTier"
-      @close="showUpgradeModal = false"
-      @upgrade="handleUpgrade"
-    />
-
-    <!-- Plan Selector Modal for Trial Users -->
+    <!-- Plan Selector Modal -->
     <PlanSelectorModal 
       v-if="showPlanSelector"
       :is-trial-expired="isExpired"
@@ -206,17 +141,15 @@ import { useUserStore } from '@/stores/user-store';
 import { useToast } from '@/composables/useToast';
 import BaseButton from '@/components/shared/BaseButton.vue';
 import SubscriptionManagement from '@/components/profile/SubscriptionManagement.vue';
-import UpgradeModal from '@/components/billing/UpgradeModal.vue';
 import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
-import type { SubscriptionTier } from '@/types/user-types';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const { showError, showSuccess } = useToast();
 const loading = ref(false);
-const showUpgradeModal = ref(false);
 const showPlanSelector = ref(false);
+const selectedBillingPeriod = ref<'monthly' | 'annual'>('monthly');
 
 // Check if this is a paid signup (redirected from router guard)
 const isAutoCheckout = computed(() => route.query.autoCheckout === 'true');
@@ -248,24 +181,22 @@ const isCurrentSubscriber = computed(() => {
   return hasActiveSubscription.value && userStore.getUserProfile?.subscription_tier;
 });
 
-async function selectPlan(tier: SubscriptionTier) {
-  console.log('selectPlan called with tier:', tier);
+async function selectPlan() {
+  console.log('selectPlan called with billingPeriod:', selectedBillingPeriod.value);
   try {
     loading.value = true;
-    
-    // Map tier to Stripe price ID
-    let priceId = '';
-    if (tier === 'optimizer') {
-      priceId = import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER;
-      console.log('Optimizer price ID from env:', priceId);
-    } else if (tier === 'accelerator') {
-      priceId = import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR;
-    }
-    
+
+    // Map billing period to Stripe price ID
+    const priceId = selectedBillingPeriod.value === 'annual'
+      ? import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR
+      : import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+
+    console.log(`${selectedBillingPeriod.value} price ID from env:`, priceId);
+
     if (!priceId) {
-      throw new Error('Invalid plan selected');
+      throw new Error('Invalid billing period selected');
     }
-    
+
     await stripeService.createCheckoutSession({
       priceId,
       successUrl: `${window.location.origin}/dashboard?subscription=success`,
@@ -292,47 +223,10 @@ function handleReturnToDashboard() {
   router.push(redirectPath || '/dashboard');
 }
 
-async function handleDeleteAccount() {
-  // Navigate to dashboard where the delete account modal can be triggered
-  router.push('/dashboard?action=delete-account');
-}
-
-async function handleUpgrade(targetTier: SubscriptionTier) {
-  try {
-    loading.value = true;
-    showUpgradeModal.value = false;
-    
-    // Get current subscription details
-    const profile = userStore.getUserProfile;
-    if (!profile?.subscription_id) {
-      throw new Error('No active subscription found');
-    }
-    
-    // Call upgrade service with prorating
-    await stripeService.upgradeSubscription({
-      subscriptionId: profile.subscription_id,
-      newTier: targetTier,
-      currentTier: profile.subscription_tier
-    });
-    
-    showSuccess(`Successfully upgraded to ${getTierDisplayName(targetTier)}!`);
-    
-    // Refresh user profile to get updated tier
-    if (userStore.getUser?.id) {
-      await userStore.fetchProfile(userStore.getUser.id);
-    }
-    
-  } catch (error) {
-    console.error('Upgrade error:', error);
-    showError(error instanceof Error ? error.message : 'Failed to upgrade subscription');
-  } finally {
-    loading.value = false;
-  }
-}
-
-function handlePlanSelection(tier: SubscriptionTier) {
+function handlePlanSelection(billingPeriod: 'monthly' | 'annual') {
   showPlanSelector.value = false;
-  selectPlan(tier);
+  selectedBillingPeriod.value = billingPeriod;
+  selectPlan();
 }
 
 onMounted(async () => {

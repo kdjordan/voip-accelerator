@@ -84,7 +84,7 @@ const props = defineProps<Props>()
 
 // Emits
 const emit = defineEmits<{
-  'role-changed': [role: 'user' | 'admin' | 'superadmin']
+  'role-changed': [role: 'user' | 'admin']
 }>()
 
 // Local state
@@ -93,12 +93,11 @@ const isLoading = ref(false)
 // Role options
 const roles = [
   { value: 'user', name: 'User' },
-  { value: 'admin', name: 'Admin' },
-  { value: 'superadmin', name: 'Super Admin' }
+  { value: 'admin', name: 'Admin' }
 ]
 
 // Methods
-async function handleRoleChange(newRole: 'user' | 'admin' | 'superadmin') {
+async function handleRoleChange(newRole: 'user' | 'admin') {
   if (newRole === props.currentRole) {
     return
   }
@@ -120,12 +119,10 @@ async function handleRoleChange(newRole: 'user' | 'admin' | 'superadmin') {
 }
 
 function getConfirmMessage(currentRole: string, newRole: string): string {
-  if (newRole === 'superadmin') {
-    return `Are you sure you want to grant Super Admin privileges? This gives the user full system access.`
-  } else if (newRole === 'admin') {
+  if (newRole === 'admin') {
     return `Are you sure you want to grant Admin privileges? This allows the user to manage other users.`
-  } else if (currentRole === 'superadmin' || currentRole === 'admin') {
-    return `Are you sure you want to remove ${currentRole} privileges and make this user a regular User?`
+  } else if (currentRole === 'admin') {
+    return `Are you sure you want to remove admin privileges and make this user a regular User?`
   }
   return `Are you sure you want to change this user's role to ${newRole}?`
 }
@@ -137,8 +134,6 @@ function getRoleDisplayName(role: string): string {
 
 function getRoleColorClass(role: string): string {
   switch (role) {
-    case 'superadmin':
-      return 'text-red-400 ring-red-500/30'
     case 'admin':
       return 'text-yellow-400 ring-yellow-500/30'
     case 'user':

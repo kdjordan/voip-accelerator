@@ -91,6 +91,8 @@
     '/pricing',
     '/login',
     '/signup',
+    '/forgot-password',
+    '/reset-password',
     '/terms-and-conditions',
     '/privacy-policy',
     '/:pathMatch(.*)*', // Add catch-all for 404 page
@@ -102,6 +104,10 @@
     '/home',
     '/about',
     '/pricing',
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
     '/terms-and-conditions',
     '/privacy-policy',
     '/:pathMatch(.*)*', // Add catch-all for 404 page

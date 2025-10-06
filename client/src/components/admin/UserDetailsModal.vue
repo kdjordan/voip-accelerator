@@ -486,9 +486,9 @@ async function loadUserActivity() {
   }
 }
 
-async function handleRoleChange(role: 'user' | 'admin' | 'superadmin') {
+async function handleRoleChange(role: 'user' | 'admin') {
   if (!props.user) return
-  
+
   try {
     await updateUserRole(props.user.id, role)
     emit('update-user', { ...props.user, role, updated_at: new Date().toISOString() })

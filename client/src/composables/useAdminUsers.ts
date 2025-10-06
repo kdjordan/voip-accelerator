@@ -21,7 +21,7 @@ interface GetUsersResponse {
 interface UpdateUserRequest {
   userId: string
   updates: {
-    role?: 'user' | 'admin' | 'super_admin'
+    role?: 'user' | 'admin'
     subscription_status?: string
     plan_expires_at?: string
     total_uploads?: number
@@ -126,7 +126,7 @@ export function useAdminUsers() {
   }
 
   // Update user role or other profile data
-  async function updateUserRole(userId: string, role: 'user' | 'admin' | 'super_admin'): Promise<void> {
+  async function updateUserRole(userId: string, role: 'user' | 'admin'): Promise<void> {
     try {
       isLoading.value = true
       error.value = null

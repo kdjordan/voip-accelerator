@@ -52,12 +52,6 @@ const router = createRouter({
       redirect: '/rate-gen/us',
     },
     {
-      path: '/admin/lerg',
-      name: 'AdminLerg',
-      component: () => import('@/pages/AdminView.vue'),
-      meta: { requiresAuth: true, requiresAdmin: true },
-    },
-    {
       path: '/terms-and-conditions',
       name: 'termsAndConditions',
       component: () => import('@/pages/TandCView.vue'),
@@ -86,6 +80,18 @@ const router = createRouter({
       name: 'SignUp',
       component: () => import('@/pages/auth/SignUpPage.vue'), // Adjust path if needed
       meta: { requiresAuth: false, hideWhenAuthed: true },
+    },
+    {
+      path: '/forgot-password',
+      name: 'ForgotPassword',
+      component: () => import('@/pages/ForgotPasswordPage.vue'),
+      meta: { requiresAuth: false, hideWhenAuthed: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'ResetPassword',
+      component: () => import('@/pages/ResetPasswordPage.vue'),
+      meta: { requiresAuth: false },
     },
     {
       path: '/auth/callback',
@@ -137,7 +143,7 @@ const authRequiredRoutes = [
   '/azview',
   '/usview',
   '/rate-gen',
-  '/admin/lerg',
+  '/admin',
   '/billing',
   // Add any other admin routes from adminRoutes if needed
 ];
@@ -168,7 +174,7 @@ const publicOnlyRoutes = [
 ];
 
 // Transitional or non-content pages for authenticated users to be redirected from
-const transitionalAuthRoutes = ['/login', '/signup', '/auth/callback', '/']; // Added root '/' and '/auth/callback'
+const transitionalAuthRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/']; // Added root '/', '/auth/callback', and '/forgot-password'
 
 // Helper function to wait for auth initialization
 async function waitForAuthInitialization(
@@ -291,6 +297,14 @@ async function checkSubscriptionStatus(userId: string): Promise<boolean> {
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
 
+  // ALWAYS allow password reset page regardless of auth state
+  // This must be first to prevent any redirects during password recovery
+  if (to.name === 'ResetPassword' || to.path === '/reset-password') {
+    console.log('[NavGuard] Password reset page - allowing access');
+    next();
+    return;
+  }
+
   if (!userStore.getAuthIsInitialized) {
     console.warn('[NavGuard] Auth store not yet initialized. Waiting for initialization...');
     await waitForAuthInitialization(userStore);
@@ -312,20 +326,21 @@ router.beforeEach(async (to, from, next) => {
   const isAdmin = userStore.isAdmin; // Use the isAdmin getter
 
   if (isAuthenticated) {
+
     // Check if user needs to complete billing (paid tier but no stripe_customer_id)
     // Skip this check if already going to billing page or returning from Stripe
     const isReturningFromStripe = to.query.subscription === 'success' || from.name === 'billing';
-    
+
     if (to.name !== 'billing' && !isReturningFromStripe && userStore.shouldRedirectToBilling) {
       console.log('[Router] User needs to complete billing, redirecting...');
       const tier = userStore.getUserProfile?.subscription_tier;
-      next({ 
-        name: 'billing', 
-        query: { tier, autoCheckout: 'true' } 
+      next({
+        name: 'billing',
+        query: { tier, autoCheckout: 'true' }
       });
       return;
     }
-    
+
     if (isTransitionalRoute && to.name !== 'dashboard') {
       // Avoid redirect loop
       next({ name: 'dashboard' });

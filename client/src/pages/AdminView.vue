@@ -9,8 +9,8 @@
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
       
-      <!-- User Management (Super Admin Only) -->
-      <UserManagement v-if="isSuperAdmin" />
+      <!-- User Management (Admin Only) -->
+      <UserManagement v-if="isAdmin" />
     </div>
 
     <!-- New Preview Modal -->
@@ -79,8 +79,8 @@
   const showLergSection = ref(false);
   const showAddLergSection = ref(true);
 
-  // Check if user is super_admin
-  const isSuperAdmin = computed(() => userStore.isSuperAdmin);
+  // Check if user is admin
+  const isAdmin = computed(() => userStore.isAdmin);
 
   const isLergLocallyStored = computed(() => {
     return store.$state.isLoaded;

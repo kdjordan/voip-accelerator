@@ -201,7 +201,7 @@ defineEmits<{
   'user-selected': [userId: string]
   'select-all': []
   'user-details': [user: UserProfile]
-  'update-role': [userId: string, role: 'user' | 'admin' | 'superadmin']
+  'update-role': [userId: string, role: 'user' | 'admin']
   'toggle-status': [userId: string, isActive: boolean]
 }>()
 

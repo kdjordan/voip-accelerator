@@ -34,12 +34,13 @@
       </div>
     </div>
 
-    <!-- Add Forgot Password Link Later -->
-    <!-- <div class="flex items-center justify-between">
+    <div class="flex items-center justify-end">
       <div class="text-sm leading-6">
-        <a href="#" class="font-semibold text-accent hover:text-accent-hover">Forgot password?</a>
+        <router-link to="/forgot-password" class="font-semibold text-accent hover:text-accent-hover">
+          Forgot password?
+        </router-link>
       </div>
-    </div> -->
+    </div>
 
     <div v-if="errorMessage" class="mt-4 text-center text-sm text-red-400">
       {{ errorMessage }}

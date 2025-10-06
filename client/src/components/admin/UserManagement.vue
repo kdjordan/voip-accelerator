@@ -343,7 +343,7 @@ const selectedUser = ref<UserProfile | null>(null)
 
 // Computed
 const adminCount = computed(() => {
-  return store.state.users.filter(user => ['admin', 'super_admin'].includes(user.role)).length
+  return store.state.users.filter(user => user.role === 'admin').length
 })
 
 const activeCount = computed(() => {
@@ -355,8 +355,7 @@ const activeCount = computed(() => {
 const roleFilterOptions = [
   { value: '', name: 'All Roles' },
   { value: 'user', name: 'Users' },
-  { value: 'admin', name: 'Admins' },
-  { value: 'super_admin', name: 'Super Admins' }
+  { value: 'admin', name: 'Admins' }
 ]
 
 const statusFilterOptions = [
@@ -436,7 +435,7 @@ function closeUserDetails() {
   selectedUser.value = null
 }
 
-async function handleUpdateRole(userId: string, role: 'user' | 'admin' | 'superadmin') {
+async function handleUpdateRole(userId: string, role: 'user' | 'admin') {
   try {
     await updateUserRole(userId, role)
   } catch (err) {

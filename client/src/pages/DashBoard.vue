@@ -8,6 +8,13 @@
     
     <!-- Dashboard Content -->
     <div class="flex flex-col gap-6 mb-8 px-4">
+      <h1 class="relative">
+      <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
+        WELCOME BACK
+      </span>
+      <!-- Info Icon Button -->
+
+    </h1>
       <!-- Three Column Account Section -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Bento 1: Account Information -->
@@ -156,7 +163,7 @@
               </div>
               <h4 class="text-base font-semibold text-white">US Reporting</h4>
             </div>
-            <p class="text-sm text-gray-400">View US rate reports and analytics</p>
+            <p class="text-sm text-gray-400">Compare and analyze NPANXX rate decks</p>
           </button>
 
           <!-- AZ Reporting -->
@@ -170,7 +177,7 @@
               </div>
               <h4 class="text-base font-semibold text-white">AZ Reporting</h4>
             </div>
-            <p class="text-sm text-gray-400">View AZ rate reports and analytics</p>
+            <p class="text-sm text-gray-400">Compare and analyze AZ rate decks</p>
           </button>
 
           <!-- US Rate Wizard -->
@@ -184,7 +191,7 @@
               </div>
               <h4 class="text-base font-semibold text-white">US Rate Wizard</h4>
             </div>
-            <p class="text-sm text-gray-400">Manage and edit US rate sheets</p>
+            <p class="text-sm text-gray-400">Fine tune NPANXX rate decks</p>
           </button>
 
           <!-- AZ Rate Wizard -->
@@ -198,7 +205,7 @@
               </div>
               <h4 class="text-base font-semibold text-white">AZ Rate Wizard</h4>
             </div>
-            <p class="text-sm text-gray-400">Manage and edit AZ rate sheets</p>
+            <p class="text-sm text-gray-400">Fine tune AZ rate decks</p>
           </button>
 
           <!-- Rate Generation -->
@@ -212,7 +219,7 @@
               </div>
               <h4 class="text-base font-semibold text-white">Rate Generation</h4>
             </div>
-            <p class="text-sm text-gray-400">Generate new rate sheets and comparisons</p>
+            <p class="text-sm text-gray-400">Generate NPANXX rate decks from up to 5 providers</p>
           </button>
         </div>
       </div>
@@ -254,16 +261,7 @@
       @cancel="cancelCancelSubscription"
     />
 
-    <!-- Payment Modal -->
-    <PaymentModal 
-      v-if="showPaymentModal"
-      :preselected-tier="userStore.getTrialTier || userStore.getSubscriptionTier"
-      :show-all-plans="showAllPlansInModal"
-      @close="showPaymentModal = false; showAllPlansInModal = false"
-      @select-plan="handlePlanSelection"
-    />
-    
-    <!-- Plan Selector Modal -->
+    <!-- Plan Selector Modal (Unified for all subscription flows) -->
     <PlanSelectorModal
       v-if="showPlanSelectorModal"
       :is-trial-expired="true"
@@ -301,7 +299,6 @@
   import type { PlanTierType, SubscriptionTier } from '@/types/user-types'; // Import PlanTierType
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
-  import PaymentModal from '@/components/billing/PaymentModal.vue';
   import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
   import { supabase } from '@/utils/supabase';
   
@@ -314,10 +311,7 @@
   // Session heartbeat to detect force logouts
   const { checkSessionValidity } = useSessionHeartbeat();
   
-  // Payment modal state
-  const showPaymentModal = ref(false);
-  const showAllPlansInModal = ref(false); // Track if modal should show all plans
-  
+  // Plan selector modal state (unified for all subscription flows)
   const showPlanSelectorModal = ref(false);
   
   // Banner state from unified store logic
@@ -572,38 +566,30 @@
     }
   }
 
-  function handlePlanSelection(plan: 'monthly' | 'annual') {
-    showPaymentModal.value = false;
-    // PaymentModal will handle the checkout redirect
-  }
-  
   // Handler for upgrade clicked from expiry banner
   function handleUpgradeFromExpiry() {
-    showPlanSelectorModal.value = true; // Use PlanSelectorModal for expiry upgrades
+    showPlanSelectorModal.value = true;
   }
   
   // Handler for plan selection from PlanSelectorModal
-  async function handlePlanSelectorSelection(tier: SubscriptionTier) {
+  async function handlePlanSelectorSelection(billingPeriod: 'monthly' | 'annual') {
     showPlanSelectorModal.value = false;
-    
+
     try {
       const { createCheckoutSession } = useBilling();
-      
-      // Get the correct price ID based on selected tier
-      const priceIds = {
-        optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
-        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR
-      };
-      
-      const priceId = priceIds[tier];
-      
+
+      // Get the correct price ID based on billing period
+      const priceId = billingPeriod === 'annual'
+        ? import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR
+        : import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+
       if (!priceId) {
-        throw new Error(`Price ID not found for ${tier} plan`);
+        throw new Error(`Price ID not found for ${billingPeriod} plan`);
       }
-      
-      console.log(`🚀 Creating checkout session for ${tier} upgrade`);
-      await createCheckoutSession(priceId, tier);
-      
+
+      console.log(`🚀 Creating checkout session for ${billingPeriod} Accelerator plan`);
+      await createCheckoutSession(priceId, 'accelerator');
+
     } catch (error: any) {
       console.error('Upgrade checkout error:', error);
       alert(`Failed to start checkout: ${error.message}`);

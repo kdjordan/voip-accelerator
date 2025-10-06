@@ -61,9 +61,9 @@
     </div>
 
     <!-- Upgrade Modal -->
-    <PaymentModal 
+    <PlanSelectorModal
       v-if="showUpgradeModal"
-      :preselected-tier="userStore.getTrialTier || userStore.getSubscriptionTier"
+      :is-trial-expired="currentPlan === 'trial'"
       @close="showUpgradeModal = false"
       @select-plan="handlePlanSelection"
     />
@@ -76,7 +76,7 @@ import { useBilling } from '@/composables/useBilling';
 import { useUserStore } from '@/stores/user-store';
 import BaseButton from '@/components/shared/BaseButton.vue';
 import BaseBadge from '@/components/shared/BaseBadge.vue';
-import PaymentModal from './PaymentModal.vue';
+import PlanSelectorModal from './PlanSelectorModal.vue';
 
 const userStore = useUserStore();
 const { 
@@ -115,9 +115,26 @@ function formatDate(dateString: string) {
   });
 }
 
-async function handlePlanSelection(plan: 'monthly' | 'annual') {
+async function handlePlanSelection(billingPeriod: 'monthly' | 'annual') {
   showUpgradeModal.value = false;
-  // PaymentModal will handle the checkout redirect
+
+  try {
+    const { createCheckoutSession } = useBilling();
+
+    // Get the correct price ID based on billing period
+    const priceId = billingPeriod === 'annual'
+      ? import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR
+      : import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+
+    if (!priceId) {
+      throw new Error(`Price ID not found for ${billingPeriod} plan`);
+    }
+
+    console.log(`🚀 Creating checkout session for ${billingPeriod} Accelerator plan`);
+    await createCheckoutSession(priceId, 'accelerator');
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+  }
 }
 
 onMounted(async () => {

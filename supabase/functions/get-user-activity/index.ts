@@ -75,10 +75,10 @@ serve(async (req: Request) => {
       .eq('id', requestingUser.id)
       .single();
 
-    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'super_admin') {
-      console.error("Access denied: User is not a super admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
+    if (profileError || !requestingUserProfile || requestingUserProfile.role !== 'admin') {
+      console.error("Access denied: User is not an admin", { userId: requestingUser.id, role: requestingUserProfile?.role });
       return new Response(
-        JSON.stringify({ error: "Access denied. Super admin role required." }),
+        JSON.stringify({ error: "Access denied. Admin role required." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
