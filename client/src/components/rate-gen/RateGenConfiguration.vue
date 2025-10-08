@@ -181,10 +181,10 @@
       </ul>
       
       <!-- Inline Generation Progress -->
-      <InlineGenerationProgress 
+      <InlineGenerationProgress
         :is-generating="store.isGenerating"
         :progress="store.generationProgress"
-        :provider-count="providerCount"
+        :provider-count="selectedProviderCount"
       />
     </div>
   </div>

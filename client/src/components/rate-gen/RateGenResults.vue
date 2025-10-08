@@ -47,12 +47,8 @@
             <!-- Providers -->
             <td class="px-4 py-4">
               <div class="text-xs space-y-1">
-                <div v-for="provider in getProviderBreakdown(deck.id).slice(0, 3)" :key="provider.name" class="flex items-center">
-                  <span class="text-gray-300 truncate max-w-[120px]" :title="provider.name">{{ provider.name }}</span>
-                  <span class="text-gray-400 font-medium whitespace-nowrap">:&nbsp;{{ provider.percentage.toFixed(1) }}%</span>
-                </div>
-                <div v-if="getProviderBreakdown(deck.id).length > 3" class="text-gray-500 text-xs mt-1">
-                  +{{ getProviderBreakdown(deck.id).length - 3 }} more
+                <div v-for="provider in getProviderBreakdown(deck.id)" :key="provider.name">
+                  <span class="text-gray-300" :title="provider.name">{{ provider.name }}</span>
                 </div>
                 <div v-if="getProviderBreakdown(deck.id).length === 0" class="text-gray-400">
                   Calculating...
@@ -325,26 +321,45 @@ function formatDate(date: Date | string): string {
 // Calculate provider statistics for all decks
 async function calculateAllDeckProviderStats() {
   const { loadFromDexieDB } = dexieDB;
-  
+
   try {
     // Load all generated rates
     const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
-    
-    // Group by deckId and count providers
+
+    // Group by deckId and count ALL provider selections (inter, intra, indeterminate)
     const stats = new Map<string, Map<string, number>>();
-    
+
     for (const rate of allRates) {
-      if (!rate.deckId || !rate.selectedProvider) continue;
-      
+      if (!rate.deckId) continue;
+
       if (!stats.has(rate.deckId)) {
         stats.set(rate.deckId, new Map());
       }
-      
+
       const deckStats = stats.get(rate.deckId)!;
-      const currentCount = deckStats.get(rate.selectedProvider) || 0;
-      deckStats.set(rate.selectedProvider, currentCount + 1);
+
+      // Count all 3 jurisdictional selections if debug data exists
+      if (rate.debug?.selectedRates) {
+        // Interstate provider
+        const interProvider = rate.debug.selectedRates.inter?.provider;
+        if (interProvider) {
+          deckStats.set(interProvider, (deckStats.get(interProvider) || 0) + 1);
+        }
+
+        // Intrastate provider
+        const intraProvider = rate.debug.selectedRates.intra?.provider;
+        if (intraProvider) {
+          deckStats.set(intraProvider, (deckStats.get(intraProvider) || 0) + 1);
+        }
+
+        // Indeterminate provider
+        const indeterminateProvider = rate.debug.selectedRates.indeterminate?.provider;
+        if (indeterminateProvider) {
+          deckStats.set(indeterminateProvider, (deckStats.get(indeterminateProvider) || 0) + 1);
+        }
+      }
     }
-    
+
     deckProviderStats.value = stats;
   } catch (error) {
     console.error('Failed to calculate provider stats:', error);
@@ -355,13 +370,14 @@ async function calculateAllDeckProviderStats() {
 function getProviderBreakdown(deckId: string): Array<{name: string, count: number, percentage: number}> {
   const stats = deckProviderStats.value.get(deckId);
   if (!stats) return [];
-  
+
   const deck = allDecks.value.find(d => d.id === deckId);
   if (!deck) return [];
-  
-  const totalRates = deck.rowCount;
+
+  // Total rates = prefixes × 3 jurisdictions
+  const totalRates = deck.rowCount * 3;
   const breakdown: Array<{name: string, count: number, percentage: number}> = [];
-  
+
   stats.forEach((count, provider) => {
     breakdown.push({
       name: provider,
@@ -369,7 +385,7 @@ function getProviderBreakdown(deckId: string): Array<{name: string, count: numbe
       percentage: (count / totalRates) * 100
     });
   });
-  
+
   // Sort by percentage descending
   return breakdown.sort((a, b) => b.percentage - a.percentage);
 }
