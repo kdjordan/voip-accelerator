@@ -122,7 +122,7 @@
 
     <!-- Right Column: Configuration Summary -->
     <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600" role="region" aria-label="Configuration summary">
-      <h3 class="text-lg font-semibold text-fbWhite mb-4">Configuration Summary</h3>
+      <h3 class="text-lg font-semibold text-fbWhite mb-4">Deck Summary</h3>
       <ul class="space-y-3 text-sm text-gray-300">
         <li v-if="config.name">
           <span class="block text-gray-400 text-xs uppercase tracking-wide mb-1">Rate Deck Name</span>
@@ -143,28 +143,37 @@
           <span class="text-fbWhite font-medium">{{ formatDate(config.effectiveDate) }}</span>
         </li>
         <li>
-          <div class="bg-gray-800/50 rounded-lg overflow-hidden">
-            <!-- Provider Table Header -->
-            <div class="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-700/50 text-xs font-medium text-gray-400 uppercase tracking-wide">
-              <div>Provider</div>
-              <div class="text-right">Inter</div>
-              <div class="text-right">Intra</div>
-              <div class="text-right">Indeterm</div>
-            </div>
-            <!-- Provider Table Rows -->
-            <div v-for="provider in store.providerList" :key="provider.id" 
-                 class="grid grid-cols-4 gap-2 px-3 py-2 border-t border-gray-700/50 text-xs hover:bg-gray-700/30 transition-colors">
-              <div class="text-fbWhite font-medium truncate" :title="provider.name">
-                {{ provider.name }}
-              </div>
-              <div class="text-right text-gray-300 font-mono">
-                ${{ formatRate(provider.avgInterRate) }}
-              </div>
-              <div class="text-right text-gray-300 font-mono">
-                ${{ formatRate(provider.avgIntraRate) }}
-              </div>
-              <div class="text-right text-gray-300 font-mono">
-                ${{ formatRate(provider.avgIndeterminateRate) }}
+          <div class="space-y-2">
+            <!-- Provider List -->
+            <div class="space-y-2">
+              <div
+                v-for="provider in store.providerList"
+                :key="provider.id"
+                @click="toggleProvider(provider.id)"
+                class="flex items-start p-3 hover:bg-gray-600/50 cursor-pointer rounded-md border border-gray-600 bg-gray-700/50 hover:bg-gray-600/70"
+              >
+                <input
+                  type="checkbox"
+                  :id="`provider-checkbox-${provider.id}`"
+                  :checked="isProviderSelected(provider.id)"
+                  class="h-4 w-4 rounded border-gray-500 text-accent focus:ring-accent focus:ring-offset-gray-700 bg-gray-800 mt-0.5 mr-3 cursor-pointer flex-shrink-0"
+                  @click.stop
+                  @change="toggleProvider(provider.id)"
+                />
+                <div class="flex-1 min-w-0">
+                  <label
+                    :for="`provider-checkbox-${provider.id}`"
+                    class="text-sm font-medium text-fbWhite cursor-pointer block mb-2"
+                    :title="provider.name"
+                  >
+                    Provider: {{ provider.name }}
+                  </label>
+                  <div class="space-y-1 text-xs text-gray-400 font-mono">
+                    <div>INTER: ${{ formatRate(provider.avgInterRate) }}</div>
+                    <div>INTRA: ${{ formatRate(provider.avgIntraRate) }}</div>
+                    <div>INDETERM: ${{ formatRate(provider.avgIndeterminateRate) }}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -226,23 +235,39 @@ const config = ref({
   effectiveDate: getDefaultEffectiveDate(), // 7 days from today
 });
 
+// Provider selection state - all providers selected by default
+const selectedProviderIds = ref<Set<string>>(new Set());
+
+// Initialize selectedProviderIds when providers are loaded
+watch(() => store.providerList, (providers) => {
+  if (providers.length > 0 && selectedProviderIds.value.size === 0) {
+    selectedProviderIds.value = new Set(providers.map(p => p.id));
+  }
+}, { immediate: true });
+
 // Computed
 const providerCount = computed(() => store.providerCount);
+const selectedProviderCount = computed(() => selectedProviderIds.value.size);
 const minDate = computed(() => new Date().toISOString().split('T')[0]); // Today as minimum date
-const isConfigValid = computed(() => 
-  config.value.name && 
-  config.value.strategy && 
-  config.value.markupValue > 0
+const isConfigValid = computed(() =>
+  config.value.name &&
+  config.value.strategy &&
+  config.value.markupValue > 0 &&
+  selectedProviderIds.value.size >= 1 // Require at least 1 provider selected
+);
+const allProvidersSelected = computed(() =>
+  store.providerList.length > 0 &&
+  selectedProviderIds.value.size === store.providerList.length
 );
 
-// Watch for changes and update store
-watch(config, (newConfig) => {
-  if (newConfig.name && newConfig.strategy && newConfig.markupValue > 0) {
+// Watch for changes and update store (including provider selection)
+watch([config, selectedProviderIds], ([newConfig, newSelectedIds]) => {
+  if (newConfig.name && newConfig.strategy && newConfig.markupValue > 0 && newSelectedIds.size >= 1) {
     const lcrConfig: LCRConfig = {
       strategy: newConfig.strategy as any,
       markupPercentage: newConfig.markupType === 'percentage' ? newConfig.markupValue : 0,
       markupFixed: newConfig.markupType === 'fixed' ? newConfig.markupValue : 0,
-      providerIds: store.providerList.map(p => p.id),
+      providerIds: Array.from(newSelectedIds), // Only use selected provider IDs
       name: newConfig.name,
       effectiveDate: new Date(newConfig.effectiveDate),
     };
@@ -251,6 +276,31 @@ watch(config, (newConfig) => {
     store.setConfig(null);
   }
 }, { deep: true });
+
+// Provider selection methods
+function isProviderSelected(providerId: string): boolean {
+  return selectedProviderIds.value.has(providerId);
+}
+
+function toggleProvider(providerId: string) {
+  if (selectedProviderIds.value.has(providerId)) {
+    selectedProviderIds.value.delete(providerId);
+  } else {
+    selectedProviderIds.value.add(providerId);
+  }
+  // Trigger reactivity
+  selectedProviderIds.value = new Set(selectedProviderIds.value);
+}
+
+function toggleAllProviders() {
+  if (allProvidersSelected.value) {
+    // Deselect all
+    selectedProviderIds.value.clear();
+  } else {
+    // Select all
+    selectedProviderIds.value = new Set(store.providerList.map(p => p.id));
+  }
+}
 
 // Helper functions (getStrategyLabel removed as it's no longer needed)
 

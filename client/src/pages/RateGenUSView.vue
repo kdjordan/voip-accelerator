@@ -35,15 +35,16 @@ const canGenerate = computed(() =>
 // Methods
 const handleGenerateRates = async () => {
   if (!store.currentConfig) return;
-  
+
   try {
     await service.generateRateDeck(store.currentConfig);
-    // Note: Users can manually navigate to the Results tab to view generated decks
-    // or stay on Settings to adjust configuration and compare different strategies
 
     // Add success message using a temporary notification
     const successMessage = `Successfully generated ${store.generatedDeck?.rowCount.toLocaleString()} rates using ${store.generatedDeck?.lcrStrategy} strategy`;
     console.log('[RateGenUSView]', successMessage);
+
+    // Automatically switch to Results tab after successful generation
+    activeTab.value = 'results';
   } catch (error) {
     // Error is already handled with user-friendly message in the service
     console.error('[RateGenUSView] Generation failed:', error);

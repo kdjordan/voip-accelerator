@@ -1150,53 +1150,42 @@ export class RateGenService {
    * Delete a specific rate deck
    */
   async deleteDeck(deckId: string): Promise<void> {
-    console.log(`[RateGenService] Starting deletion of deck ${deckId}`);
-
-    let metadataDeleted = false;
-    let ratesDeleted = false;
-
     try {
-      // Delete all rates for this deck from results database FIRST
-      const { getDB } = this.dexieDB;
-      const resultsDB = await getDB(DBName.RATE_GEN_RESULTS);
+      const { loadFromDexieDB, clearDexieTable, storeInDexieDB } = this.dexieDB;
 
-      // Use a fresh transaction for each operation
-      const deleteRatesCount = await resultsDB.transaction('rw', resultsDB.table('generated_rates'), async () => {
-        return await resultsDB.table('generated_rates').where('deckId').equals(deckId).delete();
-      });
+      // Delete all rates for this deck
+      const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
+      const remainingRates = allRates.filter((rate: any) => rate.deckId !== deckId);
 
-      console.log(`[RateGenService] Deleted ${deleteRatesCount} rate record(s) for deck ${deckId}`);
-      ratesDeleted = true;
+      await clearDexieTable(DBName.RATE_GEN_RESULTS, 'generated_rates');
+
+      if (remainingRates.length > 0) {
+        await storeInDexieDB(remainingRates, DBName.RATE_GEN_RESULTS, 'generated_rates', { replaceExisting: false });
+      }
+
+      // Delete deck metadata
+      const allDecks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
+      const remainingDecks = allDecks.filter((deck: any) => deck.id !== deckId);
+
+      await clearDexieTable(DBName.RATE_GEN_DECKS, 'rate_decks');
+
+      if (remainingDecks.length > 0) {
+        await storeInDexieDB(remainingDecks, DBName.RATE_GEN_DECKS, 'rate_decks', { replaceExisting: false });
+      }
+
+      // Update store
+      this.store.removeGeneratedDeck(deckId);
+
+      // If this was the currently loaded deck, clear it
+      if (this.store.generatedDeck?.id === deckId) {
+        this.store.clearGeneratedDeck();
+        this.temporaryGeneratedRates = [];
+      }
 
     } catch (error) {
-      console.error('[RateGenService] Error deleting rates:', error);
-      throw new Error(`Failed to delete rates for deck: ${(error as Error).message}`);
+      console.error('[RateGenService] Error deleting deck:', error);
+      throw new Error(`Failed to delete deck: ${(error as Error).message}`);
     }
-
-    try {
-      // Delete deck metadata from decks database SECOND
-      const { getDB } = this.dexieDB;
-      const decksDB = await getDB(DBName.RATE_GEN_DECKS);
-
-      const deleteMetadataCount = await decksDB.transaction('rw', decksDB.table('rate_decks'), async () => {
-        return await decksDB.table('rate_decks').where('id').equals(deckId).delete();
-      });
-
-      console.log(`[RateGenService] Deleted ${deleteMetadataCount} deck metadata record(s)`);
-      metadataDeleted = true;
-
-    } catch (error) {
-      console.error('[RateGenService] Error deleting metadata:', error);
-      throw new Error(`Failed to delete deck metadata: ${(error as Error).message}`);
-    }
-
-    // If this was the currently loaded deck, clear it from the store
-    if (this.store.generatedDeck?.id === deckId) {
-      this.store.clearGeneratedDeck();
-      this.temporaryGeneratedRates = [];
-    }
-
-    console.log(`[RateGenService] Successfully deleted deck ${deckId}`);
   }
 
   /**

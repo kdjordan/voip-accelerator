@@ -13,7 +13,7 @@
       </div>
       
       <!-- Summary Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-gray-700/50 rounded-lg p-4">
           <div class="text-sm text-gray-400">Strategy Used</div>
           <div class="text-lg font-semibold text-fbWhite">{{ deck.lcrStrategy }}</div>
@@ -21,6 +21,10 @@
         <div class="bg-gray-700/50 rounded-lg p-4">
           <div class="text-sm text-gray-400">Total Prefixes</div>
           <div class="text-lg font-semibold text-fbWhite">{{ deck.rowCount.toLocaleString() }}</div>
+        </div>
+        <div class="bg-gray-700/50 rounded-lg p-4">
+          <div class="text-sm text-gray-400">Providers Used</div>
+          <div class="text-lg font-semibold text-fbWhite">{{ selectedProviderCount }}</div>
         </div>
         <div class="bg-gray-700/50 rounded-lg p-4">
           <div class="text-sm text-gray-400">Markup Applied</div>
@@ -54,7 +58,26 @@
           </div>
         </div>
       </div>
-      
+
+      <!-- Provider Breakdown -->
+      <div v-if="!loading && providerBreakdown.length > 0" class="bg-gray-700/30 rounded-lg p-4 mb-6">
+        <h4 class="text-sm font-medium text-gray-300 mb-3">Provider Breakdown</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div
+            v-for="provider in providerBreakdown"
+            :key="provider.provider"
+            class="bg-gray-700/50 rounded-lg p-3 border border-gray-600"
+          >
+            <div class="text-sm font-medium text-fbWhite mb-1">{{ provider.provider }}</div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-lg font-semibold text-accent">{{ provider.count.toLocaleString() }}</span>
+              <span class="text-xs text-gray-400">codes</span>
+            </div>
+            <div class="text-xs text-gray-400 mt-1">{{ provider.percentage.toFixed(1) }}% of total</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Sample Calculations -->
       <div class="flex-1 overflow-auto">
         <h4 class="text-lg font-medium text-fbWhite mb-4">Sample Calculations (Random 5 Prefixes)</h4>
@@ -219,6 +242,10 @@ const averageRates = ref<{
   intrastate: number;
   indeterminate: number;
 } | null>(null);
+const providerBreakdown = ref<Array<{ provider: string; count: number; percentage: number }>>([]);
+
+// Computed
+const selectedProviderCount = computed(() => providerBreakdown.value.length);
 
 // Methods
 async function loadSampleRates() {
@@ -243,6 +270,23 @@ async function loadSampleRates() {
       };
 
       console.log('[RateDeckInsights] Average rates calculated:', averageRates.value);
+
+      // Calculate provider breakdown
+      const providerCounts = new Map<string, number>();
+      deckRates.forEach((rate: any) => {
+        const provider = rate.selectedProvider || 'Unknown';
+        providerCounts.set(provider, (providerCounts.get(provider) || 0) + 1);
+      });
+
+      providerBreakdown.value = Array.from(providerCounts.entries())
+        .map(([provider, count]) => ({
+          provider,
+          count,
+          percentage: (count / deckRates.length) * 100
+        }))
+        .sort((a, b) => b.count - a.count); // Sort by count descending
+
+      console.log('[RateDeckInsights] Provider breakdown:', providerBreakdown.value);
     }
 
     // Randomly select 5 rates with debug information
