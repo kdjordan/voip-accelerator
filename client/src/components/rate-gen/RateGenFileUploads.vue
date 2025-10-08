@@ -360,14 +360,15 @@ const handleModalConfirm = async (mappings: Record<string, string>, indeterminat
     }
     
     const finalProviderName = modalProviderName?.trim() || `Provider ${currentZoneId.value.replace('provider', '')}`;
-    
+
     // Process the file with the service
     await service.processProviderFile(
       currentFile.value,
       currentZoneId.value,
       finalProviderName,
       columnMapping,
-      startLine.value
+      startLine.value,
+      indeterminateDefinition
     );
     
     // Complete progress indicator if it exists (matching USFileUploads pattern)

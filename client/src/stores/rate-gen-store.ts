@@ -89,10 +89,12 @@ export const useRateGenStore = defineStore('rateGen', {
     },
     
     // Generation getters
-    isProcessing: (state): boolean => 
+    isProcessing: (state): boolean =>
       state.isGenerating || Object.values(state.uploadingComponents).some(Boolean),
-    
+
     hasGeneratedRates: (state): boolean => state.generatedDeckId !== null,
+
+    hasGeneratedDecks: (state): boolean => state.generatedDecks.length > 0,
   },
 
   actions: {

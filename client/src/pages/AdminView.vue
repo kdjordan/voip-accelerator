@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen text-white pt-2 w-full">
+  <div class="text-white pt-2 w-full">
     <h1 class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
       Admin Dashboard
     </h1>

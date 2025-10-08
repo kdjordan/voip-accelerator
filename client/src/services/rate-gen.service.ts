@@ -51,7 +51,8 @@ export class RateGenService {
     providerId: string,
     providerName: string,
     columnMapping: RateGenColumnMapping,
-    startLine: number = 1
+    startLine: number = 1,
+    indeterminateDefinition?: string
   ): Promise<void> {
     const performanceStart = performance.now();
     const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
@@ -113,7 +114,8 @@ export class RateGenService {
               columnMapping,
               providerId,
               providerName,
-              file.name
+              file.name,
+              indeterminateDefinition
             );
             
             if (processedRow) {
@@ -244,9 +246,10 @@ export class RateGenService {
   private transformRow(
     row: string[],
     columnMapping: RateGenColumnMapping,
-    providerId: string, 
+    providerId: string,
     providerName: string,
-    fileName: string
+    fileName: string,
+    indeterminateDefinition?: string
   ): RateGenRecord | null {
     // Helper function to get data from row
     const getData = (index: number) => index >= 0 ? (row[index] || '').toString().trim() : '';
@@ -285,9 +288,29 @@ export class RateGenService {
     // Extract rates
     const rateInter = parseFloat(getData(columnMapping.rateInter)) || 0;
     const rateIntra = parseFloat(getData(columnMapping.rateIntra)) || 0;
-    const rateIndeterminate = columnMapping.rateIndeterminate !== undefined 
-      ? parseFloat(getData(columnMapping.rateIndeterminate)) || 0
-      : rateInter; // Default to interstate if not specified
+
+    // Handle indeterminate rate based on user's definition choice (matching US service logic)
+    let rateIndeterminate: number;
+
+    if (indeterminateDefinition === 'interstate') {
+      // User chose to use interstate rate for indeterminate
+      rateIndeterminate = rateInter;
+    } else if (indeterminateDefinition === 'intrastate') {
+      // User chose to use intrastate rate for indeterminate
+      rateIndeterminate = rateIntra;
+    } else if (indeterminateDefinition === 'column' && columnMapping.rateIndeterminate !== undefined) {
+      // User chose to use the indeterminate column value
+      const parsedIndeterm = parseFloat(getData(columnMapping.rateIndeterminate));
+      // If empty/invalid, default to interstate rate
+      rateIndeterminate = (parsedIndeterm && parsedIndeterm > 0) ? parsedIndeterm : rateInter;
+    } else if (columnMapping.rateIndeterminate !== undefined) {
+      // Column is mapped but no definition provided - parse and default to interstate if empty
+      const parsedIndeterm = parseFloat(getData(columnMapping.rateIndeterminate));
+      rateIndeterminate = (parsedIndeterm && parsedIndeterm > 0) ? parsedIndeterm : rateInter;
+    } else {
+      // No column mapped and no definition - default to interstate
+      rateIndeterminate = rateInter;
+    }
 
     // Validate rates
     if (rateInter === 0 && rateIntra === 0) {
@@ -1127,35 +1150,53 @@ export class RateGenService {
    * Delete a specific rate deck
    */
   async deleteDeck(deckId: string): Promise<void> {
+    console.log(`[RateGenService] Starting deletion of deck ${deckId}`);
+
+    let metadataDeleted = false;
+    let ratesDeleted = false;
+
     try {
-      const { getDexieDB } = this.dexieDB;
-      
-      // Delete deck metadata from decks database
-      const decksDB = getDexieDB(DBName.RATE_GEN_DECKS);
-      if (!decksDB) {
-        throw new Error('Decks database not initialized');
-      }
-      await decksDB.table('rate_decks').delete(deckId);
-      
-      // Delete all rates for this deck from results database
-      const resultsDB = getDexieDB(DBName.RATE_GEN_RESULTS);
-      if (!resultsDB) {
-        throw new Error('Results database not initialized');
-      }
-      await resultsDB.table('generated_rates').where('deckId').equals(deckId).delete();
-      
-      console.log(`[RateGenService] Deleted deck ${deckId}`);
-      
-      // If this was the currently loaded deck, clear it from the store
-      if (this.store.generatedDeck?.id === deckId) {
-        this.store.clearGeneratedDeck();
-        this.temporaryGeneratedRates = [];
-      }
-      
+      // Delete all rates for this deck from results database FIRST
+      const { getDB } = this.dexieDB;
+      const resultsDB = await getDB(DBName.RATE_GEN_RESULTS);
+
+      // Use a fresh transaction for each operation
+      const deleteRatesCount = await resultsDB.transaction('rw', resultsDB.table('generated_rates'), async () => {
+        return await resultsDB.table('generated_rates').where('deckId').equals(deckId).delete();
+      });
+
+      console.log(`[RateGenService] Deleted ${deleteRatesCount} rate record(s) for deck ${deckId}`);
+      ratesDeleted = true;
+
     } catch (error) {
-      console.error('[RateGenService] Error deleting deck:', error);
-      throw new Error('Failed to delete rate deck');
+      console.error('[RateGenService] Error deleting rates:', error);
+      throw new Error(`Failed to delete rates for deck: ${(error as Error).message}`);
     }
+
+    try {
+      // Delete deck metadata from decks database SECOND
+      const { getDB } = this.dexieDB;
+      const decksDB = await getDB(DBName.RATE_GEN_DECKS);
+
+      const deleteMetadataCount = await decksDB.transaction('rw', decksDB.table('rate_decks'), async () => {
+        return await decksDB.table('rate_decks').where('id').equals(deckId).delete();
+      });
+
+      console.log(`[RateGenService] Deleted ${deleteMetadataCount} deck metadata record(s)`);
+      metadataDeleted = true;
+
+    } catch (error) {
+      console.error('[RateGenService] Error deleting metadata:', error);
+      throw new Error(`Failed to delete deck metadata: ${(error as Error).message}`);
+    }
+
+    // If this was the currently loaded deck, clear it from the store
+    if (this.store.generatedDeck?.id === deckId) {
+      this.store.clearGeneratedDeck();
+      this.temporaryGeneratedRates = [];
+    }
+
+    console.log(`[RateGenService] Successfully deleted deck ${deckId}`);
   }
 
   /**

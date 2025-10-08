@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen text-white pt-2 w-full">
+  <div class="text-white pt-2 w-full">
     <!-- Service Expiry Banner -->
     <ServiceExpiryBanner 
       v-bind="bannerState"

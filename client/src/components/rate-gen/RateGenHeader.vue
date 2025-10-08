@@ -60,7 +60,7 @@ This action cannot be undone.`"
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import { RateGenService } from '@/services/rate-gen.service';
 import BaseButton from '@/components/shared/BaseButton.vue';
@@ -87,17 +87,7 @@ const showResetConfirmModal = ref(false);
 
 
 // Removed automatic tab switching - let users control navigation
-
-// Watch for generation completion and auto-switch to results
-watch(
-  () => store.generatedDeck,
-  (generatedDeck) => {
-    if (generatedDeck && props.activeTab === 'settings') {
-      console.log('[RateGenHeader] Rate generation complete, switching to Results tab');
-      emit('tab-change', 'results');
-    }
-  }
-);
+// Users can freely navigate between Upload, Settings, and Results tabs to compare strategies
 
 // Methods
 async function confirmReset() {

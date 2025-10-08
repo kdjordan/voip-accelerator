@@ -2,20 +2,21 @@
   <div v-if="show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-gray-800 rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-semibold text-fbWhite">LCR Calculation Validation</h3>
-        <button
+        <h3 class="text-xl font-semibold text-fbWhite">Rate Deck Insights</h3>
+        <BaseButton
+          variant="destructive"
+          size="small"
           @click="$emit('close')"
-          class="text-gray-400 hover:text-fbWhite text-2xl font-bold"
         >
           ×
-        </button>
+        </BaseButton>
       </div>
       
       <!-- Summary Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-gray-700/50 rounded-lg p-4">
           <div class="text-sm text-gray-400">Strategy Used</div>
-          <div class="text-lg font-semibold text-accent">{{ deck.lcrStrategy }}</div>
+          <div class="text-lg font-semibold text-fbWhite">{{ deck.lcrStrategy }}</div>
         </div>
         <div class="bg-gray-700/50 rounded-lg p-4">
           <div class="text-sm text-gray-400">Total Prefixes</div>
@@ -28,10 +29,35 @@
           </div>
         </div>
       </div>
+
+      <!-- Average Rates Across All Prefixes -->
+      <div v-if="!loading && averageRates" class="bg-gray-700/30 rounded-lg p-4 mb-6">
+        <h4 class="text-sm font-medium text-gray-300 mb-3">Average Rates (All {{ deck.rowCount.toLocaleString() }} Prefixes)</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-accent/10 rounded-lg p-3 border border-accent/50">
+            <div class="text-xs font-medium text-accent mb-1">Interstate</div>
+            <div class="text-lg font-semibold text-fbWhite font-mono">
+              ${{ averageRates.interstate.toFixed(6) }}
+            </div>
+          </div>
+          <div class="bg-accent/10 rounded-lg p-3 border border-accent/50">
+            <div class="text-xs font-medium text-accent mb-1">Intrastate</div>
+            <div class="text-lg font-semibold text-fbWhite font-mono">
+              ${{ averageRates.intrastate.toFixed(6) }}
+            </div>
+          </div>
+          <div class="bg-accent/10 rounded-lg p-3 border border-accent/50">
+            <div class="text-xs font-medium text-accent mb-1">Indeterminate</div>
+            <div class="text-lg font-semibold text-fbWhite font-mono">
+              ${{ averageRates.indeterminate.toFixed(6) }}
+            </div>
+          </div>
+        </div>
+      </div>
       
       <!-- Sample Calculations -->
       <div class="flex-1 overflow-auto">
-        <h4 class="text-lg font-medium text-fbWhite mb-4">Sample Calculations (First 10 Prefixes)</h4>
+        <h4 class="text-lg font-medium text-fbWhite mb-4">Sample Calculations (Random 5 Prefixes)</h4>
         
         <div v-if="loading" class="text-center py-8">
           <div class="text-gray-400">Loading calculation details...</div>
@@ -49,7 +75,7 @@
           >
             <div class="flex items-center justify-between mb-3">
               <h5 class="text-lg font-medium text-fbWhite">Prefix {{ rate.prefix }}</h5>
-              <span class="text-sm text-gray-400">Sample {{ index + 1 }}/10</span>
+              <span class="text-sm text-gray-400">Sample {{ index + 1 }}/5</span>
             </div>
             
             <div v-if="rate.debug">
@@ -76,22 +102,22 @@
               <div class="mb-4">
                 <h6 class="text-sm font-medium text-gray-300 mb-2">LCR Selection ({{ rate.debug.strategy }})</h6>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <div class="bg-blue-900/30 rounded p-2 text-xs">
-                    <div class="font-medium text-blue-300">Interstate</div>
+                  <div class="bg-accent/10 border border-accent/50 rounded p-2 text-xs">
+                    <div class="font-medium text-accent">Interstate</div>
                     <div class="text-fbWhite">
                       ${{ rate.debug.selectedRates.inter.rate.toFixed(6) }}
                       <span class="text-gray-400 ml-1">({{ rate.debug.selectedRates.inter.provider }})</span>
                     </div>
                   </div>
-                  <div class="bg-green-900/30 rounded p-2 text-xs">
-                    <div class="font-medium text-green-300">Intrastate</div>
+                  <div class="bg-accent/10 border border-accent/50 rounded p-2 text-xs">
+                    <div class="font-medium text-accent">Intrastate</div>
                     <div class="text-fbWhite">
                       ${{ rate.debug.selectedRates.intra.rate.toFixed(6) }}
                       <span class="text-gray-400 ml-1">({{ rate.debug.selectedRates.intra.provider }})</span>
                     </div>
                   </div>
-                  <div class="bg-purple-900/30 rounded p-2 text-xs">
-                    <div class="font-medium text-purple-300">Indeterminate</div>
+                  <div class="bg-accent/10 border border-accent/50 rounded p-2 text-xs">
+                    <div class="font-medium text-accent">Indeterminate</div>
                     <div class="text-fbWhite">
                       ${{ rate.debug.selectedRates.indeterminate.rate.toFixed(6) }}
                       <span class="text-gray-400 ml-1">({{ rate.debug.selectedRates.indeterminate.provider }})</span>
@@ -108,7 +134,7 @@
                 </h6>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div class="bg-gray-800/50 rounded p-2 text-xs">
-                    <div class="font-medium text-accent">Interstate</div>
+                    <div class="font-medium">Interstate</div>
                     <div class="text-fbWhite font-mono">
                       ${{ rate.rate.toFixed(6) }}
                       <div class="text-gray-400 text-xs mt-1">
@@ -117,7 +143,7 @@
                     </div>
                   </div>
                   <div class="bg-gray-800/50 rounded p-2 text-xs">
-                    <div class="font-medium text-accent">Intrastate</div>
+                    <div class="font-medium">Intrastate</div>
                     <div class="text-fbWhite font-mono">
                       ${{ rate.intrastate.toFixed(6) }}
                       <div class="text-gray-400 text-xs mt-1">
@@ -126,7 +152,7 @@
                     </div>
                   </div>
                   <div class="bg-gray-800/50 rounded p-2 text-xs">
-                    <div class="font-medium text-accent">Indeterminate</div>
+                    <div class="font-medium">Indeterminate</div>
                     <div class="text-fbWhite font-mono">
                       ${{ rate.indeterminate.toFixed(6) }}
                       <div class="text-gray-400 text-xs mt-1">
@@ -138,10 +164,10 @@
               </div>
               
               <!-- Validation Check -->
-              <div class="mt-3 p-2 rounded" :class="getValidationClass(rate)">
-                <div class="text-xs font-medium">
+              <div class="mt-3">
+                <BaseBadge :variant="getValidationVariant(rate)" size="small">
                   {{ getValidationMessage(rate) }}
-                </div>
+                </BaseBadge>
               </div>
             </div>
             
@@ -154,12 +180,13 @@
       
       <!-- Footer -->
       <div class="flex justify-end mt-6 pt-4 border-t border-gray-600">
-        <button
+        <BaseButton
+          variant="destructive"
+          size="standard"
           @click="$emit('close')"
-          class="px-4 py-2 bg-gray-600 text-fbWhite rounded-lg hover:bg-gray-500 transition-colors"
         >
           Close
-        </button>
+        </BaseButton>
       </div>
     </div>
   </div>
@@ -170,6 +197,8 @@ import { ref, computed, onMounted } from 'vue';
 import type { GeneratedRateDeck, GeneratedRateRecord } from '@/types/domains/rate-gen-types';
 import useDexieDB from '@/composables/useDexieDB';
 import { DBName } from '@/types/app-types';
+import BaseBadge from '@/components/shared/BaseBadge.vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 interface Props {
   show: boolean;
@@ -185,23 +214,52 @@ const emit = defineEmits<{
 // State
 const sampleRates = ref<GeneratedRateRecord[]>([]);
 const loading = ref(true);
+const averageRates = ref<{
+  interstate: number;
+  intrastate: number;
+  indeterminate: number;
+} | null>(null);
 
 // Methods
 async function loadSampleRates() {
   try {
     loading.value = true;
     const { loadFromDexieDB } = useDexieDB();
-    
+
     // Load all rates for this deck
     const allRates = await loadFromDexieDB<GeneratedRateRecord>(DBName.RATE_GEN_RESULTS, 'generated_rates');
     const deckRates = allRates.filter((r: any) => r.deckId === props.deck.id);
-    
-    // Take first 10 rates with debug information
+
+    // Calculate average rates across all prefixes
+    if (deckRates.length > 0) {
+      const totalInterstate = deckRates.reduce((sum: number, r: any) => sum + (r.rate || 0), 0);
+      const totalIntrastate = deckRates.reduce((sum: number, r: any) => sum + (r.intrastate || 0), 0);
+      const totalIndeterminate = deckRates.reduce((sum: number, r: any) => sum + (r.indeterminate || 0), 0);
+
+      averageRates.value = {
+        interstate: totalInterstate / deckRates.length,
+        intrastate: totalIntrastate / deckRates.length,
+        indeterminate: totalIndeterminate / deckRates.length
+      };
+
+      console.log('[RateDeckInsights] Average rates calculated:', averageRates.value);
+    }
+
+    // Randomly select 5 rates with debug information
     const ratesWithDebug = deckRates.filter((r: any) => r.debug);
-    sampleRates.value = ratesWithDebug.slice(0, 10);
-    
-    console.log('[LCRValidationModal] Loaded sample rates:', sampleRates.value.length);
-    
+    if (ratesWithDebug.length > 0) {
+      // Shuffle array using Fisher-Yates algorithm
+      const shuffled = [...ratesWithDebug];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      // Take first 5 from shuffled array
+      sampleRates.value = shuffled.slice(0, 5);
+    }
+
+    console.log('[RateDeckInsights] Loaded random sample rates:', sampleRates.value.length);
+
   } catch (error) {
     console.error('[LCRValidationModal] Error loading sample rates:', error);
   } finally {
@@ -209,16 +267,16 @@ async function loadSampleRates() {
   }
 }
 
-function getValidationClass(rate: GeneratedRateRecord): string {
-  if (!rate.debug) return 'bg-gray-700/50';
-  
+function getValidationVariant(rate: GeneratedRateRecord): 'success' | 'destructive' | 'neutral' {
+  if (!rate.debug) return 'neutral';
+
   const isValid = validateLCRCalculation(rate);
-  return isValid ? 'bg-green-900/30' : 'bg-red-900/30';
+  return isValid ? 'success' : 'destructive';
 }
 
 function getValidationMessage(rate: GeneratedRateRecord): string {
   if (!rate.debug) return 'No debug information';
-  
+
   const isValid = validateLCRCalculation(rate);
   return isValid ? '✓ LCR calculation is correct' : '✗ LCR calculation may be incorrect';
 }

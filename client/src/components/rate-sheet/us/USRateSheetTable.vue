@@ -320,10 +320,10 @@
 
       <!-- Collapsible Metro list display area -->
       <transition name="slide-fade">
-        
+
         <div
           v-if="isMetroAreaVisible"
-          class="overflow-y-auto max-h-96 border border-gray-700 rounded-md bg-gray-700/30 p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
+          class="overflow-y-auto max-h-48 border border-gray-700 rounded-md bg-gray-700/30 p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
         >
           <template v-if="filteredMetroOptions.length > 0">
             <div
@@ -1694,13 +1694,18 @@ All NPAs will be available for adjustment again."
         .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
         .toCollection();
 
+      // Use the same filter logic as the table display for consistency
+      const currentFilters = createFilters();
+
+      // Apply filters if any exist
+      if (currentFilters.length > 0) {
+        collection = collection.filter((record) => currentFilters.every((fn) => fn(record)));
+      }
+
+      // Build human-readable description of filters applied
       const filtersApplied: string[] = [];
 
       if (debouncedSearchQuery.value.length > 0) {
-        collection = collection.filter((record: USRateSheetEntry) => {
-          const recordNpanxxLower = record.npanxx.toLowerCase();
-          return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
-        });
         if (debouncedSearchQuery.value.length === 1) {
           filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value[0]}'`);
         } else {
@@ -1709,38 +1714,31 @@ All NPAs will be available for adjustment again."
           );
         }
       }
+
       if (selectedState.value) {
-        collection = collection.filter(
-          (record: USRateSheetEntry) => record.stateCode === selectedState.value
-        );
-        filtersApplied.push(`Region equals '${selectedState.value}'`);
+        if (selectedState.value.startsWith('GROUP_')) {
+          // Handle group selections
+          const groupName = selectedState.value.replace('GROUP_', '').replace(/_/g, ' ');
+          filtersApplied.push(`Region: All ${groupName}`);
+        } else {
+          filtersApplied.push(`Region equals '${selectedState.value}'`);
+        }
       }
 
-      // Apply Metro Area Filter (if active)
       if (metroAreaCodesToFilter.value.length > 0) {
-        const npaSet = new Set(metroAreaCodesToFilter.value);
-        collection = collection.filter((record: USRateSheetEntry) => npaSet.has(record.npa));
-        
-        // Determine if it's a preset or custom selection
-        let metroFilterDesc = '';
         const metroCount = metroAreaCodesToFilter.value.length;
-        
-        // Check for common presets (you can adjust these counts based on your actual metro presets)
+
         if (metroCount === 10) {
-          metroFilterDesc = 'Metro Filter: Top 10 Metro Areas';
+          filtersApplied.push('Metro Filter: Top 10 Metro Areas');
         } else if (metroCount === 25) {
-          metroFilterDesc = 'Metro Filter: Top 25 Metro Areas';
+          filtersApplied.push('Metro Filter: Top 25 Metro Areas');
         } else if (metroCount === 50) {
-          metroFilterDesc = 'Metro Filter: Top 50 Metro Areas';
+          filtersApplied.push('Metro Filter: Top 50 Metro Areas');
         } else if (metroCount <= 5) {
-          // For small selections, list the NPAs
-          metroFilterDesc = `Metro Filter: NPAs ${metroAreaCodesToFilter.value.join(', ')}`;
+          filtersApplied.push(`Metro Filter: NPAs ${metroAreaCodesToFilter.value.join(', ')}`);
         } else {
-          // For larger custom selections, just show the count
-          metroFilterDesc = `Metro Filter: ${metroCount} Metro Areas Selected`;
+          filtersApplied.push(`Metro Filter: ${metroCount} Metro Areas Selected`);
         }
-        
-        filtersApplied.push(metroFilterDesc);
       }
 
       const filteredRecords = await collection.toArray();

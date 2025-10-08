@@ -1,6 +1,6 @@
 <template>
   <!-- Main Page Content (No longer blocked) -->
-  <div class="min-h-screen text-white pt-2 w-full max-w-full overflow-x-hidden">
+  <div class="text-white pt-2 w-full max-w-full overflow-x-hidden">
     
     <!-- Service Expiry Banner -->
     <ServiceExpiryBanner 

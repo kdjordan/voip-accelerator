@@ -38,9 +38,9 @@ const handleGenerateRates = async () => {
   
   try {
     await service.generateRateDeck(store.currentConfig);
-    // Note: The tab will auto-switch to results via the watch in RateGenHeader
-    // and the store will be updated by the service
-    
+    // Note: Users can manually navigate to the Results tab to view generated decks
+    // or stay on Settings to adjust configuration and compare different strategies
+
     // Add success message using a temporary notification
     const successMessage = `Successfully generated ${store.generatedDeck?.rowCount.toLocaleString()} rates using ${store.generatedDeck?.lcrStrategy} strategy`;
     console.log('[RateGenUSView]', successMessage);
@@ -117,8 +117,29 @@ async function handlePlanSelectorSelection(tier: SubscriptionTier) {
 
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   console.log('[RateGenUSView] Component mounted');
+
+  // Load existing decks to show the Results tab if any exist
+  try {
+    const existingDecks = await service.getAllDecks();
+    if (existingDecks.length > 0) {
+      store.setGeneratedDecks(existingDecks.map(d => ({
+        id: d.id,
+        name: d.name,
+        lcrStrategy: d.strategy,
+        markupPercentage: d.markupType === 'percentage' ? d.markupValue : 0,
+        markupFixed: d.markupType === 'fixed' ? d.markupValue : 0,
+        providerIds: [],
+        generatedDate: new Date(d.generatedAt),
+        effectiveDate: d.effectiveDate ? new Date(d.effectiveDate) : undefined,
+        rowCount: d.rowCount
+      })));
+      console.log(`[RateGenUSView] Loaded ${existingDecks.length} existing decks`);
+    }
+  } catch (error) {
+    console.error('[RateGenUSView] Failed to load existing decks:', error);
+  }
 });
 
 onUnmounted(() => {
@@ -129,7 +150,7 @@ onUnmounted(() => {
 <template>
   <!-- Upload Limit Fullscreen Modal -->
   <!-- Main Page Content (No longer blocked) -->
-  <div class="flex flex-col w-full min-h-screen bg-fbBlack text-fbWhite">
+  <div class="flex flex-col w-full bg-fbBlack text-fbWhite">
     
     <!-- Service Expiry Banner -->
     <ServiceExpiryBanner 
