@@ -150,7 +150,7 @@
                 v-for="provider in store.providerList"
                 :key="provider.id"
                 @click="toggleProvider(provider.id)"
-                class="flex items-start p-3 hover:bg-gray-600/50 cursor-pointer rounded-md border border-gray-600 bg-gray-700/50 hover:bg-gray-600/70"
+                class="flex items-start p-3 cursor-pointer rounded-md border border-gray-600 bg-gray-700/50 hover:bg-gray-600/70"
               >
                 <input
                   type="checkbox"
