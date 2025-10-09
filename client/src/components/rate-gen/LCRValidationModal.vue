@@ -396,6 +396,9 @@ function validateLCRCalculation(rate: GeneratedRateRecord): boolean {
     case 'LCR5':
       expectedInterRate = sortedInter[4]?.interRate || sortedInter[3]?.interRate || sortedInter[2]?.interRate || sortedInter[1]?.interRate || sortedInter[0]?.interRate || 0;
       break;
+    case 'LCR6':
+      expectedInterRate = sortedInter[5]?.interRate || sortedInter[4]?.interRate || sortedInter[3]?.interRate || sortedInter[2]?.interRate || sortedInter[1]?.interRate || sortedInter[0]?.interRate || 0;
+      break;
     case 'Average':
       expectedInterRate = sortedInter.reduce((sum, p) => sum + p.interRate, 0) / sortedInter.length;
       break;

@@ -30,8 +30,8 @@
           v-model="config.strategy"
           aria-label="LCR depth selection"
           aria-required="true"
-          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite 
-                 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent 
+          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-fbWhite
+                 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent
                  transition-colors cursor-pointer"
         >
           <option value="">Select LCR Depth</option>
@@ -40,6 +40,7 @@
           <option value="LCR3" v-if="providerCount >= 3">LCR 3</option>
           <option value="LCR4" v-if="providerCount >= 4">LCR 4</option>
           <option value="LCR5" v-if="providerCount >= 5">LCR 5</option>
+          <option value="LCR6" v-if="providerCount >= 6">LCR 6</option>
           <option value="Average" v-if="providerCount >= 3">Average of All {{ providerCount }}</option>
         </select>
     </div>

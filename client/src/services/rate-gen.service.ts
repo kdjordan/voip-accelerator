@@ -696,14 +696,17 @@ export class RateGenService {
         
       case 'LCR5':
         return sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
-        
+
+      case 'LCR6':
+        return sorted[5] || sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
+
       case 'Average':
         const avgRate = sorted.reduce((sum, r) => sum + r.rate, 0) / sorted.length;
         return {
           rate: avgRate,
           provider: sorted.map(r => r.provider).join(', ')
         };
-        
+
       default:
         return sorted[0];
     }

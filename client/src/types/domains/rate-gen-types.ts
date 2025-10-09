@@ -33,7 +33,7 @@ export interface ProviderInfo {
   avgIndeterminateRate: number; // Average indeterminate rate
 }
 
-export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5' | 'Average';
+export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5' | 'LCR6' | 'Average';
 
 export interface LCRConfig {
   name?: string;
@@ -162,10 +162,10 @@ export interface LCRWorkerResponse {
 }
 
 // Component IDs for Rate Gen upload zones
-export type RateGenComponentId = 'provider1' | 'provider2' | 'provider3' | 'provider4' | 'provider5';
+export type RateGenComponentId = 'provider1' | 'provider2' | 'provider3' | 'provider4' | 'provider5' | 'provider6';
 
 // Maximum number of providers allowed
-export const MAX_PROVIDERS = 5;
+export const MAX_PROVIDERS = 6;
 
 // Default LCR strategies with descriptions
 export const LCR_STRATEGIES = [

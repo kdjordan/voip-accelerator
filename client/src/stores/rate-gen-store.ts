@@ -250,14 +250,14 @@ export const useRateGenStore = defineStore('rateGen', {
     
     // Get next available component slot
     getNextAvailableSlot(): RateGenComponentId | null {
-      const slots: RateGenComponentId[] = ['provider1', 'provider2', 'provider3', 'provider4', 'provider5'];
-      
+      const slots: RateGenComponentId[] = ['provider1', 'provider2', 'provider3', 'provider4', 'provider5', 'provider6'];
+
       for (const slot of slots) {
         if (!this.isComponentUploading(slot) && !Object.values(this.providers).some(p => p.id === slot)) {
           return slot;
         }
       }
-      
+
       return null;
     },
   },
