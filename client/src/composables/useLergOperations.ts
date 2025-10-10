@@ -260,7 +260,9 @@ export function useLergOperations() {
       }));
 
       // Convert to CSV string
-      const csv = Papa.unparse(csvData);
+      const csv = Papa.unparse(csvData, {
+        newline: '\n', // Force Unix line endings for Excel compatibility
+      });
 
       // Create blob
       return new Blob([csv], { type: 'text/csv;charset=utf-8;' });

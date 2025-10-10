@@ -77,6 +77,7 @@ export function useCSVExport() {
         {
           quotes: options.quoteFields ?? true, // Default to true for safety
           header: false, // We handle headers manually in rows
+          newline: '\n', // Force Unix line endings for Excel compatibility
         }
       );
 
@@ -251,6 +252,7 @@ async function handleRateSheetExport(data: CSVData, options: CSVExportOptions): 
     const csv = Papa.unparse(csvData, {
       quotes: options.quoteFields ?? true,
       header: false,
+      newline: '\n', // Force Unix line endings for Excel compatibility
     });
 
     // Create and trigger download with rate-sheet specific filename handling
@@ -323,6 +325,7 @@ async function handleComparisonExport(data: CSVData, options: CSVExportOptions):
     const csv = Papa.unparse(csvData, {
       quotes: options.quoteFields ?? true,
       header: false,
+      newline: '\n', // Force Unix line endings for Excel compatibility
     });
 
     // Create and trigger download with comparison specific filename handling

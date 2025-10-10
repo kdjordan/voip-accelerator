@@ -1029,9 +1029,10 @@ export class RateGenService {
     
     const csv = Papa.unparse(csvData, {
       columns: headers,
-      header: true
+      header: true,
+      newline: '\n', // Force Unix line endings for Excel compatibility
     });
-    
+
     console.log(`[RateGenService] Generated CSV with ${filteredRates.length} rows, ${headers.length} columns`);
     return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   }
