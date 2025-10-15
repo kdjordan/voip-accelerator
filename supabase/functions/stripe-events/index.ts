@@ -85,6 +85,16 @@ serve(async (req) => {
       await handleSubscriptionDeleted(event.data.object);
     }
 
+    // Handle successful invoice payment (renewals)
+    if (event.type === 'invoice.payment_succeeded') {
+      await handleInvoicePaymentSucceeded(event.data.object);
+    }
+
+    // Handle failed invoice payment
+    if (event.type === 'invoice.payment_failed') {
+      await handleInvoicePaymentFailed(event.data.object);
+    }
+
     return new Response(JSON.stringify({ received: true, event_type: event.type }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -117,17 +127,10 @@ async function handleCheckoutCompleted(session: any) {
   console.log('🔍 Full session object:', JSON.stringify(session, null, 2));
 
   // Determine billing period from session amount_total (in cents)
-  let billingPeriod = 'monthly'; // default
-
   const amountTotal = session.amount_total;
   console.log('💰 Amount total:', amountTotal);
 
-  if (amountTotal === 9900) { // $99.00
-    billingPeriod = 'monthly';
-  } else if (amountTotal === 99900) { // $999.00
-    billingPeriod = 'annual';
-  }
-
+  const billingPeriod = determineBillingPeriod(amountTotal);
   console.log('🎯 Determined billing period:', billingPeriod);
 
   // Initialize Supabase client
@@ -315,8 +318,108 @@ async function handleSubscriptionDeleted(subscription: any) {
   }
 }
 
+// Handle successful invoice payment (renewals)
+async function handleInvoicePaymentSucceeded(invoice: any) {
+  console.log('🎯 Processing invoice.payment_succeeded');
+  console.log('📋 Invoice object:', JSON.stringify(invoice, null, 2));
+
+  // This handles successful renewals - update subscription dates
+  console.log('💰 Invoice paid successfully');
+  console.log('💳 Invoice ID:', invoice.id);
+  console.log('👤 Customer:', invoice.customer);
+  console.log('📊 Subscription:', invoice.subscription);
+  console.log('💵 Amount paid:', invoice.amount_paid / 100);
+
+  if (!invoice.subscription) {
+    console.log('⚠️ No subscription on invoice, skipping');
+    return;
+  }
+
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Determine billing period from invoice amount
+  const billingPeriod = determineBillingPeriod(invoice.amount_paid);
+
+  // Calculate new period dates
+  const paymentDate = new Date(invoice.status_transitions.paid_at * 1000);
+  const currentPeriodStart = new Date(paymentDate);
+  const currentPeriodEnd = new Date(paymentDate);
+
+  if (billingPeriod === 'annual') {
+    currentPeriodEnd.setFullYear(paymentDate.getFullYear() + 1);
+  } else {
+    currentPeriodEnd.setDate(paymentDate.getDate() + 30);
+  }
+
+  const updateData: any = {
+    subscription_status: 'active',
+    last_payment_date: paymentDate.toISOString(),
+    current_period_start: currentPeriodStart.toISOString(),
+    current_period_end: currentPeriodEnd.toISOString(),
+    plan_expires_at: currentPeriodEnd.toISOString(),
+    billing_period: billingPeriod,
+    updated_at: new Date().toISOString(),
+  };
+
+  console.log('📝 Renewal update data:', JSON.stringify(updateData, null, 2));
+
+  // Update user profile
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('stripe_customer_id', invoice.customer);
+
+  if (error) {
+    console.error('❌ Error updating renewal:', error);
+  } else {
+    console.log(`✅ Processed successful renewal for customer ${invoice.customer}`);
+  }
+}
+
+// Handle failed invoice payment
+async function handleInvoicePaymentFailed(invoice: any) {
+  console.log('🎯 Processing invoice.payment_failed');
+  console.log('📋 Invoice object:', JSON.stringify(invoice, null, 2));
+
+  console.log('❌ Invoice payment failed');
+  console.log('💳 Invoice ID:', invoice.id);
+  console.log('👤 Customer:', invoice.customer);
+  console.log('📊 Subscription:', invoice.subscription);
+  console.log('🔄 Attempt count:', invoice.attempt_count);
+
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Mark subscription as past_due (Stripe will continue retry attempts)
+  const updateData: any = {
+    subscription_status: 'past_due',
+    updated_at: new Date().toISOString(),
+  };
+
+  console.log('📝 Failed payment update data:', JSON.stringify(updateData, null, 2));
+
+  // Update user profile
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('stripe_customer_id', invoice.customer);
+
+  if (error) {
+    console.error('❌ Error updating failed payment:', error);
+  } else {
+    console.log(`✅ Processed failed payment for customer ${invoice.customer}`);
+    console.log('⚠️ User marked as past_due - Stripe will retry payment');
+  }
+}
+
 // Helper function for billing period determination (reused from checkout logic)
 function determineBillingPeriod(amountInCents: number): string {
+  if (amountInCents === 100) return 'monthly';    // $1.00 (test subscription)
   if (amountInCents === 9900) return 'monthly';   // $99.00
   if (amountInCents === 99900) return 'annual';   // $999.00
   return 'monthly'; // default
