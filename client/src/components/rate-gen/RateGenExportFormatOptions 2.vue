@@ -1,0 +1,130 @@
+<template>
+  <div class="space-y-4">
+    <!-- First bento box for NPANXX Format, Additional Columns, and Country Code -->
+    <div class="border border-fbWhite/20 rounded-lg p-6 bg-fbBlack/50">
+      <h4 class="text-lg font-semibold text-fbWhite mb-6">Format Options</h4>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- NPANXX Format Section -->
+        <div>
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">NPANXX Format</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.npanxxFormat === 'combined'"
+                @change="updateNpanxxFormat('combined')"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Combined (213555)</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.npanxxFormat === 'split'"
+                @change="updateNpanxxFormat('split')"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Split (213 | 555)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Additional Columns Section -->
+        <div>
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">Additional Columns</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.includeStateColumn"
+                @change="updateStateColumn($event.target.checked)"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">State column</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.includeCountryColumn"
+                @change="updateCountryColumn($event.target.checked)"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Country column</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Country Code Section -->
+        <div>
+          <label class="text-sm font-semibold text-fbWhite mb-3 block">Country Code</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="formatOptions.includeCountryCode"
+                @change="updateCountryCode($event.target.checked)"
+                class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+              />
+              <span class="ml-2 text-sm text-fbWhite">Include (1) prefix for North American numbers</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import type { RateGenExportOptions } from '@/types/domains/rate-gen-types';
+import { InformationCircleIcon } from '@heroicons/vue/24/outline';
+
+const props = defineProps<{
+  options: RateGenExportOptions;
+  data: any[];
+  totalRecords?: number;
+  filteredRecords?: number;
+}>();
+
+const emit = defineEmits<{
+  'update:options': [value: RateGenExportOptions];
+  'update:filtered-count': [count: number];
+}>();
+
+// Use computed for reactive options
+const formatOptions = computed({
+  get: () => props.options,
+  set: (value) => emit('update:options', value)
+});
+
+// For now, filtered count is just the total (will enhance with country filtering later)
+const filteredRecordCount = computed(() => {
+  return props.totalRecords || 0;
+});
+
+// Emit filtered count changes
+emit('update:filtered-count', filteredRecordCount.value);
+
+// Update functions
+function updateNpanxxFormat(format: 'combined' | 'split') {
+  emit('update:options', { ...props.options, npanxxFormat: format });
+}
+
+function updateCountryCode(checked: boolean) {
+  emit('update:options', { ...props.options, includeCountryCode: checked });
+}
+
+function updateStateColumn(checked: boolean) {
+  emit('update:options', { ...props.options, includeStateColumn: checked });
+}
+
+function updateCountryColumn(checked: boolean) {
+  emit('update:options', { ...props.options, includeCountryColumn: checked });
+}
+
+function updateRegionColumn(checked: boolean) {
+  emit('update:options', { ...props.options, includeRegionColumn: checked });
+}
+</script>
