@@ -633,10 +633,10 @@
         throw new Error(errorData.error || 'Failed to create checkout session');
       }
 
-      const { url } = await response.json();
+      const { sessionId } = await response.json();
 
-      if (!url) {
-        throw new Error('No checkout URL returned');
+      if (!sessionId) {
+        throw new Error('No checkout session ID returned');
       }
 
       testCheckoutStatus.value = {
@@ -645,10 +645,13 @@
         details: 'You will be redirected to complete the $1.00/month test subscription',
       };
 
-      // Redirect to Stripe checkout
-      setTimeout(() => {
-        window.location.href = url;
-      }, 1000);
+      // Load Stripe.js and redirect to checkout
+      const stripe = await (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to redirect to checkout');
+      }
 
     } catch (err) {
       console.error('Test checkout error:', err);
