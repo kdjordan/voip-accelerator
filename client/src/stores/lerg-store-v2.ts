@@ -9,6 +9,7 @@ export interface EnhancedNPARecord {
   state_province_code: string;
   state_province_name: string;
   region: string;
+  category: string; // 'us-domestic' | 'canadian' | 'caribbean' | 'pacific'
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -60,16 +61,33 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         pacific: 0,
       };
 
-      const calculatedStats = this.allNPAs.reduce((acc, npa) => {
-        // Map region to stats properties
-        if (npa.region === 'US') {
-          acc.us_domestic++;
-        } else if (npa.region === 'CA') {
-          acc.canadian++;
-        } else if (npa.region === 'Caribbean') {
-          acc.caribbean++;
-        } else if (npa.region === 'Pacific') {
-          acc.pacific++;
+      const calculatedStats = this.allNPAs.reduce((acc, npa, index) => {
+        // Debug logging for first few NPAs
+        if (index < 3) {
+          console.log('[LergStoreV2] Sample NPA data:', {
+            npa: npa.npa,
+            country_code: npa.country_code,
+            category: npa.category,
+            region: npa.region,
+          });
+        }
+
+        // Use the category field which is the authoritative categorization from the database
+        switch (npa.category) {
+          case 'us-domestic':
+            acc.us_domestic++;
+            break;
+          case 'canadian':
+            acc.canadian++;
+            break;
+          case 'caribbean':
+            acc.caribbean++;
+            break;
+          case 'pacific':
+            acc.pacific++;
+            break;
+          default:
+            console.warn(`[LergStoreV2] Unknown category for NPA ${npa.npa}: ${npa.category}`);
         }
 
         return acc;
@@ -347,6 +365,14 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         this._npaIndex = null;
 
         console.log(`[LergStoreV2] Successfully loaded ${this.allNPAs.length} NPAs`);
+
+        // DEBUG: Log first record to see structure
+        if (this.allNPAs.length > 0) {
+          console.log('[LergStoreV2] First NPA record structure:', this.allNPAs[0]);
+          console.log('[LergStoreV2] Has category field?', 'category' in this.allNPAs[0]);
+          console.log('[LergStoreV2] Category value:', this.allNPAs[0].category);
+        }
+
         console.log('[LergStoreV2] Region breakdown:', {
           'US Domestic': this.stats.us_domestic,
           Canadian: this.stats.canadian,
