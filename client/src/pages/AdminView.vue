@@ -606,13 +606,21 @@
         throw new Error('Test price ID not configured in environment variables');
       }
 
+      // Get the user's session token
+      const { data: sessionData } = await userStore.supabase.auth.getSession();
+      const sessionToken = sessionData?.session?.access_token;
+
+      if (!sessionToken) {
+        throw new Error('No active session. Please log in again.');
+      }
+
       // Call the create-checkout-session edge function
       const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({
           priceId: testPriceId,

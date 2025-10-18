@@ -344,19 +344,24 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       this.error = null;
 
       try {
-        console.log('[LergStoreV2] Loading enhanced LERG data from Supabase...');
+        console.log('[LergStoreV2] Loading enhanced LERG data from Supabase (direct query)...');
 
-        const { data, error } = await supabase.functions.invoke('get-enhanced-lerg-data');
+        // Query the database directly instead of using edge function
+        const { data, error } = await supabase
+          .from('enhanced_lerg')
+          .select('npa, country_code, country_name, state_province_code, state_province_name, region, created_at, updated_at, notes, is_active')
+          .eq('is_active', true)
+          .order('npa');
 
         if (error) {
           throw new Error(error.message || 'Failed to load LERG data');
         }
 
-        if (!data || !data.data || !Array.isArray(data.data)) {
+        if (!data || !Array.isArray(data)) {
           throw new Error('Invalid data format received from Supabase');
         }
 
-        this.allNPAs = data.data;
+        this.allNPAs = data;
         this.lastUpdated = new Date();
         this.isLoaded = true;
         // Phase 1: Clear index cache when data updates
