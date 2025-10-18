@@ -8,8 +8,7 @@ export interface EnhancedNPARecord {
   country_name: string;
   state_province_code: string;
   state_province_name: string;
-  region: string;
-  category: string; // 'us-domestic' | 'canadian' | 'caribbean' | 'pacific'
+  region: string; // 'US' | 'CA' | 'Caribbean' | 'Pacific' - this IS the category field
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -67,27 +66,26 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
           console.log('[LergStoreV2] Sample NPA data:', {
             npa: npa.npa,
             country_code: npa.country_code,
-            category: npa.category,
             region: npa.region,
           });
         }
 
-        // Use the category field which is the authoritative categorization from the database
-        switch (npa.category) {
-          case 'us-domestic':
+        // Use the region field which contains the category ('US', 'CA', 'Caribbean', 'Pacific')
+        switch (npa.region) {
+          case 'US':
             acc.us_domestic++;
             break;
-          case 'canadian':
+          case 'CA':
             acc.canadian++;
             break;
-          case 'caribbean':
+          case 'Caribbean':
             acc.caribbean++;
             break;
-          case 'pacific':
+          case 'Pacific':
             acc.pacific++;
             break;
           default:
-            console.warn(`[LergStoreV2] Unknown category for NPA ${npa.npa}: ${npa.category}`);
+            console.warn(`[LergStoreV2] Unknown region for NPA ${npa.npa}: ${npa.region}`);
         }
 
         return acc;
@@ -369,8 +367,7 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         // DEBUG: Log first record to see structure
         if (this.allNPAs.length > 0) {
           console.log('[LergStoreV2] First NPA record structure:', this.allNPAs[0]);
-          console.log('[LergStoreV2] Has category field?', 'category' in this.allNPAs[0]);
-          console.log('[LergStoreV2] Category value:', this.allNPAs[0].category);
+          console.log('[LergStoreV2] Region value:', this.allNPAs[0].region);
         }
 
         console.log('[LergStoreV2] Region breakdown:', {
