@@ -72,6 +72,7 @@
   import { useLergOperations } from '@/composables/useLergOperations';
   import { usePingStatus } from '@/composables/usePingStatus';
   import { useUserStore } from '@/stores/user-store';
+  import { supabase } from '@/utils/supabase';
   import {
     TrashIcon,
     ArrowUpTrayIcon,
@@ -607,7 +608,7 @@
       }
 
       // Get the user's session token
-      const { data: sessionData } = await userStore.supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
       const sessionToken = sessionData?.session?.access_token;
 
       if (!sessionToken) {
