@@ -101,9 +101,20 @@ export function useBilling() {
 
       console.log('📦 Edge function response:', { data, fnError });
 
-      if (fnError) {
+      // Check for errors - Supabase returns error details in 'data' when status is non-2xx
+      if (fnError || (data && data.error)) {
         console.error('❌ Edge function error:', fnError);
-        throw fnError;
+        console.error('❌ Response data:', data);
+
+        // The actual error message is in the data object when there's a non-2xx response
+        if (data && data.error) {
+          const errorMsg = `Stripe Error: ${data.error}`;
+          const errorDetails = data.details ? ` (${data.details})` : '';
+          throw new Error(errorMsg + errorDetails);
+        }
+
+        // Fallback to fnError if no data.error
+        throw fnError || new Error('Unknown edge function error');
       }
 
       if (!data) {
