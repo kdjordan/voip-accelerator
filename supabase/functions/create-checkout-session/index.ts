@@ -97,8 +97,16 @@ serve(async (req) => {
       },
     });
 
+    console.log('✅ Checkout session created successfully:', {
+      sessionId: session.id,
+      url: session.url,
+    });
+
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({
+        sessionId: session.id,
+        url: session.url  // Include the direct checkout URL for simpler redirect
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
