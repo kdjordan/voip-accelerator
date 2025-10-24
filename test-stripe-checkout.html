@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Stripe Checkout</title>
+</head>
+<body>
+  <h1>Test Stripe Checkout Session Creation</h1>
+  <button onclick="testCheckout()">Test Checkout</button>
+  <div id="output"></div>
+
+  <script>
+    async function testCheckout() {
+      const output = document.getElementById('output');
+      output.innerHTML = '<p>Testing...</p>';
+
+      try {
+        // Production values
+        const SUPABASE_URL = 'https://mwcvlicipocoqcdypgsy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13Y3ZsaWNpcG9jb3FjZHlwZ3N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMTcwNzMsImV4cCI6MjA2MjU5MzA3M30.VK3HNJaYGq1AXRNxDIf6u42ZhWBkeQ0sT-jLsAujL7o';
+        const PRICE_ID = 'price_1SDF4GFPfsG677QRcfstDlQu'; // Monthly Accelerator
+
+        output.innerHTML += `<p>Price ID: ${PRICE_ID}</p>`;
+        output.innerHTML += `<p>Supabase URL: ${SUPABASE_URL}</p>`;
+
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            priceId: PRICE_ID,
+            successUrl: 'https://voipaccelerator.com/dashboard?subscription=success',
+            cancelUrl: 'https://voipaccelerator.com/dashboard?subscription=cancelled'
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${JSON.stringify(data)}`);
+        }
+
+        output.innerHTML += '<p style="color: green;">✅ Success!</p>';
+        output.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+      } catch (error) {
+        output.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+        console.error('Full error:', error);
+      }
+    }
+  </script>
+</body>
+</html>

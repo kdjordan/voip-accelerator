@@ -85,6 +85,12 @@ export function useBilling() {
       const successUrl = `${window.location.origin}/dashboard?subscription=success`;
       const cancelUrl = `${window.location.origin}/dashboard?subscription=cancelled`;
 
+      console.log('🚀 Invoking create-checkout-session edge function with:', {
+        priceId,
+        successUrl,
+        cancelUrl,
+      });
+
       const { data, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           priceId,
@@ -93,7 +99,16 @@ export function useBilling() {
         },
       });
 
-      if (fnError) throw fnError;
+      console.log('📦 Edge function response:', { data, fnError });
+
+      if (fnError) {
+        console.error('❌ Edge function error:', fnError);
+        throw fnError;
+      }
+
+      if (!data) {
+        throw new Error('No data returned from edge function');
+      }
 
       // Redirect to Stripe Checkout
       if (data.url) {
