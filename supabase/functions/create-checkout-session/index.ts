@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "https://esm.sh/stripe@13.10.0?target=deno";
+import Stripe from "https://esm.sh/stripe@14.21.0?target=deno&no-check";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,6 +32,7 @@ serve(async (req) => {
 
     // Get auth header
     const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
     if (!authHeader) {
       throw new Error('No authorization header');
     }
@@ -39,14 +40,26 @@ serve(async (req) => {
     // Initialize Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    console.log('Supabase URL:', supabaseUrl);
+    console.log('Anon key present:', !!supabaseAnonKey);
+
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
     // Verify user
+    console.log('Verifying user authentication...');
     const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log('User verification result:', {
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      hasError: !!userError,
+      errorMessage: userError?.message,
+    });
+
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      throw new Error(`Unauthorized: ${userError?.message || 'No user found'}`);
     }
 
     // Parse request body
@@ -84,8 +97,16 @@ serve(async (req) => {
       },
     });
 
+    console.log('✅ Checkout session created successfully:', {
+      sessionId: session.id,
+      url: session.url,
+    });
+
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({
+        sessionId: session.id,
+        url: session.url  // Include the direct checkout URL for simpler redirect
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

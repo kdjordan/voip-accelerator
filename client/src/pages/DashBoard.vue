@@ -583,8 +583,15 @@
         ? import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR
         : import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
 
+      console.log('📋 Environment check:', {
+        billingPeriod,
+        monthlyPriceId: import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR,
+        annualPriceId: import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR,
+        selectedPriceId: priceId,
+      });
+
       if (!priceId) {
-        throw new Error(`Price ID not found for ${billingPeriod} plan`);
+        throw new Error(`Price ID not found for ${billingPeriod} plan. Check environment variables.`);
       }
 
       console.log(`🚀 Creating checkout session for ${billingPeriod} Accelerator plan`);
@@ -592,7 +599,19 @@
 
     } catch (error: any) {
       console.error('Upgrade checkout error:', error);
-      alert(`Failed to start checkout: ${error.message}`);
+
+      // Enhanced error messaging
+      let errorMessage = 'Failed to start checkout';
+      if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      if (error.details) {
+        errorMessage += ` (${error.details})`;
+      }
+
+      console.error('Full error object:', JSON.stringify(error, null, 2));
+      alert(errorMessage);
+
       // Reopen modal on error
       showPlanSelectorModal.value = true;
     }

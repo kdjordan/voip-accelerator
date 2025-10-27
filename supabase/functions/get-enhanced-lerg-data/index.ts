@@ -8,7 +8,7 @@ interface EnhancedLERGRecord {
   country_name: string;
   state_province_code: string;
   state_province_name: string;
-  region: string;
+  region: string; // 'US' | 'CA' | 'Caribbean' | 'Pacific' - this IS the category field
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -83,10 +83,10 @@ serve(async (req) => {
       last_updated: null
     };
 
-    // Calculate region counts
+    // Calculate region counts based on region field (which contains 'US', 'CA', 'Caribbean', 'Pacific')
     if (enhancedLergData) {
       for (const record of enhancedLergData) {
-        // Region counts
+        // Use the region field which has values: 'US', 'CA', 'Caribbean', 'Pacific'
         switch (record.region) {
           case 'US':
             stats.us_domestic++;
@@ -100,6 +100,8 @@ serve(async (req) => {
           case 'Pacific':
             stats.pacific++;
             break;
+          default:
+            console.warn(`[get-enhanced-lerg-data] Unknown region for NPA ${record.npa}: ${record.region}`);
         }
       }
 

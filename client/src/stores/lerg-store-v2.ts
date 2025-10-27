@@ -8,7 +8,7 @@ export interface EnhancedNPARecord {
   country_name: string;
   state_province_code: string;
   state_province_name: string;
-  region: string;
+  region: string; // 'US' | 'CA' | 'Caribbean' | 'Pacific' - this IS the category field
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -60,16 +60,32 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
         pacific: 0,
       };
 
-      const calculatedStats = this.allNPAs.reduce((acc, npa) => {
-        // Map region to stats properties
-        if (npa.region === 'US') {
-          acc.us_domestic++;
-        } else if (npa.region === 'CA') {
-          acc.canadian++;
-        } else if (npa.region === 'Caribbean') {
-          acc.caribbean++;
-        } else if (npa.region === 'Pacific') {
-          acc.pacific++;
+      const calculatedStats = this.allNPAs.reduce((acc, npa, index) => {
+        // Debug logging for first few NPAs
+        if (index < 3) {
+          console.log('[LergStoreV2] Sample NPA data:', {
+            npa: npa.npa,
+            country_code: npa.country_code,
+            region: npa.region,
+          });
+        }
+
+        // Use the region field which contains the category ('US', 'CA', 'Caribbean', 'Pacific')
+        switch (npa.region) {
+          case 'US':
+            acc.us_domestic++;
+            break;
+          case 'CA':
+            acc.canadian++;
+            break;
+          case 'Caribbean':
+            acc.caribbean++;
+            break;
+          case 'Pacific':
+            acc.pacific++;
+            break;
+          default:
+            console.warn(`[LergStoreV2] Unknown region for NPA ${npa.npa}: ${npa.region}`);
         }
 
         return acc;
@@ -328,25 +344,37 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       this.error = null;
 
       try {
-        console.log('[LergStoreV2] Loading enhanced LERG data from Supabase...');
+        console.log('[LergStoreV2] Loading enhanced LERG data from Supabase (direct query)...');
 
-        const { data, error } = await supabase.functions.invoke('get-enhanced-lerg-data');
+        // Query the database directly instead of using edge function
+        const { data, error } = await supabase
+          .from('enhanced_lerg')
+          .select('npa, country_code, country_name, state_province_code, state_province_name, region, created_at, updated_at, notes, is_active')
+          .eq('is_active', true)
+          .order('npa');
 
         if (error) {
           throw new Error(error.message || 'Failed to load LERG data');
         }
 
-        if (!data || !data.data || !Array.isArray(data.data)) {
+        if (!data || !Array.isArray(data)) {
           throw new Error('Invalid data format received from Supabase');
         }
 
-        this.allNPAs = data.data;
+        this.allNPAs = data;
         this.lastUpdated = new Date();
         this.isLoaded = true;
         // Phase 1: Clear index cache when data updates
         this._npaIndex = null;
 
         console.log(`[LergStoreV2] Successfully loaded ${this.allNPAs.length} NPAs`);
+
+        // DEBUG: Log first record to see structure
+        if (this.allNPAs.length > 0) {
+          console.log('[LergStoreV2] First NPA record structure:', this.allNPAs[0]);
+          console.log('[LergStoreV2] Region value:', this.allNPAs[0].region);
+        }
+
         console.log('[LergStoreV2] Region breakdown:', {
           'US Domestic': this.stats.us_domestic,
           Canadian: this.stats.canadian,
