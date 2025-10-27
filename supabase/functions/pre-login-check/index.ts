@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
     if (existingSessions && existingSessions.length > 0) {
       const mostRecentSession = existingSessions[0];
       
-      console.log('Conflict found! User already has active session:', mostRecentSession.session_token);
+      console.log('Conflict found! User already has active session');
       return new Response(JSON.stringify({
         hasConflict: true,
         existingSession: {
@@ -83,9 +83,8 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Function error:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack 
+    return new Response(JSON.stringify({
+      error: 'An unexpected error occurred. Please try again.'
     }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

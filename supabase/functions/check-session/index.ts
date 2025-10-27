@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
       const conflictingSession = existingSessions.find(s => s.session_token !== sessionId);
       
       if (conflictingSession) {
-        console.log('Conflict found! Multiple sessions detected. Current:', sessionId, 'Conflicting:', conflictingSession.session_token);
+        console.log('Conflict found! Multiple sessions detected');
         return new Response(JSON.stringify({
           hasConflict: true,
           existingSession: {
@@ -98,9 +98,8 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Function error:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack 
+    return new Response(JSON.stringify({
+      error: 'An unexpected error occurred. Please try again.'
     }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

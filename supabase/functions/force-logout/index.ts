@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
     if (deleteError) {
       console.error('Session deletion error:', deleteError);
       return new Response(
-        JSON.stringify({ error: 'Failed to clear existing sessions', details: deleteError.message }),
+        JSON.stringify({ error: 'Failed to clear existing sessions' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -74,14 +74,22 @@ Deno.serve(async (req: Request) => {
     console.log('Existing sessions deleted successfully');
 
     // Create new session record
-    console.log('Creating new session with token:', newSessionId);
+    console.log('Creating new session');
+
+    // Get IP address - handle comma-separated lists from x-forwarded-for
+    // SECURITY NOTE: IP addresses from headers can be spoofed by clients
+    // This is used for informational/audit purposes only, not for security decisions
+    // The first IP in x-forwarded-for is typically the client IP, but can be manipulated
+    const rawIp = deviceInfo?.ipAddress || req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
+    const ipAddress = rawIp ? rawIp.split(',')[0].trim() : null;
+
     const { error: insertError } = await supabase
       .from('active_sessions')
       .insert({
         user_id: user.id,
         session_token: newSessionId,
         user_agent: deviceInfo?.userAgent || req.headers.get('user-agent'),
-        ip_address: deviceInfo?.ipAddress || req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+        ip_address: ipAddress,
         browser_info: deviceInfo?.browserInfo || {},
         is_active: true,
         created_at: new Date().toISOString(),
@@ -91,7 +99,7 @@ Deno.serve(async (req: Request) => {
     if (insertError) {
       console.error('Session creation error:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to create new session', details: insertError.message }),
+        JSON.stringify({ error: 'Failed to create new session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -108,7 +116,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('Force logout error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An unexpected error occurred. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
