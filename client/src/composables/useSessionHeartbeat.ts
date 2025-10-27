@@ -14,11 +14,13 @@ export function useSessionHeartbeat() {
       const sessionId = sessionStorage.getItem('voip_session_id');
       if (!sessionId) return; // No session to check
 
-      // Check if our session still exists in the database
+      // Update last_heartbeat to keep session alive AND check if session still exists
+      // If session was deleted (force logout from another device), this will return no rows
       const { data, error } = await supabase
         .from('active_sessions')
-        .select('id')
+        .update({ last_heartbeat: new Date().toISOString() })
         .eq('session_token', sessionId)
+        .select('id')
         .single();
 
       if (error || !data) {
