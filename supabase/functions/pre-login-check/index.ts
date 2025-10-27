@@ -55,10 +55,34 @@ Deno.serve(async (req: Request) => {
 
     console.log('Found existing sessions:', existingSessions?.length || 0);
 
-    // If there are ANY active sessions, that's a conflict since user is trying to login
+    // If there are ANY active sessions, check if they're stale before showing conflict
     if (existingSessions && existingSessions.length > 0) {
       const mostRecentSession = existingSessions[0];
-      
+
+      // Check if session is stale (last heartbeat > 30 seconds ago)
+      // This handles cases where beforeunload didn't fire (browser crash, force quit, etc.)
+      const lastHeartbeat = new Date(mostRecentSession.last_heartbeat);
+      const now = new Date();
+      const timeSinceHeartbeat = (now.getTime() - lastHeartbeat.getTime()) / 1000; // seconds
+
+      if (timeSinceHeartbeat > 30) {
+        console.log('Session is stale (no heartbeat for', timeSinceHeartbeat, 'seconds) - auto-deleting');
+
+        // Delete stale session
+        await supabase
+          .from('active_sessions')
+          .delete()
+          .eq('id', mostRecentSession.id);
+
+        // No conflict - stale session was cleaned up
+        console.log('Stale session deleted - safe to login');
+        return new Response(JSON.stringify({
+          hasConflict: false,
+          message: 'Stale session cleaned up'
+        }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Session is active (recent heartbeat) - this is a real conflict
       console.log('Conflict found! User already has active session');
       return new Response(JSON.stringify({
         hasConflict: true,

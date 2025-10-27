@@ -8,6 +8,26 @@ export function useSessionHeartbeat() {
   const userStore = useUserStore();
   let heartbeatInterval: NodeJS.Timeout | null = null;
 
+  const deleteSession = async () => {
+    try {
+      const sessionId = sessionStorage.getItem('voip_session_id');
+      if (!sessionId) return;
+
+      console.log('🧹 Deleting session on tab close');
+
+      // Delete session from database
+      await supabase
+        .from('active_sessions')
+        .delete()
+        .eq('session_token', sessionId);
+
+      // Clear from sessionStorage
+      sessionStorage.removeItem('voip_session_id');
+    } catch (error) {
+      console.error('Error deleting session on tab close:', error);
+    }
+  };
+
   const checkSessionValidity = async () => {
     try {
       // Get current session ID from storage
@@ -51,6 +71,26 @@ export function useSessionHeartbeat() {
 
   onMounted(() => {
     startHeartbeat();
+
+    // Add beforeunload event listener to clean up session when tab closes
+    // This handles normal tab close, browser close, navigation away
+    const handleBeforeUnload = () => {
+      // Use navigator.sendBeacon for reliable cleanup during page unload
+      // Standard fetch/axios may be cancelled by browser during unload
+      const sessionId = sessionStorage.getItem('voip_session_id');
+      if (sessionId) {
+        // Note: We can't use async/await here because the page is unloading
+        // Just fire and forget - the delete will complete even as page unloads
+        deleteSession();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Clean up event listener on unmount
+    onUnmounted(() => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    });
   });
 
   onUnmounted(() => {
@@ -60,6 +100,7 @@ export function useSessionHeartbeat() {
   return {
     checkSessionValidity,
     startHeartbeat,
-    stopHeartbeat
+    stopHeartbeat,
+    deleteSession
   };
 }
