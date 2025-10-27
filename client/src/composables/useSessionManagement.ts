@@ -135,6 +135,8 @@ export function useSessionManagement() {
       sessionStorage.setItem('voip_session_id', newSessionId);
       const deviceInfo = getDeviceInfo();
 
+      console.log('🔄 Calling force-logout edge function...');
+
       // Let Supabase handle auth automatically (like other working functions)
       const response = await supabase.functions.invoke('force-logout', {
         body: {
@@ -143,13 +145,22 @@ export function useSessionManagement() {
         }
       });
 
+      console.log('📡 Edge function response:', response);
+
       if (response.error) {
+        console.error('❌ Edge function returned error:', response.error);
         throw response.error;
       }
 
+      if (!response.data?.success) {
+        console.error('❌ Edge function failed:', response.data);
+        throw new Error(response.data?.error || 'Failed to force logout');
+      }
+
+      console.log('✅ Force logout successful!');
       sessionConflict.value = null;
     } catch (error) {
-      console.error('Force logout error:', error);
+      console.error('💥 Force logout error:', error);
       throw error;
     }
   };
