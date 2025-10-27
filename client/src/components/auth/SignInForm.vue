@@ -115,33 +115,39 @@ import { supabase } from '@/utils/supabase';
     try {
       const { error } = await userStore.signInWithPassword(email.value, password.value);
       if (error) throw error;
-      
+
       // Check for conflicts BEFORE creating any session
       console.log('Checking for existing sessions before login...');
+      let hasConflict = false;
       try {
         const response = await supabase.functions.invoke('pre-login-check', {});
-        
+
         if (response.error) {
           throw response.error;
         }
 
         const result = response.data;
-        
+
         if (result.hasConflict) {
           // Show conflict modal WITHOUT creating a new session yet
           console.log('🚨 CONFLICT DETECTED! Showing modal for existing session:', result.existingSession);
           conflictingSession.value = result.existingSession;
           showSessionConflict.value = true;
+          hasConflict = true;
           console.log('🚨 Modal state set - showSessionConflict:', showSessionConflict.value);
           console.log('🚨 conflictingSession value:', conflictingSession.value);
-          // Don't redirect or create session - wait for user to resolve conflict
-          return;
         }
-        
+
         console.log('No conflicts found, safe to create session');
       } catch (conflictCheckError) {
         console.error('Pre-login conflict check failed:', conflictCheckError);
         // Proceed anyway - better to allow login than block it
+      }
+
+      // If conflict detected, stop here and wait for user to resolve
+      if (hasConflict) {
+        isLoading.value = false;
+        return;
       }
 
       // No conflicts detected, create the session
