@@ -112,43 +112,54 @@ import { supabase } from '@/utils/supabase';
   async function handleSignIn() {
     isLoading.value = true;
     errorMessage.value = null;
+
+    // Check for conflicts BEFORE authenticating
+    console.log('Checking for existing sessions before login...');
+    let hasConflict = false;
     try {
+      // First, get a temporary auth token to check for existing sessions
+      const tempAuthResult = await userStore.signInWithPassword(email.value, password.value);
+      if (tempAuthResult.error) throw tempAuthResult.error;
+
+      const response = await supabase.functions.invoke('pre-login-check', {});
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const result = response.data;
+
+      if (result.hasConflict) {
+        // Show conflict modal and SIGN OUT immediately to prevent auto-redirect
+        console.log('🚨 CONFLICT DETECTED! Showing modal for existing session:', result.existingSession);
+        conflictingSession.value = result.existingSession;
+        showSessionConflict.value = true;
+        hasConflict = true;
+
+        // Sign out immediately to prevent App.vue watchEffect from redirecting
+        await userStore.signOut();
+
+        console.log('🚨 Modal state set - showSessionConflict:', showSessionConflict.value);
+        console.log('🚨 conflictingSession value:', conflictingSession.value);
+        console.log('🚨 User signed out to prevent auto-redirect');
+      }
+    } catch (conflictCheckError) {
+      console.error('Pre-login conflict check failed:', conflictCheckError);
+      // If conflict check fails, sign out and proceed with error
+      await userStore.signOut();
+      throw conflictCheckError;
+    }
+
+    // If conflict detected, stop here and wait for user to resolve
+    if (hasConflict) {
+      isLoading.value = false;
+      return;
+    }
+
+    try {
+      // No conflicts detected, proceed with full login
       const { error } = await userStore.signInWithPassword(email.value, password.value);
       if (error) throw error;
-
-      // Check for conflicts BEFORE creating any session
-      console.log('Checking for existing sessions before login...');
-      let hasConflict = false;
-      try {
-        const response = await supabase.functions.invoke('pre-login-check', {});
-
-        if (response.error) {
-          throw response.error;
-        }
-
-        const result = response.data;
-
-        if (result.hasConflict) {
-          // Show conflict modal WITHOUT creating a new session yet
-          console.log('🚨 CONFLICT DETECTED! Showing modal for existing session:', result.existingSession);
-          conflictingSession.value = result.existingSession;
-          showSessionConflict.value = true;
-          hasConflict = true;
-          console.log('🚨 Modal state set - showSessionConflict:', showSessionConflict.value);
-          console.log('🚨 conflictingSession value:', conflictingSession.value);
-        }
-
-        console.log('No conflicts found, safe to create session');
-      } catch (conflictCheckError) {
-        console.error('Pre-login conflict check failed:', conflictCheckError);
-        // Proceed anyway - better to allow login than block it
-      }
-
-      // If conflict detected, stop here and wait for user to resolve
-      if (hasConflict) {
-        isLoading.value = false;
-        return;
-      }
 
       // No conflicts detected, create the session
       const { data: { user } } = await supabase.auth.getUser();
@@ -216,9 +227,41 @@ import { supabase } from '@/utils/supabase';
   async function handleForceLogout() {
     isResolvingConflict.value = true;
     try {
+      // Force logout the old session
       await forceLogout();
       showSessionConflict.value = false;
-      // Proceed with redirect after forcing logout
+
+      // Re-authenticate since we signed out earlier
+      const { error } = await userStore.signInWithPassword(email.value, password.value);
+      if (error) throw error;
+
+      // Create the new session
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user after login');
+
+      // Generate session ID
+      const sessionId = Date.now() + '-' + Math.random().toString(36).substring(2);
+      sessionStorage.setItem('voip_session_id', sessionId);
+
+      // Create session in database
+      await supabase
+        .from('active_sessions')
+        .insert({
+          user_id: user.id,
+          session_token: sessionId,
+          user_agent: navigator.userAgent,
+          ip_address: null,
+          browser_info: {
+            browser: 'Chrome',
+            os: 'Unknown',
+            device: 'Desktop'
+          },
+          is_active: true,
+          created_at: new Date().toISOString(),
+          last_heartbeat: new Date().toISOString()
+        });
+
+      // Proceed with redirect
       router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
     } catch (error: any) {
       console.error('Force logout error:', error);
