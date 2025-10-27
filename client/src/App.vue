@@ -173,6 +173,12 @@
     // Routes from which an authenticated user should be redirected
     const transitionalAuthRoutes = ['/', '/home', '/login', '/signup', '/auth/callback'];
 
+    // IMPORTANT: Don't redirect if user is on login page - let the SignInForm handle conflicts
+    // The SignInForm may need to show a session conflict modal before redirecting
+    if (currentPath === '/login') {
+      return; // Let SignInForm control the flow
+    }
+
     if (isInitialized && isAuthenticated && transitionalAuthRoutes.includes(currentPath)) {
       await nextTick(); // Wait for DOM updates if any are pending from isInitialized changing
 
@@ -180,7 +186,8 @@
       if (
         userStore.getAuthIsInitialized && // Re-check reactive getter
         userStore.getIsAuthenticated && // Re-check reactive getter
-        transitionalAuthRoutes.includes(route.path) // Re-check current route path
+        transitionalAuthRoutes.includes(route.path) && // Re-check current route path
+        route.path !== '/login' // Double-check we're not on login page
       ) {
         router.push({ name: 'dashboard' });
       } else {

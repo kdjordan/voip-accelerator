@@ -113,53 +113,32 @@ import { supabase } from '@/utils/supabase';
     isLoading.value = true;
     errorMessage.value = null;
 
-    // Check for conflicts BEFORE authenticating
-    console.log('Checking for existing sessions before login...');
-    let hasConflict = false;
     try {
-      // First, get a temporary auth token to check for existing sessions
-      const tempAuthResult = await userStore.signInWithPassword(email.value, password.value);
-      if (tempAuthResult.error) throw tempAuthResult.error;
+      // Step 1: Authenticate the user
+      const { error } = await userStore.signInWithPassword(email.value, password.value);
+      if (error) throw error;
 
+      // Step 2: Check for existing sessions
+      console.log('Checking for existing sessions...');
       const response = await supabase.functions.invoke('pre-login-check', {});
 
       if (response.error) {
-        throw response.error;
+        console.error('Pre-login check failed:', response.error);
+        // Proceed with login if conflict check fails
+      } else {
+        const result = response.data;
+
+        if (result.hasConflict) {
+          // Show modal but KEEP user authenticated
+          console.log('🚨 CONFLICT DETECTED! Showing modal...');
+          conflictingSession.value = result.existingSession;
+          showSessionConflict.value = true;
+          isLoading.value = false;
+          return; // Stop here, let user decide via modal
+        }
       }
 
-      const result = response.data;
-
-      if (result.hasConflict) {
-        // Show conflict modal and SIGN OUT immediately to prevent auto-redirect
-        console.log('🚨 CONFLICT DETECTED! Showing modal for existing session:', result.existingSession);
-        conflictingSession.value = result.existingSession;
-        showSessionConflict.value = true;
-        hasConflict = true;
-
-        // Sign out immediately to prevent App.vue watchEffect from redirecting
-        await userStore.signOut();
-
-        console.log('🚨 Modal state set - showSessionConflict:', showSessionConflict.value);
-        console.log('🚨 conflictingSession value:', conflictingSession.value);
-        console.log('🚨 User signed out to prevent auto-redirect');
-      }
-    } catch (conflictCheckError) {
-      console.error('Pre-login conflict check failed:', conflictCheckError);
-      // If conflict check fails, sign out and proceed with error
-      await userStore.signOut();
-      throw conflictCheckError;
-    }
-
-    // If conflict detected, stop here and wait for user to resolve
-    if (hasConflict) {
-      isLoading.value = false;
-      return;
-    }
-
-    try {
-      // No conflicts detected, proceed with full login
-      const { error } = await userStore.signInWithPassword(email.value, password.value);
-      if (error) throw error;
+      // Step 3: No conflict - proceed with session creation
 
       // No conflicts detected, create the session
       const { data: { user } } = await supabase.auth.getUser();
@@ -227,15 +206,10 @@ import { supabase } from '@/utils/supabase';
   async function handleForceLogout() {
     isResolvingConflict.value = true;
     try {
-      // Force logout the old session
+      // Force logout the old session via edge function
       await forceLogout();
-      showSessionConflict.value = false;
 
-      // Re-authenticate since we signed out earlier
-      const { error } = await userStore.signInWithPassword(email.value, password.value);
-      if (error) throw error;
-
-      // Create the new session
+      // Now create new session for this device
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user after login');
 
@@ -244,7 +218,7 @@ import { supabase } from '@/utils/supabase';
       sessionStorage.setItem('voip_session_id', sessionId);
 
       // Create session in database
-      await supabase
+      const { error: sessionError } = await supabase
         .from('active_sessions')
         .insert({
           user_id: user.id,
@@ -261,7 +235,13 @@ import { supabase } from '@/utils/supabase';
           last_heartbeat: new Date().toISOString()
         });
 
-      // Proceed with redirect
+      if (sessionError) {
+        console.error('Session creation error:', sessionError);
+        throw new Error('Failed to create session');
+      }
+
+      // Close modal and redirect
+      showSessionConflict.value = false;
       router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
     } catch (error: any) {
       console.error('Force logout error:', error);
