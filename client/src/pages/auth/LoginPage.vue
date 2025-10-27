@@ -10,6 +10,13 @@
           </h2>
         </div>
 
+        <!-- Session Terminated Message -->
+        <div v-if="showSessionTerminatedMessage" class="mb-6 bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
+          <p class="text-sm text-blue-300 text-center">
+            You've been logged out because you logged in on another device. Please sign in again.
+          </p>
+        </div>
+
         <!-- Form -->
         <SignInForm />
 
@@ -36,9 +43,15 @@
 </template>
 
 <script setup lang="ts">
-  import { RouterLink } from 'vue-router';
+  import { computed } from 'vue';
+  import { RouterLink, useRoute } from 'vue-router';
   import { BoltIcon } from '@heroicons/vue/24/solid';
-  import SignInForm from '@/components/auth/SignInForm.vue'; // Assuming this path
+  import SignInForm from '@/components/auth/SignInForm.vue';
 
-  // Page-specific logic can be added here if needed
+  const route = useRoute();
+
+  // Show message if user was logged out due to session termination
+  const showSessionTerminatedMessage = computed(() => {
+    return route.query.reason === 'session_terminated';
+  });
 </script>

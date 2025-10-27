@@ -28,7 +28,7 @@ export function useSessionHeartbeat() {
         // Session was removed (force logout from another device)
         // Clear everything and redirect to login
         await userStore.signOut();
-        router.push('/auth/sign-in?reason=session_terminated');
+        router.push('/login?reason=session_terminated');
       }
     } catch (error) {
       console.error('Session heartbeat error:', error);

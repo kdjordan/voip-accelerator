@@ -206,41 +206,13 @@ import { supabase } from '@/utils/supabase';
   async function handleForceLogout() {
     isResolvingConflict.value = true;
     try {
-      // Force logout the old session via edge function
+      // Force logout via edge function
+      // This edge function will:
+      // 1. Delete all existing sessions for this user
+      // 2. Create a new session with the generated session_token
       await forceLogout();
 
-      // Now create new session for this device
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user after login');
-
-      // Generate session ID
-      const sessionId = Date.now() + '-' + Math.random().toString(36).substring(2);
-      sessionStorage.setItem('voip_session_id', sessionId);
-
-      // Create session in database
-      const { error: sessionError } = await supabase
-        .from('active_sessions')
-        .insert({
-          user_id: user.id,
-          session_token: sessionId,
-          user_agent: navigator.userAgent,
-          ip_address: null,
-          browser_info: {
-            browser: 'Chrome',
-            os: 'Unknown',
-            device: 'Desktop'
-          },
-          is_active: true,
-          created_at: new Date().toISOString(),
-          last_heartbeat: new Date().toISOString()
-        });
-
-      if (sessionError) {
-        console.error('Session creation error:', sessionError);
-        throw new Error('Failed to create session');
-      }
-
-      // Close modal and redirect
+      // Close modal and redirect to dashboard
       showSessionConflict.value = false;
       router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
     } catch (error: any) {
