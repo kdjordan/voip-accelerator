@@ -9,7 +9,7 @@ export const PlanTier = {
 export type PlanTierType = 'trial' | 'active';
 
 // Billing Period Types
-export type BillingPeriod = 'monthly' | 'annual' | null;
+export type BillingPeriod = 'monthly' | 'annual' | 'test' | null;
 
 // Simplified Plan - All users get same features (unlimited)
 export interface PlanInfo {

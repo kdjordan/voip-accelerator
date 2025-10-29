@@ -572,21 +572,27 @@
   }
   
   // Handler for plan selection from PlanSelectorModal
-  async function handlePlanSelectorSelection(billingPeriod: 'monthly' | 'annual') {
+  async function handlePlanSelectorSelection(billingPeriod: 'monthly' | 'annual' | 'test') {
     showPlanSelectorModal.value = false;
 
     try {
       const { createCheckoutSession } = useBilling();
 
       // Get the correct price ID based on billing period
-      const priceId = billingPeriod === 'annual'
-        ? import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR
-        : import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+      let priceId: string;
+      if (billingPeriod === 'test') {
+        priceId = import.meta.env.VITE_STRIPE_PRICE_TEST_CHARGE;
+      } else if (billingPeriod === 'annual') {
+        priceId = import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR;
+      } else {
+        priceId = import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+      }
 
       console.log('📋 Environment check:', {
         billingPeriod,
         monthlyPriceId: import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR,
         annualPriceId: import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR,
+        testPriceId: import.meta.env.VITE_STRIPE_PRICE_TEST_CHARGE,
         selectedPriceId: priceId,
       });
 

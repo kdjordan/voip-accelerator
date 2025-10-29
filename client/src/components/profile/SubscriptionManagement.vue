@@ -9,6 +9,21 @@
 
     <!-- Subscription Info -->
     <div v-else-if="subscription" class="space-y-4">
+      <!-- Test Subscription Badge (Admin Only) -->
+      <div v-if="subscription.billing_period === 'test'" class="p-4 bg-yellow-600/20 border-2 border-yellow-500/50 rounded-lg">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🧪</span>
+          <div>
+            <p class="text-yellow-300 text-sm font-bold">
+              TEST SUBSCRIPTION
+            </p>
+            <p class="text-yellow-300/80 text-xs mt-1">
+              This is a $1.00/month test subscription for admin verification purposes
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Status -->
       <div class="flex items-center justify-between">
         <span class="text-fbWhite/70">Status</span>
@@ -91,6 +106,7 @@ interface SubscriptionData {
   cancel_at: string | null;
   cancel_at_period_end?: boolean;
   subscription_tier?: string | null;
+  billing_period?: 'monthly' | 'annual' | 'test' | null;
 }
 
 const { showError } = useToast();

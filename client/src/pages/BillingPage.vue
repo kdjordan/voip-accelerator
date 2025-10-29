@@ -57,6 +57,20 @@
               Save $189
             </span>
           </button>
+          <!-- Admin Test Button (Admin Only) -->
+          <button
+            v-if="isAdmin"
+            @click="selectedBillingPeriod = 'test'"
+            class="px-6 py-2 rounded-md text-sm font-medium transition-all relative ml-1"
+            :class="selectedBillingPeriod === 'test'
+              ? 'bg-yellow-600 text-white shadow-lg'
+              : 'text-gray-300 hover:text-white bg-yellow-600/20'"
+          >
+            🧪 Test $1
+            <span class="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full font-bold">
+              ADMIN
+            </span>
+          </button>
         </div>
       </div>
 
@@ -73,10 +87,10 @@
           <h3 class="text-2xl font-bold text-white mb-2">Accelerator</h3>
           <div class="mb-6">
             <span class="text-4xl font-bold text-white">
-              {{ selectedBillingPeriod === 'monthly' ? '$99' : '$999' }}
+              {{ getPriceDisplay() }}
             </span>
             <span class="text-gray-400">
-              {{ selectedBillingPeriod === 'monthly' ? '/month' : '/year' }}
+              {{ getPeriodDisplay() }}
             </span>
           </div>
 
@@ -106,11 +120,12 @@
             variant="primary"
             size="standard"
             class="w-full"
+            :class="selectedBillingPeriod === 'test' ? 'bg-yellow-600 hover:bg-yellow-700' : ''"
             :loading="loading"
             :disabled="loading"
           >
             <span v-if="loading">Processing...</span>
-            <span v-else>Subscribe {{ selectedBillingPeriod === 'monthly' ? 'Monthly' : 'Annually' }}</span>
+            <span v-else>{{ getButtonText() }}</span>
           </BaseButton>
 
         </div>
@@ -149,7 +164,9 @@ const userStore = useUserStore();
 const { showError, showSuccess } = useToast();
 const loading = ref(false);
 const showPlanSelector = ref(false);
-const selectedBillingPeriod = ref<'monthly' | 'annual'>('monthly');
+const selectedBillingPeriod = ref<'monthly' | 'annual' | 'test'>('monthly');
+
+const isAdmin = computed(() => userStore.isAdmin);
 
 // Check if this is a paid signup (redirected from router guard)
 const isAutoCheckout = computed(() => route.query.autoCheckout === 'true');
@@ -181,15 +198,38 @@ const isCurrentSubscriber = computed(() => {
   return hasActiveSubscription.value && userStore.getUserProfile?.subscription_tier;
 });
 
+const getPriceDisplay = () => {
+  if (selectedBillingPeriod.value === 'test') return '$1.00';
+  if (selectedBillingPeriod.value === 'monthly') return '$99';
+  return '$999';
+};
+
+const getPeriodDisplay = () => {
+  if (selectedBillingPeriod.value === 'test') return '/month (test)';
+  if (selectedBillingPeriod.value === 'monthly') return '/month';
+  return '/year';
+};
+
+const getButtonText = () => {
+  if (selectedBillingPeriod.value === 'test') return '🧪 Subscribe to Test Plan';
+  if (selectedBillingPeriod.value === 'monthly') return 'Subscribe Monthly';
+  return 'Subscribe Annually';
+};
+
 async function selectPlan() {
   console.log('selectPlan called with billingPeriod:', selectedBillingPeriod.value);
   try {
     loading.value = true;
 
     // Map billing period to Stripe price ID
-    const priceId = selectedBillingPeriod.value === 'annual'
-      ? import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR
-      : import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+    let priceId: string;
+    if (selectedBillingPeriod.value === 'test') {
+      priceId = import.meta.env.VITE_STRIPE_PRICE_TEST_CHARGE;
+    } else if (selectedBillingPeriod.value === 'annual') {
+      priceId = import.meta.env.VITE_STRIPE_PRICE_ANNUAL_ACCELERATOR;
+    } else {
+      priceId = import.meta.env.VITE_STRIPE_PRICE_MONTHLY_ACCELERATOR;
+    }
 
     console.log(`${selectedBillingPeriod.value} price ID from env:`, priceId);
 
@@ -223,7 +263,7 @@ function handleReturnToDashboard() {
   router.push(redirectPath || '/dashboard');
 }
 
-function handlePlanSelection(billingPeriod: 'monthly' | 'annual') {
+function handlePlanSelection(billingPeriod: 'monthly' | 'annual' | 'test') {
   showPlanSelector.value = false;
   selectedBillingPeriod.value = billingPeriod;
   selectPlan();

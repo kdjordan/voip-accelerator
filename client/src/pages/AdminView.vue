@@ -6,40 +6,6 @@
 
     <!-- Stats Dashboard -->
     <div class="flex flex-col gap-6 bg-gray-800 pb-6">
-      <!-- Test Payment Flow (Admin Only) -->
-      <div v-if="isAdmin" class="bg-gray-700 rounded-lg p-6 mx-4 mt-4">
-        <h2 class="text-xl font-semibold text-accent mb-4">🧪 Test Payment Flow</h2>
-        <div class="bg-yellow-900/30 border border-yellow-600 rounded-lg p-4 mb-4">
-          <p class="text-yellow-200 text-sm">
-            <strong>⚠️ Admin Testing Tool:</strong> This creates a real $1.00/month subscription for testing the complete payment flow.
-          </p>
-          <p class="text-yellow-200 text-sm mt-2">
-            Tests: Checkout → Webhook → Database Updates → Monthly Renewals
-          </p>
-        </div>
-
-        <div class="flex items-center gap-4">
-          <button
-            @click="handleTestCheckout"
-            :disabled="isTestCheckoutLoading"
-            class="bg-accent hover:bg-accent/80 text-gray-900 font-semibold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ isTestCheckoutLoading ? 'Creating Checkout...' : 'Test Checkout ($1.00/month)' }}
-          </button>
-
-          <div v-if="testCheckoutStatus" class="flex-1">
-            <div :class="getStatusClass(testCheckoutStatus.type)" class="rounded-lg p-3">
-              <p :class="getStatusTextClass(testCheckoutStatus.type)" class="font-semibold">
-                {{ testCheckoutStatus.message }}
-              </p>
-              <p v-if="testCheckoutStatus.details" :class="getStatusTextClass(testCheckoutStatus.type)" class="text-sm mt-1">
-                {{ testCheckoutStatus.details }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
 
@@ -161,10 +127,6 @@
   });
   const validationErrors = reactive<{ npa?: string; state?: string; country?: string }>({});
   const addSuccessMessage = ref<string | null>(null);
-
-  // Test checkout state
-  const isTestCheckoutLoading = ref(false);
-  const testCheckoutStatus = ref<UploadStatus | null>(null);
 
   const isFormValid = computed(() => {
     return (
@@ -546,121 +508,4 @@
     }
   }
 
-  // --- Helper Functions ---
-
-  /**
-   * Returns Tailwind classes for the status container based on the status type.
-   * @param statusType - The type of the status ('success', 'error', 'warning').
-   * @returns Tailwind CSS class string.
-   */
-  function getStatusClass(statusType: 'success' | 'error' | 'warning'): string {
-    switch (statusType) {
-      case 'success':
-        return 'bg-green-100 border border-green-400';
-      case 'error':
-        return 'bg-red-100 border border-red-400';
-      case 'warning':
-        return 'bg-yellow-100 border border-yellow-400';
-      default:
-        return 'bg-gray-100 border border-gray-400';
-    }
-  }
-
-  /**
-   * Returns Tailwind text color classes based on the status type.
-   * @param statusType - The type of the status ('success', 'error', 'warning').
-   * @returns Tailwind CSS class string for text color.
-   */
-  function getStatusTextClass(statusType: 'success' | 'error' | 'warning'): string {
-    switch (statusType) {
-      case 'success':
-        return 'text-green-800';
-      case 'error':
-        return 'text-red-800';
-      case 'warning':
-        return 'text-yellow-800';
-      default:
-        return 'text-gray-800';
-    }
-  }
-
-  /**
-   * Handle test checkout - creates a $1.00/month subscription for testing
-   */
-  async function handleTestCheckout() {
-    try {
-      isTestCheckoutLoading.value = true;
-      testCheckoutStatus.value = {
-        type: 'warning',
-        message: 'Creating test checkout session...',
-      };
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const testPriceId = import.meta.env.VITE_STRIPE_PRICE_TEST_CHARGE;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Missing Supabase configuration');
-      }
-
-      if (!testPriceId) {
-        throw new Error('Test price ID not configured in environment variables');
-      }
-
-      // Get the user's session token
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionToken = sessionData?.session?.access_token;
-
-      if (!sessionToken) {
-        throw new Error('No active session. Please log in again.');
-      }
-
-      // Call the create-checkout-session edge function
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({
-          priceId: testPriceId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-
-      const { sessionId } = await response.json();
-
-      if (!sessionId) {
-        throw new Error('No checkout session ID returned');
-      }
-
-      testCheckoutStatus.value = {
-        type: 'success',
-        message: 'Redirecting to Stripe checkout...',
-        details: 'You will be redirected to complete the $1.00/month test subscription',
-      };
-
-      // Load Stripe.js and redirect to checkout
-      const stripe = await (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to redirect to checkout');
-      }
-
-    } catch (err) {
-      console.error('Test checkout error:', err);
-      isTestCheckoutLoading.value = false;
-      testCheckoutStatus.value = {
-        type: 'error',
-        message: 'Failed to create test checkout',
-        details: err instanceof Error ? err.message : 'Unknown error occurred',
-      };
-    }
-  }
 </script>
