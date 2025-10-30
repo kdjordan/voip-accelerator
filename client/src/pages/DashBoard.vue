@@ -928,7 +928,8 @@
           // Immediate deletion - navigate to login
           console.log('[DashBoard] Account deleted immediately. Navigating to login.');
           alert(result.message || 'Your account has been successfully deleted.');
-        router.push({ name: 'Login' }); // Assuming 'Login' is the name of your login route
+          router.push({ name: 'Login' }); // Assuming 'Login' is the name of your login route
+        }
       } else {
         console.error('[DashBoard] Failed to delete account:', result.error);
         deleteAccountError.value =
