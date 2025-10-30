@@ -27,6 +27,9 @@ npm run lint          # Run ESLint
 
 **CRITICAL RULE**: For ANY substantive change, ALWAYS implement and run appropriate tests BEFORE considering the change complete.
 
+Be extremely concise. Sacrifice grammar for the sake of concision.
+Do not create any .md file for documentation unless the user specifically states
+
 ### Testing Commands (Use These Continuously)
 
 ```bash

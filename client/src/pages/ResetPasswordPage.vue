@@ -25,13 +25,6 @@
               <p class="text-sm font-medium text-green-300">{{ successMessage }}</p>
             </div>
           </div>
-          <div class="mt-4">
-            <router-link to="/dashboard">
-              <BaseButton variant="primary" class="w-full">
-                Continue to Dashboard
-              </BaseButton>
-            </router-link>
-          </div>
         </div>
 
         <!-- Form -->
@@ -177,11 +170,20 @@ async function handlePasswordReset() {
 
     if (error) throw error;
 
-    successMessage.value = 'Password reset successful! You are now logged in and can continue to your dashboard.';
+    // Password updated successfully - now sign out and redirect to login
+    successMessage.value = 'Password reset successful! Redirecting to login...';
 
     // Clear the form
     password.value = '';
     confirmPassword.value = '';
+
+    // Sign out the user immediately
+    await supabase.auth.signOut();
+
+    // Redirect to login page after a brief delay
+    setTimeout(() => {
+      router.push({ name: 'Login', query: { passwordReset: 'success' } });
+    }, 2000);
   } catch (error: any) {
     console.error('Password reset error:', error);
     errorMessage.value = error.message || 'Failed to reset password. Please try again.';

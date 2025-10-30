@@ -17,6 +17,13 @@
           </p>
         </div>
 
+        <!-- Password Reset Success Message -->
+        <div v-if="showPasswordResetSuccess" class="mb-6 bg-green-900/30 border border-green-700/50 rounded-lg p-4">
+          <p class="text-sm text-green-300 text-center">
+            Password reset successful! Please sign in with your new password.
+          </p>
+        </div>
+
         <!-- Form -->
         <SignInForm />
 
@@ -53,5 +60,10 @@
   // Show message if user was logged out due to session termination
   const showSessionTerminatedMessage = computed(() => {
     return route.query.reason === 'session_terminated';
+  });
+
+  // Show message if password was successfully reset
+  const showPasswordResetSuccess = computed(() => {
+    return route.query.passwordReset === 'success';
   });
 </script>
