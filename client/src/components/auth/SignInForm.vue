@@ -120,7 +120,14 @@ import { supabase } from '@/utils/supabase';
 
       // Step 2: Check for existing sessions
       console.log('Checking for existing sessions...');
-      const response = await supabase.functions.invoke('pre-login-check', {});
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session after login');
+
+      const response = await supabase.functions.invoke('pre-login-check', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
 
       if (response.error) {
         console.error('Pre-login check failed:', response.error);
