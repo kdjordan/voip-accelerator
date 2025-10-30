@@ -170,20 +170,25 @@ async function handlePasswordReset() {
 
     if (error) throw error;
 
-    // Password updated successfully - now sign out and redirect to login
+    // Password updated successfully
     successMessage.value = 'Password reset successful! Redirecting to login...';
 
     // Clear the form
     password.value = '';
     confirmPassword.value = '';
 
-    // Sign out the user immediately
-    await supabase.auth.signOut();
+    // Sign out the user and clear all sessions
+    await supabase.auth.signOut({ scope: 'local' });
 
-    // Redirect to login page after a brief delay
+    // Clear any cached session data
+    localStorage.removeItem('supabase.auth.token');
+    sessionStorage.clear();
+
+    // Small delay to ensure signout completes, then redirect
     setTimeout(() => {
-      router.push({ name: 'Login', query: { passwordReset: 'success' } });
-    }, 2000);
+      // Use window.location for hard redirect to ensure clean state
+      window.location.href = '/login?passwordReset=success';
+    }, 1500);
   } catch (error: any) {
     console.error('Password reset error:', error);
     errorMessage.value = error.message || 'Failed to reset password. Please try again.';
