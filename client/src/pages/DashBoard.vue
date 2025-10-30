@@ -261,6 +261,17 @@
       @cancel="cancelCancelSubscription"
     />
 
+    <!-- Account Deletion Success Modal (Scheduled) -->
+    <ConfirmationModal
+      v-model="showDeletionScheduledModal"
+      title="Account Deletion Scheduled"
+      :message="deletionScheduledMessage"
+      confirm-button-text="I Understand"
+      :cancel-button-text="undefined"
+      confirm-button-variant="primary"
+      @confirm="closeDeletionScheduledModal"
+    />
+
     <!-- Plan Selector Modal (Unified for all subscription flows) -->
     <PlanSelectorModal
       v-if="showPlanSelectorModal"
@@ -663,6 +674,11 @@
     showCancelSubscriptionModal.value = false;
   }
 
+  function closeDeletionScheduledModal() {
+    showDeletionScheduledModal.value = false;
+    deletionScheduledMessage.value = '';
+  }
+
   async function handleReactivateSubscription() {
     try {
       const { openBillingPortal } = useBilling();
@@ -890,6 +906,10 @@
   const showCancelSubscriptionModal = ref(false);
   const isCancellingSubscription = ref(false);
 
+  // Deletion Scheduled Modal State
+  const showDeletionScheduledModal = ref(false);
+  const deletionScheduledMessage = ref('');
+
   // Functions for Delete Account Modal
   function openDeleteConfirmModal() {
     deleteAccountError.value = null; // Clear previous errors
@@ -908,7 +928,7 @@
 
       if (result.success) {
         if (result.scheduled) {
-          // Scheduled deletion - show message and keep user logged in
+          // Scheduled deletion - show modal and keep user logged in
           console.log('[DashBoard] Account deletion scheduled for:', result.deletion_scheduled_for);
           const deletionDate = result.access_until ? new Date(result.access_until).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -916,9 +936,11 @@
             day: 'numeric'
           }) : 'end of billing period';
 
-          alert(`Account Deletion Scheduled\n\nYour account will be permanently deleted on ${deletionDate}.\n\nYou'll continue to have full access to all features until then.\n\nIf you change your mind, contact support before that date.`);
+          deletionScheduledMessage.value = `Your account will be permanently deleted on <strong>${deletionDate}</strong>.<br><br>You'll continue to have full access to all features until then.<br><br>If you change your mind, please contact support before that date.`;
 
           showDeleteConfirmModal.value = false;
+          showDeletionScheduledModal.value = true;
+
           // Refresh profile to show updated deletion status
           const userId = userStore.getUser?.id;
           if (userId) {
@@ -927,8 +949,8 @@
         } else {
           // Immediate deletion - navigate to login
           console.log('[DashBoard] Account deleted immediately. Navigating to login.');
-          alert(result.message || 'Your account has been successfully deleted.');
-          router.push({ name: 'Login' }); // Assuming 'Login' is the name of your login route
+          showDeleteConfirmModal.value = false;
+          router.push({ name: 'Login' });
         }
       } else {
         console.error('[DashBoard] Failed to delete account:', result.error);
