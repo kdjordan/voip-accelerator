@@ -375,7 +375,20 @@ const handleModalConfirm = async (mappings: Record<string, string>, indeterminat
     if (currentZoneId.value && progressIndicators.value[currentZoneId.value]) {
       progressIndicators.value[currentZoneId.value]?.complete();
     }
-    
+
+    // Track the upload in the new system
+    try {
+      const trackingResult = await uploadTracking.incrementUploadCount(1);
+      if (trackingResult.success) {
+        console.log('Upload tracked successfully:', trackingResult.message);
+      } else {
+        console.warn('Upload tracking failed:', trackingResult.message);
+      }
+    } catch (error) {
+      console.error('Error tracking upload:', error);
+      // Continue anyway - don't block the user experience
+    }
+
     // Reset state after successful processing
     currentFile.value = null;
     if (currentZoneId.value) {
