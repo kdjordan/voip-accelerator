@@ -58,20 +58,16 @@ serve(async (req) => {
       );
     }
 
-    // TEMPORARY: Skip signature verification for testing
-    console.log('⚠️ WARNING: Signature verification disabled for testing');
     let event: Stripe.Event;
-
-    // Parse the body as JSON directly instead of verifying signature
     try {
-      event = JSON.parse(body) as Stripe.Event;
-      console.log('✅ Event parsed (NO SIGNATURE VERIFICATION)');
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log('✅ Webhook signature verified');
       console.log('🎉 EVENT TYPE:', event.type);
       console.log('🎉 EVENT ID:', event.id);
     } catch (err) {
-      console.error('❌ Failed to parse webhook body:', err.message);
+      console.error('❌ Webhook signature verification failed:', err.message);
       return new Response(
-        JSON.stringify({ error: 'Invalid webhook body' }),
+        JSON.stringify({ error: 'Invalid signature' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
