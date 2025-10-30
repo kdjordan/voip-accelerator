@@ -587,7 +587,18 @@ export const useUserStore = defineStore('user', {
       
       // Clear sessionStorage
       sessionStorage.clear();
-      
+
+      // Clear ALL cookies (especially Supabase auth cookies)
+      const cookies = document.cookie.split(';');
+      for (const cookie of cookies) {
+        const eqPos = cookie.indexOf('=');
+        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        // Clear cookie by setting expiration to past date
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+        console.log('Cleared cookie:', name);
+      }
+
       // 4. Clear store state
       this.clearAuthData();
       
