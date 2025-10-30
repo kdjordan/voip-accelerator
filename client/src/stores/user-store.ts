@@ -650,11 +650,21 @@ export const useUserStore = defineStore('user', {
     async deleteCurrentUserAccount(): Promise<{
       success: boolean;
       message?: string;
+      scheduled?: boolean;
+      deletion_scheduled_for?: string;
+      access_until?: string;
       error?: Error | null;
     }> {
       this.setGlobalLoading(true);
       this.auth.error = null;
-      let result: { success: boolean; message?: string; error?: Error | null } = {
+      let result: {
+        success: boolean;
+        message?: string;
+        scheduled?: boolean;
+        deletion_scheduled_for?: string;
+        access_until?: string;
+        error?: Error | null;
+      } = {
         success: false,
         error: null,
       };
@@ -673,8 +683,7 @@ export const useUserStore = defineStore('user', {
         const { data, error: functionError } = await supabase.functions.invoke(
           'delete-user-account',
           {
-            method: 'POST', // Ensure this matches Edge Function
-            // JWT is automatically included by supabase-js client
+            method: 'POST',
           }
         );
 
@@ -684,16 +693,31 @@ export const useUserStore = defineStore('user', {
         }
 
         console.log('[UserStore] delete-user-account function returned successfully:', data);
-        // If function is successful, it means user is deleted on backend.
-        // Now, sign out locally.
-        await this.signOut(); // Reuse existing signOut to clear local state and session
 
-        result = { success: true, message: data?.message || 'Account deleted successfully.' };
+        // Check if deletion was scheduled (active subscription) vs immediate (trial user)
+        if (data.deletion_scheduled_for) {
+          // Scheduled deletion - user keeps access until period end
+          console.log('[UserStore] Account deletion scheduled for:', data.deletion_scheduled_for);
+          result = {
+            success: true,
+            scheduled: true,
+            message: data.message || 'Account deletion scheduled. You\'ll keep access until your billing period ends.',
+            deletion_scheduled_for: data.deletion_scheduled_for,
+            access_until: data.access_until
+          };
+        } else {
+          // Immediate deletion - sign out user
+          console.log('[UserStore] Account deleted immediately');
+          await this.signOut();
+          result = {
+            success: true,
+            scheduled: false,
+            message: data.message || 'Account deleted successfully.'
+          };
+        }
       } catch (err: any) {
         console.error('[UserStore] Error during account deletion process:', err);
-        // Differentiate between Supabase function error and other errors
         if (err.context && err.context.json) {
-          // Likely a Supabase Function error response
           this.auth.error = new Error(err.context.json.error || 'Failed to delete account.');
         } else {
           this.auth.error = err instanceof Error ? err : new Error(String(err));

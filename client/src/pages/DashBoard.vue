@@ -907,9 +907,27 @@
       const result = await userStore.deleteCurrentUserAccount();
 
       if (result.success) {
-        console.log('[DashBoard] Account deleted successfully. Navigating to login.');
-        // Display a success toast/notification (implementation depends on a global notification system)
-        // Example: toast.success(result.message || 'Your account has been successfully deleted.');
+        if (result.scheduled) {
+          // Scheduled deletion - show message and keep user logged in
+          console.log('[DashBoard] Account deletion scheduled for:', result.deletion_scheduled_for);
+          const deletionDate = result.access_until ? new Date(result.access_until).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }) : 'end of billing period';
+
+          alert(`Account Deletion Scheduled\n\nYour account will be permanently deleted on ${deletionDate}.\n\nYou'll continue to have full access to all features until then.\n\nIf you change your mind, contact support before that date.`);
+
+          showDeleteConfirmModal.value = false;
+          // Refresh profile to show updated deletion status
+          const userId = userStore.getUser?.id;
+          if (userId) {
+            await userStore.fetchProfile(userId);
+          }
+        } else {
+          // Immediate deletion - navigate to login
+          console.log('[DashBoard] Account deleted immediately. Navigating to login.');
+          alert(result.message || 'Your account has been successfully deleted.');
         router.push({ name: 'Login' }); // Assuming 'Login' is the name of your login route
       } else {
         console.error('[DashBoard] Failed to delete account:', result.error);

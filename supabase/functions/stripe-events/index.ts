@@ -292,6 +292,57 @@ async function handleSubscriptionDeleted(subscription: any) {
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // STEP 1: Check if this user had requested account deletion
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('id, account_deletion_scheduled_at, deletion_reason, email')
+    .eq('stripe_customer_id', subscription.customer)
+    .single();
+
+  if (fetchError) {
+    console.error('❌ Error fetching profile:', fetchError);
+    // Continue with normal cancellation processing
+  }
+
+  // STEP 2: If account deletion was scheduled, perform complete deletion
+  if (profile?.account_deletion_scheduled_at) {
+    console.log(`🗑️ Account deletion scheduled - performing complete account cleanup for user ${profile.id}`);
+    console.log(`📅 Deletion was requested at: ${profile.account_deletion_scheduled_at}`);
+    console.log(`📝 Reason: ${profile.deletion_reason || 'user_requested'}`);
+
+    try {
+      // Delete profile first (triggers active_sessions cascade)
+      const { error: deleteProfileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', profile.id);
+
+      if (deleteProfileError) {
+        console.error('❌ Error deleting profile during scheduled deletion:', deleteProfileError);
+        throw deleteProfileError;
+      }
+
+      console.log(`✅ Profile deleted for user ${profile.id}`);
+
+      // Delete auth user (triggers usage_metrics cascade)
+      const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(profile.id);
+
+      if (deleteAuthError) {
+        console.error('❌ Error deleting auth user during scheduled deletion:', deleteAuthError);
+        throw deleteAuthError;
+      }
+
+      console.log(`✅ Auth user deleted for user ${profile.id}`);
+      console.log(`🎉 Complete account deletion finished for ${profile.email || profile.id}`);
+
+      return; // Exit early - account fully deleted
+    } catch (deletionError) {
+      console.error('❌ Failed to complete scheduled account deletion:', deletionError);
+      // Fall through to normal cancellation processing as fallback
+    }
+  }
+
+  // STEP 3: Normal cancellation processing (no deletion scheduled)
   // Build update data for cancellation
   const updateData: any = {
     subscription_status: 'canceled',
