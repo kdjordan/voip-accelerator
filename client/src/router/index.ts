@@ -299,8 +299,21 @@ router.beforeEach(async (to, from, next) => {
 
   // ALWAYS allow password reset page regardless of auth state
   // This must be first to prevent any redirects during password recovery
-  if (to.name === 'ResetPassword' || to.path === '/reset-password') {
-    console.log('[NavGuard] Password reset page - allowing access');
+  // Also check URL hash for recovery token (Supabase puts it in #access_token=...&type=recovery)
+  const isResetPasswordRoute = to.name === 'ResetPassword' || to.path === '/reset-password';
+  const hasRecoveryToken = window.location.hash.includes('type=recovery');
+
+  if (isResetPasswordRoute || hasRecoveryToken) {
+    console.log('[NavGuard] Password reset flow detected - allowing access', {
+      isResetPasswordRoute,
+      hasRecoveryToken
+    });
+    // If we have a recovery token but are not on reset-password page, redirect there
+    if (hasRecoveryToken && !isResetPasswordRoute) {
+      console.log('[NavGuard] Recovery token detected, redirecting to reset-password page');
+      next({ name: 'ResetPassword' });
+      return;
+    }
     next();
     return;
   }
