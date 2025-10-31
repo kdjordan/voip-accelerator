@@ -101,7 +101,7 @@
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-white">Plan Information</h3>
             <BaseBadge :variant="currentPlanBadgeVariant" size="small">
-              {{ currentPlanTier === 'trial' ? 'Trial Plan' : `${currentPlanName} Plan` }}
+              {{ subscriptionBadgeText }}
             </BaseBadge>
           </div>
 
@@ -350,7 +350,24 @@
     if (tier === 'trial') {
       return 'warning';
     }
-    return 'info'; // Blue variant for monthly, annual, or unknown
+    return 'info'; // Blue variant for monthly, annual, test, or unknown
+  });
+
+  const subscriptionBadgeText = computed(() => {
+    const tier = currentPlanTier.value;
+    const billingPeriod = userStore.getBillingPeriod;
+
+    if (tier === 'trial') {
+      return 'Trial Plan';
+    }
+
+    if (tier === 'accelerator') {
+      if (billingPeriod === 'monthly') return 'Monthly';
+      if (billingPeriod === 'annual') return 'Annual';
+      if (billingPeriod === 'test') return 'Test (Admin)';
+    }
+
+    return `${currentPlanName.value} Plan`;
   });
 
   function getMonthlyPrice() {

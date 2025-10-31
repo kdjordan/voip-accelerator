@@ -98,7 +98,11 @@ serve(async (req: Request) => {
     // STEP 2: Handle Stripe subscription cancellation (if applicable)
     let deletionScheduledFor: string | null = null;
 
-    if (stripe && profile?.subscription_id && profile?.subscription_status === 'active') {
+    // Check if user has an active subscription (includes active, past_due, trialing states)
+    const hasActiveSubscription = profile?.subscription_id &&
+      ['active', 'past_due', 'trialing'].includes(profile.subscription_status);
+
+    if (stripe && hasActiveSubscription) {
       try {
         console.log(`[Delete Account] Scheduling Stripe subscription cancellation at period end for: ${profile.subscription_id}`);
 

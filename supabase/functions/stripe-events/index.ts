@@ -473,7 +473,7 @@ async function handleInvoicePaymentFailed(invoice: any) {
 
 // Helper function for billing period determination (reused from checkout logic)
 function determineBillingPeriod(amountInCents: number): string {
-  if (amountInCents === 100) return 'monthly';    // $1.00 (test subscription)
+  if (amountInCents === 100) return 'test';       // $1.00 (test subscription - admin only)
   if (amountInCents === 9900) return 'monthly';   // $99.00
   if (amountInCents === 99900) return 'annual';   // $999.00
   return 'monthly'; // default
