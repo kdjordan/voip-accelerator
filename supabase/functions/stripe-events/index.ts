@@ -58,7 +58,7 @@ serve(async (req) => {
       );
     }
 
-  let event: Stripe.Event;
+    let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
       console.log('✅ Webhook signature verified');
