@@ -197,12 +197,13 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // Emits
-defineEmits<{
+const emit = defineEmits<{
   'user-selected': [userId: string]
   'select-all': []
   'user-details': [user: UserProfile]
   'update-role': [userId: string, role: 'user' | 'admin']
   'toggle-status': [userId: string, isActive: boolean]
+  'delete-user': [userId: string]
 }>()
 
 // Store
@@ -247,8 +248,7 @@ function formatDate(dateString: string): string {
 
 function confirmDelete(user: UserProfile) {
   if (confirm(`Are you sure you want to delete user ${user.email || user.id}? This action cannot be undone.`)) {
-    // TODO: Emit delete event
-    console.log('Delete user:', user.id)
+    emit('delete-user', user.id)
   }
 }
 </script>

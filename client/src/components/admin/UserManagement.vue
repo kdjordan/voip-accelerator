@@ -273,6 +273,7 @@
           @user-details="showUserDetails"
           @update-role="handleUpdateRole"
           @toggle-status="handleToggleStatus"
+          @delete-user="handleDeleteUser"
         />
 
         <!-- Pagination -->
@@ -448,6 +449,33 @@ async function handleToggleStatus(userId: string, isActive: boolean) {
     await toggleUserStatus(userId, isActive)
   } catch (err) {
     console.error('Failed to toggle status:', err)
+  }
+}
+
+async function handleDeleteUser(userId: string) {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const response = await fetch(`${supabaseUrl}/functions/v1/delete-user-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userStore.session?.access_token}`
+      },
+      body: JSON.stringify({ userId })
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to delete user')
+    }
+
+    // Remove user from local state
+    store.removeUser(userId)
+    console.log('User deleted successfully:', userId)
+  } catch (err) {
+    console.error('Failed to delete user:', err)
+    alert(`Failed to delete user: ${err instanceof Error ? err.message : 'Unknown error'}`)
   }
 }
 

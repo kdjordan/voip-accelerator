@@ -70,7 +70,38 @@ serve(async (req: Request) => {
       );
     }
 
-    const userIdToDelete = requestingUser.id;
+    // Check if admin is trying to delete another user
+    let userIdToDelete = requestingUser.id;
+
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        if (body.userId && body.userId !== requestingUser.id) {
+          // Admin trying to delete another user - verify admin role
+          const { data: adminProfile, error: profileError } = await supabaseAdminClient
+            .from('profiles')
+            .select('role')
+            .eq('id', requestingUser.id)
+            .single();
+
+          if (profileError || !adminProfile || adminProfile.role !== 'admin') {
+            console.error('[Delete Account] Non-admin trying to delete another user');
+            return new Response(
+              JSON.stringify({ error: 'Admin privileges required to delete other users.' }),
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 403,
+              }
+            );
+          }
+          userIdToDelete = body.userId;
+          console.log(`[Delete Account] Admin ${requestingUser.id} deleting user: ${userIdToDelete}`);
+        }
+      } catch (e) {
+        // No body or invalid JSON - proceed with self-deletion
+      }
+    }
+
     console.log(`[Delete Account] Processing deletion request for user: ${userIdToDelete}`);
 
     // Delete profile first (triggers active_sessions cascade)
