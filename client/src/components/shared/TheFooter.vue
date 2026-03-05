@@ -4,6 +4,9 @@
       <div class="mt-12 text-fbWhite/50 text-sm">
         &copy; {{ new Date().getFullYear() }} VOIP Accelerator. All rights reserved.
       </div>
+      <div class="mt-2 text-fbWhite/50 text-sm">
+        Built with ❤️ by Kevin Jordan
+      </div>
       <div class="flex items-center justify-start space-x-4 mt-4 text-fbWhite/50">
         <RouterLink
           to="/terms-and-conditions"
