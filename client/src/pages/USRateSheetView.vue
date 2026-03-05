@@ -1,13 +1,6 @@
 <template>
-  <!-- Main Page Content (No longer blocked) -->
+  <!-- Main Page Content -->
   <div class="text-white pt-2 w-full">
-    
-    <!-- Service Expiry Banner -->
-    <ServiceExpiryBanner 
-      v-bind="bannerState"
-      @upgrade-clicked="handleUpgradeFromExpiry"
-    />
-    
     <h1 class="mb-2 relative">
       <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
         >US Rate Sheet Wizard
@@ -58,7 +51,7 @@
               </div>
             </div>
           </div>
-          <!-- Invalid Rows Section (NEW) -->
+          <!-- Invalid Rows Section -->
           <InvalidRows
             v-if="store.hasInvalidRateSheetRows"
             :items="usInvalidRowEntries"
@@ -69,7 +62,7 @@
           <div>
             <div class="flex justify-between items-center">
               <h3 class="text-gray-400">Effective Date</h3>
-              <!-- Right side: Date Picker (modified) -->
+              <!-- Right side: Date Picker -->
               <div v-if="isLocallyStored" class="flex flex-col items-end gap-1">
                 <input
                   type="date"
@@ -103,24 +96,17 @@
             @drop.prevent="handleDrop"
             class="relative rounded-lg p-6 h-[120px] flex items-center justify-center transition-colors duration-200"
             :class="[
-              // Dragging state (only when not processing)
               isDragging && !isProcessing && !showPreviewModal
                 ? 'border-2 border-solid border-accent bg-fbWhite/10'
-                : 'border-2 border-dashed border-gray-600', // Default border
-
-              // Hover state (only when not processing and not showing modal)
+                : 'border-2 border-dashed border-gray-600',
               !isProcessing && !showPreviewModal
                 ? 'hover:border-accent-hover hover:bg-fbWhite/10'
                 : '',
-
-              // Cursor state
               isProcessing
                 ? 'cursor-not-allowed'
                 : !showPreviewModal
                   ? 'cursor-pointer'
                   : 'cursor-default',
-
-              // Error state border
               uploadError ? 'border-2 border-solid border-red-500' : '',
             ]"
           >
@@ -162,7 +148,7 @@
 
               <!-- Uploading state -->
               <template v-else>
-                <RealTimeProgressIndicator 
+                <RealTimeProgressIndicator
                   :is-uploading="store.getUploadProgress.isUploading"
                   :progress="store.getUploadProgress.progress"
                   :stage="store.getUploadProgress.stage"
@@ -174,7 +160,7 @@
           </div>
         </div>
 
-        <!-- Data Table Section (MOVED INSIDE p-6 container) -->
+        <!-- Data Table Section -->
         <div v-if="isLocallyStored" class="mt-6">
           <USRateSheetTable />
         </div>
@@ -200,14 +186,6 @@
 
     <!-- Info Modal -->
     <InfoModal :show-modal="showInfoModal" :type="'us_rate_sheet'" @close="closeInfoModal" />
-    
-    <!-- Plan Selector Modal -->
-    <PlanSelectorModal
-      v-if="showPlanSelectorModal"
-      :is-trial-expired="true"
-      @close="showPlanSelectorModal = false"
-      @select-plan="handlePlanSelectorSelection"
-    />
   </div>
 </template>
 
@@ -215,20 +193,12 @@
   import { computed, ref, onMounted, watch } from 'vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
-  import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
-  import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
-  import type { SubscriptionTier } from '@/types/user-types';
-import { useBilling } from '@/composables/useBilling';
 
   import {
     ArrowUpTrayIcon,
-    TrashIcon,
-    ChevronDownIcon,
-    ChevronUpIcon,
     ArrowRightIcon,
-    ArrowPathIcon,
     InformationCircleIcon,
   } from '@heroicons/vue/24/outline';
   import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
@@ -241,15 +211,10 @@ import { useBilling } from '@/composables/useBilling';
   import { USColumnRole } from '@/types/domains/us-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import { useDragDrop } from '@/composables/useDragDrop';
-  import { useUserStore } from '@/stores/user-store';
 
   const store = useUsRateSheetStore();
-  const userStore = useUserStore();
-  // Use the simple, original USRateSheetService (no web workers, no streaming complexity)
   const usRateSheetService = new USRateSheetService();
   const isLocallyStored = computed(() => store.getHasUsRateSheetData);
-  const isRFUploading = ref(false);
-  const isRFRemoving = ref(false);
   const uploadError = ref<string | null>(store.getError);
   const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
   const isProcessing = computed(() => store.isLoading);
@@ -262,39 +227,32 @@ import { useBilling } from '@/composables/useBilling';
   const columnMappings = ref<Record<string, string>>({});
   const isValid = ref(false);
   const selectedFile = ref<File | null>(null);
-  
+
   // Progress tracking
   const uploadingFileRowCount = ref(0);
 
   // Effective Date State
-  const showEffectiveDateSettings = ref(true); // Default to open
   const selectedEffectiveDate = ref<string>('');
-  const minDate = computed(() => new Date().toISOString().split('T')[0]); // Minimum date is today
+  const minDate = computed(() => new Date().toISOString().split('T')[0]);
 
-  // Computed property to check if the selected date is different from the stored one
   const isDateChanged = computed(() => {
-    // Make sure both values are valid date strings before comparing
     const currentDate = store.getCurrentEffectiveDate;
     const selectedDate = selectedEffectiveDate.value;
-    // Check if selectedDate is a valid YYYY-MM-DD string
     const isValidDateString = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate);
     return isValidDateString && selectedDate !== currentDate;
   });
 
-  // Watch the store's effective date getter to update the local ref
   watch(
     () => store.getCurrentEffectiveDate,
     (newDate) => {
-      // Only update if the new date is different from the current input value
-      // to avoid resetting user input during typing/selection
       if (newDate && newDate !== selectedEffectiveDate.value) {
         selectedEffectiveDate.value = newDate;
       }
     },
-    { immediate: true } // immediate: true to run on component mount
+    { immediate: true }
   );
 
-  // --- Drag and Drop Setup ---
+  // Drag and Drop Setup
   const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, clearError } =
     useDragDrop({
       acceptedExtensions: ['.csv'],
@@ -309,11 +267,7 @@ import { useBilling } from '@/composables/useBilling';
       },
     });
 
-  // --- End Drag and Drop Setup ---
-
   onMounted(async () => {
-    // DISABLE automatic loading to prevent partial data display
-    // Data will only be loaded after successful upload via handleUploadSuccess
     console.log('[USRateSheetView] Skipping automatic data loading to prevent partial data display');
     store.setLoading(false);
   });
@@ -366,52 +320,13 @@ import { useBilling } from '@/composables/useBilling';
     }
   }
 
-  // --- Info Modal State ---
+  // Info Modal State
   const showInfoModal = ref(false);
-  const showPlanSelectorModal = ref(false);
-  // --- End Info Modal State ---
-
-  // --- Plan Selector Modal Handlers ---
-  // Handler for upgrade clicked from expiry banner
-  function handleUpgradeFromExpiry() {
-    showPlanSelectorModal.value = true;
-  }
-
-  // Handler for plan selection from PlanSelectorModal
-  async function handlePlanSelectorSelection(tier: SubscriptionTier) {
-    showPlanSelectorModal.value = false;
-
-    try {
-      const { createCheckoutSession } = useBilling();
-
-      // Get the correct price ID based on selected tier
-      const priceIds = {
-        optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
-        accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR
-      };
-
-      const priceId = priceIds[tier];
-
-      if (!priceId) {
-        throw new Error(`Price ID not found for ${tier} plan`);
-      }
-
-      console.log(`🚀 Creating checkout session for ${tier} upgrade`);
-      await createCheckoutSession(priceId, tier);
-
-    } catch (error: any) {
-      console.error('Upgrade checkout error:', error);
-      alert(`Failed to start checkout: ${error.message}`);
-      // Reopen modal on error
-      showPlanSelectorModal.value = true;
-    }
-  }
-  // --- End Plan Selector Modal Handlers ---
 
   async function handleModalConfirm(
     mappings: Record<string, string>,
     indeterminateDefinition?: string,
-    effectiveDate?: string // Make effectiveDate optional as it's not always passed
+    effectiveDate?: string
   ) {
     if (!selectedFile.value) {
       return;
@@ -419,14 +334,14 @@ import { useBilling } from '@/composables/useBilling';
 
     store.setLoading(true);
     store.setError(null);
-    store.setUploadInProgress(true); // BLOCK table loading
+    store.setUploadInProgress(true);
     uploadError.value = null;
     rfUploadStatus.value = null;
 
     try {
       const fileToProcess = selectedFile.value;
 
-      // Count rows for progress tracking FIRST
+      // Count rows for progress tracking
       let rowCount = 0;
       await new Promise<void>((resolve) => {
         Papa.parse(fileToProcess, {
@@ -434,7 +349,6 @@ import { useBilling } from '@/composables/useBilling';
             rowCount++;
           },
           complete: () => {
-            // Subtract header row(s) based on startLine
             uploadingFileRowCount.value = Math.max(0, rowCount - startLine.value);
             resolve();
           },
@@ -442,13 +356,10 @@ import { useBilling } from '@/composables/useBilling';
         });
       });
 
-      // --- Hide modal AFTER we have row count ---
       showPreviewModal.value = false;
-      
-      // Start upload progress tracking
+
       store.startUploadProgress(uploadingFileRowCount.value);
 
-      // Correctly map the roles from the modal to the service's expected keys
       const mappedColumns = Object.entries(mappings).reduce(
         (acc, [indexStr, role]) => {
           if (role) {
@@ -496,37 +407,31 @@ import { useBilling } from '@/composables/useBilling';
         );
       }
 
-      // Use the simple, original USRateSheetService (no complex optimization)
       const processedData = await usRateSheetService.processFile(
         fileToProcess,
         mappedColumns,
         startLine.value,
         indeterminateDefinition,
         effectiveDate,
-        // Progress callback - update store with real progress
         (progress, stage, rowsProcessed, totalRows) => {
           store.setUploadProgress(progress, stage, rowsProcessed, totalRows);
         }
       );
 
       await store.handleUploadSuccess(processedData);
-      userStore.incrementUploadsToday();
-      
-      // Complete progress tracking
+
       store.completeUploadProgress();
-      
-      store.setUploadInProgress(false); // ALLOW table loading now
-      selectedFile.value = null; // Clear selected file after processing
-      uploadingFileRowCount.value = 0; // Reset row count
+
+      store.setUploadInProgress(false);
+      selectedFile.value = null;
+      uploadingFileRowCount.value = 0;
       rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
     } catch (error: any) {
       uploadError.value = `Error processing file: ${error.message || 'Unknown error'}`;
-      // Clear potentially inconsistent data on error
       await store.clearUsRateSheetData();
-      // Reset progress on error
       store.resetUploadProgress();
-      selectedFile.value = null; // Clear selected file on error
-      uploadingFileRowCount.value = 0; // Reset row count on error
+      selectedFile.value = null;
+      uploadingFileRowCount.value = 0;
       rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
     } finally {
       store.setLoading(false);
@@ -536,8 +441,7 @@ import { useBilling } from '@/composables/useBilling';
   function handleModalCancel() {
     showPreviewModal.value = false;
     selectedFile.value = null;
-    uploadingFileRowCount.value = 0; // Reset row count on cancel
-    // Reset progress on cancel
+    uploadingFileRowCount.value = 0;
     store.resetUploadProgress();
   }
 
@@ -545,46 +449,26 @@ import { useBilling } from '@/composables/useBilling';
     columnMappings.value = newMappings;
   }
 
-  // Update handleClearData to use the store action
-  async function handleClearData() {
-    if (confirm('Are you sure you want to clear all US Rate Sheet data?')) {
-      await store.clearUsRateSheetData();
-    }
-  }
-
   async function handleApplyEffectiveDate() {
     if (!selectedEffectiveDate.value || !isDateChanged.value) {
       return;
     }
     await store.updateEffectiveDate(selectedEffectiveDate.value);
-    // Optionally show a success message or handle errors from the store action
   }
 
-  // Function to toggle the effective date section
-  function toggleEffectiveDateSettings() {
-    showEffectiveDateSettings.value = !showEffectiveDateSettings.value;
-  }
-
-  // --- Info Modal Functions ---
   function openInfoModal() {
     showInfoModal.value = true;
   }
 
-  // Banner state from unified store logic
-  const bannerState = computed(() => userStore.getServiceExpiryBanner);
-
   function closeInfoModal() {
     showInfoModal.value = false;
   }
-  // --- End Info Modal Functions ---
 
   const usInvalidRowEntries = computed((): InvalidRowEntry[] => {
     if (!store.invalidRateSheetRows) return [];
     return store.invalidRateSheetRows.map((row: any) => {
-      let problemValue = 'N/A'; // Default problem value
+      let problemValue = 'N/A';
 
-      // Attempt to find a specific problematic rate to display
-      // This is an adaptation for the US data to fit the AZ-style "RATE" column
       if (typeof row.interRate === 'string' && isNaN(parseFloat(row.interRate)))
         problemValue = row.interRate;
       else if (typeof row.intraRate === 'string' && isNaN(parseFloat(row.intraRate)))
@@ -597,10 +481,6 @@ import { useBilling } from '@/composables/useBilling';
         problemValue = String(row.intraRate);
       else if (row.indetermRate !== undefined && row.indetermRate !== null)
         problemValue = String(row.indetermRate);
-      // If a specific rate isn't obviously the single "problemValue", use the reason if it's concise, or a generic indicator.
-      // The `name` field already holds `row.reason`.
-      // The `problemValue` field is for the right-most column, styled like a rate.
-      // If it cannot be a rate, it might look odd. Let's prioritize numbers.
 
       return {
         rowNumber: row.rowIndex,

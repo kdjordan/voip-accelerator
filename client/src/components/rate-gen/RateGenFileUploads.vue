@@ -10,12 +10,10 @@ import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 import Papa from 'papaparse';
 import { USColumnRole } from '@/types/domains/us-types';
 import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/types/domains/rate-gen-types';
-import { useUploadTracking } from '@/composables/useUploadTracking';
 
 // Store and service
 const store = useRateGenStore();
 const service = new RateGenService();
-const uploadTracking = useUploadTracking();
 
 // Component refs for progress tracking - Rate Gen specific
 const progressIndicators = ref<Record<RateGenComponentId, InstanceType<typeof RateGenProgressIndicator> | null>>({
@@ -374,19 +372,6 @@ const handleModalConfirm = async (mappings: Record<string, string>, indeterminat
     // Complete progress indicator if it exists (matching USFileUploads pattern)
     if (currentZoneId.value && progressIndicators.value[currentZoneId.value]) {
       progressIndicators.value[currentZoneId.value]?.complete();
-    }
-
-    // Track the upload in the new system
-    try {
-      const trackingResult = await uploadTracking.incrementUploadCount(1);
-      if (trackingResult.success) {
-        console.log('Upload tracked successfully:', trackingResult.message);
-      } else {
-        console.warn('Upload tracking failed:', trackingResult.message);
-      }
-    } catch (error) {
-      console.error('Error tracking upload:', error);
-      // Continue anyway - don't block the user experience
     }
 
     // Reset state after successful processing

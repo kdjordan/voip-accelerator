@@ -1,13 +1,6 @@
 <template>
-  <!-- Main Page Content (No longer blocked) -->
+  <!-- Main Page Content -->
   <div class="text-white pt-2 w-full max-w-full overflow-x-hidden">
-    
-    <!-- Service Expiry Banner -->
-    <ServiceExpiryBanner 
-      v-bind="bannerState"
-      @upgrade-clicked="handleUpgradeFromExpiry"
-    />
-    
     <h1 class="mb-2 relative">
       <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
         AZ Rate Deck Analyzer
@@ -24,7 +17,7 @@
         </div>
       </button>
     </h1>
-    
+
     <AZContentHeader />
 
     <div class="w-full max-w-full overflow-x-hidden">
@@ -52,14 +45,6 @@
       :type="'az_comparison'"
       @close="closeInfoModal"
     />
-    
-    <!-- Plan Selector Modal -->
-    <PlanSelectorModal
-      v-if="showPlanSelectorModal"
-      :is-trial-expired="true"
-      @close="showPlanSelectorModal = false"
-      @select-plan="handlePlanSelectorSelection"
-    />
   </div>
 </template>
 
@@ -71,21 +56,13 @@ import AZContentHeader from '@/components/az/AZContentHeader.vue';
 import InfoModal from '@/components/shared/InfoModal.vue';
 import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { useAzStore } from '@/stores/az-store';
-import { useUserStore } from '@/stores/user-store';
 import { ReportTypes } from '@/types/app-types';
-import { onMounted, ref, computed } from 'vue';
-import { DBName } from '@/types/app-types';
-import type { SubscriptionTier } from '@/types/user-types';
-import { useBilling } from '@/composables/useBilling';
-import ServiceExpiryBanner from '@/components/shared/ServiceExpiryBanner.vue';
-import PlanSelectorModal from '@/components/billing/PlanSelectorModal.vue';
+import { ref } from 'vue';
 
 const azStore = useAzStore();
-const userStore = useUserStore();
 
 // Info Modal state
 const showInfoModal = ref(false);
-const showPlanSelectorModal = ref(false);
 
 // Info Modal functions
 function openInfoModal() {
@@ -95,44 +72,4 @@ function openInfoModal() {
 function closeInfoModal() {
   showInfoModal.value = false;
 }
-
-// Banner state from unified store logic
-const bannerState = computed(() => userStore.getServiceExpiryBanner);
-
-// Handler for upgrade clicked from expiry banner
-function handleUpgradeFromExpiry() {
-  showPlanSelectorModal.value = true;
-}
-
-// Handler for plan selection from PlanSelectorModal  
-async function handlePlanSelectorSelection(tier: SubscriptionTier) {
-  showPlanSelectorModal.value = false;
-  
-  try {
-    const { createCheckoutSession } = useBilling();
-    
-    // Get the correct price ID based on selected tier
-    const priceIds = {
-      optimizer: import.meta.env.VITE_STRIPE_PRICE_OPTIMIZER,
-      accelerator: import.meta.env.VITE_STRIPE_PRICE_ACCELERATOR
-    };
-    
-    const priceId = priceIds[tier];
-    
-    if (!priceId) {
-      throw new Error(`Price ID not found for ${tier} plan`);
-    }
-    
-    console.log(`🚀 Creating checkout session for ${tier} upgrade`);
-    await createCheckoutSession(priceId, tier);
-    
-  } catch (error: any) {
-    console.error('Upgrade checkout error:', error);
-    alert(`Failed to start checkout: ${error.message}`);
-    // Reopen modal on error
-    showPlanSelectorModal.value = true;
-  }
-}
-
-
 </script>

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { User, Profile, PlanTierType, BillingPeriod } from '../types/user-types';
+import type { User, Profile } from '../types/user-types';
 import { supabase } from '@/utils/supabase';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
@@ -16,9 +16,6 @@ interface SharedState {
     profile: Profile | null;
     error: Error | null;
     isInitialized: boolean;
-  };
-  usage: {
-    uploadsToday: number;
   };
 }
 
@@ -37,9 +34,6 @@ export const useUserStore = defineStore('user', {
       error: null,
       isInitialized: false,
     },
-    usage: {
-      uploadsToday: 0,
-    },
   }),
 
   getters: {
@@ -54,144 +48,6 @@ export const useUserStore = defineStore('user', {
     getAuthIsInitialized: (state) => state.auth.isInitialized,
     getUserRole: (state) => state.auth.profile?.role ?? 'user',
     isAdmin: (state) => state.auth.profile?.role === 'admin',
-    getUploadsToday: (state) => state.usage.uploadsToday,
-    isPlanActive: (state) => {
-      if (!state.auth.profile?.plan_expires_at) {
-        return false;
-      }
-      try {
-        return new Date(state.auth.profile.plan_expires_at) > new Date();
-      } catch (e) {
-        console.error('Error parsing plan_expires_at date:', state.auth.profile.plan_expires_at, e);
-        return false;
-      }
-    },
-    getCurrentPlanTier: (state): PlanTierType | null => {
-      // Simplified: trial or active based on subscription_status
-      if (state.auth.profile?.subscription_status === 'trial') {
-        return 'trial';
-      }
-      if (state.auth.profile?.subscription_status === 'active') {
-        return 'active';
-      }
-      return null;
-    },
-
-    getBillingPeriod: (state): BillingPeriod => {
-      return state.auth.profile?.billing_period ?? null;
-    },
-
-    isAnnualBilling: (state): boolean => {
-      return state.auth.profile?.billing_period === 'annual';
-    },
-
-    getCurrentPrice: (state): number => {
-      // Return price based on billing period
-      if (state.auth.profile?.billing_period === 'annual') {
-        return 999;
-      }
-      return 99; // monthly default
-    },
-    getServiceExpiryBanner: (state) => {
-      const profile = state.auth.profile;
-      if (!profile) {
-        return { show: false, message: '' };
-      }
-
-      const now = new Date();
-      const subscriptionStatus = profile.subscription_status;
-      
-      // Check for trial expiry
-      if (subscriptionStatus === 'trial') {
-        if (profile.plan_expires_at) {
-          const trialEnd = new Date(profile.plan_expires_at);
-          if (now >= trialEnd) {
-            return {
-              show: true,
-              message: "Your free trial has expired. Please choose a plan to continue using VoIP Accelerator.",
-              variant: 'error' as const,
-              buttonText: "Choose Plan"
-            };
-          } else {
-            const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            if (daysRemaining <= 3) {
-              return {
-                show: true,
-                message: `Your free trial expires in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Subscribe now to ensure uninterrupted access.`,
-                variant: 'warning' as const,
-                buttonText: "Upgrade"
-              };
-            }
-          }
-        }
-      }
-      
-      // Check for scheduled cancellation
-      else if (subscriptionStatus === 'active' && profile.cancel_at_period_end && profile.cancel_at) {
-        const cancelDate = new Date(profile.cancel_at);
-        if (now < cancelDate) {
-          const daysRemaining = Math.ceil((cancelDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          return {
-            show: true,
-            message: `Your subscription is scheduled to cancel in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. You can continue using the service until then or reactivate your subscription.`,
-            variant: 'warning' as const,
-            buttonText: "Reactivate Subscription"
-          };
-        }
-      }
-      
-      // Check for subscription expiry
-      else if (subscriptionStatus === 'active' && profile.current_period_end) {
-        const subscriptionEnd = new Date(profile.current_period_end);
-        if (now >= subscriptionEnd) {
-          const planType = profile.billing_period === 'monthly' ? 'monthly plan' :
-                          profile.billing_period === 'annual' ? 'annual membership' : 'subscription';
-          return {
-            show: true,
-            message: `Your ${planType} has expired. Please renew to continue service.`,
-            variant: 'error' as const,
-            buttonText: "Renew Now"
-          };
-        }
-      }
-      
-      // Check for explicitly cancelled states (NOT null/undefined)
-      else if (subscriptionStatus === 'cancelled' || subscriptionStatus === 'canceled') {
-        return {
-          show: true,
-          message: "Your subscription has been canceled. Please subscribe to continue using VoIP Accelerator.",
-          variant: 'error' as const,
-          buttonText: "Subscribe Now"
-        };
-      }
-      
-      // Check for no subscription (null/undefined means never had one, not cancelled)
-      else if (!subscriptionStatus) {
-        // New user without subscription - don't show error banner
-        return { show: false, message: '' };
-      }
-
-      // No upload limits - all plans unlimited
-      return { show: false, message: '' };
-    },
-    
-    shouldRedirectToBilling: (state) => {
-      const profile = state.auth.profile;
-
-      if (!profile) return false;
-
-      // Don't redirect if status is 'active' (payment completed)
-      if (profile.subscription_status === 'active') return false;
-
-      // Don't redirect if status is 'trial'
-      if (profile.subscription_status === 'trial') return false;
-
-      // Simplified: Check if user has billing_period but no stripe_customer_id
-      const hasBillingPeriod = profile.billing_period !== null;
-      const hasNoStripeCustomer = !profile.stripe_customer_id;
-
-      return hasBillingPeriod && hasNoStripeCustomer;
-    },
   },
 
   actions: {
@@ -215,30 +71,12 @@ export const useUserStore = defineStore('user', {
       this.ui.isGlobalLoading = isLoading;
     },
 
-    incrementUploadsToday() {
-      this.usage.uploadsToday += 1;
-    },
-
-    resetUploadsToday() {
-      this.usage.uploadsToday = 0;
-    },
-    
-    clearBillingRedirect() {
-      const userId = this.auth.user?.id;
-      if (userId) {
-        localStorage.removeItem(`pendingBillingRedirect_${userId}`);
-        console.log(`Cleared billing redirect flag for user ${userId}`);
-      }
-    },
-
     async fetchProfile(userId: string): Promise<void> {
       this.auth.error = null;
 
       const controller = new AbortController();
-      // const signal = controller.signal; // Signal not directly used on Supabase query due to type issues / complexity
       let timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
 
-      // Wrap the Supabase query in a new Promise to ensure it's a standard Promise for Promise.race
       const supabaseQueryPromise = new Promise<{
         data: Profile | null;
         error: any;
@@ -253,7 +91,6 @@ export const useUserStore = defineStore('user', {
           .maybeSingle()
           .then(
             (response) => {
-              // The response from .single() is directly { data, error, status, etc. }
               resolve(
                 response as {
                   data: Profile | null;
@@ -265,7 +102,6 @@ export const useUserStore = defineStore('user', {
               );
             },
             (error) => {
-              // Handle potential rejection of the Supabase query itself
               reject(error);
             }
           );
@@ -274,9 +110,9 @@ export const useUserStore = defineStore('user', {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           console.warn(
-            `[UserStore] Profile fetch for ${userId} timing out (10s). Aborting controller (for potential internal SDK use) and rejecting.`
+            `[UserStore] Profile fetch for ${userId} timing out (10s). Aborting controller.`
           );
-          controller.abort(); // Signal abortion - Supabase might pick this up if its global fetch is configured with this signal
+          controller.abort();
           reject(new Error('Profile fetch timed out.'));
         }, 10000);
       });
@@ -286,7 +122,7 @@ export const useUserStore = defineStore('user', {
 
         clearTimeout(timeoutId);
 
-        const { data, error: supabaseError, status } = response; // response is now correctly typed from supabaseQueryPromise
+        const { data, error: supabaseError, status } = response;
 
         if (supabaseError) {
           console.error(
@@ -296,7 +132,6 @@ export const useUserStore = defineStore('user', {
           this.auth.error = supabaseError;
           this.auth.profile = null;
         } else if (data) {
-          // Safely assign profile data with error handling
           try {
             this.auth.profile = data as Profile;
           } catch (assignError) {
@@ -307,7 +142,6 @@ export const useUserStore = defineStore('user', {
           console.warn(
             `[UserStore] No profile data found for user ID: ${userId}. (Status: ${status})`
           );
-          console.warn(`[UserStore] This might be a new account - profile may not exist yet`);
           this.auth.profile = null;
         }
       } catch (err: any) {
@@ -326,7 +160,6 @@ export const useUserStore = defineStore('user', {
           this.auth.error = err instanceof Error ? err : new Error(String(err));
         }
         this.auth.profile = null;
-      } finally {
       }
     },
 
@@ -341,16 +174,13 @@ export const useUserStore = defineStore('user', {
 
     async initializeAuthListener(): Promise<void> {
       this.auth.isLoading = true;
-      this.auth.isInitialized = false; // Explicitly set at start
+      this.auth.isInitialized = false;
 
-      // Setup onAuthStateChange listener. This handles ongoing events and can update profile.
-      // It runs independently of the initial getSession flow below for setting isInitialized.
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
         async (event: AuthChangeEvent, session: Session | null) => {
           const currentUser = session?.user ?? null;
-          // Update user and isAuthenticated based on the event immediately
           this.auth.user = currentUser;
           this.auth.isAuthenticated = !!currentUser;
 
@@ -359,40 +189,23 @@ export const useUserStore = defineStore('user', {
               event === 'SIGNED_IN' ||
               event === 'TOKEN_REFRESHED' ||
               event === 'USER_UPDATED' ||
-              event === 'INITIAL_SESSION' // Treat INITIAL_SESSION here as well for profile consistency
+              event === 'INITIAL_SESSION'
             ) {
-              try {
-                // Simplified signup processing - no tier selection needed
-                // All signups start as trial, users choose billing period (monthly/annual) when upgrading
-                // User profile is created with trial status by database trigger
-                
-                // Don't make the entire onAuthStateChange handler wait for fetchProfile if it's not INITIAL_SESSION
-                // For INITIAL_SESSION, it might be okay, but generally, let it be async.
-                this.fetchProfile(currentUser.id).catch((profileError) => {
-                  console.error(
-                    `[Auth Listener] Background profile fetch for user ${currentUser.id} (event ${event}) failed:`,
-                    profileError
-                  );
-                  // Don't sign out on profile fetch failure - it causes infinite recursion
-                  // Just log the error and continue
-                  console.warn(
-                    `[Auth Listener] Profile fetch failed for user ${currentUser.id} but keeping them signed in`
-                  );
-                });
-              } catch (profileError) {
-                // This catch might be redundant if fetchProfile itself handles its errors and doesn't throw to here.
+              this.fetchProfile(currentUser.id).catch((profileError) => {
                 console.error(
-                  `[Auth Listener] Error directly from fetchProfile call for user ${currentUser.id} (event ${event}):`,
+                  `[Auth Listener] Background profile fetch for user ${currentUser.id} (event ${event}) failed:`,
                   profileError
                 );
-              }
+                console.warn(
+                  `[Auth Listener] Profile fetch failed for user ${currentUser.id} but keeping them signed in`
+                );
+              });
             }
           } else if (event === 'SIGNED_OUT') {
             this.clearAuthData();
           }
         }
       );
-      // TODO: Store and manage 'subscription' if unsubscription is needed on store disposal.
 
       try {
         const {
@@ -403,19 +216,16 @@ export const useUserStore = defineStore('user', {
         if (sessionError) {
           console.error('[Auth Store] Error getting initial session:', sessionError);
           this.auth.error = sessionError;
-          this.clearAuthData(); // Ensure clean state
+          this.clearAuthData();
         } else if (session) {
           this.auth.user = session.user;
           this.auth.isAuthenticated = true;
 
-          // Fetch profile in the background. Don't await it here.
-          // The UI should react to profile changes when fetchProfile completes.
           this.fetchProfile(session.user.id).catch((profileError) => {
             console.error(
               `[Auth Store] Background fetchProfile for initial session user ${session.user.id} failed:`,
               profileError
             );
-            // If still authenticated as this user, and profile fetch failed, sign out.
             if (this.auth.user?.id === session.user.id && this.auth.isAuthenticated) {
               console.warn(
                 `[Auth Store] Signing out user ${session.user.id} due to background profile fetch failure after initial session.`
@@ -428,11 +238,10 @@ export const useUserStore = defineStore('user', {
                     e
                   )
                 );
-              // clearAuthData() will be triggered by the SIGNED_OUT event from onAuthStateChange
             }
           });
         } else {
-          this.clearAuthData(); // Ensure clean state
+          this.clearAuthData();
         }
       } catch (error) {
         console.error(
@@ -440,9 +249,8 @@ export const useUserStore = defineStore('user', {
           error
         );
         this.auth.error = error as Error;
-        this.clearAuthData(); // Ensure clean state on critical failure
+        this.clearAuthData();
       } finally {
-        // This is the crucial part: isInitialized is set true after initial session check attempt.
         this.auth.isInitialized = true;
         this.auth.isLoading = false;
       }
@@ -465,29 +273,19 @@ export const useUserStore = defineStore('user', {
         });
         if (error) throw error;
         if (data.user && !data.session) {
-          // User created, needs confirmation (most common case with email confirm ON)
           console.info(
             'Sign up successful, user created:',
             data.user.id,
             'Check email for confirmation.'
           );
-
-          // All signups start with 7-day trial
-          console.log('User signup completed - 7-day trial will start after email confirmation');
-
-          // Indicate confirmation needed to the UI if desired
           return { user: data.user, error: null };
         } else if (data.session && data.user) {
-          // If session AND user returned, user is immediately logged in (e.g., auto-confirm ON)
           console.info('Sign up successful, user logged in:', data.user.id);
           this.auth.user = data.user;
           this.auth.isAuthenticated = true;
           await this.fetchProfile(data.user.id);
-
-          return { user: data.user, error: null }; // Successful return
+          return { user: data.user, error: null };
         } else {
-          // Handle unexpected cases where neither user nor session is returned,
-          // or session without user (shouldn't happen with successful signup)
           console.error('Sign up completed with unexpected state:', {
             user: !!data.user,
             session: !!data.session,
@@ -548,8 +346,7 @@ export const useUserStore = defineStore('user', {
     async signOut() {
       this.auth.isLoading = true;
       this.auth.error = null;
-      
-      // 1. Try to cleanup database session
+
       const sessionId = sessionStorage.getItem('voip_session_id');
       if (sessionId) {
         try {
@@ -562,17 +359,14 @@ export const useUserStore = defineStore('user', {
           console.log('Database session cleanup failed (expected if auth invalid)');
         }
       }
-      
-      // 2. Try Supabase signOut (may fail if auth already invalid)
+
       try {
         await supabase.auth.signOut();
         console.log('Supabase auth signOut successful');
       } catch (e) {
         console.log('Supabase auth signOut failed (expected if already signed out)');
       }
-      
-      // 3. FORCE clear ALL auth data from storage
-      // Clear all localStorage items related to Supabase
+
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -584,33 +378,29 @@ export const useUserStore = defineStore('user', {
         localStorage.removeItem(key);
         console.log('Removed localStorage:', key);
       });
-      
-      // Clear sessionStorage
+
       sessionStorage.clear();
 
-      // Clear ALL cookies (especially Supabase auth cookies)
       const cookies = document.cookie.split(';');
       for (const cookie of cookies) {
         const eqPos = cookie.indexOf('=');
         const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
-        // Clear cookie by setting expiration to past date
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
         console.log('Cleared cookie:', name);
       }
 
-      // 4. Clear store state
       this.clearAuthData();
-      
+
       this.auth.isLoading = false;
-      console.log('✅ Logout complete - all storage cleared');
+      console.log('Logout complete - all storage cleared');
     },
 
     async resetPasswordForEmail(email: string) {
       this.auth.isLoading = true;
       this.auth.error = null;
       try {
-        const resetPasswordUrl = `${import.meta.env.VITE_SITE_URL}/update-password`; // Example: Route for setting new password
+        const resetPasswordUrl = `${import.meta.env.VITE_SITE_URL}/update-password`;
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: resetPasswordUrl,
         });
@@ -634,8 +424,6 @@ export const useUserStore = defineStore('user', {
         if (error) throw error;
         if (data.user) {
           this.auth.user = data.user;
-          // Optionally re-fetch profile if email change affects it, or wait for user to re-verify.
-          // For now, Supabase handles email change flow with verification emails.
         }
         return { success: true, user: data.user };
       } catch (err: any) {
@@ -650,9 +438,6 @@ export const useUserStore = defineStore('user', {
     async deleteCurrentUserAccount(): Promise<{
       success: boolean;
       message?: string;
-      scheduled?: boolean;
-      deletion_scheduled_for?: string;
-      access_until?: string;
       error?: Error | null;
     }> {
       this.setGlobalLoading(true);
@@ -660,9 +445,6 @@ export const useUserStore = defineStore('user', {
       let result: {
         success: boolean;
         message?: string;
-        scheduled?: boolean;
-        deletion_scheduled_for?: string;
-        access_until?: string;
         error?: Error | null;
       } = {
         success: false,
@@ -694,27 +476,11 @@ export const useUserStore = defineStore('user', {
 
         console.log('[UserStore] delete-user-account function returned successfully:', data);
 
-        // Check if deletion was scheduled (active subscription) vs immediate (trial user)
-        if (data.deletion_scheduled_for) {
-          // Scheduled deletion - user keeps access until period end
-          console.log('[UserStore] Account deletion scheduled for:', data.deletion_scheduled_for);
-          result = {
-            success: true,
-            scheduled: true,
-            message: data.message || 'Account deletion scheduled. You\'ll keep access until your billing period ends.',
-            deletion_scheduled_for: data.deletion_scheduled_for,
-            access_until: data.access_until
-          };
-        } else {
-          // Immediate deletion - sign out user
-          console.log('[UserStore] Account deleted immediately');
-          await this.signOut();
-          result = {
-            success: true,
-            scheduled: false,
-            message: data.message || 'Account deleted successfully.'
-          };
-        }
+        await this.signOut();
+        result = {
+          success: true,
+          message: data.message || 'Account deleted successfully.'
+        };
       } catch (err: any) {
         console.error('[UserStore] Error during account deletion process:', err);
         if (err.context && err.context.json) {

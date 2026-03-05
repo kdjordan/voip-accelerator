@@ -285,7 +285,6 @@ This action cannot be undone.`"
   import BaseButton from '@/components/shared/BaseButton.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import { useAzStore } from '@/stores/az-store';
-  import { useUserStore } from '@/stores/user-store';
   import AzComparisonWorker from '@/workers/az-comparison.worker?worker';
   import type {
     AzPricingReport,
@@ -302,15 +301,12 @@ This action cannot be undone.`"
   import AZCodeSummary from '@/components/az/AZCodeSummary.vue';
   import { useDragDrop } from '@/composables/useDragDrop';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
-  import { useUploadTracking } from '@/composables/useUploadTracking';
 
   // Define the component ID type to avoid TypeScript errors
   type ComponentId = 'az1' | 'az2';
 
   const azStore = useAzStore();
   const azService = new AZService();
-  const userStore = useUserStore();
-  const uploadTracking = useUploadTracking();
 
   // Computed property for button text
   const reportsButtonText = computed(() => {
@@ -587,21 +583,6 @@ This action cannot be undone.`"
       // Calculate stats AFTER processing is complete
       await azService.calculateFileStats(activeComponent.value, result.fileName);
 
-      // Track the upload in the new system
-      try {
-        const trackingResult = await uploadTracking.incrementUploadCount(1);
-        if (trackingResult.success) {
-          console.log('Upload tracked successfully:', trackingResult.message);
-          // Update legacy counter for backwards compatibility
-          userStore.incrementUploadsToday();
-        } else {
-          console.warn('Upload tracking failed:', trackingResult.message);
-        }
-      } catch (error) {
-        console.error('Error tracking upload:', error);
-        // Continue anyway - don't block the user experience
-      }
-      
       // Complete upload progress tracking
       azStore.completeUploadProgress();
       

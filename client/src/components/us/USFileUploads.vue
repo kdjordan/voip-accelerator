@@ -297,15 +297,11 @@ This action cannot be undone.`"
   import { prepareLergWorkerData, getLergDataSummary } from '@/utils/prepare-worker-data';
   import { ComponentId, DBName, ReportTypes } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
-  import { useUserStore } from '@/stores/user-store';
   import useDexieDB from '@/composables/useDexieDB';
-  import { useUploadTracking } from '@/composables/useUploadTracking';
 
   const usStore = useUsStore();
   const service = new USService();
   const lergStore = useLergStoreV2();
-  const userStore = useUserStore();
-  const uploadTracking = useUploadTracking();
 
   // Computed property for the reports button text
   const reportsButtonText = computed(() => {
@@ -481,21 +477,6 @@ This action cannot be undone.`"
       console.log(
         `[USFileUploads] File ${fileName} processed and registered for component ${componentName}.`
       );
-
-      // Track the upload in the new system
-      try {
-        const trackingResult = await uploadTracking.incrementUploadCount(1);
-        if (trackingResult.success) {
-          console.log('Upload tracked successfully:', trackingResult.message);
-          // Update legacy counter for backwards compatibility
-          userStore.incrementUploadsToday();
-        } else {
-          console.warn('Upload tracking failed:', trackingResult.message);
-        }
-      } catch (error) {
-        console.error('Error tracking upload:', error);
-        // Continue anyway - don't block the user experience
-      }
     } catch (error) {
       // Updated error message context
       console.error(`[Main] Error during post-upload processing for ${fileName}:`, error);
