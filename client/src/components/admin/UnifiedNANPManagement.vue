@@ -693,9 +693,13 @@
   // Methods
 
   async function loadData() {
-    // Data is already loaded via Dashboard initialization
-    // No need to check edge function status - simplified architecture
-    console.log('[UnifiedNANPManagement] Using data from unified store');
+    console.log('[UnifiedNANPManagement] Refreshing LERG data...');
+    try {
+      await lergStore.loadFromSupabase();
+      console.log('[UnifiedNANPManagement] LERG data refreshed, count:', lergStore.allNPAs.length);
+    } catch (err) {
+      console.error('[UnifiedNANPManagement] Failed to refresh LERG data:', err);
+    }
   }
 
   function handleFileSelect(event: Event) {
