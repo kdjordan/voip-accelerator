@@ -5,10 +5,6 @@
         &copy; {{ new Date().getFullYear() }} VOIP Accelerator. All rights reserved.
       </div>
       <div class="flex items-center justify-start space-x-4 mt-4 text-fbWhite/50">
-        <RouterLink to="#pricing" class="hover:text-fbWhite/90 transition-colors">
-          Pricing
-        </RouterLink>
-        <span class="text-fbWhite/50">|</span>
         <RouterLink
           to="/terms-and-conditions"
           class="hover:text-fbWhite/90 transition-colors"
