@@ -322,6 +322,7 @@ import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headless
 import { useAdminUsers } from '@/composables/useAdminUsers'
 import { type UserProfile } from '@/stores/admin-users-store'
 import { useUserStore } from '@/stores/user-store'
+import { supabase } from '@/utils/supabase'
 import UserTable from './UserTable.vue'
 import UserDetailsModal from './UserDetailsModal.vue'
 import BaseButton from '@/components/shared/BaseButton.vue'
@@ -454,12 +455,17 @@ async function handleToggleStatus(userId: string, isActive: boolean) {
 
 async function handleDeleteUser(userId: string) {
   try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('Not authenticated')
+    }
+
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     const response = await fetch(`${supabaseUrl}/functions/v1/delete-user-account`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${userStore.session?.access_token}`
+        'Authorization': `Bearer ${session.access_token}`
       },
       body: JSON.stringify({ userId })
     })
