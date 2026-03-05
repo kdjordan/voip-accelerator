@@ -6,10 +6,10 @@
         <div class="text-center mb-8">
           <BoltIcon class="mx-auto h-10 w-auto text-accent mb-4" />
           <h2 class="text-2xl font-bold text-white">
-            Start Your Free Trial
+            Create Your Free Account
           </h2>
           <p class="mt-2 text-sm text-gray-400">
-            7-day free trial. No credit card required.
+            Free forever. No credit card required.
           </p>
         </div>
 

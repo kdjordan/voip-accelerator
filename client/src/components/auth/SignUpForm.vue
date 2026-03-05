@@ -125,7 +125,7 @@
   const isSignupFormSuccessfullySubmitted = ref(false);
 
   function getSignupButtonText() {
-    return 'Start Free Trial';
+    return 'Create Account';
   }
 
   async function handleSignUp() {
@@ -145,7 +145,6 @@
     const userAgent = navigator.userAgent;
 
     try {
-      // All signups start with a 7-day free trial
       const { error: signUpError } = await userStore.signUp(
         email.value,
         password.value,
@@ -156,9 +155,8 @@
         console.error('Sign up error object:', signUpError);
         errorMessage.value = signUpError.message || 'Failed to create account. Please try again.';
       } else {
-        // Success - show trial confirmation message
-        signupSuccessMessage.value = `Account creation initiated! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to start your 7-day free trial.`;
-        isSignupFormSuccessfullySubmitted.value = true; // Disable button on success
+        signupSuccessMessage.value = `Account created! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your account.`;
+        isSignupFormSuccessfullySubmitted.value = true;
       }
     } catch (error) {
       // Catch any unexpected errors from the signUp action itself
