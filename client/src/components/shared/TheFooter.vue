@@ -24,6 +24,26 @@
           </svg>
         </a>
       </div>
+      <div class="mt-1 text-fbWhite/50 text-sm">
+        If you like this, you might like
+        <a
+          href="https://cdrcheck.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-accent hover:text-accent/80 transition-colors font-medium group"
+        >
+          CDRCheck
+          <svg
+            class="w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H7M17 7v10" />
+          </svg>
+        </a>
+      </div>
       <div class="flex items-center justify-start space-x-4 mt-4 text-fbWhite/50">
         <RouterLink
           to="/terms-and-conditions"
