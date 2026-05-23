@@ -347,19 +347,6 @@ export const useUserStore = defineStore('user', {
       this.auth.isLoading = true;
       this.auth.error = null;
 
-      const sessionId = sessionStorage.getItem('voip_session_id');
-      if (sessionId) {
-        try {
-          await supabase
-            .from('active_sessions')
-            .delete()
-            .eq('session_token', sessionId);
-          console.log('Database session cleanup attempted');
-        } catch (e) {
-          console.log('Database session cleanup failed (expected if auth invalid)');
-        }
-      }
-
       try {
         await supabase.auth.signOut();
         console.log('Supabase auth signOut successful');
