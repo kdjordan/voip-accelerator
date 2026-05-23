@@ -1,9 +1,11 @@
 {
   "name": "voip-accelerator",
-  "dependencies": {
-    "@supabase/stripe-sync-engine": "^0.40.1",
-    "stripe": "^18.3.0"
-  },
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/user-event": "^14.6.1",
