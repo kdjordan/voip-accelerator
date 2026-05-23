@@ -35,7 +35,7 @@ Migration off Supabase to a self-hosted backend on Hetzner. Decisions locked so 
 - Stack: Node + Hono (web framework) + better-auth (sessions/email-password) + Drizzle (Postgres access).
 - Frontend stays Vue 3 + Pinia + Vite. No framework switch.
 - Frontend deploys to the same Hetzner box via Coolify.
-- Hetzner Cloud VM + Coolify (PaaS-on-VM) running Postgres + API + frontend as separate Coolify applications.
+- Existing Hetzner CPX31 VM (already hosting TelcoOS-Main on SQLite) gets a third Coolify project for VoIP Accelerator: Postgres + Hono API + Vue static as separate Coolify applications. Project-level isolation, shared host.
 - Production only — no staging environment.
 
 ### Facelift (in progress)
