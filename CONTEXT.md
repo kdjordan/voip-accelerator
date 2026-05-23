@@ -10,7 +10,7 @@ A CSV/Excel file of telecom destinations and pricing uploaded by a user. Two fla
 - **US rate sheet** — domestic/NANP destinations. Persisted to IndexedDB via Dexie in 1000-record bulk batches.
 
 ### LERG
-Local Exchange Routing Guide. The authoritative North American telephone numbering dataset. In this app, "the LERG" refers to the enhanced LERG database (449 NPAs with geographic context) which is the single source of truth for all NANP categorization. Lives in Postgres; loaded into a Pinia store on app start.
+Local Exchange Routing Guide. The authoritative North American telephone numbering dataset. In this app, "the LERG" refers to the enhanced LERG database (450 NPAs with geographic context) which is the single source of truth for all NANP categorization. Lives in Postgres; loaded into a Pinia store on app start.
 
 ### NANP (North American Numbering Plan)
 The +1 numbering plan covering US, Canada, Caribbean, and US territories. The app's NANP categorization system uses confidence scoring to distinguish "safe" +1 destinations (US, Canada) from "expensive" ones (Caribbean, territories) when filtering rate sheets.
