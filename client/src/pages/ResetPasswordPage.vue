@@ -76,6 +76,7 @@
               :loading="isLoading"
               variant="primary"
               class="w-full"
+              :disabled="!token"
             >
               {{ isLoading ? 'Resetting...' : 'Reset password' }}
             </BaseButton>
@@ -99,49 +100,28 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { BoltIcon } from '@heroicons/vue/24/solid';
-import { supabase } from '@/utils/supabase';
+import { authClient } from '@/lib/auth';
 import BaseButton from '@/components/shared/BaseButton.vue';
 
-const router = useRouter();
+const route = useRoute();
 const password = ref('');
 const confirmPassword = ref('');
 const isLoading = ref(false);
 const errorMessage = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
+const token = ref<string>('');
 
-onMounted(async () => {
-  // Supabase automatically detects the recovery token in the URL hash
-  // and exchanges it for a session. We need to wait a moment for this to happen.
-
-  // Listen for auth state changes to detect when recovery session is ready
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
-      // Recovery session is ready - user can now reset password
-      console.log('Password recovery session detected');
-    } else if (event === 'SIGNED_OUT') {
-      errorMessage.value = 'Invalid or expired reset link. Please request a new password reset.';
-    }
-  });
-
-  // Also check for existing session (in case page was refreshed)
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
-    // Give Supabase a moment to process the URL hash
-    setTimeout(async () => {
-      const { data: { session: retrySession } } = await supabase.auth.getSession();
-      if (!retrySession) {
-        errorMessage.value = 'Invalid or expired reset link. Please request a new password reset.';
-      }
-    }, 1000);
+onMounted(() => {
+  const raw = route.query.token;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value === 'string' && value.length > 0) {
+    token.value = value;
+  } else {
+    errorMessage.value =
+      'Invalid or expired reset link. Please request a new password reset.';
   }
-
-  // Clean up subscription when component unmounts
-  return () => {
-    subscription?.unsubscribe();
-  };
 });
 
 async function handlePasswordReset() {
@@ -149,44 +129,36 @@ async function handlePasswordReset() {
   errorMessage.value = null;
   successMessage.value = null;
 
-  // Validate passwords match
   if (password.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match';
     isLoading.value = false;
     return;
   }
 
-  // Validate password length
   if (password.value.length < 6) {
     errorMessage.value = 'Password must be at least 6 characters';
     isLoading.value = false;
     return;
   }
 
+  if (!token.value) {
+    errorMessage.value = 'Missing reset token. Please request a new password reset.';
+    isLoading.value = false;
+    return;
+  }
+
   try {
-    const { error } = await supabase.auth.updateUser({
-      password: password.value
+    const { error } = await authClient.resetPassword({
+      newPassword: password.value,
+      token: token.value,
     });
+    if (error) throw new Error(error.message ?? 'Failed to reset password');
 
-    if (error) throw error;
-
-    // Password updated successfully
     successMessage.value = 'Password reset successful! Redirecting to login...';
-
-    // Clear the form
     password.value = '';
     confirmPassword.value = '';
 
-    // Sign out the user and clear all sessions
-    await supabase.auth.signOut({ scope: 'local' });
-
-    // Clear any cached session data
-    localStorage.removeItem('supabase.auth.token');
-    sessionStorage.clear();
-
-    // Small delay to ensure signout completes, then redirect
     setTimeout(() => {
-      // Use window.location for hard redirect to ensure clean state
       window.location.href = '/login?passwordReset=success';
     }, 1500);
   } catch (error: any) {

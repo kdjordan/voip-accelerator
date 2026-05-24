@@ -44,21 +44,6 @@
         </div>
       </div>
     </section>
-    <!-- Optional: Display Google Sign-In Error -->
-    <div
-      v-if="googleSignInError"
-      class="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm"
-    >
-      <div class="flex justify-between items-start">
-        <p class="mr-4">{{ googleSignInError }}</p>
-        <button
-          @click="googleSignInError = null"
-          class="text-white hover:text-gray-200 text-xl font-bold"
-        >
-          &times;
-        </button>
-      </div>
-    </div>
     <!--Pain Points Section-->
     <section ref="painPointsSection" class="pt-4 px-4 pb-32 w-full z-10 bg-fbBlack">
       <div class="flex flex-col md:flex-row gap-4">
@@ -162,18 +147,12 @@
   import TheFooter from '@/components/shared/TheFooter.vue';
   import FeatureCards from '@/components/home/FeatureCards.vue';
   import { marketingNavigationItems } from '@/constants/navigation';
-  import { useUserStore } from '@/stores/user-store';
 
   // GSAP animations setup
   const { gsap, ScrollTrigger, createAnimation } = useGsap();
 
   // Get router instance
   const router = useRouter();
-  const userStore = useUserStore();
-
-  // State for Google Sign-In
-  const isLoadingGoogle = ref(false);
-  const googleSignInError = ref<string | null>(null);
 
   // Function to handle smooth scroll
   function scrollToPricing(event: MouseEvent) {
@@ -347,21 +326,4 @@
     }
     // --- End Features section ---
   });
-
-  async function handleHeroGoogleSignIn() {
-    isLoadingGoogle.value = true;
-    googleSignInError.value = null;
-    try {
-      const result = await userStore.signInWithGoogle();
-      if (result && result.error) {
-        throw result.error;
-      }
-      router.push('/dashboard');
-    } catch (err: any) {
-      console.error('Hero Google Sign-In Error:', err);
-      googleSignInError.value = err.message || 'Google Sign-In failed. Please try again.';
-    } finally {
-      isLoadingGoogle.value = false;
-    }
-  }
 </script>

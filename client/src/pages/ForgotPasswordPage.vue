@@ -80,9 +80,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { BoltIcon } from '@heroicons/vue/24/solid';
-import { supabase } from '@/utils/supabase';
+import { useUserStore } from '@/stores/user-store';
 import BaseButton from '@/components/shared/BaseButton.vue';
 
+const userStore = useUserStore();
 const email = ref('');
 const isLoading = ref(false);
 const errorMessage = ref<string | null>(null);
@@ -94,13 +95,11 @@ async function handleResetRequest() {
   successMessage.value = null;
 
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
+    const { error } = await userStore.resetPasswordForEmail(email.value);
     if (error) throw error;
 
-    successMessage.value = 'Check your email for a password reset link. It may take a few minutes to arrive.';
+    successMessage.value =
+      'Check your email for a password reset link. It may take a few minutes to arrive.';
   } catch (error: any) {
     console.error('Password reset error:', error);
     errorMessage.value = error.message || 'Failed to send reset email. Please try again.';

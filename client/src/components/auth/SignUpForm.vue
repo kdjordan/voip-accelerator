@@ -80,40 +80,16 @@
         {{ getSignupButtonText() }}
       </BaseButton>
     </div>
-
-    <!-- Optional: Add Social Logins - Hidden for now -->
-    <!-- <div class="relative mt-10">
-      <div class="absolute inset-0 flex items-center" aria-hidden="true">
-        <div class="w-full border-t border-white/10" />
-      </div>
-      <div class="relative flex justify-center text-sm font-medium leading-6">
-        <span class="bg-gray-800 px-6 text-gray-400">Or sign up with</span>
-      </div>
-    </div>
-    <div class="mt-6">
-      <BaseButton
-        @click="handleGoogleSignUp"
-        :is-loading="isLoadingGoogle"
-        variant="secondary"
-        class="w-full"
-      >
-        <span class="sr-only">Sign up with Google</span>
-        
-        Sign up with Google
-      </BaseButton>
-    </div> -->
   </form>
 </template>
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
   import { useUserStore } from '@/stores/user-store';
   import BaseButton from '@/components/shared/BaseButton.vue';
 
   const userStore = useUserStore();
-  const router = useRouter();
-  
+
   // Account creation form state
   const email = ref('');
   const password = ref('');
@@ -121,7 +97,6 @@
   const errorMessage = ref<string | null>(null);
   const signupSuccessMessage = ref<string | null>(null);
   const isLoading = ref(false);
-  const isLoadingGoogle = ref(false);
   const isSignupFormSuccessfullySubmitted = ref(false);
 
   function getSignupButtonText() {
@@ -164,23 +139,6 @@
       errorMessage.value = 'An unexpected error occurred. Please try again.';
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  async function handleGoogleSignUp() {
-    isLoadingGoogle.value = true;
-    errorMessage.value = null;
-    try {
-      //signInWithGoogle throws on error or redirects on success
-      await userStore.signInWithGoogle();
-      // If it doesn't throw or redirect, something unexpected happened, but we often don't reach here on success.
-      // The redirect/state change is primarily handled by the Supabase callback and onAuthStateChange listener.
-    } catch (err: any) {
-      console.error('Google sign up error:', err);
-      errorMessage.value = err.message || 'Could not sign up with Google.';
-    } finally {
-      // Reset loading state regardless of success or failure
-      isLoadingGoogle.value = false;
     }
   }
 

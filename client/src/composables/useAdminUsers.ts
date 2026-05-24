@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useAdminUsersStore, type UserProfile, type UserActivity } from '@/stores/admin-users-store'
-import { supabase } from '@/utils/supabase'
+import { authClient } from '@/lib/auth'
 
 interface GetUsersParams {
   page?: number
@@ -40,10 +40,13 @@ export function useAdminUsers() {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Get the current session token for API calls
+  // Get the current session token for API calls.
+  // Admin user APIs are migrated to the new backend in a later port chunk;
+  // the better-auth session token is surfaced as a placeholder bearer until then.
   async function getAuthToken(): Promise<string | null> {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session?.access_token || null
+    const { data } = await authClient.getSession()
+    const sessionToken = (data as { session?: { token?: string } } | null)?.session?.token
+    return sessionToken ?? null
   }
 
   // Call edge functions with proper headers

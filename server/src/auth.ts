@@ -8,6 +8,11 @@ if (!secret) {
   throw new Error('BETTER_AUTH_SECRET is required');
 }
 
+const trustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
@@ -18,6 +23,7 @@ export const auth = betterAuth({
   },
   secret,
   baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins,
 });
 
 export type Auth = typeof auth;

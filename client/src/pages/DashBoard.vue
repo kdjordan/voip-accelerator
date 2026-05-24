@@ -223,7 +223,6 @@
   import { useUsStore } from '@/stores/us-store';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useLergOperations } from '@/composables/useLergOperations';
-  import { useSessionHeartbeat } from '@/composables/useSessionHeartbeat';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import {
     GlobeAmericasIcon,
@@ -241,9 +240,6 @@
   const userStore = useUserStore();
   const router = useRouter();
 
-  // Session heartbeat to detect force logouts
-  const { checkSessionValidity } = useSessionHeartbeat();
-
   // Computed properties for user display
   const userInitials = computed(() => {
     const email = userStore.auth.user?.email;
@@ -257,7 +253,7 @@
   });
 
   const formattedLastLogin = computed(() => {
-    const lastSignIn = userStore.auth.user?.last_sign_in_at;
+    const lastSignIn = userStore.auth.user?.updatedAt;
     if (!lastSignIn) {
       return 'Never';
     }
@@ -279,7 +275,7 @@
   });
 
   const formattedCreatedAt = computed(() => {
-    const createdAt = userStore.auth.user?.created_at;
+    const createdAt = userStore.auth.user?.createdAt;
     if (!createdAt) {
       return 'Never';
     }

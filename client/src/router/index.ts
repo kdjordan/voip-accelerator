@@ -162,15 +162,7 @@ router.beforeEach(async (to, from, next) => {
 
   // ALWAYS allow password reset page regardless of auth state
   const isResetPasswordRoute = to.name === 'ResetPassword' || to.path === '/reset-password';
-  const hasRecoveryToken = window.location.hash.includes('type=recovery');
-
-  if (isResetPasswordRoute || hasRecoveryToken) {
-    console.log('[NavGuard] Password reset flow detected - allowing access');
-    if (hasRecoveryToken && !isResetPasswordRoute) {
-      console.log('[NavGuard] Recovery token detected, redirecting to reset-password page');
-      next({ name: 'ResetPassword' });
-      return;
-    }
+  if (isResetPasswordRoute) {
     next();
     return;
   }
