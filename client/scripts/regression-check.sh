@@ -27,11 +27,11 @@ print_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
-# 1. Critical Path: Stripe Webhook Integration
+# 1. Critical Path: Integration Tests
 echo ""
-echo "🔧 Testing Critical Path: Stripe Webhook Integration"
+echo "🔧 Testing Critical Path: Integration Tests"
 npm run test:integration > /dev/null 2>&1
-print_status $? "Stripe webhook logic tests"
+print_status $? "Integration tests"
 
 # 2. Type checking (non-blocking for now due to existing technical debt)
 echo ""
@@ -53,13 +53,13 @@ echo ""
 echo "================================================="
 echo -e "${GREEN}🎉 All regression checks passed!${NC}"
 echo ""
-echo "✅ Stripe webhook logic: WORKING"
+echo "✅ Integration tests: WORKING"
 echo "✅ TypeScript compilation: CLEAN" 
 echo "✅ Production build: SUCCESS"
 echo ""
 echo "🚀 Safe to deploy!"
 echo ""
 echo "Quick Test Commands:"
-echo "  npm run test:integration  # Webhook tests"
+echo "  npm run test:integration  # Integration tests"
 echo "  npm run test:coverage     # Full coverage"
 echo "  npm run test:watch        # Development mode"
