@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import {
   enhancedLergRowSchema,
   lergListResponseSchema,
@@ -7,6 +7,7 @@ import {
   lergUploadResponseSchema,
   lergAddRecordRequestSchema,
   lergClearResponseSchema,
+  lergDeleteResponseSchema,
 } from '@voip-accelerator/shared';
 import { db } from '../db/client.js';
 import { enhancedLerg, type EnhancedLergInsert } from '../db/schema.js';
@@ -152,6 +153,26 @@ export const lergRoute = new Hono()
       .returning({ npa: enhancedLerg.npa });
 
     const body = lergClearResponseSchema.parse({ recordsCleared: rows.length });
+    return c.json(body);
+  })
+  // Soft delete a single NPA: flip its active row to is_active=false.
+  .delete('/:npa', requireAdmin, async (c) => {
+    const npa = c.req.param('npa');
+    if (!/^[0-9]{3}$/.test(npa)) {
+      return c.json({ error: 'NPA must be exactly 3 digits' }, 400);
+    }
+
+    const rows = await db
+      .update(enhancedLerg)
+      .set({ isActive: false, notes: 'Deleted via admin interface', updatedAt: new Date() })
+      .where(and(eq(enhancedLerg.npa, npa), eq(enhancedLerg.isActive, true)))
+      .returning({ npa: enhancedLerg.npa });
+
+    if (rows.length === 0) {
+      return c.json({ error: `NPA '${npa}' not found` }, 404);
+    }
+
+    const body = lergDeleteResponseSchema.parse({ npa: rows[0].npa });
     return c.json(body);
   });
 

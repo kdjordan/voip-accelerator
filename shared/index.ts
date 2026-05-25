@@ -7,10 +7,12 @@ export {
   lergUploadResponseSchema,
   lergAddRecordRequestSchema,
   lergClearResponseSchema,
+  lergDeleteResponseSchema,
   type EnhancedLergRow,
   type LergListResponse,
   type LergUploadRequest,
   type LergUploadResponse,
   type LergAddRecordRequest,
   type LergClearResponse,
+  type LergDeleteResponse,
 } from './schemas/lerg';

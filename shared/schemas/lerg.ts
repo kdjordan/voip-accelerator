@@ -81,7 +81,13 @@ export const lergClearResponseSchema = z.object({
   recordsCleared: z.number().int().nonnegative(),
 });
 
+// DELETE /api/lerg/:npa — soft delete (is_active=false) a single active row.
+export const lergDeleteResponseSchema = z.object({
+  npa: z.string().regex(/^[0-9]{3}$/),
+});
+
 export type LergUploadRequest = z.infer<typeof lergUploadRequestSchema>;
 export type LergUploadResponse = z.infer<typeof lergUploadResponseSchema>;
 export type LergAddRecordRequest = z.infer<typeof lergAddRecordRequestSchema>;
 export type LergClearResponse = z.infer<typeof lergClearResponseSchema>;
+export type LergDeleteResponse = z.infer<typeof lergDeleteResponseSchema>;

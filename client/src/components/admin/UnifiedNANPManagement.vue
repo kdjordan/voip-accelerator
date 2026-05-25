@@ -385,6 +385,9 @@
             </div>
           </div>
 
+          <!-- Operation Error -->
+          <p v-if="error && !isLoading" class="text-sm text-red-400">{{ error }}</p>
+
           <!-- Data Table -->
           <div class="bg-gray-800/50 rounded-lg overflow-hidden">
             <div class="max-h-96 overflow-y-auto">
@@ -394,6 +397,7 @@
                     <th class="px-4 py-3 text-left text-gray-300">NPA</th>
                     <th class="px-4 py-3 text-left text-gray-300">Location</th>
                     <th class="px-4 py-3 text-left text-gray-300">Category</th>
+                    <th class="px-4 py-3 text-right text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700">
@@ -413,6 +417,15 @@
                       <BaseBadge :variant="getCategoryBadgeVariant(getNPACategory(npa))" size="small">
                         {{ formatCategory(getNPACategory(npa)) }}
                       </BaseBadge>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                      <BaseButton
+                        variant="destructive"
+                        size="small"
+                        :icon="TrashIcon"
+                        title="Delete NPA"
+                        @click="confirmDeleteNPA(npa.npa)"
+                      />
                     </td>
                   </tr>
                 </tbody>
@@ -456,6 +469,15 @@
     @confirm="handleModalConfirm"
     @cancel="handleModalCancel"
   />
+
+  <!-- Delete NPA Confirmation -->
+  <ConfirmationModal
+    v-model="showDeleteModal"
+    title="Delete NPA"
+    :message="`Delete NPA ${npaToDelete}? It will be removed from active LERG data.`"
+    confirmButtonText="Delete"
+    @confirm="handleDeleteConfirm"
+  />
 </template>
 
 <script setup lang="ts">
@@ -466,6 +488,7 @@
     DocumentIcon,
     ChevronUpDownIcon,
     CheckIcon,
+    TrashIcon,
   } from '@heroicons/vue/24/outline';
   import {
     Listbox,
@@ -479,6 +502,7 @@
   import { useDragDrop } from '@/composables/useDragDrop';
   import { usePingStatus } from '@/composables/usePingStatus';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import Papa from 'papaparse';
@@ -499,7 +523,7 @@
 
   // New simplified LERG store and operations
   const store = useLergStoreV2();
-  const { isLoading, error, uploadLerg, addRecord, clearLerg, downloadLerg, initializeLergData } = useLergOperations();
+  const { isLoading, error, uploadLerg, addRecord, deleteRecord, clearLerg, downloadLerg, initializeLergData } = useLergOperations();
   const { status: pingStatus, checkPingStatus } = usePingStatus();
 
   // Store data access
@@ -558,6 +582,10 @@
   // Data Management State
   const searchTerm = ref('');
   const selectedCategory = ref('');
+
+  // Per-NPA delete confirmation state
+  const showDeleteModal = ref(false);
+  const npaToDelete = ref('');
 
   // Computed Properties
   const isFormValid = computed(() => {
@@ -794,6 +822,22 @@
     } catch (err: any) {
       console.error('[UnifiedNANPManagement] Export failed:', err);
       alert('❌ Export failed: ' + err.message);
+    }
+  }
+
+  function confirmDeleteNPA(npa: string) {
+    npaToDelete.value = npa;
+    showDeleteModal.value = true;
+  }
+
+  async function handleDeleteConfirm() {
+    try {
+      await deleteRecord(npaToDelete.value);
+    } catch (err: any) {
+      // Error surfaced via the composable's `error` channel.
+      console.error('[UnifiedNANPManagement] Delete failed:', err);
+    } finally {
+      showDeleteModal.value = false;
     }
   }
 

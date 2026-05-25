@@ -3,6 +3,7 @@ import {
   lergListResponseSchema,
   lergUploadResponseSchema,
   lergClearResponseSchema,
+  lergDeleteResponseSchema,
   enhancedLergRowSchema,
   pingResponseSchema,
   type EnhancedLergRow,
@@ -12,15 +13,16 @@ import Papa from 'papaparse';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
 
-// POST JSON to a Hono route, surfacing the server's { error } message on failure.
+// Send JSON to a Hono route, surfacing the server's { error } message on failure.
 // Hand-rolled rather than the Hono RPC client, which types as `unknown` here.
-async function postJson<T>(
+async function requestJson<T>(
+  method: string,
   path: string,
   body: unknown,
   schema: { parse: (data: unknown) => T }
 ): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
+    method,
     credentials: 'include',
     ...(body === undefined
       ? {}
@@ -38,6 +40,13 @@ async function postJson<T>(
   }
   return schema.parse(await res.json());
 }
+
+// Thin POST wrapper so existing callers stay untouched.
+const postJson = <T>(
+  path: string,
+  body: unknown,
+  schema: { parse: (data: unknown) => T }
+): Promise<T> => requestJson('POST', path, body, schema);
 
 export interface LergUploadOptions {
   mappings: Record<string, string>;
@@ -251,6 +260,38 @@ export function useLergOperations() {
     } catch (err) {
       console.error('[LergOps] Add record failed:', err);
       error.value = err instanceof Error ? err.message : 'Failed to add record';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Soft-delete a single LERG record by NPA
+  async function deleteRecord(npa: string): Promise<void> {
+    if (isLoading.value) {
+      throw new Error('Operation already in progress');
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      if (!/^[0-9]{3}$/.test(npa)) {
+        throw new Error('NPA must be exactly 3 digits');
+      }
+
+      console.log(`[LergOps] Deleting LERG record: ${npa}`);
+
+      // Delete via Hono route (admin-gated soft delete).
+      await requestJson('DELETE', `/api/lerg/${npa}`, undefined, lergDeleteResponseSchema);
+
+      console.log(`[LergOps] Successfully deleted record: ${npa}`);
+
+      // Refresh store data
+      await initializeLergData({ force: true });
+    } catch (err) {
+      console.error('[LergOps] Delete record failed:', err);
+      error.value = err instanceof Error ? err.message : 'Failed to delete record';
       throw err;
     } finally {
       isLoading.value = false;
@@ -476,6 +517,7 @@ export function useLergOperations() {
     initializeLergData,
     uploadLerg,
     addRecord,
+    deleteRecord,
     clearLerg,
     downloadLerg,
     checkEdgeFunctionStatus,
