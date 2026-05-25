@@ -15,7 +15,7 @@
       </h1>
 
       <div class="prose prose-invert prose-lg max-w-none text-fbWhite/90">
-        <p class="text-fbWhite/70 italic">Last Updated: May 3, 2025</p>
+        <p class="text-fbWhite/70 italic">Last Updated: May 25, 2026</p>
 
         <p>
           Please read these Terms and Conditions ("Terms", "Terms and Conditions") carefully before
@@ -52,46 +52,10 @@
           breach of security or unauthorized use of your account.
         </p>
 
-        <h2 class="text-accent">3. Billing and Payment</h2>
+        <h2 class="text-accent">3. Fees</h2>
         <p>
-          The Service is offered on a subscription basis. You will be billed in advance on a
-          recurring, periodic basis ("Billing Cycle"). Billing cycles are set either on a
-          <strong>monthly</strong> or <strong>annual</strong> basis, depending on the subscription
-          plan you select when purchasing a subscription.
-        </p>
-        <p>
-          At the end of each Billing Cycle, your subscription will automatically renew under the
-          exact same conditions unless you cancel it or VOIP Accelerator cancels it. You may cancel
-          your subscription renewal either through your online account management page or by
-          contacting VOIP Accelerator customer support team.
-        </p>
-        <p>
-          A valid payment method, including credit card, is required to process the payment for your
-          subscription. You shall provide VOIP Accelerator with accurate and complete billing
-          information including full name, address, state, zip code, telephone number, and a valid
-          payment method information. By submitting such payment information, you automatically
-          authorize VOIP Accelerator to charge all subscription fees incurred through your account
-          to any such payment instruments.
-        </p>
-        <p>
-          Should automatic billing fail to occur for any reason, VOIP Accelerator will issue an
-          electronic invoice indicating that you must proceed manually, within a certain deadline
-          date, with the full payment corresponding to the billing period as indicated on the
-          invoice.
-        </p>
-        <p>
-          <strong>Fee Changes:</strong> VOIP Accelerator in its sole discretion and at any time, may
-          modify the subscription fees. Any subscription fee change will become effective at the end
-          of the then-current Billing Cycle. We will provide you with reasonable prior notice of any
-          change in subscription fees to give you an opportunity to terminate your subscription
-          before such change becomes effective.
-        </p>
-        <p>
-          <strong>Refunds:</strong> Except when required by law, paid subscription fees are
-          non-refundable. Certain refund requests for subscriptions may be considered by VOIP
-          Accelerator on a case-by-case basis and granted at the sole discretion of VOIP
-          Accelerator. Certain jurisdictions may allow limited refunds; we will comply with
-          applicable local laws.
+          The Service is provided free of charge. There are no subscriptions, fees, or payments of
+          any kind, and we do not collect or process any payment or credit card information.
         </p>
 
         <h2 class="text-accent">4. Data Privacy and Security</h2>
@@ -100,9 +64,8 @@
           rate deck analysis and comparisons, occurs locally within your browser using IndexedDB.
           Uploaded files and derived data are generally not transmitted to our servers, except where
           necessary for specific features explicitly indicated (e.g., account management). Account
-          information, including email and subscription status (but excluding payment card details),
-          is securely stored using trusted third-party infrastructure such as Supabase. Please refer
-          to our Privacy Policy for more details on how we handle your data.
+          information, such as your email address, is stored securely on our own servers. Please
+          refer to our Privacy Policy for more details on how we handle your data.
         </p>
         <div class="my-4">
           <a
@@ -185,10 +148,6 @@
           underlying LERG database. We do not guarantee the absolute accuracy of all insights
           derived from the data.
         </p>
-        <p>
-          Stripe or other payment providers are responsible for secure transaction processing. We do
-          not store payment credentials.
-        </p>
 
         <h2 class="text-accent">8. Limitation of Liability</h2>
         <p>
@@ -263,7 +222,7 @@
         <h2 class="text-accent">13. Contact Us</h2>
         <p>If you have any questions about these Terms, please contact us:</p>
         <ul>
-          <li>By email: admin@voipaccelerator.com</li>
+          <li>By email: support@voipaccelerator.com</li>
         </ul>
       </div>
     </main>

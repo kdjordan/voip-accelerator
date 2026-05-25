@@ -17,7 +17,7 @@
       </h1>
 
       <div class="prose prose-invert prose-lg max-w-none text-fbWhite/90">
-        <p class="text-fbWhite/70 italic">Last Updated: May 3, 2025</p>
+        <p class="text-fbWhite/70 italic">Last Updated: May 25, 2026</p>
 
         <p>
           VOIP Accelerator ("us", "we", or "our") operates the VOIP Accelerator website and service (the
@@ -44,7 +44,7 @@
 
         <h4>Personal Data</h4>
         <p>
-          While using our Service, especially during account registration and subscription, we may
+          While using our Service, especially during account registration, we may
           ask you to provide us with certain personally identifiable information that can be used to
           contact or identify you ("Personal Data"). Personally identifiable information may
           include, but is not limited to:
@@ -52,7 +52,6 @@
         <ul>
           <li>Email address</li>
           <li>First name and last name</li>
-          <li>Billing information (handled by our payment processor, Stripe)</li>
           <li>Usage Data (as described below)</li>
         </ul>
 
@@ -107,9 +106,9 @@
           </li>
           <li><strong>Security Cookies:</strong> We use Security Cookies for security purposes.</li>
           <li>
-            <strong>Analytics Cookies:</strong> We may use privacy-friendly analytics tools (such as
-            Plausible or Supabase Analytics) to track anonymous usage data for improving the
-            Service.
+            <strong>Analytics Cookies:</strong> We use Google Analytics to collect anonymized usage
+            data (page views, and general device/browser/location information) to understand usage
+            patterns and improve the Service. Google Analytics sets its own cookies.
           </li>
         </ul>
 
@@ -119,7 +118,7 @@
           <li>
             To provide and maintain our Service (including processing data locally in your browser)
           </li>
-          <li>To manage your account and subscription</li>
+          <li>To manage your account</li>
           <li>To notify you about changes to our Service</li>
           <li>To provide customer support</li>
           <li>
@@ -128,11 +127,6 @@
           </li>
           <li>To monitor the usage of our Service</li>
           <li>To detect, prevent and address technical issues</li>
-          <li>To process payments through our third-party payment processor (Stripe)</li>
-          <li>
-            To communicate with you, including sending service-related emails, invoices, and
-            potentially marketing communications (which you can opt-out of)
-          </li>
         </ul>
 
         <h2 class="text-accent">3. Data Storage and Security</h2>
@@ -145,7 +139,7 @@
         </p>
         <h4>Server-Side Storage</h4>
         <p>
-          Your account information (like email, name, subscription status) and potentially
+          Your account information (such as your email address) and potentially
           aggregated/anonymized Usage Data are stored on secure servers. We take reasonable measures
           to protect this information.
         </p>
@@ -185,16 +179,16 @@
           controls in place including the security of your data and other personal information.
         </p>
 
-        <h4>Payment Processing</h4>
+        <h4>Analytics (Google Analytics)</h4>
         <p>
-          We use Stripe for payment processing. We do not store your full credit card details on our
-          servers. Stripe handles this information securely. Stripe's use of your personal
-          information is governed by their Privacy Policy, which can be viewed at
-          <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer"
-            >https://stripe.com/privacy</a
+          We use Google Analytics, a web analytics service provided by Google, to collect anonymized
+          usage data about how visitors use the Service. Google may process this data on servers in
+          the United States. Google's use of this information is governed by their Privacy Policy,
+          which can be viewed at
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer"
+            >https://policies.google.com/privacy</a
           >.
         </p>
-        <!-- Add other third-party processors if applicable (e.g., email service, analytics) -->
 
         <h2 class="text-accent">5. Disclosure of Data</h2>
         <p>
@@ -217,7 +211,7 @@
         </p>
         <p>
           If you wish to be informed what Personal Data we hold about you and if you want it to be
-          removed from our systems, please contact us at admin@voipaccelerator.com You can typically
+          removed from our systems, please contact us at support@voipaccelerator.com You can typically
           manage your account information through your account settings page.
         </p>
         <p>
@@ -285,9 +279,8 @@
           posting the new Privacy Policy on this page.
         </p>
         <p>
-          We will let you know via email and/or a prominent notice on our Service, prior to the
-          change becoming effective and update the "Last Updated" date at the top of this Privacy
-          Policy.
+          We will let you know of any changes by posting the new Privacy Policy on this page and
+          updating the "Last Updated" date at the top of this Privacy Policy.
         </p>
         <p>
           You are advised to review this Privacy Policy periodically for any changes. Changes to
@@ -297,7 +290,7 @@
         <h2 class="text-accent">10. Contact Us</h2>
         <p>If you have any questions about this Privacy Policy, please contact us:</p>
         <ul>
-          <li>By email: admin@voipaccelerator.com</li>
+          <li>By email: support@voipaccelerator.com</li>
         </ul>
       </div>
     </main>
