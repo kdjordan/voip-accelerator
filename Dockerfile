@@ -39,6 +39,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 RUN npm install -g npm@11.13.0
+# curl for Coolify's container healthcheck: node:slim ships neither curl nor wget,
+# and Coolify runs its own curl/wget probe regardless of the Dockerfile HEALTHCHECK.
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 # Prod deps only. tsx is a prod dependency, so --omit=dev still yields a runtime
 # that can execute the server's .ts directly. --ignore-scripts skips the client's
