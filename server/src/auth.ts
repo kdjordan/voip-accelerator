@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { admin } from 'better-auth/plugins';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from './db/client.js';
 import { user, session, account, verification } from './db/schema.js';
@@ -24,6 +25,7 @@ export const auth = betterAuth({
   secret,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins,
+  plugins: [admin()],
 });
 
 export type Auth = typeof auth;

@@ -29,6 +29,7 @@ function toUser(raw: unknown): User | null {
     email: typeof r.email === 'string' ? r.email : '',
     emailVerified: Boolean(r.emailVerified),
     image: typeof r.image === 'string' ? r.image : null,
+    role: r.role === 'admin' ? 'admin' : 'user',
     createdAt:
       createdAt instanceof Date
         ? createdAt.toISOString()
@@ -69,9 +70,9 @@ export const useUserStore = defineStore('user', {
     getAuthIsLoading: (state) => state.auth.isLoading,
     getAuthError: (state) => state.auth.error,
     getAuthIsInitialized: (state) => state.auth.isInitialized,
-    // Admin role detection is wired in a later port chunk; default to non-admin.
-    getUserRole: (): 'user' | 'admin' => 'user',
-    isAdmin: () => false,
+    // Role comes off the better-auth session user (admin plugin); legacy/null role reads as 'user'.
+    getUserRole: (state): 'user' | 'admin' => state.auth.user?.role ?? 'user',
+    isAdmin: (state) => state.auth.user?.role === 'admin',
   },
 
   actions: {

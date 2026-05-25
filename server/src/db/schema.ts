@@ -25,6 +25,11 @@ export const user = pgTable('user', {
   image: text('image'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  // admin plugin fields — role is input:false (set via SQL/admin API, not signup).
+  role: text('role'),
+  banned: boolean('banned').default(false),
+  banReason: text('ban_reason'),
+  banExpires: timestamp('ban_expires', { withTimezone: true }),
 });
 
 export const session = pgTable('session', {
@@ -38,6 +43,8 @@ export const session = pgTable('session', {
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  // admin plugin field — set when an admin impersonates this session's user.
+  impersonatedBy: text('impersonated_by'),
 });
 
 export const account = pgTable('account', {
