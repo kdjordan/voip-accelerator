@@ -228,6 +228,13 @@ client/tests/
 - **Shared components**: Reusable UI patterns with consistent behavior
 - **Test coverage**: All business-critical components must have tests
 
+#### UI Conventions
+- **NEVER use native `alert()`, `confirm()`, or `prompt()`** anywhere. They block the thread, can't be styled, and don't match the app. Always use the shared modal components instead:
+  - **Destructive / yes-no confirmation** → `components/shared/ConfirmationModal.vue` (`v-model` open state, `title`/`message`/`confirmButtonText`/`cancelButtonText`; pass `confirmationPhrase` to require typing a phrase for high-stakes actions like clearing all data).
+  - **Notices / success / error / info** → `components/shared/InfoModal.vue`.
+- If a needed pattern doesn't exist yet, add it to `components/shared/` — don't reach for a native dialog.
+- **Known violations to migrate** (pre-existing, fix opportunistically when touching these files): `UserTable.vue`, `UserRoleSelector.vue`, `UserStatusToggle.vue`, `UnifiedNANPManagement.vue`, `NANPDiagnostics.vue`, `UserManagement.vue`, `AdminView.vue`, `USRateSheetTable.vue`, `AZEffectiveDates.vue`.
+
 #### Performance Optimization
 - **Memory Management**: Use `markRaw()` for large datasets in AZ components (50-70% memory reduction)
 - **Web Workers**: Offload CPU-intensive operations (CSV parsing, data processing)
