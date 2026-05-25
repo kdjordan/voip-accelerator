@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import type { User } from '../types/user-types';
-import { supabase } from '@/utils/supabase';
 import { authClient } from '@/lib/auth';
 
 interface SharedState {
@@ -253,22 +252,18 @@ export const useUserStore = defineStore('user', {
       }
 
       try {
-        const { data, error: functionError } = await supabase.functions.invoke(
-          'delete-user-account',
-          {
-            method: 'POST',
-          }
-        );
+        const { data, error: deleteError } = await authClient.deleteUser();
 
-        if (functionError) {
-          console.error('[UserStore] Error invoking delete-user-account function:', functionError);
-          throw functionError;
+        if (deleteError) {
+          console.error('[UserStore] Error deleting account:', deleteError);
+          throw new Error(deleteError.message || 'Failed to delete account.');
         }
 
+        // deleteUser already cleared the server session; signOut clears local state.
         await this.signOut();
         result = {
           success: true,
-          message: data.message || 'Account deleted successfully.',
+          message: data?.message || 'Account deleted successfully.',
         };
       } catch (err: any) {
         console.error('[UserStore] Error during account deletion process:', err);

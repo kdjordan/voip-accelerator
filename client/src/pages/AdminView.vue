@@ -38,7 +38,6 @@
   import { useLergOperations } from '@/composables/useLergOperations';
   import { usePingStatus } from '@/composables/usePingStatus';
   import { useUserStore } from '@/stores/user-store';
-  import { supabase } from '@/utils/supabase';
   import {
     TrashIcon,
     ArrowUpTrayIcon,

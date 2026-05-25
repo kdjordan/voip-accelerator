@@ -22,6 +22,12 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    // Self-service account deletion (replaces the delete-user-account edge fn).
+    // No email verification: a fresh session deletes immediately; FK cascade on
+    // session/account cleans up the rest.
+    deleteUser: { enabled: true },
+  },
   secret,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins,

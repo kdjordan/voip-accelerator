@@ -233,7 +233,6 @@
   } from '@heroicons/vue/24/outline';
   import { useRouter } from 'vue-router';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
-  import { supabase } from '@/utils/supabase';
 
 
   // User store for user info
