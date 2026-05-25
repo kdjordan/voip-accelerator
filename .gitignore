@@ -60,11 +60,6 @@ client/.env.development
 client/.env.production
 !client/.env.example
 
-# Supabase
-/supabase/.env
-/supabase/.env.*
-!/supabase/.env.example
-
 # Cypress
 /cypress/videos/
 /cypress/screenshots/

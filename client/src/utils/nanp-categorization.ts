@@ -326,20 +326,20 @@ export class NANPCategorizer {
   }
 
   private static isKnownUSNPA(npa: string): boolean {
-    // Basic US NPA patterns - primary data should come from Supabase
-    // This is only for emergency fallback when LERG/Supabase data is unavailable
+    // Basic US NPA patterns - primary data should come from the LERG store
+    // This is only for emergency fallback when LERG data is unavailable
     const basicUSPatterns = ['201', '212', '213', '214', '215', '216', '217', '305', '310', '312', '313', '404', '415', '510', '718', '773', '917'];
     return basicUSPatterns.includes(npa);
   }
 
   private static isKnownCanadianNPA(npa: string): boolean {
-    // Basic Canadian NPA patterns - primary data should come from Supabase
+    // Basic Canadian NPA patterns - primary data should come from the LERG store
     const basicCanadianPatterns = ['204', '403', '416', '418', '450', '514', '604', '613', '705', '780', '902', '905'];
     return basicCanadianPatterns.includes(npa);
   }
 
   private static isKnownCaribbeanNPA(npa: string): boolean {
-    // Basic Caribbean patterns - primary data should come from Supabase
+    // Basic Caribbean patterns - primary data should come from the LERG store
     const basicCaribbeanPatterns = ['242', '246', '264', '268', '284', '340', '441', '649', '664', '721', '758', '767', '784', '787', '809', '829', '849', '868', '869', '876', '939', '987'];
     return basicCaribbeanPatterns.includes(npa);
   }

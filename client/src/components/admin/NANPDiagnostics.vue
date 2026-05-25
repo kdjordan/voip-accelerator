@@ -423,7 +423,7 @@
         }
       }
 
-      // Note: Removed hardcoded NPAs to use Supabase as single source of truth
+      // Note: Removed hardcoded NPAs to use the LERG API as single source of truth
 
       console.log(`[NANPDiagnostics] Collected ${npas.size} NPAs from all sources`);
     } catch (error) {
@@ -487,7 +487,7 @@
     if (!canAddNPA.value) return;
 
     try {
-      // TODO: Replace with actual Supabase integration
+      // TODO: Replace with actual backend integration
       console.log('Adding NPA to manual overrides:', {
         npa: newNPA.value.npa,
         category: newNPA.value.country,
@@ -531,7 +531,7 @@
     const unknownNPAs = diagnostics.value.needs_attention;
 
     try {
-      // TODO: Replace with actual Supabase bulk operation
+      // TODO: Replace with actual backend bulk operation
       console.log('Bulk adding unknown NPAs as Caribbean destinations');
 
       showNoticeModal(

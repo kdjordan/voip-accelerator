@@ -86,13 +86,6 @@ const router = createRouter({
       component: () => import('@/pages/ResetPasswordPage.vue'),
       meta: { requiresAuth: false },
     },
-    {
-      path: '/auth/callback',
-      name: 'AuthCallback',
-      component: () => import('@/pages/auth/AuthCallbackPage.vue'),
-      meta: { requiresAuth: false },
-    },
-
     // Spread the admin routes
     ...adminRoutes,
     {

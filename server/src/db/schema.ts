@@ -75,7 +75,7 @@ export const verification = pgTable('verification', {
 });
 
 // ---------------------------------------------------------------------------
-// enhanced_lerg — mirrors supabase/migrations/20250628161522_create_enhanced_lerg_table.sql.
+// enhanced_lerg — the LERG geographic table (ported from the legacy enhanced_lerg migration).
 // RLS, GRANT, and the get_npa_info() helper are dropped: auth is enforced at
 // the Hono handler layer (ADR-0002), and the helper isn't called from the app.
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 
-// Enhanced NPA Record type matching Supabase enhanced_lerg table
+// Enhanced NPA Record type matching the enhanced_lerg table
 export interface EnhancedNPARecord {
   npa: string;
   country_code: string;

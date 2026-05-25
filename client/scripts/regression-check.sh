@@ -48,17 +48,6 @@ echo "🏗️  Build Verification"
 npm run build > /dev/null 2>&1
 print_status $? "Production build"
 
-# 4. Edge function deployment check (optional)
-echo ""
-echo "🌐 Edge Function Status"
-if command -v supabase &> /dev/null; then
-    echo "Supabase CLI available - checking function status..."
-    # This would check if functions deploy without syntax errors
-    print_warning "Manual edge function verification recommended"
-else
-    print_warning "Supabase CLI not available - manual function check recommended"
-fi
-
 # Success summary
 echo ""
 echo "================================================="

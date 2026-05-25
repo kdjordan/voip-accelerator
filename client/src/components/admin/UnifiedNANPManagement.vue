@@ -686,13 +686,13 @@
   const edgeStatusTitle = computed(() => {
     const status = pingStatus.value;
     if (!status) {
-      return 'Checking Supabase edge function status...';
+      return 'Checking API status...';
     }
 
     if (status.hasLergTable === true && status.isOnline === true) {
-      return 'Supabase edge functions connected';
+      return 'API connected';
     } else {
-      return `Supabase edge functions disconnected${status.error ? ': ' + status.error : ''}`;
+      return `API disconnected${status.error ? ': ' + status.error : ''}`;
     }
   });
 
