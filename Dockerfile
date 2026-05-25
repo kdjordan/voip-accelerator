@@ -43,15 +43,19 @@ RUN npm install -g npm@11.13.0
 # and Coolify runs its own curl/wget probe regardless of the Dockerfile HEALTHCHECK.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-# Prod deps only. tsx is a prod dependency, so --omit=dev still yields a runtime
-# that can execute the server's .ts directly. --ignore-scripts skips the client's
-# dev-only `prepare: husky install` (husky is omitted here); no prod dep needs an
-# install script (esbuild ships its binary via an optional platform package).
+# Prod deps only, scoped to the workspaces the runtime actually uses (server +
+# shared). The client is served as pre-built static files (client/dist, copied
+# below), so its runtime deps (the vue family) are dead weight here — scoping the
+# install to server+shared drops them (~77 -> ~35 packages). tsx is a server prod
+# dependency, so --omit=dev still yields a runtime that can execute the server's
+# .ts directly. --ignore-scripts skips the client's dev-only `prepare: husky
+# install` (husky is omitted here); no prod dep needs an install script (esbuild
+# ships its binary via an optional platform package).
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 COPY shared/package.json ./shared/
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci --omit=dev --ignore-scripts --workspace=server --workspace=shared
 
 # App code (run as .ts via tsx) + the LERG seed CSV (read file-relative by the
 # seed script). client source is not copied — only its built output, below.
