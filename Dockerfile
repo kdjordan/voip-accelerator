@@ -13,13 +13,15 @@ FROM node:22.14.0-slim AS client-build
 WORKDIR /app
 RUN npm install -g npm@11.13.0
 
-# Workspace manifests + root lockfile first, for layer caching. npm ci here is
-# the FULL install (vite/terser are devDeps needed to build the client).
+# Workspace manifests + root lockfile first, for layer caching. --include=dev is
+# REQUIRED: Coolify injects NODE_ENV=production at build time, which makes a bare
+# `npm ci` omit devDependencies (vite / @vitejs/plugin-vue / terser) that the
+# client build needs. --include=dev forces them in regardless of NODE_ENV.
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 COPY shared/package.json ./shared/
-RUN npm ci
+RUN npm ci --include=dev
 
 # Source. The client imports @voip-accelerator/shared (runtime zod) and the
 # AppType from @voip-accelerator/server (type-only, erased at build).
