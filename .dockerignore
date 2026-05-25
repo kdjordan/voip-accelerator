@@ -1,0 +1,51 @@
+# Dependencies + build outputs (regenerated inside the image)
+node_modules
+**/node_modules
+dist
+dist-ssr
+**/dist
+**/dist-ssr
+
+# Secrets / env — provided by Coolify at runtime, never baked into the image.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Stale compiled shared/ shadows (the .ts/.js gotcha) — must never ship.
+# shared/ is all TypeScript; any .js here is a stray tsc artifact.
+shared/**/*.js
+shared/**/*.js.map
+
+# Finder/iCloud "keep both" duplicate artifacts.
+"docker-compose 2.yml"
+"server/.env 2.example"
+"server/drizzle.config 2.ts"
+"server/src/index 2.ts"
+"server/tsconfig 2.json"
+"shared/schemas/ping 2.ts"
+
+# VCS / tooling / editor
+.git
+.gitignore
+.github
+.claude
+.cursor
+.vscode
+.DS_Store
+**/.DS_Store
+
+# Not needed at build or runtime
+tests
+docs
+supabase
+sql
+amplify.yml
+*.md
+**/*.md
+
+# Potentially sensitive / unneeded data files (the seed CSV is copied explicitly
+# in the Dockerfile, so excluding everything else here is safe).
+production-user-emails.csv
+staging_enhanced_lerg_data.sql
