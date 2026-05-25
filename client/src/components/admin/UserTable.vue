@@ -43,12 +43,6 @@
               Role
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-              Subscription
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-              Uploads
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
               Status
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -105,26 +99,6 @@
               />
             </td>
 
-            <!-- Subscription -->
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-white">
-                {{ user.subscription_status || 'None' }}
-              </div>
-              <div v-if="user.plan_expires_at" class="text-xs text-gray-400">
-                Expires: {{ formatDate(user.plan_expires_at) }}
-              </div>
-            </td>
-
-            <!-- Total Uploads (Analytics) -->
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-white font-mono">
-                {{ user.total_uploads || 0 }}
-              </div>
-              <div class="text-xs text-gray-400">
-                uploads
-              </div>
-            </td>
-
             <!-- Status -->
             <td class="px-6 py-4 whitespace-nowrap">
               <UserStatusToggle
@@ -143,20 +117,6 @@
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
               <div class="flex items-center justify-end space-x-2">
                 <button
-                  @click="$emit('user-details', user)"
-                  class="text-accent hover:text-accent/80 transition-colors"
-                  title="View Details"
-                >
-                  <EyeIcon class="h-4 w-4" />
-                </button>
-                <button
-                  @click="$emit('user-details', user)"
-                  class="text-blue-400 hover:text-blue-300 transition-colors"
-                  title="Edit User"
-                >
-                  <PencilIcon class="h-4 w-4" />
-                </button>
-                <button
                   @click="confirmDelete(user)"
                   class="text-red-400 hover:text-red-300 transition-colors"
                   title="Delete User"
@@ -174,12 +134,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { 
-  ArrowPathIcon, 
-  UserIcon, 
-  EyeIcon, 
-  PencilIcon, 
-  TrashIcon 
+import {
+  ArrowPathIcon,
+  UserIcon,
+  TrashIcon
 } from '@heroicons/vue/24/outline'
 import { type UserProfile } from '@/stores/admin-users-store'
 import { useAdminUsersStore } from '@/stores/admin-users-store'
@@ -200,7 +158,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'user-selected': [userId: string]
   'select-all': []
-  'user-details': [user: UserProfile]
   'update-role': [userId: string, role: 'user' | 'admin']
   'toggle-status': [userId: string, isActive: boolean]
   'delete-user': [userId: string]

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useAdminUsersStore, type UserProfile, type UserActivity } from '@/stores/admin-users-store'
+import { useAdminUsersStore, type UserProfile } from '@/stores/admin-users-store'
 import { authClient } from '@/lib/auth'
 
 interface GetUsersParams {
@@ -18,18 +18,12 @@ interface GetUsersResponse {
   hasMore: boolean
 }
 
-// Stripe / upload-limit admin fields aren't owned by better-auth; the routes that
-// back these get ported in chunk 4 (subscription surface). Until then, stub + throw.
-const CHUNK_4_NOT_PORTED =
-  'Subscription and upload admin actions are not available yet (ported in chunk 4).'
-
 export function useAdminUsers() {
   const store = useAdminUsersStore()
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
   // Map a better-auth admin user onto the UserProfile shape the UI renders.
-  // Subscription/upload columns are chunk-4 territory, so they come back null.
   function toUserProfile(u: {
     id: string
     email: string
@@ -45,12 +39,6 @@ export function useAdminUsers() {
       banned: u.banned ?? false,
       created_at: new Date(u.createdAt).toISOString(),
       updated_at: u.updatedAt ? new Date(u.updatedAt).toISOString() : null,
-      plan_expires_at: null,
-      stripe_customer_id: null,
-      subscription_status: null,
-      total_uploads: null,
-      uploads_this_month: null,
-      uploads_reset_date: null,
     }
   }
 
@@ -192,27 +180,6 @@ export function useAdminUsers() {
     }
   }
 
-  // chunk 4: Stripe subscription fields — not managed by better-auth, needs a custom route.
-  async function updateUserSubscription(
-    _userId: string,
-    _updates: { subscription_status?: string; plan_expires_at?: string }
-  ): Promise<void> {
-    throw new Error(CHUNK_4_NOT_PORTED)
-  }
-
-  // chunk 4: upload-limit accounting — not managed by better-auth, needs a custom route.
-  async function updateUserUploads(
-    _userId: string,
-    _updates: { total_uploads?: number; uploads_this_month?: number; uploads_reset_date?: string }
-  ): Promise<void> {
-    throw new Error(CHUNK_4_NOT_PORTED)
-  }
-
-  // chunk 4: user activity analytics — not managed by better-auth, needs a custom route.
-  async function getUserActivity(_userId: string): Promise<UserActivity> {
-    throw new Error(CHUNK_4_NOT_PORTED)
-  }
-
   // Export users to CSV
   async function exportUsers(): Promise<void> {
     try {
@@ -220,18 +187,13 @@ export function useAdminUsers() {
       const allUsers = await fetchUsers({ limit: 1000 })
 
       // Create CSV content
-      const headers = ['ID', 'Email', 'Role', 'Subscription Status', 'Plan Expires', 'Total Uploads', 'Uploads This Month', 'Uploads Reset Date', 'Created At', 'Last Updated']
+      const headers = ['ID', 'Email', 'Role', 'Created At', 'Last Updated']
       const csvContent = [
         headers.join(','),
         ...allUsers.users.map(user => [
           user.id,
           user.email || '',
           user.role,
-          user.subscription_status || '',
-          user.plan_expires_at || '',
-          user.total_uploads || 0,
-          user.uploads_this_month || 0,
-          user.uploads_reset_date || '',
           user.created_at,
           user.updated_at || ''
         ].join(','))
@@ -286,11 +248,8 @@ export function useAdminUsers() {
     // Actions
     fetchUsers,
     updateUserRole,
-    updateUserSubscription,
-    updateUserUploads,
     toggleUserStatus,
     deleteUser,
-    getUserActivity,
     exportUsers,
     searchUsers,
     filterByRole,

@@ -7,23 +7,7 @@ export interface UserProfile {
   updated_at: string | null
   role: string
   banned: boolean
-  plan_expires_at: string | null
-  stripe_customer_id: string | null
-  subscription_status: string | null
-  total_uploads: number | null
-  uploads_this_month: number | null
-  uploads_reset_date: string | null
   email?: string
-}
-
-export interface UserActivity {
-  lastLogin: string | null
-  totalLogins: number
-  createdAt: string
-  lastActivity: string | null
-  rateSheetUploads: number
-  isActive: boolean
-  banDuration: string | null
 }
 
 interface AdminUsersState {
@@ -37,7 +21,6 @@ interface AdminUsersState {
   isLoading: boolean
   error: string | null
   selectedUsers: Set<string>
-  userActivities: Map<string, UserActivity>
 }
 
 export const useAdminUsersStore = defineStore('admin-users', () => {
@@ -53,7 +36,6 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
     isLoading: false,
     error: null,
     selectedUsers: new Set(),
-    userActivities: new Map(),
   })
 
   // Getters
@@ -111,7 +93,6 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
   function removeUser(userId: string) {
     state.value.users = state.value.users.filter(u => u.id !== userId)
     state.value.selectedUsers.delete(userId)
-    state.value.userActivities.delete(userId)
   }
 
   function setTotalUsers(total: number) {
@@ -167,14 +148,6 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
     state.value.selectedUsers.clear()
   }
 
-  function setUserActivity(userId: string, activity: UserActivity) {
-    state.value.userActivities.set(userId, activity)
-  }
-
-  function getUserActivity(userId: string): UserActivity | null {
-    return state.value.userActivities.get(userId) || null
-  }
-
   function nextPage() {
     if (hasMorePages.value) {
       state.value.currentPage += 1
@@ -212,7 +185,6 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
       isLoading: false,
       error: null,
       selectedUsers: new Set(),
-      userActivities: new Map(),
     }
   }
 
@@ -242,8 +214,6 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
     toggleUserSelection,
     selectAllUsers,
     clearSelection,
-    setUserActivity,
-    getUserActivity,
     nextPage,
     previousPage,
     goToPage,

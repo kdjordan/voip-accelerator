@@ -270,7 +270,6 @@
           :loading="store.state.isLoading"
           @user-selected="store.toggleUserSelection"
           @select-all="store.selectAllUsers"
-          @user-details="showUserDetails"
           @update-role="handleUpdateRole"
           @toggle-status="handleToggleStatus"
           @delete-user="handleDeleteUser"
@@ -304,14 +303,6 @@
       </div>
     </div>
     </div>
-
-    <!-- User Details Modal -->
-    <UserDetailsModal
-      :show="showDetailsModal"
-      :user="selectedUser"
-      @close="closeUserDetails"
-      @update-user="handleUserUpdate"
-    />
   </div>
 </template>
 
@@ -320,10 +311,8 @@ import { ref, computed, onMounted } from 'vue'
 import { ArrowPathIcon, MagnifyingGlassIcon, XMarkIcon, ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue'
 import { useAdminUsers } from '@/composables/useAdminUsers'
-import { type UserProfile } from '@/stores/admin-users-store'
 import { useUserStore } from '@/stores/user-store'
 import UserTable from './UserTable.vue'
-import UserDetailsModal from './UserDetailsModal.vue'
 import BaseButton from '@/components/shared/BaseButton.vue'
 import BaseBadge from '@/components/shared/BaseBadge.vue'
 
@@ -339,8 +328,6 @@ const searchQuery = ref('')
 const roleFilter = ref('')
 const statusFilter = ref('all')
 const isExporting = ref(false)
-const showDetailsModal = ref(false)
-const selectedUser = ref<UserProfile | null>(null)
 
 // Computed
 const adminCount = computed(() => {
@@ -426,16 +413,6 @@ async function exportUsers() {
   }
 }
 
-function showUserDetails(user: UserProfile) {
-  selectedUser.value = user
-  showDetailsModal.value = true
-}
-
-function closeUserDetails() {
-  showDetailsModal.value = false
-  selectedUser.value = null
-}
-
 async function handleUpdateRole(userId: string, role: 'user' | 'admin') {
   try {
     await updateUserRole(userId, role)
@@ -468,11 +445,6 @@ async function changePage(page: number) {
   } catch (err) {
     console.error('Failed to change page:', err)
   }
-}
-
-function handleUserUpdate(user: UserProfile) {
-  store.updateUser(user.id, user)
-  closeUserDetails()
 }
 
 function getRoleFilterDisplayName(value: string): string {
