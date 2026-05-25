@@ -189,26 +189,6 @@ export const useUserStore = defineStore('user', {
       this.auth.isLoading = false;
     },
 
-    async resetPasswordForEmail(email: string) {
-      this.auth.isLoading = true;
-      this.auth.error = null;
-      try {
-        const redirectTo = `${window.location.origin}/reset-password`;
-        const { error } = await authClient.requestPasswordReset({
-          email,
-          redirectTo,
-        });
-        if (error) throw new Error(error.message ?? 'Reset request failed');
-        return { error: null };
-      } catch (err) {
-        console.error('Error sending password reset email:', err);
-        this.auth.error = err as Error;
-        return { error: err as Error };
-      } finally {
-        this.auth.isLoading = false;
-      }
-    },
-
     async updateUserEmail(newEmail: string) {
       this.setGlobalLoading(true);
       this.auth.error = null;

@@ -34,14 +34,6 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-end">
-      <div class="text-sm leading-6">
-        <router-link to="/forgot-password" class="font-semibold text-accent hover:text-accent-hover">
-          Forgot password?
-        </router-link>
-      </div>
-    </div>
-
     <div v-if="errorMessage" class="mt-4 text-center text-sm text-red-400">
       {{ errorMessage }}
     </div>

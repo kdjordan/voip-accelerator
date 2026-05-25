@@ -74,18 +74,6 @@ const router = createRouter({
       component: () => import('@/pages/auth/SignUpPage.vue'),
       meta: { requiresAuth: false, hideWhenAuthed: true },
     },
-    {
-      path: '/forgot-password',
-      name: 'ForgotPassword',
-      component: () => import('@/pages/ForgotPasswordPage.vue'),
-      meta: { requiresAuth: false, hideWhenAuthed: true },
-    },
-    {
-      path: '/reset-password',
-      name: 'ResetPassword',
-      component: () => import('@/pages/ResetPasswordPage.vue'),
-      meta: { requiresAuth: false },
-    },
     // Spread the admin routes
     ...adminRoutes,
     {
@@ -127,7 +115,7 @@ const authRequiredRoutes = [
 ];
 
 // Routes only for unauthenticated users
-const transitionalAuthRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/'];
+const transitionalAuthRoutes = ['/login', '/signup', '/auth/callback', '/'];
 
 // Helper function to wait for auth initialization
 async function waitForAuthInitialization(
@@ -152,13 +140,6 @@ async function waitForAuthInitialization(
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-
-  // ALWAYS allow password reset page regardless of auth state
-  const isResetPasswordRoute = to.name === 'ResetPassword' || to.path === '/reset-password';
-  if (isResetPasswordRoute) {
-    next();
-    return;
-  }
 
   if (!userStore.getAuthIsInitialized) {
     console.warn('[NavGuard] Auth store not yet initialized. Waiting for initialization...');
