@@ -1,10 +1,43 @@
 import { ref, computed } from 'vue';
-import { supabase } from '@/utils/supabase';
-import { lergListResponseSchema, type EnhancedLergRow } from '@voip-accelerator/shared';
+import {
+  lergListResponseSchema,
+  lergUploadResponseSchema,
+  lergClearResponseSchema,
+  enhancedLergRowSchema,
+  pingResponseSchema,
+  type EnhancedLergRow,
+} from '@voip-accelerator/shared';
 import { useLergStoreV2, type EnhancedNPARecord } from '@/stores/lerg-store-v2';
 import Papa from 'papaparse';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+
+// POST JSON to a Hono route, surfacing the server's { error } message on failure.
+// Hand-rolled rather than the Hono RPC client, which types as `unknown` here.
+async function postJson<T>(
+  path: string,
+  body: unknown,
+  schema: { parse: (data: unknown) => T }
+): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    ...(body === undefined
+      ? {}
+      : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const errBody = (await res.json()) as { error?: string };
+      if (errBody?.error) message = errBody.error;
+    } catch {
+      // non-JSON error body — keep the status-code message
+    }
+    throw new Error(message);
+  }
+  return schema.parse(await res.json());
+}
 
 export interface LergUploadOptions {
   mappings: Record<string, string>;
@@ -28,21 +61,19 @@ export function useLergOperations() {
   // Computed state
   const isInitialized = computed(() => store.isInitialized);
 
-  // Check if edge functions are available
+  // Check that the API/LERG backend is reachable (was an edge-function ping).
   async function checkEdgeFunctionStatus(): Promise<boolean> {
     try {
-      const { data, error: funcError } = await supabase.functions.invoke('get-enhanced-lerg-data');
-
-      if (funcError) {
-        console.warn('[LergOps] Edge function not available:', funcError);
+      const res = await fetch(`${API_BASE_URL}/api/ping`, { credentials: 'include' });
+      if (!res.ok) {
         isEdgeFunctionAvailable.value = false;
         return false;
       }
-
-      isEdgeFunctionAvailable.value = true;
-      return true;
+      const body = pingResponseSchema.parse(await res.json());
+      isEdgeFunctionAvailable.value = body.status === 'ok';
+      return isEdgeFunctionAvailable.value;
     } catch (err) {
-      console.warn('[LergOps] Edge function check failed:', err);
+      console.warn('[LergOps] Health check failed:', err);
       isEdgeFunctionAvailable.value = false;
       return false;
     }
@@ -123,16 +154,16 @@ export function useLergOperations() {
 
       console.log(`[LergOps] Uploading ${csvData.length} LERG records...`);
 
-      // Upload to Supabase via edge function
-      const { data, error: uploadError } = await supabase.functions.invoke('upload-lerg', {
-        body: { records: csvData },
-      });
+      // Upload via Hono route (admin-gated, bulk upsert).
+      const result = await postJson(
+        '/api/lerg/upload',
+        { records: csvData },
+        lergUploadResponseSchema
+      );
 
-      if (uploadError) {
-        throw new Error(uploadError.message || 'Failed to upload LERG data');
-      }
-
-      console.log(`[LergOps] Successfully uploaded ${csvData.length} records`);
+      console.log(
+        `[LergOps] Uploaded: ${result.recordsInserted} inserted, ${result.recordsSkipped} skipped`
+      );
 
       // Refresh store data
       await initializeLergData({ force: true });
@@ -199,9 +230,10 @@ export function useLergOperations() {
       const stateCode = record.state.toUpperCase();
       const stateName = stateNames[stateCode] || stateCode;
       
-      // Add via edge function
-      const { data, error: addError } = await supabase.functions.invoke('add-enhanced-lerg-record', {
-        body: {
+      // Add via Hono route (admin-gated single insert).
+      await postJson(
+        '/api/lerg/records',
+        {
           npa: record.npa,
           state_province_code: stateCode,
           country_code: record.country.toUpperCase(),
@@ -209,11 +241,8 @@ export function useLergOperations() {
           country_name: record.country === 'US' ? 'United States' : record.country === 'CA' ? 'Canada' : record.country,
           category: record.country === 'US' ? 'us-domestic' : record.country === 'CA' ? 'canadian' : 'caribbean',
         },
-      });
-
-      if (addError) {
-        throw new Error(addError.message || 'Failed to add LERG record');
-      }
+        enhancedLergRowSchema
+      );
 
       console.log(`[LergOps] Successfully added record: ${record.npa}`);
 
@@ -246,14 +275,10 @@ export function useLergOperations() {
 
       console.log('[LergOps] Clearing all LERG data...');
 
-      // Clear via edge function
-      const { data, error: clearError } = await supabase.functions.invoke('clear-lerg');
+      // Clear via Hono route (admin-gated soft delete).
+      const result = await postJson('/api/lerg/clear', undefined, lergClearResponseSchema);
 
-      if (clearError) {
-        throw new Error(clearError.message || 'Failed to clear LERG data');
-      }
-
-      console.log('[LergOps] Successfully cleared all LERG data');
+      console.log(`[LergOps] Successfully cleared ${result.recordsCleared} LERG records`);
 
       // Clear store data
       store.clearData();

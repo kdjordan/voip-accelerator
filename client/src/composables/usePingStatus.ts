@@ -1,4 +1,7 @@
 import { ref } from 'vue';
+import { pingResponseSchema } from '@voip-accelerator/shared';
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
 
 interface PingStatus {
   isOnline: boolean;
@@ -18,27 +21,19 @@ export function usePingStatus() {
     try {
       status.value.lastChecked = new Date();
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ping-status`,
-        {
-          method: 'GET',
-          mode: 'cors',
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/ping`, {
+        method: 'GET',
+        credentials: 'include',
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = pingResponseSchema.parse(await response.json());
       status.value = {
         isOnline: data.status === 'ok',
-        hasLergTable: data.hasLergTable || false,
+        hasLergTable: data.hasLergTable,
         lastChecked: new Date(),
       };
     } catch (error) {
