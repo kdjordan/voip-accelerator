@@ -62,13 +62,6 @@
       {{ errorMessage }}
     </div>
 
-    <div
-      v-if="signupSuccessMessage"
-      class="mt-6 p-4 bg-green-500/10 border border-green-500/30 text-green-300 rounded-md text-sm"
-    >
-      {{ signupSuccessMessage }}
-    </div>
-
     <div>
       <BaseButton
         type="submit"
@@ -97,7 +90,6 @@
   const password = ref('');
   const confirmPassword = ref('');
   const errorMessage = ref<string | null>(null);
-  const signupSuccessMessage = ref<string | null>(null);
   const isLoading = ref(false);
   const isSignupFormSuccessfullySubmitted = ref(false);
 
@@ -148,7 +140,6 @@
 
   function clearMessages() {
     errorMessage.value = null;
-    signupSuccessMessage.value = null;
     isSignupFormSuccessfullySubmitted.value = false;
   }
 </script>
