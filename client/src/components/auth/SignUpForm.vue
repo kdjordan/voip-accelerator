@@ -85,10 +85,12 @@
 
 <script setup lang="ts">
   import { ref } from 'vue';
+  import { useRouter } from 'vue-router';
   import { useUserStore } from '@/stores/user-store';
   import BaseButton from '@/components/shared/BaseButton.vue';
 
   const userStore = useUserStore();
+  const router = useRouter();
 
   // Account creation form state
   const email = ref('');
@@ -130,8 +132,10 @@
         console.error('Sign up error object:', signUpError);
         errorMessage.value = signUpError.message || 'Failed to create account. Please try again.';
       } else {
-        signupSuccessMessage.value = `Account created! A confirmation email has been sent to ${email.value}. Please check your inbox (and spam folder) and click the link to activate your account.`;
+        // better-auth signs the user in on sign-up (session returned) and there
+        // is no email verification, so go straight to the app — same as sign-in.
         isSignupFormSuccessfullySubmitted.value = true;
+        router.push((router.currentRoute.value.query.redirect as string) || '/dashboard');
       }
     } catch (error) {
       // Catch any unexpected errors from the signUp action itself
