@@ -36,11 +36,12 @@ export function useUSTableData<T extends USRateSheetEntry | USPricingComparisonR
     try {
       // Import LERG store dynamically to avoid circular dependencies
       const { useLergStoreV2 } = await import('@/stores/lerg-store-v2');
+      const { useLergOperations } = await import('@/composables/useLergOperations');
       const lergStore = useLergStoreV2();
 
       // Ensure LERG data is loaded
       if (!lergStore.isInitialized) {
-        await lergStore.loadFromSupabase();
+        await useLergOperations().initializeLergData();
       }
 
       const regionCodes: string[] = [];
@@ -92,11 +93,12 @@ export function useUSTableData<T extends USRateSheetEntry | USPricingComparisonR
 
       // Import LERG store dynamically to avoid circular dependencies
       const { useLergStoreV2 } = await import('@/stores/lerg-store-v2');
+      const { useLergOperations } = await import('@/composables/useLergOperations');
       const lergStore = useLergStoreV2();
 
       // Ensure LERG data is loaded for NPA lookups
       if (!lergStore.isInitialized) {
-        await lergStore.loadFromSupabase();
+        await useLergOperations().initializeLergData();
       }
 
       // Get unique NPAs from the table more efficiently

@@ -499,7 +499,7 @@
 
   // New simplified LERG store and operations
   const store = useLergStoreV2();
-  const { isLoading, error, uploadLerg, addRecord, clearLerg, downloadLerg } = useLergOperations();
+  const { isLoading, error, uploadLerg, addRecord, clearLerg, downloadLerg, initializeLergData } = useLergOperations();
   const { status: pingStatus, checkPingStatus } = usePingStatus();
 
   // Store data access
@@ -695,7 +695,7 @@
   async function loadData() {
     console.log('[UnifiedNANPManagement] Refreshing LERG data...');
     try {
-      await lergStore.loadFromSupabase();
+      await initializeLergData({ force: true });
       console.log('[UnifiedNANPManagement] LERG data refreshed, count:', lergStore.allNPAs.length);
     } catch (err) {
       console.error('[UnifiedNANPManagement] Failed to refresh LERG data:', err);

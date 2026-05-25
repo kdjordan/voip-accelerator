@@ -1,7 +1,10 @@
 import { ref, computed } from 'vue';
 import { supabase } from '@/utils/supabase';
+import { lergListResponseSchema, type EnhancedLergRow } from '@voip-accelerator/shared';
 import { useLergStoreV2, type EnhancedNPARecord } from '@/stores/lerg-store-v2';
 import Papa from 'papaparse';
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
 
 export interface LergUploadOptions {
   mappings: Record<string, string>;
@@ -46,19 +49,45 @@ export function useLergOperations() {
   }
 
   // Initialize LERG data (called once on app startup)
-  async function initializeLergData(): Promise<void> {
-    if (store.isLoaded && store.allNPAs.length > 0) {
+  async function initializeLergData(options: { force?: boolean } = {}): Promise<void> {
+    if (!options.force && store.isLoaded && store.allNPAs.length > 0) {
       console.log('[LergOps] LERG data already loaded, skipping initialization');
       return;
     }
 
+    store.setLoading(true);
     try {
-      await store.loadFromSupabase();
+      const res = await fetch(`${API_BASE_URL}/api/lerg`, { credentials: 'include' });
+      if (!res.ok) {
+        throw new Error(`LERG fetch failed: ${res.status}`);
+      }
+      const body = lergListResponseSchema.parse(await res.json());
+      store.setRecords(body.rows.map(toStoreRecord));
+      console.log(`[LergOps] Loaded ${body.count} NPAs via /api/lerg`);
     } catch (err) {
       console.error('[LergOps] Failed to initialize LERG data:', err);
-      error.value = err instanceof Error ? err.message : 'Failed to initialize LERG data';
+      const message = err instanceof Error ? err.message : 'Failed to initialize LERG data';
+      error.value = message;
+      store.setError(message);
       throw err;
+    } finally {
+      store.setLoading(false);
     }
+  }
+
+  function toStoreRecord(row: EnhancedLergRow): EnhancedNPARecord {
+    return {
+      npa: row.npa,
+      country_code: row.country_code,
+      country_name: row.country_name,
+      state_province_code: row.state_province_code,
+      state_province_name: row.state_province_name,
+      region: row.region ?? '',
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      notes: row.notes,
+      is_active: row.is_active,
+    };
   }
 
   // Upload LERG CSV file
@@ -74,7 +103,7 @@ export function useLergOperations() {
       // Ensure LERG data is loaded before proceeding. This is the definitive fix.
       if (!store.isLoaded) {
         console.log('[LergOps] LERG data not loaded. Forcing synchronous load before upload...');
-        await store.loadFromSupabase();
+        await initializeLergData();
         console.log('[LergOps] LERG data load complete.');
       }
 
@@ -106,7 +135,7 @@ export function useLergOperations() {
       console.log(`[LergOps] Successfully uploaded ${csvData.length} records`);
 
       // Refresh store data
-      await store.refresh();
+      await initializeLergData({ force: true });
     } catch (err) {
       console.error('[LergOps] Upload failed:', err);
       error.value = err instanceof Error ? err.message : 'Upload failed';
@@ -189,7 +218,7 @@ export function useLergOperations() {
       console.log(`[LergOps] Successfully added record: ${record.npa}`);
 
       // Refresh store data
-      await store.refresh();
+      await initializeLergData({ force: true });
     } catch (err) {
       console.error('[LergOps] Add record failed:', err);
       error.value = err instanceof Error ? err.message : 'Failed to add record';

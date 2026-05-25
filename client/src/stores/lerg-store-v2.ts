@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia';
-import { supabase } from '@/utils/supabase';
 
 // Enhanced NPA Record type matching Supabase enhanced_lerg table
 export interface EnhancedNPARecord {
@@ -334,60 +333,20 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
   },
 
   actions: {
-    async loadFromSupabase() {
-      if (this.isLoading) {
-        console.log('[LergStoreV2] Already loading, skipping duplicate request');
-        return;
-      }
-
-      this.isLoading = true;
+    setRecords(records: EnhancedNPARecord[]) {
+      this.allNPAs = records;
+      this.lastUpdated = new Date();
+      this.isLoaded = true;
       this.error = null;
+      this._npaIndex = null;
+    },
 
-      try {
-        console.log('[LergStoreV2] Loading enhanced LERG data from Supabase (direct query)...');
+    setError(message: string) {
+      this.error = message;
+    },
 
-        // Query the database directly instead of using edge function
-        const { data, error } = await supabase
-          .from('enhanced_lerg')
-          .select('npa, country_code, country_name, state_province_code, state_province_name, region, created_at, updated_at, notes, is_active')
-          .eq('is_active', true)
-          .order('npa');
-
-        if (error) {
-          throw new Error(error.message || 'Failed to load LERG data');
-        }
-
-        if (!data || !Array.isArray(data)) {
-          throw new Error('Invalid data format received from Supabase');
-        }
-
-        this.allNPAs = data;
-        this.lastUpdated = new Date();
-        this.isLoaded = true;
-        // Phase 1: Clear index cache when data updates
-        this._npaIndex = null;
-
-        console.log(`[LergStoreV2] Successfully loaded ${this.allNPAs.length} NPAs`);
-
-        // DEBUG: Log first record to see structure
-        if (this.allNPAs.length > 0) {
-          console.log('[LergStoreV2] First NPA record structure:', this.allNPAs[0]);
-          console.log('[LergStoreV2] Region value:', this.allNPAs[0].region);
-        }
-
-        console.log('[LergStoreV2] Region breakdown:', {
-          'US Domestic': this.stats.us_domestic,
-          Canadian: this.stats.canadian,
-          Caribbean: this.stats.caribbean,
-          Pacific: this.stats.pacific,
-        });
-      } catch (err) {
-        console.error('[LergStoreV2] Error loading LERG data:', err);
-        this.error = err instanceof Error ? err.message : 'Failed to load LERG data';
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
+    setLoading(value: boolean) {
+      this.isLoading = value;
     },
 
     // Add a single NPA record (admin function)
@@ -414,12 +373,5 @@ export const useLergStoreV2 = defineStore('lerg-v2', {
       // Phase 1: Clear cache
       this._npaIndex = null;
     },
-
-    // Refresh data from Supabase
-    async refresh() {
-      this.isLoaded = false; // Force reload
-      await this.loadFromSupabase();
-    },
-
   },
 });
