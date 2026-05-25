@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div
     v-if="modelValue"
     class="fixed inset-0 z-50 flex items-center justify-center bg-fbBlack/80 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
@@ -23,6 +24,7 @@
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
