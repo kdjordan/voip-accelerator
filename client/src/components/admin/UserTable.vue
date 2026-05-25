@@ -130,10 +130,19 @@
       </table>
     </div>
   </div>
+
+  <ConfirmationModal
+    v-model="showDeleteModal"
+    title="Delete User"
+    :message="deleteMessage"
+    confirm-button-text="Delete"
+    confirm-button-variant="destructive"
+    @confirm="onConfirmDelete"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   ArrowPathIcon,
   UserIcon,
@@ -143,6 +152,7 @@ import { type UserProfile } from '@/stores/admin-users-store'
 import { useAdminUsersStore } from '@/stores/admin-users-store'
 import UserRoleSelector from './UserRoleSelector.vue'
 import UserStatusToggle from './UserStatusToggle.vue'
+import ConfirmationModal from '@/components/shared/ConfirmationModal.vue'
 
 // Props
 interface Props {
@@ -165,6 +175,11 @@ const emit = defineEmits<{
 
 // Store
 const store = useAdminUsersStore()
+
+// Delete confirmation state
+const showDeleteModal = ref(false)
+const deleteMessage = ref('')
+const pendingDeleteUserId = ref<string | null>(null)
 
 // Computed
 const selectedUsers = computed(() => store.state.selectedUsers)
@@ -204,8 +219,16 @@ function formatDate(dateString: string): string {
 }
 
 function confirmDelete(user: UserProfile) {
-  if (confirm(`Are you sure you want to delete user ${user.email || user.id}? This action cannot be undone.`)) {
-    emit('delete-user', user.id)
+  deleteMessage.value = `Are you sure you want to delete user ${user.email || user.id}? This action cannot be undone.`
+  pendingDeleteUserId.value = user.id
+  showDeleteModal.value = true
+}
+
+function onConfirmDelete() {
+  showDeleteModal.value = false
+  if (pendingDeleteUserId.value) {
+    emit('delete-user', pendingDeleteUserId.value)
+    pendingDeleteUserId.value = null
   }
 }
 </script>

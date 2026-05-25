@@ -258,6 +258,22 @@
       </div>
     </div>
   </div>
+
+  <NoticeModal
+    v-model="showNotice"
+    :title="noticeTitle"
+    :message="noticeMessage"
+    :variant="noticeVariant"
+  />
+
+  <ConfirmationModal
+    v-model="showBulkAddModal"
+    title="Add Unknown NPAs"
+    :message="bulkAddMessage"
+    confirm-button-text="Continue"
+    confirm-button-variant="primary"
+    @confirm="doBulkAddUnknownNPAs"
+  />
 </template>
 
 <script setup lang="ts">
@@ -265,11 +281,32 @@
   import { ChevronDownIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
   import { NANPCategorizer } from '@/utils/nanp-categorization';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+  import NoticeModal from '@/components/shared/NoticeModal.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
   const showDiagnostics = ref(false);
   const isAnalyzing = ref(false);
   const diagnostics = ref<any>(null);
   const lergStore = useLergStoreV2();
+
+  // Notice + confirmation modal state
+  const showNotice = ref(false);
+  const noticeTitle = ref('');
+  const noticeMessage = ref('');
+  const noticeVariant = ref<'success' | 'error' | 'info'>('info');
+  const showBulkAddModal = ref(false);
+  const bulkAddMessage = ref('');
+
+  function showNoticeModal(
+    title: string,
+    message: string,
+    variant: 'success' | 'error' | 'info' = 'info'
+  ) {
+    noticeTitle.value = title;
+    noticeMessage.value = message;
+    noticeVariant.value = variant;
+    showNotice.value = true;
+  }
 
   // Manual NPA management state
   const newNPA = ref({
@@ -337,7 +374,7 @@
       console.log('[NANPDiagnostics] Analysis completed:', enhancedResult);
     } catch (error) {
       console.error('[NANPDiagnostics] Failed to run diagnostics:', error);
-      alert(`❌ Diagnostic analysis failed: ${error.message}`);
+      showNoticeModal('Analysis Failed', `Diagnostic analysis failed: ${error.message}`, 'error');
     } finally {
       isAnalyzing.value = false;
     }
@@ -460,7 +497,11 @@
         added_at: new Date().toISOString(),
       });
 
-      alert(`NPA ${newNPA.value.npa} added successfully as ${newNPA.value.country}`);
+      showNoticeModal(
+        'NPA Added',
+        `NPA ${newNPA.value.npa} added successfully as ${newNPA.value.country}`,
+        'success'
+      );
 
       // Reset form
       newNPA.value = { npa: '', country: '', region: '' };
@@ -470,34 +511,40 @@
       await runDiagnostics();
     } catch (error) {
       console.error('Failed to add NPA:', error);
-      alert('❌ Failed to add NPA. Please try again.');
+      showNoticeModal('Add Failed', 'Failed to add NPA. Please try again.', 'error');
     }
   }
 
-  async function bulkAddUnknownNPAs() {
+  function bulkAddUnknownNPAs() {
     if (!diagnostics.value || !diagnostics.value.needs_attention.length) return;
 
     const unknownNPAs = diagnostics.value.needs_attention;
+    bulkAddMessage.value = `This will add ${unknownNPAs.length} unknown NPAs as "Caribbean" destinations. Continue?`;
+    showBulkAddModal.value = true;
+  }
 
-    if (
-      !confirm(
-        `This will add ${unknownNPAs.length} unknown NPAs as "Caribbean" destinations. Continue?`
-      )
-    ) {
-      return;
-    }
+  async function doBulkAddUnknownNPAs() {
+    showBulkAddModal.value = false;
+
+    if (!diagnostics.value || !diagnostics.value.needs_attention.length) return;
+
+    const unknownNPAs = diagnostics.value.needs_attention;
 
     try {
       // TODO: Replace with actual Supabase bulk operation
       console.log('Bulk adding unknown NPAs as Caribbean destinations');
 
-      alert(`Successfully added ${unknownNPAs.length} NPAs as Caribbean destinations`);
+      showNoticeModal(
+        'NPAs Added',
+        `Successfully added ${unknownNPAs.length} NPAs as Caribbean destinations`,
+        'success'
+      );
 
       // Refresh diagnostics
       await runDiagnostics();
     } catch (error) {
       console.error('Failed to bulk add NPAs:', error);
-      alert('❌ Bulk operation failed. Please try again.');
+      showNoticeModal('Bulk Operation Failed', 'Bulk operation failed. Please try again.', 'error');
     }
   }
 

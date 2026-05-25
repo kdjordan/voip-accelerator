@@ -882,6 +882,13 @@ All NPAs will be available for adjustment again."
       }"
       :on-export="handleExportWithOptions"
     />
+
+    <NoticeModal
+      v-model="showNotice"
+      :title="noticeTitle"
+      :message="noticeMessage"
+      :variant="noticeVariant"
+    />
   </div>
 </template>
 
@@ -912,6 +919,7 @@ All NPAs will be available for adjustment again."
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import NoticeModal from '@/components/shared/NoticeModal.vue';
   import USExportModal from '@/components/exports/USExportModal.vue';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
@@ -1439,6 +1447,22 @@ All NPAs will be available for adjustment again."
   const showClearDataModal = ref(false);
   const showResetSessionModal = ref(false);
   const showExportModal = ref(false);
+
+  const showNotice = ref(false);
+  const noticeTitle = ref('');
+  const noticeMessage = ref('');
+  const noticeVariant = ref<'success' | 'error' | 'info'>('info');
+
+  function showNoticeModal(
+    title: string,
+    message: string,
+    variant: 'success' | 'error' | 'info' = 'info'
+  ) {
+    noticeTitle.value = title;
+    noticeMessage.value = message;
+    noticeVariant.value = variant;
+    showNotice.value = true;
+  }
   const exportData = ref<USRateSheetEntry[]>([]);
   const totalExportRecords = ref(0);
 
@@ -1497,7 +1521,7 @@ All NPAs will be available for adjustment again."
     if (!dbInstance.value) {
       await initializeDB();
       if (!dbInstance.value) {
-        alert('Database is not ready. Cannot export.');
+        showNoticeModal('Export Failed', 'Database is not ready. Cannot export.', 'error');
         return;
       }
     }
@@ -1518,7 +1542,7 @@ All NPAs will be available for adjustment again."
       exportData.value = await query.toArray();
 
       if (exportData.value.length === 0) {
-        alert('No data matches the current filters to export.');
+        showNoticeModal('Nothing to Export', 'No data matches the current filters to export.', 'info');
         return;
       }
 
@@ -1532,7 +1556,7 @@ All NPAs will be available for adjustment again."
       showExportModal.value = true;
     } catch (error) {
       console.error('Error preparing export data:', error);
-      alert('Failed to prepare export data.');
+      showNoticeModal('Export Failed', 'Failed to prepare export data.', 'error');
     }
   }
 
@@ -1576,7 +1600,7 @@ All NPAs will be available for adjustment again."
     if (!dbInstance.value) {
       await initializeDB(); // Ensure DB is initialized if not already
       if (!dbInstance.value) {
-        alert('Database is not ready. Cannot export.');
+        showNoticeModal('Export Failed', 'Database is not ready. Cannot export.', 'error');
         console.error('[Export Debug] DB instance still not ready after init attempt.');
         return;
       }
@@ -1595,7 +1619,7 @@ All NPAs will be available for adjustment again."
       const dataToExport = await query.toArray();
 
       if (dataToExport.length === 0) {
-        alert('No data matches the current filters to export.');
+        showNoticeModal('Nothing to Export', 'No data matches the current filters to export.', 'info');
 
         return;
       }
@@ -1648,7 +1672,11 @@ All NPAs will be available for adjustment again."
       // exportError.value is already set by useCSVExport if the error originated there
       // If the error is from data preparation before calling exportToCSV, dataError (if defined) or a local error ref should be used
       // For now, ensure user is notified.
-      alert(`Export failed: ${err.message || 'An unexpected error occurred'}`);
+      showNoticeModal(
+        'Export Failed',
+        err.message || 'An unexpected error occurred',
+        'error'
+      );
       // If you have a specific dataError ref for this component:
       // dataError.value = err.message || 'Failed to export data';
     }

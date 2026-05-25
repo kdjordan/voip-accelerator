@@ -478,6 +478,24 @@
     confirmButtonText="Delete"
     @confirm="handleDeleteConfirm"
   />
+
+  <!-- Clear All LERG Confirmation -->
+  <ConfirmationModal
+    v-model="showClearModal"
+    title="Clear All LERG Data"
+    :message="clearMessage"
+    confirm-button-text="Clear All Data"
+    :requires-confirmation-phrase="true"
+    confirmation-phrase="CLEAR"
+    @confirm="doClearLergData"
+  />
+
+  <NoticeModal
+    v-model="showNotice"
+    :title="noticeTitle"
+    :message="noticeMessage"
+    :variant="noticeVariant"
+  />
 </template>
 
 <script setup lang="ts">
@@ -503,6 +521,7 @@
   import { usePingStatus } from '@/composables/usePingStatus';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import NoticeModal from '@/components/shared/NoticeModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
   import BaseBadge from '@/components/shared/BaseBadge.vue';
   import Papa from 'papaparse';
@@ -586,6 +605,23 @@
   // Per-NPA delete confirmation state
   const showDeleteModal = ref(false);
   const npaToDelete = ref('');
+  const showClearModal = ref(false);
+  const clearMessage = ref('');
+  const showNotice = ref(false);
+  const noticeTitle = ref('');
+  const noticeMessage = ref('');
+  const noticeVariant = ref<'success' | 'error' | 'info'>('info');
+
+  function showNoticeModal(
+    title: string,
+    message: string,
+    variant: 'success' | 'error' | 'info' = 'info'
+  ) {
+    noticeTitle.value = title;
+    noticeMessage.value = message;
+    noticeVariant.value = variant;
+    showNotice.value = true;
+  }
 
   // Computed Properties
   const isFormValid = computed(() => {
@@ -821,7 +857,7 @@
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('[UnifiedNANPManagement] Export failed:', err);
-      alert('❌ Export failed: ' + err.message);
+      showNoticeModal('Export Failed', err.message, 'error');
     }
   }
 
@@ -841,25 +877,24 @@
     }
   }
 
-  async function confirmClearLergData() {
-    const confirmed = window.confirm(
-      '⚠️ WARNING: This will permanently clear ALL LERG data from the database.\n\n' +
-        'This action cannot be undone. All ' +
-        (stats.value?.total || 0) +
-        ' NPA records will be removed.\n\n' +
-        'Are you absolutely sure you want to proceed?'
-    );
+  function confirmClearLergData() {
+    clearMessage.value =
+      'WARNING: This will permanently clear ALL LERG data from the database.\n\n' +
+      'This action cannot be undone. All ' +
+      (stats.value?.total || 0) +
+      ' NPA records will be removed.';
+    showClearModal.value = true;
+  }
 
-    if (!confirmed) {
-      return;
-    }
+  async function doClearLergData() {
+    showClearModal.value = false;
 
     try {
       await clearLerg();
-      alert('✅ Successfully cleared all LERG data from the database.');
+      showNoticeModal('LERG Data Cleared', 'Successfully cleared all LERG data from the database.', 'success');
     } catch (err: any) {
       console.error('[UnifiedNANPManagement] Clear failed:', err);
-      alert('❌ Failed to clear LERG data: ' + err.message);
+      showNoticeModal('Clear Failed', 'Failed to clear LERG data: ' + err.message, 'error');
     }
   }
 

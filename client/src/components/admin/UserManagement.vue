@@ -303,6 +303,13 @@
       </div>
     </div>
     </div>
+
+    <NoticeModal
+      v-model="showNotice"
+      title="Delete Failed"
+      :message="noticeMessage"
+      variant="error"
+    />
   </div>
 </template>
 
@@ -315,6 +322,7 @@ import { useUserStore } from '@/stores/user-store'
 import UserTable from './UserTable.vue'
 import BaseButton from '@/components/shared/BaseButton.vue'
 import BaseBadge from '@/components/shared/BaseBadge.vue'
+import NoticeModal from '@/components/shared/NoticeModal.vue'
 
 // Composables
 const { store, isLoading, error, fetchUsers, updateUserRole, toggleUserStatus, deleteUser, exportUsers: exportUsersComposable, searchUsers, filterByRole: filterByRoleComposable, changePage: changePageComposable } = useAdminUsers()
@@ -328,6 +336,8 @@ const searchQuery = ref('')
 const roleFilter = ref('')
 const statusFilter = ref('all')
 const isExporting = ref(false)
+const showNotice = ref(false)
+const noticeMessage = ref('')
 
 // Computed
 const adminCount = computed(() => {
@@ -435,7 +445,8 @@ async function handleDeleteUser(userId: string) {
     console.log('User deleted successfully:', userId)
   } catch (err) {
     console.error('Failed to delete user:', err)
-    alert(`Failed to delete user: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    noticeMessage.value = `Failed to delete user: ${err instanceof Error ? err.message : 'Unknown error'}`
+    showNotice.value = true
   }
 }
 

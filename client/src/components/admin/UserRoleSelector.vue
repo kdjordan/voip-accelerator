@@ -67,12 +67,22 @@
       </div>
     </Listbox>
   </div>
+
+  <ConfirmationModal
+    v-model="showConfirmModal"
+    title="Confirm Role Change"
+    :message="confirmMessage"
+    confirm-button-text="Confirm"
+    confirm-button-variant="primary"
+    @confirm="onConfirm"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ArrowPathIcon, ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue'
+import ConfirmationModal from '@/components/shared/ConfirmationModal.vue'
 
 // Props
 interface Props {
@@ -89,6 +99,9 @@ const emit = defineEmits<{
 
 // Local state
 const isLoading = ref(false)
+const showConfirmModal = ref(false)
+const confirmMessage = ref('')
+const pendingRole = ref<'user' | 'admin'>('user')
 
 // Role options
 const roles = [
@@ -97,20 +110,22 @@ const roles = [
 ]
 
 // Methods
-async function handleRoleChange(newRole: 'user' | 'admin') {
+function handleRoleChange(newRole: 'user' | 'admin') {
   if (newRole === props.currentRole) {
     return
   }
 
   // Confirm role change
-  const confirmMessage = getConfirmMessage(props.currentRole, newRole)
-  if (!confirm(confirmMessage)) {
-    return
-  }
+  confirmMessage.value = getConfirmMessage(props.currentRole, newRole)
+  pendingRole.value = newRole
+  showConfirmModal.value = true
+}
 
+function onConfirm() {
+  showConfirmModal.value = false
   try {
     isLoading.value = true
-    emit('role-changed', newRole)
+    emit('role-changed', pendingRole.value)
   } catch (error) {
     console.error('Failed to change role:', error)
   } finally {

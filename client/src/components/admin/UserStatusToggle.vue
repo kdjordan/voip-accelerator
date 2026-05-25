@@ -32,12 +32,22 @@
       </span>
     </button>
   </div>
+
+  <ConfirmationModal
+    v-model="showConfirmModal"
+    title="Confirm Status Change"
+    :message="confirmMessage"
+    confirm-button-text="Confirm"
+    confirm-button-variant="primary"
+    @confirm="onConfirm"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ArrowPathIcon } from '@heroicons/vue/24/outline'
 import BaseBadge from '@/components/shared/BaseBadge.vue'
+import ConfirmationModal from '@/components/shared/ConfirmationModal.vue'
 
 // Props
 interface Props {
@@ -54,6 +64,9 @@ const emit = defineEmits<{
 
 // Local state
 const isLoading = ref(false)
+const showConfirmModal = ref(false)
+const confirmMessage = ref('')
+const pendingStatus = ref(false)
 
 // Computed
 const statusText = computed(() => {
@@ -86,24 +99,25 @@ const toggleTitle = computed(() => {
 })
 
 // Methods
-async function handleToggle() {
+function handleToggle() {
   const newStatus = !props.isActive
   const action = newStatus ? 'activate' : 'deactivate'
-  
+
   // Confirm the action
-  const confirmMessage = `Are you sure you want to ${action} this user? ${
-    newStatus 
-      ? 'The user will be able to sign in and use the application.' 
+  confirmMessage.value = `Are you sure you want to ${action} this user? ${
+    newStatus
+      ? 'The user will be able to sign in and use the application.'
       : 'The user will be unable to sign in until reactivated.'
   }`
-  
-  if (!confirm(confirmMessage)) {
-    return
-  }
+  pendingStatus.value = newStatus
+  showConfirmModal.value = true
+}
 
+function onConfirm() {
+  showConfirmModal.value = false
   try {
     isLoading.value = true
-    emit('status-changed', newStatus)
+    emit('status-changed', pendingStatus.value)
   } catch (error) {
     console.error('Failed to toggle user status:', error)
   } finally {

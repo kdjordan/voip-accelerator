@@ -29,6 +29,15 @@
       @confirm="handleModalConfirm"
       @cancel="handleModalCancel"
     />
+
+    <ConfirmationModal
+      v-model="showClearLergModal"
+      title="Clear LERG Data"
+      message="Are you sure you want to clear all LERG codes? This action cannot be undone."
+      confirm-button-text="Clear All"
+      confirm-button-variant="destructive"
+      @confirm="doClearLergData"
+    />
   </div>
 </template>
 
@@ -53,6 +62,7 @@
   import type { ParseResult } from 'papaparse';
   import { useDragDrop } from '@/composables/useDragDrop';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import UnifiedNANPManagement from '@/components/admin/UnifiedNANPManagement.vue';
   import UserManagement from '@/components/admin/UserManagement.vue';
 
@@ -106,6 +116,7 @@
   }));
 
   const showPreviewModal = ref(false);
+  const showClearLergModal = ref(false);
   const columns = ref<string[]>([]);
   const previewData = ref<string[][]>([]);
   const columnRoles = ref<string[]>([]);
@@ -334,10 +345,12 @@
     lergUploadStatus.value = null;
   }
 
-  async function confirmClearLergData() {
-    if (!confirm('Are you sure you want to clear all LERG codes? This action cannot be undone.')) {
-      return;
-    }
+  function confirmClearLergData() {
+    showClearLergModal.value = true;
+  }
+
+  async function doClearLergData() {
+    showClearLergModal.value = false;
 
     try {
       isLergUploading.value = true;

@@ -77,6 +77,13 @@
       </div>
     </div>
   </div>
+
+  <NoticeModal
+    v-model="showNotice"
+    :title="noticeTitle"
+    :message="noticeMessage"
+    variant="error"
+  />
 </template>
 
 <script setup lang="ts">
@@ -86,9 +93,14 @@
   import type { EffectiveDateSettings, ChangeCodeType } from '@/types/domains/rate-sheet-types';
   import { ChangeCode } from '@/types/domains/rate-sheet-types';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import NoticeModal from '@/components/shared/NoticeModal.vue';
   import { ArrowRightIcon } from '@heroicons/vue/24/outline';
 
   const store = useAzRateSheetStore();
+
+  const showNotice = ref(false);
+  const noticeTitle = ref('');
+  const noticeMessage = ref('');
 
   const effectiveDateSettings = ref<EffectiveDateSettings>({
     same: 'today',
@@ -344,9 +356,9 @@
   async function applyEffectiveDateSettings() {
     if (isApplyingSettings.value || !effectiveDateWorker) return;
     if (store.getDiscrepancyCount > 0) {
-      alert(
-        `Cannot apply effective dates while ${store.getDiscrepancyCount} rate conflicts exist. Please resolve all conflicts first.`
-      );
+      noticeTitle.value = 'Cannot Apply Effective Dates';
+      noticeMessage.value = `Cannot apply effective dates while ${store.getDiscrepancyCount} rate conflicts exist. Please resolve all conflicts first.`;
+      showNotice.value = true;
       return;
     }
 
