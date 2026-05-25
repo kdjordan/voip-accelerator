@@ -18,72 +18,40 @@ interface GetUsersResponse {
   hasMore: boolean
 }
 
-interface UpdateUserRequest {
-  userId: string
-  updates: {
-    role?: 'user' | 'admin'
-    subscription_status?: string
-    plan_expires_at?: string
-    total_uploads?: number
-    uploads_this_month?: number
-    uploads_reset_date?: string
-  }
-}
-
-interface ToggleStatusRequest {
-  userId: string
-  isActive: boolean
-}
+// Stripe / upload-limit admin fields aren't owned by better-auth; the routes that
+// back these get ported in chunk 4 (subscription surface). Until then, stub + throw.
+const CHUNK_4_NOT_PORTED =
+  'Subscription and upload admin actions are not available yet (ported in chunk 4).'
 
 export function useAdminUsers() {
   const store = useAdminUsersStore()
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Get the current session token for API calls.
-  // Admin user APIs are migrated to the new backend in a later port chunk;
-  // the better-auth session token is surfaced as a placeholder bearer until then.
-  async function getAuthToken(): Promise<string | null> {
-    const { data } = await authClient.getSession()
-    const sessionToken = (data as { session?: { token?: string } } | null)?.session?.token
-    return sessionToken ?? null
-  }
-
-  // Call edge functions with proper headers
-  async function callEdgeFunction(functionName: string, options: {
-    method?: 'GET' | 'POST' | 'PUT'
-    body?: any
-    params?: Record<string, string>
-  } = {}) {
-    const token = await getAuthToken()
-    if (!token) {
-      throw new Error('Authentication required')
+  // Map a better-auth admin user onto the UserProfile shape the UI renders.
+  // Subscription/upload columns are chunk-4 territory, so they come back null.
+  function toUserProfile(u: {
+    id: string
+    email: string
+    role?: string | null
+    banned?: boolean | null
+    createdAt: string | Date
+    updatedAt: string | Date | null
+  }): UserProfile {
+    return {
+      id: u.id,
+      email: u.email,
+      role: u.role ?? 'user',
+      banned: u.banned ?? false,
+      created_at: new Date(u.createdAt).toISOString(),
+      updated_at: u.updatedAt ? new Date(u.updatedAt).toISOString() : null,
+      plan_expires_at: null,
+      stripe_customer_id: null,
+      subscription_status: null,
+      total_uploads: null,
+      uploads_this_month: null,
+      uploads_reset_date: null,
     }
-
-    const { method = 'POST', body, params } = options
-    
-    let url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`
-    
-    if (params && method === 'GET') {
-      const searchParams = new URLSearchParams(params)
-      url += `?${searchParams.toString()}`
-    }
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-      throw new Error(errorData.error || `HTTP ${response.status}`)
-    }
-
-    return await response.json()
   }
 
   // Fetch users with current filters
@@ -93,30 +61,58 @@ export function useAdminUsers() {
       error.value = null
       store.setLoading(true)
 
-      const queryParams = {
-        page: params?.page?.toString() || store.state.currentPage.toString(),
-        limit: params?.limit?.toString() || store.state.itemsPerPage.toString(),
-        search: params?.search || store.state.searchQuery || undefined,
-        role: params?.role || store.state.roleFilter || undefined,
-        status: params?.status || store.state.statusFilter || undefined,
+      const page = params?.page ?? store.state.currentPage
+      const limit = params?.limit ?? store.state.itemsPerPage
+      const search = params?.search ?? store.state.searchQuery
+      const role = params?.role ?? store.state.roleFilter ?? undefined
+      const status = params?.status ?? store.state.statusFilter
+
+      const query: {
+        limit: number
+        offset: number
+        searchField?: 'email'
+        searchOperator?: 'contains'
+        searchValue?: string
+        filterField?: string
+        filterOperator?: 'eq'
+        filterValue?: string | boolean
+      } = {
+        limit,
+        offset: (page - 1) * limit,
       }
 
-      // Remove undefined values
-      const cleanParams = Object.fromEntries(
-        Object.entries(queryParams).filter(([_, value]) => value !== undefined)
-      ) as Record<string, string>
+      if (search) {
+        query.searchField = 'email'
+        query.searchOperator = 'contains'
+        query.searchValue = search
+      }
 
-      const response: GetUsersResponse = await callEdgeFunction('get-all-users', {
-        method: 'GET',
-        params: cleanParams,
-      })
+      // listUsers accepts a single filter field. Role filter takes precedence;
+      // status (active/inactive) maps to the banned flag only when no role filter set.
+      if (role) {
+        query.filterField = 'role'
+        query.filterOperator = 'eq'
+        query.filterValue = role
+      } else if (status && status !== 'all') {
+        query.filterField = 'banned'
+        query.filterOperator = 'eq'
+        query.filterValue = status === 'inactive'
+      }
+
+      const { data, error: apiError } = await authClient.admin.listUsers({ query })
+      if (apiError) {
+        throw new Error(apiError.message || 'Failed to fetch users')
+      }
+
+      const users = (data?.users ?? []).map(toUserProfile)
+      const total = data?.total ?? 0
 
       // Update store with new data
-      store.setUsers(response.users)
-      store.setTotalUsers(response.total)
-      store.setCurrentPage(response.page)
+      store.setUsers(users)
+      store.setTotalUsers(total)
+      store.setCurrentPage(page)
 
-      return response
+      return { users, total, page, limit, hasMore: total > page * limit }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch users'
       error.value = errorMessage
@@ -128,21 +124,16 @@ export function useAdminUsers() {
     }
   }
 
-  // Update user role or other profile data
+  // Update user role
   async function updateUserRole(userId: string, role: 'user' | 'admin'): Promise<void> {
     try {
       isLoading.value = true
       error.value = null
 
-      const request: UpdateUserRequest = {
-        userId,
-        updates: { role }
+      const { error: apiError } = await authClient.admin.setRole({ userId, role })
+      if (apiError) {
+        throw new Error(apiError.message || 'Failed to update user role')
       }
-
-      await callEdgeFunction('update-user-profile', {
-        method: 'POST',
-        body: request,
-      })
 
       // Update local store
       store.updateUser(userId, { role, updated_at: new Date().toISOString() })
@@ -155,92 +146,21 @@ export function useAdminUsers() {
     }
   }
 
-  // Update user subscription details
-  async function updateUserSubscription(userId: string, updates: {
-    subscription_status?: string
-    plan_expires_at?: string
-  }): Promise<void> {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      const request: UpdateUserRequest = {
-        userId,
-        updates
-      }
-
-      await callEdgeFunction('update-user-profile', {
-        method: 'POST',
-        body: request,
-      })
-
-      // Update local store
-      store.updateUser(userId, { ...updates, updated_at: new Date().toISOString() })
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update user subscription'
-      error.value = errorMessage
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Update user upload statistics
-  async function updateUserUploads(userId: string, updates: {
-    total_uploads?: number
-    uploads_this_month?: number
-    uploads_reset_date?: string
-  }): Promise<void> {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      const request: UpdateUserRequest = {
-        userId,
-        updates
-      }
-
-      await callEdgeFunction('update-user-profile', {
-        method: 'POST',
-        body: request,
-      })
-
-      // Update local store
-      store.updateUser(userId, { ...updates, updated_at: new Date().toISOString() })
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update user uploads'
-      error.value = errorMessage
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Toggle user active status
+  // Toggle user active status via better-auth ban/unban
   async function toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
     try {
       isLoading.value = true
       error.value = null
 
-      const request: ToggleStatusRequest = {
-        userId,
-        isActive
+      const { error: apiError } = isActive
+        ? await authClient.admin.unbanUser({ userId })
+        : await authClient.admin.banUser({ userId })
+      if (apiError) {
+        throw new Error(apiError.message || 'Failed to toggle user status')
       }
 
-      await callEdgeFunction('toggle-user-status', {
-        method: 'POST',
-        body: request,
-      })
-
-      // Update activity in store
-      const existingActivity = store.getUserActivity(userId)
-      if (existingActivity) {
-        store.setUserActivity(userId, {
-          ...existingActivity,
-          isActive,
-          banDuration: isActive ? null : existingActivity.banDuration
-        })
-      }
+      // Update local store
+      store.updateUser(userId, { banned: !isActive, updated_at: new Date().toISOString() })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to toggle user status'
       error.value = errorMessage
@@ -256,10 +176,11 @@ export function useAdminUsers() {
       isLoading.value = true
       error.value = null
 
-      // Note: This would need a delete edge function or modify existing delete-user-account
-      // For now, we'll simulate by toggling status to inactive
-      await toggleUserStatus(userId, false)
-      
+      const { error: apiError } = await authClient.admin.removeUser({ userId })
+      if (apiError) {
+        throw new Error(apiError.message || 'Failed to delete user')
+      }
+
       // Remove from local store
       store.removeUser(userId)
     } catch (err) {
@@ -271,29 +192,25 @@ export function useAdminUsers() {
     }
   }
 
-  // Get user activity details
-  async function getUserActivity(userId: string): Promise<UserActivity> {
-    try {
-      // Check if we already have it in store
-      const cachedActivity = store.getUserActivity(userId)
-      if (cachedActivity) {
-        return cachedActivity
-      }
+  // chunk 4: Stripe subscription fields — not managed by better-auth, needs a custom route.
+  async function updateUserSubscription(
+    _userId: string,
+    _updates: { subscription_status?: string; plan_expires_at?: string }
+  ): Promise<void> {
+    throw new Error(CHUNK_4_NOT_PORTED)
+  }
 
-      const activity: UserActivity = await callEdgeFunction('get-user-activity', {
-        method: 'GET',
-        params: { userId }
-      })
+  // chunk 4: upload-limit accounting — not managed by better-auth, needs a custom route.
+  async function updateUserUploads(
+    _userId: string,
+    _updates: { total_uploads?: number; uploads_this_month?: number; uploads_reset_date?: string }
+  ): Promise<void> {
+    throw new Error(CHUNK_4_NOT_PORTED)
+  }
 
-      // Cache in store
-      store.setUserActivity(userId, activity)
-      
-      return activity
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch user activity'
-      error.value = errorMessage
-      throw err
-    }
+  // chunk 4: user activity analytics — not managed by better-auth, needs a custom route.
+  async function getUserActivity(_userId: string): Promise<UserActivity> {
+    throw new Error(CHUNK_4_NOT_PORTED)
   }
 
   // Export users to CSV
@@ -301,7 +218,7 @@ export function useAdminUsers() {
     try {
       // Get all users (no pagination)
       const allUsers = await fetchUsers({ limit: 1000 })
-      
+
       // Create CSV content
       const headers = ['ID', 'Email', 'Role', 'Subscription Status', 'Plan Expires', 'Total Uploads', 'Uploads This Month', 'Uploads Reset Date', 'Created At', 'Last Updated']
       const csvContent = [

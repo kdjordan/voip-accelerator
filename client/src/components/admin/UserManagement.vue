@@ -322,14 +322,13 @@ import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headless
 import { useAdminUsers } from '@/composables/useAdminUsers'
 import { type UserProfile } from '@/stores/admin-users-store'
 import { useUserStore } from '@/stores/user-store'
-import { supabase } from '@/utils/supabase'
 import UserTable from './UserTable.vue'
 import UserDetailsModal from './UserDetailsModal.vue'
 import BaseButton from '@/components/shared/BaseButton.vue'
 import BaseBadge from '@/components/shared/BaseBadge.vue'
 
 // Composables
-const { store, isLoading, error, fetchUsers, updateUserRole, toggleUserStatus, exportUsers: exportUsersComposable, searchUsers, filterByRole: filterByRoleComposable, changePage: changePageComposable } = useAdminUsers()
+const { store, isLoading, error, fetchUsers, updateUserRole, toggleUserStatus, deleteUser, exportUsers: exportUsersComposable, searchUsers, filterByRole: filterByRoleComposable, changePage: changePageComposable } = useAdminUsers()
 const userStore = useUserStore()
 
 // Check if user is admin
@@ -455,29 +454,7 @@ async function handleToggleStatus(userId: string, isActive: boolean) {
 
 async function handleDeleteUser(userId: string) {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('Not authenticated')
-    }
-
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const response = await fetch(`${supabaseUrl}/functions/v1/delete-user-account`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ userId })
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to delete user')
-    }
-
-    // Remove user from local state
-    store.removeUser(userId)
+    await deleteUser(userId)
     console.log('User deleted successfully:', userId)
   } catch (err) {
     console.error('Failed to delete user:', err)

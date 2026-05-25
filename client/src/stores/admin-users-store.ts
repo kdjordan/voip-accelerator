@@ -6,6 +6,7 @@ export interface UserProfile {
   created_at: string
   updated_at: string | null
   role: string
+  banned: boolean
   plan_expires_at: string | null
   stripe_customer_id: string | null
   subscription_status: string | null

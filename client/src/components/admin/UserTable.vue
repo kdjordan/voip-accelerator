@@ -129,7 +129,7 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <UserStatusToggle
                 :user-id="user.id"
-                :is-active="true"
+                :is-active="!user.banned"
                 @status-changed="(isActive) => $emit('toggle-status', user.id, isActive)"
               />
             </td>
