@@ -20,21 +20,34 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('@/pages/DashBoard.vue'),
     },
+    // A-Z (international) route HIDDEN for US-NPANXX focus — redirects to /dashboard (reversible).
+    // Component/store/worker code remains intact. To restore: delete this redirect block and
+    // uncomment the original definition below.
     {
       path: '/az-rate-sheet',
-      name: 'AZRateSheet',
-      component: () => import('@/pages/AZRateSheetView.vue'),
+      redirect: '/dashboard',
     },
+    // {
+    //   path: '/az-rate-sheet',
+    //   name: 'AZRateSheet',
+    //   component: () => import('@/pages/AZRateSheetView.vue'),
+    // },
     {
       path: '/us-rate-sheet',
       name: 'USRateSheet',
       component: () => import('@/pages/USRateSheetView.vue'),
     },
+    // A-Z (international) route HIDDEN for US-NPANXX focus — redirects to /dashboard (reversible).
+    // To restore: delete this redirect block and uncomment the original definition below.
     {
       path: '/azview',
-      name: 'azview',
-      component: () => import('@/pages/AzView.vue'),
+      redirect: '/dashboard',
     },
+    // {
+    //   path: '/azview',
+    //   name: 'azview',
+    //   component: () => import('@/pages/AzView.vue'),
+    // },
     {
       path: '/usview',
       name: 'usview',
@@ -106,9 +119,9 @@ const router = createRouter({
 // Routes that require authentication
 const authRequiredRoutes = [
   '/dashboard',
-  '/az-rate-sheet',
+  '/az-rate-sheet', // A-Z hidden (redirects to /dashboard); retained for reversibility
   '/us-rate-sheet',
-  '/azview',
+  '/azview', // A-Z hidden (redirects to /dashboard); retained for reversibility
   '/usview',
   '/rate-gen',
   '/admin',
