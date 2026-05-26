@@ -61,7 +61,37 @@
         </li>
       </ul>
 
-      <div class="mt-auto p-3"></div>
+      <!-- Help card -->
+      <div class="mt-auto p-3">
+        <div
+          v-if="userStore.ui.isSideNavOpen"
+          class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+        >
+          <div class="flex items-center gap-2 text-zinc-300">
+            <QuestionMarkCircleIcon class="h-4 w-4 text-zinc-400 flex-shrink-0" />
+            <span class="text-sm font-medium">Need help?</span>
+          </div>
+          <p class="mt-1.5 text-xs leading-relaxed text-zinc-500">
+            Check out our guide on preparing files for accurate analysis.
+          </p>
+          <a
+            href="#"
+            @click.prevent
+            class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-white/[0.06] hover:text-white transition-colors"
+          >
+            View Guide <ArrowTopRightOnSquareIcon class="h-3 w-3" />
+          </a>
+        </div>
+        <a
+          v-else
+          href="#"
+          @click.prevent
+          class="flex justify-center py-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+          aria-label="Help guide"
+        >
+          <QuestionMarkCircleIcon class="h-5 w-5" />
+        </a>
+      </div>
     </nav>
 
     <!-- Drag handle to toggle collapse -->
@@ -81,6 +111,8 @@
     ArrowLeftEndOnRectangleIcon,
     ArrowRightStartOnRectangleIcon,
     BoltIcon,
+    QuestionMarkCircleIcon,
+    ArrowTopRightOnSquareIcon,
   } from '@heroicons/vue/24/outline';
   import type { NavigationItem } from '@/types/nav-types';
 

@@ -31,7 +31,7 @@
 
   const buttonClasses = computed(() => [
     'report-tab-button',
-    props.isActive ? 'text-emerald-300 bg-emerald-400/10 rounded-md' : 'text-zinc-400',
+    props.isActive ? 'text-emerald-300' : 'text-zinc-400',
     props.isLoading ? 'cursor-not-allowed opacity-75' : '',
   ]);
 
@@ -42,6 +42,6 @@
 
 <style scoped>
   .report-tab-button {
-    @apply mr-8 py-4 px-1 relative hover:text-white transition-colors;
+    @apply mr-8 py-4 px-1 relative hover:text-white transition-colors focus:outline-none;
   }
 </style>

@@ -6,6 +6,7 @@ import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie com
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
 import { NANPCategorizer } from '@/utils/nanp-categorization';
+import { buildUsInsightsSummary, type UsInsightsSummary } from '@/utils/us-insights';
 import { DBSchemas } from '@/types/app-types';
 
 import type {
@@ -55,6 +56,7 @@ interface UsStore {
   setReports: (pricing: USPricingReport, code: USCodeReport) => void;
   getFileNames: string[];
   setPricingReportProcessing: (processing: boolean) => void;
+  setInsightsSummary: (summary: UsInsightsSummary) => void;
 }
 
 export class USService {
@@ -811,6 +813,10 @@ export class USService {
         );
         console.log(`[USService] Stored ${comparisonResults.length} comparison results using unified pattern`);
       }
+
+      // Compute the Insights dashboard summary from the matched records (single in-memory pass)
+      const uniqueFile1Codes = new Set(data1.map((r) => r.npanxx)).size;
+      this.store.setInsightsSummary(buildUsInsightsSummary(comparisonResults, uniqueFile1Codes));
     } catch (error) {
       console.error('[USService] Critical error during US pricing comparison process:', error);
       // Update store or notify user of failure

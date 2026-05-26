@@ -82,13 +82,16 @@ This action cannot be undone.`"
 
   // Helper function to get the correct report label
   function getReportLabel(type: ReportType): string {
+    if (type === ReportTypes.FILES) {
+      return 'Upload';
+    }
     if (type === ReportTypes.CODE) {
-      return 'Code Compare';
+      return 'Insights';
     }
     if (type === ReportTypes.PRICING) {
-      return 'Pricing Report';
+      return 'Explorer';
     }
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return type; // unreachable — ReportType is exhaustively handled above
   }
 
   async function confirmReset() {

@@ -1,37 +1,37 @@
 <template>
-  <div class="border border-fbWhite/20 rounded-lg p-4">
+  <div class="border border-white/10 rounded-lg p-4">
     <div class="flex items-center justify-between mb-3">
-      <h4 class="text-sm font-medium text-fbWhite">Preview</h4>
-      <span class="text-xs text-fbWhite/70">First 10 rows</span>
+      <h4 class="text-sm font-medium text-white">Preview</h4>
+      <span class="text-xs text-zinc-400">First 10 rows</span>
     </div>
 
     <div v-if="loading || isFormatting" class="flex justify-center py-8">
       <ArrowPathIcon class="w-8 h-8 text-accent animate-spin" />
     </div>
 
-    <div v-else-if="previewRows.length === 0" class="text-center py-8 text-sm text-fbWhite/70">
+    <div v-else-if="previewRows.length === 0" class="text-center py-8 text-sm text-zinc-400">
       No data to preview
     </div>
 
     <div v-else class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-fbWhite/20">
-        <thead class="bg-fbHover">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/[0.04]">
           <tr>
             <th
               v-for="header in previewHeaders"
               :key="header"
-              class="px-3 py-2 text-left text-xs font-medium text-fbWhite/70 uppercase tracking-wider"
+              class="px-3 py-2 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
             >
               {{ header }}
             </th>
           </tr>
         </thead>
-        <tbody class="bg-fbBlack divide-y divide-fbWhite/20">
+        <tbody class="bg-ink-raised divide-y divide-white/10">
           <tr v-for="(row, index) in previewRows" :key="index">
             <td
               v-for="header in previewHeaders"
               :key="header"
-              class="px-3 py-2 whitespace-nowrap text-sm text-fbWhite"
+              class="px-3 py-2 whitespace-nowrap text-sm text-white"
             >
               {{ formatCellValue(row[header], header) }}
             </td>

@@ -1,260 +1,119 @@
 <template>
-  <div class="bg-black/20 border border-white/[0.07] rounded-xl p-4 min-h-[400px]">
-    <!-- Filtered Data Average Rates Summary -->
-    <div
-      v-if="displayedData.length > 0 || isLoading || isPageLoading || isCalculatingAverages"
-      class="mb-6 space-y-3"
+  <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4">
+    <!-- ===================== LEFT FILTER RAIL ===================== -->
+    <aside
+      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-5 h-max lg:sticky lg:top-4"
     >
-      <!-- File 1 Averages -->
+      <!-- Rail header -->
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-white">Filters</h3>
+        <button
+          type="button"
+          @click="handleClearAllFilters"
+          :disabled="isLoading || isFiltering || isPageLoading"
+          class="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Reset all
+        </button>
+      </div>
+
+      <!-- NPANXX Search -->
       <div>
-        <!-- File 1 Badge -->
-        <div class="mb-2">
-          <BaseBadge size="small" variant="neutral">{{ fileName1 }}</BaseBadge>
-        </div>
-        <!-- File 1 Bento Boxes -->
-        <div class="grid grid-cols-3 gap-2">
-          <div class="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Inter Avg</div>
-            <div class="text-base font-secondary text-white">
-              <span v-if="isCalculatingAverages">...</span>
-              <span v-else>${{ animatedFile1InterAvg.toFixed(6) }}</span>
-            </div>
-          </div>
-          <div class="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Intra Avg</div>
-            <div class="text-base font-secondary text-white">
-              <span v-if="isCalculatingAverages">...</span>
-              <span v-else>${{ animatedFile1IntraAvg.toFixed(6) }}</span>
-            </div>
-          </div>
-          <div class="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Indeterm Avg</div>
-            <div class="text-base font-secondary text-white">
-              <span v-if="isCalculatingAverages">...</span>
-              <span v-else>${{ animatedFile1IndetermAvg.toFixed(6) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- File 2 Averages -->
-      <div>
-        <!-- File 2 Badge -->
-        <div class="mb-2">
-          <BaseBadge size="small" variant="neutral">{{ fileName2 }}</BaseBadge>
-        </div>
-        <!-- File 2 Bento Boxes -->
-        <div class="grid grid-cols-3 gap-2">
-          <div class="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Inter Avg</div>
-            <div class="text-base font-secondary text-white">
-              <span v-if="isCalculatingAverages">...</span>
-              <span v-else>${{ animatedFile2InterAvg.toFixed(6) }}</span>
-            </div>
-          </div>
-          <div class="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Intra Avg</div>
-            <div class="text-base font-secondary text-white">
-              <span v-if="isCalculatingAverages">...</span>
-              <span v-else>${{ animatedFile2IntraAvg.toFixed(6) }}</span>
-            </div>
-          </div>
-          <div class="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Indeterm Avg</div>
-            <div class="text-base font-secondary text-white">
-              <span v-if="isCalculatingAverages">...</span>
-              <span v-else>${{ animatedFile2IndetermAvg.toFixed(6) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- New Filter Controls Section -->
-    <div class="mb-6">
-      <!-- Main Header for Filters -->
-      <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-3 gap-2">
-        <div>
-          <h3 class="text-base font-semibold text-white">Filter Controls</h3>
-          <p class="text-sm text-zinc-400">
-            Showing {{ displayedData.length.toLocaleString() }} of
-            {{ totalFilteredItems.toLocaleString() }} entries
-          </p>
-        </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <BaseButton
-            variant="primary"
-            size="small"
-            @click="handleOpenExportModal"
-            :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
-            title="Download Filtered Data"
-            class="min-w-[160px]"
-          >
-            <span v-if="isExporting" class="flex items-center justify-center">
-              <ArrowPathIcon class="animate-spin w-4 h-4 mr-1.5" />
-              Exporting...
-            </span>
-            <span v-else class="flex items-center justify-center">
-              <ArrowDownTrayIcon class="w-4 h-4 mr-1.5" />
-              Export Data
-            </span>
-          </BaseButton>
-          <!-- Optional: Clear Data button from USRateSheetTable.vue can be added here -->
-          <!-- <BaseButton variant="destructive" size="small">Clear Data</BaseButton> -->
-        </div>
-      </div>
-
-      <!-- Primary Filters Row -->
-      <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-4 items-end mb-4">
-        <!-- NPANXX Search (lg:col-span-2) -->
-        <div class="md:col-span-1 lg:col-span-2">
-          <label for="npanxx-search" class="block text-sm font-medium text-zinc-400 mb-1"
-            >Filter by NPANXX</label
-          >
+        <label for="npanxx-search" class="block text-xs font-medium text-zinc-400 mb-1.5"
+          >Filter by NPA/NXX</label
+        >
+        <div class="relative">
           <input
             type="text"
             id="npanxx-search"
             v-model="npanxxSearchInput"
             placeholder="e.g., 201, 301333..."
-            class="bg-white/[0.03] border border-white/10 text-white placeholder-zinc-500 sm:text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent block w-full p-2.5"
+            class="bg-white/[0.03] border border-white/10 text-white placeholder-zinc-500 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent block w-full py-2.5 pl-3 pr-9"
+          />
+          <MagnifyingGlassIcon
+            class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500"
           />
         </div>
+      </div>
 
-        <!-- State Filter (md:col-span-1) -->
-        <div class="w-full md:col-span-1">
-          <Listbox v-model="selectedState" as="div">
-            <ListboxLabel class="block text-sm font-medium text-zinc-400 mb-1"
-              >Filter by State/Province/Country</ListboxLabel
+      <!-- State / Province / Country -->
+      <div>
+        <Listbox v-model="selectedState" as="div">
+          <ListboxLabel class="block text-xs font-medium text-zinc-400 mb-1.5"
+            >State / Province / Country</ListboxLabel
+          >
+          <div class="relative">
+            <ListboxButton
+              class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2.5 pl-3 pr-9 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 border border-white/10"
+              :disabled="availableStates.length === 0 || isLoading || isFiltering"
             >
-            <div class="relative mt-1">
-              <ListboxButton
-                class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2.5 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 sm:text-sm border border-white/10"
-                :disabled="availableStates.length === 0 || isLoading || isFiltering"
+              <span class="block truncate text-white">{{
+                selectedState
+                  ? getSelectedStateDisplayName(selectedState)
+                  : 'All States/Provinces/Countries'
+              }}</span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <ChevronUpDownIcon class="h-5 w-5 text-zinc-400" aria-hidden="true" />
+              </span>
+            </ListboxButton>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <ListboxOptions
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-ink-raised py-1 text-base shadow-lg ring-1 ring-white/10 focus:outline-none sm:text-sm"
               >
-                <span class="block truncate text-white">{{
-                  selectedState
-                    ? getSelectedStateDisplayName(selectedState)
-                    : 'All States/Provinces/Countries'
-                }}</span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                  <ChevronUpDownIcon class="h-5 w-5 text-zinc-400" aria-hidden="true" />
-                </span>
-              </ListboxButton>
-              <transition
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-              >
-                <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-ink-raised py-1 text-base shadow-lg ring-1 ring-white/10 focus:outline-none sm:text-sm"
-                >
-                  <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
+                <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
+                  <li
+                    :class="[
+                      active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                    ]"
+                  >
+                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                      >All States/Provinces/Countries</span
+                    >
+                    <span
+                      v-if="selected"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
+                    >
+                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </li>
+                </ListboxOption>
+                <template v-for="group in groupedAvailableStates" :key="group.label">
+                  <li class="text-zinc-500 px-4 py-2 text-xs uppercase select-none">
+                    {{ group.label }}
+                  </li>
+                  <!-- Group-level selection option -->
+                  <ListboxOption
+                    v-slot="{ active, selected }"
+                    :value="'GROUP_' + group.label.replace(/\s+/g, '_').toUpperCase()"
+                    as="template"
+                  >
                     <li
                       :class="[
                         active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4',
+                        'relative cursor-default select-none py-2 pl-6 pr-4 font-medium italic',
                       ]"
                     >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                        >All States/Provinces/Countries</span
+                      <span :class="[selected ? 'font-bold' : 'font-medium', 'block truncate']"
+                        >All {{ group.label }}</span
                       >
                       <span
                         v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
+                        class="absolute inset-y-0 left-0 flex items-center pl-1 text-emerald-400"
                       >
                         <CheckIcon class="h-5 w-5" aria-hidden="true" />
                       </span>
                     </li>
                   </ListboxOption>
-                  <template v-for="group in groupedAvailableStates" :key="group.label">
-                    <li class="text-zinc-500 px-4 py-2 text-xs uppercase select-none">
-                      {{ group.label }}
-                    </li>
-                    <!-- Group-level selection option -->
-                    <ListboxOption
-                      v-slot="{ active, selected }"
-                      :value="'GROUP_' + group.label.replace(/\s+/g, '_').toUpperCase()"
-                      as="template"
-                    >
-                      <li
-                        :class="[
-                          active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
-                          'relative cursor-default select-none py-2 pl-6 pr-4 font-medium italic',
-                        ]"
-                      >
-                        <span :class="[selected ? 'font-bold' : 'font-medium', 'block truncate']"
-                          >All {{ group.label }}</span
-                        >
-                        <span
-                          v-if="selected"
-                          class="absolute inset-y-0 left-0 flex items-center pl-1 text-emerald-400"
-                        >
-                          <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                        </span>
-                      </li>
-                    </ListboxOption>
-                    <!-- Individual region options -->
-                    <ListboxOption
-                      v-for="regionCode in group.codes"
-                      :key="regionCode"
-                      :value="regionCode"
-                      v-slot="{ active, selected }"
-                      as="template"
-                    >
-                      <li
-                        :class="[
-                          active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
-                          'relative cursor-default select-none py-2 pl-10 pr-4',
-                        ]"
-                      >
-                        <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                          >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
-                        >
-                        <span
-                          v-if="selected"
-                          class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
-                        >
-                          <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                        </span>
-                      </li>
-                    </ListboxOption>
-                  </template>
-                </ListboxOptions>
-              </transition>
-            </div>
-          </Listbox>
-        </div>
-
-        <!-- Rate Comparison Filter -->
-        <div class="relative">
-          <Listbox v-model="selectedCheaper" as="div">
-            <ListboxLabel class="block text-xs font-medium text-zinc-400 mb-1">
-              Rate Comparison
-            </ListboxLabel>
-            <div class="relative mt-1">
-              <ListboxButton
-                class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2.5 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 sm:text-sm border border-white/10"
-                :disabled="isLoading || isFiltering"
-              >
-                <span class="block truncate text-white">
-                  {{ rateComparisonOptions.find(opt => opt.value === selectedCheaper)?.label || 'All Comparisons' }}
-                </span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                  <ChevronUpDownIcon class="h-5 w-5 text-zinc-400" aria-hidden="true" />
-                </span>
-              </ListboxButton>
-              <transition
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-              >
-                <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-ink-raised py-1 text-base shadow-lg ring-1 ring-white/10 focus:outline-none sm:text-sm"
-                >
+                  <!-- Individual region options -->
                   <ListboxOption
-                    v-for="option in rateComparisonOptions"
-                    :key="option.value"
-                    :value="option.value"
+                    v-for="regionCode in group.codes"
+                    :key="regionCode"
+                    :value="regionCode"
                     v-slot="{ active, selected }"
                     as="template"
                   >
@@ -264,9 +123,9 @@
                         'relative cursor-default select-none py-2 pl-10 pr-4',
                       ]"
                     >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">
-                        {{ option.label }}
-                      </span>
+                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
+                        >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
+                      >
                       <span
                         v-if="selected"
                         class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
@@ -275,113 +134,99 @@
                       </span>
                     </li>
                   </ListboxOption>
-                </ListboxOptions>
-              </transition>
-            </div>
-          </Listbox>
-        </div>
-
-        <!-- Reset All Filters Button (md:col-span-1) -->
-        <div class="md:col-span-1 self-end">
-          <BaseButton
-            variant="secondary"
-            size="default"
-            @click="handleClearAllFilters"
-            class="w-full"
-            :disabled="isLoading || isFiltering || isPageLoading"
-            title="Reset All Filters"
-          >
-            <XCircleIcon class="w-5 h-5 mr-1.5" />
-            Reset All Filters
-          </BaseButton>
-        </div>
+                </template>
+              </ListboxOptions>
+            </transition>
+          </div>
+        </Listbox>
       </div>
 
-      <!-- Metro Area Filter Section -->
-      <div class="mt-4 pt-4 border-t border-white/10">
-        <p class="text-xs uppercase text-zinc-500 font-semibold tracking-wider mb-2">
-          FILTER BY METRO AREA
-        </p>
-        <!-- Metro Controls Row -->
-        <div class="grid md:grid-cols-3 gap-4 items-center mb-3">
-          <!-- Search Input with Integrated Toggle (md:col-span-1) -->
-          <div class="relative flex items-stretch md:col-span-1">
-            <div class="relative flex-grow focus-within:z-10">
-              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <MagnifyingGlassIcon class="h-5 w-5 text-zinc-400" />
-              </div>
-              <input
-                v-model="metroSearchQuery"
-                type="text"
-                placeholder="Search metros..."
-                class="block w-full rounded-l-md border-0 py-2.5 pl-10 bg-white/[0.03] text-white ring-1 ring-inset ring-white/10 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-400/60 sm:text-sm sm:leading-6"
-              />
-              <button
-                v-if="metroSearchQuery"
-                @click="clearMetroSearch"
-                type="button"
-                class="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-white"
-                aria-label="Clear search"
+      <!-- Rate Comparison -->
+      <div>
+        <Listbox v-model="selectedCheaper" as="div">
+          <ListboxLabel class="block text-xs font-medium text-zinc-400 mb-1.5">
+            Rate Comparison
+          </ListboxLabel>
+          <div class="relative">
+            <ListboxButton
+              class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2.5 pl-3 pr-9 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 border border-white/10"
+              :disabled="isLoading || isFiltering"
+            >
+              <span class="block truncate text-white">
+                {{
+                  rateComparisonOptions.find((opt) => opt.value === selectedCheaper)?.label ||
+                  'All Comparisons'
+                }}
+              </span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <ChevronUpDownIcon class="h-5 w-5 text-zinc-400" aria-hidden="true" />
+              </span>
+            </ListboxButton>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <ListboxOptions
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-ink-raised py-1 text-base shadow-lg ring-1 ring-white/10 focus:outline-none sm:text-sm"
               >
-                <XCircleIcon class="h-5 w-5" />
-              </button>
-            </div>
-            <button
-              @click="toggleMetroAreaVisibility"
-              type="button"
-              class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-md px-3 py-2.5 text-sm font-semibold bg-white/[0.03] text-zinc-400 ring-1 ring-inset ring-white/10 hover:bg-white/[0.06] focus:z-10"
-              title="Toggle metro selection visibility"
-            >
-              <ChevronDownIcon
-                class="h-5 w-5 transition-transform duration-200"
-                :class="{ 'rotate-180': isMetroAreaVisible }"
-              />
-            </button>
+                <ListboxOption
+                  v-for="option in rateComparisonOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  v-slot="{ active, selected }"
+                  as="template"
+                >
+                  <li
+                    :class="[
+                      active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                    ]"
+                  >
+                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">
+                      {{ option.label }}
+                    </span>
+                    <span
+                      v-if="selected"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
+                    >
+                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </li>
+                </ListboxOption>
+              </ListboxOptions>
+            </transition>
           </div>
+        </Listbox>
+      </div>
 
-          <!-- Metro Action Buttons (md:col-span-2, aligned right) -->
-          <div
-            class="md:col-span-2 flex flex-wrap gap-x-2 gap-y-2 justify-start md:justify-end items-center"
+      <!-- Metro Area -->
+      <div>
+        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Metro Area</label>
+        <div class="relative">
+          <MagnifyingGlassIcon
+            class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500"
+          />
+          <input
+            v-model="metroSearchQuery"
+            type="text"
+            placeholder="Search metros..."
+            @focus="isMetroAreaVisible = true"
+            class="block w-full rounded-lg border border-white/10 py-2.5 pl-9 pr-9 bg-white/[0.03] text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+          />
+          <button
+            @click="toggleMetroAreaVisibility"
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+            title="Toggle metro selection"
           >
-            <BaseButton
-              variant="secondary-outline"
-              size="small"
-              @click="() => selectTopNMetros(10)"
-              :disabled="isLoading || isFiltering || isPageLoading"
-            >
-              Select Top 10
-            </BaseButton>
-            <BaseButton
-              variant="secondary-outline"
-              size="small"
-              @click="() => selectTopNMetros(25)"
-              :disabled="isLoading || isFiltering || isPageLoading"
-            >
-              Select Top 25
-            </BaseButton>
-            <BaseButton
-              variant="secondary"
-              size="small"
-              @click="handleSelectAllMetros"
-              :disabled="
-                isLoading || isFiltering || isPageLoading || filteredMetroOptions.length === 0
-              "
-            >
-              {{ areAllMetrosSelected ? 'Deselect Visible' : 'Select All' }}
-            </BaseButton>
-            <BaseButton
-              v-if="selectedMetros.length > 0"
-              variant="secondary-outline"
-              size="small"
-              @click="clearAllSelectedMetros"
-              :disabled="isLoading || isFiltering || isPageLoading"
-            >
-              Clear Selected ({{ selectedMetros.length }})
-            </BaseButton>
-          </div>
+            <ChevronDownIcon
+              class="h-5 w-5 transition-transform duration-200"
+              :class="{ 'rotate-180': isMetroAreaVisible }"
+            />
+          </button>
         </div>
 
-        <!-- Collapsible Metro Chip Grid -->
         <transition
           enter-active-class="transition ease-out duration-200 origin-top"
           enter-from-class="transform opacity-0 scale-y-95"
@@ -390,346 +235,485 @@
           leave-from-class="transform opacity-100 scale-y-100"
           leave-to-class="transform opacity-0 scale-y-95"
         >
-          <div
-            v-show="isMetroAreaVisible"
-            class="bg-white/[0.02] p-3 mt-1 rounded-lg border border-white/[0.07] max-h-[300px] overflow-y-auto shadow-md"
-          >
-            <div
-              v-if="filteredMetroOptions.length > 0"
-              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-2"
-            >
-              <label
-                v-for="metro in filteredMetroOptions"
-                :key="metro.key"
-                :for="`metro-checkbox-${metro.key}`"
-                class="flex items-center space-x-2 p-2 rounded-md hover:bg-white/[0.05] cursor-pointer transition-colors duration-150 border border-transparent hover:border-white/15"
-                :class="{ 'bg-emerald-400/10 ring-1 ring-emerald-400/40': isMetroSelected(metro) }"
+          <div v-show="isMetroAreaVisible" class="mt-2 space-y-2">
+            <!-- Quick-select buttons -->
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="n in [10, 25]"
+                :key="n"
+                type="button"
+                @click="() => selectTopNMetros(n)"
+                :disabled="isLoading || isFiltering || isPageLoading"
+                class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-zinc-300 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
               >
-                <input
-                  :id="`metro-checkbox-${metro.key}`"
-                  type="checkbox"
-                  :checked="isMetroSelected(metro)"
-                  @change="() => toggleMetroSelection(metro)"
-                  class="h-4 w-4 rounded border-white/20 bg-white/[0.05] text-emerald-400 focus:ring-emerald-400/60 focus:ring-offset-ink shadow"
-                />
-                <span class="text-sm text-zinc-200 truncate flex-grow" :title="metro.displayName">
-                  {{ metro.displayName }}
-                </span>
-                <span
-                  class="text-xs text-zinc-400 ml-auto whitespace-nowrap bg-white/[0.06] px-1.5 py-0.5 rounded-sm font-secondary"
-                  >{{ formatPopulation(metro.population) }}</span
-                >
-              </label>
+                Top {{ n }}
+              </button>
+              <button
+                type="button"
+                @click="handleSelectAllMetros"
+                :disabled="
+                  isLoading || isFiltering || isPageLoading || filteredMetroOptions.length === 0
+                "
+                class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-zinc-300 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+              >
+                {{ areAllMetrosSelected ? 'Deselect' : 'All' }}
+              </button>
+              <button
+                v-if="selectedMetros.length > 0"
+                type="button"
+                @click="clearAllSelectedMetros"
+                :disabled="isLoading || isFiltering || isPageLoading"
+                class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-zinc-400 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+              >
+                Clear ({{ selectedMetros.length }})
+              </button>
             </div>
+
+            <!-- Metro checklist -->
             <div
-              v-else-if="metroSearchQuery && filteredMetroOptions.length === 0"
-              class="py-4 text-center text-sm text-zinc-500"
+              class="max-h-56 overflow-y-auto rounded-lg border border-white/[0.07] bg-white/[0.02] p-2 space-y-0.5"
             >
-              No metro areas match "{{ metroSearchQuery }}".
+              <template v-if="filteredMetroOptions.length > 0">
+                <label
+                  v-for="metro in filteredMetroOptions"
+                  :key="metro.key"
+                  :for="`metro-checkbox-${metro.key}`"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.05] cursor-pointer transition-colors"
+                  :class="{ 'bg-emerald-400/10': isMetroSelected(metro) }"
+                >
+                  <input
+                    :id="`metro-checkbox-${metro.key}`"
+                    type="checkbox"
+                    :checked="isMetroSelected(metro)"
+                    @change="() => toggleMetroSelection(metro)"
+                    class="h-3.5 w-3.5 rounded border-white/20 bg-white/[0.05] text-emerald-400 focus:ring-emerald-400/60 focus:ring-offset-ink"
+                  />
+                  <span class="text-xs text-zinc-200 truncate flex-1" :title="metro.displayName">{{
+                    metro.displayName
+                  }}</span>
+                  <span class="text-[10px] text-zinc-500 whitespace-nowrap">{{
+                    formatPopulation(metro.population)
+                  }}</span>
+                </label>
+              </template>
+              <div v-else class="py-3 text-center text-xs text-zinc-500">
+                No metro areas match your search.
+              </div>
             </div>
-            <div v-else class="py-4 text-center text-sm text-zinc-500">
-              No metro areas available or matching current search.
-            </div>
+
+            <p v-if="selectedMetros.length > 0" class="text-[11px] text-zinc-500">
+              <span class="text-zinc-300 font-medium">{{ selectedMetros.length }}</span> selected ·
+              {{ totalSelectedPopulation.toLocaleString() }} pop.
+            </p>
           </div>
         </transition>
       </div>
-    </div>
-    <!-- End New Filter Controls Section -->
 
-    <!-- Selected Metros Chips Display & Summary -->
-    <div v-if="selectedMetros.length > 0" class="my-3 space-y-3">
-      <div class="flex flex-wrap gap-2 items-center px-1">
-        <span class="text-xs text-zinc-500 mr-1">Selected Metros:</span>
-        <span
-          v-for="metro in selectedMetros"
-          :key="metro.key"
-          class="inline-flex items-center gap-x-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-xs font-medium text-zinc-200 ring-1 ring-inset ring-white/10"
+      <!-- Export Data -->
+      <div class="pt-1">
+        <button
+          type="button"
+          @click="handleOpenExportModal"
+          :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 hover:bg-emerald-400/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {{ metro.displayName }}
-          <button
-            @click="removeSelectedMetro(metro)"
-            type="button"
-            class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-white/10"
-          >
-            <span class="sr-only">Remove</span>
-            <XCircleIcon
-              class="h-3.5 w-3.5 text-zinc-400 group-hover:text-zinc-200"
-              aria-hidden="true"
-            />
-          </button>
-        </span>
+          <ArrowPathIcon v-if="isExporting" class="animate-spin w-4 h-4" />
+          <ArrowDownTrayIcon v-else class="w-4 h-4" />
+          {{ isExporting ? 'Exporting...' : 'Export Data' }}
+        </button>
       </div>
-      <div class="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg text-sm">
-        <div class="flex justify-between items-center mb-2">
-          <p class="text-zinc-300">
-            <span class="font-semibold">{{ selectedMetros.length }}</span> metro area(s) selected.
-          </p>
-          <p class="text-zinc-300">
-            Total Affected Population:
-            <span class="font-semibold text-white">{{
-              totalSelectedPopulation.toLocaleString()
-            }}</span>
-          </p>
+    </aside>
+
+    <!-- ===================== MAIN COLUMN ===================== -->
+    <div class="space-y-4 min-w-0">
+      <!-- Summary cards: File A / File B / Delta (A - B) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- File A -->
+        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+          <div class="flex items-baseline gap-2">
+            <span class="text-sm font-semibold text-white">File A</span>
+            <span class="text-xs text-emerald-400 truncate" :title="fileName1">{{ fileName1 }}</span>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            <div v-for="stat in fileAStats" :key="stat.label">
+              <div class="text-[10px] uppercase tracking-wider text-zinc-500">{{ stat.label }}</div>
+              <div class="mt-0.5 text-sm font-secondary text-white tabular-nums">
+                <span v-if="isCalculatingAverages">…</span>
+                <span v-else>{{ fmtMoney(stat.value) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- File B -->
+        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+          <div class="flex items-baseline gap-2">
+            <span class="text-sm font-semibold text-white">File B</span>
+            <span class="text-xs text-violet-400 truncate" :title="fileName2">{{ fileName2 }}</span>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            <div v-for="stat in fileBStats" :key="stat.label">
+              <div class="text-[10px] uppercase tracking-wider text-zinc-500">{{ stat.label }}</div>
+              <div class="mt-0.5 text-sm font-secondary text-white tabular-nums">
+                <span v-if="isCalculatingAverages">…</span>
+                <span v-else>{{ fmtMoney(stat.value) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delta (A - B) -->
+        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+          <div class="flex items-baseline gap-2">
+            <span class="text-sm font-semibold text-white">Delta (A − B)</span>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            <div v-for="stat in deltaStats" :key="stat.label">
+              <div class="text-[10px] uppercase tracking-wider text-zinc-500">{{ stat.label }}</div>
+              <div class="mt-0.5 text-sm font-secondary text-zinc-300 tabular-nums">
+                <span v-if="isCalculatingAverages">…</span>
+                <span v-else>{{ fmtMoney(stat.value) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pricing Comparison panel -->
+      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+        <!-- Panel header -->
         <div
-          v-if="targetedNPAsDisplay.summary"
-          class="text-xs text-zinc-500 pt-2 border-t border-white/10"
-          :title="targetedNPAsDisplay.fullList"
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.06]"
         >
-          {{ targetedNPAsDisplay.summary }}
-        </div>
-      </div>
-    </div>
+          <div>
+            <h3 class="text-base font-semibold text-white">Pricing Comparison</h3>
+            <p class="text-xs text-zinc-500">
+              Showing {{ displayedData.length.toLocaleString() }} of
+              {{ totalFilteredItems.toLocaleString() }} entries
+            </p>
+          </div>
 
-    <div
-      v-if="isLoading && displayedData.length === 0"
-      class="flex flex-col items-center justify-center py-10 min-h-[300px]"
-    >
-      <ArrowPathIcon class="animate-spin w-10 h-10 text-accent mb-3" />
-      <p class="text-zinc-400 text-sm">Loading comparison data...</p>
-    </div>
-    <div v-else-if="error" class="text-center text-rose-400 py-10">
-      Error loading data: {{ error }}
-    </div>
-    <div
-      v-else-if="displayedData.length === 0 && !isLoading && !isPageLoading"
-      class="flex flex-col items-center justify-center text-zinc-500 py-10 min-h-[300px] w-full"
-    >
-      No matching comparison data found. Ensure reports have been generated or adjust filters.
-    </div>
-    <div v-else class="overflow-x-auto relative">
-      <!-- Loading overlay for filter changes -->
-      <div
-        v-if="isFiltering || (isPageLoading && displayedData.length === 0)"
-        class="absolute inset-0 bg-ink/70 backdrop-blur-sm flex items-center justify-center z-20 rounded-lg"
-      >
-        <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
-      </div>
-      <!-- Make the container scrollable -->
-      <div ref="scrollContainerRef" class="max-h-[600px] overflow-y-auto">
-        <table class="min-w-full divide-y divide-white/[0.06] text-sm">
-          <thead class="bg-ink-raised sticky top-0 z-10">
-            <tr>
-              <!-- Dynamically render table headers -->
-              <th
-                v-for="header in tableHeaders"
-                :key="header.key"
-                scope="col"
-                class="px-4 py-3 text-[11px] uppercase tracking-wider text-zinc-500 align-bottom"
-                :class="[
-                  header.textAlign,
-                  { 'cursor-pointer hover:bg-white/[0.04]': header.sortable },
-                  {
-                    'min-w-28': [
-                      'file1_inter',
-                      'file2_inter',
-                      'diff_inter_pct',
-                      'file1_intra',
-                      'file2_intra',
-                      'diff_intra_pct',
-                      'file1_indeterm',
-                      'file2_indeterm',
-                      'diff_indeterm_pct',
-                    ].includes(header.key),
-                  },
-                ]"
-                @click="header.sortable ? handleSort(header.key) : null"
+          <!-- Column Presets -->
+          <Listbox v-model="columnPreset" as="div" class="relative flex-shrink-0">
+            <ListboxButton
+              class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06] transition-colors"
+            >
+              <ViewColumnsIcon class="h-4 w-4 text-zinc-400" />
+              {{ columnPresets.find((p) => p.value === columnPreset)?.label }}
+              <ChevronUpDownIcon class="h-4 w-4 text-zinc-400" />
+            </ListboxButton>
+            <transition
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <ListboxOptions
+                class="absolute right-0 z-20 mt-1 w-48 overflow-auto rounded-lg bg-ink-raised py-1 text-sm shadow-lg ring-1 ring-white/10 focus:outline-none"
               >
-                <div
-                  class="flex"
-                  :class="[
-                    header.customRender ? 'flex-col' : 'items-center', // Default for non-customRender is row, so items-center for vertical alignment
-                    header.customRender && header.textAlign === 'text-center' ? 'items-center' : '',
-                    header.customRender && header.textAlign === 'text-left' ? 'items-start' : '',
-                    !header.customRender && header.textAlign === 'text-center'
-                      ? 'justify-center'
-                      : '',
-                    !header.customRender && header.textAlign === 'text-left' ? 'justify-start' : '',
-                  ]"
+                <ListboxOption
+                  v-for="preset in columnPresets"
+                  :key="preset.value"
+                  :value="preset.value"
+                  v-slot="{ active, selected }"
+                  as="template"
                 >
-                  <template v-if="header.customRender">
-                    <BaseBadge
-                      size="small"
-                      variant="neutral"
-                      class="max-w-[100px] truncate"
-                      :title="header.fileBadge === 'file1' ? fileName1 : fileName2"
-                      >{{ header.fileBadge === 'file1' ? fileName1 : fileName2 }}</BaseBadge
+                  <li
+                    :class="[
+                      active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                      'relative cursor-default select-none py-2 pl-9 pr-4',
+                    ]"
+                  >
+                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
+                      preset.label
+                    }}</span>
+                    <span
+                      v-if="selected"
+                      class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-emerald-400"
                     >
+                      <CheckIcon class="h-4 w-4" aria-hidden="true" />
+                    </span>
+                  </li>
+                </ListboxOption>
+              </ListboxOptions>
+            </transition>
+          </Listbox>
+        </div>
+
+        <!-- Selected metros summary (chips) -->
+        <div
+          v-if="selectedMetros.length > 0"
+          class="px-5 py-3 border-b border-white/[0.06] flex flex-wrap gap-2 items-center"
+        >
+          <span class="text-xs text-zinc-500 mr-1">Metros:</span>
+          <span
+            v-for="metro in selectedMetros"
+            :key="metro.key"
+            class="inline-flex items-center gap-x-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-xs font-medium text-zinc-200 ring-1 ring-inset ring-white/10"
+          >
+            {{ metro.displayName }}
+            <button
+              @click="removeSelectedMetro(metro)"
+              type="button"
+              class="group -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-white/10"
+            >
+              <span class="sr-only">Remove</span>
+              <XCircleIcon
+                class="h-3.5 w-3.5 text-zinc-400 group-hover:text-zinc-200"
+                aria-hidden="true"
+              />
+            </button>
+          </span>
+        </div>
+
+        <!-- Body states -->
+        <div
+          v-if="isLoading && displayedData.length === 0"
+          class="flex flex-col items-center justify-center py-16 min-h-[300px]"
+        >
+          <ArrowPathIcon class="animate-spin w-10 h-10 text-emerald-400 mb-3" />
+          <p class="text-zinc-400 text-sm">Loading comparison data...</p>
+        </div>
+        <div v-else-if="error" class="text-center text-rose-400 py-16">
+          Error loading data: {{ error }}
+        </div>
+        <div
+          v-else-if="displayedData.length === 0 && !isLoading && !isPageLoading"
+          class="flex flex-col items-center justify-center text-zinc-500 py-16 min-h-[300px] w-full text-sm"
+        >
+          No matching comparison data found. Ensure reports have been generated or adjust filters.
+        </div>
+
+        <!-- Table -->
+        <div v-else class="relative">
+          <!-- Loading overlay for filter changes -->
+          <div
+            v-if="isFiltering || (isPageLoading && displayedData.length === 0)"
+            class="absolute inset-0 bg-ink/70 backdrop-blur-sm flex items-center justify-center z-20"
+          >
+            <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
+          </div>
+          <div ref="scrollContainerRef" class="max-h-[600px] overflow-auto">
+            <table class="min-w-full divide-y divide-white/[0.06] text-sm">
+              <thead class="bg-ink-raised sticky top-0 z-10">
+                <tr>
+                  <th
+                    v-for="header in visibleHeaders"
+                    :key="header.key"
+                    scope="col"
+                    class="px-4 py-3 text-[11px] uppercase tracking-wider text-zinc-500 align-bottom whitespace-nowrap"
+                    :class="[
+                      header.textAlign,
+                      { 'cursor-pointer hover:bg-white/[0.04]': header.sortable },
+                      {
+                        'min-w-28': [
+                          'file1_inter',
+                          'file2_inter',
+                          'diff_inter_pct',
+                          'file1_intra',
+                          'file2_intra',
+                          'diff_intra_pct',
+                          'file1_indeterm',
+                          'file2_indeterm',
+                          'diff_indeterm_pct',
+                        ].includes(header.key),
+                      },
+                    ]"
+                    @click="header.sortable ? handleSort(header.key) : null"
+                  >
+                    <div
+                      class="flex"
+                      :class="[
+                        header.customRender ? 'flex-col' : 'items-center',
+                        header.customRender && header.textAlign === 'text-center'
+                          ? 'items-center'
+                          : '',
+                        header.customRender && header.textAlign === 'text-left'
+                          ? 'items-start'
+                          : '',
+                        !header.customRender && header.textAlign === 'text-center'
+                          ? 'justify-center'
+                          : '',
+                        !header.customRender && header.textAlign === 'text-left'
+                          ? 'justify-start'
+                          : '',
+                      ]"
+                    >
+                      <template v-if="header.customRender">
+                        <BaseBadge
+                          size="small"
+                          variant="neutral"
+                          class="max-w-[100px] truncate"
+                          :title="header.fileBadge === 'file1' ? fileName1 : fileName2"
+                          >{{ header.fileBadge === 'file1' ? fileName1 : fileName2 }}</BaseBadge
+                        >
+                      </template>
+
+                      <div class="flex items-center" :class="{ 'mt-0.5': header.customRender }">
+                        <span>{{ header.label }}</span>
+                        <template v-if="header.sortable">
+                          <ArrowUpIcon
+                            v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
+                            class="w-3 h-3 ml-1 text-emerald-400"
+                          />
+                          <ArrowDownIcon
+                            v-else-if="
+                              currentSortKey === header.key && currentSortDirection === 'desc'
+                            "
+                            class="w-3 h-3 ml-1 text-emerald-400"
+                          />
+                          <ChevronUpDownIcon
+                            v-else
+                            class="w-4 h-4 ml-1 text-zinc-600 hover:text-zinc-300"
+                          />
+                        </template>
+                      </div>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/[0.06]">
+                <tr
+                  v-for="record in displayedData"
+                  :key="record.npanxx"
+                  class="hover:bg-white/[0.02]"
+                >
+                  <td class="px-4 py-3 font-secondary text-zinc-200">{{ record.npanxx }}</td>
+                  <td class="px-4 py-3 text-zinc-400">{{ record.stateCode }}</td>
+                  <td class="px-4 py-3 text-zinc-400">{{ record.countryCode }}</td>
+                  <!-- Inter group -->
+                  <template v-if="showInter">
+                    <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.03]">
+                      {{ record.file1_inter?.toFixed(6) }}
+                    </td>
+                    <td class="px-4 py-3 font-secondary text-zinc-200">
+                      {{ record.file2_inter?.toFixed(6) }}
+                    </td>
+                    <td class="px-4 py-3 font-secondary text-center text-zinc-400">
+                      {{ record.diff_inter_pct?.toFixed(2) }}%
+                    </td>
                   </template>
-
-                  <div class="flex items-center" :class="{ 'mt-0.5': header.customRender }">
-                    <span>{{ header.label }}</span>
-                    <template v-if="header.sortable">
-                      <ArrowUpIcon
-                        v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
-                        class="w-3 h-3 ml-1 text-accent"
-                      />
-                      <ArrowDownIcon
-                        v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'"
-                        class="w-3 h-3 ml-1 text-accent"
-                      />
-                      <ChevronUpDownIcon
-                        v-else
-                        class="w-4 h-4 ml-1 text-zinc-500 hover:text-zinc-300"
-                      />
-                    </template>
-                  </div>
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-white/[0.06]">
-            <tr v-for="record in displayedData" :key="record.npanxx" class="hover:bg-white/[0.02]">
-              <!-- Populate table cells -->
-              <td class="px-4 py-3 font-secondary text-zinc-200">{{ record.npanxx }}</td>
-              <!-- <td class="px-4 py-2 text-gray-400">{{ record.npa }}</td> -->
-              <!-- <td class="px-4 py-2 text-gray-400">{{ record.nxx }}</td> -->
-              <td class="px-4 py-3 text-zinc-400">{{ record.stateCode }}</td>
-              <td class="px-4 py-3 text-zinc-400">{{ record.countryCode }}</td>
-              <!-- File 1 Inter Rate -->
-              <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.04]">
-                {{ record.file1_inter?.toFixed(6) }}
-              </td>
-              <!-- File 2 Inter Rate -->
-              <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.02]">
-                {{ record.file2_inter?.toFixed(6) }}
-              </td>
-              <!-- Diff Inter % Cell -->
-              <td class="px-4 py-3 font-secondary" :class="deltaClass(record.diff_inter_pct)">{{ record.diff_inter_pct?.toFixed(2) }}%</td>
-              <!-- File 1 Intra Rate -->
-              <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.04]">
-                {{ record.file1_intra?.toFixed(6) }}
-              </td>
-              <!-- File 2 Intra Rate -->
-              <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.02]">
-                {{ record.file2_intra?.toFixed(6) }}
-              </td>
-              <!-- Diff Intra % Cell -->
-              <td class="px-4 py-3 font-secondary" :class="deltaClass(record.diff_intra_pct)">{{ record.diff_intra_pct?.toFixed(2) }}%</td>
-              <!-- File 1 Indeterm Rate -->
-              <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.04]">
-                {{ record.file1_indeterm?.toFixed(6) }}
-              </td>
-              <!-- File 2 Indeterm Rate -->
-              <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.02]">
-                {{ record.file2_indeterm?.toFixed(6) }}
-              </td>
-              <!-- Diff Indeterm % Cell -->
-              <td class="px-4 py-3 font-secondary" :class="deltaClass(record.diff_indeterm_pct)">{{ record.diff_indeterm_pct?.toFixed(2) }}%</td>
-            </tr>
-          </tbody>
-        </table>
-        <!-- REMOVED: Trigger for loading more (loadMoreTriggerRef) -->
-        <!-- REMOVED: Loading indicator (isLoadingMore) -->
-
-        <div
-          v-if="!isPageLoading && displayedData.length === 0 && totalFilteredItems > 0"
-          class="text-center text-zinc-600 py-4"
-        >
-          No results on this page. Try adjusting filters or page number.
+                  <!-- Intra group -->
+                  <template v-if="showIntra">
+                    <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.03]">
+                      {{ record.file1_intra?.toFixed(6) }}
+                    </td>
+                    <td class="px-4 py-3 font-secondary text-zinc-200">
+                      {{ record.file2_intra?.toFixed(6) }}
+                    </td>
+                    <td class="px-4 py-3 font-secondary text-center text-zinc-400">
+                      {{ record.diff_intra_pct?.toFixed(2) }}%
+                    </td>
+                  </template>
+                  <!-- Indeterm group -->
+                  <template v-if="showIndeterm">
+                    <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.03]">
+                      {{ record.file1_indeterm?.toFixed(6) }}
+                    </td>
+                    <td class="px-4 py-3 font-secondary text-zinc-200">
+                      {{ record.file2_indeterm?.toFixed(6) }}
+                    </td>
+                    <td class="px-4 py-3 font-secondary text-center text-zinc-400">
+                      {{ record.diff_indeterm_pct?.toFixed(2) }}%
+                    </td>
+                  </template>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <!-- Pagination footer -->
         <div
-          v-else-if="
-            !isPageLoading &&
-            displayedData.length > 0 &&
-            currentPage === totalPages &&
-            totalFilteredItems > 0
-          "
-          class="text-center text-zinc-600 py-4"
+          v-if="totalFilteredItems > 0 || isPageLoading"
+          class="flex flex-col md:flex-row items-center justify-between gap-4 px-5 py-3 border-t border-white/[0.06] text-sm text-zinc-400"
         >
-          End of results.
+          <!-- Items per page selector -->
+          <div class="flex items-center gap-2">
+            <span>Show:</span>
+            <select
+              v-model="itemsPerPage"
+              class="bg-white/[0.03] border border-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent p-1.5"
+              :disabled="isPageLoading || isFiltering"
+            >
+              <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+                {{ option }}
+              </option>
+            </select>
+            <span>entries per page</span>
+          </div>
+
+          <!-- Page Info and Navigation -->
+          <div class="flex items-center gap-2 flex-wrap justify-center">
+            <BaseButton
+              @click="() => goToFirstPage(createFilters())"
+              :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
+              size="small"
+              variant="secondary"
+              class="px-2.5 py-1.5"
+              title="First Page"
+            >
+              &laquo; First
+            </BaseButton>
+            <BaseButton
+              @click="() => goToPreviousPage(createFilters())"
+              :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
+              size="small"
+              variant="secondary"
+              class="px-2.5 py-1.5"
+              title="Previous Page"
+            >
+              &lsaquo; Prev
+            </BaseButton>
+
+            <span class="flex items-center gap-1.5">
+              Page
+              <input
+                type="number"
+                v-model.number="directPageInput"
+                @change="() => handleDirectPageInput(createFilters())"
+                @keyup.enter="() => handleDirectPageInput(createFilters())"
+                min="1"
+                :max="totalPages"
+                class="bg-white/[0.03] border border-white/10 text-white w-14 text-center text-sm rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+                :disabled="isPageLoading || isFiltering || totalPages === 1"
+              />
+              of {{ totalPages.toLocaleString() }}
+            </span>
+
+            <BaseButton
+              @click="() => goToNextPage(createFilters())"
+              :disabled="!canGoToNextPage || isPageLoading || isFiltering"
+              size="small"
+              variant="secondary"
+              class="px-2.5 py-1.5"
+              title="Next Page"
+            >
+              Next &rsaquo;
+            </BaseButton>
+            <BaseButton
+              @click="() => goToLastPage(createFilters())"
+              :disabled="
+                !canGoToNextPage || currentPage === totalPages || isPageLoading || isFiltering
+              "
+              size="small"
+              variant="secondary"
+              class="px-2.5 py-1.5"
+              title="Last Page"
+            >
+              Last &raquo;
+            </BaseButton>
+          </div>
+
+          <!-- Total Records Display -->
+          <div class="min-w-[150px] text-right md:text-left">
+            <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
+            <span
+              v-if="isPerformingPageLevelSort && totalFilteredItems > itemsPerPage"
+              class="block text-xs text-amber-400/70"
+              >(Sorted current page)</span
+            >
+          </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Pagination Controls -->
-    <div
-      v-if="totalFilteredItems > 0 || isPageLoading"
-      class="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-zinc-400"
-    >
-      <!-- Items per page selector -->
-      <div class="flex items-center gap-2">
-        <span>Show:</span>
-        <select
-          v-model="itemsPerPage"
-          class="bg-white/[0.03] border border-white/10 text-white sm:text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent p-1.5"
-          :disabled="isPageLoading || isFiltering"
-        >
-          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
-        <span>entries per page</span>
-      </div>
-
-      <!-- Page Info and Navigation -->
-      <div class="flex items-center gap-2 flex-wrap justify-center">
-        <BaseButton
-          @click="() => goToFirstPage(createFilters())"
-          :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="First Page"
-        >
-          &laquo; First
-        </BaseButton>
-        <BaseButton
-          @click="() => goToPreviousPage(createFilters())"
-          :disabled="!canGoToPreviousPage || isPageLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="Previous Page"
-        >
-          &lsaquo; Prev
-        </BaseButton>
-
-        <span class="flex items-center gap-1.5">
-          Page
-          <input
-            type="number"
-            v-model.number="directPageInput"
-            @change="() => handleDirectPageInput(createFilters())"
-            @keyup.enter="() => handleDirectPageInput(createFilters())"
-            min="1"
-            :max="totalPages"
-            class="bg-white/[0.03] border border-white/10 text-white w-14 text-center sm:text-sm rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
-            :disabled="isPageLoading || isFiltering || totalPages === 1"
-          />
-          of {{ totalPages.toLocaleString() }}
-        </span>
-
-        <BaseButton
-          @click="() => goToNextPage(createFilters())"
-          :disabled="!canGoToNextPage || isPageLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="Next Page"
-        >
-          Next &rsaquo;
-        </BaseButton>
-        <BaseButton
-          @click="() => goToLastPage(createFilters())"
-          :disabled="!canGoToNextPage || currentPage === totalPages || isPageLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="Last Page"
-        >
-          Last &raquo;
-        </BaseButton>
-      </div>
-
-      <!-- Total Records Display -->
-      <div class="min-w-[150px] text-right md:text-left">
-        <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
-        <span
-          v-if="isPerformingPageLevelSort && totalFilteredItems > itemsPerPage"
-          class="block text-xs text-amber-400/70"
-          >(Sorted current page)</span
-        >
       </div>
     </div>
 
@@ -765,6 +749,7 @@
     MagnifyingGlassIcon,
     XCircleIcon,
     ChevronDownIcon,
+    ViewColumnsIcon,
   } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
@@ -791,10 +776,9 @@
   import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
   import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
 
-  // Presentational helper: color a rate delta — positive = emerald, negative = rose, zero/none = neutral.
-  function deltaClass(pct: number | null | undefined): string {
-    if (pct === null || pct === undefined || pct === 0) return 'text-zinc-400';
-    return pct > 0 ? 'text-emerald-400' : 'text-rose-400';
+  // Money formatter for the summary cards (handles negative deltas).
+  function fmtMoney(v: number): string {
+    return `${v < 0 ? '-' : ''}$${Math.abs(v).toFixed(6)}`;
   }
 
   // Type for sortable column definition
@@ -921,6 +905,47 @@
     },
   ];
 
+  // --- Column Presets (focus which rate-type groups are visible) ---
+  type ColumnPreset = 'all' | 'inter' | 'intra' | 'indeterm';
+  const columnPresets: { value: ColumnPreset; label: string }[] = [
+    { value: 'all', label: 'All Columns' },
+    { value: 'inter', label: 'Interstate' },
+    { value: 'intra', label: 'Intrastate' },
+    { value: 'indeterm', label: 'Indeterminate' },
+  ];
+  const columnPreset = ref<ColumnPreset>('all');
+
+  const showInter = computed(
+    () => columnPreset.value === 'all' || columnPreset.value === 'inter'
+  );
+  const showIntra = computed(
+    () => columnPreset.value === 'all' || columnPreset.value === 'intra'
+  );
+  const showIndeterm = computed(
+    () => columnPreset.value === 'all' || columnPreset.value === 'indeterm'
+  );
+
+  // Map each rate-type column key to its group so headers can be filtered by preset.
+  const rateGroupOf: Record<string, ColumnPreset> = {
+    file1_inter: 'inter',
+    file2_inter: 'inter',
+    diff_inter_pct: 'inter',
+    file1_intra: 'intra',
+    file2_intra: 'intra',
+    diff_intra_pct: 'intra',
+    file1_indeterm: 'indeterm',
+    file2_indeterm: 'indeterm',
+    diff_indeterm_pct: 'indeterm',
+  };
+
+  const visibleHeaders = computed(() =>
+    tableHeaders.filter((h) => {
+      const group = rateGroupOf[h.key as string];
+      if (!group) return true; // npanxx / state / country always shown
+      return columnPreset.value === 'all' || columnPreset.value === group;
+    })
+  );
+
   const usStore = useUsStore();
   const lergStore = useLergStoreV2();
   const COMPARISON_TABLE_NAME = 'comparison_results';
@@ -984,19 +1009,17 @@
     metroSearchQuery,
     filteredMetroOptions,
     totalSelectedPopulation,
-    targetedNPAsDisplay,
     areAllMetrosSelected,
     metroAreaCodesToFilter,
     toggleMetroSelection,
     isMetroSelected,
     handleSelectAllMetros,
     removeSelectedMetro,
-    clearMetroSearch,
     clearAllSelectedMetros,
     formatPopulation,
   } = useMetroFilter();
 
-  const isMetroAreaVisible = ref(true); // For collapsible metro chip grid
+  const isMetroAreaVisible = ref(false); // Metro chip list collapsed by default in the rail
 
   // Re-introducing the missing refs that were accessed in the template
   const isPageLoading = ref<boolean>(false); // Loading state for page changes and initial data load for a filter set
@@ -1057,6 +1080,23 @@
   const animatedFile2IndetermAvg = useTransition(file2IndetermAvgSource, transitionConfig);
   // --- End Animated Averages ---
 
+  // --- Summary card stat rows (filter-aware, animated) ---
+  const fileAStats = computed(() => [
+    { label: 'Inter Avg', value: animatedFile1InterAvg.value },
+    { label: 'Intra Avg', value: animatedFile1IntraAvg.value },
+    { label: 'Indeterm Avg', value: animatedFile1IndetermAvg.value },
+  ]);
+  const fileBStats = computed(() => [
+    { label: 'Inter Avg', value: animatedFile2InterAvg.value },
+    { label: 'Intra Avg', value: animatedFile2IntraAvg.value },
+    { label: 'Indeterm Avg', value: animatedFile2IndetermAvg.value },
+  ]);
+  const deltaStats = computed(() => [
+    { label: 'Inter', value: animatedFile1InterAvg.value - animatedFile2InterAvg.value },
+    { label: 'Intra', value: animatedFile1IntraAvg.value - animatedFile2IntraAvg.value },
+    { label: 'Indeterm', value: animatedFile1IndetermAvg.value - animatedFile2IndetermAvg.value },
+  ]);
+
   // --- Get Filenames for Headers ---
   const fileName1 = computed(() => {
     const names = usStore.getFileNames;
@@ -1092,7 +1132,7 @@
     // Special handling for US territories and common abbreviations
     const territoryNames: Record<string, string> = {
       'PR': 'Puerto Rico',
-      'VI': 'U.S. Virgin Islands', 
+      'VI': 'U.S. Virgin Islands',
       'GU': 'Guam',
       'AS': 'American Samoa',
       'MP': 'Northern Mariana Islands',
@@ -1110,7 +1150,7 @@
       return usState.name;
     }
 
-    // Try Canadian provinces  
+    // Try Canadian provinces
     const caProvince = lergStore.getCanadianProvinces.find(province => province.code === code);
     if (caProvince) {
       return caProvince.name;
@@ -1160,7 +1200,7 @@
         if (selectedState.value === 'GROUP_UNITED_STATES') {
           // Filter for US states only (not territories) - use LERG store to look up by NPA
           const npaInfo = lergStore.getOptimizedLocationByNPA(record.npa);
-          return npaInfo?.country_code === 'US' && 
+          return npaInfo?.country_code === 'US' &&
                  !['PR', 'VI', 'GU', 'AS', 'MP'].includes(npaInfo.state_province_code);
         } else if (selectedState.value === 'GROUP_CANADA') {
           // Filter for all Canadian provinces - use LERG store to look up by NPA
@@ -1174,7 +1214,7 @@
           // Handle individual region selections - use LERG store to look up by NPA
           const npaInfo = lergStore.getOptimizedLocationByNPA(record.npa);
           if (!npaInfo) return false;
-          
+
           // Check if it matches state/province code
           if (npaInfo.state_province_code === selectedState.value) {
             return true;
@@ -1202,23 +1242,23 @@
         const intraSame = record.file1_intra === record.file2_intra;
         const indetermSame = record.file1_indeterm === record.file2_indeterm;
         const allSame = interSame && intraSame && indetermSame;
-        
+
         if (selectedCheaper.value === 'same') {
           return allSame;
         }
-        
+
         // For "cheaper" comparisons, calculate average rates (but exclude "same" records)
         if (!allSame) {
           const avgFile1 = ((record.file1_inter || 0) + (record.file1_intra || 0) + (record.file1_indeterm || 0)) / 3;
           const avgFile2 = ((record.file2_inter || 0) + (record.file2_intra || 0) + (record.file2_indeterm || 0)) / 3;
-          
+
           if (selectedCheaper.value === 'file1') {
             return avgFile1 < avgFile2;
           } else if (selectedCheaper.value === 'file2') {
             return avgFile2 < avgFile1;
           }
         }
-        
+
         return false; // Exclude "same" records from "cheaper" filters
       });
     }
@@ -1364,24 +1404,24 @@
   // Helper function to build applied filters array for metadata
   function buildAppliedFiltersArray(): string[] {
     const appliedFilters: string[] = [];
-    
+
     if (npanxxFilterTerms.value.length > 0) {
       appliedFilters.push(`NPANXX: ${npanxxFilterTerms.value.join(', ')}`);
     }
-    
+
     if (selectedState.value) {
       appliedFilters.push(`State: ${selectedState.value}`);
     }
-    
+
     if (selectedCheaper.value) {
       const option = rateComparisonOptions.value.find(opt => opt.value === selectedCheaper.value);
       appliedFilters.push(`Rate Comparison: ${option?.label || selectedCheaper.value}`);
     }
-    
+
     if (selectedMetros.value.length > 0) {
       appliedFilters.push(`Metro Areas: ${selectedMetros.value.length} selected`);
     }
-    
+
     return appliedFilters;
   }
 
@@ -1448,8 +1488,8 @@
 
       // Export using the new context-aware composable
       await exportToCSVWithContext(
-        { 
-          headers, 
+        {
+          headers,
           rows,
           metadata: {
             exportType: 'comparison',
@@ -1515,7 +1555,7 @@
   function determineCheaperFile(record: USPricingComparisonRecord): string {
     const avgFile1 = ((record.file1_inter || 0) + (record.file1_intra || 0) + (record.file1_indeterm || 0)) / 3;
     const avgFile2 = ((record.file2_inter || 0) + (record.file2_intra || 0) + (record.file2_indeterm || 0)) / 3;
-    
+
     if (avgFile1 === avgFile2) return 'Same';
     return avgFile1 < avgFile2 ? fileName1.value : fileName2.value;
   }
@@ -1540,7 +1580,7 @@
       };
 
       const transformed = transformDataForExport(comparisonData, modifiedOptions, 'comparison');
-      
+
       // Build filename parts
       const filenameParts = [];
       if (selectedState.value) filenameParts.push(selectedState.value);
@@ -1548,7 +1588,7 @@
         filenameParts.push(`search_${npanxxFilterTerms.value.join('-')}`);
       }
 
-      // Export using the new context-aware composable  
+      // Export using the new context-aware composable
       await exportToCSVWithContext(transformed, {
         filename: 'us-comparison',
         additionalNameParts: filenameParts,
@@ -1587,7 +1627,7 @@
       if (!dbInstance.value) {
         await initializeDB();
       }
-      
+
       await fetchUniqueStatesFromData(); // Fetch states from comparison data
       await resetPaginationAndLoad(createFilters()); // Then load initial data (first page)
       await calculateFullFilteredAverages(); // Calculate initial averages
@@ -1635,7 +1675,7 @@
       if (oldTotal > 0 && newTotal > 0 && Math.abs(newTotal - oldTotal) > 10) {
         console.log('[USDetailedComparisonTable] Significant data change detected, refreshing available states');
         await fetchUniqueStatesFromData();
-        
+
         // Check if currently selected state still exists
         if (selectedState.value && !availableStates.value.includes(selectedState.value)) {
           const isGroupSelection = selectedState.value.startsWith('GROUP_');

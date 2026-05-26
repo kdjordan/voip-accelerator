@@ -1,7 +1,7 @@
 <template>
   <div v-if="usStore.getFileNameByComponent(componentId) !== ''" class="space-y-6">
     <!-- Code Report heading with file name pill and remove button -->
-    <div class="mb-4 flex items-center justify-between">
+    <div v-if="!npaCoverageOnly" class="mb-4 flex items-center justify-between">
       <span class="text-lg text-white font-semibold">Code Report</span>
       <div class="flex items-center space-x-2">
         <BaseBadge size="small" variant="info">
@@ -20,8 +20,10 @@
     </div>
 
     <!-- Code Report Content -->
-    <div class="bg-black/20 border border-white/[0.07] rounded-xl p-4">
+    <div :class="npaCoverageOnly ? '' : 'bg-black/20 border border-white/[0.07] rounded-xl p-4'">
       <div class="space-y-4">
+        <!-- Stats blocks (hidden in NPA-coverage-only mode — duplicated by the Insights KPI cards) -->
+        <template v-if="!npaCoverageOnly">
         <!-- Basic Stats -->
         <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
           <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Total Codes:</div>
@@ -88,10 +90,11 @@
             </div>
           </div>
         </div>
+        </template>
 
         <!-- NPA Distribution Section -->
         <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-          <div class="flex justify-between mb-2">
+          <div v-if="!npaCoverageOnly" class="flex justify-between mb-2">
             <div class="text-[10px] uppercase tracking-wider text-zinc-500">NPA Coverage</div>
             <div
               v-if="showDistribution"
@@ -109,7 +112,7 @@
             </div>
           </div>
 
-          <div v-if="showDistribution" class="space-y-3">
+          <div v-if="showDistribution || npaCoverageOnly" class="space-y-3">
             <!-- Search Input -->
             <div class="relative">
               <input
@@ -340,6 +343,8 @@
   const props = defineProps<{
     componentId: ComponentId;
     isRemoving?: boolean;
+    // When true, render only the NPA coverage explorer (no header, stats, or inner toggle).
+    npaCoverageOnly?: boolean;
   }>();
 
   // Define emits

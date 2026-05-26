@@ -1,13 +1,8 @@
 <template>
   <!-- Show content if enhanced reports are available (implies code report is ready) -->
-  <div v-if="enhancedReport1 || enhancedReport2" class="space-y-6">
-    <!-- REMOVED US Pricing Summary Section -->
-    <!-- Detailed NPANXX Comparison Section -->
-    <div class="bg-white/[0.02] border border-white/[0.07] border-t-0 rounded-b-2xl p-6">
-      <h3 class="text-base text-white font-semibold mb-4 uppercase tracking-wide">US Pricing Comparison</h3>
-      <!-- USDetailedComparisonTable will handle summary and details -->
-      <USDetailedComparisonTable />
-    </div>
+  <div v-if="enhancedReport1 || enhancedReport2" class="mt-4">
+    <!-- USDetailedComparisonTable owns the full Explorer layout (filter rail + cards + table) -->
+    <USDetailedComparisonTable />
   </div>
 
   <!-- Fallback message if NO enhanced report data is available -->

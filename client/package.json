@@ -27,6 +27,7 @@
     "@voip-accelerator/shared": "*",
     "@vueuse/core": "^10.11.0",
     "better-auth": "^1.6.10",
+    "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dexie": "^4.0.11",
@@ -36,6 +37,7 @@
     "papaparse": "^5.4.1",
     "pinia": "^2.1.7",
     "vue": "^3.4.29",
+    "vue-chartjs": "^5.3.3",
     "vue-router": "^4.3.3"
   },
   "devDependencies": {

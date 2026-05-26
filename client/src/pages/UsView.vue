@@ -3,10 +3,9 @@
   <div class="text-white pt-2 w-full">
     <!-- Header -->
     <div class="relative px-1 mb-6">
-      <p class="text-xs font-secondary uppercase tracking-wider text-emerald-400/80">US Analyzer</p>
-      <h1 class="text-2xl md:text-3xl text-white font-bold tracking-tight">US Rate Deck Analyzer</h1>
+      <h1 class="text-2xl md:text-3xl text-emerald-400 font-bold tracking-tight">US Rate Deck Analyzer</h1>
       <p class="mt-1.5 text-sm text-zinc-400 max-w-2xl">
-        Upload two rate deck CSV files to analyze and compare rates, destinations, and call details.
+        Upload two rate decks to compare coverage and rate aggregates across destinations.
       </p>
       <button
         @click="openInfoModal"
@@ -55,7 +54,7 @@
         </ol>
 
         <!-- Upload cards (Rate Deck A / VS / Rate Deck B) -->
-        <USFileUploads />
+        <USFileUploads ref="fileUploadsRef" />
 
         <!-- What happens next -->
         <div class="mt-6 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-5 flex gap-4">
@@ -72,18 +71,21 @@
         <!-- Start Analysis -->
         <div class="mt-6 flex flex-col items-center">
           <button
-            :disabled="!bothDecksUploaded"
+            :disabled="!bothDecksUploaded || isStarting"
             class="w-full max-w-md inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold transition-colors"
             :class="
-              bothDecksUploaded
+              bothDecksUploaded && !isStarting
                 ? 'bg-emerald-400 text-ink hover:bg-emerald-300'
                 : 'bg-white/[0.03] text-zinc-500 border border-white/10 cursor-not-allowed'
             "
             @click="startAnalysis"
           >
-            <ArrowPathIcon v-if="bothDecksUploaded && !usStore.isCodeReportReady" class="h-4 w-4 animate-spin" />
+            <ArrowPathIcon v-if="isStarting" class="h-4 w-4 animate-spin" />
             {{ startButtonLabel }}
-            <ArrowRightIcon v-if="bothDecksUploaded && usStore.isCodeReportReady" class="h-4 w-4" />
+            <ArrowRightIcon
+              v-if="bothDecksUploaded && usStore.isCodeReportReady && !isStarting"
+              class="h-4 w-4"
+            />
           </button>
           <p v-if="!bothDecksUploaded" class="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-500">
             <LockClosedIcon class="h-3.5 w-3.5" /> Upload both decks to start
@@ -98,9 +100,8 @@
       <div>
         <transition name="fade" mode="out-in" appear>
           <div :key="usStore.getActiveReportType">
-            <USCodeReport
+            <USInsights
               v-if="usStore.activeReportType === ReportTypes.CODE && usStore.isCodeReportReady"
-              :report="usStore.getCodeReport"
             />
             <USPricingReport
               v-if="usStore.activeReportType === ReportTypes.PRICING && usStore.isCodeReportReady"
@@ -124,7 +125,7 @@
 
 <script setup lang="ts">
   import USFileUploads from '@/components/us/USFileUploads.vue';
-  import USCodeReport from '@/components/us/USCodeReport.vue';
+  import USInsights from '@/components/us/USInsights.vue';
   import USPricingReport from '@/components/us/USPricingReport.vue';
   import USContentHeader from '@/components/us/USContentHeader.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
@@ -148,9 +149,9 @@
   const error = ref<string | null>(null);
 
   const steps = [
-    { n: 1, label: 'Upload Files', desc: 'Upload two CSV files to compare' },
-    { n: 2, label: 'Map & Review', desc: 'Map columns and confirm a preview' },
-    { n: 3, label: 'Analyze', desc: 'Get the detailed comparison and insights' },
+    { n: 1, label: 'Rate Deck A', desc: 'Upload & map columns' },
+    { n: 2, label: 'Rate Deck B', desc: 'Upload & map columns' },
+    { n: 3, label: 'Start Analysis', desc: 'Compare rates & get insights' },
   ];
 
   const bothDecksUploaded = computed(() => usStore.getNumberOfFilesUploaded === 2);
@@ -161,14 +162,30 @@
     return 1;
   });
 
+  const fileUploadsRef = ref<InstanceType<typeof USFileUploads> | null>(null);
+  const isStarting = ref(false);
+
   const startButtonLabel = computed(() => {
     if (!bothDecksUploaded.value) return 'Start Analysis';
-    return usStore.isCodeReportReady ? 'View Analysis' : 'Analyzing…';
+    if (isStarting.value) return 'Analyzing…';
+    return usStore.isCodeReportReady ? 'View Analysis' : 'Start Analysis';
   });
 
-  function startAnalysis() {
-    if (bothDecksUploaded.value && usStore.isCodeReportReady) {
+  async function startAnalysis() {
+    if (!bothDecksUploaded.value) return;
+    // Already analyzed → just switch to the report view.
+    if (usStore.isCodeReportReady) {
       usStore.setActiveReportType(ReportTypes.CODE);
+      return;
+    }
+    // Trigger generation; USContentHeader's watcher auto-switches to the Insights tab once ready.
+    isStarting.value = true;
+    try {
+      await fileUploadsRef.value?.generateReports();
+    } catch (err) {
+      console.error('[UsView] Analysis failed:', err);
+    } finally {
+      isStarting.value = false;
     }
   }
 

@@ -1,222 +1,253 @@
 <template>
   <div class="flex flex-col gap-8 w-full">
-    <!-- Upload Zones Box -->
-    <div class="w-full">
-      <div>
-        <div class="pb-0">
-          <!-- Responsive: stack vertically on mobile, side-by-side on desktop -->
-          <div class="flex flex-col md:flex-row w-full gap-6">
-            <!-- Left Side: First Upload Zone and Single File Report -->
-            <div class="w-full md:w-1/2 md:pr-6">
-              <!-- Conditionally render Drop Zone or Code Summary -->
-              <template v-if="usStore.isComponentDisabled('us1')">
-                <USCodeSummary 
-                  componentId="us1" 
-                  :isRemoving="isRemovingFile.us1"
-                  @remove-file="handleRemoveFile" 
-                />
-              </template>
-              <template v-else>
-                <!-- Your Rates Upload Zone (Drop Zone Content) -->
-                <div
-                  class="relative border-2 rounded-xl p-6 h-[120px] flex items-center justify-center"
-                  :class="[
-                    isDraggingUs1
-                      ? 'border-emerald-400 bg-emerald-400/[0.07] border-solid'
-                      : !usStore.isComponentDisabled('us1') /* Keep hover state for dropzone */
-                        ? 'border-2 border-dashed border-white/15 hover:border-emerald-400/60 hover:bg-white/[0.03]'
-                        : '',
-                    usStore.isComponentUploading('us1')
-                      ? 'cursor-not-allowed'
-                      : usStore.isComponentUploading('us2')
-                        ? 'opacity-50 cursor-not-allowed border-gray-600' /* Dim if other is uploading */
-                        : !usStore.isComponentDisabled('us1')
-                          ? 'cursor-pointer'
-                          : '',
-                    /* Removed isComponentDisabled check for background as it's handled by v-if now */
-                    uploadError.us1 ? 'border-rose-500 border-solid border-2' : '',
-                  ]"
-                  @dragenter.prevent="handleDragEnterUs1"
-                  @dragleave.prevent="handleDragLeaveUs1"
-                  @dragover.prevent="handleDragOverUs1"
-                  @drop.prevent="handleDropUs1"
-                >
-                  <!-- File Input -->
-                  <input
-                    type="file"
-                    accept=".csv"
-                    class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                    :disabled="
-                      usStore.isComponentUploading('us1') ||
-                      usStore.isComponentUploading('us2') ||
-                      usStore.isComponentDisabled('us1')
-                    "
-                    @change="(e) => handleFileChange(e, 'us1')"
-                  />
-
-                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                    <!-- Uploading State -->
-                    <template v-if="usStore.isComponentUploading('us1')">
-                      <UploadProgressIndicator 
-                        :total-rows="uploadingFileRowCount.us1"
-                        :rows-per-second="14000"
-                        ref="progressIndicators.us1"
-                      />
-                    </template>
-
-                    <!-- Waiting State (if other is uploading) -->
-                    <template
-                      v-else-if="
-                        !usStore.isComponentDisabled('us1') && usStore.isComponentUploading('us2')
-                      "
-                    >
-                      <div class="flex-1 flex items-center justify-center w-full">
-                        <p class="text-sm text-zinc-500">
-                          Please wait for the other file to finish processing...
-                        </p>
-                      </div>
-                    </template>
-
-                    <!-- Default/Empty State -->
-                    <template v-else>
-                      <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2 text-emerald-400 border-white/10 bg-white/[0.03]"
-                      />
-                      <p class="mt-2 text-sm text-zinc-400">
-                        DRAG &amp; DROP or CLICK to upload
-                      </p>
-                      <p
-                        v-if="uploadError.us1"
-                        class="mt-1 text-sm text-rose-400"
-                      >
-                        {{ uploadError.us1 }}
-                      </p>
-                    </template>
-                  </div>
-                </div>
-              </template>
-            </div>
-
-            <!-- Vertical Divider - hidden on mobile, shown on desktop -->
-            <div class="hidden md:block mx-4 border-l border-white/10"></div>
-
-            <!-- Right Side: Second Upload Zone -->
-            <div class="w-full md:w-1/2 md:pl-6">
-              <!-- Conditionally render Drop Zone or Code Summary for us2 -->
-              <template v-if="usStore.isComponentDisabled('us2')">
-                <USCodeSummary 
-                  componentId="us2" 
-                  :isRemoving="isRemovingFile.us2"
-                  @remove-file="handleRemoveFile" 
-                />
-              </template>
-              <template v-else>
-                <!-- Prospect's Rates Upload Zone (Drop Zone Content) -->
-                <div
-                  class="relative border-2 rounded-xl p-6 h-[120px] flex items-center justify-center"
-                  :class="[
-                    isDraggingUs2
-                      ? 'border-emerald-400 bg-emerald-400/[0.07] border-solid'
-                      : !usStore.isComponentDisabled('us2') /* Keep hover state for dropzone */
-                        ? 'border-2 border-dashed border-white/15 hover:border-emerald-400/60 hover:bg-white/[0.03]'
-                        : '',
-                    usStore.isComponentUploading('us2')
-                      ? 'cursor-not-allowed'
-                      : usStore.isComponentUploading('us1')
-                        ? 'opacity-50 cursor-not-allowed border-gray-600' /* Dim if other is uploading */
-                        : !usStore.isComponentDisabled('us2')
-                          ? 'cursor-pointer'
-                          : '',
-                    /* Removed isComponentDisabled check for background as it's handled by v-if now */
-                    uploadError.us2 ? 'border-rose-500 border-solid border-2' : '',
-                  ]"
-                  @dragenter.prevent="handleDragEnterUs2"
-                  @dragleave.prevent="handleDragLeaveUs2"
-                  @dragover.prevent="handleDragOverUs2"
-                  @drop.prevent="handleDropUs2"
-                >
-                  <!-- File Input -->
-                  <input
-                    type="file"
-                    accept=".csv"
-                    class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                    :disabled="
-                      usStore.isComponentUploading('us2') ||
-                      usStore.isComponentUploading('us1') ||
-                      usStore.isComponentDisabled('us2')
-                    "
-                    @change="(e) => handleFileChange(e, 'us2')"
-                  />
-
-                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                    <!-- Uploading State -->
-                    <template v-if="usStore.isComponentUploading('us2')">
-                      <UploadProgressIndicator 
-                        :total-rows="uploadingFileRowCount.us2"
-                        :rows-per-second="14000"
-                        ref="progressIndicators.us2"
-                      />
-                    </template>
-
-                    <!-- Waiting State (if other is uploading) -->
-                    <template
-                      v-else-if="
-                        !usStore.isComponentDisabled('us2') && usStore.isComponentUploading('us1')
-                      "
-                    >
-                      <div class="flex-1 flex items-center justify-center w-full">
-                        <p class="text-sm text-zinc-500">
-                          Please wait for the other file to finish processing...
-                        </p>
-                      </div>
-                    </template>
-
-                    <!-- Default/Empty State -->
-                    <template v-else>
-                      <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2 text-emerald-400 border-white/10 bg-white/[0.03]"
-                      />
-                      <p class="mt-2 text-sm text-zinc-400">
-                        DRAG &amp; DROP or CLICK to upload
-                      </p>
-                      <p
-                        v-if="uploadError.us2"
-                        class="mt-1 text-sm text-rose-400"
-                      >
-                        {{ uploadError.us2 }}
-                      </p>
-                    </template>
-                  </div>
-                </div>
-              </template>
-              <!-- Remove File Button & Old Summary (Removed) -->
-              <!--
-                <div class=\"flex justify-end mt-2\" v-if=\"usStore.isComponentDisabled(\'us2\')\">
-                   <button @click=\"handleRemoveFile(\'us2\')\" class=\"...\">...</button>
-                </div>
-                <USCodeSummary v-if=\"usStore.isComponentDisabled(\'us2\')\" componentId=\"us2\" />
-              -->
-            </div>
-          </div>
+    <!-- Upload Cards: Rate Deck A · VS · Rate Deck B -->
+    <div class="flex flex-col md:flex-row md:items-stretch gap-5 md:gap-4">
+      <!-- ===== Rate Deck A (us1) ===== -->
+      <div class="flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 flex flex-col">
+        <!-- Card header -->
+        <div class="flex items-center gap-3 mb-5">
+          <span
+            class="h-10 w-10 grid place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20"
+          >
+            <DocumentTextIcon class="h-5 w-5 text-emerald-400" />
+          </span>
+          <h3 class="text-base font-semibold text-white">Rate Deck A</h3>
         </div>
 
-        <!-- Reports Button Container -->
-        <div v-if="usStore.isFull" class="border-t border-white/10">
-          <div class="flex justify-end mt-8">
-            <!-- Use BaseButton for Get Reports -->
-            <BaseButton
-              variant="primary"
-              size="standard"
-              :icon="ArrowRightIcon"
-              @click="handleReportsAction"
-              :loading="isGeneratingReports"
+        <!-- Uploaded confirmation (full report lives in the tabs after Start Analysis) -->
+        <template v-if="usStore.isComponentDisabled('us1')">
+          <div
+            class="flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-6 min-h-[200px]"
+          >
+            <span
+              class="h-12 w-12 grid place-items-center rounded-full bg-emerald-400/10 ring-1 ring-emerald-400/20"
             >
-              {{ reportsButtonText }}
-            </BaseButton>
+              <CheckCircleIcon class="h-7 w-7 text-emerald-400" />
+            </span>
+            <p
+              class="mt-3 text-sm font-medium text-white max-w-full truncate px-2"
+              :title="usStore.getFileNameByComponent('us1')"
+            >
+              {{ usStore.getFileNameByComponent('us1') }}
+            </p>
+            <p class="mt-1 text-xs text-zinc-400">
+              {{ (usStore.getFileStats('us1')?.totalCodes || 0).toLocaleString() }} codes · ready
+            </p>
+            <button
+              type="button"
+              @click="handleRemoveFile('us1')"
+              :disabled="isRemovingFile.us1"
+              class="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+            >
+              <ArrowPathIcon v-if="isRemovingFile.us1" class="h-3.5 w-3.5 animate-spin" />
+              <TrashIcon v-else class="h-3.5 w-3.5" />
+              Remove
+            </button>
           </div>
+        </template>
+        <template v-else>
+          <!-- Drop Zone -->
+          <div
+            class="relative flex-1 border-2 rounded-xl p-6 min-h-[200px] flex items-center justify-center transition-colors"
+            :class="[
+              isDraggingUs1
+                ? 'border-emerald-400 bg-emerald-400/[0.07] border-solid'
+                : 'border-dashed border-white/15 hover:border-emerald-400/50 hover:bg-white/[0.02]',
+              usStore.isComponentUploading('us1')
+                ? 'cursor-not-allowed'
+                : usStore.isComponentUploading('us2')
+                  ? 'opacity-50 cursor-not-allowed border-white/10' /* Dim if other is uploading */
+                  : 'cursor-pointer',
+              uploadError.us1 ? 'border-rose-500 border-solid' : '',
+            ]"
+            @dragenter.prevent="handleDragEnterUs1"
+            @dragleave.prevent="handleDragLeaveUs1"
+            @dragover.prevent="handleDragOverUs1"
+            @drop.prevent="handleDropUs1"
+          >
+            <!-- File Input (overlays the whole zone — keeps click-anywhere-to-upload) -->
+            <input
+              type="file"
+              accept=".csv"
+              class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+              :disabled="
+                usStore.isComponentUploading('us1') ||
+                usStore.isComponentUploading('us2') ||
+                usStore.isComponentDisabled('us1')
+              "
+              @change="(e) => handleFileChange(e, 'us1')"
+            />
+
+            <div class="flex flex-col items-center justify-center w-full h-full text-center">
+              <!-- Uploading State -->
+              <template v-if="usStore.isComponentUploading('us1')">
+                <UploadProgressIndicator
+                  :total-rows="uploadingFileRowCount.us1"
+                  :rows-per-second="14000"
+                  ref="progressIndicators.us1"
+                />
+              </template>
+
+              <!-- Waiting State (if other is uploading) -->
+              <template v-else-if="usStore.isComponentUploading('us2')">
+                <p class="text-sm text-zinc-500">
+                  Please wait for the other file to finish processing...
+                </p>
+              </template>
+
+              <!-- Default/Empty State -->
+              <template v-else>
+                <CloudArrowUpIcon class="h-10 w-10 text-emerald-400" />
+                <p class="mt-3 text-sm text-zinc-300">Drag &amp; drop your CSV file here</p>
+                <p class="mt-1 text-xs text-zinc-600">or</p>
+                <span
+                  class="mt-3 inline-flex items-center rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2 text-sm font-medium text-zinc-200"
+                >
+                  Browse Files
+                </span>
+                <p v-if="uploadError.us1" class="mt-3 text-sm text-rose-400">
+                  {{ uploadError.us1 }}
+                </p>
+              </template>
+            </div>
+          </div>
+          <!-- Footer -->
+          <div class="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+            <DocumentIcon class="h-3.5 w-3.5" />
+            CSV files only (max 50MB)
+          </div>
+        </template>
+      </div>
+
+      <!-- ===== VS medallion ===== -->
+      <div class="self-center shrink-0 py-1 md:py-0">
+        <span
+          class="h-11 w-11 grid place-items-center rounded-full border border-dashed border-white/15 bg-ink text-[11px] font-secondary font-semibold tracking-wider text-zinc-400"
+        >
+          VS
+        </span>
+      </div>
+
+      <!-- ===== Rate Deck B (us2) ===== -->
+      <div class="flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 flex flex-col">
+        <!-- Card header -->
+        <div class="flex items-center gap-3 mb-5">
+          <span
+            class="h-10 w-10 grid place-items-center rounded-xl bg-violet-400/10 ring-1 ring-violet-400/20"
+          >
+            <DocumentTextIcon class="h-5 w-5 text-violet-400" />
+          </span>
+          <h3 class="text-base font-semibold text-white">Rate Deck B</h3>
         </div>
+
+        <!-- Uploaded confirmation (full report lives in the tabs after Start Analysis) -->
+        <template v-if="usStore.isComponentDisabled('us2')">
+          <div
+            class="flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-violet-400/20 bg-violet-400/[0.04] p-6 min-h-[200px]"
+          >
+            <span
+              class="h-12 w-12 grid place-items-center rounded-full bg-violet-400/10 ring-1 ring-violet-400/20"
+            >
+              <CheckCircleIcon class="h-7 w-7 text-violet-400" />
+            </span>
+            <p
+              class="mt-3 text-sm font-medium text-white max-w-full truncate px-2"
+              :title="usStore.getFileNameByComponent('us2')"
+            >
+              {{ usStore.getFileNameByComponent('us2') }}
+            </p>
+            <p class="mt-1 text-xs text-zinc-400">
+              {{ (usStore.getFileStats('us2')?.totalCodes || 0).toLocaleString() }} codes · ready
+            </p>
+            <button
+              type="button"
+              @click="handleRemoveFile('us2')"
+              :disabled="isRemovingFile.us2"
+              class="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+            >
+              <ArrowPathIcon v-if="isRemovingFile.us2" class="h-3.5 w-3.5 animate-spin" />
+              <TrashIcon v-else class="h-3.5 w-3.5" />
+              Remove
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <!-- Drop Zone -->
+          <div
+            class="relative flex-1 border-2 rounded-xl p-6 min-h-[200px] flex items-center justify-center transition-colors"
+            :class="[
+              isDraggingUs2
+                ? 'border-violet-400 bg-violet-400/[0.07] border-solid'
+                : 'border-dashed border-white/15 hover:border-violet-400/50 hover:bg-white/[0.02]',
+              usStore.isComponentUploading('us2')
+                ? 'cursor-not-allowed'
+                : usStore.isComponentUploading('us1')
+                  ? 'opacity-50 cursor-not-allowed border-white/10' /* Dim if other is uploading */
+                  : 'cursor-pointer',
+              uploadError.us2 ? 'border-rose-500 border-solid' : '',
+            ]"
+            @dragenter.prevent="handleDragEnterUs2"
+            @dragleave.prevent="handleDragLeaveUs2"
+            @dragover.prevent="handleDragOverUs2"
+            @drop.prevent="handleDropUs2"
+          >
+            <!-- File Input (overlays the whole zone — keeps click-anywhere-to-upload) -->
+            <input
+              type="file"
+              accept=".csv"
+              class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+              :disabled="
+                usStore.isComponentUploading('us2') ||
+                usStore.isComponentUploading('us1') ||
+                usStore.isComponentDisabled('us2')
+              "
+              @change="(e) => handleFileChange(e, 'us2')"
+            />
+
+            <div class="flex flex-col items-center justify-center w-full h-full text-center">
+              <!-- Uploading State -->
+              <template v-if="usStore.isComponentUploading('us2')">
+                <UploadProgressIndicator
+                  :total-rows="uploadingFileRowCount.us2"
+                  :rows-per-second="14000"
+                  ref="progressIndicators.us2"
+                />
+              </template>
+
+              <!-- Waiting State (if other is uploading) -->
+              <template v-else-if="usStore.isComponentUploading('us1')">
+                <p class="text-sm text-zinc-500">
+                  Please wait for the other file to finish processing...
+                </p>
+              </template>
+
+              <!-- Default/Empty State -->
+              <template v-else>
+                <CloudArrowUpIcon class="h-10 w-10 text-violet-400" />
+                <p class="mt-3 text-sm text-zinc-300">Drag &amp; drop your CSV file here</p>
+                <p class="mt-1 text-xs text-zinc-600">or</p>
+                <span
+                  class="mt-3 inline-flex items-center rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2 text-sm font-medium text-zinc-200"
+                >
+                  Browse Files
+                </span>
+                <p v-if="uploadError.us2" class="mt-3 text-sm text-rose-400">
+                  {{ uploadError.us2 }}
+                </p>
+              </template>
+            </div>
+          </div>
+          <!-- Footer -->
+          <div class="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+            <DocumentIcon class="h-3.5 w-3.5" />
+            CSV files only (max 50MB)
+          </div>
+        </template>
       </div>
     </div>
+
+    <!-- Analysis is triggered by the "Start Analysis" button in UsView (see defineExpose below). -->
+
 
     <!-- Preview Modal -->
     <PreviewModal
@@ -260,13 +291,14 @@ This action cannot be undone.`"
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, computed } from 'vue';
+  import { ref, reactive } from 'vue';
   import {
-    ArrowUpTrayIcon,
+    CloudArrowUpIcon,
+    DocumentTextIcon,
     DocumentIcon,
     TrashIcon,
-    ArrowRightIcon,
     ArrowPathIcon,
+    CheckCircleIcon,
   } from '@heroicons/vue/24/outline';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import BaseButton from '@/components/shared/BaseButton.vue';
@@ -286,7 +318,6 @@ This action cannot be undone.`"
   } from '@/types/domains/us-types';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
-  import USCodeSummary from '@/components/us/USCodeSummary.vue';
   import USComparisonWorker from '@/workers/us-comparison.worker?worker';
   import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
@@ -303,11 +334,8 @@ This action cannot be undone.`"
   const service = new USService();
   const lergStore = useLergStoreV2();
 
-  // Computed property for the reports button text
-  const reportsButtonText = computed(() => {
-    return isGeneratingReports.value ? 'GENERATING REPORTS' : 'Get Reports';
-  });
-
+  // Expose the report-generation trigger so UsView's "Start Analysis" button can invoke it.
+  defineExpose({ generateReports: handleReportsAction });
 
   // Component state
   const isGeneratingReports = ref<boolean>(false);
