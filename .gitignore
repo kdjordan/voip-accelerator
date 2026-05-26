@@ -37,6 +37,8 @@ coverage
 *.js
 !*.config.js
 *.js.map
+# compiled from drizzle.config.ts (drizzle-kit reads the .ts directly)
+server/drizzle.config.js
 
 # TypeScript artifacts
 *.tsbuildinfo
