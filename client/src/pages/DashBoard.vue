@@ -131,7 +131,8 @@
             <p class="text-sm text-gray-400">Compare and analyze NPANXX rate decks</p>
           </button>
 
-          <!-- AZ Reporting -->
+          <!-- AZ Reporting — HIDDEN for US-NPANXX focus (reversible). To restore: uncomment. -->
+          <!--
           <button
             @click="$router.push('/azview')"
             class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
@@ -144,6 +145,7 @@
             </div>
             <p class="text-sm text-gray-400">Compare and analyze AZ rate decks</p>
           </button>
+          -->
 
           <!-- US Rate Wizard -->
           <button
@@ -159,7 +161,8 @@
             <p class="text-sm text-gray-400">Fine tune NPANXX rate decks</p>
           </button>
 
-          <!-- AZ Rate Wizard -->
+          <!-- AZ Rate Wizard — HIDDEN for US-NPANXX focus (reversible). To restore: uncomment. -->
+          <!--
           <button
             @click="$router.push('/az-rate-sheet')"
             class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
@@ -172,6 +175,7 @@
             </div>
             <p class="text-sm text-gray-400">Fine tune AZ rate decks</p>
           </button>
+          -->
 
           <!-- Rate Generation -->
           <button
@@ -226,7 +230,7 @@
   import BaseButton from '@/components/shared/BaseButton.vue';
   import {
     GlobeAmericasIcon,
-    GlobeAltIcon,
+    GlobeAltIcon, // retained for the hidden AZ Reporting quick action (see template)
     AdjustmentsVerticalIcon,
     SparklesIcon,
     ClockIcon

@@ -3,7 +3,7 @@ import {
   HomeIcon,
   DocumentChartBarIcon,
   GlobeAmericasIcon,
-  GlobeAltIcon,
+  GlobeAltIcon, // retained for the hidden AZ Reporting nav item (see below)
   WrenchScrewdriverIcon,
   AdjustmentsVerticalIcon,
   SparklesIcon,
@@ -25,11 +25,12 @@ export const appNavigationItems: NavigationItem[] = [
         href: '/usview',
         icon: GlobeAmericasIcon,
       },
-      {
-        name: 'AZ Reporting',
-        href: '/azview',
-        icon: GlobeAltIcon,
-      },
+      // A-Z (international) HIDDEN for US-NPANXX focus (reversible). To restore: uncomment.
+      // {
+      //   name: 'AZ Reporting',
+      //   href: '/azview',
+      //   icon: GlobeAltIcon,
+      // },
     ],
   },
   {
@@ -41,11 +42,12 @@ export const appNavigationItems: NavigationItem[] = [
         href: '/us-rate-sheet',
         icon: AdjustmentsVerticalIcon,
       },
-      {
-        name: 'AZ Rate Wizard',
-        href: '/az-rate-sheet',
-        icon: AdjustmentsVerticalIcon,
-      },
+      // A-Z (international) HIDDEN for US-NPANXX focus (reversible). To restore: uncomment.
+      // {
+      //   name: 'AZ Rate Wizard',
+      //   href: '/az-rate-sheet',
+      //   icon: AdjustmentsVerticalIcon,
+      // },
     ],
   },
   {
