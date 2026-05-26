@@ -247,9 +247,12 @@ export const DBSchemas = {
   // Schema for AZ Rate Sheet (formerly RATE_SHEET)
   [DBName.AZ_RATE_SHEET]:
     'entries: ++id, destinationName, code, rate, effectiveDate, minDuration, increments',
-  // Schema for US Rate Sheet (new) - CORRECTED
-  [DBName.US_RATE_SHEET]:
-    'entries: ++id, npanxx, stateCode, npa, nxx, *interRate, *intraRate, *indetermRate',
+  // Schema for US Rate Sheet (new).
+  // Rate fields are intentionally NOT indexed: no query filters/sorts on them at
+  // the DB level (rate stats run on in-memory arrays), and indexing them made
+  // every bulk rate adjustment re-maintain 3 multiEntry indexes per row — the
+  // dominant cost of Pricing Studio's Apply on large decks.
+  [DBName.US_RATE_SHEET]: 'entries: ++id, npanxx, stateCode, npa, nxx',
   [DBName.LERG]: 'enhanced_lerg: npa, country_code, country_name, state_province_code, state_province_name, region, category, source, confidence_score',
   [DBName.US_PRICING_COMPARISON]: `
     comparison_results: ++id, &npanxx,

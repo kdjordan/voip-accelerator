@@ -1,206 +1,204 @@
 <template>
-  <!-- Main Page Content -->
-  <div class="text-white pt-2 w-full">
-    <h1 class="mb-2 relative">
-      <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary"
-        >US Rate Sheet Wizard
-      </span>
-      <!-- Info Icon Button -->
-      <button
-        @click="openInfoModal"
-        class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
-        aria-label="Show usage information"
-      >
-        <!-- Apply dashboard styling -->
-        <div class="p-1 bg-blue-900/40 rounded-lg border border-blue-400/50 animate-pulse-info">
-          <InformationCircleIcon class="w-5 h-5 text-blue-400" />
-        </div>
-      </button>
-    </h1>
-
-    <!-- Stats Dashboard -->
-    <div class="bg-gray-800 rounded-lg overflow-hidden">
-      <!-- Header Section -->
-      <div class="p-6 border-b border-gray-700/50">
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 gap-4 mb-6">
-          <!-- Storage Status -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Storage Status</h3>
-              <div class="flex items-center space-x-2">
-                <div
-                  class="w-3 h-3 rounded-full"
-                  :class="[
-                    isLocallyStored
-                      ? 'bg-accent animate-status-pulse-success'
-                      : 'bg-warning animate-status-pulse-warning',
-                  ]"
-                ></div>
-                <span class="text-sm">{{ isLocallyStored ? 'Data Loaded' : 'No Data' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Total Records -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Total Records Processed</h3>
-              <div class="text-xl font-medium">
-                {{ store.getTotalRecords }}
-              </div>
-            </div>
-          </div>
-          <!-- Invalid Rows Section -->
-          <InvalidRows
-            v-if="store.hasInvalidRateSheetRows"
-            :items="usInvalidRowEntries"
-            title="Invalid Rows Not Uploaded"
-          />
-
-          <!-- Effective Date - Integrated Picker -->
-          <div>
-            <div class="flex justify-between items-center">
-              <h3 class="text-gray-400">Effective Date</h3>
-              <!-- Right side: Date Picker -->
-              <div v-if="isLocallyStored" class="flex flex-col items-end gap-1">
-                <input
-                  type="date"
-                  id="effective-date"
-                  v-model="selectedEffectiveDate"
-                  class="bg-gray-800 border border-gray-700 rounded text-sm px-3 py-2 text-white w-full"
-                  :min="minDate"
-                />
-                <BaseButton
-                  variant="primary"
-                  size="small"
-                  :disabled="!isDateChanged || store.isLoading"
-                  :icon="ArrowRightIcon"
-                  @click="handleApplyEffectiveDate"
-                  class="whitespace-nowrap"
-                >
-                  Apply
-                </BaseButton>
-              </div>
-              <div v-else class="text-sm text-gray-500 italic">Upload data first</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- File Upload Section -->
-        <div v-if="!isLocallyStored" class="mt-6">
-          <div
-            @dragenter.prevent="handleDragEnter"
-            @dragleave.prevent="handleDragLeave"
-            @dragover.prevent="handleDragOver"
-            @drop.prevent="handleDrop"
-            class="relative rounded-lg p-6 h-[120px] flex items-center justify-center transition-colors duration-200"
-            :class="[
-              isDragging && !isProcessing && !showPreviewModal
-                ? 'border-2 border-solid border-accent bg-fbWhite/10'
-                : 'border-2 border-dashed border-gray-600',
-              !isProcessing && !showPreviewModal
-                ? 'hover:border-accent-hover hover:bg-fbWhite/10'
-                : '',
-              isProcessing
-                ? 'cursor-not-allowed'
-                : !showPreviewModal
-                  ? 'cursor-pointer'
-                  : 'cursor-default',
-              uploadError ? 'border-2 border-solid border-red-500' : '',
-            ]"
-          >
-            <input
-              type="file"
-              accept=".csv"
-              class="absolute inset-0 opacity-0 w-full h-full"
-              :class="{ 'pointer-events-none': isProcessing || showPreviewModal }"
-              :disabled="isProcessing || showPreviewModal"
-              @change="handleFileChange"
-            />
-            <div class="flex flex-col h-full w-full">
-              <!-- Normal state -->
-              <template v-if="!isProcessing">
-                <div class="flex items-center justify-center w-full h-full">
-                  <div class="text-center">
-                    <ArrowUpTrayIcon
-                      class="w-10 h-10 mx-auto border rounded-full p-2"
-                      :class="
-                        uploadError
-                          ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                          : 'text-accent border-accent/50 bg-accent/10'
-                      "
-                    />
-                    <p class="mt-2 text-base" :class="uploadError ? 'text-red-500' : 'text-accent'">
-                      <template v-if="uploadError">
-                        <span>{{ uploadError }}</span>
-                      </template>
-                      <template v-else>
-                        <span>DRAG & DROP to upload or CLICK to select file</span>
-                      </template>
-                    </p>
-                    <p v-if="uploadError" class="mt-1 text-xs text-red-400">
-                      Please try again with a CSV file
-                    </p>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Uploading state -->
-              <template v-else>
-                <RealTimeProgressIndicator
-                  :is-uploading="store.getUploadProgress.isUploading"
-                  :progress="store.getUploadProgress.progress"
-                  :stage="store.getUploadProgress.stage"
-                  :rows-processed="store.getUploadProgress.rowsProcessed"
-                  :total-rows="store.getUploadProgress.totalRows"
-                />
-              </template>
-            </div>
-          </div>
-        </div>
-
-        <!-- Data Table Section -->
-        <div v-if="isLocallyStored" class="mt-6">
-          <USRateSheetTable />
-        </div>
+  <!-- Pricing Studio — browser-local rate-deck transformation workspace -->
+  <div class="text-zinc-300 pt-2 w-full">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-5 px-1">
+      <div class="flex items-center gap-3">
+        <h1 class="flex items-center gap-2 text-2xl md:text-3xl font-semibold text-white tracking-tight">
+          <BoltIcon class="h-6 w-6 text-emerald-400" aria-hidden="true" /> Pricing Studio
+        </h1>
+        <span
+          v-if="isLocallyStored"
+          class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-status-pulse-success"></span>
+          Data loaded
+        </span>
       </div>
 
-      <!-- Preview Modal -->
-      <PreviewModal
-        v-if="showPreviewModal"
-        :show-modal="showPreviewModal"
-        :columns="columns"
-        :preview-data="previewData"
-        :column-options="US_COLUMN_ROLE_OPTIONS"
-        :start-line="startLine"
-        :validate-required="false"
-        :source="'US'"
-        @update:mappings="handleMappingUpdate"
-        @update:valid="(newValid) => (isValid = newValid)"
-        @update:start-line="(newStartLine) => (startLine = newStartLine)"
-        @confirm="handleModalConfirm"
-        @cancel="handleModalCancel"
-      />
+      <p class="hidden md:flex items-center gap-1.5 text-sm text-zinc-500">
+        <LockClosedIcon class="h-3.5 w-3.5" aria-hidden="true" />
+        All processing is done locally in your browser.
+      </p>
+
+      <div class="ml-auto flex items-center gap-2 md:gap-3">
+        <button
+          @click="openInfoModal"
+          class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors"
+          aria-label="How Pricing Studio works"
+        >
+          <QuestionMarkCircleIcon class="w-4 h-4" /> How it works
+        </button>
+
+        <template v-if="isLocallyStored">
+          <div class="flex items-center gap-2">
+            <label for="effective-date" class="text-xs text-zinc-500 whitespace-nowrap">Effective Date</label>
+            <input
+              id="effective-date"
+              type="date"
+              v-model="selectedEffectiveDate"
+              :min="minDate"
+              @change="handleApplyEffectiveDate"
+              class="bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+            />
+          </div>
+
+          <button
+            @click="handleExportPackage"
+            :disabled="!readiness.exportReady"
+            class="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-ink hover:bg-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ArrowDownTrayIcon class="h-4 w-4" /> Export Package
+          </button>
+
+          <button
+            @click="requestReset"
+            class="inline-flex items-center gap-2 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm font-medium text-rose-300 hover:bg-rose-400/20 transition-colors"
+          >
+            Reset All
+          </button>
+        </template>
+      </div>
     </div>
+
+    <!-- Readiness strip -->
+    <PricingStudioMetricStrip v-if="isLocallyStored" :stats="readiness" class="mb-5 px-1" />
+
+    <!-- Invalid rows surfaced after upload -->
+    <InvalidRows
+      v-if="store.hasInvalidRateSheetRows"
+      :items="usInvalidRowEntries"
+      title="Invalid Rows Not Uploaded"
+      class="mb-5"
+    />
+
+    <!-- UPLOAD STATE -->
+    <div
+      v-if="!isLocallyStored"
+      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 md:p-8"
+    >
+      <div
+        @dragenter.prevent="handleDragEnter"
+        @dragleave.prevent="handleDragLeave"
+        @dragover.prevent="handleDragOver"
+        @drop.prevent="handleDrop"
+        class="relative rounded-xl p-8 min-h-[160px] flex items-center justify-center transition-colors duration-200"
+        :class="[
+          isDragging && !isProcessing && !showPreviewModal
+            ? 'border-2 border-solid border-emerald-400 bg-emerald-400/[0.06]'
+            : 'border-2 border-dashed border-white/15',
+          !isProcessing && !showPreviewModal
+            ? 'hover:border-emerald-400/50 hover:bg-white/[0.03] cursor-pointer'
+            : isProcessing
+              ? 'cursor-not-allowed'
+              : 'cursor-default',
+          uploadError ? 'border-2 border-solid border-rose-500/60' : '',
+        ]"
+      >
+        <input
+          type="file"
+          accept=".csv"
+          class="absolute inset-0 opacity-0 w-full h-full"
+          :class="{ 'pointer-events-none': isProcessing || showPreviewModal }"
+          :disabled="isProcessing || showPreviewModal"
+          @change="handleFileChange"
+        />
+        <template v-if="!isProcessing">
+          <div class="text-center">
+            <ArrowUpTrayIcon
+              class="w-12 h-12 mx-auto rounded-full p-3 border"
+              :class="
+                uploadError
+                  ? 'text-rose-400 border-rose-500/40 bg-rose-500/10'
+                  : 'text-emerald-400 border-emerald-400/30 bg-emerald-400/[0.08]'
+              "
+            />
+            <p class="mt-3 text-base font-medium" :class="uploadError ? 'text-rose-400' : 'text-white'">
+              <template v-if="uploadError">{{ uploadError }}</template>
+              <template v-else>Drag &amp; drop a rate deck to upload, or click to select</template>
+            </p>
+            <p class="mt-1 text-sm text-zinc-500">
+              {{ uploadError ? 'Please try again with a CSV file' : 'CSV rate sheet — parsed locally, never uploaded' }}
+            </p>
+          </div>
+        </template>
+        <template v-else>
+          <RealTimeProgressIndicator
+            :is-uploading="store.getUploadProgress.isUploading"
+            :progress="store.getUploadProgress.progress"
+            :stage="store.getUploadProgress.stage"
+            :rows-processed="store.getUploadProgress.rowsProcessed"
+            :total-rows="store.getUploadProgress.totalRows"
+          />
+        </template>
+      </div>
+
+      <!-- Local-processing trust note -->
+      <div class="mt-5 flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+        <LockClosedIcon class="h-5 w-5 text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <h3 class="text-sm font-semibold text-white">All data is stored in your browser</h3>
+          <p class="mt-1 text-sm text-zinc-500 leading-relaxed">
+            Your rate sheets never leave your device — parsing and pricing run entirely locally, and
+            the deck is cleared when you reload. We never upload or store your data.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKSPACE STATE -->
+    <div v-else>
+      <USRateSheetTable ref="tableRef" />
+    </div>
+
+    <!-- Preview Modal (column mapping) -->
+    <PreviewModal
+      v-if="showPreviewModal"
+      :show-modal="showPreviewModal"
+      :columns="columns"
+      :preview-data="previewData"
+      :column-options="US_COLUMN_ROLE_OPTIONS"
+      :start-line="startLine"
+      :validate-required="false"
+      :source="'US'"
+      @update:mappings="handleMappingUpdate"
+      @update:valid="(newValid) => (isValid = newValid)"
+      @update:start-line="(newStartLine) => (startLine = newStartLine)"
+      @confirm="handleModalConfirm"
+      @cancel="handleModalCancel"
+    />
 
     <!-- Info Modal -->
     <InfoModal :show-modal="showInfoModal" :type="'us_rate_sheet'" @close="closeInfoModal" />
+
+    <!-- Reset All confirmation (wipes the loaded deck + session) -->
+    <ConfirmationModal
+      v-model="showResetConfirm"
+      title="Reset Pricing Studio"
+      message="This clears the loaded rate deck and all session changes (frozen scopes and operations) from your browser. This cannot be undone."
+      confirm-button-text="Reset Everything"
+      :requires-confirmation-phrase="true"
+      confirmation-phrase="RESET"
+      @confirm="confirmReset"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, ref, onMounted, watch } from 'vue';
-  import BaseButton from '@/components/shared/BaseButton.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
+  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import PricingStudioMetricStrip from '@/components/rate-sheet/us/pricing-studio/PricingStudioMetricStrip.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   import {
     ArrowUpTrayIcon,
-    ArrowRightIcon,
-    InformationCircleIcon,
+    BoltIcon,
+    LockClosedIcon,
+    QuestionMarkCircleIcon,
   } from '@heroicons/vue/24/outline';
+  import { ArrowDownTrayIcon } from '@heroicons/vue/20/solid';
   import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
@@ -210,14 +208,31 @@
   import { USRateSheetService } from '@/services/us-rate-sheet.service';
   import { USColumnRole } from '@/types/domains/us-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+  import { usePricingStudioStore } from '@/stores/pricing-studio-store';
+  import { computeReadiness, type ReadinessStats } from '@/utils/pricing-engine';
   import { useDragDrop } from '@/composables/useDragDrop';
 
   const store = useUsRateSheetStore();
+  const psStore = usePricingStudioStore();
   const usRateSheetService = new USRateSheetService();
   const isLocallyStored = computed(() => store.getHasUsRateSheetData);
   const uploadError = ref<string | null>(store.getError);
   const rfUploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
   const isProcessing = computed(() => store.isLoading);
+
+  // Readiness strip stats (pure derivation; avg inter rate is fed by the table).
+  const readiness = computed<ReadinessStats>(() =>
+    computeReadiness({
+      totalRecords: store.getTotalRecords,
+      operations: psStore.operations,
+      freeze: psStore.freezeState,
+      avgInterRate: psStore.deckAvgInterRate,
+    })
+  );
+
+  // Workspace child exposes exportPackage()/resetAll() (added in Phase 5).
+  const tableRef = ref<InstanceType<typeof USRateSheetTable> | null>(null);
+  const showResetConfirm = ref(false);
 
   // Preview Modal state
   const showPreviewModal = ref(false);
@@ -234,13 +249,6 @@
   // Effective Date State
   const selectedEffectiveDate = ref<string>('');
   const minDate = computed(() => new Date().toISOString().split('T')[0]);
-
-  const isDateChanged = computed(() => {
-    const currentDate = store.getCurrentEffectiveDate;
-    const selectedDate = selectedEffectiveDate.value;
-    const isValidDateString = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate);
-    return isValidDateString && selectedDate !== currentDate;
-  });
 
   watch(
     () => store.getCurrentEffectiveDate,
@@ -268,7 +276,6 @@
     });
 
   onMounted(async () => {
-    console.log('[USRateSheetView] Skipping automatic data loading to prevent partial data display');
     store.setLoading(false);
   });
 
@@ -332,6 +339,9 @@
       return;
     }
 
+    // Fresh upload → clear any prior sculpting session.
+    psStore.reset();
+
     store.setLoading(true);
     store.setError(null);
     store.setUploadInProgress(true);
@@ -345,7 +355,7 @@
       let rowCount = 0;
       await new Promise<void>((resolve) => {
         Papa.parse(fileToProcess, {
-          step: (results) => {
+          step: () => {
             rowCount++;
           },
           complete: () => {
@@ -450,10 +460,26 @@
   }
 
   async function handleApplyEffectiveDate() {
-    if (!selectedEffectiveDate.value || !isDateChanged.value) {
+    const isValidDateString = /^\d{4}-\d{2}-\d{2}$/.test(selectedEffectiveDate.value);
+    if (!isValidDateString || selectedEffectiveDate.value === store.getCurrentEffectiveDate) {
       return;
     }
     await store.updateEffectiveDate(selectedEffectiveDate.value);
+  }
+
+  function requestReset() {
+    showResetConfirm.value = true;
+  }
+
+  async function confirmReset() {
+    showResetConfirm.value = false;
+    psStore.reset();
+    await store.clearUsRateSheetData();
+  }
+
+  function handleExportPackage() {
+    // Workspace owns the export logic (rate deck CSV + branded audit PDF); wired in Phase 5.
+    (tableRef.value as unknown as { exportPackage?: () => void } | null)?.exportPackage?.();
   }
 
   function openInfoModal() {

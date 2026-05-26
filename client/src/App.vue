@@ -121,7 +121,7 @@
   });
 
   // Redesigned data-dense views use a wider canvas than the default max-w-6xl.
-  const wideContentRoutes = ['/usview'];
+  const wideContentRoutes = ['/usview', '/us-rate-sheet', '/proto/pricing-studio'];
   const isWideContent = computed(() => wideContentRoutes.includes(route.path));
 
   onMounted(() => {

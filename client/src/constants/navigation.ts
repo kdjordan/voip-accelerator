@@ -14,7 +14,7 @@ import {
 export const appNavigationItems: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Reporting', href: '/usview', icon: DocumentChartBarIcon },
-  { name: 'Rate Wizard', href: '/us-rate-sheet', icon: WrenchScrewdriverIcon },
+  { name: 'Pricing Studio', href: '/us-rate-sheet', icon: WrenchScrewdriverIcon },
   { name: 'Rate Generation', href: '/rate-gen/us', icon: SparklesIcon },
   {
     name: 'Admin',

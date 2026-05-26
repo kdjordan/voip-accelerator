@@ -1,1032 +1,498 @@
 <template>
-  <div class="bg-gray-900/50 p-4 rounded-lg min-h-[400px]">
-    <!-- Averages Section -->
-    <div class="mb-6">
-      <h4 class="text-xs font-medium text-gray-400 uppercase mb-3">Rate Averages</h4>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- Interstate Average -->
-        <div class="bg-gray-800/60 p-3 rounded-lg text-center">
-          <p class="text-sm text-gray-400 mb-1">Inter Avg</p>
-          <div class="flex items-center justify-center min-h-[28px]">
-            <!-- Only show rate if NOT calculating AND value is not null -->
-            <p
-              v-if="!isCalculatingAverages && currentDisplayAverages.inter !== null"
-              class="text-lg font-semibold text-white font-mono mr-2"
-            >
-              {{ formatRate(animatedInterAvg) }}
-            </p>
-            <ArrowPathIcon
-              v-if="isCalculatingAverages"
-              class="w-4 h-4 text-gray-500 animate-spin"
-            />
-          </div>
+  <!-- Pricing Studio workspace: filters | command bar + table | operations -->
+  <div class="flex flex-col xl:flex-row gap-4">
+    <!-- LEFT: Filter panel -->
+    <aside class="xl:w-72 flex-shrink-0">
+      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-secondary uppercase tracking-wider text-zinc-400">Filters</h3>
+          <button
+            @click="handleClearAllFilters"
+            class="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+          >
+            <ArrowPathIcon class="h-3 w-3" /> Reset Filters
+          </button>
         </div>
-        <!-- Intrastate Average -->
-        <div class="bg-gray-800/60 p-3 rounded-lg text-center">
-          <p class="text-sm text-gray-400 mb-1">Intra Avg</p>
-          <div class="flex items-center justify-center min-h-[28px]">
-            <!-- Only show rate if NOT calculating AND value is not null -->
-            <p
-              v-if="!isCalculatingAverages && currentDisplayAverages.intra !== null"
-              class="text-lg font-semibold text-white font-mono mr-2"
-            >
-              {{ formatRate(animatedIntraAvg) }}
-            </p>
-            <ArrowPathIcon
-              v-if="isCalculatingAverages"
-              class="w-4 h-4 text-gray-500 animate-spin"
-            />
-          </div>
-        </div>
-        <!-- Indeterminate Average -->
-        <div class="bg-gray-800/60 p-3 rounded-lg text-center">
-          <p class="text-sm text-gray-400 mb-1">Indeterm Avg</p>
-          <div class="flex items-center justify-center min-h-[28px]">
-            <!-- Only show rate if NOT calculating AND value is not null -->
-            <p
-              v-if="!isCalculatingAverages && currentDisplayAverages.indeterm !== null"
-              class="text-lg font-semibold text-white font-mono mr-2"
-            >
-              {{ formatRate(animatedIndetermAvg) }}
-            </p>
-            <ArrowPathIcon
-              v-if="isCalculatingAverages"
-              class="w-4 h-4 text-gray-500 animate-spin"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Header Row -->
-    <div class="mb-4 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <h3 class="text-lg font-medium text-white">Filter Controls</h3>
-        <br />
-        <p v-if="!isDataLoading" class="text-sm text-gray-400">
-          Showing {{ displayedData.length }} of {{ totalFilteredItems }} NPANXX entries
-        </p>
-        <span v-else class="text-sm text-gray-400">Loading data...</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <BaseButton
-          variant="primary"
-          size="small"
-          :icon="ArrowDownTrayIcon"
-          :loading="isExporting"
-          :disabled="totalFilteredItems === 0 || isExporting || isApplyingAdjustment"
-          @click="handleOpenExportModal"
-          title="Export all loaded data (based on current filters)"
-        >
-          Export Rates
-        </BaseButton>
-        <BaseButton
-          variant="destructive"
-          size="small"
-          :icon="TrashIcon"
-          :loading="store.isLoading"
-          :disabled="store.isLoading"
-          @click="handleClearData"
-          title="Clear all rate sheet data"
-        >
-          Clear Data
-        </BaseButton>
-      </div>
-    </div>
-
-    <!-- Primary Filters Row -->
-    <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-      <!-- NPANXX Search -->
-      <div class="relative md:col-span-2">
-        <label for="npanxx-search" class="block text-xs font-medium text-gray-400 mb-1"
-          >Filter by NPANXX</label
-        >
-        <input
-          id="npanxx-search"
-          v-model="searchQuery"
-          type="text"
-          placeholder="e.g., 201, 301333..."
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
-        />
-      </div>
-
-      <!-- State Filter Dropdown -->
-      <div class="relative">
-        <label for="state-filter" class="block text-xs font-medium text-gray-400 mb-1"
-          >Filter by State/Province</label
-        >
-        <Listbox v-model="selectedState" as="div" id="state-filter">
-          <div class="relative mt-1">
-            <ListboxButton
-              class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
-              :disabled="availableStates.length === 0 || isDataLoading"
-            >
-              <span class="block truncate text-white">{{
-                selectedState
-                  ? getSelectedStateDisplayName(selectedState)
-                  : 'All States/Provinces'
-              }}</span>
-              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </span>
-            </ListboxButton>
-            <transition
-              leave-active-class="transition duration-100 ease-in"
-              leave-from-class="opacity-100"
-              leave-to-class="opacity-0"
-            >
-              <ListboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
-              >
-                <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
-                  <li
-                    :class="[
-                      active ? 'bg-gray-700 text-primary-400' : 'bg-gray-600 text-accent',
-                      'relative cursor-default select-none py-2 pl-10 pr-4',
-                    ]"
-                  >
-                    <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                      >All States/Provinces</span
-                    >
-                    <span
-                      v-if="selected"
-                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                    >
-                      <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  </li>
-                </ListboxOption>
-                <template v-for="group in groupedAvailableStates" :key="group.label">
-                  <li class="text-gray-500 px-4 py-2 text-xs uppercase select-none">
-                    {{ group.label }}
-                  </li>
-                  <!-- Group-level selection option -->
-                  <ListboxOption
-                    v-slot="{ active, selected }"
-                    :value="'GROUP_' + group.label.replace(/\s+/g, '_').toUpperCase()"
-                    as="template"
-                  >
-                    <li
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-6 pr-4 font-medium italic',
-                      ]"
-                    >
-                      <span :class="[selected ? 'font-bold' : 'font-medium', 'block truncate']"
-                        >All {{ group.label }}</span
-                      >
-                      <span
-                        v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-1 text-primary-400"
-                      >
-                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                      </span>
-                    </li>
-                  </ListboxOption>
-                  <!-- Individual region options -->
-                  <ListboxOption
-                    v-for="regionCode in group.codes"
-                    :key="regionCode"
-                    :value="regionCode"
-                    v-slot="{ active, selected }"
-                    as="template"
-                  >
-                    <li
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4',
-                      ]"
-                    >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                        >{{ getRegionDisplayName(regionCode) }} ({{ regionCode }})</span
-                      >
-                      <span
-                        v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                      >
-                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                      </span>
-                    </li>
-                  </ListboxOption>
-                </template>
-              </ListboxOptions>
-            </transition>
-          </div>
-        </Listbox>
-      </div>
-
-      <!-- Reset All Filters Button -->
-      <BaseButton
-        variant="secondary"
-        size="standard"
-        class="w-full"
-        :icon="XMarkIcon"
-        @click="handleClearAllFilters"
-        title="Reset NPANXX, State, and Metro Area filters"
-      >
-        Reset All Filters
-      </BaseButton>
-    </div>
-
-    <!-- Metro Area Filters Row -->
-    <div class="mb-4">
-      <label class="block text-xs font-medium text-gray-400 mb-2 uppercase"
-        >Filter by Metro Area</label
-      >
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center mb-3">
-        <!-- Metro Search with Toggle -->
-        <div class="md:col-span-1">
-          <label for="metro-search-input" class="sr-only">Search Metro Areas</label>
-          <div class="relative flex items-center">
-            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" />
-            </div>
+        <!-- NPA / NPANXX search -->
+        <div>
+          <label for="npanxx-search" class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">NPA / NPANXX</label>
+          <div class="relative">
+            <MagnifyingGlassIcon class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600" />
             <input
-              id="metro-search-input"
+              id="npanxx-search"
+              v-model="searchQuery"
+              type="text"
+              placeholder="e.g. 201, 301333…"
+              class="w-full bg-white/[0.03] border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <!-- State / Province / Country -->
+        <div>
+          <label for="state-filter" class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">State / Province / Country</label>
+          <select
+            id="state-filter"
+            v-model="selectedState"
+            class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+          >
+            <option value="">All States / Provinces / Countries</option>
+            <option value="GROUP_UNITED_STATES">All United States</option>
+            <option value="GROUP_CANADA">All Canada</option>
+            <option value="GROUP_OTHER_COUNTRIES">All Other Countries</option>
+            <optgroup
+              v-for="group in groupedAvailableStates"
+              :key="group.label"
+              :label="group.label"
+            >
+              <option v-for="code in group.codes" :key="code" :value="code">
+                {{ getRegionDisplayName(code) }} ({{ code }})
+              </option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Metro Area (compact) -->
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Metro Area</label>
+          <div class="relative">
+            <MagnifyingGlassIcon class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600" />
+            <input
               v-model="metroSearchQuery"
               type="text"
-              placeholder="Search metros..."
-              class="block w-full rounded-l-md border-0 py-2.5 pl-10 bg-gray-800 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm sm:leading-6"
+              placeholder="Search metros…"
+              @focus="isMetroAreaVisible = true"
+              class="w-full bg-white/[0.03] border border-white/10 rounded-lg pl-8 pr-8 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
             />
             <button
               @click="isMetroAreaVisible = !isMetroAreaVisible"
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
-              aria-label="Toggle metro area list"
-              title="Toggle metro area list"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+              aria-label="Toggle metro list"
             >
-              <ChevronDownIcon
-                :class="{ 'rotate-180 transform': isMetroAreaVisible }"
-                class="w-5 h-5 transition-transform duration-200"
-              />
+              <ChevronDownIcon class="h-4 w-4 transition-transform" :class="{ 'rotate-180': isMetroAreaVisible }" />
+            </button>
+          </div>
+
+          <!-- Quick selects -->
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <button
+              v-for="n in [10, 25]"
+              :key="n"
+              @click="selectTopNMetros(n)"
+              class="text-[11px] px-2 py-1 rounded border border-white/10 text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200 transition-colors"
+            >
+              Top {{ n }}
             </button>
             <button
-              v-if="metroSearchQuery"
-              @click="clearMetroSearch"
-              class="absolute inset-y-0 right-12 flex items-center pr-3 text-gray-400 hover:text-white mr-1"
-              aria-label="Clear metro search"
-              title="Clear metro search"
+              v-if="selectedMetros.length"
+              @click="clearAllSelectedMetros"
+              class="text-[11px] px-2 py-1 rounded border border-white/10 text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200 transition-colors"
             >
-              <XCircleIcon class="h-4 w-4" />
+              Clear
+            </button>
+          </div>
+
+          <!-- Collapsible list -->
+          <transition name="fade">
+            <div
+              v-if="isMetroAreaVisible"
+              class="mt-2 max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] divide-y divide-white/[0.05]"
+            >
+              <button
+                v-for="metro in filteredMetroOptions"
+                :key="metro.key"
+                @click="toggleMetroSelection(metro)"
+                class="w-full flex items-center justify-between px-2.5 py-1.5 text-left text-xs hover:bg-white/[0.04] transition-colors"
+                :class="isMetroSelected(metro) ? 'text-emerald-300' : 'text-zinc-300'"
+              >
+                <span class="truncate">{{ metro.displayName }}</span>
+                <CheckIcon v-if="isMetroSelected(metro)" class="h-3.5 w-3.5 flex-shrink-0" />
+              </button>
+              <p v-if="!filteredMetroOptions.length" class="px-2.5 py-2 text-xs text-zinc-600">No metros match.</p>
+            </div>
+          </transition>
+
+          <!-- Selected chips -->
+          <div v-if="selectedMetros.length" class="mt-2 flex flex-wrap gap-1.5">
+            <span
+              v-for="metro in chipMetros"
+              :key="metro.key"
+              class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] pl-2 pr-1 py-0.5 text-[11px] text-zinc-300"
+            >
+              {{ metro.displayName }}
+              <button @click="removeSelectedMetro(metro)" class="text-zinc-500 hover:text-zinc-200" aria-label="Remove metro">
+                <XMarkIcon class="h-3 w-3" />
+              </button>
+            </span>
+            <span v-if="selectedMetros.length > 3" class="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] text-zinc-400">
+              +{{ selectedMetros.length - 3 }} more
+            </span>
+          </div>
+        </div>
+
+        <!-- Rate jurisdiction (drives the adjustment target) -->
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Rate Jurisdiction</label>
+          <div class="grid grid-cols-4 gap-1">
+            <button
+              v-for="opt in adjustmentTargetRateOptions"
+              :key="opt.value"
+              @click="adjustmentTargetRate = opt.value"
+              class="text-[11px] px-1.5 py-1.5 rounded border transition-colors"
+              :class="
+                adjustmentTargetRate === opt.value
+                  ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
+                  : 'border-white/10 text-zinc-400 hover:bg-white/[0.05]'
+              "
+            >
+              {{ opt.short }}
             </button>
           </div>
         </div>
 
-        <!-- Metro Action Buttons -->
-        <div class="md:col-span-2 flex flex-wrap items-center justify-start md:justify-end gap-2">
-          <BaseButton
-            variant="secondary-outline"
-            size="small"
-            @click="() => selectTopNMetros(10)"
-            :disabled="filteredMetroOptions.length === 0 || isDataLoading"
-            title="Select the top 10 visible metro areas by population (if available)"
-          >
-            Select Top 10
-          </BaseButton>
-          <BaseButton
-            variant="secondary-outline"
-            size="small"
-            @click="() => selectTopNMetros(25)"
-            :disabled="filteredMetroOptions.length === 0 || isDataLoading"
-            title="Select the top 25 visible metro areas by population (if available)"
-          >
-            Select Top 25
-          </BaseButton>
-          <BaseButton
-            variant="secondary"
-            size="small"
-            :disabled="filteredMetroOptions.length === 0 || isDataLoading"
-            :title="
-              areAllMetrosSelected
-                ? 'Deselect all visible metro areas'
-                : 'Select all visible metro areas'
-            "
-            @click="handleSelectAllMetros"
-          >
-            {{ areAllMetrosSelected ? 'Deselect All' : 'Select All' }}
-          </BaseButton>
-          <BaseButton
-            v-if="selectedMetros.length > 0"
-            variant="secondary-outline"
-            size="small"
-            :disabled="isDataLoading"
-            title="Clear all selected metro areas"
-            @click="clearAllSelectedMetros"
-          >
-            Clear Selected ({{ selectedMetros.length }})
-          </BaseButton>
+        <!-- Export filtered rates -->
+        <button
+          @click="exportRatesCsv"
+          :disabled="totalFilteredItems === 0 || isExporting"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.06] px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ArrowDownTrayIcon class="h-4 w-4" /> Export Rates
+        </button>
+
+        <!-- Local storage trust note -->
+        <div class="flex items-start gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+          <LockClosedIcon class="h-4 w-4 text-zinc-500 flex-shrink-0 mt-0.5" />
+          <p class="text-[11px] text-zinc-500 leading-relaxed">
+            All data is stored in your browser. Your rate sheets never leave your device.
+          </p>
         </div>
       </div>
+    </aside>
 
-      <!-- Collapsible Metro list display area -->
-      <transition name="slide-fade">
+    <!-- CENTER: command bar + preview + table -->
+    <div class="flex-1 min-w-0 space-y-4">
+      <!-- Command bar -->
+      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+        <h3 class="text-xs font-secondary uppercase tracking-wider text-zinc-400 mb-3">Create Pricing Adjustment</h3>
 
-        <div
-          v-if="isMetroAreaVisible"
-          class="overflow-y-auto max-h-48 border border-gray-700 rounded-md bg-gray-700/30 p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
-        >
-          <template v-if="filteredMetroOptions.length > 0">
-            <div
-              v-for="metro in filteredMetroOptions"
-              :key="metro.key"
-              @click="() => toggleMetroSelection(metro)"
-              class="flex flex-col items-start p-2.5 hover:bg-gray-600/50 cursor-pointer rounded-md border border-gray-600 h-full"
-              :class="{
-                'bg-primary-500/10 hover:bg-primary-500/20 border-primary-500/50':
-                  isMetroSelected(metro),
-                'bg-gray-700/50 hover:bg-gray-600/70': !isMetroSelected(metro),
-              }"
-            >
-              <div class="flex items-center justify-between w-full">
-                <div class="flex items-center overflow-hidden mr-2">
-                  <input
-                    type="checkbox"
-                    :id="`metro-checkbox-${metro.key}`"
-                    :checked="isMetroSelected(metro)"
-                    class="h-4 w-4 rounded border-gray-500 text-primary-500 focus:ring-primary-400 focus:ring-offset-gray-700 bg-gray-800 mr-2.5 cursor-pointer"
-                    @click.stop
-                    @change="() => toggleMetroSelection(metro)"
-                  />
-                  <label
-                    :for="`metro-checkbox-${metro.key}`"
-                    :class="[
-                      isMetroSelected(metro)
-                        ? 'font-semibold text-primary-300'
-                        : 'font-normal text-gray-100',
-                      'text-sm cursor-pointer line-clamp-1',
-                    ]"
-                    :title="metro.displayName"
-                  >
-                    {{ metro.displayName }}
-                  </label>
-                </div>
-                <BaseBadge variant="neutral" size="small">{{
-                  formatPopulation(metro.population)
-                }}</BaseBadge>
-              </div>
-            </div>
-          </template>
-          <div
-            v-else-if="metroSearchQuery"
-            class="p-4 text-sm text-gray-500 text-center col-span-full"
-          >
-            No metro areas match your search.
+        <!-- Declarative sentence -->
+        <p class="mb-4 text-sm text-zinc-400 leading-relaxed">
+          <span class="font-secondary font-semibold uppercase text-emerald-400">{{ adjustmentType }}</span>
+          <span class="font-secondary text-white"> {{ valuePhrase }} </span>
+          <span class="text-zinc-500">on</span>
+          <span class="text-zinc-200"> {{ targetLabel(adjustmentTargetRate) }} </span>
+          <span class="text-zinc-500">for</span>
+          <span class="text-zinc-200"> {{ scopeLabel }}</span>
+        </p>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+          <!-- Operation -->
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Operation</label>
+            <select v-model="adjustmentType" class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60">
+              <option v-for="o in adjustmentTypeOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
           </div>
-          <div v-else class="p-4 text-sm text-gray-500 text-center col-span-full">
-            No metro areas available.
+          <!-- Method -->
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Method</label>
+            <select v-model="adjustmentValueType" :disabled="adjustmentType === 'set'" class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/60 disabled:opacity-50" :class="adjustmentType === 'set' ? 'text-zinc-500' : 'text-white'">
+              <option v-for="o in adjustmentValueTypeOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </div>
+          <!-- Value -->
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Value</label>
+            <input v-model.number="adjustmentValue" type="number" min="0" step="any" placeholder="0" class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-400/60" />
+          </div>
+          <!-- Target -->
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Target Rate</label>
+            <select v-model="adjustmentTargetRate" class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60">
+              <option v-for="o in adjustmentTargetRateOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </div>
+          <!-- Preview -->
+          <button
+            @click="handlePreview"
+            :disabled="!canAdjust"
+            class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <EyeIcon class="h-4 w-4" /> Preview
+          </button>
+          <!-- Apply + Freeze -->
+          <button
+            @click="handleApplyAndFreeze"
+            :disabled="!canAdjust || isApplyingAdjustment"
+            class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-ink hover:bg-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ArrowPathIcon v-if="isApplyingAdjustment" class="h-4 w-4 animate-spin" />
+            <LockClosedIcon v-else class="h-4 w-4" />
+            Apply + Freeze
+          </button>
+        </div>
+
+        <!-- Preview impact card -->
+        <div v-if="previewImpact" class="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+          <div class="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Preview Impact</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Rows Affected</p>
+              <p class="font-secondary text-white">{{ fmtInt(previewImpact.rowsAffected) }}
+                <span class="text-xs text-zinc-500">{{ pctOfTotal(previewImpact.rowsAffected) }}</span>
+              </p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-zinc-500">NPAs Affected</p>
+              <p class="font-secondary text-white">{{ fmtInt(previewImpact.npasAffected) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Frozen Rows Excluded</p>
+              <p class="font-secondary text-violet-300">{{ fmtInt(previewImpact.frozenRowsExcluded) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Avg Delta</p>
+              <p class="font-secondary text-emerald-400">{{ avgDeltaLabel }}</p>
+            </div>
+            <p class="ml-auto inline-flex items-center gap-1.5 text-xs text-zinc-500">
+              <LockClosedIcon class="h-3.5 w-3.5" /> Existing frozen rows will not be changed
+            </p>
           </div>
         </div>
-      </transition>
 
-      <!-- Metro Filter Summary -->
-      <div v-if="selectedMetros.length > 0" class="bg-gray-800/60 p-3 rounded-lg text-sm my-4">
-        <div class="flex justify-between items-center mb-2">
-          <p class="text-gray-300">
-            <span class="font-semibold">{{ selectedMetros.length }}</span> metro area(s) selected.
+        <!-- Feedback -->
+        <div v-if="adjustmentStatusMessage || adjustmentError" class="mt-3 text-xs">
+          <p v-if="adjustmentStatusMessage" class="text-emerald-400">{{ adjustmentStatusMessage }}</p>
+          <p v-if="adjustmentError" class="text-rose-400">Error: {{ adjustmentError }}</p>
+        </div>
+      </div>
+
+      <!-- Table card -->
+      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/[0.06]">
+          <p v-if="!isDataLoading" class="text-sm text-zinc-500">
+            Showing <span class="font-secondary text-zinc-300">{{ displayedData.length }}</span>
+            of <span class="font-secondary text-zinc-300">{{ totalFilteredItems.toLocaleString() }}</span> rows
           </p>
-          <p class="text-gray-300">
-            Total Affected Population:
-            <span class="font-semibold text-white">{{
-              totalSelectedPopulation.toLocaleString()
-            }}</span>
-          </p>
-        </div>
-        <div
-          v-if="targetedNPAsDisplay.summary"
-          class="text-xs text-gray-400 pt-2 border-t border-gray-700/50"
-          :title="targetedNPAsDisplay.fullList"
-        >
-          {{ targetedNPAsDisplay.summary }}
-        </div>
-      </div>
-    </div>
+          <span v-else class="text-sm text-zinc-500">Loading…</span>
 
-    <!-- Rate Adjustment Section -->
-    <div class="bg-gray-900/50 p-4 rounded-lg mb-4">
-      <h4 class="text-sm font-medium text-gray-300 mb-4">
-        Apply Rate Adjustments (to Filtered Results)
-      </h4>
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-        <!-- Adjustment Type -->
-        <div class="relative">
-          <Listbox v-model="adjustmentType" as="div">
-            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
-              >Adjustment</ListboxLabel
+          <div class="flex items-center gap-2">
+            <label for="status-filter" class="text-xs text-zinc-500">Show</label>
+            <select
+              id="status-filter"
+              v-model="statusFilter"
+              class="bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
             >
-            <div class="relative mt-1">
-              <ListboxButton
-                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
-              >
-                <span class="block truncate text-white">{{ selectedAdjustmentTypeLabel }}</span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-                </span>
-              </ListboxButton>
-              <transition
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-              >
-                <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
-                >
-                  <ListboxOption
-                    v-for="option in adjustmentTypeOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    v-slot="{ active, selected }"
-                    as="template"
-                  >
-                    <li
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4',
-                      ]"
-                    >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
-                        option.label
-                      }}</span>
-                      <span
-                        v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                      >
-                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                      </span>
-                    </li>
-                  </ListboxOption>
-                </ListboxOptions>
-              </transition>
+              <option value="all">All Rows</option>
+              <option value="modified">Modified</option>
+              <option value="frozen">Frozen</option>
+              <option value="original">Original</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto overflow-y-auto max-h-[600px] relative min-h-[280px]">
+          <transition name="fade">
+            <div v-if="isFiltering" class="absolute inset-0 bg-ink/60 flex items-center justify-center z-20">
+              <ArrowPathIcon class="animate-spin w-7 h-7 text-emerald-400" />
             </div>
-          </Listbox>
-        </div>
+          </transition>
 
-        <!-- Value Type -->
-        <div class="relative">
-          <Listbox v-model="adjustmentValueType" as="div">
-            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1">By</ListboxLabel>
-            <div class="relative mt-1">
-              <ListboxButton
-                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
-                :disabled="adjustmentType === 'set'"
-              >
-                <span
-                  class="block truncate"
-                  :class="adjustmentType === 'set' ? 'text-gray-500' : 'text-white'"
+          <table class="min-w-full text-sm">
+            <thead class="sticky top-0 z-10 bg-ink-raised">
+              <tr class="text-[11px] uppercase tracking-wider text-zinc-500">
+                <th
+                  v-for="header in tableHeaders"
+                  :key="header.key"
+                  scope="col"
+                  class="px-4 py-2.5 font-medium whitespace-nowrap"
+                  :class="[
+                    header.numeric ? 'text-right' : 'text-left',
+                    header.sortable ? 'cursor-pointer hover:text-zinc-300 select-none' : '',
+                  ]"
+                  @click="header.sortable ? handleSort(header.key) : null"
                 >
-                  {{ selectedAdjustmentValueTypeLabel }}
-                </span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-                </span>
-              </ListboxButton>
-              <transition
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-              >
-                <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                  <span class="inline-flex items-center gap-1" :class="header.numeric ? 'justify-end w-full' : ''">
+                    {{ header.label }}
+                    <ArrowUpIcon v-if="currentSortKey === header.key && currentSortDirection === 'asc'" class="w-3 h-3 text-emerald-400" />
+                    <ArrowDownIcon v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'" class="w-3 h-3 text-emerald-400" />
+                  </span>
+                </th>
+                <th scope="col" class="px-3 py-2.5 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="isDataLoading && !isFiltering">
+                <td :colspan="tableHeaders.length + 1" class="text-center py-12">
+                  <div class="flex items-center justify-center gap-2 text-emerald-400">
+                    <ArrowPathIcon class="animate-spin w-5 h-5" /> Loading rate deck…
+                  </div>
+                </td>
+              </tr>
+
+              <template v-else-if="displayedData.length > 0">
+                <tr
+                  v-for="entry in displayedData"
+                  :key="entry.npanxx"
+                  class="border-t border-white/[0.05] transition-colors"
+                  :class="rowClass(entry)"
                 >
-                  <ListboxOption
-                    v-for="option in adjustmentValueTypeOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    v-slot="{ active, selected }"
-                    as="template"
-                  >
-                    <li
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4',
-                      ]"
+                  <td class="px-4 py-2 font-secondary text-zinc-300">{{ entry.npanxx }}</td>
+                  <td class="px-4 py-2 text-zinc-400">{{ stateOf(entry) }}</td>
+                  <td class="px-4 py-2 text-zinc-400">{{ countryOf(entry) }}</td>
+                  <td class="px-4 py-2 text-right font-secondary text-white">{{ formatRate(entry.interRate) }}</td>
+                  <td class="px-4 py-2 text-right font-secondary text-white">{{ formatRate(entry.intraRate) }}</td>
+                  <td class="px-4 py-2 text-right font-secondary text-white">{{ formatRate(entry.indetermRate) }}</td>
+                  <td class="px-4 py-2 text-zinc-500 font-secondary whitespace-nowrap">{{ store.getCurrentEffectiveDate || 'N/A' }}</td>
+                  <td class="px-4 py-2">
+                    <span
+                      class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                      :class="statusBadgeClass(rowStatus(entry))"
                     >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
-                        option.label
-                      }}</span>
-                      <span
-                        v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                      >
-                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                      </span>
-                    </li>
-                  </ListboxOption>
-                </ListboxOptions>
-              </transition>
-            </div>
-          </Listbox>
-        </div>
-
-        <!-- Value Input -->
-        <div>
-          <label for="adjustment-value" class="block text-xs font-medium text-gray-400 mb-1"
-            >Value</label
-          >
-          <input
-            id="adjustment-value"
-            v-model.number="adjustmentValue"
-            type="number"
-            min="0"
-            step="any"
-            placeholder="Enter value..."
-            class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg p-2.5 focus:ring-primary-500 focus:border-primary-500"
-          />
-        </div>
-
-        <!-- Target Rate Type -->
-        <div class="relative">
-          <Listbox v-model="adjustmentTargetRate" as="div">
-            <ListboxLabel class="block text-xs font-medium text-gray-400 mb-1"
-              >Target Rate</ListboxLabel
-            >
-            <div class="relative mt-1">
-              <ListboxButton
-                class="relative w-full cursor-default rounded-lg bg-gray-800 py-2.5 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm border border-gray-700"
-              >
-                <span class="block truncate text-white">{{
-                  selectedAdjustmentTargetRateLabel
-                }}</span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                  <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
-                </span>
-              </ListboxButton>
-              <transition
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
-              >
-                <ListboxOptions
-                  class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
-                >
-                  <ListboxOption
-                    v-for="option in adjustmentTargetRateOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    v-slot="{ active, selected }"
-                    as="template"
-                  >
-                    <li
-                      :class="[
-                        active ? 'bg-gray-700 text-primary-400' : 'text-gray-300',
-                        'relative cursor-default select-none py-2 pl-10 pr-4',
-                      ]"
+                      <LockClosedIcon v-if="rowStatus(entry) === 'frozen'" class="h-2.5 w-2.5" />
+                      <span v-else class="h-1.5 w-1.5 rounded-full" :class="rowStatus(entry) === 'modified' ? 'bg-emerald-400' : 'bg-zinc-600'"></span>
+                      {{ statusLabel(rowStatus(entry)) }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <button
+                      @click="toggleRowFreeze(entry)"
+                      class="text-zinc-600 hover:text-zinc-300 transition-colors"
+                      :title="isRowFrozen(entry) ? 'Unfreeze this NPANXX' : 'Freeze this NPANXX'"
                     >
-                      <span :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']">{{
-                        option.label
-                      }}</span>
-                      <span
-                        v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-400"
-                      >
-                        <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                      </span>
-                    </li>
-                  </ListboxOption>
-                </ListboxOptions>
-              </transition>
-            </div>
-          </Listbox>
+                      <LockOpenIcon v-if="isRowFrozen(entry)" class="h-4 w-4" />
+                      <LockClosedIcon v-else class="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              </template>
+
+              <tr v-else>
+                <td :colspan="tableHeaders.length + 1" class="text-center text-zinc-500 py-12">
+                  {{ store.hasUsRateSheetData ? 'No rows match the current filters.' : 'No rate deck loaded. Upload a CSV to begin.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Apply Button -->
-        <div>
-          <BaseButton
-            variant="primary"
-            size="standard"
-            class="w-full"
-            :icon="ArrowRightIcon"
-            :loading="isApplyingAdjustment"
-            :disabled="
-              isApplyingAdjustment ||
-              adjustmentValue === null ||
-              adjustmentValue <= 0 ||
-              totalFilteredItems === 0
-            "
-            @click="handleApplyAdjustment"
-            title="Apply adjustment to all currently filtered records"
-          >
-            Apply
-          </BaseButton>
-        </div>
-      </div>
-      <!-- Feedback Area -->
-      <div
-        v-if="adjustmentStatusMessage || adjustmentError || adjustedNpasThisSession.size > 0"
-        class="mt-3 text-xs"
-      >
-        <p v-if="adjustmentStatusMessage" class="text-green-400">{{ adjustmentStatusMessage }}</p>
-        <p v-if="adjustmentError" class="text-red-400">Error: {{ adjustmentError }}</p>
-        <div
-          v-if="adjustedNpasThisSession.size > 0"
-          class="flex items-center justify-between mt-2 p-2 bg-blue-900/30 rounded border border-blue-700/50"
-        >
-          <p class="text-blue-300">
-            <span class="font-medium">{{ adjustedNpasThisSession.size }}</span> NPA(s) adjusted this
-            session (protected from re-adjustment)
-          </p>
-          <BaseButton
-            variant="secondary"
-            size="standard"
-            @click="handleResetSession"
-            class="text-xs"
-            title="Reset session tracking to allow re-adjusting all NPAs"
-          >
-            Reset Session
-          </BaseButton>
+        <!-- Pagination -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-white/[0.06] text-sm text-zinc-500">
+          <div class="flex items-center gap-2">
+            <span>Show</span>
+            <select v-model="itemsPerPage" :disabled="isDataLoading || isFiltering" class="bg-white/[0.03] border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60">
+              <option v-for="option in itemsPerPageOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+            <span>per page</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 flex-wrap justify-center">
+            <button @click="() => goToFirstPage(createDisplayFilters())" :disabled="!canGoToPreviousPage || isDataLoading || isFiltering" class="px-2 py-1 rounded border border-white/10 hover:bg-white/[0.05] disabled:opacity-40 disabled:cursor-not-allowed">« First</button>
+            <button @click="() => goToPreviousPage(createDisplayFilters())" :disabled="!canGoToPreviousPage || isDataLoading || isFiltering" class="px-2 py-1 rounded border border-white/10 hover:bg-white/[0.05] disabled:opacity-40 disabled:cursor-not-allowed">‹ Prev</button>
+            <span class="flex items-center gap-1.5 px-1">
+              Page
+              <input type="number" v-model.number="directPageInput" @change="() => handleDirectPageInput(createDisplayFilters())" @keyup.enter="() => handleDirectPageInput(createDisplayFilters())" min="1" :max="totalPages" :disabled="isDataLoading || isFiltering" class="bg-white/[0.03] border border-white/10 rounded w-14 text-center py-1 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60" />
+              of {{ totalPages.toLocaleString() }}
+            </span>
+            <button @click="() => goToNextPage(createDisplayFilters())" :disabled="!canGoToNextPage || isDataLoading || isFiltering" class="px-2 py-1 rounded border border-white/10 hover:bg-white/[0.05] disabled:opacity-40 disabled:cursor-not-allowed">Next ›</button>
+            <button @click="() => goToLastPage(createDisplayFilters())" :disabled="!canGoToNextPage || currentPage === totalPages || isDataLoading || isFiltering" class="px-2 py-1 rounded border border-white/10 hover:bg-white/[0.05] disabled:opacity-40 disabled:cursor-not-allowed">Last »</button>
+          </div>
+
+          <span class="min-w-[140px] text-right">Total: {{ totalFilteredItems.toLocaleString() }} records</span>
         </div>
       </div>
     </div>
 
-    <!-- Table Container -->
-    <div class="overflow-y-auto max-h-[600px] relative min-h-[300px]" ref="scrollContainerRef">
-      <!-- Loading overlay for filter changes -->
-      <transition
-        enter-active-class="transition ease-out duration-200"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition ease-in duration-150"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="isFiltering"
-          class="absolute inset-0 bg-gray-900/70 flex items-center justify-center z-20 rounded-lg"
-        >
-          <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
-        </div>
-      </transition>
-      <table class="min-w-full divide-y divide-gray-700 text-sm">
-        <thead class="bg-gray-800 sticky top-0 z-10">
-          <tr>
-            <th
-              v-for="header in tableHeaders"
-              :key="header.key"
-              scope="col"
-              class="px-4 py-2 text-gray-300"
-              :class="[header.textAlign, { 'cursor-pointer hover:bg-gray-700': header.sortable }]"
-              @click="header.sortable ? handleSort(header.key) : null"
-            >
-              <div class="flex items-center justify-center">
-                <span>{{ header.label }}</span>
-                <template v-if="header.sortable">
-                  <ArrowUpIcon
-                    v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
-                    class="w-3 h-3 ml-1 text-accent"
-                  />
-                  <ArrowDownIcon
-                    v-else-if="currentSortKey === header.key && currentSortDirection === 'desc'"
-                    class="w-3 h-3 ml-1 text-accent"
-                  />
-                  <ChevronUpDownIcon
-                    v-else
-                    class="w-4 h-4 ml-1 text-gray-500 hover:text-gray-200"
-                  />
-                </template>
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-800">
-          <!-- Loading State -->
-          <tr v-if="isDataLoading && !isFiltering">
-            <td colspan="7" class="text-center py-10">
-              <div class="flex items-center justify-center space-x-2 text-accent">
-                <ArrowPathIcon class="animate-spin w-6 h-6" />
-                <span>Loading Rate Sheet Data...</span>
-              </div>
-            </td>
-          </tr>
+    <!-- RIGHT: operations panel -->
+    <aside class="xl:w-80 flex-shrink-0">
+      <PricingOperationsPanel />
+    </aside>
 
-          <!-- Data Rows -->
-          <template v-else-if="displayedData.length > 0">
-            <tr v-for="entry in displayedData" :key="entry.npanxx" class="hover:bg-gray-700/50">
-              <td class="px-4 py-2 text-gray-400 font-mono text-center">{{ entry.npanxx }}</td>
-              <td class="px-4 py-2 text-gray-400 text-center">
-                {{
-                  tableHeaders.find((h) => h.key === 'stateCode')?.getValue?.(entry) ||
-                  lergStore.getNPAInfo(entry.npa)?.state_province_code ||
-                  'N/A'
-                }}
-              </td>
-              <td class="px-4 py-2 text-gray-400 text-center">
-                {{ lergStore.getNPAInfo(entry.npa)?.country_code || 'N/A' }}
-              </td>
-              <td class="px-4 py-2 text-white font-mono text-center">
-                {{ formatRate(entry.interRate) }}
-              </td>
-              <td class="px-4 py-2 text-white font-mono text-center">
-                {{ formatRate(entry.intraRate) }}
-              </td>
-              <td class="px-4 py-2 text-white font-mono text-center">
-                {{ formatRate(entry.indetermRate) }}
-              </td>
-              <td class="px-4 py-2 text-gray-400 font-mono text-center">
-                {{ store.getCurrentEffectiveDate || 'N/A' }}
-              </td>
-            </tr>
-          </template>
-
-          <!-- Empty State -->
-          <tr v-else>
-            <td colspan="7" class="text-center text-gray-500 py-10">
-              {{
-                store.hasUsRateSheetData
-                  ? 'No records match the current filters. Try adjusting your search criteria or clearing filters.'
-                  : 'No US Rate Sheet data found. Please upload a file.'
-              }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div
-        v-if="displayedData.length > 0 && currentPage === totalPages && totalFilteredItems > 0"
-        class="text-center text-gray-600 py-4"
-      >
-        End of results.
-      </div>
-      <div
-        v-else-if="
-          displayedData.length === 0 && totalFilteredItems > 0 && !isDataLoading && !isFiltering
-        "
-        class="text-center text-gray-600 py-4"
-      >
-        No results on this page. Try adjusting filters or page number.
-      </div>
-    </div>
-
-    <!-- Pagination Controls -->
-    <div
-      class="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400"
-    >
-      <!-- Items per page selector -->
-      <div class="flex items-center gap-2">
-        <span>Show:</span>
-        <select
-          v-model="itemsPerPage"
-          class="bg-gray-800 border border-gray-700 text-white sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-1.5"
-          :disabled="isDataLoading || isFiltering"
-        >
-          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
-        <span>entries per page</span>
-      </div>
-
-      <!-- Page Info and Navigation -->
-      <div class="flex items-center gap-2 flex-wrap justify-center">
-        <BaseButton
-          @click="() => goToFirstPage(createFilters())"
-          :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="First Page"
-        >
-          &laquo; First
-        </BaseButton>
-        <BaseButton
-          @click="() => goToPreviousPage(createFilters())"
-          :disabled="!canGoToPreviousPage || isDataLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="Previous Page"
-        >
-          &lsaquo; Prev
-        </BaseButton>
-
-        <span class="flex items-center gap-1.5">
-          Page
-          <input
-            type="number"
-            v-model.number="directPageInput"
-            @change="() => handleDirectPageInput(createFilters())"
-            @keyup.enter="() => handleDirectPageInput(createFilters())"
-            min="1"
-            :max="totalPages"
-            class="bg-gray-800 border border-gray-700 text-white w-14 text-center sm:text-sm rounded-md p-1.5 focus:ring-primary-500 focus:border-primary-500"
-            :disabled="isDataLoading || isFiltering"
-          />
-          of {{ totalPages.toLocaleString() }}
-        </span>
-
-        <BaseButton
-          @click="() => goToNextPage(createFilters())"
-          :disabled="!canGoToNextPage || isDataLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="Next Page"
-        >
-          Next &rsaquo;
-        </BaseButton>
-        <BaseButton
-          @click="() => goToLastPage(createFilters())"
-          :disabled="!canGoToNextPage || currentPage === totalPages || isDataLoading || isFiltering"
-          size="small"
-          variant="secondary"
-          class="px-2.5 py-1.5"
-          title="Last Page"
-        >
-          Last &raquo;
-        </BaseButton>
-      </div>
-
-      <!-- Total Records Display -->
-      <div class="min-w-[150px] text-right md:text-left">
-        <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
-      </div>
-    </div>
-
-    <!-- Clear Data Confirmation Modal -->
-    <ConfirmationModal
-      v-model="showClearDataModal"
-      title="Clear US Rate Sheet Data"
-      message="This will permanently delete all uploaded US rate sheet data, calculated averages, and session tracking.
-
-This action cannot be undone."
-      confirm-button-text="Clear All Data"
-      cancel-button-text="Cancel"
-      @confirm="confirmClearData"
-    />
-
-    <!-- Reset Session Confirmation Modal -->
-    <ConfirmationModal
-      v-model="showResetSessionModal"
-      title="Reset Session Tracking"
-      message="This will clear the list of NPAs that have been adjusted during this session.
-
-All NPAs will be available for adjustment again."
-      confirm-button-text="Reset Session"
-      cancel-button-text="Cancel"
-      confirm-button-variant="primary"
-      @confirm="confirmResetSession"
-    />
-
-    <!-- Export Modal -->
-    <USExportModal
-      v-model:open="showExportModal"
-      export-type="rate-sheet"
-      :filters="exportFilters"
-      :data="exportData"
-      :total-records="totalExportRecords"
-      :adjusted-npas="adjustedNpasThisSession"
-      :adjustment-details="adjustmentDetailsThisSession"
-      :adjustment-operations="adjustmentOperationsThisSession"
-      :adjustment-settings="{
-        type: adjustmentType,
-        valueType: adjustmentValueType,
-        value: adjustmentValue,
-        targetRate: adjustmentTargetRate
-      }"
-      :on-export="handleExportWithOptions"
-    />
-
-    <NoticeModal
-      v-model="showNotice"
-      :title="noticeTitle"
-      :message="noticeMessage"
-      :variant="noticeVariant"
-    />
+    <NoticeModal v-model="showNotice" :title="noticeTitle" :message="noticeMessage" :variant="noticeVariant" />
   </div>
 </template>
 
 <script setup lang="ts">
   import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
   import {
-    Listbox,
-    ListboxButton,
-    ListboxLabel,
-    ListboxOptions,
-    ListboxOption,
-  } from '@headlessui/vue';
-  import {
-    TrashIcon,
     ArrowDownTrayIcon,
     ArrowPathIcon,
     CheckIcon,
-    ChevronUpDownIcon,
-    ArrowRightIcon,
     ArrowUpIcon,
     ArrowDownIcon,
     MagnifyingGlassIcon,
-    XCircleIcon,
     XMarkIcon,
     ChevronDownIcon,
   } from '@heroicons/vue/20/solid';
+  import { LockClosedIcon, LockOpenIcon, EyeIcon } from '@heroicons/vue/24/outline';
   import type { USRateSheetEntry } from '@/types/domains/rate-sheet-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
-  import BaseBadge from '@/components/shared/BaseBadge.vue';
-  import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+  import { usePricingStudioStore } from '@/stores/pricing-studio-store';
   import NoticeModal from '@/components/shared/NoticeModal.vue';
-  import USExportModal from '@/components/exports/USExportModal.vue';
+  import PricingOperationsPanel from '@/components/rate-sheet/us/pricing-studio/PricingOperationsPanel.vue';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
-  import { useDebounceFn, useIntersectionObserver, useTransition } from '@vueuse/core';
-  import Papa from 'papaparse';
+  import { useDebounceFn } from '@vueuse/core';
   import { DBName } from '@/types/app-types';
-  import BaseButton from '@/components/shared/BaseButton.vue';
-  import {
-    type AdjustmentType,
-    type AdjustmentValueType,
-    type TargetRateType,
+  import type {
+    AdjustmentType,
+    AdjustmentValueType,
+    TargetRateType,
   } from '@/types/domains/rate-sheet-types';
   import Dexie from 'dexie';
   import { useMetroFilter } from '@/composables/filters/useMetroFilter';
-  import {
-    US_REGION_CODES,
-    CA_REGION_CODES,
-    getRegionName,
-    sortRegionCodesByName,
-    groupRegionCodes,
-    RegionType,
-  } from '@/types/constants/region-codes';
-  import { useCSVExport, type CSVExportOptions } from '@/composables/exports/useCSVExport';
+  import { groupRegionCodes } from '@/types/constants/region-codes';
+  import { useCSVExport } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
-  import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
-  import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
+  import {
+    classifyRow,
+    buildRateDeckCsv,
+    computeReadiness,
+    type Adjustment,
+    type AdjustmentImpact,
+    type RowStatus,
+    type GeoInfo,
+  } from '@/utils/pricing-engine';
+  import { downloadAuditPdf } from '@/utils/pricing-audit-pdf';
+  import UsRateAdjusterWorker from '@/workers/us-rate-adjuster.worker?worker';
+  import type {
+    UsRateAdjusterRequest,
+    UsRateAdjusterResponse,
+  } from '@/workers/us-rate-adjuster.worker';
 
-  // Type for average values
   interface RateAverages {
     inter: number | null;
     intra: number | null;
     indeterm: number | null;
   }
 
-  // Initialize store and service
   const store = useUsRateSheetStore();
+  const psStore = usePricingStudioStore();
   const lergStore = useLergStoreV2();
   const RATE_SHEET_TABLE_NAME = 'entries';
 
-  // Define table headers for dynamic rendering and sorting
+  // Table headers. `getValue` forces client-side sort (works for LERG-derived
+  // columns like Country that aren't stored fields); `numeric` drives alignment.
   const tableHeaders = ref([
-    {
-      key: 'npanxx',
-      label: 'NPANXX',
-      sortable: true,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => entry.npanxx,
-    },
-    {
-      key: 'stateCode',
-      label: 'State',
-      sortable: true,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => lergStore.getNPAInfo(entry.npa)?.state_province_code || 'N/A',
-    },
-    {
-      key: 'countryCode',
-      label: 'Country',
-      sortable: true,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) =>
-        lergStore.getNPAInfo(entry.npa)?.country_code || 'N/A',
-    },
-    {
-      key: 'interRate',
-      label: 'Interstate Rate',
-      sortable: true,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => entry.interRate,
-    },
-    {
-      key: 'intraRate',
-      label: 'Intrastate Rate',
-      sortable: true,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => entry.intraRate,
-    },
-    {
-      key: 'indetermRate',
-      label: 'Indeterminate Rate',
-      sortable: true,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => entry.indetermRate,
-    },
-    {
-      key: 'effectiveDateGlobal',
-      label: 'Effective Date',
-      sortable: false,
-      textAlign: 'text-center',
-      getValue: (entry: USRateSheetEntry) => store.getCurrentEffectiveDate || 'N/A',
-    },
+    { key: 'npanxx', label: 'NPANXX', sortable: true, numeric: false, getValue: (e: USRateSheetEntry) => e.npanxx },
+    { key: 'stateCode', label: 'State', sortable: true, numeric: false, getValue: (e: USRateSheetEntry) => lergStore.getNPAInfo(e.npa)?.state_province_code || 'N/A' },
+    { key: 'countryCode', label: 'Country', sortable: true, numeric: false, getValue: (e: USRateSheetEntry) => lergStore.getNPAInfo(e.npa)?.country_code || 'N/A' },
+    { key: 'interRate', label: 'Interstate Rate', sortable: true, numeric: true, getValue: (e: USRateSheetEntry) => e.interRate },
+    { key: 'intraRate', label: 'Intrastate Rate', sortable: true, numeric: true, getValue: (e: USRateSheetEntry) => e.intraRate },
+    { key: 'indetermRate', label: 'Indeterminate Rate', sortable: true, numeric: true, getValue: (e: USRateSheetEntry) => e.indetermRate },
+    { key: 'effectiveDateGlobal', label: 'Effective Date', sortable: false, numeric: false },
+    { key: 'status', label: 'Status', sortable: false, numeric: false },
   ]);
 
-  // Initialize table data composable
   const {
-    // Data
     displayedData,
     totalFilteredItems,
-
-    // Loading states
     isDataLoading,
     isFiltering,
-
-    // Error handling
     dataError,
-
-    // Pagination
     currentPage,
     itemsPerPage,
     itemsPerPageOptions,
@@ -1034,26 +500,16 @@ All NPAs will be available for adjustment again."
     canGoToPreviousPage,
     canGoToNextPage,
     directPageInput,
-
-    // Sorting
     currentSortKey,
     currentSortDirection,
-
-    // Methods
     initializeDB,
-    fetchPageData,
     resetPaginationAndLoad,
-    goToPage,
     goToFirstPage,
     goToPreviousPage,
     goToNextPage,
     goToLastPage,
     handleDirectPageInput,
-
-    // DB instance
     dbInstance,
-
-    // US-specific
     availableStates,
     fetchUniqueStates,
     fetchUniqueStatesFromData,
@@ -1066,27 +522,19 @@ All NPAs will be available for adjustment again."
     tableHeaders: tableHeaders.value,
   });
 
-  // --- Metro Filter Composable ---
   const {
     selectedMetros,
     metroSearchQuery,
     filteredMetroOptions,
-    totalSelectedPopulation,
-    targetedNPAsDisplay,
-    areAllMetrosSelected,
     metroAreaCodesToFilter,
     toggleMetroSelection,
     isMetroSelected,
-    handleSelectAllMetros,
     removeSelectedMetro,
-    clearMetroSearch,
     selectTopNMetros,
     clearAllSelectedMetros,
-    formatPopulation,
   } = useMetroFilter();
 
-  // --- Reactive State (Table Filters) ---
-  // --- Rate Adjustment Options Data ---
+  // Adjustment option data (short labels for the jurisdiction segmented control).
   const adjustmentTypeOptions = [
     { value: 'markup', label: 'Markup' },
     { value: 'markdown', label: 'Markdown' },
@@ -1097,112 +545,89 @@ All NPAs will be available for adjustment again."
     { value: 'fixed', label: 'Fixed Amount' },
   ] as const;
   const adjustmentTargetRateOptions = [
-    { value: 'all', label: 'All Rates' },
-    { value: 'inter', label: 'Interstate Only' },
-    { value: 'intra', label: 'Intrastate Only' },
-    { value: 'indeterm', label: 'Indeterminate Only' },
+    { value: 'inter', label: 'Interstate Only', short: 'Inter' },
+    { value: 'intra', label: 'Intrastate Only', short: 'Intra' },
+    { value: 'indeterm', label: 'Indeterminate Only', short: 'Indet' },
+    { value: 'all', label: 'All Rates', short: 'All' },
   ] as const;
-  // --- End Rate Adjustment Options Data ---
 
-  // --- Rate Adjustment State ---
-  const adjustmentType = ref<AdjustmentType>(adjustmentTypeOptions[0].value);
-  const isMetroAreaVisible = ref(true);
-  const adjustmentValueType = ref<AdjustmentValueType>(adjustmentValueTypeOptions[0].value);
+  const adjustmentType = ref<AdjustmentType>('markup');
+  const adjustmentValueType = ref<AdjustmentValueType>('percentage');
   const adjustmentValue = ref<number | null>(null);
-  const adjustmentTargetRate = ref<TargetRateType>(adjustmentTargetRateOptions[0].value);
+  const adjustmentTargetRate = ref<TargetRateType>('inter');
   const isApplyingAdjustment = ref(false);
   const adjustmentStatusMessage = ref<string | null>(null);
   const adjustmentError = ref<string | null>(null);
-  const adjustedNpasThisSession = ref(new Set<string>()); // Stores NPAs of records adjusted in this session
-  const adjustmentDetailsThisSession = ref<Map<string, {
-    recordsAffected: number;
-    beforeRates: { inter?: number; intra?: number; indeterm?: number };
-    afterRates: { inter?: number; intra?: number; indeterm?: number };
-    adjustmentType: string;
-    adjustmentValue: number;
-    adjustmentValueType: string;
-    targetRate: string;
-  }>>(new Map()); // Stores detailed adjustment information per NPA
-  
-  // Session-level tracking for adjustment operations
-  const adjustmentOperationsThisSession = ref<Array<{
-    timestamp: string;
-    filtersApplied: string[];
-    adjustmentType: string;
-    adjustmentValue: number;
-    adjustmentValueType: string;
-    targetRate: string;
-    npasAffected: string[];
-    recordsAffected: number;
-  }>>([]);
-  // --- End Rate Adjustment State ---
-
-  // Moved initialization out of hooks/functions
-  // Timeout ID for clearing the status message
+  const previewImpact = ref<AdjustmentImpact | null>(null);
   let adjustmentStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const searchQuery = ref('');
-  const debouncedSearchQuery = ref<string[]>([]); // Changed from string to string[]
+  const debouncedSearchQuery = ref<string[]>([]);
   const selectedState = ref<string>('');
+  const statusFilter = ref<'all' | RowStatus>('all');
+  const isMetroAreaVisible = ref(false);
 
-  const totalRecords = ref<number>(0); // This might become redundant if totalFilteredItems is always up-to-date
-
-  // Replace the US_STATES and CA_PROVINCES constants with imported ones
-  const US_STATES = US_REGION_CODES;
-  const CA_PROVINCES = CA_REGION_CODES;
-
-  // State for Average Calculation
   const currentDisplayAverages = ref<RateAverages>({ inter: null, intra: null, indeterm: null });
-  const isCalculatingAverages = ref(false); // Ensuring this definition is clean and correct
+  const isCalculatingAverages = ref(false);
 
-  // --- Animated Averages ---
-  const transitionConfig = { duration: 500 };
-  const interAvgSource = computed(() => currentDisplayAverages.value.inter ?? 0);
-  const intraAvgSource = computed(() => currentDisplayAverages.value.intra ?? 0);
-  const indetermAvgSource = computed(() => currentDisplayAverages.value.indeterm ?? 0);
+  // First three selected metros become chips; the rest collapse into "+N more".
+  const chipMetros = computed(() => selectedMetros.value.slice(0, 3));
 
-  const animatedInterAvg = useTransition(interAvgSource, transitionConfig);
-  const animatedIntraAvg = useTransition(intraAvgSource, transitionConfig);
-  const animatedIndetermAvg = useTransition(indetermAvgSource, transitionConfig);
-  // --- End Animated Averages ---
+  const canAdjust = computed(
+    () => adjustmentValue.value !== null && adjustmentValue.value > 0 && totalFilteredItems.value > 0
+  );
 
-  // Create filter functions for the composable
+  const valuePhrase = computed(() => {
+    const v = adjustmentValue.value ?? 0;
+    if (adjustmentType.value === 'set') return `to $${v}`;
+    const sign = adjustmentType.value === 'markup' ? '+' : '−';
+    return `${sign}${v}${adjustmentValueType.value === 'percentage' ? '%' : ''}`;
+  });
+
+  const scopeLabel = computed(() => describeScope());
+
+  const avgDeltaLabel = computed(() => {
+    if (!previewImpact.value) return '—';
+    const d = previewImpact.value.avgDelta;
+    const pick =
+      adjustmentTargetRate.value === 'intra'
+        ? d.intra
+        : adjustmentTargetRate.value === 'indeterm'
+          ? d.indeterm
+          : d.inter;
+    if (pick === null) return '—';
+    return `${pick >= 0 ? '+' : ''}$${pick.toFixed(6)}`;
+  });
+
+  // --- Filters ---
   function createFilters(): FilterFunction<USRateSheetEntry>[] {
     const filters: FilterFunction<USRateSheetEntry>[] = [];
 
-    // NPANXX Search Filter
     if (debouncedSearchQuery.value.length > 0) {
       filters.push((record) => {
-        const recordNpanxxLower = record.npanxx.toLowerCase();
-        return debouncedSearchQuery.value.some((term) => recordNpanxxLower.startsWith(term));
+        const lower = record.npanxx.toLowerCase();
+        return debouncedSearchQuery.value.some((term) => lower.startsWith(term));
       });
     }
 
-    // State Filter
     if (selectedState.value) {
       filters.push((record) => {
-        // Handle group selections
         if (selectedState.value === 'GROUP_UNITED_STATES') {
-          // Filter for US states only (not territories) - use LERG store to look up by NPA
           const npaInfo = lergStore.getNPAInfo(record.npa);
-          return npaInfo?.country_code === 'US' && 
-                 !['PR', 'VI', 'GU', 'AS', 'MP'].includes(npaInfo.state_province_code);
+          return (
+            npaInfo?.country_code === 'US' &&
+            !['PR', 'VI', 'GU', 'AS', 'MP'].includes(npaInfo.state_province_code)
+          );
         } else if (selectedState.value === 'GROUP_CANADA') {
-          // Filter for all Canadian provinces - use LERG store to look up by NPA
-          const npaInfo = lergStore.getNPAInfo(record.npa);
-          return npaInfo?.country_code === 'CA';
+          return lergStore.getNPAInfo(record.npa)?.country_code === 'CA';
         } else if (selectedState.value === 'GROUP_OTHER_COUNTRIES') {
-          // Filter for all other countries (not US or Canada) - use LERG store to look up by NPA
           const npaInfo = lergStore.getNPAInfo(record.npa);
-          return npaInfo && npaInfo.country_code !== 'US' && npaInfo.country_code !== 'CA';
-        } else {
-          // Handle individual region selections
-          return record.stateCode === selectedState.value;
+          return !!npaInfo && npaInfo.country_code !== 'US' && npaInfo.country_code !== 'CA';
         }
+        return record.stateCode === selectedState.value;
       });
     }
 
-    // Metro Area Filter
     if (metroAreaCodesToFilter.value.length > 0) {
       const npaSet = new Set(metroAreaCodesToFilter.value);
       filters.push((record) => npaSet.has(record.npa));
@@ -1211,115 +636,90 @@ All NPAs will be available for adjustment again."
     return filters;
   }
 
+  // Display-only filters add the Status predicate on top of the scope filters, so
+  // status never alters the adjustment scope, averages, or export.
+  function createDisplayFilters(): FilterFunction<USRateSheetEntry>[] {
+    const filters = createFilters();
+    if (statusFilter.value !== 'all') {
+      filters.push(
+        (record) =>
+          classifyRow(record, psStore.freezeState, psStore.modifiedNpanxx) === statusFilter.value
+      );
+    }
+    return filters;
+  }
+
   const debouncedSearch = useDebounceFn(async () => {
-    const terms = searchQuery.value
+    debouncedSearchQuery.value = searchQuery.value
       .split(',')
-      .map((term) => term.trim().toLowerCase())
-      .filter((term) => term.length > 0);
-    debouncedSearchQuery.value = terms;
-    // Reset sorting when search query changes
+      .map((t) => t.trim().toLowerCase())
+      .filter((t) => t.length > 0);
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
-    await resetPaginationAndLoad(createFilters());
+    previewImpact.value = null;
+    await resetPaginationAndLoad(createDisplayFilters());
     await recalculateAndDisplayAverages();
   }, 300);
 
   const stopSearchWatcher = watch(searchQuery, debouncedSearch);
-
-  // Watcher for itemsPerPage changes
   const stopItemsPerPageWatcher = watch(itemsPerPage, async () => {
-    await resetPaginationAndLoad(createFilters());
+    await resetPaginationAndLoad(createDisplayFilters());
   });
-
-  // Watcher for state filter changes - handles table reload AND average calculation
-  const stopStateWatcher = watch(selectedState, async (newStateCode) => {
-    // Reset sorting when state filter changes
+  const stopStateWatcher = watch(selectedState, async () => {
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
-
-    await resetPaginationAndLoad(createFilters());
+    previewImpact.value = null;
+    await resetPaginationAndLoad(createDisplayFilters());
     await recalculateAndDisplayAverages();
   });
-
-  // Watcher for metro filter changes
   const stopMetroWatcher = watch(
     selectedMetros,
     async () => {
-      await resetPaginationAndLoad(createFilters());
+      previewImpact.value = null;
+      await resetPaginationAndLoad(createDisplayFilters());
       await recalculateAndDisplayAverages();
     },
     { deep: true }
   );
-
-  // Watcher to refresh available states when data changes
+  const stopStatusWatcher = watch(statusFilter, async () => {
+    await resetPaginationAndLoad(createDisplayFilters());
+  });
   const stopDataChangeWatcher = watch(
     () => store.lastDbUpdateTime,
     async () => {
       if (store.getHasUsRateSheetData && !store.getIsUploadInProgress) {
-        console.log('[USRateSheetTable] Data changed, refreshing available states');
         await fetchUniqueStatesFromData();
-        
-        // Check if currently selected state still exists in the new data
-        if (selectedState.value && !availableStates.value.includes(selectedState.value)) {
-          // Handle group selections
-          const isGroupSelection = selectedState.value.startsWith('GROUP_');
-          if (!isGroupSelection) {
-            console.log(`[USRateSheetTable] Selected state ${selectedState.value} no longer exists in data, resetting filter`);
-            selectedState.value = '';
-          }
+        if (
+          selectedState.value &&
+          !availableStates.value.includes(selectedState.value) &&
+          !selectedState.value.startsWith('GROUP_')
+        ) {
+          selectedState.value = '';
         }
       }
     }
   );
 
-  /**
-   * Calculates the average rates for a given state or the entire dataset.
-   * Uses Dexie.each for memory efficiency.
-   * @returns Promise resolving to RateAverages or null if DB error.
-   */
+  // --- Averages (deck/selection scan; feeds the readiness strip's avg inter) ---
   async function calculateAverages(): Promise<RateAverages | null> {
-    if (!dbInstance.value) {
-      await initializeDB();
-    }
-
-    if (!dbInstance.value) {
-      console.error('[USRateSheetTable] calculateAverages: DB not ready or no instance.');
-      return null;
-    }
+    if (!dbInstance.value) await initializeDB();
+    if (!dbInstance.value) return null;
 
     let sumInter = 0;
     let sumIntra = 0;
     let sumIndeterm = 0;
     let count = 0;
-
     try {
       const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
       let queryChain: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
-
-      // Apply filters using the same logic as createFilters()
       const filters = createFilters();
       if (filters.length > 0) {
         queryChain = queryChain.filter((record) => filters.every((fn) => fn(record)));
       }
-
-      const recordCountForAverages = await queryChain.clone().count();
-
-      let logCount = 0;
-      const MAX_LOG_ENTRIES = 3;
-
       await queryChain.each((entry) => {
-        if (logCount < MAX_LOG_ENTRIES) {
-          logCount++;
-        }
-        if (typeof entry.interRate === 'number') {
-          sumInter += entry.interRate;
-        }
-        if (typeof entry.intraRate === 'number') {
-          sumIntra += entry.intraRate;
-        }
-        if (typeof entry.indetermRate === 'number') {
-          sumIndeterm += entry.indetermRate;
-        }
+        if (typeof entry.interRate === 'number') sumInter += entry.interRate;
+        if (typeof entry.intraRate === 'number') sumIntra += entry.intraRate;
+        if (typeof entry.indetermRate === 'number') sumIndeterm += entry.indetermRate;
         if (
           typeof entry.interRate === 'number' ||
           typeof entry.intraRate === 'number' ||
@@ -1328,14 +728,11 @@ All NPAs will be available for adjustment again."
           count++;
         }
       });
-
-      const averagesResult: RateAverages = {
+      return {
         inter: count > 0 && !isNaN(sumInter) ? sumInter / count : null,
         intra: count > 0 && !isNaN(sumIntra) ? sumIntra / count : null,
         indeterm: count > 0 && !isNaN(sumIndeterm) ? sumIndeterm / count : null,
       };
-
-      return averagesResult;
     } catch (err: any) {
       dataError.value = err.message || 'Failed to calculate averages';
       return null;
@@ -1344,58 +741,52 @@ All NPAs will be available for adjustment again."
 
   async function recalculateAndDisplayAverages() {
     isCalculatingAverages.value = true;
-    currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
     await nextTick();
-
     const averages = await calculateAverages();
-
     currentDisplayAverages.value = averages ?? { inter: null, intra: null, indeterm: null };
-
+    psStore.setDeckAvgInterRate(currentDisplayAverages.value.inter);
     isCalculatingAverages.value = false;
   }
 
+  // --- Lifecycle ---
   onMounted(async () => {
-    adjustedNpasThisSession.value.clear(); // Clear on mount for a fresh session
-    adjustmentDetailsThisSession.value.clear(); // Clear adjustment details for a fresh session
-    adjustmentOperationsThisSession.value = []; // Clear adjustment operations for a fresh session
-    if (!lergStore.isLoaded) {
-      console.warn('[USRateSheetTable] LERG data not loaded. State names might be unavailable.');
-    }
-
-    // RESPECT UPLOAD GATE: Only load data if not currently uploading
     if (store.getHasUsRateSheetData && !store.getIsUploadInProgress) {
-      console.log('[USRateSheetTable] Mounting with existing data and upload gate CLOSED - loading table data');
-      
-      // Initialize DB first if needed
-      if (!dbInstance.value) {
-        await initializeDB();
-      }
-      
+      if (!dbInstance.value) await initializeDB();
       await fetchUniqueStatesFromData();
-      await resetPaginationAndLoad(createFilters());
+      await resetPaginationAndLoad(createDisplayFilters());
       await recalculateAndDisplayAverages();
-    } else if (store.getIsUploadInProgress) {
-      console.log('[USRateSheetTable] Mounting but upload gate is OPEN - skipping data load');
-    } else {
-      // No data yet, but still load LERG states as fallback
-      console.log('[USRateSheetTable] No data on mount, loading default states from LERG');
+    } else if (!store.getIsUploadInProgress) {
       await fetchUniqueStates();
     }
   });
 
-  // Watcher for upload gate changes  
   const stopUploadGateWatcher = watch(
     () => store.getIsUploadInProgress,
     async (isUploading, wasUploading) => {
-      // When upload completes (gate closes) and we have data, load it
       if (wasUploading && !isUploading && store.getHasUsRateSheetData) {
-        console.log('[USRateSheetTable] Upload gate CLOSED after upload - loading complete data');
         await fetchUniqueStatesFromData();
-        await resetPaginationAndLoad(createFilters());
+        await resetPaginationAndLoad(createDisplayFilters());
         await recalculateAndDisplayAverages();
       }
-    },
-    { immediate: false }
+    }
+  );
+
+  const stopHasDataWatcher = watch(
+    () => store.getHasUsRateSheetData,
+    async (hasData, oldHasData) => {
+      if (hasData === oldHasData) return;
+      if (!hasData) {
+        selectedState.value = '';
+        searchQuery.value = '';
+        statusFilter.value = 'all';
+        previewImpact.value = null;
+        currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
+      } else if (!store.getIsUploadInProgress) {
+        await fetchUniqueStatesFromData();
+        await resetPaginationAndLoad(createDisplayFilters());
+        await recalculateAndDisplayAverages();
+      }
+    }
   );
 
   onBeforeUnmount(() => {
@@ -1403,688 +794,391 @@ All NPAs will be available for adjustment again."
     stopStateWatcher();
     stopMetroWatcher();
     stopItemsPerPageWatcher();
+    stopStatusWatcher();
     stopUploadGateWatcher();
     stopDataChangeWatcher();
+    stopHasDataWatcher();
+    if (adjustmentStatusTimeoutId) clearTimeout(adjustmentStatusTimeoutId);
   });
 
-  watch(
-    () => store.getHasUsRateSheetData,
-    async (hasData, oldHasData) => {
-      if (hasData !== oldHasData) {
-        if (!hasData) {
-          selectedState.value = '';
-          searchQuery.value = '';
-          currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
-        } else {
-          // RESPECT UPLOAD GATE: Only load data if upload is complete
-          if (!store.getIsUploadInProgress) {
-            console.log('[USRateSheetTable] Data available and upload gate CLOSED - loading table data');
-            await fetchUniqueStatesFromData();
-            await resetPaginationAndLoad(createFilters());
-            await recalculateAndDisplayAverages();
-          } else {
-            console.log('[USRateSheetTable] Data available but upload gate is OPEN - waiting for upload completion');
-          }
-        }
-      }
-    },
-    { immediate: false }
-  );
-
-  /**
-   * Formats a rate value for display, including a leading '$' and handling null/undefined.
-   * @param rate The rate value.
-   * @returns Formatted string (e.g., $0.008000) or 'N/A'.
-   */
+  // --- Display helpers ---
   function formatRate(rate: number | string | null | undefined): string {
-    if (rate === null || rate === undefined || typeof rate !== 'number') {
-      return 'N/A';
-    }
-    return Number(rate).toFixed(6);
+    if (rate === null || rate === undefined || typeof rate !== 'number') return 'N/A';
+    return rate.toFixed(6);
+  }
+  function fmtInt(n: number): string {
+    return n.toLocaleString('en-US');
+  }
+  function pctOfTotal(n: number): string {
+    const total = store.getTotalRecords;
+    return total ? `(${((n / total) * 100).toFixed(2)}%)` : '';
+  }
+  function geoOf(npa: string): GeoInfo {
+    const info = lergStore.getNPAInfo(npa);
+    return { state: info?.state_province_code || '', country: info?.country_code || '' };
+  }
+  function stateOf(entry: USRateSheetEntry): string {
+    return geoOf(entry.npa).state || 'N/A';
+  }
+  function countryOf(entry: USRateSheetEntry): string {
+    return geoOf(entry.npa).country || 'N/A';
+  }
+  function targetLabel(target: TargetRateType): string {
+    return (
+      { all: 'All Rates', inter: 'Interstate Rates', intra: 'Intrastate Rates', indeterm: 'Indeterminate Rates' } as Record<TargetRateType, string>
+    )[target];
+  }
+  function rowStatus(entry: USRateSheetEntry): RowStatus {
+    return classifyRow(entry, psStore.freezeState, psStore.modifiedNpanxx);
+  }
+  function isRowFrozen(entry: USRateSheetEntry): boolean {
+    return rowStatus(entry) === 'frozen' || psStore.npanxxOverrides.get(entry.npanxx) === 'frozen';
+  }
+  function rowClass(entry: USRateSheetEntry): string {
+    return rowStatus(entry) === 'frozen' ? 'bg-violet-400/[0.04] hover:bg-violet-400/[0.08]' : 'hover:bg-white/[0.02]';
+  }
+  function statusLabel(s: RowStatus): string {
+    return { frozen: 'Frozen', modified: 'Modified', original: 'Original' }[s];
+  }
+  function statusBadgeClass(s: RowStatus): string {
+    return {
+      frozen: 'text-violet-300 bg-violet-400/10 ring-1 ring-violet-400/30',
+      modified: 'text-emerald-300 bg-emerald-400/10 ring-1 ring-emerald-400/30',
+      original: 'text-zinc-400 bg-white/[0.04]',
+    }[s];
   }
 
-  // Modal state for confirmations
-  const showClearDataModal = ref(false);
-  const showResetSessionModal = ref(false);
-  const showExportModal = ref(false);
-
-  const showNotice = ref(false);
-  const noticeTitle = ref('');
-  const noticeMessage = ref('');
-  const noticeVariant = ref<'success' | 'error' | 'info'>('info');
-
-  function showNoticeModal(
-    title: string,
-    message: string,
-    variant: 'success' | 'error' | 'info' = 'info'
-  ) {
-    noticeTitle.value = title;
-    noticeMessage.value = message;
-    noticeVariant.value = variant;
-    showNotice.value = true;
-  }
-  const exportData = ref<USRateSheetEntry[]>([]);
-  const totalExportRecords = ref(0);
-
-  function handleClearData() {
-    showClearDataModal.value = true;
-  }
-
-  function confirmClearData() {
-    currentDisplayAverages.value = { inter: null, intra: null, indeterm: null };
-    adjustedNpasThisSession.value.clear(); // Clear adjusted NPAs
-    store.clearUsRateSheetData();
-    showClearDataModal.value = false;
-  }
-
-  function handleResetSession() {
-    showResetSessionModal.value = true;
-  }
-
-  function confirmResetSession() {
-    console.log(
-      '[USRateSheetTable] Resetting session tracking. Previously adjusted NPAs:',
-      Array.from(adjustedNpasThisSession.value)
-    );
-    adjustedNpasThisSession.value.clear();
-    adjustmentDetailsThisSession.value.clear();
-    adjustmentOperationsThisSession.value = []; // Clear adjustment operations history
-    adjustmentStatusMessage.value = 'Session tracking reset. All NPAs can now be adjusted again.';
-
-    // Clear the message after a few seconds
-    if (adjustmentStatusTimeoutId) {
-      clearTimeout(adjustmentStatusTimeoutId);
-    }
-    adjustmentStatusTimeoutId = setTimeout(() => {
-      adjustmentStatusMessage.value = null;
-      adjustmentStatusTimeoutId = null;
-    }, 3000);
-    
-    showResetSessionModal.value = false;
-  }
-
-  // Replace isExporting ref with the one from composable
-  const { isExporting, exportError, exportToCSV } = useCSVExport();
-  const { transformDataForExport } = useUSExportConfig();
-
-  // Export filters for modal
-  const exportFilters = computed<USExportFilters>(() => ({
-    states: selectedState.value ? [selectedState.value] : [],
-    excludeStates: false,
-    npanxxSearch: debouncedSearchQuery.value.join(', '),
-    metroAreas: selectedMetros.value.map(m => m.displayName),
-    countries: [],
-    excludeCountries: false,
-  }));
-
-  async function handleOpenExportModal() {
-    if (!dbInstance.value) {
-      await initializeDB();
-      if (!dbInstance.value) {
-        showNoticeModal('Export Failed', 'Database is not ready. Cannot export.', 'error');
-        return;
-      }
-    }
-
-    try {
-      // Get total record count
-      const totalTable = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      totalExportRecords.value = await totalTable.count();
-
-      // Get filtered data
-      let query: Dexie.Collection<USRateSheetEntry, any> = totalTable.toCollection();
-      const currentFilters = createFilters();
-
-      if (currentFilters.length > 0) {
-        query = query.filter((record) => currentFilters.every((fn) => fn(record)));
-      }
-
-      exportData.value = await query.toArray();
-
-      if (exportData.value.length === 0) {
-        showNoticeModal('Nothing to Export', 'No data matches the current filters to export.', 'info');
-        return;
-      }
-
-      // Add effective date to each record
-      const effectiveDate = store.getCurrentEffectiveDate || 'N/A';
-      exportData.value = exportData.value.map(entry => ({
-        ...entry,
-        effectiveDate,
-      }));
-
-      showExportModal.value = true;
-    } catch (error) {
-      console.error('Error preparing export data:', error);
-      showNoticeModal('Export Failed', 'Failed to prepare export data.', 'error');
-    }
-  }
-
-  async function handleExportWithOptions(data: USRateSheetEntry[], options: USExportFormatOptions) {
-    try {
-      const transformed = transformDataForExport(data, options, 'rate-sheet');
-      
-      // Apply Excel text formatting to NXX column if in split format
-      if (options.npanxxFormat === 'split') {
-        transformed.rows = transformed.rows.map(row => ({
-          ...row,
-          'NXX': `="${row['NXX']}"` // Excel formula to force text format
-        }));
-      }
-      
-      const exportOptions: CSVExportOptions = {
-        filename: 'us-rate-sheet',
-        additionalNameParts: [],
-        timestamp: true,
-        quoteFields: true,
-      };
-
-      if (selectedState.value) {
-        exportOptions.additionalNameParts?.push(selectedState.value.replace(/\s+/g, '_'));
-      }
-      if (debouncedSearchQuery.value.length > 0) {
-        const queryPart = debouncedSearchQuery.value.join('-');
-        exportOptions.additionalNameParts?.push(`search_${queryPart.replace(/\s+/g, '_')}`);
-      }
-
-      await exportToCSV(transformed, exportOptions);
-    } catch (error) {
-      console.error('Export failed:', error);
-      throw error;
-    }
-  }
-
-  async function handleExport() {
-    if (isExporting.value) return; // Already handled by useCSVExport, but good for clarity
-
-    if (!dbInstance.value) {
-      await initializeDB(); // Ensure DB is initialized if not already
-      if (!dbInstance.value) {
-        showNoticeModal('Export Failed', 'Database is not ready. Cannot export.', 'error');
-        console.error('[Export Debug] DB instance still not ready after init attempt.');
-        return;
-      }
-    }
-
-    try {
-      const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-      let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
-
-      const currentFilters = createFilters();
-
-      if (currentFilters.length > 0) {
-        query = query.filter((record) => currentFilters.every((fn) => fn(record)));
-      }
-
-      const dataToExport = await query.toArray();
-
-      if (dataToExport.length === 0) {
-        showNoticeModal('Nothing to Export', 'No data matches the current filters to export.', 'info');
-
-        return;
-      }
-
-      const headers = [
-        'NPANXX',
-        'State',
-        'Country',
-        'Interstate Rate',
-        'Intrastate Rate',
-        'Indeterminate Rate',
-        'Effective Date',
-      ];
-
-      const rows = dataToExport.map((entry) => {
-        const npaInfo = lergStore.getNPAInfo(entry.npa); // Get NPA info from enhanced store
-        return [
-          `1${entry.npanxx}`,
-          npaInfo?.state_province_code || 'N/A',
-          npaInfo?.country_code || 'N/A',
-          // Using the local formatRate which is confirmed to use .toFixed(6)
-          typeof entry.interRate === 'number' ? formatRate(entry.interRate) : 'N/A',
-          typeof entry.intraRate === 'number' ? formatRate(entry.intraRate) : 'N/A',
-          typeof entry.indetermRate === 'number' ? formatRate(entry.indetermRate) : 'N/A',
-          store.getCurrentEffectiveDate || 'N/A', // Assuming store is the usRateSheetStore
-        ];
-      });
-
-      const exportOptions: CSVExportOptions = {
-        filename: 'us-rate-sheet',
-        additionalNameParts: [],
-        timestamp: true, // Default is true in composable, explicit for clarity
-        quoteFields: true, // Default is true in composable, explicit for clarity
-      };
-
-      if (selectedState.value) {
-        exportOptions.additionalNameParts?.push(selectedState.value.replace(/\s+/g, '_'));
-      }
-      if (debouncedSearchQuery.value && debouncedSearchQuery.value.length > 0) {
-        // Assuming debouncedSearchQuery is an array of strings or a single string
-        const queryPart = Array.isArray(debouncedSearchQuery.value)
-          ? debouncedSearchQuery.value.join('-')
-          : debouncedSearchQuery.value;
-        exportOptions.additionalNameParts?.push(`search_${queryPart.replace(/\s+/g, '_')}`);
-      }
-
-      await exportToCSV({ headers, rows }, exportOptions);
-    } catch (err: any) {
-      console.error('[Export Debug] Error during export:', err);
-      // exportError.value is already set by useCSVExport if the error originated there
-      // If the error is from data preparation before calling exportToCSV, dataError (if defined) or a local error ref should be used
-      // For now, ensure user is notified.
-      showNoticeModal(
-        'Export Failed',
-        err.message || 'An unexpected error occurred',
-        'error'
-      );
-      // If you have a specific dataError ref for this component:
-      // dataError.value = err.message || 'Failed to export data';
-    }
-  }
-
-  async function handleApplyAdjustment() {
-    console.log('[USRateSheetTable] handleApplyAdjustment: ENTRY POINT - Function called');
-    console.log(
-      '[USRateSheetTable] handleApplyAdjustment: isApplyingAdjustment.value =',
-      isApplyingAdjustment.value
-    );
-    console.log('[USRateSheetTable] handleApplyAdjustment: dbInstance.value =', !!dbInstance.value);
-
-    if (isApplyingAdjustment.value || !dbInstance.value) {
-      console.log(
-        '[USRateSheetTable] handleApplyAdjustment: EARLY EXIT - isApplyingAdjustment or no dbInstance'
-      );
-      return;
-    }
-    if (adjustmentValue.value === null || adjustmentValue.value <= 0) {
-      adjustmentError.value = 'Please enter a positive adjustment value.';
-      adjustmentStatusMessage.value = null;
-      return;
-    }
-
-    if (adjustmentStatusTimeoutId) {
-      clearTimeout(adjustmentStatusTimeoutId);
-      adjustmentStatusTimeoutId = null;
-    }
-
-    isApplyingAdjustment.value = true;
-    adjustmentStatusMessage.value = null;
-    adjustmentError.value = null;
-    const startTime = performance.now();
-
-    try {
-      console.log(
-        '[USRateSheetTable] handleApplyAdjustment: Start. adjustedNpasThisSession:',
-        new Set(adjustedNpasThisSession.value)
-      );
-
-      let collection: Dexie.Collection<USRateSheetEntry, any> = dbInstance.value
-        .table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME)
-        .toCollection();
-
-      // Use the same filter logic as the table display for consistency
-      const currentFilters = createFilters();
-
-      // Apply filters if any exist
-      if (currentFilters.length > 0) {
-        collection = collection.filter((record) => currentFilters.every((fn) => fn(record)));
-      }
-
-      // Build human-readable description of filters applied
-      const filtersApplied: string[] = [];
-
-      if (debouncedSearchQuery.value.length > 0) {
-        if (debouncedSearchQuery.value.length === 1) {
-          filtersApplied.push(`NPANXX starts with '${debouncedSearchQuery.value[0]}'`);
-        } else {
-          filtersApplied.push(
-            `NPANXXs start with one of [${debouncedSearchQuery.value.join(', ')}]`
-          );
-        }
-      }
-
-      if (selectedState.value) {
-        if (selectedState.value.startsWith('GROUP_')) {
-          // Handle group selections
-          const groupName = selectedState.value.replace('GROUP_', '').replace(/_/g, ' ');
-          filtersApplied.push(`Region: All ${groupName}`);
-        } else {
-          filtersApplied.push(`Region equals '${selectedState.value}'`);
-        }
-      }
-
-      if (metroAreaCodesToFilter.value.length > 0) {
-        const metroCount = metroAreaCodesToFilter.value.length;
-
-        if (metroCount === 10) {
-          filtersApplied.push('Metro Filter: Top 10 Metro Areas');
-        } else if (metroCount === 25) {
-          filtersApplied.push('Metro Filter: Top 25 Metro Areas');
-        } else if (metroCount === 50) {
-          filtersApplied.push('Metro Filter: Top 50 Metro Areas');
-        } else if (metroCount <= 5) {
-          filtersApplied.push(`Metro Filter: NPAs ${metroAreaCodesToFilter.value.join(', ')}`);
-        } else {
-          filtersApplied.push(`Metro Filter: ${metroCount} Metro Areas Selected`);
-        }
-      }
-
-      const filteredRecords = await collection.toArray();
-      const recordCount = filteredRecords.length;
-
-      if (recordCount === 0) {
-        adjustmentStatusMessage.value =
-          'No records match the current filters. No adjustments applied.';
-        isApplyingAdjustment.value = false;
-        return;
-      }
-
-      adjustmentStatusMessage.value = `Applying ${recordCount} updates...`;
-
-      const allUpdatesToApply: { key: any; changes: Partial<USRateSheetEntry> }[] = [];
-      const npasBeingAdjustedThisRound = new Set<string>(); // Track NPAs being adjusted in this round
-
-      for (const record of filteredRecords) {
-        console.log(
-          `[USRateSheetTable] Processing record: NPANXX=${record.npanxx}, NPA=${record.npa}, ID=${record.id}`
-        );
-        if (!record || !record.id || !record.npa) {
-          console.warn('[USRateSheetTable] Skipping record due to missing id or npa:', record);
-          continue; // Ensure record, record.id, and record.npa exist
-        }
-
-        // Skip if the NPA of this record has already been adjusted in this session
-        const isNpaAdjusted = adjustedNpasThisSession.value.has(record.npa);
-        console.log(
-          `[USRateSheetTable] NPA ${record.npa} in adjustedNpasThisSession? ${isNpaAdjusted}`
-        );
-        if (isNpaAdjusted) {
-          console.log(
-            `[USRateSheetTable] SKIPPING record ${record.npanxx} (NPA: ${record.npa}) as its NPA was already adjusted this session.`
-          );
-          continue;
-        }
-
-        const changes: Partial<USRateSheetEntry> = {};
-        let changed = false;
-        const targets: (keyof Pick<
-          USRateSheetEntry,
-          'interRate' | 'intraRate' | 'indetermRate'
-        >)[] = [];
-
-        if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'inter')
-          targets.push('interRate');
-        if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'intra')
-          targets.push('intraRate');
-        if (adjustmentTargetRate.value === 'all' || adjustmentTargetRate.value === 'indeterm')
-          targets.push('indetermRate');
-
-        // Track adjustment details for this NPA
-        const npaKey = record.npa;
-        if (!adjustmentDetailsThisSession.value.has(npaKey)) {
-          adjustmentDetailsThisSession.value.set(npaKey, {
-            recordsAffected: 0,
-            beforeRates: {},
-            afterRates: {},
-            adjustmentType: adjustmentType.value,
-            adjustmentValue: adjustmentValue.value!,
-            adjustmentValueType: adjustmentValueType.value,
-            targetRate: adjustmentTargetRate.value
-          });
-        }
-        const npaDetails = adjustmentDetailsThisSession.value.get(npaKey)!;
-
-        targets.forEach((rateField) => {
-          const currentRate = record[rateField];
-          if (typeof currentRate !== 'number') return;
-
-          // Store the before rate if we haven't already for this NPA
-          const rateType = rateField === 'interRate' ? 'inter' : 
-                          rateField === 'intraRate' ? 'intra' : 'indeterm';
-          
-          if (npaDetails.beforeRates[rateType] === undefined) {
-            npaDetails.beforeRates[rateType] = currentRate;
-          }
-
-          let adjustedRate: number;
-          const value = adjustmentValue.value!;
-
-          if (adjustmentType.value === 'set') {
-            adjustedRate = value;
-          } else if (adjustmentValueType.value === 'percentage') {
-            const percentage = value / 100;
-            adjustedRate =
-              currentRate * (adjustmentType.value === 'markup' ? 1 + percentage : 1 - percentage);
-          } else {
-            adjustedRate = currentRate + (adjustmentType.value === 'markup' ? value : -value);
-          }
-
-          const finalRate = Math.max(0, parseFloat(adjustedRate.toFixed(6)));
-
-          if (finalRate !== currentRate) {
-            changes[rateField] = finalRate;
-            changed = true;
-            
-            // Store the after rate
-            npaDetails.afterRates[rateType] = finalRate;
-          }
-        });
-
-        if (changed && record.id) {
-          allUpdatesToApply.push({ key: record.id, changes });
-          // Track this NPA as being adjusted in this round
-          npasBeingAdjustedThisRound.add(record.npa);
-          
-          // Increment the record count for this NPA
-          npaDetails.recordsAffected++;
-          
-          console.log(
-            `[USRateSheetTable] Adding NPA ${record.npa} to npasBeingAdjustedThisRound (will be added to session tracking after successful update)`
-          );
-        }
-      }
-
-      console.log(
-        '[USRateSheetTable] Records to update (allUpdatesToApply):',
-        JSON.parse(JSON.stringify(allUpdatesToApply))
-      );
-      const updatesCount = allUpdatesToApply.length;
-      if (updatesCount === 0) {
-        adjustmentStatusMessage.value = 'No changes needed for the matching records.';
-        isApplyingAdjustment.value = false;
-        return;
-      }
-
-      const tableToUpdate = dbInstance.value.table<USRateSheetEntry, number | string>(
-        RATE_SHEET_TABLE_NAME
-      );
-      await tableToUpdate.bulkUpdate(allUpdatesToApply);
-
-      // Add successfully updated NPAs to the session tracking
-      console.log(
-        '[USRateSheetTable] Adding NPAs from this round to adjustedNpasThisSession:',
-        Array.from(npasBeingAdjustedThisRound)
-      );
-
-      npasBeingAdjustedThisRound.forEach((npa) => {
-        adjustedNpasThisSession.value.add(npa);
-        console.log(`[USRateSheetTable] Added NPA ${npa} to adjustedNpasThisSession`);
-      });
-
-      // Track this adjustment operation for session history
-      const adjustmentOperation = {
-        timestamp: new Date().toISOString(),
-        filtersApplied: filtersApplied.length > 0 ? filtersApplied : ['No filters - all data'],
-        adjustmentType: adjustmentType.value,
-        adjustmentValue: adjustmentValue.value!,
-        adjustmentValueType: adjustmentValueType.value,
-        targetRate: adjustmentTargetRate.value,
-        npasAffected: Array.from(npasBeingAdjustedThisRound).sort(),
-        recordsAffected: updatesCount
-      };
-      
-      adjustmentOperationsThisSession.value.push(adjustmentOperation);
-      console.log('[USRateSheetTable] Tracked adjustment operation:', adjustmentOperation);
-
-      console.log(
-        '[USRateSheetTable] handleApplyAdjustment: End. adjustedNpasThisSession:',
-        new Set(adjustedNpasThisSession.value)
-      );
-
-      const endTime = performance.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2);
-      adjustmentStatusMessage.value = `Adjustment complete: ${updatesCount} records updated in ${duration}s.`;
-
-      await resetPaginationAndLoad(createFilters());
-      await recalculateAndDisplayAverages();
-      // --- End refresh ---
-
-      // --- Reset adjustment form ---
-      adjustmentValue.value = null; // Only reset the value input
-      // --- End reset form ---
-
-      adjustmentStatusTimeoutId = setTimeout(() => {
-        adjustmentStatusMessage.value = null;
-        adjustmentStatusTimeoutId = null;
-      }, 4000);
-
-      store.lastDbUpdateTime = Date.now();
-    } catch (err: any) {
-      adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
-      adjustmentStatusMessage.value = null;
-    } finally {
-      isApplyingAdjustment.value = false;
-    }
-  }
-
-  const selectedAdjustmentTypeLabel = computed(
-    () => adjustmentTypeOptions.find((opt) => opt.value === adjustmentType.value)?.label || ''
-  );
-  const selectedAdjustmentValueTypeLabel = computed(
-    () =>
-      adjustmentValueTypeOptions.find((opt) => opt.value === adjustmentValueType.value)?.label || ''
-  );
-  const selectedAdjustmentTargetRateLabel = computed(
-    () =>
-      adjustmentTargetRateOptions.find((opt) => opt.value === adjustmentTargetRate.value)?.label ||
-      ''
-  );
-
+  // --- Region/state select helpers ---
   function getRegionDisplayName(code: string): string {
-    // Special handling for US territories and common abbreviations
     const territoryNames: Record<string, string> = {
-      'PR': 'Puerto Rico',
-      'VI': 'U.S. Virgin Islands', 
-      'GU': 'Guam',
-      'AS': 'American Samoa',
-      'MP': 'Northern Mariana Islands',
-      'DC': 'District of Columbia',
+      PR: 'Puerto Rico',
+      VI: 'U.S. Virgin Islands',
+      GU: 'Guam',
+      AS: 'American Samoa',
+      MP: 'Northern Mariana Islands',
+      DC: 'District of Columbia',
     };
-
-    // Check territory names first
-    if (territoryNames[code]) {
-      return territoryNames[code];
-    }
-
-    // Try US states
-    const usState = lergStore.getUSStates.find(state => state.code === code);
-    if (usState) {
-      return usState.name;
-    }
-
-    // Try Canadian provinces  
-    const caProvince = lergStore.getCanadianProvinces.find(province => province.code === code);
-    if (caProvince) {
-      return caProvince.name;
-    }
-
-    // Try other countries
-    const country = lergStore.getDistinctCountries.find(country => country.code === code);
-    if (country) {
-      return country.name;
-    }
-
-    // Fall back to the code itself
-    return code;
+    if (territoryNames[code]) return territoryNames[code];
+    const usState = lergStore.getUSStates.find((s) => s.code === code);
+    if (usState) return usState.name;
+    const caProvince = lergStore.getCanadianProvinces.find((p) => p.code === code);
+    if (caProvince) return caProvince.name;
+    const country = lergStore.getDistinctCountries.find((c) => c.code === code);
+    return country ? country.name : code;
   }
-
-  // Helper function to get display name for selected state (handles both individual and group selections)
-  function getSelectedStateDisplayName(selectedValue: string): string {
-    // Handle group selections
-    if (selectedValue === 'GROUP_UNITED_STATES') {
-      return 'All United States';
-    } else if (selectedValue === 'GROUP_CANADA') {
-      return 'All Canada';
-    } else if (selectedValue === 'GROUP_OTHER_COUNTRIES') {
-      return 'All Other Countries';
-    } else {
-      // Handle individual selections
-      return getRegionDisplayName(selectedValue) + ' (' + selectedValue + ')';
-    }
-  }
-
-  // Computed property to structure states for the dropdown with optgroup
   const groupedAvailableStates = computed(() => {
     const grouped = groupRegionCodes(availableStates.value);
-
     return [
       { label: 'United States', codes: grouped['US'] || [] },
       { label: 'Canada', codes: grouped['CA'] || [] },
       { label: 'Other Countries', codes: grouped['OTHER'] || [] },
-    ].filter((group) => group.codes.length > 0);
+    ].filter((g) => g.codes.length > 0);
   });
 
-  // --- Sorting Handler ---
+  // --- Sorting / clearing ---
   async function handleSort(key: string) {
     const header = tableHeaders.value.find((h) => h.key === key);
-    if (!header || !header.sortable) {
-      return;
-    }
-
+    if (!header || !header.sortable) return;
     if (currentSortKey.value === key) {
       currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
       currentSortKey.value = key;
       currentSortDirection.value = 'asc';
     }
-    // After updating sort state, reload data from the beginning
-    await resetPaginationAndLoad(createFilters());
+    await resetPaginationAndLoad(createDisplayFilters());
   }
-  // --- End Sorting Handler ---
 
   async function handleClearAllFilters() {
     searchQuery.value = '';
     selectedState.value = '';
+    statusFilter.value = 'all';
     clearAllSelectedMetros();
-
-    // Reset sorting to default when clearing all filters
     currentSortKey.value = 'npanxx';
     currentSortDirection.value = 'asc';
+    previewImpact.value = null;
+    await resetPaginationAndLoad(createDisplayFilters());
+    await recalculateAndDisplayAverages();
+  }
 
-    await resetPaginationAndLoad(createFilters());
+  // --- Scope description (for the command sentence + operation record) ---
+  function describeScope(): string {
+    const parts = describeFilters();
+    return parts.length ? 'Filtered Results' : 'All Records';
+  }
+  function describeFilters(): string[] {
+    const out: string[] = [];
+    if (debouncedSearchQuery.value.length > 0) {
+      out.push(`NPANXX starts with ${debouncedSearchQuery.value.join(', ')}`);
+    }
+    if (selectedState.value) {
+      if (selectedState.value.startsWith('GROUP_')) {
+        out.push(`Region: ${selectedState.value.replace('GROUP_', '').replace(/_/g, ' ')}`);
+      } else {
+        out.push(`Region: ${selectedState.value}`);
+      }
+    }
+    if (selectedMetros.value.length > 0) {
+      out.push(`Metro: ${selectedMetros.value.map((m) => m.displayName).join(', ')}`);
+    }
+    return out;
+  }
+
+  // --- Load filtered records into memory for preview/apply (matches legacy path) ---
+  async function loadFilteredRecords(): Promise<USRateSheetEntry[]> {
+    if (!dbInstance.value) await initializeDB();
+    if (!dbInstance.value) return [];
+    const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+    let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
+    const filters = createFilters();
+    if (filters.length > 0) query = query.filter((record) => filters.every((fn) => fn(record)));
+    return query.toArray();
+  }
+
+  function buildAdjustment(): Adjustment {
+    return {
+      type: adjustmentType.value,
+      valueType: adjustmentValueType.value,
+      value: adjustmentValue.value!,
+      target: adjustmentTargetRate.value,
+    };
+  }
+
+  // Plain NPA→geo map for the worker (no lergStore closure crosses the boundary).
+  // Mirrors lergStore.getNPAInfo, built once per run from the ~449 LERG records.
+  function buildNpaGeoMap(): UsRateAdjusterRequest['npaGeoMap'] {
+    const map: UsRateAdjusterRequest['npaGeoMap'] = {};
+    for (const rec of lergStore.allNPAs) {
+      map[rec.npa] = {
+        country_code: rec.country_code,
+        state_province_code: rec.state_province_code,
+      };
+    }
+    return map;
+  }
+
+  // Serialize the current scope + adjustment for the worker. Freeze Set/Map are
+  // cloned to plain collections — Vue reactive proxies don't structured-clone.
+  function buildWorkerRequest(mode: 'apply' | 'preview'): UsRateAdjusterRequest {
+    return {
+      searchTerms: [...debouncedSearchQuery.value],
+      selectedState: selectedState.value,
+      metroNpas: [...metroAreaCodesToFilter.value],
+      npaGeoMap: buildNpaGeoMap(),
+      adjustment: buildAdjustment(),
+      freeze: {
+        frozenNpas: new Set(psStore.frozenNpas),
+        npanxxOverrides: new Map(psStore.npanxxOverrides),
+      },
+      scopeLabel: describeScope(),
+      filtersApplied: describeFilters(),
+      mode,
+    };
+  }
+
+  // Spawn the off-thread adjuster, relay progress, resolve on complete / reject
+  // on error, and always terminate the worker before settling.
+  function runAdjusterWorker(
+    request: UsRateAdjusterRequest,
+    onProgress?: (p: { phase: 'reading' | 'writing'; percentage: number }) => void
+  ): Promise<UsRateAdjusterResponse> {
+    return new Promise((resolve, reject) => {
+      const worker = new UsRateAdjusterWorker();
+      worker.onmessage = (event: MessageEvent<UsRateAdjusterResponse>) => {
+        const msg = event.data;
+        if (msg.type === 'progress') {
+          onProgress?.({ phase: msg.phase, percentage: msg.percentage });
+          return;
+        }
+        worker.terminate();
+        if (msg.type === 'error') reject(new Error(msg.message));
+        else resolve(msg);
+      };
+      worker.onerror = (err) => {
+        worker.terminate();
+        reject(new Error(err.message || 'Rate adjuster worker crashed.'));
+      };
+      worker.postMessage(request);
+    });
+  }
+
+  // --- Preview (dry run; does not commit) — runs off-thread ---
+  async function handlePreview() {
+    if (!canAdjust.value) return;
+    adjustmentError.value = null;
+    try {
+      const result = await runAdjusterWorker(buildWorkerRequest('preview'));
+      if (result.type === 'complete' && result.mode === 'preview') {
+        previewImpact.value = result.impact;
+      }
+    } catch (err: any) {
+      adjustmentError.value = err.message || 'Preview failed.';
+    }
+  }
+
+  // --- Apply + Freeze (worker commits to Dexie; main thread records session state) ---
+  async function handleApplyAndFreeze() {
+    if (!canAdjust.value || isApplyingAdjustment.value) return;
+    if (adjustmentStatusTimeoutId) {
+      clearTimeout(adjustmentStatusTimeoutId);
+      adjustmentStatusTimeoutId = null;
+    }
+    isApplyingAdjustment.value = true;
+    adjustmentStatusMessage.value = null;
+    adjustmentError.value = null;
+    const startTime = performance.now();
+
+    try {
+      const result = await runAdjusterWorker(buildWorkerRequest('apply'), (p) => {
+        const label = p.phase === 'reading' ? 'Scanning rows' : 'Applying';
+        adjustmentStatusMessage.value = `${label}… ${Math.round(p.percentage)}%`;
+      });
+      if (result.type !== 'complete' || result.mode !== 'apply') return;
+
+      if (result.impact.rowsAffected === 0) {
+        adjustmentStatusMessage.value =
+          result.impact.frozenRowsExcluded > 0
+            ? 'All matching rows are frozen — no changes applied.'
+            : 'No changes needed for the matching rows.';
+        previewImpact.value = result.impact;
+        return;
+      }
+
+      // Record freeze + modified + operation into the session store (the worker
+      // already committed the rate writes to IndexedDB).
+      psStore.recordAdjustment({
+        newlyFrozenNpas: result.newlyFrozenNpas,
+        modifiedNpanxx: result.modifiedNpanxx,
+        operation: result.operation,
+      });
+
+      // Use the worker's single-pass averages instead of a second full scan.
+      currentDisplayAverages.value = result.averages;
+      psStore.setDeckAvgInterRate(result.averages.inter);
+
+      const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+      adjustmentStatusMessage.value = `Applied to ${result.impact.rowsAffected.toLocaleString()} rows and froze ${result.newlyFrozenNpas.length} NPA(s) in ${duration}s.`;
+      previewImpact.value = null;
+      adjustmentValue.value = null;
+
+      await resetPaginationAndLoad(createDisplayFilters());
+      store.lastDbUpdateTime = Date.now();
+
+      adjustmentStatusTimeoutId = setTimeout(() => {
+        adjustmentStatusMessage.value = null;
+        adjustmentStatusTimeoutId = null;
+      }, 4000);
+    } catch (err: any) {
+      adjustmentError.value = err.message || 'An unknown error occurred during adjustment.';
+    } finally {
+      isApplyingAdjustment.value = false;
+    }
+  }
+
+  // --- Per-NPANXX freeze/thaw override ---
+  function toggleRowFreeze(entry: USRateSheetEntry) {
+    if (isRowFrozen(entry)) {
+      psStore.thawNpanxx(entry.npanxx);
+    } else {
+      psStore.freezeNpanxx(entry.npanxx);
+    }
+  }
+
+  // --- Export ---
+  const { isExporting, exportToCSV } = useCSVExport();
+
+  async function buildDeckCsvAndDownload(records: USRateSheetEntry[], filenameParts: string[]) {
+    const { headers, rows } = buildRateDeckCsv(records, {
+      effectiveDate: store.getCurrentEffectiveDate,
+      getGeo: geoOf,
+      formatRate: (n) => (typeof n === 'number' ? n.toFixed(6) : 'N/A'),
+    });
+    await exportToCSV(
+      { headers, rows },
+      { filename: 'us-rate-deck', additionalNameParts: filenameParts, timestamp: true, quoteFields: true }
+    );
+  }
+
+  // Filter-panel "Export Rates": current filtered deck as CSV only.
+  async function exportRatesCsv() {
+    if (isExporting.value) return;
+    try {
+      const records = await loadFilteredRecords();
+      if (records.length === 0) {
+        showNoticeModal('Nothing to Export', 'No rows match the current filters.', 'info');
+        return;
+      }
+      const parts: string[] = [];
+      if (selectedState.value) parts.push(selectedState.value.replace(/\s+/g, '_'));
+      if (debouncedSearchQuery.value.length) parts.push(`search_${debouncedSearchQuery.value.join('-')}`);
+      await buildDeckCsvAndDownload(records, parts);
+    } catch (err: any) {
+      showNoticeModal('Export Failed', err.message || 'Failed to export rates.', 'error');
+    }
+  }
+
+  // Header "Export Package": full final deck CSV + branded change-audit PDF.
+  async function exportPackage() {
+    if (isExporting.value || !store.getHasUsRateSheetData) return;
+    try {
+      if (!dbInstance.value) await initializeDB();
+      if (!dbInstance.value) {
+        showNoticeModal('Export Failed', 'Database is not ready.', 'error');
+        return;
+      }
+      const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
+      const allRecords = await table.toArray();
+      if (allRecords.length === 0) {
+        showNoticeModal('Nothing to Export', 'No rate deck data to export.', 'info');
+        return;
+      }
+      // 1) Final rate deck CSV
+      await buildDeckCsvAndDownload(allRecords, ['final']);
+      // 2) Branded change-audit PDF
+      const readiness = computeReadiness({
+        totalRecords: store.getTotalRecords,
+        operations: psStore.operations,
+        freeze: psStore.freezeState,
+        avgInterRate: psStore.deckAvgInterRate,
+      });
+      downloadAuditPdf(psStore.operations, {
+        generatedAt: new Date(),
+        totalRecords: store.getTotalRecords,
+        modifiedRows: readiness.modifiedRows,
+        frozenScopes: readiness.frozenScopes,
+        effectiveDate: store.getCurrentEffectiveDate,
+      });
+      showNoticeModal(
+        'Export Package Ready',
+        'Two files downloaded: the final rate deck (CSV) and the change audit (PDF).',
+        'success'
+      );
+    } catch (err: any) {
+      showNoticeModal('Export Failed', err.message || 'Failed to export package.', 'error');
+    }
+  }
+
+  defineExpose({ exportPackage });
+
+  // --- Notice modal ---
+  const showNotice = ref(false);
+  const noticeTitle = ref('');
+  const noticeMessage = ref('');
+  const noticeVariant = ref<'success' | 'error' | 'info'>('info');
+  function showNoticeModal(title: string, message: string, variant: 'success' | 'error' | 'info' = 'info') {
+    noticeTitle.value = title;
+    noticeMessage.value = message;
+    noticeVariant.value = variant;
+    showNotice.value = true;
   }
 </script>
 
 <style scoped>
-  /* General transition for smooth visibility changes */
-  .slide-fade-enter-active {
-    transition: all 0.3s ease-out;
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.15s ease;
   }
-
-  .slide-fade-leave-active {
-    transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
-  }
-
-  .slide-fade-enter-from,
-  .slide-fade-leave-to {
-    transform: translateY(-10px);
+  .fade-enter-from,
+  .fade-leave-to {
     opacity: 0;
-  }
-
-  thead th {
-    position: sticky;
-    top: 0;
-    background-color: #1f2937; /* bg-gray-800 */
-    z-index: 10;
   }
 </style>
