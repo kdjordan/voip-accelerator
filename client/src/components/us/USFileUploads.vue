@@ -2,8 +2,8 @@
   <div class="flex flex-col gap-8 w-full">
     <!-- Upload Zones Box -->
     <div class="w-full">
-      <div class="bg-white/[0.02] border border-white/[0.07] border-t-0 rounded-b-2xl p-4 md:p-6">
-        <div class="pb-4 mb-6">
+      <div>
+        <div class="pb-0">
           <!-- Responsive: stack vertically on mobile, side-by-side on desktop -->
           <div class="flex flex-col md:flex-row w-full gap-6">
             <!-- Left Side: First Upload Zone and Single File Report -->
@@ -71,7 +71,7 @@
                       "
                     >
                       <div class="flex-1 flex items-center justify-center w-full">
-                        <p class="text-sizeMd text-accent/80">
+                        <p class="text-sm text-zinc-500">
                           Please wait for the other file to finish processing...
                         </p>
                       </div>
@@ -80,10 +80,10 @@
                     <!-- Default/Empty State -->
                     <template v-else>
                       <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
+                        class="w-10 h-10 mx-auto border rounded-full p-2 text-emerald-400 border-white/10 bg-white/[0.03]"
                       />
-                      <p class="mt-2 text-base text-accent">
-                        DRAG & DROP or CLICK to upload
+                      <p class="mt-2 text-sm text-zinc-400">
+                        DRAG &amp; DROP or CLICK to upload
                       </p>
                       <p
                         v-if="uploadError.us1"
@@ -165,7 +165,7 @@
                       "
                     >
                       <div class="flex-1 flex items-center justify-center w-full">
-                        <p class="text-sizeMd text-accent/80">
+                        <p class="text-sm text-zinc-500">
                           Please wait for the other file to finish processing...
                         </p>
                       </div>
@@ -174,10 +174,10 @@
                     <!-- Default/Empty State -->
                     <template v-else>
                       <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2 text-accent border-accent/50 bg-accent/10"
+                        class="w-10 h-10 mx-auto border rounded-full p-2 text-emerald-400 border-white/10 bg-white/[0.03]"
                       />
-                      <p class="mt-2 text-base text-accent">
-                        DRAG & DROP or CLICK to upload
+                      <p class="mt-2 text-sm text-zinc-400">
+                        DRAG &amp; DROP or CLICK to upload
                       </p>
                       <p
                         v-if="uploadError.us2"

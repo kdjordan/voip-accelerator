@@ -2,82 +2,29 @@ import type { NavigationItem } from '@/types/nav-types';
 import {
   HomeIcon,
   DocumentChartBarIcon,
-  GlobeAmericasIcon,
-  GlobeAltIcon, // retained for the hidden AZ Reporting nav item (see below)
   WrenchScrewdriverIcon,
-  AdjustmentsVerticalIcon,
   SparklesIcon,
-  // Cog6ToothIcon, // Keep commented out if not used
+  AdjustmentsVerticalIcon,
 } from '@heroicons/vue/24/outline';
 
+// FLAT nav: with A-Z hidden (US-NPANXX focus) each section had a single child, so the
+// dropdown sub-menus were removed — every route is now a direct link.
+// To restore A-Z later: give Reporting / Rate Wizard a `children: [...]` array again (US + AZ)
+// and reinstate the expandable rendering in SideNav.vue + AppMobileNav.vue.
 export const appNavigationItems: NavigationItem[] = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: HomeIcon,
-  },
-  {
-    name: 'Reporting',
-    icon: DocumentChartBarIcon,
-    children: [
-      {
-        name: 'US Reporting',
-        href: '/usview',
-        icon: GlobeAmericasIcon,
-      },
-      // A-Z (international) HIDDEN for US-NPANXX focus (reversible). To restore: uncomment.
-      // {
-      //   name: 'AZ Reporting',
-      //   href: '/azview',
-      //   icon: GlobeAltIcon,
-      // },
-    ],
-  },
-  {
-    name: 'Rate Wizard',
-    icon: WrenchScrewdriverIcon,
-    children: [
-      {
-        name: 'US Rate Wizard',
-        href: '/us-rate-sheet',
-        icon: AdjustmentsVerticalIcon,
-      },
-      // A-Z (international) HIDDEN for US-NPANXX focus (reversible). To restore: uncomment.
-      // {
-      //   name: 'AZ Rate Wizard',
-      //   href: '/az-rate-sheet',
-      //   icon: AdjustmentsVerticalIcon,
-      // },
-    ],
-  },
-  {
-    name: 'Rate Generation',
-    icon: SparklesIcon,
-    children: [
-      {
-        name: 'US Rate Generation',
-        href: '/rate-gen/us',
-        icon: GlobeAmericasIcon,
-      },
-    ],
-  },
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Reporting', href: '/usview', icon: DocumentChartBarIcon },
+  { name: 'Rate Wizard', href: '/us-rate-sheet', icon: WrenchScrewdriverIcon },
+  { name: 'Rate Generation', href: '/rate-gen/us', icon: SparklesIcon },
   {
     name: 'Admin',
     href: '/admin',
     icon: AdjustmentsVerticalIcon,
     meta: { requiresAuth: true, requiresAdmin: true },
   },
-  // {
-  //   name: 'Lerg Admin',
-  //   href: '/admin',
-  //   icon: Cog6ToothIcon,
-  // },
 ];
 
 // Example Marketing Navigation (Adjust as needed)
 export const marketingNavigationItems: NavigationItem[] = [
   { name: 'Features', href: '/#features' },
-  // { name: 'Pricing', href: '/pricing' },
-  // { name: 'About', href: '/about' },
-  // Login/Signup are now handled explicitly in MarketingMobileNav panel
 ];

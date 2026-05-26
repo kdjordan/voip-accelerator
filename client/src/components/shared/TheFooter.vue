@@ -1,16 +1,16 @@
 <template>
-  <footer class="text-muted-foreground py-3 text-sizeSm text-foreground">
+  <footer class="py-8 text-sm text-zinc-500">
     <div class="flex flex-col items-center justify-center">
-      <div class="mt-12 text-fbWhite/50 text-sm">
-        &copy; {{ new Date().getFullYear() }} VOIP Accelerator. All rights reserved.
+      <div class="text-zinc-600">
+        &copy; {{ new Date().getFullYear() }} VoIP Accelerator. All rights reserved.
       </div>
-      <div class="mt-2 text-fbWhite/50 text-sm">
-        Built with <span class="text-red-500">❤️</span> by
+      <div class="mt-2">
+        Built with <span class="text-rose-400">❤</span> by
         <a
           href="https://kevinjordan.dev"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 text-accent hover:text-accent/80 transition-colors font-medium group"
+          class="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium group"
         >
           Kevin Jordan
           <svg
@@ -24,15 +24,15 @@
           </svg>
         </a>
       </div>
-      <div class="mt-1 text-fbWhite/50 text-sm">
+      <div class="mt-1">
         If you like this, you might like
         <a
-          href="https://reconciledcdr.com"
+          href="https://reconcilecdr.com"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 text-accent hover:text-accent/80 transition-colors font-medium group"
+          class="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium group"
         >
-          ReconciledCDR
+          ReconcileCDR
           <svg
             class="w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
             fill="none"
@@ -44,35 +44,31 @@
           </svg>
         </a>
       </div>
-      <div class="flex items-center justify-start space-x-4 mt-4 text-fbWhite/50">
+      <div class="flex items-center justify-center gap-4 mt-4 text-zinc-500">
         <RouterLink
           to="/terms-and-conditions"
-          class="hover:text-fbWhite/90 transition-colors"
+          class="hover:text-zinc-200 transition-colors"
           target="_blank"
         >
           Terms
         </RouterLink>
-        <span class="text-fbWhite/50">|</span>
-        <RouterLink
-          to="/privacy-policy"
-          class="hover:text-fbWhite/90 transition-colors"
-          target="_blank"
-        >
+        <span class="text-zinc-700">|</span>
+        <RouterLink to="/privacy-policy" class="hover:text-zinc-200 transition-colors" target="_blank">
           Privacy
         </RouterLink>
-        <span class="text-fbWhite/50">|</span>
+        <span class="text-zinc-700">|</span>
         <a
           href="https://kevinjordan.dev"
           target="_blank"
           rel="noopener noreferrer"
-          class="hover:text-fbWhite/90 transition-colors flex items-center"
+          class="hover:text-zinc-200 transition-colors flex items-center"
         >
           About
           <ArrowTopRightOnSquareIcon class="w-3 h-3 ml-1" />
         </a>
         <template v-if="isHomePage">
-          <span class="text-fbWhite/50">|</span>
-          <RouterLink to="#hero" class="hover:text-fbWhite/90 transition-colors"> Top </RouterLink>
+          <span class="text-zinc-700">|</span>
+          <RouterLink to="#hero" class="hover:text-zinc-200 transition-colors"> Top </RouterLink>
         </template>
       </div>
     </div>
