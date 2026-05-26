@@ -1,36 +1,41 @@
 <template>
-  <div class="text-white pt-2 w-full">
+  <div class="w-full pb-4">
     <!-- Dashboard Content -->
-    <div class="flex flex-col gap-6 mb-8 px-4">
-      <h1 class="relative">
-      <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
-        WELCOME BACK
-      </span>
-    </h1>
+    <div class="flex flex-col gap-6 px-4">
+      <!-- Header -->
+      <header class="pt-2">
+        <p class="text-xs font-secondary uppercase tracking-wider text-emerald-400">Dashboard</p>
+        <h1 class="mt-1 flex items-center gap-2 text-2xl md:text-3xl font-semibold text-white">
+          Welcome back, {{ displayName }}
+          <BoltIcon class="h-6 w-6 text-emerald-400" aria-hidden="true" />
+        </h1>
+        <p class="mt-1 text-sm text-zinc-400">Here's what's happening with your account.</p>
+      </header>
+
       <!-- Two Column Account Section -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Bento 1: Account Information -->
-        <div class="bg-gray-800 rounded-lg p-5 border border-gray-700/50 flex flex-col">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-semibold text-white">Account Information</h3>
-            <div class="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center border border-accent/50 flex-shrink-0">
-              <span class="text-xs font-medium text-accent">{{ userInitials }}</span>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Account Information -->
+        <section class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 flex flex-col">
+          <div class="flex items-start justify-between mb-5">
+            <h2 class="text-base font-semibold text-white">Account Information</h2>
+            <div class="w-10 h-10 rounded-full bg-emerald-400/10 ring-1 ring-emerald-400/30 flex items-center justify-center shrink-0">
+              <span class="text-xs font-medium text-emerald-300">{{ userInitials }}</span>
             </div>
           </div>
 
           <!-- Email -->
-          <div class="text-sm mb-3">
-            <span class="text-gray-400 block mb-1">Email:</span>
-            <span class="text-gray-300">{{ displayEmail }}</span>
+          <div class="mb-5">
+            <span class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Email</span>
+            <span class="text-sm text-zinc-200">{{ displayEmail }}</span>
           </div>
 
           <!-- Email Edit Form -->
-          <div v-if="isEditingEmail" class="w-full space-y-2 mb-3">
+          <div v-if="isEditingEmail" class="w-full space-y-2 mb-5">
             <input
               v-model="newEmail"
               type="email"
               placeholder="Enter new email"
-              class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+              class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent text-sm"
               @keyup.enter="updateEmail(newEmail)"
               @keyup.escape="cancelEmailEdit"
             />
@@ -47,30 +52,29 @@
               </BaseButton>
               <BaseButton
                 @click="cancelEmailEdit"
-                variant="destructive"
+                variant="secondary"
                 size="small"
                 class="flex-1"
               >
                 Cancel
               </BaseButton>
             </div>
-            <div v-if="emailSuccessMessage" class="text-green-400 text-xs">
+            <div v-if="emailSuccessMessage" class="text-emerald-400 text-xs">
               {{ emailSuccessMessage }}
             </div>
-            <div v-if="emailErrorMessage" class="text-red-400 text-xs">
+            <div v-if="emailErrorMessage" class="text-rose-400 text-xs">
               {{ emailErrorMessage }}
             </div>
           </div>
 
           <!-- Buttons at bottom -->
-          <div class="flex justify-between mt-auto">
+          <div class="flex items-center gap-3 mt-auto">
             <!-- Update Email Button -->
             <BaseButton
               v-if="!isEditingEmail"
               @click="isEditingEmail = true"
               variant="secondary"
-              size="small"
-              style="width: 33.333%;"
+              :icon="EnvelopeIcon"
             >
               Update Email
             </BaseButton>
@@ -79,119 +83,142 @@
             <BaseButton
               @click="handleLogout"
               variant="destructive"
-              size="small"
-              :is-loading="isLoggingOut"
-              style="width: 33.333%;"
+              :icon="ArrowRightOnRectangleIcon"
+              :loading="isLoggingOut"
             >
               Logout
             </BaseButton>
           </div>
-        </div>
+        </section>
 
-        <!-- Bento 2: Activity -->
-        <div class="bg-gray-800 rounded-lg p-5 border border-gray-700/50">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-semibold text-white">Activity</h3>
-            <div class="w-6 h-6 rounded-full border border-accent/50 bg-accent/20 flex items-center justify-center flex-shrink-0">
-              <ClockIcon class="w-4 h-4 text-accent" />
+        <!-- Activity -->
+        <section class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+          <div class="flex items-start justify-between mb-5">
+            <h2 class="text-base font-semibold text-white">Activity</h2>
+            <div class="w-10 h-10 rounded-full bg-emerald-400/10 ring-1 ring-emerald-400/30 flex items-center justify-center shrink-0">
+              <ClockIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
             </div>
           </div>
 
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col gap-4">
             <!-- Last Login -->
-            <div class="text-sm">
-              <span class="text-gray-400 block mb-1">Last Login</span>
-              <span class="text-gray-300">{{ formattedLastLogin }}</span>
+            <div>
+              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Last Login</span>
+              <span class="text-sm text-zinc-200 font-secondary">{{ formattedLastLogin }}</span>
             </div>
 
             <!-- Member Since -->
-            <div class="text-sm">
-              <span class="text-gray-400 block mb-1">Member Since</span>
-              <span class="text-gray-300">{{ formattedCreatedAt }}</span>
+            <div>
+              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Member Since</span>
+              <span class="text-sm text-zinc-200 font-secondary">{{ formattedCreatedAt }}</span>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
       <!-- Quick Actions -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700/50">
-        <h3 class="text-lg font-semibold text-white mb-5">Quick Actions</h3>
+      <section class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+        <h2 class="text-lg font-semibold text-white mb-5">Quick Actions</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- US Reporting -->
           <button
             @click="$router.push('/usview')"
-            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
           >
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
-                <GlobeAmericasIcon class="w-6 h-6 text-accent" />
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
+                  <GlobeAmericasIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                </div>
+                <h3 class="text-base font-semibold text-white">US Reporting</h3>
               </div>
-              <h4 class="text-base font-semibold text-white">US Reporting</h4>
+              <ArrowRightIcon
+                class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+                aria-hidden="true"
+              />
             </div>
-            <p class="text-sm text-gray-400">Compare and analyze NPANXX rate decks</p>
+            <p class="text-sm text-zinc-400">Compare and analyze NPANXX rate decks</p>
           </button>
 
           <!-- AZ Reporting — HIDDEN for US-NPANXX focus (reversible). To restore: uncomment. -->
           <!--
           <button
             @click="$router.push('/azview')"
-            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
           >
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
-                <GlobeAltIcon class="w-6 h-6 text-accent" />
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
+                  <GlobeAltIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                </div>
+                <h3 class="text-base font-semibold text-white">AZ Reporting</h3>
               </div>
-              <h4 class="text-base font-semibold text-white">AZ Reporting</h4>
+              <ArrowRightIcon class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true" />
             </div>
-            <p class="text-sm text-gray-400">Compare and analyze AZ rate decks</p>
+            <p class="text-sm text-zinc-400">Compare and analyze AZ rate decks</p>
           </button>
           -->
 
           <!-- US Rate Wizard -->
           <button
             @click="$router.push('/us-rate-sheet')"
-            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
           >
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
-                <AdjustmentsVerticalIcon class="w-6 h-6 text-accent" />
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
+                  <AdjustmentsVerticalIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                </div>
+                <h3 class="text-base font-semibold text-white">US Rate Wizard</h3>
               </div>
-              <h4 class="text-base font-semibold text-white">US Rate Wizard</h4>
+              <ArrowRightIcon
+                class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+                aria-hidden="true"
+              />
             </div>
-            <p class="text-sm text-gray-400">Fine tune NPANXX rate decks</p>
+            <p class="text-sm text-zinc-400">Fine tune NPANXX rate decks</p>
           </button>
 
           <!-- AZ Rate Wizard — HIDDEN for US-NPANXX focus (reversible). To restore: uncomment. -->
           <!--
           <button
             @click="$router.push('/az-rate-sheet')"
-            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
           >
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
-                <AdjustmentsVerticalIcon class="w-6 h-6 text-accent" />
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
+                  <AdjustmentsVerticalIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                </div>
+                <h3 class="text-base font-semibold text-white">AZ Rate Wizard</h3>
               </div>
-              <h4 class="text-base font-semibold text-white">AZ Rate Wizard</h4>
+              <ArrowRightIcon class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true" />
             </div>
-            <p class="text-sm text-gray-400">Fine tune AZ rate decks</p>
+            <p class="text-sm text-zinc-400">Fine tune AZ rate decks</p>
           </button>
           -->
 
           <!-- Rate Generation -->
           <button
             @click="$router.push('/rate-gen/us')"
-            class="bg-gray-700/30 hover:bg-accent/10 border border-accent/30 hover:border-accent/50 rounded-lg p-5 transition-all group text-left"
+            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
           >
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-lg border border-accent/50 bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
-                <SparklesIcon class="w-6 h-6 text-accent" />
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
+                  <SparklesIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                </div>
+                <h3 class="text-base font-semibold text-white">Rate Generation</h3>
               </div>
-              <h4 class="text-base font-semibold text-white">Rate Generation</h4>
+              <ArrowRightIcon
+                class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+                aria-hidden="true"
+              />
             </div>
-            <p class="text-sm text-gray-400">Generate NPANXX rate decks from up to 5 providers</p>
+            <p class="text-sm text-zinc-400">Generate NPANXX rate decks from up to 5 providers</p>
           </button>
         </div>
-      </div>
+      </section>
 
       <!-- Delete Account Button -->
       <div class="flex justify-end">
@@ -199,11 +226,11 @@
           @click="openDeleteConfirmModal"
           variant="destructive"
           size="small"
+          :icon="TrashIcon"
         >
           Delete Account
         </BaseButton>
       </div>
-
     </div>
 
 
@@ -233,8 +260,13 @@
     GlobeAltIcon, // retained for the hidden AZ Reporting quick action (see template)
     AdjustmentsVerticalIcon,
     SparklesIcon,
-    ClockIcon
+    ClockIcon,
+    EnvelopeIcon,
+    ArrowRightOnRectangleIcon,
+    ArrowRightIcon,
+    TrashIcon
   } from '@heroicons/vue/24/outline';
+  import { BoltIcon } from '@heroicons/vue/24/solid';
   import { useRouter } from 'vue-router';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
@@ -300,6 +332,14 @@
     return userStore.auth.user?.email || 'Loading...';
   });
 
+  // Friendly first-name greeting derived from the email local part (e.g. phase3-smoke@… → "Phase3")
+  const displayName = computed(() => {
+    const email = userStore.auth.user?.email;
+    if (!email) return 'there';
+    const token = email.split('@')[0].split(/[._-]/)[0];
+    return token ? token.charAt(0).toUpperCase() + token.slice(1) : 'there';
+  });
+
   // Email Update State & Logic
   const newEmail = ref('');
   const isUpdatingEmail = ref(false);
@@ -322,13 +362,18 @@
     emailSuccessMessage.value = null;
 
     try {
-      await userStore.updateUserEmail(email);
-      emailSuccessMessage.value =
-        'Email update initiated. Check both email inboxes for confirmation.';
-      setTimeout(() => {
-        isEditingEmail.value = false;
-        newEmail.value = '';
-      }, 3000);
+      const result = await userStore.updateUserEmail(email);
+      if (result.success) {
+        emailSuccessMessage.value = 'Email updated successfully.';
+        setTimeout(() => {
+          isEditingEmail.value = false;
+          newEmail.value = '';
+          emailSuccessMessage.value = null;
+        }, 2500);
+      } else {
+        emailErrorMessage.value =
+          result.error?.message || 'Failed to update email. Please try again.';
+      }
     } catch (error: any) {
       console.error('Update email error:', error);
       emailErrorMessage.value = error.message || 'Failed to update email. Please try again.';
