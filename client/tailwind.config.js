@@ -25,6 +25,10 @@ export default {
         fbBlack: colors.gray['950'],
         fbWhite: colors.slate['300'],
         fbHover: colors.slate['800'],
+        // Marketing landing surfaces (near-black canvas + raised panel). Emerald accent
+        // on these uses Tailwind's native emerald-* scale; `accent` (app green) is unchanged.
+        ink: '#08090A',
+        'ink-raised': '#0C0F0E',
         // Define specific colors for animation
         'info-pulse-start': 'rgba(30, 58, 138, 0.3)', // blue-900/30
         'info-pulse-mid': 'rgba(30, 64, 175, 0.45)', // blue-800/45 (slightly brighter midpoint)
