@@ -27,12 +27,12 @@
       <div class="mt-1 text-fbWhite/50 text-sm">
         If you like this, you might like
         <a
-          href="https://cdrcheck.com"
+          href="https://reconciledcdr.com"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-1 text-accent hover:text-accent/80 transition-colors font-medium group"
         >
-          CDRCheck
+          ReconciledCDR
           <svg
             class="w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
             fill="none"
