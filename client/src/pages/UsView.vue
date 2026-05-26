@@ -1,14 +1,15 @@
 <template>
   <!-- Main Page Content -->
   <div class="text-white pt-2 w-full">
-    <h1 class="mb-2 relative">
-      <span class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
+    <h1 class="mb-4 relative px-1">
+      <span class="block text-xs font-secondary uppercase tracking-wider text-zinc-500">US Analyzer</span>
+      <span class="text-xl md:text-2xl text-white font-semibold tracking-tight">
         US Rate Deck Analyzer
       </span>
       <!-- Info Icon Button -->
      <button
         @click="openInfoModal"
-        class="absolute top-1 right-1 text-gray-400 hover:text-white transition-colors duration-150"
+        class="absolute top-1 right-1 text-zinc-400 hover:text-white transition-colors duration-150"
         aria-label="Show AZ Rate Deck Analyzer information"
       >
         <!-- Apply dashboard styling -->
@@ -36,7 +37,7 @@
             v-else-if="
               usStore.activeReportType === ReportTypes.PRICING && !usStore.isCodeReportReady
             "
-            class="text-center p-10 text-gray-400"
+            class="text-center p-10 text-zinc-400"
           >
             <p>Waiting for initial report generation...</p>
           </div>

@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-8 w-full">
     <!-- Upload Zones Box -->
     <div class="w-full">
-      <div class="bg-gray-800 rounded-b-lg p-4 md:p-6">
+      <div class="bg-white/[0.02] border border-white/[0.07] border-t-0 rounded-b-2xl p-4 md:p-6">
         <div class="pb-4 mb-6">
           <!-- Responsive: stack vertically on mobile, side-by-side on desktop -->
           <div class="flex flex-col md:flex-row w-full gap-6">
@@ -19,12 +19,12 @@
               <template v-else>
                 <!-- Your Rates Upload Zone (Drop Zone Content) -->
                 <div
-                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
+                  class="relative border-2 rounded-xl p-6 h-[120px] flex items-center justify-center"
                   :class="[
                     isDraggingUs1
-                      ? 'border-accent bg-fbWhite/10 border-solid'
+                      ? 'border-emerald-400 bg-emerald-400/[0.07] border-solid'
                       : !usStore.isComponentDisabled('us1') /* Keep hover state for dropzone */
-                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+                        ? 'border-2 border-dashed border-white/15 hover:border-emerald-400/60 hover:bg-white/[0.03]'
                         : '',
                     usStore.isComponentUploading('us1')
                       ? 'cursor-not-allowed'
@@ -34,7 +34,7 @@
                           ? 'cursor-pointer'
                           : '',
                     /* Removed isComponentDisabled check for background as it's handled by v-if now */
-                    uploadError.us1 ? 'border-red-500 border-solid border-2' : '',
+                    uploadError.us1 ? 'border-rose-500 border-solid border-2' : '',
                   ]"
                   @dragenter.prevent="handleDragEnterUs1"
                   @dragleave.prevent="handleDragLeaveUs1"
@@ -87,7 +87,7 @@
                       </p>
                       <p
                         v-if="uploadError.us1"
-                        class="mt-1 text-sm text-red-400"
+                        class="mt-1 text-sm text-rose-400"
                       >
                         {{ uploadError.us1 }}
                       </p>
@@ -98,7 +98,7 @@
             </div>
 
             <!-- Vertical Divider - hidden on mobile, shown on desktop -->
-            <div class="hidden md:block mx-4 border-l border-gray-700/50"></div>
+            <div class="hidden md:block mx-4 border-l border-white/10"></div>
 
             <!-- Right Side: Second Upload Zone -->
             <div class="w-full md:w-1/2 md:pl-6">
@@ -113,12 +113,12 @@
               <template v-else>
                 <!-- Prospect's Rates Upload Zone (Drop Zone Content) -->
                 <div
-                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center"
+                  class="relative border-2 rounded-xl p-6 h-[120px] flex items-center justify-center"
                   :class="[
                     isDraggingUs2
-                      ? 'border-accent bg-fbWhite/10 border-solid'
+                      ? 'border-emerald-400 bg-emerald-400/[0.07] border-solid'
                       : !usStore.isComponentDisabled('us2') /* Keep hover state for dropzone */
-                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600'
+                        ? 'border-2 border-dashed border-white/15 hover:border-emerald-400/60 hover:bg-white/[0.03]'
                         : '',
                     usStore.isComponentUploading('us2')
                       ? 'cursor-not-allowed'
@@ -128,7 +128,7 @@
                           ? 'cursor-pointer'
                           : '',
                     /* Removed isComponentDisabled check for background as it's handled by v-if now */
-                    uploadError.us2 ? 'border-red-500 border-solid border-2' : '',
+                    uploadError.us2 ? 'border-rose-500 border-solid border-2' : '',
                   ]"
                   @dragenter.prevent="handleDragEnterUs2"
                   @dragleave.prevent="handleDragLeaveUs2"
@@ -181,7 +181,7 @@
                       </p>
                       <p
                         v-if="uploadError.us2"
-                        class="mt-1 text-sm text-red-400"
+                        class="mt-1 text-sm text-rose-400"
                       >
                         {{ uploadError.us2 }}
                       </p>
@@ -201,7 +201,7 @@
         </div>
 
         <!-- Reports Button Container -->
-        <div v-if="usStore.isFull" class="border-t border-gray-700/50">
+        <div v-if="usStore.isFull" class="border-t border-white/10">
           <div class="flex justify-end mt-8">
             <!-- Use BaseButton for Get Reports -->
             <BaseButton
