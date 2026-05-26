@@ -1,17 +1,12 @@
 <template>
   <!-- Show content if enhanced reports are available (implies code report is ready) -->
-  <div v-if="enhancedReport1 || enhancedReport2" class="space-y-6">
-    <!-- REMOVED US Pricing Summary Section -->
-    <!-- Detailed NPANXX Comparison Section -->
-    <div class="bg-gray-800 p-6 rounded-lg">
-      <h3 class="text-lg text-gray-400 font-medium mb-4 uppercase">US Pricing Comparison</h3>
-      <!-- USDetailedComparisonTable will handle summary and details -->
-      <USDetailedComparisonTable />
-    </div>
+  <div v-if="enhancedReport1 || enhancedReport2" class="mt-4">
+    <!-- USDetailedComparisonTable owns the full Explorer layout (filter rail + cards + table) -->
+    <USDetailedComparisonTable />
   </div>
 
   <!-- Fallback message if NO enhanced report data is available -->
-  <div v-else class="text-center text-xl text-muted-foreground p-10">
+  <div v-else class="text-center text-xl text-zinc-500 p-10">
     Pricing report data is being generated or is unavailable. Please upload files first.
   </div>
 </template>

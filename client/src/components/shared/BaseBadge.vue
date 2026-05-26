@@ -16,26 +16,26 @@
   });
 
   // Base classes shared by all badges
-  const baseClasses = 'inline-flex items-center font-medium';
+  const baseClasses = 'inline-flex items-center font-medium rounded-md';
 
   // Classes based on variant
   const variantClasses = computed(() => {
     switch (props.variant) {
       case 'accent':
-        return 'bg-accent/10 border-accent/50 text-accent border rounded-md';
+        return 'bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/30';
       case 'info':
-        return 'bg-blue-900/30 border-blue-700/50 text-blue-300 border rounded-md';
+        return 'bg-blue-400/10 text-blue-300 ring-1 ring-blue-400/30';
       case 'success':
-        return 'bg-green-900/30 border-green-700/50 text-green-300 border rounded-md';
+        return 'bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/30';
       case 'warning':
-        return 'bg-yellow-900/30 border-yellow-700/50 text-yellow-300 border rounded-md';
+        return 'bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/30';
       case 'destructive':
-        return 'bg-red-950/50 border-red-500/50 text-red-400 border rounded-md';
+        return 'bg-rose-400/10 text-rose-300 ring-1 ring-rose-400/30';
       case 'violet': // For memory storage example
-        return 'bg-violet-900/30 border-violet-700/50 text-violet-300 border rounded-md';
+        return 'bg-violet-400/10 text-violet-300 ring-1 ring-violet-400/30';
       case 'neutral':
       default:
-        return 'bg-gray-700 text-gray-200 ring-1 ring-inset ring-gray-600 rounded-md';
+        return 'bg-zinc-400/10 text-zinc-300 ring-1 ring-zinc-400/30';
     }
   });
 

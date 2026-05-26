@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
     <!-- Report Type Tabs -->
-    <div class="bg-gray-800 px-6 pb-6 rounded-t-lg">
-      <div class="flex items-center border-b border-gray-700">
+    <div class="bg-white/[0.02] border border-white/[0.07] border-b-0 px-6 pb-0 rounded-t-2xl">
+      <div class="flex items-center border-b border-white/10">
         <ReportTabButton
           v-for="type in availableReportTypes"
           :key="type"
@@ -82,13 +82,16 @@ This action cannot be undone.`"
 
   // Helper function to get the correct report label
   function getReportLabel(type: ReportType): string {
+    if (type === ReportTypes.FILES) {
+      return 'Upload';
+    }
     if (type === ReportTypes.CODE) {
-      return 'Code Compare';
+      return 'Insights';
     }
     if (type === ReportTypes.PRICING) {
-      return 'Pricing Report';
+      return 'Explorer';
     }
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return type; // unreachable — ReportType is exhaustively handled above
   }
 
   async function confirmReset() {

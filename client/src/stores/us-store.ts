@@ -7,6 +7,7 @@ import type {
   USEnhancedCodeReport,
 } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
+import type { UsInsightsSummary } from '@/utils/us-insights';
 
 export const useUsStore = defineStore('us', {
   state: () => ({
@@ -18,6 +19,7 @@ export const useUsStore = defineStore('us', {
     activeReportType: 'files' as ReportType,
     pricingReport: null as USPricingReport | null,
     codeReport: null as USCodeReport | null,
+    insightsSummary: null as UsInsightsSummary | null,
     enhancedCodeReports: new Map<string, USEnhancedCodeReport>(),
     uploadingComponents: {} as Record<string, boolean>,
     tempFiles: new Map<string, File>(),
@@ -59,6 +61,8 @@ export const useUsStore = defineStore('us', {
     getPricingReport: (state): USPricingReport | null => state.pricingReport,
 
     getCodeReport: (state): USCodeReport | null => state.codeReport,
+
+    getInsightsSummary: (state): UsInsightsSummary | null => state.insightsSummary,
 
     areReportsReady: (state): boolean => state.isCodeReportReady && state.isPricingReportReady,
 
@@ -190,6 +194,7 @@ export const useUsStore = defineStore('us', {
       this.isPricingReportProcessing = false;
       this.pricingReport = null;
       this.codeReport = null;
+      this.insightsSummary = null;
       this.enhancedCodeReports.clear();
       this.showUploadComponents = true;
       this.invalidRows.clear();
@@ -220,6 +225,10 @@ export const useUsStore = defineStore('us', {
 
     setPricingReportReady() {
       this.isPricingReportReady = true;
+    },
+
+    setInsightsSummary(summary: UsInsightsSummary) {
+      this.insightsSummary = summary;
     },
 
     setEnhancedCodeReport(report: USEnhancedCodeReport) {
@@ -256,6 +265,7 @@ export const useUsStore = defineStore('us', {
         this.isPricingReportProcessing = false;
         this.codeReport = null;
         this.isCodeReportReady = false;
+        this.insightsSummary = null;
         this.activeReportType = 'files';
       }
     },

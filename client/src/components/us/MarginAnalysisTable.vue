@@ -1,8 +1,8 @@
 <template>
-  <div class="p-6 rounded-lg overflow-hidden bg-gray-900/50">
+  <div class="p-6 rounded-xl overflow-hidden bg-black/20 border border-white/[0.07]">
     <table class="w-full text-sm">
       <thead>
-        <tr class="text-left text-gray-400">
+        <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500">
           <th class="py-2 px-2 font-medium">Margin</th>
           <th class="py-2 px-2 font-medium text-right">Match (Inter)</th>
           <th class="py-2 px-2 font-medium text-right">%</th>
@@ -10,7 +10,7 @@
           <th class="py-2 px-2 font-medium text-right">%</th>
         </tr>
       </thead>
-      <tbody class="text-gray-300">
+      <tbody class="text-zinc-300">
         <MarginAnalysisTableRow label="< 10%" :data="analysis.lessThan10" />
         <MarginAnalysisTableRow label="10% - 20%" :data="analysis.between10And20" />
         <MarginAnalysisTableRow label="20% - 30%" :data="analysis.between20And30" />
@@ -22,7 +22,7 @@
         <MarginAnalysisTableRow label="80% - 90%" :data="analysis.between80And90" />
         <MarginAnalysisTableRow label="90% - 100%" :data="analysis.between90And100" />
         <MarginAnalysisTableRow label="> 100%" :data="analysis.greaterThan100" />
-        <tr class="border-t-2 border-gray-700 font-semibold text-white">
+        <tr class="border-t-2 border-white/10 font-semibold text-white font-secondary">
           <td class="py-2 px-2">Total</td>
           <td class="py-2 px-2 text-right">{{ analysis.totalInterMatches }}</td>
           <td class="py-2 px-2 text-right">{{ analysis.totalPercentInter.toFixed(1) }}%</td>

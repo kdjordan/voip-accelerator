@@ -53,6 +53,7 @@ coverage
 .env.production
 .env.claude
 .claude/
+.codegraph/
 !.env.example
 client/.env
 client/.env.local

@@ -2,72 +2,72 @@
   <div v-if="exportType === 'rate-sheet'">
     <div class="space-y-4">
       <!-- First bento box for NPANXX Format, Additional Columns, and Country Code -->
-      <div class="border border-fbWhite/20 rounded-lg p-6 bg-fbBlack/50">
-        <h4 class="text-lg font-semibold text-fbWhite mb-6">Format Options</h4>
+      <div class="border border-white/10 rounded-lg p-6 bg-white/[0.02]">
+        <h4 class="text-lg font-semibold text-white mb-6">Format Options</h4>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           <!-- NPANXX Format Section -->
           <div>
-            <label class="text-sm font-semibold text-fbWhite mb-3 block">NPANXX Format</label>
+            <label class="text-sm font-semibold text-white mb-3 block">NPANXX Format</label>
             <div class="space-y-2">
               <label class="flex items-center">
                 <input
                   type="checkbox"
                   :checked="formatOptions.npanxxFormat === 'combined'"
                   @change="updateNpanxxFormat('combined')"
-                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                  class="h-4 w-4 text-accent focus:ring-accent border-white/10 bg-white/[0.04] rounded"
                 />
-                <span class="ml-2 text-sm text-fbWhite">Combined (213555)</span>
+                <span class="ml-2 text-sm text-white">Combined (213555)</span>
               </label>
               <label class="flex items-center">
                 <input
                   type="checkbox"
                   :checked="formatOptions.npanxxFormat === 'split'"
                   @change="updateNpanxxFormat('split')"
-                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                  class="h-4 w-4 text-accent focus:ring-accent border-white/10 bg-white/[0.04] rounded"
                 />
-                <span class="ml-2 text-sm text-fbWhite">Split (213 | 555)</span>
+                <span class="ml-2 text-sm text-white">Split (213 | 555)</span>
               </label>
             </div>
           </div>
 
           <!-- Additional Columns Section -->
           <div>
-            <label class="text-sm font-semibold text-fbWhite mb-3 block">Additional Columns</label>
+            <label class="text-sm font-semibold text-white mb-3 block">Additional Columns</label>
             <div class="space-y-2">
               <label class="flex items-center">
                 <input
                   type="checkbox"
                   :checked="formatOptions.includeStateColumn"
                   @change="updateStateColumn($event.target.checked)"
-                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                  class="h-4 w-4 text-accent focus:ring-accent border-white/10 bg-white/[0.04] rounded"
                 />
-                <span class="ml-2 text-sm text-fbWhite">State column</span>
+                <span class="ml-2 text-sm text-white">State column</span>
               </label>
               <label class="flex items-center">
                 <input
                   type="checkbox"
                   :checked="formatOptions.includeCountryColumn"
                   @change="updateCountryColumn($event.target.checked)"
-                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                  class="h-4 w-4 text-accent focus:ring-accent border-white/10 bg-white/[0.04] rounded"
                 />
-                <span class="ml-2 text-sm text-fbWhite">Country column</span>
+                <span class="ml-2 text-sm text-white">Country column</span>
               </label>
             </div>
           </div>
 
           <!-- Country Code Section -->
           <div>
-            <label class="text-sm font-semibold text-fbWhite mb-3 block">Country Code</label>
+            <label class="text-sm font-semibold text-white mb-3 block">Country Code</label>
             <div class="space-y-2">
               <label class="flex items-center">
                 <input
                   type="checkbox"
                   :checked="formatOptions.includeCountryCode"
                   @change="updateCountryCode($event.target.checked)"
-                  class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+                  class="h-4 w-4 text-accent focus:ring-accent border-white/10 bg-white/[0.04] rounded"
                 />
-                <span class="ml-2 text-sm text-fbWhite">Include (1) prefix for North American numbers</span>
+                <span class="ml-2 text-sm text-white">Include (1) prefix for North American numbers</span>
               </label>
             </div>
           </div>
@@ -76,9 +76,9 @@
       </div>
 
       <!-- Second full-width bento box for Countries in Current Data -->
-      <div class="border border-fbWhite/20 rounded-lg p-6 bg-fbBlack/50">
-        <h4 class="text-lg font-semibold text-fbWhite block">Countries in Current Data</h4>
-        <p class="text-xs font-normal text-fbWhite/70 mb-6">
+      <div class="border border-white/10 rounded-lg p-6 bg-white/[0.02]">
+        <h4 class="text-lg font-semibold text-white block">Countries in Current Data</h4>
+        <p class="text-xs font-normal text-zinc-400 mb-6">
           Uncheck countries to exclude from export
         </p>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
@@ -91,9 +91,9 @@
               type="checkbox"
               :checked="!formatOptions.selectedCountries.includes(country)"
               @change="updateCountrySelection(country, $event.target.checked)"
-              class="h-3 w-3 text-accent focus:ring-accent border-fbWhite/20 bg-fbBlack rounded"
+              class="h-3 w-3 text-accent focus:ring-accent border-white/10 bg-ink-raised rounded"
             />
-            <span class="ml-1 text-fbWhite">{{ countryDisplayNames.get(country) || country }}</span>
+            <span class="ml-1 text-white">{{ countryDisplayNames.get(country) || country }}</span>
           </label>
         </div>
 

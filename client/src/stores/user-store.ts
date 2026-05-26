@@ -193,12 +193,19 @@ export const useUserStore = defineStore('user', {
       this.setGlobalLoading(true);
       this.auth.error = null;
       try {
-        const { data, error } = await authClient.changeEmail({
+        const { error } = await authClient.changeEmail({
           newEmail,
           callbackURL: `${window.location.origin}/dashboard`,
         });
         if (error) throw new Error(error.message ?? 'Email change failed');
-        return { success: true, user: data ?? this.auth.user };
+        // Email changes immediately (current email is unverified → no verification email).
+        // Refresh the session so the displayed email reflects the new address.
+        const { data: sessionData } = await authClient.getSession();
+        const refreshed = (sessionData as { user?: unknown } | null)?.user;
+        if (refreshed) {
+          this.auth.user = toUser(refreshed);
+        }
+        return { success: true, user: this.auth.user };
       } catch (err: any) {
         console.error('[UserStore] Error updating email:', err);
         this.auth.error = err;

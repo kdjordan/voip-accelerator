@@ -2,20 +2,20 @@
   <Teleport to="body">
   <div
     v-if="modelValue"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-fbBlack/80 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
     :class="modelValue ? 'opacity-100' : 'opacity-0 pointer-events-none'"
     @click.self="closeModal"
   >
     <div
-      class="w-full max-w-md transform rounded-lg bg-slate-800 p-6 shadow-xl transition-all duration-300 ease-in-out"
+      class="w-full max-w-md transform rounded-2xl border border-white/10 bg-ink-raised p-6 shadow-xl transition-all duration-300 ease-in-out"
       :class="modelValue ? 'scale-100 opacity-100' : 'scale-95 opacity-0'"
     >
-      <h3 class="mb-4 text-xl font-semibold text-fbWhite">
+      <h3 class="mb-4 text-xl font-semibold text-white">
         {{ title }}
       </h3>
-      <p class="mb-6 text-sm text-slate-400" v-html="formattedMessage"></p>
+      <p class="mb-6 text-sm text-zinc-400" v-html="formattedMessage"></p>
       <div v-if="requiresConfirmationPhrase" class="mb-6">
-        <label for="confirmationPhraseInput" class="mb-2 block text-sm font-medium text-slate-300">
+        <label for="confirmationPhraseInput" class="mb-2 block text-sm font-medium text-zinc-300">
           To confirm, type "<strong class="text-accent">{{ confirmationPhrase }}</strong
           >" below:
         </label>
@@ -24,7 +24,7 @@
           ref="confirmationInputRef"
           v-model="typedPhrase"
           type="text"
-          class="w-full rounded-md border-slate-600 bg-slate-700 p-2.5 text-fbWhite placeholder-slate-500 focus:border-accent focus:ring-1 focus:ring-accent"
+          class="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
           :placeholder="confirmationPhrase"
           @keyup.enter="confirmAction"
         />

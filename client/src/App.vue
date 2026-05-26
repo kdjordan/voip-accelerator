@@ -46,7 +46,8 @@
           >
             <main class="flex-1">
               <div
-                class="min-h-full flex justify-center w-full max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8"
+                class="min-h-full flex justify-center w-full mx-auto mt-10 px-4 sm:px-6 lg:px-8"
+                :class="isWideContent ? 'max-w-[1600px]' : 'max-w-6xl'"
               >
                 <router-view />
               </div>
@@ -118,6 +119,10 @@
     // Check if the path is explicitly listed OR if it's the named 404 route
     return marketingPages.includes(route.path) || route.name === 'notFound';
   });
+
+  // Redesigned data-dense views use a wider canvas than the default max-w-6xl.
+  const wideContentRoutes = ['/usview'];
+  const isWideContent = computed(() => wideContentRoutes.includes(route.path));
 
   onMounted(() => {
     // Removed async as we are not awaiting inside directly

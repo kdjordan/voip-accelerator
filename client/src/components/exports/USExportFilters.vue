@@ -1,21 +1,21 @@
 <template>
   <div class="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-    <h4 class="text-sm font-medium text-fbWhite mb-3">Active Filters</h4>
+    <h4 class="text-sm font-medium text-white mb-3">Active Filters</h4>
     
     <div class="space-y-2">
       <!-- Record Count -->
       <div class="flex items-center justify-between">
-        <span class="text-sm text-fbWhite/70">Records to export:</span>
-        <span class="text-sm font-medium text-fbWhite">
+        <span class="text-sm text-zinc-400">Records to export:</span>
+        <span class="text-sm font-medium text-white">
           {{ filteredRecords.toLocaleString() }} of {{ totalRecords.toLocaleString() }}
         </span>
       </div>
 
       <!-- States Filter -->
       <div v-if="filters.states?.length > 0" class="flex items-start">
-        <span class="text-sm text-fbWhite/70 mr-2">States:</span>
+        <span class="text-sm text-zinc-400 mr-2">States:</span>
         <div class="flex-1">
-          <span class="text-sm text-fbWhite">
+          <span class="text-sm text-white">
             {{ filters.excludeStates ? 'Excluding: ' : '' }}
             <span class="font-medium">{{ filters.states.join(', ') }}</span>
           </span>
@@ -24,23 +24,23 @@
 
       <!-- NPANXX Search -->
       <div v-if="filters.npanxxSearch" class="flex items-start">
-        <span class="text-sm text-fbWhite/70 mr-2">NPANXX Search:</span>
-        <span class="text-sm font-medium text-fbWhite">{{ filters.npanxxSearch }}</span>
+        <span class="text-sm text-zinc-400 mr-2">NPANXX Search:</span>
+        <span class="text-sm font-medium text-white">{{ filters.npanxxSearch }}</span>
       </div>
 
       <!-- Metro Areas -->
       <div v-if="filters.metroAreas?.length > 0" class="flex items-start">
-        <span class="text-sm text-fbWhite/70 mr-2">Metro Areas:</span>
+        <span class="text-sm text-zinc-400 mr-2">Metro Areas:</span>
         <div class="flex-1">
-          <span class="text-sm font-medium text-fbWhite">{{ filters.metroAreas.join(', ') }}</span>
+          <span class="text-sm font-medium text-white">{{ filters.metroAreas.join(', ') }}</span>
         </div>
       </div>
 
       <!-- Countries -->
       <div v-if="filters.countries?.length > 0" class="flex items-start">
-        <span class="text-sm text-fbWhite/70 mr-2">Countries:</span>
+        <span class="text-sm text-zinc-400 mr-2">Countries:</span>
         <div class="flex-1">
-          <span class="text-sm text-fbWhite">
+          <span class="text-sm text-white">
             {{ filters.excludeCountries ? 'Excluding: ' : 'Including: ' }}
             <span class="font-medium">{{ filters.countries.join(', ') }}</span>
           </span>
@@ -49,14 +49,14 @@
 
       <!-- Rate Types (for comparison exports) -->
       <div v-if="filters.rateTypes?.length > 0" class="flex items-start">
-        <span class="text-sm text-fbWhite/70 mr-2">Rate Types:</span>
+        <span class="text-sm text-zinc-400 mr-2">Rate Types:</span>
         <div class="flex-1">
-          <span class="text-sm font-medium text-fbWhite">{{ filters.rateTypes.join(', ') }}</span>
+          <span class="text-sm font-medium text-white">{{ filters.rateTypes.join(', ') }}</span>
         </div>
       </div>
 
       <!-- No Filters Message -->
-      <div v-if="!hasActiveFilters" class="text-sm text-fbWhite/70">
+      <div v-if="!hasActiveFilters" class="text-sm text-zinc-400">
         No filters applied - exporting all available records
       </div>
     </div>
@@ -64,19 +64,19 @@
     <!-- Session History Section (Rate Sheet Only) -->
     <div v-if="exportType === 'rate-sheet'" class="mt-4 pt-3 border-t border-blue-500/20">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-sm font-medium text-fbWhite">Session History</span>
+        <span class="text-sm font-medium text-white">Session History</span>
         <label class="flex items-center">
           <input
             type="checkbox"
             :checked="includeSessionHistory"
             :disabled="adjustedNpasCount === 0"
             @change="$emit('update:include-session-history', $event.target.checked)"
-            class="h-4 w-4 text-accent focus:ring-accent border-fbWhite/20 bg-fbHover rounded"
+            class="h-4 w-4 text-accent focus:ring-accent border-white/10 bg-white/[0.04] rounded"
           />
-          <span class="ml-2 text-sm text-fbWhite">Include adjustment history</span>
+          <span class="ml-2 text-sm text-white">Include adjustment history</span>
         </label>
       </div>
-      <div class="text-xs text-fbWhite/70">
+      <div class="text-xs text-zinc-400">
         <template v-if="adjustedNpasCount > 0">
           {{ adjustedNpasCount }} NPAs adjusted this session
         </template>

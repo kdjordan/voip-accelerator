@@ -10,9 +10,9 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-black/80 transition-opacity" />
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity" />
       </TransitionChild>
-/
+
       <div class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
           <TransitionChild
@@ -24,11 +24,11 @@
             leave-from="opacity-100 translate-y-0 sm:scale-100"
             leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
-            <DialogPanel class="relative transform overflow-hidden rounded-lg bg-fbBlack text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
-              <div class="bg-fbBlack px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <DialogPanel class="relative transform overflow-hidden rounded-2xl border border-white/10 bg-ink-raised text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-6xl">
+              <div class="px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
                   <div class="mt-3 text-center sm:ml-0 sm:mt-0 sm:text-left flex-1">
-                    <DialogTitle as="h3" class="text-2xl font-secondary uppercase text-accent tracking-wider">
+                    <DialogTitle as="h3" class="text-lg font-semibold text-white">
                       <template v-if="exportType === 'comparison'">
                         Export Comparison Data
                       </template>
@@ -37,7 +37,7 @@
                       </template>
                     </DialogTitle>
                     <div class="mt-2">
-                      <p class="text-sm text-fbWhite/70">
+                      <p class="text-sm text-zinc-400">
                         <template v-if="exportType === 'comparison'">
                           Review your export filters before downloading. Comparison exports use optimized formatting for rate analysis.
                         </template>
@@ -86,7 +86,7 @@
                   />
                 </div>
               </div>
-              <div class="bg-fbHover px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+              <div class="border-t border-white/10 bg-white/[0.02] px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                 <BaseButton
                   variant="secondary"
                   @click="$emit('update:open', false)"

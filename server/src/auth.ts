@@ -23,6 +23,10 @@ export const auth = betterAuth({
     enabled: true,
   },
   user: {
+    // Self-service login-email change. The app sends no email and emailVerified is
+    // always false (signup verification is off), so better-auth updates the address
+    // immediately — no sendChangeEmailVerification transport needed.
+    changeEmail: { enabled: true },
     // Self-service account deletion (replaces the delete-user-account edge fn).
     // No email verification: a fresh session deletes immediately; FK cascade on
     // session/account cleans up the rest.

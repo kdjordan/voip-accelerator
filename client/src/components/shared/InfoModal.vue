@@ -16,19 +16,19 @@
     >
       <div class="flex min-h-screen items-center justify-center">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black/80" @click="closeModal"></div>
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="closeModal"></div>
 
         <!-- Modal Content -->
         <div
-          class="relative transform rounded-lg bg-gray-800 text-left shadow-xl transition-all m-4 w-full max-w-2xl max-h-[90vh] flex flex-col"
+          class="relative transform rounded-2xl border border-white/10 bg-ink-raised text-left shadow-xl transition-all m-4 w-full max-w-2xl max-h-[90vh] flex flex-col"
         >
           <!-- Modal Header -->
           <div
-            class="flex items-center justify-between px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-fbWhite/10"
+            class="flex items-center justify-between px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-white/10"
           >
             <h2
               id="info-modal-title"
-              class="text-lg leading-6 font-medium text-accent uppercase tracking-wider font-secondary"
+              class="text-lg leading-6 font-medium text-white uppercase tracking-wider font-secondary"
             >
               {{ title }}
             </h2>
@@ -36,20 +36,20 @@
               type="button"
               @click="closeModal"
               aria-label="Close modal"
-              class="rounded-md p-1 text-gray-400 hover:text-white hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 focus:ring-offset-gray-800 transition-colors"
+              class="rounded-md p-1 text-zinc-400 hover:text-white hover:bg-white/[0.05] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-ink-raised transition-colors"
             >
               <XCircleIcon class="h-6 w-6" aria-hidden="true" />
             </button>
           </div>
 
           <!-- Modal Body -->
-          <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 text-fbWhite overflow-auto">
+          <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 text-zinc-300 overflow-auto">
             <p class="text-base" v-html="message"></p>
           </div>
 
           <!-- Modal Footer -->
           <div
-            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-fbHover/30 border-t border-fbWhite/10"
+            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-white/[0.02] border-t border-white/10"
           >
             <BaseButton size="standard" variant="secondary" @click="closeModal"> Close </BaseButton>
           </div>
