@@ -9,7 +9,7 @@
       <span>{{ props.label }}</span>
     </div>
     <template v-if="props.isActive">
-      <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+      <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400" />
     </template>
   </button>
 </template>
@@ -31,7 +31,7 @@
 
   const buttonClasses = computed(() => [
     'report-tab-button',
-    props.isActive ? 'text-white' : 'text-gray-400',
+    props.isActive ? 'text-emerald-300 bg-emerald-400/10 rounded-md' : 'text-zinc-400',
     props.isLoading ? 'cursor-not-allowed opacity-75' : '',
   ]);
 

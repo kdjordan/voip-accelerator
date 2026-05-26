@@ -33,20 +33,20 @@
 
   // Base classes shared by all buttons
   const baseClasses =
-    'inline-flex items-center justify-center rounded-md border font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900'; // Adjusted font-medium
+    'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-ink';
 
   // Classes based on variant
   const variantClasses = computed(() => {
     switch (props.variant) {
       case 'destructive':
-        return 'bg-red-950 text-red-400 border-red-500/50 hover:bg-red-900 active:bg-red-800 disabled:bg-slate-800/50 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed focus:ring-red-500';
+        return 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30 hover:bg-rose-500/25 active:bg-rose-500/30 disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:ring-transparent disabled:cursor-not-allowed focus:ring-rose-400';
       case 'secondary': // Styles for the standard secondary button (like the current 'Use Highest')
-        return 'bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 active:bg-gray-600 disabled:bg-slate-800/50 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed focus:ring-gray-500';
+        return 'border border-white/10 text-zinc-200 hover:bg-white/[0.05] active:bg-white/[0.08] disabled:text-zinc-600 disabled:border-white/5 disabled:cursor-not-allowed focus:ring-white/20';
       case 'secondary-outline': // Styles for the less prominent outline button (for 'Use Lowest')
-        return 'bg-transparent text-gray-400 border-gray-700 hover:bg-gray-800/50 hover:border-gray-600 hover:text-gray-300 active:bg-gray-800 disabled:bg-transparent disabled:text-slate-600 disabled:border-slate-800 disabled:cursor-not-allowed focus:ring-gray-600';
+        return 'border border-white/10 bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200 active:bg-white/[0.06] disabled:text-zinc-600 disabled:border-white/5 disabled:cursor-not-allowed focus:ring-white/20';
       case 'primary':
       default:
-        return 'bg-accent/20 text-accent border-accent hover:bg-accent/30 active:bg-accent/40 disabled:bg-slate-800/50 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed focus:ring-accent';
+        return 'bg-emerald-400 text-ink font-semibold hover:bg-emerald-300 active:bg-emerald-300 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed focus:ring-emerald-400';
     }
   });
 

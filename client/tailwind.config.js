@@ -25,15 +25,16 @@ export default {
         fbBlack: colors.gray['950'],
         fbWhite: colors.slate['300'],
         fbHover: colors.slate['800'],
-        // Marketing landing surfaces (near-black canvas + raised panel). Emerald accent
-        // on these uses Tailwind's native emerald-* scale; `accent` (app green) is unchanged.
+        // Marketing landing surfaces (near-black canvas + raised panel). The app `accent`
+        // token and the landing's literal emerald-* scale now both resolve to emerald-400,
+        // so the portal and landing share one accent.
         ink: '#08090A',
         'ink-raised': '#0C0F0E',
         // Define specific colors for animation
         'info-pulse-start': 'rgba(30, 58, 138, 0.3)', // blue-900/30
         'info-pulse-mid': 'rgba(30, 64, 175, 0.45)', // blue-800/45 (slightly brighter midpoint)
-        accent: 'hsl(160, 100%, 40%)',
-        'accent-background': 'hsl(160, 100%, 40%, 0.2)',
+        accent: '#34d399', // emerald-400
+        'accent-background': 'rgb(52 211 153 / 0.2)', // emerald-400 @ 20%
         warning: colors.orange[400],
         'warning-background': `${colors.orange[400]}1A`,
         info: colors.blue[500],

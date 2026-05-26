@@ -9,7 +9,7 @@
       </div>
       
       <!-- Progress Bar -->
-      <div class="w-full bg-gray-700/50 rounded-full h-2.5 overflow-hidden">
+      <div class="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
         <div 
           class="bg-accent h-full rounded-full transition-all duration-300 ease-out"
           :style="`width: ${percentage}%`"
