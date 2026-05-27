@@ -62,9 +62,11 @@
 
           <!-- File Upload Area -->
           <div
-            class="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+            class="border-2 rounded-lg p-8 text-center transition-colors"
             :class="[
-              isDragging ? 'border-accent bg-accent/10' : 'border-gray-600 hover:border-gray-500',
+              isDragging
+                ? 'border-solid border-emerald-400 bg-emerald-400/[0.07]'
+                : 'border-dashed border-white/15 hover:border-emerald-400/50 hover:bg-white/[0.02]',
             ]"
             @dragenter="handleDragEnter"
             @dragleave="handleDragLeave"

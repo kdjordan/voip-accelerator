@@ -5,9 +5,9 @@ import { RateGenService } from '@/services/rate-gen.service';
 
 // Components
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
-import RateGenHeader from '@/components/rate-gen/RateGenHeader.vue';
 import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
 import RateGenResults from '@/components/rate-gen/RateGenResults.vue';
+import BaseButton from '@/components/shared/BaseButton.vue';
 
 const store = useRateGenStore();
 const service = new RateGenService();
@@ -60,11 +60,6 @@ const handleExport = async (format: 'csv' | 'excel') => {
   }
 };
 
-const handleTabChange = (tab: 'upload' | 'settings' | 'results') => {
-  activeTab.value = tab;
-  console.log(`[RateGenUSView] Tab changed to: ${tab}`);
-};
-
 // Lifecycle
 onMounted(async () => {
   console.log('[RateGenUSView] Component mounted');
@@ -97,56 +92,50 @@ onUnmounted(() => {
 
 <template>
   <!-- Main Page Content -->
-  <div class="flex flex-col w-full bg-fbBlack text-fbWhite">
+  <div class="flex flex-col w-full bg-ink text-zinc-300">
     <!-- Page Title -->
     <div class="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
-      <h1 class="text-2xl sm:text-3xl text-accent uppercase rounded-lg px-2 sm:px-4 py-2 font-secondary" role="heading" aria-level="1">US Rate Generation</h1>
+      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-white" role="heading" aria-level="1">Rate Composition Studio</h1>
     </div>
 
-    <!-- Tab Header -->
-    <div class="px-4 sm:px-6 lg:px-8" role="navigation" aria-label="Rate generation tabs">
-      <RateGenHeader
-        :active-tab="activeTab"
-        @tab-change="handleTabChange"
-      />
-    </div>
-
-    <!-- Tab Content - Full Width -->
+    <!-- Step Content - Full Width -->
     <div class="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1">
-      <div class="bg-gray-800 rounded-b-lg p-4 sm:p-6" role="tabpanel" :aria-labelledby="`${activeTab}-tab`">
-        <!-- Upload Tab Content -->
-        <div v-if="activeTab === 'upload'">
-          <div class="pb-4 mb-6">
-            <h2 class="text-xl font-semibold text-fbWhite mb-6">
-              Provider Rate Decks
-            </h2>
+      <!-- Upload — bare on the ink canvas; cards are self-contained -->
+      <div v-if="activeTab === 'upload'" class="pt-6">
+        <RateGenFileUploads />
 
-            <!-- Rate Gen File Uploads Component -->
-            <RateGenFileUploads />
-          </div>
+        <div v-if="store.providerCount >= 2" class="mt-6 flex justify-end">
+          <BaseButton variant="primary" @click="activeTab = 'settings'">
+            Continue to Configuration
+          </BaseButton>
         </div>
+      </div>
 
-        <!-- Settings Tab Content -->
-        <div v-if="activeTab === 'settings'">
-          <h2 class="text-xl font-semibold text-fbWhite mb-6">
-            Rate Generation Configuration
-          </h2>
+      <!-- Configuration — bare on the ink canvas (component owns its sections) -->
+      <div v-else-if="activeTab === 'settings'" class="pt-6">
+        <button
+          type="button"
+          class="mb-4 inline-flex items-center gap-1 rounded text-sm text-zinc-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+          @click="activeTab = 'upload'"
+        >
+          ← Back to uploads
+        </button>
 
-          <!-- Rate Generation Configuration Component -->
-          <RateGenConfiguration @generate-rates="handleGenerateRates" />
-        </div>
+        <RateGenConfiguration @generate-rates="handleGenerateRates" />
+      </div>
 
-        <!-- Results Tab Content -->
-        <div v-if="activeTab === 'results'">
-          <h2 class="text-xl font-semibold text-fbWhite mb-6">
-            Rate Generation History
-          </h2>
+      <!-- Results keeps the legacy panel until its redesign slice -->
+      <div v-else class="bg-gray-800 rounded-lg p-4 sm:p-6">
+        <button
+          type="button"
+          class="mb-4 inline-flex items-center gap-1 rounded text-sm text-zinc-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+          @click="activeTab = 'upload'"
+        >
+          ← Back to uploads
+        </button>
 
-          <!-- Rate Generation Results Component -->
-          <RateGenResults
-            @generate-new="activeTab = 'settings'"
-          />
-        </div>
+        <h2 class="text-xl font-semibold text-fbWhite mb-6">Rate Generation History</h2>
+        <RateGenResults @generate-new="activeTab = 'settings'" />
       </div>
     </div>
 

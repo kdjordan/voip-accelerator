@@ -32,6 +32,17 @@ interface RateGenStore {
   providerList: ProviderInfo[];
 }
 
+/**
+ * Resolve a record's provider name to the CURRENT store name (so post-upload renames
+ * flow into generated output), falling back to the name baked into the record.
+ */
+export function currentProviderName(
+  record: Pick<RateGenRecord, 'providerId' | 'providerName'>,
+  namesById: Map<string, string>
+): string {
+  return namesById.get(record.providerId) ?? record.providerName;
+}
+
 export class RateGenService {
   private store: RateGenStore;
   private dexieDB = useDexieDB();
@@ -90,6 +101,9 @@ export class RateGenService {
     let sumIntraRate = 0;
     let sumIndeterminateRate = 0;
 
+    // Distinct NPAs (first 3 digits) for LERG coverage %
+    const distinctNpas = new Set<string>();
+
     // Start approximated progress timer
     this.startApproximatedProgress(providerId, fileSizeMB);
     
@@ -126,6 +140,7 @@ export class RateGenService {
               sumInterRate += processedRow.rateInter;
               sumIntraRate += processedRow.rateIntra;
               sumIndeterminateRate += processedRow.rateIndeterminate;
+              distinctNpas.add(processedRow.prefix.slice(0, 3));
             } else {
               invalidRows.push({
                 rowNumber: totalRows,
@@ -175,7 +190,8 @@ export class RateGenService {
               uploadDate: new Date(),
               avgInterRate: Math.round(avgInterRate * 1000000) / 1000000, // Round to 6 decimal places
               avgIntraRate: Math.round(avgIntraRate * 1000000) / 1000000,
-              avgIndeterminateRate: Math.round(avgIndeterminateRate * 1000000) / 1000000
+              avgIndeterminateRate: Math.round(avgIndeterminateRate * 1000000) / 1000000,
+              npaCount: distinctNpas.size
             };
             
             // Complete the process - set progress beyond 100% to show "Processing complete!"
@@ -580,6 +596,9 @@ export class RateGenService {
     // Load all data once for this batch
     const allData = await loadFromDexieDB<RateGenRecord>(DBName.RATE_GEN, 'providers');
     
+    // Current provider names (so post-upload renames flow into generated output)
+    const namesById = new Map(this.store.providerList.map(p => [p.id, p.name]));
+
     // Create a map for quick lookup by prefix
     const dataByPrefix = new Map<string, RateGenRecord[]>();
     allData.forEach(record => {
@@ -600,7 +619,7 @@ export class RateGenService {
             rate: record.rateInter,
             intraRate: record.rateIntra,
             indeterminateRate: record.rateIndeterminate,
-            provider: record.providerName
+            provider: currentProviderName(record, namesById)
           });
         }
       });

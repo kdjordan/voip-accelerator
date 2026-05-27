@@ -117,14 +117,14 @@
         class="relative rounded-xl p-8 min-h-[160px] flex items-center justify-center transition-colors duration-200"
         :class="[
           isDragging && !isProcessing && !showPreviewModal
-            ? 'border-2 border-solid border-emerald-400 bg-emerald-400/[0.06]'
+            ? 'border-2 border-solid border-emerald-400 bg-emerald-400/[0.07]'
             : 'border-2 border-dashed border-white/15',
           !isProcessing && !showPreviewModal
-            ? 'hover:border-emerald-400/50 hover:bg-white/[0.03] cursor-pointer'
+            ? 'hover:border-emerald-400/50 hover:bg-white/[0.02] cursor-pointer'
             : isProcessing
               ? 'cursor-not-allowed'
               : 'cursor-default',
-          uploadError ? 'border-2 border-solid border-rose-500/60' : '',
+          uploadError ? 'border-2 border-solid border-rose-500' : '',
         ]"
       >
         <input

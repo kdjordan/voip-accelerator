@@ -190,15 +190,15 @@
             <div class="mb-8">
               <div class="mt-2 overflow-auto max-h-80 rounded-xl border border-white/[0.07]">
                 <table class="min-w-full">
-                  <thead class="bg-white/[0.02]">
+                  <thead class="sticky top-0 z-10 bg-ink-raised">
                     <tr>
-                      <th class="min-w-[80px] p-1 text-left">
+                      <th class="min-w-[80px] p-1 text-left border-b border-white/10">
                         <div class="text-[11px] uppercase tracking-wider text-zinc-500 pl-3">ROW</div>
                       </th>
                       <th
                         v-for="(column, index) in columns"
                         :key="index"
-                        class="px-6 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider"
+                        class="px-6 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-white/10"
                       >
                         <Listbox v-model="mappings[index]" as="div" class="min-w-[200px]">
                           <div class="relative mt-1">

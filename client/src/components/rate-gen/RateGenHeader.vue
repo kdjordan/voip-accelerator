@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
     <!-- Tab Navigation -->
-    <div class="bg-gray-800 px-6 pb-6 rounded-t-lg">
-      <div class="flex items-center border-b border-gray-700">
+    <div class="px-6">
+      <div class="flex items-center border-b border-white/10">
         <!-- Upload Files Tab (Always visible) -->
         <ReportTabButton
           label="Upload Files"

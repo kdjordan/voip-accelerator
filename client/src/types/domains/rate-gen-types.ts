@@ -31,6 +31,7 @@ export interface ProviderInfo {
   avgInterRate: number;     // Average interstate rate
   avgIntraRate: number;     // Average intrastate rate
   avgIndeterminateRate: number; // Average indeterminate rate
+  npaCount: number;         // Distinct NPAs in this deck (for LERG coverage %)
 }
 
 export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5' | 'LCR6' | 'Average';
@@ -162,10 +163,10 @@ export interface LCRWorkerResponse {
 }
 
 // Component IDs for Rate Gen upload zones
-export type RateGenComponentId = 'provider1' | 'provider2' | 'provider3' | 'provider4' | 'provider5' | 'provider6';
+export type RateGenComponentId = 'provider1' | 'provider2' | 'provider3' | 'provider4' | 'provider5';
 
-// Maximum number of providers allowed
-export const MAX_PROVIDERS = 6;
+// Maximum number of providers allowed (browser holds all decks in memory during generation)
+export const MAX_PROVIDERS = 5;
 
 // Default LCR strategies with descriptions
 export const LCR_STRATEGIES = [

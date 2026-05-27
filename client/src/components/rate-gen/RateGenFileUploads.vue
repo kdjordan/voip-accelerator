@@ -1,73 +1,40 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
+import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { RateGenService } from '@/services/rate-gen.service';
-import { ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
+import {
+  CloudArrowUpIcon,
+  PencilSquareIcon,
+  XMarkIcon,
+  CheckIcon,
+} from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
 import RateGenProgressIndicator from '@/components/rate-gen/RateGenProgressIndicator.vue';
 import TestDataLoader from '@/components/rate-gen/TestDataLoader.vue';
 import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 import Papa from 'papaparse';
 import { USColumnRole } from '@/types/domains/us-types';
-import type { RateGenComponentId, ProviderInfo, RateGenColumnMapping } from '@/types/domains/rate-gen-types';
+import {
+  MAX_PROVIDERS,
+  type RateGenComponentId,
+  type ProviderInfo,
+  type RateGenColumnMapping,
+} from '@/types/domains/rate-gen-types';
 
-// Store and service
 const store = useRateGenStore();
+const lergStore = useLergStoreV2();
 const service = new RateGenService();
 
-// Component refs for progress tracking - Rate Gen specific
-const progressIndicators = ref<Record<RateGenComponentId, InstanceType<typeof RateGenProgressIndicator> | null>>({
-  provider1: null,
-  provider2: null,
-  provider3: null,
-  provider4: null,
-  provider5: null,
-});
+// Solid identity color per provider slot (matches the target mock: violet, blue, …).
+const AVATAR_STYLES = [
+  'bg-violet-500/90 text-white',
+  'bg-sky-500/90 text-white',
+  'bg-amber-500/90 text-white',
+  'bg-rose-500/90 text-white',
+  'bg-emerald-500/90 text-white',
+];
 
-// Upload progress row count tracking - match USFileUploads pattern
-const uploadingFileRowCount = ref<Record<RateGenComponentId, number>>({
-  provider1: 0,
-  provider2: 0,
-  provider3: 0,
-  provider4: 0,
-  provider5: 0,
-});
-
-// Drag states for each provider zone
-const dragStates = ref<Record<RateGenComponentId, boolean>>({
-  provider1: false,
-  provider2: false,
-  provider3: false,
-  provider4: false,
-  provider5: false,
-});
-
-// Upload errors
-const uploadErrors = ref<Record<RateGenComponentId, string | null>>({
-  provider1: null,
-  provider2: null,
-  provider3: null,
-  provider4: null,
-  provider5: null,
-});
-
-// PreviewModal state
-const showPreviewModal = ref(false);
-const previewData = ref<string[][]>([]);
-const previewColumns = ref<string[]>([]);
-const currentFile = ref<File | null>(null);
-const currentZoneId = ref<RateGenComponentId | null>(null);
-const columnMappings = ref<Record<string, string>>({});
-const isModalValid = ref(false);
-const startLine = ref(1);
-const providerName = ref('');
-
-// Confirmation modal state
-const showConfirmModal = ref(false);
-const confirmingRemovalZoneId = ref<RateGenComponentId | null>(null);
-const confirmingProviderName = ref('');
-
-// Rate Gen specific column options - match USFileUploads exactly
 const rateGenColumnOptions = [
   { value: USColumnRole.NPANXX, label: 'NPANXX', required: false },
   { value: USColumnRole.NPA, label: 'NPA', required: false },
@@ -77,155 +44,110 @@ const rateGenColumnOptions = [
   { value: USColumnRole.INDETERMINATE, label: 'Indeterminate Rate', required: false },
 ];
 
-// Progressive zone visibility
-const visibleZones = computed(() => {
-  const zones: RateGenComponentId[] = [];
-  const providerCount = store.providerCount;
-  
-  // Always show provider1
-  zones.push('provider1');
-  
-  // Show provider2 after provider1 is uploaded or uploading
-  if (providerCount >= 1 || store.isComponentUploading('provider1')) {
-    zones.push('provider2');
-  }
-  
-  // Show provider3 after provider2 is uploaded
-  if (providerCount >= 2) {
-    zones.push('provider3');
-  }
-  
-  // Show provider4 after provider3 is uploaded
-  if (providerCount >= 3) {
-    zones.push('provider4');
-  }
-  
-  // Show provider5 after provider4 is uploaded
-  if (providerCount >= 4) {
-    zones.push('provider5');
-  }
-  
-  return zones;
-});
+// ── Dropzone / upload state (single zone, targets the next free slot) ──
+const dragOver = ref(false);
+const dropzoneError = ref<string | null>(null);
 
-// Check if a zone should show as completed (summary view)
-const isZoneCompleted = (zoneId: RateGenComponentId) => {
-  return store.providerList.some(p => p.id === zoneId);
+// PreviewModal state
+const showPreviewModal = ref(false);
+const previewData = ref<string[][]>([]);
+const previewColumns = ref<string[]>([]);
+const currentFile = ref<File | null>(null);
+const currentZoneId = ref<RateGenComponentId | null>(null);
+const pendingRowCount = ref(0);
+const columnMappings = ref<Record<string, string>>({});
+const isModalValid = ref(false);
+const startLine = ref(1);
+const providerName = ref('');
+
+// Remove-confirmation state
+const showConfirmModal = ref(false);
+const removingProvider = ref<ProviderInfo | null>(null);
+
+// Inline rename state
+const editingId = ref<string | null>(null);
+const editName = ref('');
+const editInput = ref<HTMLInputElement | null>(null);
+
+const atCapacity = computed(() => store.providerCount >= MAX_PROVIDERS);
+const isUploading = computed(() => store.isProcessing);
+const canUpload = computed(
+  () => !store.isProcessing && !showPreviewModal.value && store.getNextAvailableSlot() !== null
+);
+
+const slotNumber = (p: ProviderInfo): number => parseInt(p.id.replace('provider', ''), 10) || 1;
+const avatarStyle = (p: ProviderInfo): string =>
+  AVATAR_STYLES[(slotNumber(p) - 1) % AVATAR_STYLES.length];
+
+const formatRate = (rate: number | undefined): string =>
+  rate === undefined || rate === null ? '0.000000' : rate.toFixed(6);
+
+const coverage = (p: ProviderInfo): string => {
+  const total = lergStore.usTotalNPAs; // NPAs they have vs our LERG; US-focus denominator
+  if (!total) return '—';
+  const pct = Math.min(100, (p.npaCount / total) * 100);
+  return pct >= 99.95 ? '100%' : `${pct.toFixed(1)}%`;
 };
 
-// Check if upload is in progress for any zone
-const isAnyUploadInProgress = computed(() => {
-  return store.isProcessing || showPreviewModal.value;
-});
+const statsFor = (p: ProviderInfo) => [
+  { label: 'Prefixes', value: p.rowCount.toLocaleString() },
+  { label: 'Avg Inter Rate', value: formatRate(p.avgInterRate) },
+  { label: 'Avg Intra Rate', value: formatRate(p.avgIntraRate) },
+  { label: 'Avg Indet Rate', value: formatRate(p.avgIndeterminateRate) },
+  { label: 'Coverage', value: coverage(p) },
+];
 
-// Note: Debug progress code removed - now using UploadProgressIndicator component
-
-// Get provider info for a zone
-const getProviderForZone = (zoneId: RateGenComponentId): ProviderInfo | undefined => {
-  return store.providerList.find(p => p.id === zoneId);
-};
-
-// Check if progress should be shown
-const shouldShowProgress = (zoneId: RateGenComponentId): boolean => {
-  return store.isComponentUploading(zoneId);
-};
-
-// Drag and drop handlers
-const handleDragEnter = (zoneId: RateGenComponentId) => {
-  if (!canAcceptDrop(zoneId)) return;
-  dragStates.value[zoneId] = true;
-};
-
-const handleDragLeave = (zoneId: RateGenComponentId) => {
-  dragStates.value[zoneId] = false;
-};
-
-const handleDragOver = (zoneId: RateGenComponentId, event: DragEvent) => {
-  if (!canAcceptDrop(zoneId)) return;
-  event.preventDefault();
-};
-
-const handleDrop = async (zoneId: RateGenComponentId, event: DragEvent) => {
-  event.preventDefault();
-  dragStates.value[zoneId] = false;
-  
-  if (!canAcceptDrop(zoneId)) return;
-  
-  const files = event.dataTransfer?.files;
-  if (files && files.length > 0) {
-    await handleFileUpload(files[0], zoneId);
-  }
-};
-
-const handleFileChange = async (event: Event, zoneId: RateGenComponentId) => {
+// ── Upload flow ──
+const handleFileChange = async (event: Event) => {
   const target = event.target as HTMLInputElement;
-  const files = target.files;
-  
-  if (files && files.length > 0) {
-    await handleFileUpload(files[0], zoneId);
-  }
-  
-  // Reset input
+  const file = target.files?.[0];
+  if (file) await handleFileUpload(file);
   target.value = '';
 };
 
-// Check if zone can accept drops/uploads
-const canAcceptDrop = (zoneId: RateGenComponentId): boolean => {
-  // Prevent any drops/uploads if modal is open or any upload is in progress
-  if (isAnyUploadInProgress.value) return false;
-
-  return !store.isComponentUploading(zoneId) &&
-         !isZoneCompleted(zoneId) &&
-         !store.isProcessing;
+const handleDrop = async (event: DragEvent) => {
+  dragOver.value = false;
+  if (!canUpload.value) return;
+  const file = event.dataTransfer?.files?.[0];
+  if (file) await handleFileUpload(file);
 };
 
-// Handle file upload - show PreviewModal for column mapping and provider naming
-const handleFileUpload = async (file: File, zoneId: RateGenComponentId) => {
-  // Prevent upload if already in progress
-  if (store.isComponentUploading(zoneId) || showPreviewModal.value) {
-    return;
-  }
-  
-  // Validate file type
+const handleFileUpload = async (file: File) => {
+  if (!canUpload.value) return;
+
   if (!file.name.toLowerCase().endsWith('.csv')) {
-    uploadErrors.value[zoneId] = 'Please upload a CSV file';
+    dropzoneError.value = 'Please upload a CSV file';
     return;
   }
-  
-  // Clear previous error
-  uploadErrors.value[zoneId] = null;
-  
+
+  const slot = store.getNextAvailableSlot();
+  if (!slot) {
+    dropzoneError.value = `Maximum of ${MAX_PROVIDERS} rate decks reached`;
+    return;
+  }
+
+  dropzoneError.value = null;
+  currentFile.value = file;
+  currentZoneId.value = slot;
+
   try {
-    // Store current file and zone for modal processing
-    currentFile.value = file;
-    currentZoneId.value = zoneId;
-    
-    // Parse CSV to show preview
     await parseFileForPreview(file);
-    
   } catch (error) {
-    uploadErrors.value[zoneId] = `Upload failed: ${(error as Error).message}`;
-    console.error('[RateGenFileUploads] File upload error:', error);
-    
-    // Reset state on error
+    dropzoneError.value = `Upload failed: ${(error as Error).message}`;
     currentFile.value = null;
     currentZoneId.value = null;
   }
 };
 
-// Parse file for preview modal and count rows for progress tracking
-const parseFileForPreview = async (file: File): Promise<void> => {
-  return new Promise((resolve, reject) => {
+const parseFileForPreview = (file: File): Promise<void> =>
+  new Promise((resolve, reject) => {
     const previewRows: string[][] = [];
     let rowCount = 0;
-    
     Papa.parse(file, {
       header: false,
       skipEmptyLines: true,
       step: (results) => {
-        if (rowCount < 20) { // Only take first 20 rows for preview
-          previewRows.push(results.data as string[]);
-        }
+        if (rowCount < 20) previewRows.push(results.data as string[]);
         rowCount++;
       },
       complete: () => {
@@ -233,716 +155,277 @@ const parseFileForPreview = async (file: File): Promise<void> => {
           reject(new Error('No data found in CSV file'));
           return;
         }
-        
-        // Store total row count for progress tracking (similar to USFileUploads pattern)
-        if (currentZoneId.value) {
-          uploadingFileRowCount.value[currentZoneId.value] = Math.max(0, rowCount - 1); // Subtract header row
-        }
-        
-        // Set preview data
+        pendingRowCount.value = Math.max(0, rowCount - 1);
         previewData.value = previewRows;
         previewColumns.value = previewRows[0] || [];
-        
-        // Reset modal state
         columnMappings.value = {};
         isModalValid.value = false;
         startLine.value = 1;
-        
-        // Set a better default provider name based on the zone
-        const zoneNumber = currentZoneId.value ? parseInt(currentZoneId.value.replace('provider', '')) : 1;
-        providerName.value = `Provider ${zoneNumber}`;
-        
-        // Show modal
+        providerName.value = `Provider ${currentZoneId.value?.replace('provider', '') ?? ''}`.trim();
         showPreviewModal.value = true;
-        
         resolve();
       },
-      error: (error) => {
-        reject(new Error(`CSV parsing error: ${error.message}`));
-      }
+      error: (error) => reject(new Error(`CSV parsing error: ${error.message}`)),
     });
   });
-};
 
-// Remove provider - show confirmation modal
-const handleRemoveProvider = (zoneId: RateGenComponentId) => {
-  const provider = getProviderForZone(zoneId);
-  if (!provider) return;
-  
-  confirmingRemovalZoneId.value = zoneId;
-  confirmingProviderName.value = provider.name;
-  showConfirmModal.value = true;
-};
+const handleModalConfirm = async (
+  mappings: Record<string, string>,
+  indeterminateDefinition?: string,
+  _effectiveDate?: string,
+  modalProviderName?: string
+) => {
+  if (!currentFile.value || !currentZoneId.value) return;
+  const zoneId = currentZoneId.value;
 
-// Confirm provider removal
-const confirmRemoveProvider = async () => {
-  if (!confirmingRemovalZoneId.value) return;
-  
-  const provider = getProviderForZone(confirmingRemovalZoneId.value);
-  if (!provider) return;
-  
-  try {
-    await service.removeProvider(provider.id);
-    uploadErrors.value[confirmingRemovalZoneId.value] = null;
-    
-    // Reset confirmation state
-    showConfirmModal.value = false;
-    confirmingRemovalZoneId.value = null;
-    confirmingProviderName.value = '';
-  } catch (error) {
-    store.addError(`Failed to remove provider: ${(error as Error).message}`);
-    // Keep modal open on error
-  }
-};
-
-// Get zone label
-const getZoneLabel = (zoneId: RateGenComponentId): string => {
-  const zoneNumber = parseInt(zoneId.replace('provider', ''));
-  return `Provider ${zoneNumber}`;
-};
-
-// PreviewModal event handlers
-const handleModalConfirm = async (mappings: Record<string, string>, indeterminateDefinition?: string, effectiveDate?: string, modalProviderName?: string) => {
-  if (!currentFile.value || !currentZoneId.value) {
-    console.error('[RateGenFileUploads] No current file or zone for upload');
-    return;
-  }
-  
   try {
     showPreviewModal.value = false;
-    
-    // Convert mappings to RateGenColumnMapping
-    const columnMapping: RateGenColumnMapping = {
-      rateInter: -1,
-      rateIntra: -1,
-    };
-    
-    // Map the column indices
+
+    const columnMapping: RateGenColumnMapping = { rateInter: -1, rateIntra: -1 };
     Object.entries(mappings).forEach(([columnIndex, role]) => {
       const index = parseInt(columnIndex);
       switch (role) {
-        case USColumnRole.NPANXX:
-          columnMapping.npanxx = index;
-          break;
-        case USColumnRole.NPA:
-          columnMapping.npa = index;
-          break;
-        case USColumnRole.NXX:
-          columnMapping.nxx = index;
-          break;
-        case USColumnRole.INTERSTATE:
-          columnMapping.rateInter = index;
-          break;
-        case USColumnRole.INTRASTATE:
-          columnMapping.rateIntra = index;
-          break;
-        case USColumnRole.INDETERMINATE:
-          columnMapping.rateIndeterminate = index;
-          break;
+        case USColumnRole.NPANXX: columnMapping.npanxx = index; break;
+        case USColumnRole.NPA: columnMapping.npa = index; break;
+        case USColumnRole.NXX: columnMapping.nxx = index; break;
+        case USColumnRole.INTERSTATE: columnMapping.rateInter = index; break;
+        case USColumnRole.INTRASTATE: columnMapping.rateIntra = index; break;
+        case USColumnRole.INDETERMINATE: columnMapping.rateIndeterminate = index; break;
       }
     });
-    
-    // Validate required mappings
+
     if (columnMapping.rateInter === -1 || columnMapping.rateIntra === -1) {
-      uploadErrors.value[currentZoneId.value] = 'Interstate and Intrastate rate columns are required';
+      dropzoneError.value = 'Interstate and Intrastate rate columns are required';
       return;
     }
-    
-    // Validate prefix mapping (either npanxx OR both npa+nxx)
     const hasNpanxx = columnMapping.npanxx !== undefined;
     const hasNpaAndNxx = columnMapping.npa !== undefined && columnMapping.nxx !== undefined;
-    
     if (!hasNpanxx && !hasNpaAndNxx) {
-      uploadErrors.value[currentZoneId.value] = 'Either NPANXX column or both NPA and NXX columns are required';
+      dropzoneError.value = 'Either NPANXX column or both NPA and NXX columns are required';
       return;
     }
-    
-    const finalProviderName = modalProviderName?.trim() || `Provider ${currentZoneId.value.replace('provider', '')}`;
 
-    // Process the file with the service
+    const finalProviderName =
+      modalProviderName?.trim() || `Provider ${zoneId.replace('provider', '')}`;
+
     await service.processProviderFile(
       currentFile.value,
-      currentZoneId.value,
+      zoneId,
       finalProviderName,
       columnMapping,
       startLine.value,
       indeterminateDefinition
     );
-    
-    // Complete progress indicator if it exists (matching USFileUploads pattern)
-    if (currentZoneId.value && progressIndicators.value[currentZoneId.value]) {
-      progressIndicators.value[currentZoneId.value]?.complete();
-    }
-
-    // Reset state after successful processing
-    currentFile.value = null;
-    if (currentZoneId.value) {
-      uploadingFileRowCount.value[currentZoneId.value] = 0; // Reset row count
-    }
-    currentZoneId.value = null;
-    columnMappings.value = {};
-    isModalValid.value = false;
-    startLine.value = 1;
-    providerName.value = '';
-    
   } catch (error) {
-    console.error('[RateGenFileUploads] Error processing file:', error);
-    
-    if (currentZoneId.value) {
-      uploadErrors.value[currentZoneId.value] = `Processing failed: ${(error as Error).message}`;
-    }
-    
-    // Reset state on error as well
-    currentFile.value = null;
-    if (currentZoneId.value) {
-      uploadingFileRowCount.value[currentZoneId.value] = 0; // Reset row count on error
-    }
-    currentZoneId.value = null;
-    columnMappings.value = {};
-    isModalValid.value = false;
-    startLine.value = 1;
-    providerName.value = '';
+    dropzoneError.value = `Processing failed: ${(error as Error).message}`;
+  } finally {
+    resetUploadState();
   }
 };
 
 const handleModalCancel = () => {
   showPreviewModal.value = false;
+  resetUploadState();
+};
+
+const resetUploadState = () => {
   currentFile.value = null;
-  // Reset row count on cancel
-  if (currentZoneId.value) {
-    uploadingFileRowCount.value[currentZoneId.value] = 0;
-  }
   currentZoneId.value = null;
-  // Reset all modal state
+  pendingRowCount.value = 0;
   columnMappings.value = {};
   isModalValid.value = false;
   startLine.value = 1;
   providerName.value = '';
 };
 
-// Watch for errors from store
-watch(() => store.uploadErrors, (newErrors) => {
-  // Update local error states from store
-  Object.keys(newErrors).forEach(providerId => {
-    const zoneId = providerId as RateGenComponentId;
-    const error = store.getUploadError(providerId);
-    if (error) {
-      uploadErrors.value[zoneId] = error;
-    }
-  });
-}, { deep: true });
+// ── Rename ──
+const startEdit = async (p: ProviderInfo) => {
+  editingId.value = p.id;
+  editName.value = p.name;
+  await nextTick();
+  editInput.value?.focus();
+  editInput.value?.select();
+};
+const commitEdit = () => {
+  if (editingId.value) store.renameProvider(editingId.value, editName.value);
+  editingId.value = null;
+};
+const cancelEdit = () => {
+  editingId.value = null;
+};
 
-// Format rate to 6 decimal places
-const formatRate = (rate: number | undefined): string => {
-  if (rate === undefined || rate === null) return '0.000000';
-  return rate.toFixed(6);
+// ── Remove ──
+const requestRemove = (p: ProviderInfo) => {
+  removingProvider.value = p;
+  showConfirmModal.value = true;
+};
+const confirmRemove = async () => {
+  if (!removingProvider.value) return;
+  try {
+    await service.removeProvider(removingProvider.value.id);
+    showConfirmModal.value = false;
+    removingProvider.value = null;
+  } catch (error) {
+    store.addError(`Failed to remove provider: ${(error as Error).message}`);
+  }
 };
 </script>
 
 <template>
-  <div class="flex flex-col gap-8 w-full">
+  <div class="flex flex-col gap-6">
     <!-- Test Data Loader (Development Only) -->
     <TestDataLoader />
-    
-    <!-- Upload Zones Container -->
-    <div class="w-full">
-      <div class="bg-gray-800 rounded-lg p-4 md:p-6 w-full">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Left Column -->
-          <div class="space-y-6">
-            <!-- Provider 1 Zone -->
-            <transition
-              enter-active-class="transition-all duration-300 ease-out"
-              enter-from-class="opacity-0 transform scale-95"
-              enter-to-class="opacity-100 transform scale-100"
-              leave-active-class="transition-all duration-200 ease-in"
-              leave-from-class="opacity-100 transform scale-100"
-              leave-to-class="opacity-0 transform scale-95"
-            >
-              <div v-if="visibleZones.includes('provider1')" key="provider1">
-              <!-- Completed State -->
-              <template v-if="isZoneCompleted('provider1')">
-                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-fbWhite">
-                      {{ getProviderForZone('provider1')?.name }}
-                    </h3>
-                    <button
-                      @click="handleRemoveProvider('provider1')"
-                      class="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    <p>{{ (getProviderForZone('provider1')?.rowCount || getProviderForZone('provider1')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
-                    <p>{{ getProviderForZone('provider1')?.fileName }}</p>
-                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider1')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider1')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider1')?.avgIndeterminateRate) }}</p>
-                  </div>
-                </div>
-              </template>
-              
-              <!-- Upload State -->
-              <template v-else>
-                <div
-                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
-                  :class="[
-                    dragStates.provider1
-                      ? 'border-accent bg-fbWhite/10 border-solid'
-                      : canAcceptDrop('provider1')
-                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                        : store.isComponentUploading('provider1')
-                          ? 'border-gray-600 border-dashed cursor-not-allowed'
-                          : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
-                    uploadErrors.provider1 ? 'border-red-500 border-solid' : '',
-                  ]"
-                  @dragenter.prevent="handleDragEnter('provider1')"
-                  @dragleave.prevent="handleDragLeave('provider1')"
-                  @dragover.prevent="handleDragOver('provider1', $event)"
-                  @drop.prevent="handleDrop('provider1', $event)"
-                >
-                  <!-- File Input -->
-                  <input
-                    type="file"
-                    accept=".csv"
-                    class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                    :disabled="!canAcceptDrop('provider1')"
-                    @change="(e) => handleFileChange(e, 'provider1')"
-                  />
 
-                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                    <!-- Uploading State -->
-                    <template v-if="store.isComponentUploading('provider1')">
-                      <RateGenProgressIndicator 
-                        :total-rows="uploadingFileRowCount.provider1"
-                        :progress="store.getUploadProgress('provider1')"
-                        ref="progressIndicators.provider1"
-                      />
-                    </template>
-
-                    <!-- Default State -->
-                    <template v-else>
-                      <!-- Error notification -->
-                      <div
-                        v-if="uploadErrors.provider1"
-                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                      >
-                        <p class="text-red-500 font-medium text-xs">{{ uploadErrors.provider1 }}</p>
-                      </div>
-
-                      <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2"
-                        :class="
-                          uploadErrors.provider1
-                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                            : 'text-accent border-accent/50 bg-accent/10'
-                        "
-                      />
-                      <p
-                        class="mt-2 text-base"
-                        :class="uploadErrors.provider1 ? 'text-red-500' : 'text-accent'"
-                      >
-                        {{ uploadErrors.provider1 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
-                      </p>
-                    </template>
-                  </div>
-                </div>
-              </template>
-              </div>
-            </transition>
-
-            <!-- Provider 3 Zone -->
-            <div v-if="visibleZones.includes('provider3')">
-              <!-- Similar structure to Provider 1 -->
-              <template v-if="isZoneCompleted('provider3')">
-                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-fbWhite">
-                      {{ getProviderForZone('provider3')?.name }}
-                    </h3>
-                    <button
-                      @click="handleRemoveProvider('provider3')"
-                      class="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    <p>{{ (getProviderForZone('provider3')?.rowCount || getProviderForZone('provider3')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
-                    <p>{{ getProviderForZone('provider3')?.fileName }}</p>
-                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider3')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider3')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider3')?.avgIndeterminateRate) }}</p>
-                  </div>
-                </div>
-              </template>
-              <template v-else>
-                <!-- Upload zone for provider3 (similar to provider1) -->
-                <div
-                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
-                  :class="[
-                    dragStates.provider3
-                      ? 'border-accent bg-fbWhite/10 border-solid'
-                      : canAcceptDrop('provider3')
-                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                        : store.isComponentUploading('provider3')
-                          ? 'border-gray-600 border-dashed cursor-not-allowed'
-                          : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
-                    uploadErrors.provider3 ? 'border-red-500 border-solid' : '',
-                  ]"
-                  @dragenter.prevent="handleDragEnter('provider3')"
-                  @dragleave.prevent="handleDragLeave('provider3')"
-                  @dragover.prevent="handleDragOver('provider3', $event)"
-                  @drop.prevent="handleDrop('provider3', $event)"
-                >
-                  <input
-                    type="file"
-                    accept=".csv"
-                    class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                    :disabled="!canAcceptDrop('provider3')"
-                    @change="(e) => handleFileChange(e, 'provider3')"
-                  />
-
-                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                    <!-- Uploading State -->
-                    <template v-if="store.isComponentUploading('provider3')">
-                      <RateGenProgressIndicator 
-                        :total-rows="uploadingFileRowCount.provider3"
-                        :progress="store.getUploadProgress('provider3')"
-                        ref="progressIndicators.provider3"
-                      />
-                    </template>
-
-                    <!-- Default State -->
-                    <template v-else>
-                      <!-- Error notification -->
-                      <div
-                        v-if="uploadErrors.provider3"
-                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                      >
-                        <p class="text-red-500 font-medium text-xs">{{ uploadErrors.provider3 }}</p>
-                      </div>
-
-                      <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2"
-                        :class="
-                          uploadErrors.provider3
-                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                            : 'text-accent border-accent/50 bg-accent/10'
-                        "
-                      />
-                      <p
-                        class="mt-2 text-base"
-                        :class="uploadErrors.provider3 ? 'text-red-500' : 'text-accent'"
-                      >
-                        {{ uploadErrors.provider3 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
-                      </p>
-                    </template>
-                  </div>
-                </div>
-              </template>
-            </div>
-
-            <!-- Provider 5 Zone -->
-            <div v-if="visibleZones.includes('provider5')">
-              <!-- Completed State -->
-              <template v-if="isZoneCompleted('provider5')">
-                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-fbWhite">
-                      {{ getProviderForZone('provider5')?.name }}
-                    </h3>
-                    <button
-                      @click="handleRemoveProvider('provider5')"
-                      class="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    <p>{{ (getProviderForZone('provider5')?.rowCount || getProviderForZone('provider5')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
-                    <p>{{ getProviderForZone('provider5')?.fileName }}</p>
-                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider5')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider5')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider5')?.avgIndeterminateRate) }}</p>
-                  </div>
-                </div>
-              </template>
-              
-              <!-- Upload State -->
-              <template v-else>
-              <div
-                class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
-                :class="[
-                  dragStates.provider5
-                    ? 'border-accent bg-fbWhite/10 border-solid'
-                    : canAcceptDrop('provider5')
-                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                      : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
-                  uploadErrors.provider5 ? 'border-red-500 border-solid' : '',
-                ]"
-                @dragenter.prevent="handleDragEnter('provider5')"
-                @dragleave.prevent="handleDragLeave('provider5')"
-                @dragover.prevent="handleDragOver('provider5', $event)"
-                @drop.prevent="handleDrop('provider5', $event)"
-              >
-                <input
-                  type="file"
-                  accept=".csv"
-                  class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                  :disabled="!canAcceptDrop('provider5')"
-                  @change="(e) => handleFileChange(e, 'provider5')"
-                />
-
-                <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                  <!-- Uploading State -->
-                  <template v-if="store.isComponentUploading('provider5')">
-                    <RateGenProgressIndicator 
-                      :total-rows="uploadingFileRowCount.provider5"
-                      :progress="store.getUploadProgress('provider5')"
-                      ref="progressIndicators.provider5"
-                    />
-                  </template>
-
-                  <!-- Default State -->
-                  <template v-else>
-                    <!-- Error notification -->
-                    <div
-                      v-if="uploadErrors.provider5"
-                      class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                    >
-                      <p class="text-red-500 font-medium text-xs">{{ uploadErrors.provider5 }}</p>
-                    </div>
-
-                    <ArrowUpTrayIcon
-                      class="w-10 h-10 mx-auto border rounded-full p-2"
-                      :class="
-                        uploadErrors.provider5
-                          ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                          : 'text-accent border-accent/50 bg-accent/10'
-                      "
-                    />
-                    <p
-                      class="mt-2 text-base"
-                      :class="uploadErrors.provider5 ? 'text-red-500' : 'text-accent'"
-                    >
-                      {{ uploadErrors.provider5 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
-                    </p>
-                  </template>
-                </div>
-              </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- Right Column -->
-          <div class="space-y-6">
-            <!-- Provider 2 Zone -->
-            <div v-if="visibleZones.includes('provider2')">
-              <!-- Similar structure to Provider 1 -->
-              <template v-if="isZoneCompleted('provider2')">
-                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-fbWhite">
-                      {{ getProviderForZone('provider2')?.name }}
-                    </h3>
-                    <button
-                      @click="handleRemoveProvider('provider2')"
-                      class="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    <p>{{ (getProviderForZone('provider2')?.rowCount || getProviderForZone('provider2')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
-                    <p>{{ getProviderForZone('provider2')?.fileName }}</p>
-                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider2')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider2')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider2')?.avgIndeterminateRate) }}</p>
-                  </div>
-                </div>
-              </template>
-              <template v-else>
-                <div
-                  class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
-                  :class="[
-                    dragStates.provider2
-                      ? 'border-accent bg-fbWhite/10 border-solid'
-                      : canAcceptDrop('provider2')
-                        ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                        : store.isComponentUploading('provider2')
-                          ? 'border-gray-600 border-dashed cursor-not-allowed'
-                          : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
-                    uploadErrors.provider2 ? 'border-red-500 border-solid' : '',
-                  ]"
-                  @dragenter.prevent="handleDragEnter('provider2')"
-                  @dragleave.prevent="handleDragLeave('provider2')"
-                  @dragover.prevent="handleDragOver('provider2', $event)"
-                  @drop.prevent="handleDrop('provider2', $event)"
-                >
-                  <input
-                    type="file"
-                    accept=".csv"
-                    class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                    :disabled="!canAcceptDrop('provider2')"
-                    @change="(e) => handleFileChange(e, 'provider2')"
-                  />
-
-                  <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                    <!-- Uploading State -->
-                    <template v-if="store.isComponentUploading('provider2')">
-                      <RateGenProgressIndicator 
-                        :total-rows="uploadingFileRowCount.provider2"
-                        :progress="store.getUploadProgress('provider2')"
-                        ref="progressIndicators.provider2"
-                      />
-                    </template>
-
-                    <!-- Default State -->
-                    <template v-else>
-                      <!-- Error notification -->
-                      <div
-                        v-if="uploadErrors.provider2"
-                        class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                      >
-                        <p class="text-red-500 font-medium text-xs">{{ uploadErrors.provider2 }}</p>
-                      </div>
-
-                      <ArrowUpTrayIcon
-                        class="w-10 h-10 mx-auto border rounded-full p-2"
-                        :class="
-                          uploadErrors.provider2
-                            ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                            : 'text-accent border-accent/50 bg-accent/10'
-                        "
-                      />
-                      <p
-                        class="mt-2 text-base"
-                        :class="uploadErrors.provider2 ? 'text-red-500' : 'text-accent'"
-                      >
-                        {{ uploadErrors.provider2 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
-                      </p>
-                    </template>
-                  </div>
-                </div>
-              </template>
-            </div>
-
-            <!-- Provider 4 Zone -->
-            <div v-if="visibleZones.includes('provider4')">
-              <!-- Completed State -->
-              <template v-if="isZoneCompleted('provider4')">
-                <div class="bg-gray-700 rounded-lg p-4 border border-accent/30">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-fbWhite">
-                      {{ getProviderForZone('provider4')?.name }}
-                    </h3>
-                    <button
-                      @click="handleRemoveProvider('provider4')"
-                      class="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    <p>{{ (getProviderForZone('provider4')?.rowCount || getProviderForZone('provider4')?.recordCount || 0).toLocaleString() }} rates uploaded</p>
-                    <p>{{ getProviderForZone('provider4')?.fileName }}</p>
-                    <p class="mt-1">Avg rates: {{ formatRate(getProviderForZone('provider4')?.avgInterRate) }} / {{ formatRate(getProviderForZone('provider4')?.avgIntraRate) }} / {{ formatRate(getProviderForZone('provider4')?.avgIndeterminateRate) }}</p>
-                  </div>
-                </div>
-              </template>
-              
-              <!-- Upload State -->
-              <template v-else>
-              <div
-                class="relative border-2 rounded-lg p-6 h-[120px] flex items-center justify-center transition-all"
-                :class="[
-                  dragStates.provider4
-                    ? 'border-accent bg-fbWhite/10 border-solid'
-                    : canAcceptDrop('provider4')
-                      ? 'hover:border-accent-hover hover:bg-fbWhite/10 border-2 border-dashed border-gray-600 cursor-pointer'
-                      : store.isComponentUploading('provider4')
-                        ? 'border-gray-600 border-dashed cursor-not-allowed'
-                        : 'border-gray-600 border-dashed opacity-50 cursor-not-allowed',
-                  uploadErrors.provider4 ? 'border-red-500 border-solid' : '',
-                ]"
-                @dragenter.prevent="handleDragEnter('provider4')"
-                @dragleave.prevent="handleDragLeave('provider4')"
-                @dragover.prevent="handleDragOver('provider4', $event)"
-                @drop.prevent="handleDrop('provider4', $event)"
-              >
-                <input
-                  type="file"
-                  accept=".csv"
-                  class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                  :disabled="!canAcceptDrop('provider4')"
-                  @change="(e) => handleFileChange(e, 'provider4')"
-                />
-
-                <div class="flex flex-col items-center justify-center w-full h-full text-center">
-                  <!-- Uploading State -->
-                  <template v-if="store.isComponentUploading('provider4')">
-                    <RateGenProgressIndicator 
-                      :total-rows="uploadingFileRowCount.provider4"
-                      :progress="store.getUploadProgress('provider4')"
-                      ref="progressIndicators.provider4"
-                    />
-                  </template>
-
-                  <!-- Default State -->
-                  <template v-else>
-                    <!-- Error notification -->
-                    <div
-                      v-if="uploadErrors.provider4"
-                      class="bg-red-500/20 py-2 px-4 rounded-lg mb-2 w-full max-w-xs mx-auto"
-                    >
-                      <p class="text-red-500 font-medium text-xs">{{ uploadErrors.provider4 }}</p>
-                    </div>
-
-                    <ArrowUpTrayIcon
-                      class="w-10 h-10 mx-auto border rounded-full p-2"
-                      :class="
-                        uploadErrors.provider4
-                          ? 'text-red-500 border-red-500/50 bg-red-500/10'
-                          : 'text-accent border-accent/50 bg-accent/10'
-                      "
-                    />
-                    <p
-                      class="mt-2 text-base"
-                      :class="uploadErrors.provider4 ? 'text-red-500' : 'text-accent'"
-                    >
-                      {{ uploadErrors.provider4 ? 'Please try again' : 'DRAG & DROP or CLICK to upload' }}
-                    </p>
-                  </template>
-                </div>
-              </div>
-              </template>
-            </div>
-          </div>
-        </div>
-
-        <!-- Status Info -->
-        <div class="mt-6 pt-4 border-t border-gray-700">
-          <div class="flex items-center justify-between text-sm">
-            <div class="text-gray-400">
-              Providers uploaded: {{ store.providerCount }}/5
-            </div>
-            <div class="text-accent" v-if="store.providerCount >= 2">
-              Ready to generate rates!
-            </div>
-            <div class="text-gray-500" v-else>
-              Upload at least 2 providers to generate rates
-            </div>
-          </div>
-        </div>
+    <!-- Section header -->
+    <div>
+      <div class="flex items-center gap-3">
+        <span
+          class="grid h-7 w-7 place-items-center rounded-full bg-emerald-400/15 font-secondary text-sm font-semibold text-emerald-300 ring-1 ring-emerald-400/30"
+        >
+          1
+        </span>
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Provider Inputs</h2>
+      </div>
+      <div class="mt-2 flex items-center justify-between">
+        <p class="text-sm text-zinc-400">Upload up to {{ MAX_PROVIDERS }} rate decks</p>
+        <p class="font-secondary text-sm text-emerald-300">
+          {{ store.providerCount }} / {{ MAX_PROVIDERS }} uploaded
+        </p>
       </div>
     </div>
 
-    <!-- PreviewModal for column mapping and provider naming -->
+    <!-- Dropzone -->
+    <div
+      v-if="!atCapacity"
+      class="relative rounded-2xl border-2 p-8 text-center transition-colors"
+      :class="[
+        dragOver
+          ? 'border-solid border-emerald-400 bg-emerald-400/[0.07]'
+          : 'border-dashed border-white/15 bg-white/[0.02]',
+        canUpload && !dragOver ? 'hover:border-emerald-400/50 hover:bg-white/[0.02]' : '',
+        dropzoneError ? 'border-solid border-rose-500' : '',
+      ]"
+      @dragenter.prevent="canUpload && (dragOver = true)"
+      @dragover.prevent
+      @dragleave.prevent="dragOver = false"
+      @drop.prevent="handleDrop"
+    >
+      <input
+        v-if="canUpload"
+        type="file"
+        accept=".csv"
+        class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        @change="handleFileChange"
+      />
+
+      <!-- Uploading -->
+      <template v-if="isUploading">
+        <RateGenProgressIndicator
+          :total-rows="pendingRowCount"
+          :progress="currentZoneId ? store.getUploadProgress(currentZoneId) : 0"
+        />
+      </template>
+
+      <!-- Idle -->
+      <template v-else>
+        <div
+          v-if="dropzoneError"
+          class="mx-auto mb-3 inline-block rounded-lg bg-rose-400/10 px-3 py-1.5 text-xs font-medium text-rose-300"
+        >
+          {{ dropzoneError }}
+        </div>
+        <CloudArrowUpIcon class="mx-auto h-10 w-10 text-zinc-500" />
+        <p class="mt-3 font-medium text-white">Drag &amp; drop files here</p>
+        <p class="text-sm text-zinc-400">or click to browse</p>
+        <p class="mt-1 text-xs text-zinc-500">CSV rate decks only</p>
+      </template>
+    </div>
+
+    <!-- Provider cards -->
+    <div
+      v-for="p in store.providerList"
+      :key="p.id"
+      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-3">
+          <span
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-full font-secondary text-xs font-semibold"
+            :class="avatarStyle(p)"
+          >
+            P{{ slotNumber(p) }}
+          </span>
+          <div class="min-w-0">
+            <!-- Inline rename -->
+            <div v-if="editingId === p.id" class="flex items-center gap-2">
+              <input
+                ref="editInput"
+                v-model="editName"
+                type="text"
+                maxlength="40"
+                class="w-44 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1 text-sm text-white placeholder-zinc-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                @keyup.enter="commitEdit"
+                @keyup.esc="cancelEdit"
+              />
+              <button
+                type="button"
+                class="rounded-md p-1 text-emerald-300 transition-colors hover:bg-emerald-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                aria-label="Save name"
+                @click="commitEdit"
+              >
+                <CheckIcon class="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                class="rounded-md p-1 text-zinc-400 transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                aria-label="Cancel"
+                @click="cancelEdit"
+              >
+                <XMarkIcon class="h-4 w-4" />
+              </button>
+            </div>
+            <!-- Name + uploaded file name -->
+            <template v-else>
+              <h3 class="truncate text-base font-semibold leading-tight text-white">{{ p.name }}</h3>
+              <p class="truncate font-secondary text-xs text-zinc-500">{{ p.fileName }}</p>
+            </template>
+          </div>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-1">
+          <button
+            v-if="editingId !== p.id"
+            type="button"
+            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+            @click="startEdit(p)"
+          >
+            <PencilSquareIcon class="h-4 w-4" /> Edit
+          </button>
+          <button
+            type="button"
+            class="rounded-md p-1 text-zinc-400 transition-colors hover:bg-rose-400/10 hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+            aria-label="Remove provider"
+            @click="requestRemove(p)"
+          >
+            <XMarkIcon class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <dl class="mt-4 grid grid-cols-3 gap-y-3">
+        <div
+          v-for="(s, i) in statsFor(p)"
+          :key="s.label"
+          :class="i % 3 === 0 ? 'pr-4' : 'border-l border-white/[0.06] px-4'"
+        >
+          <dd class="font-secondary text-sm text-white">{{ s.value }}</dd>
+          <dt class="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">{{ s.label }}</dt>
+        </div>
+      </dl>
+    </div>
+
+    <!-- PreviewModal: column mapping + provider naming -->
     <PreviewModal
       v-if="showPreviewModal"
       :showModal="showPreviewModal"
@@ -961,19 +444,15 @@ const formatRate = (rate: number | undefined): string => {
       @cancel="handleModalCancel"
     />
 
-    <!-- Confirmation Modal for Provider Removal -->
+    <!-- Remove confirmation -->
     <ConfirmationModal
       v-model="showConfirmModal"
       title="Remove Provider"
-      :message="`Are you sure you want to remove '${confirmingProviderName}'? This action cannot be undone.`"
+      :message="`Are you sure you want to remove '${removingProvider?.name ?? ''}'? This action cannot be undone.`"
       confirm-button-text="Remove"
       cancel-button-text="Cancel"
       variant="destructive"
-      @confirm="confirmRemoveProvider"
+      @confirm="confirmRemove"
     />
   </div>
 </template>
-
-<style scoped>
-/* Any additional custom styles if needed */
-</style>

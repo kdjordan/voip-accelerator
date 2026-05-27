@@ -40,35 +40,32 @@
       </div>
     </header>
 
-    <!-- Split hero -->
-    <main
-      class="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-6 pb-16 pt-16 lg:grid-cols-2"
-    >
+    <!-- Centered hero -->
+    <main class="relative z-10 mx-auto max-w-3xl px-6 pb-10 pt-16 text-center">
       <div class="reveal">
         <div
           class="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-secondary text-xs text-zinc-400"
         >
           <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-          US NPANXX rate intelligence · local-first
+          Built for US wholesale VoIP · free forever
         </div>
         <h1 class="text-5xl font-bold leading-[1.04] tracking-tighter text-white md:text-6xl">
-          See the margin<br />
-          hiding in your<br />
+          Buy and sell<br />
           <span class="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent"
-            >rate decks.</span
+            >US minutes smarter.</span
           >
         </h1>
-        <p class="mt-6 max-w-md text-lg leading-relaxed text-zinc-400">
-          VoIP Accelerator turns US NPANXX rate decks into side-by-side insight — compare them,
-          reprice them down to the NPA, and export switch-ready sheets. Enriched with LERG, aware of
-          every jurisdiction. All in your browser; nothing is ever stored.
+        <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
+          Compare NPANXX rate decks, catch the margin a partner is quietly cherry-picking, and
+          reprice down to the NPA — in minutes, not a day in Excel. LERG-enriched, jurisdiction-aware,
+          and free. Nothing ever leaves your browser.
         </p>
-        <div class="mt-8 flex flex-wrap items-center gap-4">
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
           <RouterLink
             to="/signup"
             class="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-6 py-3 font-semibold text-ink transition-colors hover:bg-emerald-300"
           >
-            Get started — free <ArrowRightIcon class="h-4 w-4" />
+            Sign Up — Free Forever
           </RouterLink>
           <a
             href="#how"
@@ -77,128 +74,97 @@
             See how it works <ArrowRightIcon class="h-4 w-4" />
           </a>
         </div>
-        <p class="mt-6 text-sm text-zinc-500">
-          Load a deck in seconds. A full two-deck analysis in minutes — no formulas, no pivot
-          tables.
-        </p>
+        <Transition name="caption-fade" mode="out-in">
+          <p :key="activeShot" class="mt-6 text-sm text-zinc-500">
+            {{ heroShots[activeShot].caption }}
+          </p>
+        </Transition>
       </div>
 
-      <!-- Product dashboard mock (static, illustrative) -->
-      <div class="reveal-delay">
-        <div
-          class="overflow-hidden rounded-2xl border border-white/10 bg-ink-raised/90 shadow-2xl shadow-emerald-950/40 ring-1 ring-emerald-400/5 backdrop-blur"
-        >
-          <!-- app top bar -->
-          <div class="flex items-center justify-between border-b border-white/[0.07] px-4 py-3">
-            <div class="flex items-center gap-2 font-secondary text-xs text-zinc-500">
-              <BoltIcon class="h-3.5 w-3.5 text-emerald-400" /> Comparison · your deck vs. provider
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="rounded border border-white/10 px-2 py-1 font-secondary text-[10px] text-zinc-500"
-                >NPANXX</span
-              >
-              <span
-                class="rounded border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 font-secondary text-[10px] text-emerald-300"
-                >Export</span
-              >
-            </div>
-          </div>
-          <div class="grid grid-cols-[120px_1fr]">
-            <!-- sidebar -->
-            <div class="border-r border-white/[0.07] py-3 font-secondary text-[11px]">
-              <div
-                v-for="(nav, i) in sideNav"
-                :key="nav"
-                class="flex items-center gap-2 px-3 py-1.5"
-                :class="
-                  i === 0
-                    ? 'border-l-2 border-emerald-400 bg-emerald-400/[0.07] text-emerald-300'
-                    : 'border-l-2 border-transparent text-zinc-500'
-                "
-              >
-                <span class="h-1 w-1 rounded-full" :class="i === 0 ? 'bg-emerald-400' : 'bg-zinc-600'"></span
-                >{{ nav }}
-              </div>
-            </div>
-            <!-- main -->
-            <div class="space-y-3 p-3.5">
-              <!-- KPI cards -->
-              <div class="grid grid-cols-4 gap-2">
-                <div
-                  v-for="k in kpis"
-                  :key="k.label"
-                  class="rounded-lg border border-white/[0.07] bg-white/[0.02] p-2.5"
-                >
-                  <div class="text-[9px] uppercase tracking-wider text-zinc-500">{{ k.label }}</div>
-                  <div class="mt-1 font-secondary text-sm text-white">{{ k.value }}</div>
-                  <div
-                    class="font-secondary text-[9px]"
-                    :class="k.good ? 'text-emerald-400' : 'text-rose-400'"
-                  >
-                    {{ k.delta }}
-                  </div>
-                </div>
-              </div>
-              <!-- chart -->
-              <div class="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
-                <div class="mb-2 flex items-center justify-between text-[10px] text-zinc-500">
-                  <span class="font-medium text-zinc-300">Rate delta by NPA</span>
-                  <span class="flex items-center gap-3 font-secondary">
-                    <span class="flex items-center gap-1"
-                      ><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>Provider</span
-                    >
-                    <span class="flex items-center gap-1"
-                      ><span class="h-1.5 w-1.5 rounded-full bg-zinc-500"></span>Yours</span
-                    >
-                  </span>
-                </div>
-                <svg viewBox="0 0 400 110" class="h-[110px] w-full" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="rateArea" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="rgba(16,185,129,0.35)" />
-                      <stop offset="100%" stop-color="rgba(16,185,129,0)" />
-                    </linearGradient>
-                  </defs>
-                  <polyline
-                    points="0,70 57,62 114,75 171,55 228,60 285,42 342,50 400,35"
-                    fill="none"
-                    stroke="#71717a"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M0,88 57,80 114,86 171,68 228,78 285,58 342,66 400,48 L400,110 L0,110 Z"
-                    fill="url(#rateArea)"
-                  />
-                  <polyline
-                    points="0,88 57,80 114,86 171,68 228,78 285,58 342,66 400,48"
-                    fill="none"
-                    stroke="#34d399"
-                    stroke-width="2.5"
-                  />
-                </svg>
-              </div>
-              <!-- top opportunities -->
-              <div class="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
-                <div class="mb-2 text-[10px] font-medium text-zinc-300">Top buying opportunities</div>
-                <div
-                  v-for="o in opps"
-                  :key="o.dest"
-                  class="flex items-center justify-between py-1 font-secondary text-[11px]"
-                >
-                  <span class="text-zinc-400">{{ o.dest }}</span>
-                  <span :class="o.delta.startsWith('-') ? 'text-emerald-400' : 'text-rose-400'">{{
-                    o.delta
-                  }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <p class="mt-3 text-center font-secondary text-[11px] text-zinc-600">
-          US NPANXX · LERG-enriched · interstate / intrastate / indeterminate
+    </main>
+
+    <!-- Hero product shot — auto-crossfading screenshots -->
+    <div class="reveal-delay relative z-10 mx-auto max-w-6xl px-6">
+      <div
+        class="relative aspect-[7/5] overflow-hidden rounded-2xl border border-white/10 bg-ink-raised shadow-2xl shadow-emerald-950/40 ring-1 ring-emerald-400/5 sm:aspect-[16/11]"
+      >
+        <img
+          v-for="(shot, i) in heroShots"
+          :key="i"
+          :src="shot.src"
+          :alt="shot.alt"
+          class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-1000 ease-in-out"
+          :class="i === activeShot ? 'opacity-100' : 'opacity-0'"
+        />
+      </div>
+      <!-- slide indicators -->
+      <div class="mt-4 flex items-center justify-center gap-2">
+        <button
+          v-for="(shot, i) in heroShots"
+          :key="i"
+          type="button"
+          @click="selectShot(i)"
+          :aria-label="shot.alt"
+          class="h-1.5 rounded-full transition-all"
+          :class="i === activeShot ? 'w-6 bg-emerald-400' : 'w-1.5 bg-white/20 hover:bg-white/40'"
+        />
+      </div>
+    </div>
+
+    <!-- Trust strip — replaces a logo wall (we don't fabricate proof) -->
+    <div
+      class="relative z-10 mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-center gap-3 px-6 font-secondary text-xs text-zinc-400"
+    >
+      <span
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
+      >
+        <LockClosedIcon class="h-3.5 w-3.5 text-emerald-400" /> Local-first &amp; ephemeral
+      </span>
+      <span
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
+      >
+        <MapPinIcon class="h-3.5 w-3.5 text-emerald-400" /> LERG-enriched &amp; jurisdiction-aware
+      </span>
+      <span
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
+      >
+        <BoltIcon class="h-3.5 w-3.5 text-emerald-400" /> Built for full-size decks
+      </span>
+    </div>
+
+    <!-- What this replaces: the spreadsheet status quo, agitated before the pitch -->
+    <section class="relative z-10 mx-auto max-w-7xl px-6 py-16">
+      <div class="mb-12 text-center">
+        <p class="mb-3 font-secondary text-xs uppercase tracking-wider text-zinc-500">
+          What this replaces
+        </p>
+        <h2 class="text-3xl font-bold tracking-tight text-white md:text-4xl">
+          Right now, this lives in a spreadsheet.
+        </h2>
+        <p class="mx-auto mt-3 max-w-xl text-zinc-400">
+          A full US NPANXX deck runs 200,000 rows. Here's what that costs you every time a new one
+          lands.
         </p>
       </div>
-    </main>
+      <div class="grid gap-5 md:grid-cols-3">
+        <div
+          v-for="problem in problems"
+          :key="problem.title"
+          class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6"
+        >
+          <span
+            class="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.03] ring-1 ring-white/10"
+          >
+            <component :is="problem.icon" class="h-5 w-5 text-zinc-400" />
+          </span>
+          <h3 class="mt-4 font-semibold text-white">{{ problem.title }}</h3>
+          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">{{ problem.body }}</p>
+        </div>
+      </div>
+      <p class="mx-auto mt-10 max-w-xl text-center text-zinc-300">
+        You don't need a faster spreadsheet. You need to see the deck for what it is.
+      </p>
+    </section>
 
     <!-- Analyze + Adjust: the two halves of NPANXX deck work -->
     <section id="features" class="relative z-10 mx-auto max-w-7xl px-6 py-16">
@@ -240,26 +206,6 @@
           </div>
         </div>
       </div>
-      <!-- cross-cutting trust badges -->
-      <div
-        class="mt-6 flex flex-wrap items-center justify-center gap-3 font-secondary text-xs text-zinc-400"
-      >
-        <span
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
-        >
-          <LockClosedIcon class="h-3.5 w-3.5 text-emerald-400" /> Local-first &amp; ephemeral
-        </span>
-        <span
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
-        >
-          <MapPinIcon class="h-3.5 w-3.5 text-emerald-400" /> LERG-enriched &amp; jurisdiction-aware
-        </span>
-        <span
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
-        >
-          <BoltIcon class="h-3.5 w-3.5 text-emerald-400" /> Built for full-size decks
-        </span>
-      </div>
     </section>
 
     <!-- How it works -->
@@ -294,7 +240,7 @@
         </p>
         <p class="text-xl leading-relaxed text-zinc-200 md:text-2xl">
           A partner sends a new rate deck — or quietly cherry-picks the traffic to where your margin
-          is thinnest. The answer is buried in 200,000 rows. VoIP Accelerator surfaces it in
+          is thinnest. The answer is buried in +200k rows. VoIP Accelerator surfaces it in
           minutes, down to the NPA, so you can respond surgically instead of rebuilding a deck.
         </p>
         <p class="mt-5 text-sm text-zinc-500">
@@ -317,7 +263,7 @@
         to="/signup"
         class="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-400 px-7 py-3.5 font-semibold text-ink transition-colors hover:bg-emerald-300"
       >
-        Get started — free <ArrowRightIcon class="h-4 w-4" />
+        Sign Up — Free Forever
       </RouterLink>
     </section>
 
@@ -329,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-  import type { Component } from 'vue';
+  import { ref, onMounted, onBeforeUnmount, type Component } from 'vue';
   import { RouterLink } from 'vue-router';
   import {
     BoltIcon,
@@ -337,24 +283,56 @@
     ArrowsRightLeftIcon,
     AdjustmentsHorizontalIcon,
     ArrowDownTrayIcon,
+    ArrowTrendingDownIcon,
     LockClosedIcon,
     MapPinIcon,
     DocumentArrowUpIcon,
     TableCellsIcon,
   } from '@heroicons/vue/24/outline';
   import TheFooter from '@/components/shared/TheFooter.vue';
+  import compareShot from '@/assets/screenshots/compare.png';
+  import explorerShot from '@/assets/screenshots/explorer.png';
+  import wizardShot from '@/assets/screenshots/wizard.png';
 
-  interface Kpi {
-    label: string;
-    value: string;
-    delta: string;
-    good: boolean;
+  // --- Hero screenshot carousel (auto-crossfade) ---
+  const heroShots = [
+    {
+      src: compareShot,
+      alt: 'Comparing two US NPANXX rate decks — coverage match, margin deltas, and top buy/sell opportunities',
+      caption: 'Drop in two decks — see where you win and where they beat you, in seconds.',
+    },
+    {
+      src: explorerShot,
+      alt: 'Per-NPANXX pricing comparison between two US rate decks — interstate, intrastate, and indeterminate deltas',
+      caption: 'Drill to the exact NPANXX. Nothing stays buried.',
+    },
+    {
+      src: wizardShot,
+      alt: 'Pricing Studio repricing 223,267 US NPANXX rows by percentage with an effective date, in the browser',
+      caption: 'Reprice with a scalpel — by code, NPA, state, or metro. Try that in Excel.',
+    },
+  ];
+  const activeShot = ref(0);
+  let shotTimer: ReturnType<typeof setInterval> | undefined;
+
+  function startShotRotation() {
+    if (heroShots.length < 2) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    shotTimer = setInterval(() => {
+      activeShot.value = (activeShot.value + 1) % heroShots.length;
+    }, 5000);
   }
 
-  interface Opportunity {
-    dest: string;
-    delta: string;
+  function selectShot(i: number) {
+    activeShot.value = i;
+    if (shotTimer) clearInterval(shotTimer);
+    startShotRotation();
   }
+
+  onMounted(startShotRotation);
+  onBeforeUnmount(() => {
+    if (shotTimer) clearInterval(shotTimer);
+  });
 
   interface PanelItem {
     label: string;
@@ -374,25 +352,31 @@
     body: string;
   }
 
-  // --- Static, illustrative content for the dashboard mock ---
-  const sideNav = ['Compare', 'NPANXX', 'Jurisdiction', 'Adjust', 'LERG', 'Export'];
-
-  const kpis: Kpi[] = [
-    { label: 'Matched', value: '1,204', delta: 'codes', good: true },
-    { label: 'Buying ops', value: '12', delta: '↑ >10%', good: true },
-    { label: 'Gaps', value: '47', delta: 'your deck', good: false },
-    { label: 'Avg Δ', value: '-9.4%', delta: '↓ cheaper', good: true },
-  ];
-
-  // US NPANXX opportunities are by metro / NPA, not country.
-  const opps: Opportunity[] = [
-    { dest: 'Los Angeles · 213', delta: '-16.9%' },
-    { dest: 'Dallas · 469', delta: '-11.5%' },
-    { dest: 'Miami · 305', delta: '-7.6%' },
-    { dest: 'New York · 917', delta: '+21.4%' },
-  ];
+  interface Problem {
+    icon: Component;
+    title: string;
+    body: string;
+  }
 
   // --- Page content ---
+  const problems: Problem[] = [
+    {
+      icon: TableCellsIcon,
+      title: 'The deck outgrows the spreadsheet',
+      body: 'Pivot tables crawl and formulas break long before 200k rows — so you spot-check a few NPAs and trust the rest is fine.',
+    },
+    {
+      icon: ArrowTrendingDownIcon,
+      title: 'Margin leaks out of sight',
+      body: 'A partner re-routes traffic to the NPANXX where your margin is thinnest. The loss is real, and buried across thousands of rows until the invoice lands.',
+    },
+    {
+      icon: MapPinIcon,
+      title: 'Jurisdiction is invisible in a CSV',
+      body: 'Interstate, intrastate, indeterminate — every NPANXX prices differently, and none of that context lives in your sheet, so mispricing slips through.',
+    },
+  ];
+
   const panels: Panel[] = [
     {
       icon: ArrowsRightLeftIcon,
@@ -463,10 +447,23 @@
       transform: translateY(0);
     }
   }
+  /* Caption crossfade — synced with the hero carousel. */
+  .caption-fade-enter-active,
+  .caption-fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+  .caption-fade-enter-from,
+  .caption-fade-leave-to {
+    opacity: 0;
+  }
   @media (prefers-reduced-motion: reduce) {
     .reveal,
     .reveal-delay {
       animation: none;
+    }
+    .caption-fade-enter-active,
+    .caption-fade-leave-active {
+      transition: none;
     }
   }
 </style>

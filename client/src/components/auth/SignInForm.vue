@@ -1,7 +1,7 @@
 <template>
   <form class="space-y-6" @submit.prevent="handleSignIn">
     <div>
-      <label for="email" class="block text-sm font-medium leading-6 text-gray-300"
+      <label for="email" class="block text-sm font-medium leading-6 text-zinc-300"
         >Email address</label
       >
       <div class="mt-2">
@@ -12,13 +12,13 @@
           type="email"
           autocomplete="email"
           required
-          class="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6"
+          class="block w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white placeholder-zinc-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 sm:text-sm"
         />
       </div>
     </div>
 
     <div>
-      <label for="password" class="block text-sm font-medium leading-6 text-gray-300"
+      <label for="password" class="block text-sm font-medium leading-6 text-zinc-300"
         >Password</label
       >
       <div class="mt-2">
@@ -29,12 +29,12 @@
           type="password"
           autocomplete="current-password"
           required
-          class="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-accent sm:text-sm sm:leading-6"
+          class="block w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white placeholder-zinc-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 sm:text-sm"
         />
       </div>
     </div>
 
-    <div v-if="errorMessage" class="mt-4 text-center text-sm text-red-400">
+    <div v-if="errorMessage" class="mt-4 text-center text-sm text-rose-400">
       {{ errorMessage }}
     </div>
 

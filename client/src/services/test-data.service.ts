@@ -262,11 +262,12 @@ export class TestDataService {
         name: testProvider.name,
         fileName: testProvider.fileName,
         uploadDate: new Date(),
-        recordCount: testProvider.recordCount,
+        rowCount: testProvider.recordCount,
         invalidRowCount: 0,
         avgInterRate: this.roundToSixDecimals(avgInterRate),
         avgIntraRate: this.roundToSixDecimals(avgIntraRate),
-        avgIndeterminateRate: this.roundToSixDecimals(avgIndeterminateRate)
+        avgIndeterminateRate: this.roundToSixDecimals(avgIndeterminateRate),
+        npaCount: new Set(rateData.map((r) => r.prefix.slice(0, 3))).size
       };
       
       providers.push(providerInfo);
