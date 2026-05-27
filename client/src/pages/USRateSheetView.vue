@@ -46,7 +46,7 @@
           <button
             @click="handleExportPackage"
             :disabled="!readiness.exportReady"
-            class="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-ink hover:bg-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-white/[0.06] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowDownTrayIcon class="h-4 w-4" /> Export Package
           </button>
@@ -61,16 +61,48 @@
       </div>
     </div>
 
-    <!-- Readiness strip -->
-    <PricingStudioMetricStrip v-if="isLocallyStored" :stats="readiness" class="mb-5 px-1" />
+    <!-- Readiness summary — one calm line; expands to the full metric strip -->
+    <div v-if="isLocallyStored" class="mb-5 px-1">
+      <button
+        @click="showStrip = !showStrip"
+        class="flex w-full items-center gap-x-5 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-sm hover:bg-white/[0.03] transition-colors flex-wrap"
+      >
+        <span class="font-secondary text-white">{{ readiness.modifiedRows.toLocaleString() }}</span>
+        <span class="text-zinc-500">modified ({{ readiness.modifiedPct }}%)</span>
+        <span class="text-zinc-700">·</span>
+        <span class="font-secondary text-violet-300">{{ readiness.frozenScopes }}</span>
+        <span class="text-zinc-500">frozen</span>
+        <span class="text-zinc-700">·</span>
+        <span class="text-zinc-500">avg inter</span>
+        <span class="font-secondary text-white">{{ avgInterLabel }}</span>
+        <span
+          class="ml-auto inline-flex items-center gap-1.5"
+          :class="readiness.exportReady ? 'text-emerald-400' : 'text-zinc-500'"
+        >
+          <CheckCircleIcon class="h-4 w-4" /> {{ readiness.exportReady ? 'Export ready' : 'Not ready' }}
+          <ChevronDownIcon class="h-4 w-4 text-zinc-500 transition-transform" :class="{ 'rotate-180': showStrip }" />
+        </span>
+      </button>
+      <PricingStudioMetricStrip v-if="showStrip" :stats="readiness" class="mt-3" />
+    </div>
 
-    <!-- Invalid rows surfaced after upload -->
-    <InvalidRows
-      v-if="store.hasInvalidRateSheetRows"
-      :items="usInvalidRowEntries"
-      title="Invalid Rows Not Uploaded"
-      class="mb-5"
-    />
+    <!-- Invalid rows surfaced after upload — collapsed to a chip -->
+    <div v-if="store.hasInvalidRateSheetRows" class="mb-5 px-1">
+      <button
+        @click="showInvalid = !showInvalid"
+        class="inline-flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-400/[0.06] px-3 py-1.5 text-xs text-amber-300/90 hover:bg-amber-400/10 transition-colors"
+      >
+        <ExclamationTriangleIcon class="h-3.5 w-3.5" />
+        {{ usInvalidRowEntries.length }} invalid {{ usInvalidRowEntries.length === 1 ? 'row' : 'rows' }} not uploaded — review
+        <ChevronDownIcon class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-180': showInvalid }" />
+      </button>
+      <InvalidRows
+        v-if="showInvalid"
+        :items="usInvalidRowEntries"
+        title="Invalid Rows Not Uploaded"
+        class="mt-3"
+      />
+    </div>
 
     <!-- UPLOAD STATE -->
     <div
@@ -198,7 +230,12 @@
     LockClosedIcon,
     QuestionMarkCircleIcon,
   } from '@heroicons/vue/24/outline';
-  import { ArrowDownTrayIcon } from '@heroicons/vue/20/solid';
+  import {
+    ArrowDownTrayIcon,
+    ChevronDownIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
+  } from '@heroicons/vue/20/solid';
   import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
   import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
@@ -228,6 +265,13 @@
       freeze: psStore.freezeState,
       avgInterRate: psStore.deckAvgInterRate,
     })
+  );
+
+  // Readiness summary line is collapsed by default; the invalid-rows table starts hidden behind a chip.
+  const showStrip = ref(false);
+  const showInvalid = ref(false);
+  const avgInterLabel = computed(() =>
+    readiness.value.avgInterRate != null ? `$${readiness.value.avgInterRate.toFixed(6)}` : '—'
   );
 
   // Workspace child exposes exportPackage()/resetAll() (added in Phase 5).

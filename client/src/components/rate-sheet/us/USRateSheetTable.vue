@@ -1,8 +1,8 @@
 <template>
   <!-- Pricing Studio workspace: filters | command bar + table | operations -->
   <div class="flex flex-col xl:flex-row gap-4">
-    <!-- LEFT: Filter panel -->
-    <aside class="xl:w-72 flex-shrink-0">
+    <!-- LEFT: Filter panel + accumulating change cards -->
+    <aside class="xl:w-72 flex-shrink-0 space-y-4">
       <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-secondary uppercase tracking-wider text-zinc-400">Filters</h3>
@@ -107,7 +107,10 @@
                 :class="isMetroSelected(metro) ? 'text-emerald-300' : 'text-zinc-300'"
               >
                 <span class="truncate">{{ metro.displayName }}</span>
-                <CheckIcon v-if="isMetroSelected(metro)" class="h-3.5 w-3.5 flex-shrink-0" />
+                <span class="flex items-center gap-1.5 flex-shrink-0">
+                  <span class="text-[10px] text-zinc-500">{{ formatPopulation(metro.population) }}</span>
+                  <CheckIcon v-if="isMetroSelected(metro)" class="h-3.5 w-3.5" />
+                </span>
               </button>
               <p v-if="!filteredMetroOptions.length" class="px-2.5 py-2 text-xs text-zinc-600">No metros match.</p>
             </div>
@@ -131,23 +134,26 @@
           </div>
         </div>
 
-        <!-- Rate jurisdiction (drives the adjustment target) -->
-        <div>
-          <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Rate Jurisdiction</label>
-          <div class="grid grid-cols-4 gap-1">
-            <button
-              v-for="opt in adjustmentTargetRateOptions"
-              :key="opt.value"
-              @click="adjustmentTargetRate = opt.value"
-              class="text-[11px] px-1.5 py-1.5 rounded border transition-colors"
-              :class="
-                adjustmentTargetRate === opt.value
-                  ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
-                  : 'border-white/10 text-zinc-400 hover:bg-white/[0.05]'
-              "
-            >
-              {{ opt.short }}
-            </button>
+        <!-- Metro selection summary: affected NPAs + population (shows when metros are selected) -->
+        <div
+          v-if="selectedMetros.length"
+          class="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2"
+        >
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-400">
+              <span class="font-secondary text-zinc-200">{{ selectedMetros.length }}</span>
+              metro{{ selectedMetros.length === 1 ? '' : 's' }}
+            </span>
+            <span class="text-zinc-500">
+              Pop: <span class="font-secondary text-zinc-200">{{ totalSelectedPopulation.toLocaleString() }}</span>
+            </span>
+          </div>
+          <div
+            v-if="targetedNPAsDisplay.summary"
+            class="max-h-24 overflow-y-auto break-words border-t border-white/[0.06] pt-2 text-[11px] leading-relaxed text-zinc-500"
+            :title="targetedNPAsDisplay.fullList"
+          >
+            {{ targetedNPAsDisplay.summary }}
           </div>
         </div>
 
@@ -168,6 +174,9 @@
           </p>
         </div>
       </div>
+
+      <!-- Recent Changes: cards accumulate in the rail; stacked when collapsed, listed when expanded -->
+      <PricingOperationsPanel />
     </aside>
 
     <!-- CENTER: command bar + preview + table -->
@@ -406,11 +415,6 @@
       </div>
     </div>
 
-    <!-- RIGHT: operations panel -->
-    <aside class="xl:w-80 flex-shrink-0">
-      <PricingOperationsPanel />
-    </aside>
-
     <NoticeModal v-model="showNotice" :title="noticeTitle" :message="noticeMessage" :variant="noticeVariant" />
   </div>
 </template>
@@ -527,11 +531,14 @@
     metroSearchQuery,
     filteredMetroOptions,
     metroAreaCodesToFilter,
+    totalSelectedPopulation,
+    targetedNPAsDisplay,
     toggleMetroSelection,
     isMetroSelected,
     removeSelectedMetro,
     selectTopNMetros,
     clearAllSelectedMetros,
+    formatPopulation,
   } = useMetroFilter();
 
   // Adjustment option data (short labels for the jurisdiction segmented control).
@@ -545,16 +552,16 @@
     { value: 'fixed', label: 'Fixed Amount' },
   ] as const;
   const adjustmentTargetRateOptions = [
-    { value: 'inter', label: 'Interstate Only', short: 'Inter' },
-    { value: 'intra', label: 'Intrastate Only', short: 'Intra' },
-    { value: 'indeterm', label: 'Indeterminate Only', short: 'Indet' },
-    { value: 'all', label: 'All Rates', short: 'All' },
+    { value: 'inter', label: 'Interstate Only' },
+    { value: 'intra', label: 'Intrastate Only' },
+    { value: 'indeterm', label: 'Indeterminate Only' },
+    { value: 'all', label: 'All Rates' },
   ] as const;
 
   const adjustmentType = ref<AdjustmentType>('markup');
   const adjustmentValueType = ref<AdjustmentValueType>('percentage');
   const adjustmentValue = ref<number | null>(null);
-  const adjustmentTargetRate = ref<TargetRateType>('inter');
+  const adjustmentTargetRate = ref<TargetRateType>('all');
   const isApplyingAdjustment = ref(false);
   const adjustmentStatusMessage = ref<string | null>(null);
   const adjustmentError = ref<string | null>(null);
