@@ -160,7 +160,7 @@
         <!-- Export filtered rates -->
         <button
           @click="exportRatesCsv"
-          :disabled="totalFilteredItems === 0 || isExporting"
+          :disabled="!store.hasUsRateSheetData || isExportBusy"
           class="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.06] px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <ArrowDownTrayIcon class="h-4 w-4" /> Export Rates
@@ -269,6 +269,13 @@
             <p class="ml-auto inline-flex items-center gap-1.5 text-xs text-zinc-500">
               <LockClosedIcon class="h-3.5 w-3.5" /> Existing frozen rows will not be changed
             </p>
+            <button
+              @click="previewImpact = null"
+              class="text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Dismiss preview"
+            >
+              <XMarkIcon class="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -415,6 +422,14 @@
       </div>
     </div>
 
+    <USExportOptionsModal
+      v-model:open="showExportModal"
+      :mode="exportMode"
+      :record-count="store.getTotalRecords"
+      :busy="isExportBusy"
+      @confirm="handleExportConfirm"
+    />
+
     <NoticeModal v-model="showNotice" :title="noticeTitle" :message="noticeMessage" :variant="noticeVariant" />
   </div>
 </template>
@@ -448,19 +463,22 @@
   import Dexie from 'dexie';
   import { useMetroFilter } from '@/composables/filters/useMetroFilter';
   import { groupRegionCodes } from '@/types/constants/region-codes';
-  import { useCSVExport } from '@/composables/exports/useCSVExport';
   import { useUSTableData } from '@/composables/tables/useUSTableData';
   import type { FilterFunction } from '@/composables/tables/useTableData';
   import {
     classifyRow,
-    buildRateDeckCsv,
     computeReadiness,
     type Adjustment,
     type AdjustmentImpact,
     type RowStatus,
     type GeoInfo,
   } from '@/utils/pricing-engine';
-  import { downloadAuditPdf } from '@/utils/pricing-audit-pdf';
+  import { buildAuditPdf } from '@/utils/pricing-audit-pdf';
+  import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
+  import USExportOptionsModal from '@/components/exports/USExportOptionsModal.vue';
+  import type { USExportFormatOptions } from '@/types/exports';
+  import Papa from 'papaparse';
+  import { zipSync, strToU8 } from 'fflate';
   import UsRateAdjusterWorker from '@/workers/us-rate-adjuster.worker?worker';
   import type {
     UsRateAdjusterRequest,
@@ -930,17 +948,6 @@
     return out;
   }
 
-  // --- Load filtered records into memory for preview/apply (matches legacy path) ---
-  async function loadFilteredRecords(): Promise<USRateSheetEntry[]> {
-    if (!dbInstance.value) await initializeDB();
-    if (!dbInstance.value) return [];
-    const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
-    let query: Dexie.Collection<USRateSheetEntry, any> = table.toCollection();
-    const filters = createFilters();
-    if (filters.length > 0) query = query.filter((record) => filters.every((fn) => fn(record)));
-    return query.toArray();
-  }
-
   function buildAdjustment(): Adjustment {
     return {
       type: adjustmentType.value,
@@ -1091,80 +1098,126 @@
   }
 
   // --- Export ---
-  const { isExporting, exportToCSV } = useCSVExport();
+  const { transformDataForExport } = useUSExportConfig();
 
-  async function buildDeckCsvAndDownload(records: USRateSheetEntry[], filenameParts: string[]) {
-    const { headers, rows } = buildRateDeckCsv(records, {
-      effectiveDate: store.getCurrentEffectiveDate,
-      getGeo: geoOf,
-      formatRate: (n) => (typeof n === 'number' ? n.toFixed(6) : 'N/A'),
-    });
-    await exportToCSV(
-      { headers, rows },
-      { filename: 'us-rate-deck', additionalNameParts: filenameParts, timestamp: true, quoteFields: true }
+  // Export options modal. BOTH exports run on the WHOLE deck regardless of active
+  // filters (a filtered export was confusing to explain). The modal picks the CSV
+  // column format; "package" mode also bundles the branded audit PDF into one .zip.
+  const showExportModal = ref(false);
+  const exportMode = ref<'package' | 'rates'>('package');
+  const isExportBusy = ref(false);
+
+  function openExportModal(mode: 'package' | 'rates') {
+    if (!store.getHasUsRateSheetData) return;
+    exportMode.value = mode;
+    showExportModal.value = true;
+  }
+
+  // Filter-panel "Export Rates" → whole-deck CSV only (format chosen in the modal).
+  function exportRatesCsv() {
+    openExportModal('rates');
+  }
+
+  // Header "Export Package" → whole-deck CSV + audit PDF, zipped (one download).
+  function exportPackage() {
+    openExportModal('package');
+  }
+
+  defineExpose({ exportPackage });
+
+  function exportStamp(): string {
+    return new Date().toISOString().replace(/[:.]/g, '-');
+  }
+
+  function triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Build the rate-deck CSV string for the whole deck in the chosen column format.
+  function buildDeckCsv(records: USRateSheetEntry[], options: USExportFormatOptions): string {
+    const effectiveDate = store.getCurrentEffectiveDate || 'N/A';
+    const withDate = records.map((r) => ({ ...r, effectiveDate }));
+    // selectedCountries [] → no country filtering (whole deck regardless of UI filters).
+    const { headers, rows } = transformDataForExport(
+      withDate,
+      { ...options, selectedCountries: [] },
+      'rate-sheet'
     );
+    // Excel text guard so split NXX keeps leading zeros (matches legacy export).
+    const data =
+      options.npanxxFormat === 'split'
+        ? rows.map((row) => ({ ...row, NXX: `="${row.NXX}"` }))
+        : rows;
+    return Papa.unparse({ fields: headers, data }, { quotes: true });
   }
 
-  // Filter-panel "Export Rates": current filtered deck as CSV only.
-  async function exportRatesCsv() {
-    if (isExporting.value) return;
-    try {
-      const records = await loadFilteredRecords();
-      if (records.length === 0) {
-        showNoticeModal('Nothing to Export', 'No rows match the current filters.', 'info');
-        return;
-      }
-      const parts: string[] = [];
-      if (selectedState.value) parts.push(selectedState.value.replace(/\s+/g, '_'));
-      if (debouncedSearchQuery.value.length) parts.push(`search_${debouncedSearchQuery.value.join('-')}`);
-      await buildDeckCsvAndDownload(records, parts);
-    } catch (err: any) {
-      showNoticeModal('Export Failed', err.message || 'Failed to export rates.', 'error');
+  // Modal confirm → load the whole deck, build the CSV, then download (rates) or
+  // zip CSV + audit PDF into a single archive (package).
+  async function handleExportConfirm(options: USExportFormatOptions) {
+    if (isExportBusy.value) return;
+    if (!dbInstance.value) await initializeDB();
+    if (!dbInstance.value) {
+      showNoticeModal('Export Failed', 'Database is not ready.', 'error');
+      return;
     }
-  }
-
-  // Header "Export Package": full final deck CSV + branded change-audit PDF.
-  async function exportPackage() {
-    if (isExporting.value || !store.getHasUsRateSheetData) return;
+    isExportBusy.value = true;
     try {
-      if (!dbInstance.value) await initializeDB();
-      if (!dbInstance.value) {
-        showNoticeModal('Export Failed', 'Database is not ready.', 'error');
-        return;
-      }
       const table = dbInstance.value.table<USRateSheetEntry>(RATE_SHEET_TABLE_NAME);
       const allRecords = await table.toArray();
       if (allRecords.length === 0) {
         showNoticeModal('Nothing to Export', 'No rate deck data to export.', 'info');
         return;
       }
-      // 1) Final rate deck CSV
-      await buildDeckCsvAndDownload(allRecords, ['final']);
-      // 2) Branded change-audit PDF
+      const csv = buildDeckCsv(allRecords, options);
+      const stamp = exportStamp();
+
+      if (exportMode.value === 'rates') {
+        triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `us-rate-deck-${stamp}.csv`);
+        showExportModal.value = false;
+        showNoticeModal('Export Ready', `Exported the full deck (${allRecords.length.toLocaleString()} rows).`, 'success');
+        return;
+      }
+
+      // Package: whole-deck CSV + branded change-audit PDF, zipped into one file.
       const readiness = computeReadiness({
         totalRecords: store.getTotalRecords,
         operations: psStore.operations,
         freeze: psStore.freezeState,
         avgInterRate: psStore.deckAvgInterRate,
       });
-      downloadAuditPdf(psStore.operations, {
+      const pdfBlob = buildAuditPdf(psStore.operations, {
         generatedAt: new Date(),
         totalRecords: store.getTotalRecords,
         modifiedRows: readiness.modifiedRows,
         frozenScopes: readiness.frozenScopes,
         effectiveDate: store.getCurrentEffectiveDate,
+      }).output('blob');
+      const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
+
+      const archive = zipSync({
+        [`us-rate-deck-${stamp}.csv`]: strToU8(csv),
+        [`change-audit-${stamp}.pdf`]: pdfBytes,
       });
+      triggerDownload(new Blob([archive], { type: 'application/zip' }), `pricing-studio-export-${stamp}.zip`);
+      showExportModal.value = false;
       showNoticeModal(
         'Export Package Ready',
-        'Two files downloaded: the final rate deck (CSV) and the change audit (PDF).',
+        `Downloaded one .zip: the full rate deck (${allRecords.length.toLocaleString()} rows) and the change-audit PDF.`,
         'success'
       );
     } catch (err: any) {
-      showNoticeModal('Export Failed', err.message || 'Failed to export package.', 'error');
+      showNoticeModal('Export Failed', err.message || 'Failed to export.', 'error');
+    } finally {
+      isExportBusy.value = false;
     }
   }
-
-  defineExpose({ exportPackage });
 
   // --- Notice modal ---
   const showNotice = ref(false);

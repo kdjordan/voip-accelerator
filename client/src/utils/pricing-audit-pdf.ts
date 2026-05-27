@@ -57,7 +57,7 @@ export function buildAuditPdf(operations: PricingOperation[], meta: AuditPdfMeta
   });
   doc.text('Local browser session', pageWidth - marginX, 66, { align: 'right' });
 
-  // Summary block
+  // Summary block — stacked one per line so nothing is clipped at the page edge.
   const summary = [
     `Total records: ${fmtInt(meta.totalRecords)}`,
     `Modified rows: ${fmtInt(meta.modifiedRows)}`,
@@ -67,14 +67,18 @@ export function buildAuditPdf(operations: PricingOperation[], meta: AuditPdfMeta
   ];
   doc.setFontSize(10);
   doc.setTextColor(...INK);
-  doc.text(summary.join('     •     '), marginX, 96);
+  let summaryY = 92;
+  for (const line of summary) {
+    doc.text(line, marginX, summaryY);
+    summaryY += 15;
+  }
 
   // Operations table
   const { headers, rows } = buildAuditTable(operations);
   autoTable(doc, {
-    startY: 112,
+    startY: summaryY + 8,
     head: [headers],
-    body: rows.length ? rows : [['—', 'No operations recorded this session', '', '', '', '', '', '', '', '', '', '']],
+    body: rows.length ? rows : [['No operations recorded this session', '', '', '', '', '', '', '', '', '', '']],
     margin: { left: marginX, right: marginX },
     styles: { fontSize: 7.5, cellPadding: 4, textColor: INK, lineColor: [228, 228, 231] },
     headStyles: { fillColor: EMERALD, textColor: INK, fontStyle: 'bold' },

@@ -62,7 +62,7 @@ describe('Pricing Studio — end-to-end session flow', () => {
     // Audit = one row per operation.
     const audit = buildAuditTable(store.operations);
     expect(audit.rows).toHaveLength(2);
-    expect(audit.rows[0][1]).toBe('markup');
+    expect(audit.rows[0][0]).toBe('markup');
 
     // Final rate-deck CSV reflects the mutated rates (0.01 → 0.011 on interstate).
     const csv = buildRateDeckCsv(deck, {

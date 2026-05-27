@@ -348,7 +348,6 @@ export function buildRateDeckCsv(
  */
 export function buildAuditTable(operations: PricingOperation[]): CsvTable {
   const headers = [
-    'Timestamp',
     'Operation',
     'Method',
     'Value',
@@ -363,7 +362,6 @@ export function buildAuditTable(operations: PricingOperation[]): CsvTable {
   ];
   const fmtDelta = (n: number | null) => (n != null ? n.toFixed(6) : '');
   const rows = operations.map((op) => [
-    op.timestamp,
     op.kind,
     op.valueType ?? '',
     op.value != null ? String(op.value) : '',

@@ -219,7 +219,6 @@ describe('buildAuditTable', () => {
     const csv = buildAuditTable([op]);
     expect(csv.rows).toHaveLength(1);
     expect(csv.rows[0]).toEqual([
-      '2026-05-26T10:00:00.000Z',
       'markup',
       'percentage',
       '12',
