@@ -72,18 +72,22 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-- **Conductor:** sits on `feat/rate-gen-studio` @ `55f02ca` (integration branch for the Rate Composition
+- **Conductor:** sits on `feat/rate-gen-studio` @ `a468719` (integration branch for the Rate Composition
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** Wave 1 (functional, test-first) — sub-agents in background.
+- **Active tasks:** none in flight. **Wave 1 ✅ DONE** (A + B merged; worktrees removed; branches deleted).
+  Combined `regression-check` GREEN + 94 unit tests on `a468719`.
 
-  | task | branch | worktree | mode | status |
-  |------|--------|----------|------|--------|
-  | A — upload validation (reject inter/intra ≤0) | `feat/rg-upload-validation` | `../va-wt-rg-upload-validation` | sub-agent (bg) | ✅ merged `55f02ca`; 64 unit green |
-  | B — engine core (pure in-mem selection, drop IDB persist, aggregates) | `feat/rg-engine-core` | `../va-wt-rg-engine-core` | sub-agent (bg) | 🟡 running |
+  | wave | task | status |
+  |------|------|--------|
+  | 1 | A — upload validation (reject inter/intra ≤0) | ✅ merged |
+  | 1 | B — engine core (pure in-mem `selectLeanRecords`, drop IDB persist, `rate-gen-aggregates.ts`) | ✅ merged |
+  | 2 | C — tab-shell rework of `RateGenUSView` (3 tabs) + fold Generation Strategy | ⬜ next |
+  | 3 | D — Simulation Preview sandbox (sample, scenarios ≤4, compare, commit) | ⬜ blocked on C |
+  | 3 | E — Generated Decks tab + 3 outputs (Final CSV dialog, Route CSV, Summary PDF) | ⬜ blocked on B(✅) |
 
-  _Combined `regression-check` deferred until B merges (B's node_modules symlinks the main checkout — no concurrent builds). A's worktree can be removed after B lands._
+- **⚠️ Interim state after Wave 1:** generation now holds rates IN MEMORY only (`service.getGeneratedRecords(deckId)`) and no longer writes IndexedDB. The LEGACY `RateGenResults` + `RateGenExportModal` still read the now-unwritten IDB tables → they show/export EMPTY at runtime. **Expected** — those are retired/replaced in slices D/E. Don't gut-check generation output until D/E land. Slice E reads from `getGeneratedRecords(deckId)`.
 
 - **Waves:** 1 = A+B (running). 2 = C (tab shell). 3 = D (sandbox) + E (decks/outputs). Visual reskin
   (Switchboard) deferred until functionality baked — separate track/chat.
