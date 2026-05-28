@@ -1,22 +1,25 @@
 <template>
   <!-- Pricing Studio — browser-local rate-deck transformation workspace -->
-  <div class="text-zinc-300 pt-2 w-full">
+  <div class="text-fg-dim pt-2 w-full">
+    <!-- Running head -->
+    <RunningHead left="Section III — Repricing" right="Browser-local · ephemeral" class="px-1 mb-3" />
+
     <!-- Header -->
     <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-5 px-1">
       <div class="flex items-center gap-3">
-        <h1 class="flex items-center gap-2 text-2xl md:text-3xl font-semibold text-white tracking-tight">
-          <BoltIcon class="h-6 w-6 text-emerald-400" aria-hidden="true" /> Pricing Studio
+        <h1 class="flex items-center gap-2 font-display text-2xl md:text-3xl font-semibold text-fg tracking-[-0.025em]">
+          <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" /> Pricing Studio
         </h1>
         <span
           v-if="isLocallyStored"
-          class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300"
+          class="inline-flex items-center gap-1.5 border border-warn bg-warn-soft px-2.5 py-1 font-display text-[10px] uppercase tracking-wider text-warn"
         >
-          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-status-pulse-success"></span>
+          <span class="h-1.5 w-1.5 rounded-full bg-warn animate-status-pulse-success"></span>
           Data loaded
         </span>
       </div>
 
-      <p class="hidden md:flex items-center gap-1.5 text-sm text-zinc-500">
+      <p class="hidden md:flex items-center gap-1.5 text-sm text-fg-faint">
         <LockClosedIcon class="h-3.5 w-3.5" aria-hidden="true" />
         All processing is done locally in your browser.
       </p>
@@ -24,7 +27,7 @@
       <div class="ml-auto flex items-center gap-2 md:gap-3">
         <button
           @click="openInfoModal"
-          class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors"
+          class="inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
           aria-label="How Pricing Studio works"
         >
           <QuestionMarkCircleIcon class="w-4 h-4" /> How it works
@@ -32,28 +35,28 @@
 
         <template v-if="isLocallyStored">
           <div class="flex items-center gap-2">
-            <label for="effective-date" class="text-xs text-zinc-500 whitespace-nowrap">Effective Date</label>
+            <label for="effective-date" class="font-display text-[10px] uppercase tracking-wider text-fg-faint whitespace-nowrap">Effective Date</label>
             <input
               id="effective-date"
               type="date"
               v-model="selectedEffectiveDate"
               :min="minDate"
               @change="handleApplyEffectiveDate"
-              class="bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+              class="bg-input border border-line-strong px-3 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
             />
           </div>
 
           <button
             @click="handleExportPackage"
             :disabled="!readiness.exportReady"
-            class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-white/[0.06] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="inline-flex items-center gap-2 bg-accent px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-[0.06em] text-accent-ink hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowDownTrayIcon class="h-4 w-4" /> Export Package
           </button>
 
           <button
             @click="requestReset"
-            class="inline-flex items-center gap-2 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm font-medium text-rose-300 hover:bg-rose-400/20 transition-colors"
+            class="inline-flex items-center gap-2 border border-down bg-down-soft px-3 py-2 font-display text-[11px] uppercase tracking-[0.06em] text-down hover:opacity-80 transition-opacity"
           >
             Reset All
           </button>
@@ -65,22 +68,22 @@
     <div v-if="isLocallyStored" class="mb-5 px-1">
       <button
         @click="showStrip = !showStrip"
-        class="flex w-full items-center gap-x-5 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-sm hover:bg-white/[0.03] transition-colors flex-wrap"
+        class="flex w-full items-center gap-x-5 gap-y-1 border border-line bg-surface px-4 py-2.5 text-sm hover:bg-row transition-colors flex-wrap"
       >
-        <span class="font-secondary text-white">{{ readiness.modifiedRows.toLocaleString() }}</span>
-        <span class="text-zinc-500">modified ({{ readiness.modifiedPct }}%)</span>
-        <span class="text-zinc-700">·</span>
-        <span class="font-secondary text-violet-300">{{ readiness.frozenScopes }}</span>
-        <span class="text-zinc-500">frozen</span>
-        <span class="text-zinc-700">·</span>
-        <span class="text-zinc-500">avg inter</span>
-        <span class="font-secondary text-white">{{ avgInterLabel }}</span>
+        <span class="font-secondary text-fg">{{ readiness.modifiedRows.toLocaleString() }}</span>
+        <span class="text-fg-faint">modified ({{ readiness.modifiedPct }}%)</span>
+        <span class="text-fg-mute">·</span>
+        <span class="font-secondary text-info">{{ readiness.frozenScopes }}</span>
+        <span class="text-fg-faint">frozen</span>
+        <span class="text-fg-mute">·</span>
+        <span class="text-fg-faint">avg inter</span>
+        <span class="font-secondary text-fg">{{ avgInterLabel }}</span>
         <span
           class="ml-auto inline-flex items-center gap-1.5"
-          :class="readiness.exportReady ? 'text-emerald-400' : 'text-zinc-500'"
+          :class="readiness.exportReady ? 'text-warn' : 'text-fg-faint'"
         >
           <CheckCircleIcon class="h-4 w-4" /> {{ readiness.exportReady ? 'Export ready' : 'Not ready' }}
-          <ChevronDownIcon class="h-4 w-4 text-zinc-500 transition-transform" :class="{ 'rotate-180': showStrip }" />
+          <ChevronDownIcon class="h-4 w-4 text-fg-faint transition-transform" :class="{ 'rotate-180': showStrip }" />
         </span>
       </button>
       <PricingStudioMetricStrip v-if="showStrip" :stats="readiness" class="mt-3" />
@@ -90,7 +93,7 @@
     <div v-if="store.hasInvalidRateSheetRows" class="mb-5 px-1">
       <button
         @click="showInvalid = !showInvalid"
-        class="inline-flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-400/[0.06] px-3 py-1.5 text-xs text-amber-300/90 hover:bg-amber-400/10 transition-colors"
+        class="inline-flex items-center gap-2 border border-warn bg-warn-soft px-3 py-1.5 font-display text-xs uppercase tracking-wider text-warn hover:opacity-80 transition-opacity"
       >
         <ExclamationTriangleIcon class="h-3.5 w-3.5" />
         {{ usInvalidRowEntries.length }} invalid {{ usInvalidRowEntries.length === 1 ? 'row' : 'rows' }} not uploaded — review
@@ -107,24 +110,24 @@
     <!-- UPLOAD STATE -->
     <div
       v-if="!isLocallyStored"
-      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 md:p-8"
+      class="border border-line bg-surface p-6 md:p-8"
     >
       <div
         @dragenter.prevent="handleDragEnter"
         @dragleave.prevent="handleDragLeave"
         @dragover.prevent="handleDragOver"
         @drop.prevent="handleDrop"
-        class="relative rounded-xl p-8 min-h-[160px] flex items-center justify-center transition-colors duration-200"
+        class="relative p-8 min-h-[160px] flex items-center justify-center transition-colors duration-200"
         :class="[
           isDragging && !isProcessing && !showPreviewModal
-            ? 'border-2 border-solid border-emerald-400 bg-emerald-400/[0.07]'
-            : 'border-2 border-dashed border-white/15',
+            ? 'border-2 border-solid border-accent bg-accent-soft'
+            : 'border-2 border-dashed border-line-strong',
           !isProcessing && !showPreviewModal
-            ? 'hover:border-emerald-400/50 hover:bg-white/[0.02] cursor-pointer'
+            ? 'hover:border-accent hover:bg-row cursor-pointer'
             : isProcessing
               ? 'cursor-not-allowed'
               : 'cursor-default',
-          uploadError ? 'border-2 border-solid border-rose-500' : '',
+          uploadError ? 'border-2 border-solid border-down' : '',
         ]"
       >
         <input
@@ -141,15 +144,15 @@
               class="w-12 h-12 mx-auto rounded-full p-3 border"
               :class="
                 uploadError
-                  ? 'text-rose-400 border-rose-500/40 bg-rose-500/10'
-                  : 'text-emerald-400 border-emerald-400/30 bg-emerald-400/[0.08]'
+                  ? 'text-down border-down bg-down-soft'
+                  : 'text-accent border-accent-ring bg-accent-soft'
               "
             />
-            <p class="mt-3 text-base font-medium" :class="uploadError ? 'text-rose-400' : 'text-white'">
+            <p class="mt-3 text-base font-medium" :class="uploadError ? 'text-down' : 'text-fg'">
               <template v-if="uploadError">{{ uploadError }}</template>
               <template v-else>Drag &amp; drop a rate deck to upload, or click to select</template>
             </p>
-            <p class="mt-1 text-sm text-zinc-500">
+            <p class="mt-1 text-sm text-fg-faint">
               {{ uploadError ? 'Please try again with a CSV file' : 'CSV rate sheet — parsed locally, never uploaded' }}
             </p>
           </div>
@@ -166,11 +169,11 @@
       </div>
 
       <!-- Local-processing trust note -->
-      <div class="mt-5 flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
-        <LockClosedIcon class="h-5 w-5 text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+      <div class="mt-5 flex items-start gap-3 border border-line bg-surface p-4">
+        <LockClosedIcon class="h-5 w-5 text-fg-faint flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div>
-          <h3 class="text-sm font-semibold text-white">All data is stored in your browser</h3>
-          <p class="mt-1 text-sm text-zinc-500 leading-relaxed">
+          <h3 class="font-display text-sm font-semibold text-fg">All data is stored in your browser</h3>
+          <p class="mt-1 text-sm text-fg-faint leading-relaxed">
             Your rate sheets never leave your device — parsing and pricing run entirely locally, and
             the deck is cleared when you reload. We never upload or store your data.
           </p>
@@ -222,6 +225,7 @@
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import PricingStudioMetricStrip from '@/components/rate-sheet/us/pricing-studio/PricingStudioMetricStrip.vue';
+  import RunningHead from '@/components/shared/RunningHead.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   import {
