@@ -100,6 +100,7 @@
         v-if="showInvalid"
         :items="usInvalidRowEntries"
         title="Invalid Rows Not Uploaded"
+        :start-expanded="true"
         class="mt-3"
       />
     </div>
