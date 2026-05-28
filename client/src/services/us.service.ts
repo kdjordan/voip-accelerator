@@ -527,6 +527,36 @@ export class USService {
     }
   }
 
+  // Land a rate-deck hand-off into a comparison slot, reproducing the post-parse
+  // end-state of a normal CSV upload (Dexie write + file registration + stats) —
+  // just skipping the file parse and column mapping. The rows are already
+  // USStandardizedData-shaped. See docs/adr/0009-cross-module-rate-deck-handoff.md.
+  async ingestHandoffRows(
+    rows: USStandardizedData[],
+    fileName: string,
+    componentId: string
+  ): Promise<{ fileName: string; tableName: string }> {
+    if (!this.lergStore.isInitialized) {
+      const errorMsg =
+        'LERG data is not loaded. Cannot land a rate deck without state information.';
+      console.error(`[USService] ${errorMsg}`);
+      return Promise.reject(new Error(errorMsg));
+    }
+
+    const tableName = fileName.toLowerCase().replace('.csv', '');
+
+    // Same Dexie write path as a real upload (chunked bulkPut with sourceFile).
+    if (rows.length > 0) {
+      await this.storeDataInOptimizedChunks(rows, tableName, fileName);
+    }
+
+    // Register the file with its slot, then compute + store the same file stats.
+    this.store.addFileUploaded(componentId, fileName);
+    await this.calculateFileStats(componentId, fileName);
+
+    return { fileName, tableName };
+  }
+
   // Remove a table directly from Dexie
   async removeTable(tableName: string): Promise<void> {
     try {

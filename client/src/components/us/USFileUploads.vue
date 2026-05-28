@@ -325,13 +325,15 @@ This action cannot be undone.`"
   import { ComponentId, DBName, ReportTypes } from '@/types/app-types';
   import type { RateStats } from '@/types/domains/us-types';
   import useDexieDB from '@/composables/useDexieDB';
+  import { deriveHandoffFileName } from '@/utils/handoff-landing-analyzer';
 
   const usStore = useUsStore();
   const service = new USService();
   const lergStore = useLergStoreV2();
 
-  // Expose the report-generation trigger so UsView's "Start Analysis" button can invoke it.
-  defineExpose({ generateReports: handleReportsAction });
+  // Expose the report-generation trigger so UsView's "Start Analysis" button can invoke it,
+  // plus the hand-off landing entry point (consumed on mount by UsView).
+  defineExpose({ generateReports: handleReportsAction, landHandoff });
 
   // Component state
   const isGeneratingReports = ref<boolean>(false);
@@ -596,6 +598,76 @@ This action cannot be undone.`"
       usStore.setComponentUploading('us1', false); // Clear processing state
       usStore.setComponentUploading('us2', false);
       console.log('[USFileUploads] Report generation process finished.');
+    }
+  }
+
+  // Land a rate-deck hand-off into a comparison slot, reproducing the post-parse
+  // upload end-state (Dexie data + file registration + stats + per-file enhanced
+  // report) — skipping the file picker and column-mapping step. UsView calls this
+  // on mount when a pending hand-off targets the analyzer.
+  // See docs/adr/0009-cross-module-rate-deck-handoff.md.
+  async function landHandoff(
+    rows: USStandardizedData[],
+    name: string,
+    componentId: ComponentId
+  ): Promise<void> {
+    // Replacing an occupied slot: clear its prior data/table/stats first.
+    if (usStore.isComponentDisabled(componentId)) {
+      const prevFileName = usStore.getFileNameByComponent(componentId);
+      if (prevFileName) {
+        const prevTableName = prevFileName.toLowerCase().replace('.csv', '');
+        try {
+          await service.removeTable(prevTableName);
+        } catch (removeError) {
+          console.warn('[USFileUploads] Failed to remove prior slot table:', removeError);
+        }
+      }
+      // Any existing comparison is now obsolete.
+      const { deleteDatabase } = useDexieDB();
+      try {
+        await deleteDatabase(DBName.US_PRICING_COMPARISON);
+      } catch (dbError) {
+        console.warn('[USFileUploads] Failed to delete comparison database:', dbError);
+      }
+      usStore.removeFile(componentId);
+    }
+
+    // Derive a safe, unique filename so the analyzer's filename→tableName
+    // convention stays collision-free against the other slot.
+    const fileName = deriveHandoffFileName(name, usStore.getFileNames);
+
+    usStore.setComponentUploading(componentId, true);
+    uploadError[componentId] = null;
+    try {
+      await service.ingestHandoffRows(rows, fileName, componentId);
+
+      // Per-file enhanced code report — same worker path as a real upload.
+      // Post PLAIN objects to the worker (rows may arrive as reactive proxies).
+      try {
+        const cleanData = rows.map((item) => ({
+          npanxx: item.npanxx,
+          npa: item.npa,
+          nxx: item.nxx,
+          interRate: item.interRate,
+          intraRate: item.intraRate,
+          indetermRate: item.indetermRate,
+        }));
+        const report = await generateEnhancedCodeReport(fileName, cleanData);
+        if (report) usStore.setEnhancedCodeReport(report);
+      } catch (enhancedReportError) {
+        console.error(
+          '[USFileUploads] Failed to generate enhanced report for landed deck:',
+          enhancedReportError
+        );
+      }
+    } catch (error) {
+      console.error('[USFileUploads] Error landing hand-off:', error);
+      uploadError[componentId] = `Failed to load hand-off deck: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      throw error;
+    } finally {
+      usStore.setComponentUploading(componentId, false);
     }
   }
 
