@@ -17,7 +17,7 @@
       @click="handleToggle"
       :disabled="isLoading"
       :title="toggleTitle"
-      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-canvas disabled:opacity-50 disabled:cursor-not-allowed"
       :class="toggleBackgroundClass"
     >
       <span
@@ -27,7 +27,7 @@
         <!-- Loading Spinner -->
         <ArrowPathIcon 
           v-if="isLoading" 
-          class="h-3 w-3 animate-spin text-gray-600 absolute top-0.5 left-0.5" 
+          class="h-3 w-3 animate-spin text-fg-mute absolute top-0.5 left-0.5" 
         />
       </span>
     </button>
@@ -78,14 +78,14 @@ const statusVariant = computed(() => {
 })
 
 const statusDotClass = computed(() => {
-  return props.isActive ? 'bg-green-400' : 'bg-red-400'
+  return props.isActive ? 'bg-warn' : 'bg-down'
 })
 
 const toggleBackgroundClass = computed(() => {
   if (isLoading.value) {
-    return 'bg-gray-400'
+    return 'bg-fg-mute'
   }
-  return props.isActive ? 'bg-green-600' : 'bg-red-600'
+  return props.isActive ? 'bg-warn' : 'bg-down'
 })
 
 const toggleKnobClass = computed(() => {

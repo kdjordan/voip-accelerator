@@ -1,11 +1,14 @@
 <template>
-  <div class="text-white pt-2 w-full">
-    <h1 class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
-      Admin Dashboard
-    </h1>
+  <div class="text-fg pt-2 w-full pb-4">
+    <div class="flex flex-col gap-6">
+      <!-- Standardized masthead -->
+      <PageMasthead
+        title="Admin Dashboard"
+        section="Section V — Admin"
+        right="System & users"
+        subtitle="Manage LERG data and application users."
+      />
 
-    <!-- Stats Dashboard -->
-    <div class="flex flex-col gap-6 bg-gray-800 pb-6">
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
 
@@ -58,6 +61,7 @@
   import type { LERGRecord } from '@/types/domains/lerg-types';
   import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/domains/lerg-types';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import PageMasthead from '@/components/shared/PageMasthead.vue';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
   import { useDragDrop } from '@/composables/useDragDrop';

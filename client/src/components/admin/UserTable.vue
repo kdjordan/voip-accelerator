@@ -1,29 +1,29 @@
 <template>
-  <div class="bg-gray-800/50 rounded-lg overflow-hidden">
+  <div class="bg-surface rounded-lg overflow-hidden">
     <!-- Table Header -->
-    <div class="px-6 py-4 border-b border-gray-700/50">
+    <div class="px-6 py-4 border-b border-line">
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-medium text-white">Users</h3>
+        <h3 class="text-lg font-medium text-fg">Users</h3>
         <div class="flex items-center space-x-2">
           <input
             type="checkbox"
             :checked="isAllSelected"
             @change="handleSelectAll"
-            class="rounded border-gray-600 text-accent focus:ring-accent focus:ring-offset-gray-800"
+            class="rounded border-line-strong text-accent focus:ring-accent focus:ring-offset-canvas"
           />
-          <label class="text-sm text-gray-400">Select All</label>
+          <label class="text-sm text-fg-faint">Select All</label>
         </div>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="p-8 text-center text-gray-400">
+    <div v-if="loading" class="p-8 text-center text-fg-faint">
       <ArrowPathIcon class="animate-spin h-8 w-8 mx-auto mb-2" />
       <p>Loading users...</p>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="users.length === 0" class="p-8 text-center text-gray-400">
+    <div v-else-if="users.length === 0" class="p-8 text-center text-fg-faint">
       <UserIcon class="h-12 w-12 mx-auto mb-2 opacity-50" />
       <p>No users found</p>
     </div>
@@ -31,33 +31,33 @@
     <!-- Table -->
     <div v-else class="overflow-x-auto">
       <table class="w-full">
-        <thead class="bg-gray-900/50">
+        <thead class="bg-row">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium text-fg-faint uppercase tracking-wider">
               Select
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium text-fg-faint uppercase tracking-wider">
               User
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium text-fg-faint uppercase tracking-wider">
               Role
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium text-fg-faint uppercase tracking-wider">
               Status
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium text-fg-faint uppercase tracking-wider">
               Created
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium text-fg-faint uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-700/50">
+        <tbody class="divide-y divide-line">
           <tr
             v-for="user in users"
             :key="user.id"
-            class="hover:bg-gray-700/30 transition-colors"
+            class="hover:bg-row-hover transition-colors"
           >
             <!-- Checkbox -->
             <td class="px-6 py-4 whitespace-nowrap">
@@ -65,7 +65,7 @@
                 type="checkbox"
                 :checked="selectedUsers.has(user.id)"
                 @change="() => $emit('user-selected', user.id)"
-                class="rounded border-gray-600 text-accent focus:ring-accent focus:ring-offset-gray-800"
+                class="rounded border-line-strong text-accent focus:ring-accent focus:ring-offset-canvas"
               />
             </td>
 
@@ -73,17 +73,17 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center">
                 <div class="flex-shrink-0 h-10 w-10">
-                  <div class="h-10 w-10 rounded-full bg-gradient-to-r from-accent to-blue-500 flex items-center justify-center">
-                    <span class="text-white font-medium text-sm">
+                  <div class="h-10 w-10 rounded-full bg-accent-soft ring-1 ring-accent-ring flex items-center justify-center">
+                    <span class="text-accent font-medium text-sm">
                       {{ getUserInitials(user.email || user.id) }}
                     </span>
                   </div>
                 </div>
                 <div class="ml-4">
-                  <div class="text-sm font-medium text-white">
+                  <div class="text-sm font-medium text-fg">
                     {{ user.email || 'No email' }}
                   </div>
-                  <div class="text-sm text-gray-400">
+                  <div class="text-sm text-fg-faint">
                     ID: {{ user.id.slice(0, 8) }}...
                   </div>
                 </div>
@@ -109,7 +109,7 @@
             </td>
 
             <!-- Created Date -->
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-fg-faint">
               {{ formatDate(user.created_at) }}
             </td>
 
@@ -118,7 +118,7 @@
               <div class="flex items-center justify-end space-x-2">
                 <button
                   @click="confirmDelete(user)"
-                  class="text-red-400 hover:text-red-300 transition-colors"
+                  class="text-down hover:text-down transition-colors"
                   title="Delete User"
                 >
                   <TrashIcon class="h-4 w-4" />

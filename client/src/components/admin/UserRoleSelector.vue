@@ -7,15 +7,15 @@
     >
       <div class="relative">
         <ListboxButton
-          class="relative w-full cursor-default rounded bg-gray-700 py-1 pl-3 pr-8 text-left text-sm text-white shadow-sm ring-1 ring-inset ring-gray-600 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          class="relative w-full cursor-default rounded bg-input py-1 pl-3 pr-8 text-left text-sm text-fg shadow-sm ring-1 ring-inset ring-line-strong focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
           :class="getRoleColorClass(currentRole)"
         >
           <span class="flex items-center">
             <span class="block truncate">{{ getRoleDisplayName(currentRole) }}</span>
           </span>
           <span class="pointer-events-none absolute inset-y-0 right-0 ml-3 flex items-center pr-2">
-            <ArrowPathIcon v-if="isLoading" class="h-4 w-4 animate-spin text-gray-400" />
-            <ChevronUpDownIcon v-else class="h-4 w-4 text-gray-400" aria-hidden="true" />
+            <ArrowPathIcon v-if="isLoading" class="h-4 w-4 animate-spin text-fg-faint" />
+            <ChevronUpDownIcon v-else class="h-4 w-4 text-fg-faint" aria-hidden="true" />
           </span>
         </ListboxButton>
 
@@ -25,7 +25,7 @@
           leave-to-class="opacity-0"
         >
           <ListboxOptions
-            class="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-gray-800 py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+            class="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-surface py-1 text-sm shadow-lg ring-1 ring-line focus:outline-none"
           >
             <ListboxOption
               v-for="role in roles"
@@ -36,7 +36,7 @@
             >
               <li
                 :class="[
-                  active ? 'bg-accent/20 text-white' : 'text-gray-300',
+                  active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
                   'relative cursor-default select-none py-2 pl-3 pr-9'
                 ]"
               >
@@ -54,7 +54,7 @@
                 <span
                   v-if="selected"
                   :class="[
-                    active ? 'text-white' : 'text-accent',
+                    active ? 'text-fg' : 'text-accent',
                     'absolute inset-y-0 right-0 flex items-center pr-4'
                   ]"
                 >
@@ -150,10 +150,10 @@ function getRoleDisplayName(role: string): string {
 function getRoleColorClass(role: string): string {
   switch (role) {
     case 'admin':
-      return 'text-yellow-400 ring-yellow-500/30'
+      return 'text-warn ring-line-strong'
     case 'user':
     default:
-      return 'text-green-400 ring-green-500/30'
+      return 'text-fg-dim ring-line-strong'
   }
 }
 </script>
