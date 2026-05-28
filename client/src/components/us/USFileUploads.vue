@@ -3,41 +3,39 @@
     <!-- Upload Cards: Rate Deck A · VS · Rate Deck B -->
     <div class="flex flex-col md:flex-row md:items-stretch gap-5 md:gap-4">
       <!-- ===== Rate Deck A (us1) ===== -->
-      <div class="flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 flex flex-col">
+      <div class="flex-1 border border-line bg-surface p-5 flex flex-col">
         <!-- Card header -->
         <div class="flex items-center gap-3 mb-5">
-          <span
-            class="h-10 w-10 grid place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20"
-          >
-            <DocumentTextIcon class="h-5 w-5 text-emerald-400" />
+          <span class="h-10 w-10 grid place-items-center border border-line-strong">
+            <DocumentTextIcon class="h-5 w-5 text-fg" />
           </span>
-          <h3 class="text-base font-semibold text-white">Rate Deck A</h3>
+          <h3 class="font-display text-base font-semibold tracking-[-0.005em] text-fg">
+            Rate Deck A
+          </h3>
         </div>
 
         <!-- Uploaded confirmation (full report lives in the tabs after Start Analysis) -->
         <template v-if="usStore.isComponentDisabled('us1')">
           <div
-            class="flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-6 min-h-[200px]"
+            class="flex-1 flex flex-col items-center justify-center text-center border border-warn bg-warn-soft p-6 min-h-[200px]"
           >
-            <span
-              class="h-12 w-12 grid place-items-center rounded-full bg-emerald-400/10 ring-1 ring-emerald-400/20"
-            >
-              <CheckCircleIcon class="h-7 w-7 text-emerald-400" />
+            <span class="h-12 w-12 grid place-items-center border border-warn">
+              <CheckCircleIcon class="h-7 w-7 text-warn" />
             </span>
             <p
-              class="mt-3 text-sm font-medium text-white max-w-full truncate px-2"
+              class="mt-3 font-display text-sm font-medium text-fg max-w-full truncate px-2"
               :title="usStore.getFileNameByComponent('us1')"
             >
               {{ usStore.getFileNameByComponent('us1') }}
             </p>
-            <p class="mt-1 text-xs text-zinc-400">
+            <p class="mt-1 font-display text-[11px] text-fg-faint">
               {{ (usStore.getFileStats('us1')?.totalCodes || 0).toLocaleString() }} codes · ready
             </p>
             <button
               type="button"
               @click="handleRemoveFile('us1')"
               :disabled="isRemovingFile.us1"
-              class="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+              class="mt-4 inline-flex items-center gap-1.5 border border-down bg-down-soft px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-down transition-opacity hover:opacity-80 disabled:opacity-50"
             >
               <ArrowPathIcon v-if="isRemovingFile.us1" class="h-3.5 w-3.5 animate-spin" />
               <TrashIcon v-else class="h-3.5 w-3.5" />
@@ -48,17 +46,17 @@
         <template v-else>
           <!-- Drop Zone -->
           <div
-            class="relative flex-1 border-2 rounded-xl p-6 min-h-[200px] flex items-center justify-center transition-colors"
+            class="relative flex-1 border-2 p-6 min-h-[200px] flex items-center justify-center transition-colors"
             :class="[
               isDraggingUs1
-                ? 'border-emerald-400 bg-emerald-400/[0.07] border-solid'
-                : 'border-dashed border-white/15 hover:border-emerald-400/50 hover:bg-white/[0.02]',
+                ? 'border-accent bg-accent-soft border-solid'
+                : 'border-dashed border-line-strong hover:border-accent hover:bg-row',
               usStore.isComponentUploading('us1')
                 ? 'cursor-not-allowed'
                 : usStore.isComponentUploading('us2')
-                  ? 'opacity-50 cursor-not-allowed border-white/10' /* Dim if other is uploading */
+                  ? 'opacity-50 cursor-not-allowed border-line' /* Dim if other is uploading */
                   : 'cursor-pointer',
-              uploadError.us1 ? 'border-rose-500 border-solid' : '',
+              uploadError.us1 ? 'border-down border-solid' : '',
             ]"
             @dragenter.prevent="handleDragEnterUs1"
             @dragleave.prevent="handleDragLeaveUs1"
@@ -90,29 +88,29 @@
 
               <!-- Waiting State (if other is uploading) -->
               <template v-else-if="usStore.isComponentUploading('us2')">
-                <p class="text-sm text-zinc-500">
+                <p class="font-sans text-sm text-fg-mute">
                   Please wait for the other file to finish processing...
                 </p>
               </template>
 
               <!-- Default/Empty State -->
               <template v-else>
-                <CloudArrowUpIcon class="h-10 w-10 text-emerald-400" />
-                <p class="mt-3 text-sm text-zinc-300">Drag &amp; drop your CSV file here</p>
-                <p class="mt-1 text-xs text-zinc-600">or</p>
+                <CloudArrowUpIcon class="h-10 w-10 text-accent" />
+                <p class="mt-3 font-sans text-sm text-fg-dim">Drag &amp; drop your CSV file here</p>
+                <p class="mt-1 font-display text-xs text-fg-mute">or</p>
                 <span
-                  class="mt-3 inline-flex items-center rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2 text-sm font-medium text-zinc-200"
+                  class="mt-3 inline-flex items-center border border-line-strong bg-row px-4 py-2 font-display text-[11px] font-medium uppercase tracking-[0.06em] text-fg"
                 >
                   Browse Files
                 </span>
-                <p v-if="uploadError.us1" class="mt-3 text-sm text-rose-400">
+                <p v-if="uploadError.us1" class="mt-3 font-sans text-sm text-down">
                   {{ uploadError.us1 }}
                 </p>
               </template>
             </div>
           </div>
           <!-- Footer -->
-          <div class="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+          <div class="mt-3 flex items-center gap-1.5 font-display text-[11px] text-fg-faint">
             <DocumentIcon class="h-3.5 w-3.5" />
             CSV files only (max 50MB)
           </div>
@@ -122,48 +120,46 @@
       <!-- ===== VS medallion ===== -->
       <div class="self-center shrink-0 py-1 md:py-0">
         <span
-          class="h-11 w-11 grid place-items-center rounded-full border border-dashed border-white/15 bg-ink text-[11px] font-secondary font-semibold tracking-wider text-zinc-400"
+          class="h-11 w-11 grid place-items-center rounded-full border border-dashed border-line-strong bg-canvas font-display text-[11px] font-semibold tracking-wider text-fg-faint"
         >
           VS
         </span>
       </div>
 
       <!-- ===== Rate Deck B (us2) ===== -->
-      <div class="flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 flex flex-col">
+      <div class="flex-1 border border-line bg-surface p-5 flex flex-col">
         <!-- Card header -->
         <div class="flex items-center gap-3 mb-5">
-          <span
-            class="h-10 w-10 grid place-items-center rounded-xl bg-violet-400/10 ring-1 ring-violet-400/20"
-          >
-            <DocumentTextIcon class="h-5 w-5 text-violet-400" />
+          <span class="h-10 w-10 grid place-items-center border border-line-strong">
+            <DocumentTextIcon class="h-5 w-5 text-fg" />
           </span>
-          <h3 class="text-base font-semibold text-white">Rate Deck B</h3>
+          <h3 class="font-display text-base font-semibold tracking-[-0.005em] text-fg">
+            Rate Deck B
+          </h3>
         </div>
 
         <!-- Uploaded confirmation (full report lives in the tabs after Start Analysis) -->
         <template v-if="usStore.isComponentDisabled('us2')">
           <div
-            class="flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-violet-400/20 bg-violet-400/[0.04] p-6 min-h-[200px]"
+            class="flex-1 flex flex-col items-center justify-center text-center border border-warn bg-warn-soft p-6 min-h-[200px]"
           >
-            <span
-              class="h-12 w-12 grid place-items-center rounded-full bg-violet-400/10 ring-1 ring-violet-400/20"
-            >
-              <CheckCircleIcon class="h-7 w-7 text-violet-400" />
+            <span class="h-12 w-12 grid place-items-center border border-warn">
+              <CheckCircleIcon class="h-7 w-7 text-warn" />
             </span>
             <p
-              class="mt-3 text-sm font-medium text-white max-w-full truncate px-2"
+              class="mt-3 font-display text-sm font-medium text-fg max-w-full truncate px-2"
               :title="usStore.getFileNameByComponent('us2')"
             >
               {{ usStore.getFileNameByComponent('us2') }}
             </p>
-            <p class="mt-1 text-xs text-zinc-400">
+            <p class="mt-1 font-display text-[11px] text-fg-faint">
               {{ (usStore.getFileStats('us2')?.totalCodes || 0).toLocaleString() }} codes · ready
             </p>
             <button
               type="button"
               @click="handleRemoveFile('us2')"
               :disabled="isRemovingFile.us2"
-              class="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+              class="mt-4 inline-flex items-center gap-1.5 border border-down bg-down-soft px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-down transition-opacity hover:opacity-80 disabled:opacity-50"
             >
               <ArrowPathIcon v-if="isRemovingFile.us2" class="h-3.5 w-3.5 animate-spin" />
               <TrashIcon v-else class="h-3.5 w-3.5" />
@@ -174,17 +170,17 @@
         <template v-else>
           <!-- Drop Zone -->
           <div
-            class="relative flex-1 border-2 rounded-xl p-6 min-h-[200px] flex items-center justify-center transition-colors"
+            class="relative flex-1 border-2 p-6 min-h-[200px] flex items-center justify-center transition-colors"
             :class="[
               isDraggingUs2
-                ? 'border-violet-400 bg-violet-400/[0.07] border-solid'
-                : 'border-dashed border-white/15 hover:border-violet-400/50 hover:bg-white/[0.02]',
+                ? 'border-accent bg-accent-soft border-solid'
+                : 'border-dashed border-line-strong hover:border-accent hover:bg-row',
               usStore.isComponentUploading('us2')
                 ? 'cursor-not-allowed'
                 : usStore.isComponentUploading('us1')
-                  ? 'opacity-50 cursor-not-allowed border-white/10' /* Dim if other is uploading */
+                  ? 'opacity-50 cursor-not-allowed border-line' /* Dim if other is uploading */
                   : 'cursor-pointer',
-              uploadError.us2 ? 'border-rose-500 border-solid' : '',
+              uploadError.us2 ? 'border-down border-solid' : '',
             ]"
             @dragenter.prevent="handleDragEnterUs2"
             @dragleave.prevent="handleDragLeaveUs2"
@@ -216,29 +212,29 @@
 
               <!-- Waiting State (if other is uploading) -->
               <template v-else-if="usStore.isComponentUploading('us1')">
-                <p class="text-sm text-zinc-500">
+                <p class="font-sans text-sm text-fg-mute">
                   Please wait for the other file to finish processing...
                 </p>
               </template>
 
               <!-- Default/Empty State -->
               <template v-else>
-                <CloudArrowUpIcon class="h-10 w-10 text-violet-400" />
-                <p class="mt-3 text-sm text-zinc-300">Drag &amp; drop your CSV file here</p>
-                <p class="mt-1 text-xs text-zinc-600">or</p>
+                <CloudArrowUpIcon class="h-10 w-10 text-accent" />
+                <p class="mt-3 font-sans text-sm text-fg-dim">Drag &amp; drop your CSV file here</p>
+                <p class="mt-1 font-display text-xs text-fg-mute">or</p>
                 <span
-                  class="mt-3 inline-flex items-center rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2 text-sm font-medium text-zinc-200"
+                  class="mt-3 inline-flex items-center border border-line-strong bg-row px-4 py-2 font-display text-[11px] font-medium uppercase tracking-[0.06em] text-fg"
                 >
                   Browse Files
                 </span>
-                <p v-if="uploadError.us2" class="mt-3 text-sm text-rose-400">
+                <p v-if="uploadError.us2" class="mt-3 font-sans text-sm text-down">
                   {{ uploadError.us2 }}
                 </p>
               </template>
             </div>
           </div>
           <!-- Footer -->
-          <div class="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+          <div class="mt-3 flex items-center gap-1.5 font-display text-[11px] text-fg-faint">
             <DocumentIcon class="h-3.5 w-3.5" />
             CSV files only (max 50MB)
           </div>

@@ -2,7 +2,7 @@
   <div v-if="usStore.getFileNameByComponent(componentId) !== ''" class="space-y-6">
     <!-- Code Report heading with file name pill and remove button -->
     <div v-if="!npaCoverageOnly" class="mb-4 flex items-center justify-between">
-      <span class="text-lg text-white font-semibold">Code Report</span>
+      <span class="font-display text-lg text-fg font-semibold">Code Report</span>
       <div class="flex items-center space-x-2">
         <BaseBadge size="small" variant="info">
           {{ truncatedFileName }}
@@ -20,93 +20,93 @@
     </div>
 
     <!-- Code Report Content -->
-    <div :class="npaCoverageOnly ? '' : 'bg-black/20 border border-white/[0.07] rounded-xl p-4'">
+    <div :class="npaCoverageOnly ? '' : 'bg-canvas border border-line p-4'">
       <div class="space-y-4">
         <!-- Stats blocks (hidden in NPA-coverage-only mode — duplicated by the Insights KPI cards) -->
         <template v-if="!npaCoverageOnly">
         <!-- Basic Stats -->
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-          <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Total Codes:</div>
-          <div class="text-xl font-secondary text-white">{{ totalCodes }}</div>
+        <div class="bg-surface border border-line p-3">
+          <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Total Codes:</div>
+          <div class="font-display text-xl text-fg">{{ totalCodes }}</div>
         </div>
 
         <!-- LERG Database Info Section -->
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-          <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">LERG Database NPAs:</div>
+        <div class="bg-surface border border-line p-3">
+          <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-2">LERG Database NPAs:</div>
           <div class="grid grid-cols-4 gap-2">
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Total</div>
-              <div class="text-lg font-secondary text-white">{{ lergTotalNPAs }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Total</div>
+              <div class="font-display text-lg text-fg">{{ lergTotalNPAs }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">US</div>
-              <div class="text-lg font-secondary text-white">{{ lergUSNPAs }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">US</div>
+              <div class="font-display text-lg text-fg">{{ lergUSNPAs }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Canada</div>
-              <div class="text-lg font-secondary text-white">{{ lergCanadaNPAs }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Canada</div>
+              <div class="font-display text-lg text-fg">{{ lergCanadaNPAs }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Others</div>
-              <div class="text-lg font-secondary text-white">{{ lergOthersNPAs }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Others</div>
+              <div class="font-display text-lg text-fg">{{ lergOthersNPAs }}</div>
             </div>
           </div>
         </div>
 
         <!-- US Coverage Section -->
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-          <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">US NPA Coverage:</div>
+        <div class="bg-surface border border-line p-3">
+          <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-2">US NPA Coverage:</div>
           <div class="grid grid-cols-3 gap-2">
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">In LERG</div>
-              <div class="text-lg font-secondary text-white">{{ totalLergCodes }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">In LERG</div>
+              <div class="font-display text-lg text-fg">{{ totalLergCodes }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">In FILE</div>
-              <div class="text-lg font-secondary text-white">{{ fileUSNPACount }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">In FILE</div>
+              <div class="font-display text-lg text-fg">{{ fileUSNPACount }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Coverage</div>
-              <div class="text-lg font-secondary text-white">{{ usCoveragePercentage }}%</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Coverage</div>
+              <div class="font-display text-lg text-fg">{{ usCoveragePercentage }}%</div>
             </div>
           </div>
         </div>
 
         <!-- Rate Statistics Section -->
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-          <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Average Rates:</div>
+        <div class="bg-surface border border-line p-3">
+          <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-2">Average Rates:</div>
           <div class="grid grid-cols-3 gap-2">
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Inter</div>
-              <div class="text-lg font-secondary text-white">${{ averageRates.interstate }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Inter</div>
+              <div class="font-display text-lg text-fg">${{ averageRates.interstate }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Intra</div>
-              <div class="text-lg font-secondary text-white">${{ averageRates.intrastate }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Intra</div>
+              <div class="font-display text-lg text-fg">${{ averageRates.intrastate }}</div>
             </div>
-            <div class="bg-white/[0.03] rounded-lg p-2">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Indeterm</div>
-              <div class="text-lg font-secondary text-white">${{ averageRates.indeterminate }}</div>
+            <div class="bg-row p-2">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Indeterm</div>
+              <div class="font-display text-lg text-fg">${{ averageRates.indeterminate }}</div>
             </div>
           </div>
         </div>
         </template>
 
         <!-- NPA Distribution Section -->
-        <div class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
+        <div class="bg-surface border border-line p-3">
           <div v-if="!npaCoverageOnly" class="flex justify-between mb-2">
-            <div class="text-[10px] uppercase tracking-wider text-zinc-500">NPA Coverage</div>
+            <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint">NPA Coverage</div>
             <div
               v-if="showDistribution"
               @click="showDistribution = false"
-              class="cursor-pointer text-xs text-accent hover:text-emerald-300"
+              class="cursor-pointer text-xs text-accent hover:text-accent-text"
             >
               Hide Details
             </div>
             <div
               v-else
               @click="showDistribution = true"
-              class="cursor-pointer text-xs text-accent hover:text-emerald-300"
+              class="cursor-pointer text-xs text-accent hover:text-accent-text"
             >
               Show Details
             </div>
@@ -119,12 +119,12 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search by NPA, country, or state..."
-                class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+                class="w-full bg-input border border-line-strong px-3 py-2 text-sm text-fg font-display placeholder-fg-mute focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
               />
               <span
                 v-if="searchQuery"
                 @click="searchQuery = ''"
-                class="absolute right-3 top-2 text-zinc-400 hover:text-white cursor-pointer"
+                class="absolute right-3 top-2 text-fg-faint hover:text-fg cursor-pointer"
               >
                 &times;
               </span>
@@ -140,7 +140,7 @@
               <!-- No Results Message -->
               <div
                 v-if="searchQuery && !isFiltering && Object.keys(hierarchicalData).length === 0"
-                class="text-center py-4 text-zinc-500"
+                class="text-center py-4 font-sans text-fg-faint"
               >
                 No results found for "{{ searchQuery }}"
               </div>
@@ -150,14 +150,14 @@
                 v-for="[countryKey, countryInfo] in Object.entries(hierarchicalData)"
                 :key="countryKey"
               >
-                <div class="bg-white/[0.02] rounded-lg p-3" :class="getCountryBorderClass(countryKey)">
+                <div class="bg-surface p-3" :class="getCountryBorderClass(countryKey)">
                   <div
                     @click="toggleCountryExpanded(countryKey)"
                     class="flex justify-between items-center cursor-pointer"
                   >
-                    <span class="text-zinc-200 font-medium">{{ countryInfo.displayName }}</span>
+                    <span class="font-display text-fg font-medium">{{ countryInfo.displayName }}</span>
                     <div class="flex items-center space-x-2">
-                      <span class="text-zinc-500 text-sm"> {{ countryInfo.totalNPAs }} NPAs </span>
+                      <span class="text-fg-faint text-sm"> {{ countryInfo.totalNPAs }} NPAs </span>
                       <span
                         class="transform transition-transform"
                         :class="{ 'rotate-180': expandedCountries.has(countryKey) }"
@@ -189,14 +189,14 @@
                       "
                     >
                       <template v-for="state in countryInfo.states" :key="state.stateCode">
-                        <div class="bg-white/[0.03] rounded overflow-hidden">
+                        <div class="bg-row overflow-hidden">
                           <div
                             @click="toggleStateExpanded(state.stateCode)"
-                            class="px-3 py-2 cursor-pointer hover:bg-white/[0.05] flex justify-between items-center"
+                            class="px-3 py-2 cursor-pointer hover:bg-row-hover flex justify-between items-center"
                           >
-                            <span class="text-zinc-300">{{ state.displayName }}</span>
+                            <span class="text-fg-dim">{{ state.displayName }}</span>
                             <div class="flex items-center space-x-2">
-                              <span class="text-zinc-500 text-sm">
+                              <span class="text-fg-faint text-sm">
                                 {{ state.npas.length }} NPAs
                               </span>
                               <span
@@ -224,14 +224,14 @@
                           <!-- NPAs -->
                           <div
                             v-if="expandedStates.has(state.stateCode)"
-                            class="px-3 py-2 bg-black/30 border-t border-white/10"
+                            class="px-3 py-2 bg-canvas border-t border-line"
                           >
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">NPAs:</div>
+                            <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-2">NPAs:</div>
                             <div class="flex flex-wrap gap-2">
                               <div
                                 v-for="npa in state.npas"
                                 :key="npa"
-                                class="bg-white/[0.06] px-2 py-1 rounded text-xs text-white font-secondary"
+                                class="bg-row px-2 py-1 text-xs text-fg font-display"
                               >
                                 {{ npa }}
                               </div>
@@ -244,14 +244,14 @@
                     <!-- Others - Show Countries as sub-items -->
                     <template v-else-if="countryInfo.hasCountries">
                       <template v-for="country in countryInfo.countries" :key="country.countryCode">
-                        <div class="bg-white/[0.03] rounded overflow-hidden">
+                        <div class="bg-row overflow-hidden">
                           <div
                             @click="toggleStateExpanded(country.countryCode)"
-                            class="px-3 py-2 cursor-pointer hover:bg-white/[0.05] flex justify-between items-center"
+                            class="px-3 py-2 cursor-pointer hover:bg-row-hover flex justify-between items-center"
                           >
-                            <span class="text-zinc-300">{{ country.countryName }}</span>
+                            <span class="text-fg-dim">{{ country.countryName }}</span>
                             <div class="flex items-center space-x-2">
-                              <span class="text-zinc-500 text-sm">
+                              <span class="text-fg-faint text-sm">
                                 {{ country.totalNPAs }} NPAs
                               </span>
                               <span
@@ -279,14 +279,14 @@
                           <!-- NPAs for this country -->
                           <div
                             v-if="expandedStates.has(country.countryCode)"
-                            class="px-3 py-2 bg-black/30 border-t border-white/10"
+                            class="px-3 py-2 bg-canvas border-t border-line"
                           >
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">NPAs:</div>
+                            <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-2">NPAs:</div>
                             <div class="flex flex-wrap gap-2">
                               <div
                                 v-for="npa in country.npas"
                                 :key="npa"
-                                class="bg-white/[0.06] px-2 py-1 rounded text-xs text-white font-secondary"
+                                class="bg-row px-2 py-1 text-xs text-fg font-display"
                               >
                                 {{ npa }}
                               </div>
@@ -298,8 +298,8 @@
 
                     <!-- Other Countries/Unknown - Show NPAs directly -->
                     <template v-else>
-                      <div class="bg-white/[0.03] rounded p-2">
-                        <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">NPAs:</div>
+                      <div class="bg-row p-2">
+                        <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint mb-2">NPAs:</div>
                         <div class="flex flex-wrap gap-1">
                           <div
                             v-for="npa in countryInfo.npas"
@@ -800,14 +800,14 @@
   // Styling functions for different country types
   function getCountryBorderClass(countryKey: string) {
     if (countryKey === 'US') return '';
-    if (countryKey === 'CA') return 'border border-blue-400/30';
-    if (countryKey === 'UNKNOWN') return 'border border-rose-400/30';
-    return 'border border-amber-400/30';
+    if (countryKey === 'CA') return 'border border-info';
+    if (countryKey === 'UNKNOWN') return 'border border-down';
+    return 'border border-warn';
   }
 
   function getCountryNPAClass(countryKey: string) {
-    if (countryKey === 'UNKNOWN') return 'bg-rose-400/10 text-rose-300';
-    return 'bg-amber-400/10 text-amber-300';
+    if (countryKey === 'UNKNOWN') return 'bg-down-soft text-down';
+    return 'bg-warn-soft text-warn';
   }
 
   // Add watcher to auto-expand matching items

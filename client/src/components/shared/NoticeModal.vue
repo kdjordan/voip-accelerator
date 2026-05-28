@@ -2,18 +2,18 @@
   <Teleport to="body">
   <div
     v-if="modelValue"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 transition-opacity duration-300 ease-in-out"
     :class="modelValue ? 'opacity-100' : 'opacity-0 pointer-events-none'"
     @click.self="closeModal"
   >
     <div
-      class="w-full max-w-md transform rounded-2xl border border-white/10 bg-ink-raised p-6 shadow-xl transition-all duration-300 ease-in-out"
+      class="w-full max-w-md transform border border-line-strong bg-surface p-6 transition-all duration-300 ease-in-out"
       :class="modelValue ? 'scale-100 opacity-100' : 'scale-95 opacity-0'"
     >
-      <h3 class="mb-4 text-xl font-semibold" :class="titleClass">
+      <h3 class="mb-4 font-display text-lg font-semibold uppercase tracking-wider" :class="titleClass">
         {{ title }}
       </h3>
-      <p class="mb-6 text-sm text-zinc-400" v-html="formattedMessage"></p>
+      <p class="mb-6 font-sans text-sm text-fg-dim" v-html="formattedMessage"></p>
       <div class="flex justify-end">
         <BaseButton
           variant="secondary"
@@ -52,12 +52,12 @@
   const titleClass = computed(() => {
     switch (props.variant) {
       case 'success':
-        return 'text-emerald-300';
+        return 'text-warn';
       case 'error':
-        return 'text-rose-300';
+        return 'text-down';
       case 'info':
       default:
-        return 'text-white';
+        return 'text-fg';
     }
   });
 

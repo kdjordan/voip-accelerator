@@ -1,31 +1,31 @@
 <template>
   <div
-    class="rounded-lg border bg-white/[0.02] p-3"
-    :class="isLock ? 'border-violet-400/20' : 'border-white/[0.06]'"
+    class="border bg-surface p-3"
+    :class="isLock ? 'border-info' : 'border-line'"
   >
     <div class="flex items-center gap-2 min-w-0">
       <span
-        class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+        class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
         :class="badgeClass"
       >
         {{ kindLabel }}
       </span>
-      <span class="text-sm font-secondary text-white truncate">{{ valueLabel }}</span>
-      <span v-if="op.target" class="text-xs text-zinc-400 truncate">{{ targetLabel }}</span>
+      <span class="text-sm font-secondary text-fg truncate">{{ valueLabel }}</span>
+      <span v-if="op.target" class="text-xs text-fg-faint truncate">{{ targetLabel }}</span>
     </div>
 
-    <p class="mt-1.5 text-xs text-zinc-500 truncate">Applied to: {{ op.scopeLabel }}</p>
+    <p class="mt-1.5 text-xs text-fg-faint truncate">Applied to: {{ op.scopeLabel }}</p>
 
     <div class="mt-2 flex items-end justify-between">
-      <div class="text-[11px] text-zinc-500">
-        <span class="font-secondary text-zinc-300">{{ fmtInt(op.recordsAffected) }}</span>
+      <div class="text-[11px] text-fg-faint">
+        <span class="font-secondary text-fg-dim">{{ fmtInt(op.recordsAffected) }}</span>
         {{ isLock ? 'row locked' : 'rows affected' }}
-        <span class="mx-1.5 text-zinc-700">·</span>
+        <span class="mx-1.5 text-fg-mute">·</span>
         {{ fmtTime(op.timestamp) }}
       </div>
       <span
         v-if="!isLock"
-        class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-violet-300 bg-violet-400/10 ring-1 ring-violet-400/30"
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-info bg-info-soft ring-1 ring-info"
       >
         <LockClosedIcon class="h-2.5 w-2.5" /> Frozen
       </span>
@@ -55,9 +55,18 @@
   });
 
   const badgeClass = computed(() => {
-    if (props.op.kind === 'lock') return 'text-violet-300 bg-violet-400/10';
-    if (props.op.kind === 'unlock') return 'text-zinc-300 bg-white/10';
-    return 'text-emerald-300 bg-emerald-400/10';
+    switch (props.op.kind) {
+      case 'lock':
+        return 'text-info bg-info-soft';
+      case 'unlock':
+        return 'text-fg-dim bg-row';
+      case 'markup':
+        return 'text-warn bg-warn-soft';
+      case 'markdown':
+        return 'text-accent bg-accent-soft';
+      default:
+        return 'text-fg bg-row'; // set
+    }
   });
 
   const valueLabel = computed(() => {

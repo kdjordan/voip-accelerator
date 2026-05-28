@@ -1,15 +1,23 @@
 <template>
   <!-- Main Page Content -->
-  <div class="text-white pt-2 w-full">
+  <div class="text-fg pt-2 w-full">
+    <!-- Portal ticker — live session KPIs (quiet "ephemeral" state before a comparison exists) -->
+    <TheTicker :items="tickerItems" variant="portal" :live="tickerItems.length > 0" class="mb-6" />
+
+    <!-- Running head -->
+    <RunningHead left="Section II — US NPANXX" right="File A vs File B" class="px-1 mb-3" />
+
     <!-- Header -->
     <div class="relative px-1 mb-6">
-      <h1 class="text-2xl md:text-3xl text-emerald-400 font-bold tracking-tight">US Rate Deck Analyzer</h1>
-      <p class="mt-1.5 text-sm text-zinc-400 max-w-2xl">
+      <h1 class="font-display text-3xl md:text-4xl font-semibold tracking-[-0.035em] text-fg leading-none">
+        US Rate Deck Analyzer
+      </h1>
+      <p class="mt-2 font-sans text-sm text-fg-dim max-w-2xl">
         Upload two rate decks to compare coverage and rate aggregates across destinations.
       </p>
       <button
         @click="openInfoModal"
-        class="absolute top-0 right-1 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors"
+        class="absolute top-0 right-1 inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
         aria-label="How the US Rate Deck Analyzer works"
       >
         <QuestionMarkCircleIcon class="w-4 h-4" /> How it works
@@ -18,50 +26,56 @@
 
     <!-- UPLOAD STATE: stepper + upload cards + what's next + start analysis -->
     <template v-if="usStore.activeReportType === ReportTypes.FILES">
-      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 md:p-8">
+      <div class="border border-line bg-surface p-6 md:p-8">
         <!-- Stepper -->
-        <ol class="flex items-start justify-between gap-2 mb-8 max-w-3xl mx-auto">
-          <li v-for="(step, i) in steps" :key="step.n" class="flex-1 flex items-start">
-            <div class="flex-1 flex flex-col items-center text-center">
+        <div class="grid grid-cols-1 sm:grid-cols-3 border border-line bg-canvas mb-8">
+          <div
+            v-for="(step, i) in steps"
+            :key="step.n"
+            class="flex flex-col gap-2 px-5 py-5"
+            :class="i ? 'border-t border-line sm:border-t-0 sm:border-l' : ''"
+          >
+            <div class="flex items-center gap-3">
               <span
-                class="h-9 w-9 grid place-items-center rounded-full text-sm font-secondary font-semibold transition-colors"
-                :class="
-                  currentStep > step.n
-                    ? 'bg-emerald-400 text-ink'
-                    : currentStep === step.n
-                      ? 'bg-emerald-400 text-ink ring-4 ring-emerald-400/20'
-                      : 'bg-white/[0.04] text-zinc-500 ring-1 ring-white/10'
-                "
+                class="font-display text-[28px] font-semibold leading-none tracking-[-0.04em]"
+                :class="currentStep >= step.n ? 'text-accent' : 'text-fg-mute'"
+                >{{ String(step.n).padStart(2, '0') }}</span
               >
-                <CheckIcon v-if="currentStep > step.n" class="h-4 w-4" />
-                <template v-else>{{ step.n }}</template>
-              </span>
               <span
-                class="mt-2 text-sm font-medium"
-                :class="currentStep >= step.n ? 'text-zinc-100' : 'text-zinc-500'"
+                class="font-display text-sm font-semibold tracking-[-0.005em]"
+                :class="currentStep >= step.n ? 'text-fg' : 'text-fg-faint'"
                 >{{ step.label }}</span
               >
-              <span class="mt-0.5 text-xs text-zinc-500 max-w-[12rem]">{{ step.desc }}</span>
+              <span
+                v-if="currentStep > step.n"
+                class="ml-auto inline-flex items-center gap-1 font-display text-[10px] uppercase tracking-[0.12em] text-warn"
+              >
+                <CheckIcon class="h-3 w-3" /> Done
+              </span>
+              <span
+                v-else-if="currentStep === step.n"
+                class="ml-auto font-display text-[10px] uppercase tracking-[0.12em] text-accent"
+                >● Now</span
+              >
             </div>
-            <!-- connector -->
-            <span
-              v-if="i < steps.length - 1"
-              class="hidden sm:block h-px flex-1 mt-[18px] -mx-2"
-              :class="currentStep > step.n ? 'bg-emerald-400/40' : 'bg-white/10'"
-              style="border-top: 1px dashed currentColor; background: none"
-            ></span>
-          </li>
-        </ol>
+            <span class="font-display text-[11px] text-fg-faint">{{ step.desc }}</span>
+          </div>
+        </div>
 
         <!-- Upload cards (Rate Deck A / VS / Rate Deck B) -->
         <USFileUploads ref="fileUploadsRef" />
 
         <!-- What happens next -->
-        <div class="mt-6 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-5 flex gap-4">
-          <SparklesIcon class="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+        <div
+          class="mt-6 flex gap-4 border border-accent-ring bg-accent-soft p-5"
+          style="border-left: 3px solid var(--accent)"
+        >
+          <SparklesIcon class="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
           <div>
-            <h3 class="text-sm font-semibold text-white">What happens next?</h3>
-            <p class="mt-1 text-sm text-zinc-400 leading-relaxed">
+            <div class="font-display text-[11px] uppercase tracking-[0.16em] text-accent">
+              What happens next
+            </div>
+            <p class="mt-1.5 font-sans text-[13.5px] leading-relaxed text-fg">
               We'll analyze both files, identify matching destinations, compare rates, and highlight
               the differences — so you can see coverage gaps and where the margin is, fast.
             </p>
@@ -72,11 +86,11 @@
         <div class="mt-6 flex flex-col items-center">
           <button
             :disabled="!bothDecksUploaded || isStarting"
-            class="w-full max-w-md inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold transition-colors"
+            class="w-full max-w-md inline-flex items-center justify-center gap-2 px-6 py-3 font-display text-[13px] font-semibold uppercase tracking-[0.06em] transition-colors"
             :class="
               bothDecksUploaded && !isStarting
-                ? 'bg-emerald-400 text-ink hover:bg-emerald-300'
-                : 'bg-white/[0.03] text-zinc-500 border border-white/10 cursor-not-allowed'
+                ? 'bg-accent text-accent-ink hover:bg-accent-strong'
+                : 'bg-row text-fg-mute border border-line cursor-not-allowed'
             "
             @click="startAnalysis"
           >
@@ -87,7 +101,10 @@
               class="h-4 w-4"
             />
           </button>
-          <p v-if="!bothDecksUploaded" class="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-500">
+          <p
+            v-if="!bothDecksUploaded"
+            class="mt-2 inline-flex items-center gap-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-fg-mute"
+          >
             <LockClosedIcon class="h-3.5 w-3.5" /> Upload both decks to start
           </p>
         </div>
@@ -109,7 +126,7 @@
             />
             <div
               v-else-if="usStore.activeReportType === ReportTypes.PRICING && !usStore.isCodeReportReady"
-              class="text-center p-10 text-zinc-400"
+              class="text-center p-10 font-sans text-sm text-fg-faint"
             >
               <p>Waiting for initial report generation...</p>
             </div>
@@ -129,6 +146,8 @@
   import USPricingReport from '@/components/us/USPricingReport.vue';
   import USContentHeader from '@/components/us/USContentHeader.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
+  import TheTicker, { type TickerItem } from '@/components/shared/TheTicker.vue';
+  import RunningHead from '@/components/shared/RunningHead.vue';
   import {
     QuestionMarkCircleIcon,
     SparklesIcon,
@@ -155,6 +174,31 @@
   ];
 
   const bothDecksUploaded = computed(() => usStore.getNumberOfFilesUploaded === 2);
+
+  // Portal ticker — derived from the live session insights summary. Empty before a
+  // comparison exists, so TheTicker shows its quiet "SESSION · LOCAL · EPHEMERAL" state.
+  const tickerItems = computed<TickerItem[]>(() => {
+    const sum = usStore.getInsightsSummary;
+    if (!sum) return [];
+    const fmtDelta = (v: number) => `${v < 0 ? '−' : '+'}$${Math.abs(v).toFixed(4)}`;
+    return [
+      { sym: 'COVERAGE', value: `${sum.coverageMatchPct.toFixed(2)}%`, dir: 'warn' },
+      { sym: 'MATCHED', value: sum.matchedCodes.toLocaleString(), dir: 'neutral' },
+      {
+        sym: 'AVG MARGIN Δ INTER',
+        value: fmtDelta(sum.marginDeltaInter),
+        dir: sum.marginDeltaInter >= 0 ? 'warn' : 'accent',
+      },
+      {
+        sym: 'AVG MARGIN Δ INTRA',
+        value: fmtDelta(sum.marginDeltaIntra),
+        dir: sum.marginDeltaIntra >= 0 ? 'warn' : 'accent',
+      },
+      { sym: 'OPPORTUNITIES', value: sum.totalOpportunities.toLocaleString(), dir: 'accent' },
+      { sym: 'TOP SELL', value: sum.sellToCount.toLocaleString(), dir: 'warn' },
+      { sym: 'TOP BUY', value: sum.buyFromCount.toLocaleString(), dir: 'accent' },
+    ];
+  });
 
   const currentStep = computed(() => {
     if (bothDecksUploaded.value) return 3;
