@@ -1,276 +1,316 @@
 <template>
+  <!-- Landing is a forced-light peer theme regardless of the global app theme. -->
   <div
     id="hero"
-    class="relative min-h-screen overflow-x-hidden bg-ink text-zinc-300 antialiased selection:bg-emerald-400/30"
+    data-theme="light"
+    class="min-h-screen overflow-x-hidden bg-canvas font-sans text-fg antialiased"
   >
-    <!-- Ambient emerald glow -->
-    <div
-      class="pointer-events-none absolute inset-x-0 top-0 h-[640px] bg-[radial-gradient(70%_50%_at_70%_-5%,rgba(16,185,129,0.16),transparent_65%)]"
-    ></div>
+    <!-- Top ticker — landing crawl (green/red trading-screen palette) -->
+    <TheTicker :items="tickerItems" variant="landing" />
 
-    <!-- Nav -->
-    <header class="relative z-10 mx-auto flex h-[76px] max-w-7xl items-center justify-between px-6">
-      <RouterLink to="/" class="flex items-center gap-2.5">
-        <span
-          class="grid h-8 w-8 place-items-center rounded-lg bg-emerald-400/10 ring-1 ring-emerald-400/30"
-        >
-          <BoltIcon class="h-4 w-4 text-emerald-400" />
-        </span>
-        <span class="font-semibold leading-none tracking-tight text-white">
-          VOIP<span class="block font-secondary text-[9px] tracking-[0.25em] text-zinc-500"
-            >ACCELERATOR</span
-          >
-        </span>
-      </RouterLink>
-      <nav class="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-        <a href="#features" class="transition-colors hover:text-white">Product</a>
-        <a href="#how" class="transition-colors hover:text-white">How it works</a>
-        <a href="#why" class="transition-colors hover:text-white">Why it exists</a>
-      </nav>
-      <div class="flex items-center gap-5 text-sm">
-        <RouterLink to="/login" class="text-zinc-300 transition-colors hover:text-white"
-          >Sign in</RouterLink
-        >
-        <RouterLink
-          to="/signup"
-          class="rounded-full bg-emerald-400 px-4 py-2 font-semibold text-ink transition-colors hover:bg-emerald-300"
-        >
-          Get started
+    <div class="mx-auto max-w-[1180px] px-6 md:px-10">
+      <!-- Masthead -->
+      <header class="flex items-center justify-between pb-[18px] pt-5">
+        <RouterLink to="/" class="inline-flex items-center gap-3 text-fg no-underline">
+          <span class="brand-chip"><BoltSolidIcon class="h-4 w-4" /></span>
+          <span class="font-display text-sm font-semibold uppercase tracking-[0.04em]">
+            VoIP Accelerator
+          </span>
         </RouterLink>
-      </div>
-    </header>
-
-    <!-- Centered hero -->
-    <main class="relative z-10 mx-auto max-w-3xl px-6 pb-10 pt-16 text-center">
-      <div class="reveal">
-        <div
-          class="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-secondary text-xs text-zinc-400"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-          Built for US wholesale VoIP · free forever
-        </div>
-        <h1 class="text-5xl font-bold leading-[1.04] tracking-tighter text-white md:text-6xl">
-          Buy and sell<br />
-          <span class="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent"
-            >US minutes smarter.</span
+        <nav class="hidden items-center gap-8 md:flex">
+          <a
+            v-for="link in navLinks"
+            :key="link.href"
+            :href="link.href"
+            class="font-display text-xs uppercase tracking-[0.04em] text-fg-dim no-underline transition-colors hover:text-fg"
+            >{{ link.label }}</a
           >
-        </h1>
-        <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
-          Compare NPANXX rate decks, catch the margin a partner is quietly cherry-picking, and
-          reprice down to the NPA — in minutes, not a day in Excel. LERG-enriched, jurisdiction-aware,
-          and free. Nothing ever leaves your browser.
-        </p>
-        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        </nav>
+        <div class="flex items-center gap-4">
+          <RouterLink
+            to="/login"
+            class="font-display text-xs uppercase tracking-[0.04em] text-fg-dim no-underline transition-colors hover:text-fg"
+            >Sign in</RouterLink
+          >
           <RouterLink
             to="/signup"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-6 py-3 font-semibold text-ink transition-colors hover:bg-emerald-300"
+            class="inline-flex items-center gap-2 border border-line-strong px-[18px] py-[11px] font-display text-xs font-medium uppercase tracking-[0.06em] text-fg no-underline transition-colors hover:bg-row"
           >
-            Sign Up — Free Forever
+            Get started
           </RouterLink>
-          <a
-            href="#how"
-            class="inline-flex items-center gap-2 font-medium text-zinc-200 transition-colors hover:text-white"
-          >
-            See how it works <ArrowRightIcon class="h-4 w-4" />
-          </a>
         </div>
-        <Transition name="caption-fade" mode="out-in">
-          <p :key="activeShot" class="mt-6 text-sm text-zinc-500">
-            {{ heroShots[activeShot].caption }}
-          </p>
-        </Transition>
-      </div>
+      </header>
 
-    </main>
+      <SlabRule :size="3" />
 
-    <!-- Hero product shot — auto-crossfading screenshots -->
-    <div class="reveal-delay relative z-10 mx-auto max-w-6xl px-6">
-      <div
-        class="relative aspect-[7/5] overflow-hidden rounded-2xl border border-white/10 bg-ink-raised shadow-2xl shadow-emerald-950/40 ring-1 ring-emerald-400/5 sm:aspect-[16/11]"
-      >
-        <img
-          v-for="(shot, i) in heroShots"
-          :key="i"
-          :src="shot.src"
-          :alt="shot.alt"
-          class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-1000 ease-in-out"
-          :class="i === activeShot ? 'opacity-100' : 'opacity-0'"
+      <!-- Hero -->
+      <section class="pb-8 pt-[60px]">
+        <RunningHead
+          left="Vol. I · No. 01"
+          right="Issue 2026.05 · US NPANXX rate intelligence · free forever"
         />
-      </div>
-      <!-- slide indicators -->
-      <div class="mt-4 flex items-center justify-center gap-2">
-        <button
-          v-for="(shot, i) in heroShots"
-          :key="i"
-          type="button"
-          @click="selectShot(i)"
-          :aria-label="shot.alt"
-          class="h-1.5 rounded-full transition-all"
-          :class="i === activeShot ? 'w-6 bg-emerald-400' : 'w-1.5 bg-white/20 hover:bg-white/40'"
-        />
-      </div>
-    </div>
-
-    <!-- Trust strip — replaces a logo wall (we don't fabricate proof) -->
-    <div
-      class="relative z-10 mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-center gap-3 px-6 font-secondary text-xs text-zinc-400"
-    >
-      <span
-        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
-      >
-        <LockClosedIcon class="h-3.5 w-3.5 text-emerald-400" /> Local-first &amp; ephemeral
-      </span>
-      <span
-        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
-      >
-        <MapPinIcon class="h-3.5 w-3.5 text-emerald-400" /> LERG-enriched &amp; jurisdiction-aware
-      </span>
-      <span
-        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5"
-      >
-        <BoltIcon class="h-3.5 w-3.5 text-emerald-400" /> Built for full-size decks
-      </span>
-    </div>
-
-    <!-- What this replaces: the spreadsheet status quo, agitated before the pitch -->
-    <section class="relative z-10 mx-auto max-w-7xl px-6 py-16">
-      <div class="mb-12 text-center">
-        <p class="mb-3 font-secondary text-xs uppercase tracking-wider text-zinc-500">
-          What this replaces
-        </p>
-        <h2 class="text-3xl font-bold tracking-tight text-white md:text-4xl">
-          Right now, this lives in a spreadsheet.
-        </h2>
-        <p class="mx-auto mt-3 max-w-xl text-zinc-400">
-          A full US NPANXX deck runs 200,000 rows. Here's what that costs you every time a new one
-          lands.
-        </p>
-      </div>
-      <div class="grid gap-5 md:grid-cols-3">
-        <div
-          v-for="problem in problems"
-          :key="problem.title"
-          class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6"
-        >
-          <span
-            class="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.03] ring-1 ring-white/10"
-          >
-            <component :is="problem.icon" class="h-5 w-5 text-zinc-400" />
-          </span>
-          <h3 class="mt-4 font-semibold text-white">{{ problem.title }}</h3>
-          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">{{ problem.body }}</p>
-        </div>
-      </div>
-      <p class="mx-auto mt-10 max-w-xl text-center text-zinc-300">
-        You don't need a faster spreadsheet. You need to see the deck for what it is.
-      </p>
-    </section>
-
-    <!-- Analyze + Adjust: the two halves of NPANXX deck work -->
-    <section id="features" class="relative z-10 mx-auto max-w-7xl px-6 py-16">
-      <div class="mb-12 text-center">
-        <h2 class="text-3xl font-bold tracking-tight text-white md:text-4xl">
-          Two sides to every deck.
-        </h2>
-        <p class="mx-auto mt-3 max-w-xl text-zinc-400">
-          Compare a deck against another, or reprice and build one of your own — every NPANXX
-          enriched with LERG.
-        </p>
-      </div>
-      <div class="grid gap-5 md:grid-cols-2">
-        <div
-          v-for="panel in panels"
-          :key="panel.title"
-          class="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-8"
-        >
-          <div class="mb-1 flex items-center gap-3">
-            <span
-              class="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/30"
+        <div class="mt-6 grid grid-cols-1 items-start gap-12 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
+          <div>
+            <h1
+              class="font-display text-[clamp(48px,8vw,84px)] font-semibold leading-[0.92] tracking-[-0.05em] text-fg"
             >
-              <component :is="panel.icon" class="h-5 w-5 text-emerald-400" />
-            </span>
-            <h3 class="text-xl font-semibold text-white">{{ panel.title }}</h3>
+              Buy and sell <span class="text-accent">US</span><br />minutes
+              <span
+                style="
+                  text-decoration: underline;
+                  text-decoration-color: var(--accent);
+                  text-underline-offset: 12px;
+                  text-decoration-thickness: 6px;
+                "
+                >smarter</span
+              >.
+            </h1>
+            <div class="mt-7 flex flex-wrap items-center gap-3.5">
+              <RouterLink to="/signup" :class="ctaPrimary">
+                Sign up — free forever <ArrowRightIcon class="h-3.5 w-3.5" />
+              </RouterLink>
+              <a href="#how" :class="ctaGhost">How it works</a>
+            </div>
           </div>
-          <p class="mb-6 text-sm text-zinc-500">{{ panel.tagline }}</p>
-          <div class="space-y-5">
+          <div class="border-l border-line pl-8">
+            <div class="mb-3 font-display text-[11px] uppercase tracking-[0.16em] text-accent">
+              The lede
+            </div>
+            <p class="m-0 font-sans text-[17px] leading-[1.55] text-fg-dim">
+              Compare NPANXX rate decks, catch the margin a partner is quietly cherry-picking, and
+              reprice down to the NPA — in minutes, not a day in Excel. LERG-enriched,
+              jurisdiction-aware, and free.
+            </p>
             <div
-              v-for="item in panel.items"
-              :key="item.label"
-              class="border-l-2 border-emerald-400/30 pl-4"
+              class="mt-[22px] border-l-[3px] border-accent bg-surface px-[18px] py-3.5 font-display text-[12.5px] leading-[1.55] text-fg"
             >
-              <div class="font-secondary text-xs uppercase tracking-wider text-emerald-300/90">
-                {{ item.label }}
-              </div>
-              <p class="mt-1 text-sm leading-relaxed text-zinc-400">{{ item.body }}</p>
+              "Drop in two decks — see where you win and where they beat you, in seconds."
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- How it works -->
-    <section id="how" class="relative z-10 mx-auto max-w-6xl px-6 py-16">
-      <h2 class="text-center text-3xl font-bold tracking-tight text-white">
-        Three steps. No spreadsheet.
-      </h2>
-      <div class="mt-10 grid gap-5 md:grid-cols-3">
-        <div
-          v-for="(step, i) in steps"
-          :key="step.title"
-          class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6"
-        >
-          <div class="flex items-center gap-3">
-            <span
-              class="grid h-8 w-8 place-items-center rounded-lg bg-emerald-400/10 font-secondary text-sm text-emerald-300 ring-1 ring-emerald-400/30"
-              >{{ i + 1 }}</span
-            >
-            <component :is="step.icon" class="h-5 w-5 text-emerald-300" />
+      <!-- Product shot — auto-crossfading screenshots in an editorial frame -->
+      <SlabRule :size="2" />
+      <section class="py-[22px]">
+        <RunningHead
+          :left-accent="false"
+          left="Fig. 1 — Insights view"
+          right="87.02% match · 194,281 opportunities surfaced"
+        />
+        <div class="border border-line-strong bg-surface">
+          <div class="relative aspect-[7/5] overflow-hidden sm:aspect-[16/11]">
+            <img
+              v-for="(shot, i) in heroShots"
+              :key="i"
+              :src="shot.src"
+              :alt="shot.alt"
+              class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-1000 ease-in-out"
+              :class="i === activeShot ? 'opacity-100' : 'opacity-0'"
+            />
           </div>
-          <h3 class="mt-4 font-semibold text-white">{{ step.title }}</h3>
-          <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">{{ step.body }}</p>
         </div>
-      </div>
-    </section>
+        <div class="mt-3 flex items-center justify-between">
+          <Transition name="caption-fade" mode="out-in">
+            <p :key="activeShot" class="m-0 font-sans text-[13px] text-fg-faint">
+              {{ heroShots[activeShot].caption }}
+            </p>
+          </Transition>
+          <div class="flex items-center gap-2">
+            <button
+              v-for="(shot, i) in heroShots"
+              :key="i"
+              type="button"
+              @click="selectShot(i)"
+              :aria-label="shot.alt"
+              class="h-1.5 transition-all"
+              :class="i === activeShot ? 'w-6 bg-accent' : 'w-1.5 bg-fg/20 hover:bg-fg/40'"
+            />
+          </div>
+        </div>
+      </section>
+      <SlabRule :size="2" />
 
-    <!-- Why it exists — honest, no fabricated proof -->
-    <section id="why" class="relative z-10 mx-auto max-w-4xl px-6 py-16">
-      <div class="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-8 md:p-10">
-        <p class="mb-4 font-secondary text-xs tracking-[0.2em] text-emerald-400/80">
-          BUILT BY AN OPERATOR
-        </p>
-        <p class="text-xl leading-relaxed text-zinc-200 md:text-2xl">
-          A partner sends a new rate deck — or quietly cherry-picks the traffic to where your margin
-          is thinnest. The answer is buried in +200k rows. VoIP Accelerator surfaces it in
-          minutes, down to the NPA, so you can respond surgically instead of rebuilding a deck.
-        </p>
-        <p class="mt-5 text-sm text-zinc-500">
-          It started as a tool one operator built to answer that exact question. There wasn't
-          anything else that did it — so now it's yours too, free.
-        </p>
-      </div>
-    </section>
+      <!-- Trust strip — newspaper columns -->
+      <section class="grid grid-cols-1 py-[26px] sm:grid-cols-3">
+        <div
+          v-for="(t, i) in trust"
+          :key="t.label"
+          class="px-7"
+          :class="i ? 'border-t border-line pt-6 sm:border-l sm:border-t-0 sm:pt-0' : ''"
+        >
+          <div class="mb-2.5 font-display text-[10px] uppercase tracking-[0.20em] text-accent">
+            {{ t.col }}
+          </div>
+          <div class="flex items-center gap-3">
+            <component :is="t.icon" class="h-[22px] w-[22px] text-fg" />
+            <div class="font-display text-sm font-semibold text-fg">{{ t.label }}</div>
+          </div>
+        </div>
+      </section>
+      <SlabRule :size="1" />
 
-    <!-- Closing CTA — cheat-code accent -->
-    <section class="relative z-10 mx-auto max-w-4xl px-6 py-20 text-center">
-      <p class="mb-4 font-secondary text-xs tracking-[0.2em] text-emerald-400/80">YOUR CHEAT CODE</p>
-      <h2 class="text-3xl font-bold tracking-tight text-white md:text-4xl">
-        The cheat code for buying and selling smarter.
-      </h2>
-      <p class="mt-4 text-zinc-400">
-        Free forever. Local-first. Your rates never leave your browser.
-      </p>
-      <RouterLink
-        to="/signup"
-        class="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-400 px-7 py-3.5 font-semibold text-ink transition-colors hover:bg-emerald-300"
-      >
-        Sign Up — Free Forever
-      </RouterLink>
-    </section>
+      <!-- Section II — What this replaces -->
+      <section class="py-20">
+        <div class="mb-14 flex flex-col items-start justify-between gap-10 md:flex-row md:gap-16">
+          <div class="max-w-[720px] flex-auto">
+            <div class="eyebrow mb-3.5">Section II — What this replaces</div>
+            <h2
+              class="m-0 font-display text-[clamp(36px,5vw,56px)] font-semibold leading-none tracking-[-0.04em] text-fg"
+            >
+              Right now, this lives<br />in a spreadsheet.
+            </h2>
+          </div>
+          <p class="m-0 max-w-[320px] pt-2 font-sans text-[15px] leading-[1.55] text-fg-dim">
+            A full US NPANXX deck runs 200,000 rows. Here's what that costs you every time a new one
+            lands.
+          </p>
+        </div>
+        <div
+          class="grid grid-cols-1 border-y border-line-strong md:grid-cols-3"
+        >
+          <div
+            v-for="(p, i) in problems"
+            :key="p.title"
+            class="px-7 pb-9 pt-8"
+            :class="i < 2 ? 'border-b border-line md:border-b-0 md:border-r' : ''"
+          >
+            <div class="dropcap mb-3.5">{{ String(i + 1).padStart(2, '0') }}</div>
+            <div class="mb-2.5 text-fg-faint"><component :is="p.icon" class="h-5 w-5" /></div>
+            <h3 class="m-0 font-display text-[19px] font-semibold leading-[1.22] tracking-[-0.015em] text-fg">
+              {{ p.title }}
+            </h3>
+            <p class="mt-2.5 font-sans text-sm leading-[1.55] text-fg-dim">{{ p.body }}</p>
+          </div>
+        </div>
+        <p
+          class="mx-auto mt-12 max-w-[720px] text-center font-display text-[22px] leading-[1.3] tracking-[-0.015em] text-fg"
+        >
+          <span class="text-accent">—</span> You don't need a faster spreadsheet. You need to see the
+          deck for what it is. <span class="text-accent">—</span>
+        </p>
+      </section>
 
-    <!-- Footer (shared component) -->
-    <div class="relative z-10 border-t border-white/[0.06]">
-      <TheFooter />
+      <!-- Section III — Analyze + Adjust -->
+      <section id="features" class="pb-[60px]">
+        <RunningHead left="Section III — Two sides to every deck" right="Analyze · Adjust" />
+        <div
+          class="mt-3 grid grid-cols-1 border-y-2 border-line-strong md:grid-cols-2"
+        >
+          <div
+            v-for="(panel, i) in panels"
+            :key="panel.title"
+            class="px-8 pb-10 pt-9"
+            :class="i === 0 ? 'border-b border-line-strong md:border-b-0 md:border-r' : ''"
+          >
+            <div class="mb-3.5 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
+              {{ panel.section }}
+            </div>
+            <div class="mb-4 flex items-center gap-3.5">
+              <span
+                class="inline-grid h-11 w-11 place-items-center border border-accent-ring bg-accent-soft text-accent"
+              >
+                <component :is="panel.icon" class="h-[22px] w-[22px]" />
+              </span>
+              <h3 class="m-0 font-display text-4xl font-semibold tracking-[-0.03em] text-fg">
+                {{ panel.title }}
+              </h3>
+            </div>
+            <p class="mb-6 max-w-[460px] font-sans text-[15px] text-fg-dim">{{ panel.tagline }}</p>
+            <div class="flex flex-col gap-[18px]">
+              <div v-for="item in panel.items" :key="item.label" class="border-l-2 border-accent pl-3.5">
+                <div class="font-display text-[11px] uppercase tracking-[0.12em] text-fg">
+                  {{ item.label }}
+                </div>
+                <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">{{ item.body }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section IV — How it works -->
+      <section id="how" class="py-[60px]">
+        <RunningHead left="Section IV — How it works" right="3 steps · no spreadsheet" />
+        <h2
+          class="my-8 font-display text-[clamp(32px,4.5vw,44px)] font-semibold leading-[1.05] tracking-[-0.03em] text-fg"
+        >
+          Three steps. No spreadsheet.
+        </h2>
+        <div class="grid grid-cols-1 border-y border-line-strong md:grid-cols-3">
+          <div
+            v-for="(step, i) in steps"
+            :key="step.title"
+            class="px-6 pb-8 pt-7"
+            :class="i < 2 ? 'border-b border-line md:border-b-0 md:border-r' : ''"
+          >
+            <div class="mb-[18px] flex items-center justify-between">
+              <span class="dropcap !text-[44px]">{{ String(i + 1).padStart(2, '0') }}</span>
+              <component :is="step.icon" class="h-[22px] w-[22px] text-fg-faint" />
+            </div>
+            <h3 class="m-0 font-display text-[19px] font-semibold tracking-[-0.015em] text-fg">
+              {{ step.title }}
+            </h3>
+            <p class="mt-2 font-sans text-[13.5px] leading-[1.55] text-fg-dim">{{ step.body }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section V — Why it exists -->
+      <section id="why" class="pb-20 pt-[60px]">
+        <RunningHead left="Section V — Why it exists" right="Built by an operator" />
+        <div class="mt-6 grid grid-cols-1 items-start gap-12 lg:grid-cols-[1fr_2fr] lg:gap-14">
+          <div>
+            <div class="mb-3 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
+              Colophon
+            </div>
+            <p class="m-0 font-display text-sm leading-[1.55] text-fg-dim">
+              One operator. Two evenings. The question Excel couldn't answer in a day.
+            </p>
+            <hr class="mt-5 border-0 border-t border-line-strong" />
+            <p class="mt-4 font-sans text-[13px] leading-[1.5] text-fg-faint">
+              There wasn't anything else that did it — so now it's yours too, free. No tiers, no
+              upsells, no telemetry.
+            </p>
+          </div>
+          <div class="border-l-4 border-accent pl-7">
+            <p
+              class="m-0 font-display text-[28px] font-medium leading-[1.25] tracking-[-0.02em] text-fg"
+            >
+              A partner sends a new rate deck — or quietly cherry-picks the traffic to where your
+              margin is thinnest. The answer is buried in <span class="text-accent">+200k rows</span>.
+              We surface it in minutes, down to the NPA, so you respond surgically instead of
+              rebuilding a deck.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Closing CTA -->
+      <SlabRule :size="2" />
+      <section class="pb-20 pt-[70px] text-center">
+        <div class="mb-3.5 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
+          Your cheat code
+        </div>
+        <h2
+          class="m-0 font-display text-[clamp(36px,5vw,56px)] font-semibold leading-none tracking-[-0.04em] text-fg"
+        >
+          The cheat code for buying<br />and selling smarter.
+        </h2>
+        <p class="mx-auto mt-5 max-w-[480px] font-sans text-base text-fg-dim">
+          Free forever. Local-first. Your rates never leave your browser.
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3.5">
+          <RouterLink to="/signup" :class="ctaPrimary">
+            Sign up — free forever <ArrowRightIcon class="h-3.5 w-3.5" />
+          </RouterLink>
+          <a href="#features" :class="ctaGhost">See a sample deck</a>
+        </div>
+      </section>
     </div>
+
+    <!-- Footer (shared component — reskin deferred to Pass 2) -->
+    <TheFooter />
   </div>
 </template>
 
@@ -289,10 +329,40 @@
     DocumentArrowUpIcon,
     TableCellsIcon,
   } from '@heroicons/vue/24/outline';
+  import { BoltIcon as BoltSolidIcon } from '@heroicons/vue/24/solid';
   import TheFooter from '@/components/shared/TheFooter.vue';
+  import TheTicker, { type TickerItem } from '@/components/shared/TheTicker.vue';
+  import RunningHead from '@/components/shared/RunningHead.vue';
+  import SlabRule from '@/components/shared/SlabRule.vue';
   import compareShot from '@/assets/screenshots/compare.png';
   import explorerShot from '@/assets/screenshots/explorer.png';
   import wizardShot from '@/assets/screenshots/wizard.png';
+
+  // Shared Switchboard CTA classes (primary red fill / outline ghost).
+  const ctaPrimary =
+    'inline-flex items-center gap-2 bg-accent px-6 py-[15px] font-display text-[13px] font-semibold uppercase tracking-[0.06em] text-accent-ink no-underline';
+  const ctaGhost =
+    'inline-flex items-center gap-2 border border-line-strong px-[18px] py-[11px] font-display text-xs font-medium uppercase tracking-[0.06em] text-fg no-underline transition-colors hover:bg-row';
+
+  const navLinks = [
+    { label: 'Product', href: '#features' },
+    { label: 'How it works', href: '#how' },
+    { label: 'Why it exists', href: '#why' },
+  ];
+
+  // Landing ticker — green/red trading-screen palette (marketing only).
+  const tickerItems: TickerItem[] = [
+    { sym: 'NY-212', value: '+17.33%', dir: 'up' },
+    { sym: 'CA-657', value: '+23.83%', dir: 'up' },
+    { sym: 'CA-310', value: '−44.47%', dir: 'down' },
+    { sym: 'OH-330', value: '−45.31%', dir: 'down' },
+    { sym: 'VA-540', value: '−41.70%', dir: 'down' },
+    { sym: 'DC-202', value: '+34.81%', dir: 'up' },
+    { sym: 'CO-748', value: '+17.17%', dir: 'up' },
+    { sym: 'AVG MARGIN', value: '$0.0041', dir: 'up' },
+    { sym: 'COVERAGE', value: '87.02%', dir: 'up' },
+    { sym: 'ROWS', value: '223,267', dir: 'up' },
+  ];
 
   // --- Hero screenshot carousel (auto-crossfade) ---
   const heroShots = [
@@ -341,6 +411,7 @@
 
   interface Panel {
     icon: Component;
+    section: string;
     title: string;
     tagline: string;
     items: PanelItem[];
@@ -358,7 +429,19 @@
     body: string;
   }
 
+  interface Trust {
+    icon: Component;
+    col: string;
+    label: string;
+  }
+
   // --- Page content ---
+  const trust: Trust[] = [
+    { icon: LockClosedIcon, col: 'Column A', label: 'Local-first & ephemeral' },
+    { icon: MapPinIcon, col: 'Column B', label: 'LERG-enriched & jurisdiction-aware' },
+    { icon: BoltIcon, col: 'Column C', label: 'Built for full-size decks' },
+  ];
+
   const problems: Problem[] = [
     {
       icon: TableCellsIcon,
@@ -380,6 +463,7 @@
   const panels: Panel[] = [
     {
       icon: ArrowsRightLeftIcon,
+      section: 'Section III-A',
       title: 'Analyze',
       tagline: 'Compare two NPANXX decks side-by-side and see what is hiding between them.',
       items: [
@@ -395,6 +479,7 @@
     },
     {
       icon: AdjustmentsHorizontalIcon,
+      section: 'Section III-B',
       title: 'Adjust',
       tagline: 'Reprice or build a deck, down to the code — without the spreadsheet gymnastics.',
       items: [
@@ -430,23 +515,6 @@
 </script>
 
 <style scoped>
-  /* Subtle entrance fade — disabled for reduced-motion users. */
-  .reveal {
-    animation: hv-fade 0.7s ease-out both;
-  }
-  .reveal-delay {
-    animation: hv-fade 0.7s ease-out 0.15s both;
-  }
-  @keyframes hv-fade {
-    from {
-      opacity: 0;
-      transform: translateY(18px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
   /* Caption crossfade — synced with the hero carousel. */
   .caption-fade-enter-active,
   .caption-fade-leave-active {
@@ -457,10 +525,6 @@
     opacity: 0;
   }
   @media (prefers-reduced-motion: reduce) {
-    .reveal,
-    .reveal-delay {
-      animation: none;
-    }
     .caption-fade-enter-active,
     .caption-fade-leave-active {
       transition: none;
