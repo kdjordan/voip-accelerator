@@ -203,9 +203,14 @@ mono/single-accent** — dropped the 5-colour rainbow (AVATAR_STYLES + simulatio
 mono slabs, win-rate bars use one `bg-accent` fill (theme-aware). Section/scenario badges + active mode toggle
 + drag-active + focus rings + primary actions = accent; "uploaded" counter = warn; remove/error = down.
 Verified in chrome-devtools both themes with 3 loaded test providers + a generated deck; regression-check GREEN.
-**NOT-MERGED yet (awaits owner gut-check).** Remaining Pass-2: **Admin** (`/admin` + user-mgmt comps, masthead V
-+ reskin), auth pages (login/signup — BoltIcon still emerald), `AppMobileNav`, App.vue shell + the deferred
-ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+**NOT-MERGED yet (awaits owner gut-check).** ✅ **Legal pages reskinned `3518e8c`** — `TandCView`/`PrivacyView`
+tokenized to Switchboard (theme-aware via `data-theme`, NOT forced-light): `bg-canvas`/`text-fg`, Geist-Mono
+headings, Inter body, accent eyebrow + slab rule; fake "BoltIcon + VOIP Accelerator" pill → `VoipLogo` mark
+(first real consumer of VoipLogo); in-content "View Privacy Policy" button → in-app `RouterLink` (was a prod
+absolute URL + new tab); prose `<style>` blocks scoped + retokenized, dropped `prose-invert` + the raw
+`text-white` that broke light mode. Verified both themes, regression GREEN. Remaining Pass-2: **Admin** (`/admin`
++ user-mgmt comps, masthead V + reskin), auth pages (login/signup — BoltIcon still emerald), `AppMobileNav`,
+App.vue shell + the deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
 **Two known-out-of-scope items seen during rate-gen verify (NOT fixed):** (a) `TestDataLoader.vue` still uses
 yellow/gray literals — dev-only (`?testMode=true` / `VITE_ENABLE_TEST_DATA`), never ships to prod; (b) a
 pre-existing Vue dev warning — `variant="destructive"` passed to the reskinned `ConfirmationModal` (now a
