@@ -6,6 +6,7 @@ import { RateGenService } from '@/services/rate-gen.service';
 // Components
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
 import RateGenSimulation from '@/components/rate-gen/RateGenSimulation.vue';
+import RateGenGeneratedDecks from '@/components/rate-gen/RateGenGeneratedDecks.vue';
 import ReportTabButton from '@/components/shared/ReportsTabButton.vue';
 
 const store = useRateGenStore();
@@ -70,12 +71,9 @@ const effectiveDate = ref(getDefaultEffectiveDate());
         <RateGenSimulation v-model:effective-date="effectiveDate" :service="service" />
       </div>
 
-      <!-- Generated Decks (placeholder) -->
+      <!-- Generated Decks -->
       <div v-else class="pt-6">
-        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center">
-          <h2 class="text-lg font-semibold text-white">No generated decks yet</h2>
-          <p class="mt-2 text-sm text-zinc-400">Generated decks will appear here.</p>
-        </div>
+        <RateGenGeneratedDecks :service="service" />
       </div>
     </div>
 

@@ -8,15 +8,10 @@ import type {
   ProviderInfo,
   LCRConfig,
   GeneratedRateDeck,
-  GeneratedRateRecord,
   InvalidRateGenRow,
   LCRStrategy,
-  RateGenExportOptions,
-  EnhancedGeneratedRate,
   LeanGeneratedRecord
 } from '@/types/domains/rate-gen-types';
-
-import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 
 interface RateGenStore {
   setComponentUploading: (componentId: any, isUploading: boolean) => void;
@@ -162,7 +157,6 @@ export class RateGenService {
   private store: RateGenStore;
   private dexieDB = useDexieDB();
   private worker: Worker | null = null;
-  private temporaryGeneratedRates: GeneratedRateRecord[] = [];
   // Committed generated decks held IN MEMORY (session-only), keyed by deck id.
   // Generated output is NO LONGER persisted to IndexedDB — provider uploads stay there.
   private generatedDeckRecords: Map<string, LeanGeneratedRecord[]> = new Map();
@@ -748,192 +742,6 @@ export class RateGenService {
   }
 
   /**
-   * Export rate deck as CSV
-   */
-  /**
-   * Export generated rate deck with options
-   */
-  async exportRateDeck(deckId: string, format: 'csv' | 'excel', options?: RateGenExportOptions): Promise<Blob> {
-    console.log(`[RateGenService] Exporting deck ${deckId} as ${format}`);
-    
-    // Load rates from IndexedDB instead of using temporary storage
-    const rates = await this.loadRatesForDeck(deckId);
-    
-    if (rates.length === 0) {
-      throw new Error('No rates found for this deck');
-    }
-    
-    // Get deck metadata for effective date
-    const { loadFromDexieDB } = this.dexieDB;
-    const decks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
-    const deck = decks.find((d: any) => d.id === deckId);
-    const effectiveDate = deck?.effectiveDate || deck?.generatedAt || new Date();
-    
-    console.log(`[RateGenService] Found ${rates.length} rates for export`);
-    
-    if (format === 'csv') {
-      return this.exportAsCSV(rates, options, effectiveDate);
-    } else {
-      throw new Error('Excel export not yet implemented');
-    }
-  }
-
-  /**
-   * Load rates for a specific deck from IndexedDB
-   */
-  async loadRatesForDeck(deckId: string): Promise<GeneratedRateRecord[]> {
-    try {
-      const { loadFromDexieDB } = this.dexieDB;
-      const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
-      
-      // Filter rates for this specific deck
-      const deckRates = allRates.filter((rate: any) => rate.deckId === deckId);
-      
-      console.log(`[RateGenService] Loaded ${deckRates.length} rates for deck ${deckId}`);
-      return deckRates;
-    } catch (error) {
-      console.error('[RateGenService] Error loading rates:', error);
-      throw new Error('Failed to load rates from database');
-    }
-  }
-
-  /**
-   * Enrich rates with geographic data from LERG
-   */
-  private enrichWithGeographicData(rates: GeneratedRateRecord[]): EnhancedGeneratedRate[] {
-    const lergStore = useLergStoreV2();
-    
-    return rates.map(rate => {
-      // Extract NPA from prefix (first 3 digits)
-      const npa = rate.prefix?.substring(0, 3);
-      
-      // O(1) LERG lookup
-      const npaInfo = npa ? lergStore.getNPAInfo(npa) : null;
-      
-      return {
-        ...rate,
-        npa,
-        state: npaInfo?.state_province_name,
-        stateCode: npaInfo?.state_province_code,
-        country: npaInfo?.country_name || 'United States',
-        countryCode: npaInfo?.country_code || 'US',
-        region: npaInfo?.region
-      };
-    });
-  }
-
-  /**
-   * Filter rates by country if specified in options
-   */
-  private filterRatesByCountry(rates: EnhancedGeneratedRate[], options: RateGenExportOptions): EnhancedGeneratedRate[] {
-    // If no countries are selected for exclusion, return all records
-    if (!options.excludeCountries || options.selectedCountries.length === 0) {
-      return rates;
-    }
-    
-    // Filter out excluded countries
-    return rates.filter(rate => {
-      const country = rate.countryCode || 'US';
-      return !options.selectedCountries.includes(country);
-    });
-  }
-
-  /**
-   * Export generated rates as CSV with options
-   */
-  private exportAsCSV(rates: GeneratedRateRecord[], options?: RateGenExportOptions, effectiveDate?: Date): Blob {
-    // Enrich with geographic data if needed
-    const shouldEnrichGeo = options?.includeStateColumn || options?.includeCountryColumn || options?.includeRegionColumn;
-    const enrichedRates = shouldEnrichGeo ? this.enrichWithGeographicData(rates) : rates;
-    
-    // Filter by country if specified
-    const filteredRates = options ? this.filterRatesByCountry(enrichedRates as EnhancedGeneratedRate[], options) : enrichedRates;
-    
-    // Build headers based on options
-    let headers: string[] = [];
-    
-    // NPANXX format
-    if (options?.npanxxFormat === 'split') {
-      headers.push('npa', 'nxx');
-    } else {
-      // Always use 'npanxx' as the header name
-      headers.push('npanxx');
-    }
-    
-    // Rate columns - 'rate' is the interstate rate
-    headers.push('interstate', 'intrastate', 'indeterminate');
-    
-    // Always include effective date
-    headers.push('effective_date');
-    
-    // Optional columns
-    if (options?.includeProviderColumn) {
-      headers.push('selectedProvider');
-    }
-    if (options?.includeStateColumn) {
-      headers.push('state');
-    }
-    if (options?.includeCountryColumn) {
-      headers.push('country');
-    }
-    if (options?.includeRegionColumn) {
-      headers.push('region');
-    }
-    
-    // Transform data for CSV export
-    const csvData = filteredRates.map(rate => {
-      const row: any = {};
-      
-      // Handle NPANXX format
-      if (options?.npanxxFormat === 'split') {
-        const npa = rate.prefix?.substring(0, 3) || '';
-        const nxx = rate.prefix?.substring(3, 6) || '';
-        row.npa = options?.includeCountryCode ? `1${npa}` : npa;
-        row.nxx = nxx;
-      } else {
-        // Use npanxx as the field name, optionally add country code
-        row.npanxx = options?.includeCountryCode ? `1${rate.prefix}` : rate.prefix;
-      }
-      
-      // Rate columns - 'rate' field is the interstate rate
-      row.interstate = rate.rate;
-      row.intrastate = rate.intrastate;
-      row.indeterminate = rate.indeterminate;
-      
-      // Effective date - format as MM/DD/YYYY
-      const dateStr = effectiveDate ? 
-        `${(effectiveDate.getMonth() + 1).toString().padStart(2, '0')}/${effectiveDate.getDate().toString().padStart(2, '0')}/${effectiveDate.getFullYear()}` : 
-        `${(new Date().getMonth() + 1).toString().padStart(2, '0')}/${new Date().getDate().toString().padStart(2, '0')}/${new Date().getFullYear()}`;
-      row.effective_date = dateStr;
-      
-      // Optional columns
-      if (options?.includeProviderColumn) {
-        row.selectedProvider = rate.selectedProvider;
-      }
-      if (options?.includeStateColumn && 'stateCode' in rate) {
-        row.state = (rate as EnhancedGeneratedRate).stateCode;
-      }
-      if (options?.includeCountryColumn && 'countryCode' in rate) {
-        row.country = (rate as EnhancedGeneratedRate).countryCode;
-      }
-      if (options?.includeRegionColumn && 'region' in rate) {
-        row.region = (rate as EnhancedGeneratedRate).region;
-      }
-      
-      return row;
-    });
-    
-    const csv = Papa.unparse(csvData, {
-      columns: headers,
-      header: true,
-      newline: '\n', // Force Unix line endings for Excel compatibility
-    });
-
-    console.log(`[RateGenService] Generated CSV with ${filteredRates.length} rows, ${headers.length} columns`);
-    return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  }
-
-  /**
    * Run LCR validation tests in development mode
    */
   private async runLCRValidationTests(config: LCRConfig): Promise<void> {
@@ -989,105 +797,20 @@ export class RateGenService {
   }
 
   /**
-   * Get all generated rate decks
-   */
-  async getAllDecks(): Promise<any[]> {
-    try {
-      const { loadFromDexieDB } = this.dexieDB;
-      const decks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
-      return decks.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
-    } catch (error) {
-      console.error('[RateGenService] Error loading decks:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Load a specific rate deck
-   */
-  async loadDeck(deckId: string): Promise<void> {
-    try {
-      const { loadFromDexieDB } = this.dexieDB;
-      
-      // Load deck metadata
-      const decks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
-      const deckMetadata = decks.find((d: any) => d.id === deckId);
-      
-      if (!deckMetadata) {
-        throw new Error('Rate deck not found');
-      }
-      
-      // Load the rates for this deck
-      const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
-      const deckRates = allRates.filter((r: any) => r.deckId === deckId);
-      
-      // Update temporary rates for export
-      this.temporaryGeneratedRates = deckRates;
-      
-      // Create GeneratedRateDeck from metadata
-      const deck: GeneratedRateDeck = {
-        id: deckMetadata.id,
-        name: deckMetadata.name,
-        lcrStrategy: deckMetadata.strategy,
-        markupPercentage: deckMetadata.markupType === 'percentage' ? deckMetadata.markupValue : 0,
-        markupFixed: deckMetadata.markupType === 'fixed' ? deckMetadata.markupValue : 0,
-        providerIds: [], // We'll need to store this in metadata if needed
-        generatedDate: new Date(deckMetadata.generatedAt),
-        rowCount: deckMetadata.rowCount
-      };
-      
-      this.store.setGeneratedDeck(deck);
-      
-      console.log(`[RateGenService] Loaded deck ${deckId} with ${deckRates.length} rates`);
-      
-    } catch (error) {
-      console.error('[RateGenService] Error loading deck:', error);
-      throw new Error('Failed to load rate deck');
-    }
-  }
-
-  /**
-   * Delete a specific rate deck
+   * Delete a generated deck. Generated decks are session-only (held in memory,
+   * never persisted) — deleting just drops the in-memory records and the store
+   * metadata. Provider uploads in IndexedDB are untouched.
    */
   async deleteDeck(deckId: string): Promise<void> {
-    try {
-      const { loadFromDexieDB, clearDexieTable, storeInDexieDB } = this.dexieDB;
+    // Drop the in-memory lean records for this deck (session-only store)
+    this.generatedDeckRecords.delete(deckId);
 
-      // Delete all rates for this deck
-      const allRates = await loadFromDexieDB(DBName.RATE_GEN_RESULTS, 'generated_rates');
-      const remainingRates = allRates.filter((rate: any) => rate.deckId !== deckId);
+    // Update store
+    this.store.removeGeneratedDeck(deckId);
 
-      await clearDexieTable(DBName.RATE_GEN_RESULTS, 'generated_rates');
-
-      if (remainingRates.length > 0) {
-        await storeInDexieDB(remainingRates, DBName.RATE_GEN_RESULTS, 'generated_rates', { replaceExisting: false });
-      }
-
-      // Delete deck metadata
-      const allDecks = await loadFromDexieDB(DBName.RATE_GEN_DECKS, 'rate_decks');
-      const remainingDecks = allDecks.filter((deck: any) => deck.id !== deckId);
-
-      await clearDexieTable(DBName.RATE_GEN_DECKS, 'rate_decks');
-
-      if (remainingDecks.length > 0) {
-        await storeInDexieDB(remainingDecks, DBName.RATE_GEN_DECKS, 'rate_decks', { replaceExisting: false });
-      }
-
-      // Drop the in-memory lean records for this deck (session-only store)
-      this.generatedDeckRecords.delete(deckId);
-
-      // Update store
-      this.store.removeGeneratedDeck(deckId);
-
-      // If this was the currently loaded deck, clear it
-      if (this.store.generatedDeck?.id === deckId) {
-        this.store.clearGeneratedDeck();
-        this.temporaryGeneratedRates = [];
-      }
-
-    } catch (error) {
-      console.error('[RateGenService] Error deleting deck:', error);
-      throw new Error(`Failed to delete deck: ${(error as Error).message}`);
+    // If this was the currently loaded deck, clear it
+    if (this.store.generatedDeck?.id === deckId) {
+      this.store.clearGeneratedDeck();
     }
   }
 
