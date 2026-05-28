@@ -210,6 +210,17 @@ ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
 yellow/gray literals — dev-only (`?testMode=true` / `VITE_ENABLE_TEST_DATA`), never ships to prod; (b) a
 pre-existing Vue dev warning — `variant="destructive"` passed to the reskinned `ConfirmationModal` (now a
 teleport root) in `RateGenFileUploads`; benign, predates this reskin (that block untouched).
+**Two FUNCTIONAL fixes also landed on this branch (owner-requested, NOT reskin — will merge to main with Pass-2):**
+✅ **`0bedf79`** — removed the "Data starts on line" control from the shared `PreviewModal` (affects ALL mapping
+modals: US/rate-gen/AZ/admin-LERG). Safe because upload parsers reject invalid/header rows via `transformRow`
+regardless; `startLine` stays pinned to 1, prop/emit plumbing left intact (avoids churning 5 callers + services).
+✅ **`ba837f9`** — footer Terms/Privacy links now navigate in-app (dropped `target="_blank"` → SPA nav, owner
+chose same-tab over new-tab). **Root cause found + DEFERRED (owner's call):** `<RouterLink target="_blank">`
+forced a fresh full-page load, and on a fresh/deep-link load an *authenticated* user gets bounced to `/dashboard`
+by a redirect race — the nav guard pauses the deep-link while awaiting auth init, and `App.vue`'s `watchEffect`
+redirects the unresolved `/` START_LOCATION (transitional) to dashboard. This breaks ALL deep-links/bookmarks to
+non-dashboard routes for authed users (same root as the known "/usview bounces until LERG loads"). Owner opted for
+the footer workaround now; the App.vue race is the real fix when someone wants deep-linking/bookmarks to work.
 **Verify tip:** to reach populated rate-gen states, SPA-nav with the router (`#app.__vue_app__.config.
 globalProperties.$router.push('/rate-gen/us?testMode=true')`) AFTER the dashboard mounts LERG — a full reload to
 that URL bounces to /dashboard (guard runs before LERG loads). Then the dev TestDataLoader's "3 Providers" button
