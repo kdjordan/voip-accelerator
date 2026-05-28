@@ -1,21 +1,23 @@
 <template>
-  <div class="min-h-screen bg-fbBlack text-white">
-    <!-- Simple Centered Header -->
-    <header class="py-6 flex justify-center items-center">
-      <!-- Placeholder for Logo/Icon -->
-      <div class="flex items-center space-x-2 text-2xl text-accent bg-accent/20 border border-accent/50 px-6 py-2 rounded-lg">
-        <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
-        <span>VOIP Accelerator</span>
+  <div class="min-h-screen bg-canvas text-fg">
+    <!-- Editorial masthead -->
+    <header class="border-b border-line">
+      <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-5">
+        <RouterLink to="/" class="inline-flex">
+          <VoipLogo />
+        </RouterLink>
       </div>
     </header>
 
-    <main class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-      <h1 class="text-4xl md:text-5xl font-medium tracking-tight text-accent mb-12 text-center">
+    <main class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <p class="eyebrow text-accent mb-3">Legal · Terms</p>
+      <h1 class="font-display text-4xl md:text-5xl font-semibold tracking-tight text-fg">
         Terms and Conditions
       </h1>
+      <div class="slab-rule mt-6 mb-10"></div>
 
-      <div class="prose prose-invert prose-lg max-w-none text-fbWhite/90">
-        <p class="text-fbWhite/70 italic">Last Updated: May 25, 2026</p>
+      <div class="prose prose-lg max-w-none">
+        <p class="text-fg-faint italic">Last Updated: May 25, 2026</p>
 
         <p>
           Please read these Terms and Conditions ("Terms", "Terms and Conditions") carefully before
@@ -30,7 +32,7 @@
           access the Service.
         </p>
 
-        <h2 class="text-accent">1. Description of Service</h2>
+        <h2 class="text-fg font-display">1. Description of Service</h2>
         <p>
           VOIP Accelerator provides tools for analyzing, comparing, and managing Voice over IP
           (VOIP) rate decks and related telecommunications data. The Service allows users to upload
@@ -38,7 +40,7 @@
           within the user's browser for enhanced data privacy.
         </p>
 
-        <h2 class="text-accent">2. Accounts</h2>
+        <h2 class="text-fg font-display">2. Accounts</h2>
         <p>
           When you create an account with us, you guarantee that the information you provide us is
           accurate, complete, and current at all times. Inaccurate, incomplete, or obsolete
@@ -52,13 +54,13 @@
           breach of security or unauthorized use of your account.
         </p>
 
-        <h2 class="text-accent">3. Fees</h2>
+        <h2 class="text-fg font-display">3. Fees</h2>
         <p>
           The Service is provided free of charge. There are no subscriptions, fees, or payments of
           any kind, and we do not collect or process any payment or credit card information.
         </p>
 
-        <h2 class="text-accent">4. Data Privacy and Security</h2>
+        <h2 class="text-fg font-display">4. Data Privacy and Security</h2>
         <p>
           VOIP Accelerator is designed with user privacy in mind. Most data processing, including
           rate deck analysis and comparisons, occurs locally within your browser using IndexedDB.
@@ -67,15 +69,13 @@
           information, such as your email address, is stored securely on our own servers. Please
           refer to our Privacy Policy for more details on how we handle your data.
         </p>
-        <div class="my-4">
-          <a
-            href="https://voipaccelerator.com/privacy-policy"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-block bg-accent/20 border border-accent/50 text-accent font-medium px-6 py-2 rounded-3xl hover:bg-accent/20 transition-colors text-center"
+        <div class="my-4 not-prose">
+          <RouterLink
+            to="/privacy-policy"
+            class="inline-flex items-center border border-line-strong bg-row px-4 py-2 font-display text-[11px] font-medium uppercase tracking-[0.06em] text-fg transition-colors hover:border-accent hover:text-accent"
           >
             View Privacy Policy
-          </a>
+          </RouterLink>
         </div>
         <p>
           While we strive to use commercially acceptable means to protect your data processed
@@ -84,7 +84,7 @@
           device and browser environment.
         </p>
 
-        <h2 class="text-accent">5. Intellectual Property</h2>
+        <h2 class="text-fg font-display">5. Intellectual Property</h2>
         <p>
           The Service and its original content (excluding Content provided by users), features and
           functionality are and will remain the exclusive property of VOIP Accelerator and its
@@ -99,7 +99,7 @@
           to provide the Service.
         </p>
 
-        <h2 class="text-accent">6. User Conduct</h2>
+        <h2 class="text-fg font-display">6. User Conduct</h2>
         <p>You agree not to use the Service:</p>
         <ul>
           <li>
@@ -129,7 +129,7 @@
           </li>
         </ul>
 
-        <h2 class="text-accent">7. Disclaimers</h2>
+        <h2 class="text-fg font-display">7. Disclaimers</h2>
         <p>
           Your use of the Service is at your sole risk. The Service is provided on an "AS IS" and
           "AS AVAILABLE" basis. The Service is provided without warranties of any kind, whether
@@ -149,7 +149,7 @@
           derived from the data.
         </p>
 
-        <h2 class="text-accent">8. Limitation of Liability</h2>
+        <h2 class="text-fg font-display">8. Limitation of Liability</h2>
         <p>
           In no event shall VOIP Accelerator, nor its directors, employees, partners, agents,
           suppliers, or affiliates, be liable for any indirect, incidental, special, consequential
@@ -164,7 +164,7 @@
           for consequential or incidental damages, so the above limitation may not apply to you.
         </p>
 
-        <h2 class="text-accent">9. Indemnification</h2>
+        <h2 class="text-fg font-display">9. Indemnification</h2>
         <p>
           You agree to defend, indemnify and hold harmless VOIP Accelerator and its licensee and
           licensors, and their employees, contractors, agents, officers and directors, from and
@@ -174,7 +174,7 @@
           password; b) a breach of these Terms, or c) Content posted on the Service.
         </p>
 
-        <h2 class="text-accent">10. Termination</h2>
+        <h2 class="text-fg font-display">10. Termination</h2>
         <p>
           We may terminate or suspend your account and bar access to the Service immediately,
           without prior notice or liability, under our sole discretion, for any reason whatsoever
@@ -190,7 +190,7 @@
           indemnity and limitations of liability.
         </p>
 
-        <h2 class="text-accent">11. Governing Law</h2>
+        <h2 class="text-fg font-display">11. Governing Law</h2>
         <p>
           These Terms shall be governed and construed in accordance with the laws of United States,
           without regard to its conflict of law provisions.
@@ -204,7 +204,7 @@
           Service.
         </p>
 
-        <h2 class="text-accent">12. Changes to Terms</h2>
+        <h2 class="text-fg font-display">12. Changes to Terms</h2>
         <p>
           We reserve the right, at our sole discretion, to modify or replace these Terms at any
           time. If a revision is material we will provide at least 30 days notice prior to any new
@@ -219,7 +219,7 @@
           changes.
         </p>
 
-        <h2 class="text-accent">13. Contact Us</h2>
+        <h2 class="text-fg font-display">13. Contact Us</h2>
         <p>If you have any questions about these Terms, please contact us:</p>
         <ul>
           <li>By email: support@voipaccelerator.com</li>
@@ -231,45 +231,32 @@
 </template>
 
 <script setup lang="ts">
-  import { BoltIcon } from '@heroicons/vue/24/solid';
-  // import TopNav from '@/components/shared/TopNav.vue'; // Removed TopNav
+  import VoipLogo from '@/components/shared/VoipLogo.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
 
   // No specific script logic needed for this static page yet
 </script>
 
-<style>
-  /* Add Tailwind's typography plugin styles */
-  /* If not already globally configured */
-  /* Consider adding @tailwindcss/typography to your project if not present */
-  /* and configuring it in tailwind.config.js */
-
-  /* Basic prose styling adjustments if needed */
+<style scoped>
   .prose h2 {
-    @apply mb-4 mt-10 pb-2 border-b border-fbWhite/20; /* Example styling */
-    /* Use text-accent for h2 as defined in template */
+    @apply mb-4 mt-10 pb-2 border-b border-line text-xl tracking-tight;
   }
 
   .prose p,
   .prose ul,
   .prose li {
-    @apply text-fbWhite/80 leading-relaxed; /* Adjust text color and leading */
+    @apply font-sans text-fg-dim leading-relaxed;
   }
 
   .prose strong {
-    @apply text-fbWhite; /* Make strong text stand out more */
+    @apply text-fg;
   }
 
   .prose a {
-    @apply text-accent hover:text-accent/80; /* Style links */
+    @apply text-accent hover:text-accent-text;
   }
 
   .prose ul {
     @apply list-disc pl-6;
-  }
-
-  /* Ensure container padding works well with prose */
-  .container .prose {
-    max-width: 100%; /* Allow prose to fill container */
   }
 </style>

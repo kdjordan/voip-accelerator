@@ -1,23 +1,23 @@
 <template>
-  <div class="min-h-screen bg-fbBlack text-white">
-    <!-- Simple Centered Header -->
-    <header class="py-6 flex justify-center items-center">
-      <!-- Placeholder for Logo/Icon -->
-      <div
-        class="flex items-center space-x-2 text-2xl text-accent bg-accent/20 border border-accent/50 px-6 py-2 rounded-lg"
-      >
-        <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
-        <span>VOIP Accelerator</span>
+  <div class="min-h-screen bg-canvas text-fg">
+    <!-- Editorial masthead -->
+    <header class="border-b border-line">
+      <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-5">
+        <RouterLink to="/" class="inline-flex">
+          <VoipLogo />
+        </RouterLink>
       </div>
     </header>
 
-    <main class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-      <h1 class="text-4xl md:text-5xl font-medium tracking-tight text-accent mb-12 text-center">
+    <main class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <p class="eyebrow text-accent mb-3">Legal · Privacy</p>
+      <h1 class="font-display text-4xl md:text-5xl font-semibold tracking-tight text-fg">
         Privacy Policy
       </h1>
+      <div class="slab-rule mt-6 mb-10"></div>
 
-      <div class="prose prose-invert prose-lg max-w-none text-fbWhite/90">
-        <p class="text-fbWhite/70 italic">Last Updated: May 25, 2026</p>
+      <div class="prose prose-lg max-w-none">
+        <p class="text-fg-faint italic">Last Updated: May 25, 2026</p>
 
         <p>
           VOIP Accelerator ("us", "we", or "our") operates the VOIP Accelerator website and service (the
@@ -34,13 +34,13 @@
           from https://voipaccelerator.com/terms-and-conditions.
         </p>
 
-        <h2 class="text-accent">1. Information Collection and Use</h2>
+        <h2 class="text-fg font-display">1. Information Collection and Use</h2>
         <p>
           We collect several different types of information for various purposes to provide and
           improve our Service to you.
         </p>
 
-        <h3 class="text-fbWhite/80">Types of Data Collected</h3>
+        <h3 class="text-fg font-display">Types of Data Collected</h3>
 
         <h4>Personal Data</h4>
         <p>
@@ -112,7 +112,7 @@
           </li>
         </ul>
 
-        <h2 class="text-accent">2. Use of Data</h2>
+        <h2 class="text-fg font-display">2. Use of Data</h2>
         <p>VOIP Accelerator uses the collected data for various purposes:</p>
         <ul>
           <li>
@@ -129,7 +129,7 @@
           <li>To detect, prevent and address technical issues</li>
         </ul>
 
-        <h2 class="text-accent">3. Data Storage and Security</h2>
+        <h2 class="text-fg font-display">3. Data Storage and Security</h2>
         <h4>Local Storage (IndexedDB)</h4>
         <p>
           As mentioned, your primary User Content (rate decks, comparisons, reports) is stored
@@ -157,7 +157,7 @@
           and is not retained by us.
         </p>
 
-        <h2 class="text-accent">4. Data Transfer & Third-Party Processors</h2>
+        <h2 class="text-fg font-display">4. Data Transfer & Third-Party Processors</h2>
         <p>
           Your information, including Personal Data, may be transferred to — and maintained on —
           computers located outside of your state, province, country or other governmental
@@ -190,7 +190,7 @@
           >.
         </p>
 
-        <h2 class="text-accent">5. Disclosure of Data</h2>
+        <h2 class="text-fg font-display">5. Disclosure of Data</h2>
         <p>
           VOIP Accelerator may disclose your Personal Data in the good faith belief that such action
           is necessary to:
@@ -203,7 +203,7 @@
           <li>To protect against legal liability</li>
         </ul>
 
-        <h2 class="text-accent">6. Your Data Protection Rights</h2>
+        <h2 class="text-fg font-display">6. Your Data Protection Rights</h2>
         <p>
           Depending on your location, you may have certain data protection rights. VOIP Accelerator
           aims to take reasonable steps to allow you to correct, amend, delete, or limit the use of
@@ -252,7 +252,7 @@
           requests.
         </p>
 
-        <h2 class="text-accent">7. Children's Privacy</h2>
+        <h2 class="text-fg font-display">7. Children's Privacy</h2>
         <p>Our Service does not address anyone under the age of 18 ("Children").</p>
         <p>
           We do not knowingly collect personally identifiable information from anyone under the age
@@ -262,7 +262,7 @@
           information from our servers.
         </p>
 
-        <h2 class="text-accent">8. Links To Other Sites</h2>
+        <h2 class="text-fg font-display">8. Links To Other Sites</h2>
         <p>
           Our Service may contain links to other sites that are not operated by us. If you click on
           a third party link, you will be directed to that third party's site. We strongly advise
@@ -273,7 +273,7 @@
           practices of any third party sites or services.
         </p>
 
-        <h2 class="text-accent">9. Changes To This Privacy Policy</h2>
+        <h2 class="text-fg font-display">9. Changes To This Privacy Policy</h2>
         <p>
           We may update our Privacy Policy from time to time. We will notify you of any changes by
           posting the new Privacy Policy on this page.
@@ -287,7 +287,7 @@
           this Privacy Policy are effective when they are posted on this page.
         </p>
 
-        <h2 class="text-accent">10. Contact Us</h2>
+        <h2 class="text-fg font-display">10. Contact Us</h2>
         <p>If you have any questions about this Privacy Policy, please contact us:</p>
         <ul>
           <li>By email: support@voipaccelerator.com</li>
@@ -299,46 +299,40 @@
 </template>
 
 <script setup lang="ts">
-  import { BoltIcon } from '@heroicons/vue/24/solid';
-  // import TopNav from '@/components/shared/TopNav.vue'; // Removed TopNav
+  import VoipLogo from '@/components/shared/VoipLogo.vue';
   import TheFooter from '@/components/shared/TheFooter.vue';
 
   // No specific script logic needed for this static page yet
 </script>
 
-<style>
-  /* Reusing styles similar to TandCView */
+<style scoped>
   .prose h2 {
-    @apply mb-4 mt-10 pb-2 border-b border-fbWhite/20;
+    @apply mb-4 mt-10 pb-2 border-b border-line text-xl tracking-tight;
   }
 
   .prose h3 {
-    @apply text-xl text-fbWhite/80 mb-3 mt-6; /* Style for subheadings */
+    @apply text-xl text-fg mb-3 mt-6;
   }
 
   .prose h4 {
-    @apply text-lg text-fbWhite/70 mb-2 mt-4 font-semibold; /* Style for sub-subheadings */
+    @apply font-display text-lg text-fg-dim mb-2 mt-4 font-semibold;
   }
 
   .prose p,
   .prose ul,
   .prose li {
-    @apply text-fbWhite/80 leading-relaxed;
+    @apply font-sans text-fg-dim leading-relaxed;
   }
 
   .prose strong {
-    @apply text-fbWhite;
+    @apply text-fg;
   }
 
   .prose a {
-    @apply text-accent hover:text-accent/80;
+    @apply text-accent hover:text-accent-text;
   }
 
   .prose ul {
     @apply list-disc pl-6 mb-4;
-  }
-
-  .container .prose {
-    max-width: 100%;
   }
 </style>
