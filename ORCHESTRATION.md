@@ -76,7 +76,7 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** none in flight. **Waves 1–2 ✅ DONE** (A+B+C merged; worktrees/branches cleaned). HEAD `9ee0662`, regression-check GREEN + 94 unit.
+- **Active tasks:** **D running** (`feat/rg-sandbox`, worktree `../va-wt-rg-sandbox`, **cmux tab — owner-steered**, dev server on **:5174** not :5173). Waves 1–2 ✅ DONE (A+B+C merged). HEAD `9ee0662` (+ board commits), regression-check GREEN + 94 unit. E held until D merges (both edit RateGenUSView tab bodies → sequential).
 
   | wave | task | status |
   |------|------|--------|
