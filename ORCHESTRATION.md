@@ -72,11 +72,11 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-- **Conductor:** sits on `feat/rate-gen-studio` @ `a468719` (integration branch for the Rate Composition
-  Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
-  stays pristine at `a4d137d` until the whole studio is done + gut-checked).
-- **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** none. **ALL 7 SLICES (A–G) MERGED — studio + both refinements COMPLETE on `feat/rate-gen-studio` @ `0a4d577`.** Final regression-check GREEN + **132 unit tests**. Dev server running on :5173 (integration branch) for owner gut-check.
+- **Conductor:** sits on `main` @ `4baca0e` (Rate Composition Studio rework MERGED + PUSHED 2026-05-28;
+  owner gut-check passed). Integration branch `feat/rate-gen-studio` merged & deleted.
+- **`main` = `origin/main` = `4baca0e`** (the studio). **Last prod deploy still `8b696b7`** — ⚠️ a push does
+  NOT auto-deploy; **owner is redeploying via Coolify manually.** Tag the commit once deploy is confirmed.
+- **Active tasks:** none. **✅ SHIPPED TO `main` (pushed `4baca0e`, 2026-05-28).** All 7 slices (A–G) — studio + both refinements. Owner gut-check passed; cross-tool validation by owner tomorrow. Final regression-check GREEN + **132 unit tests**. **Awaiting owner manual Coolify redeploy** (prod still `8b696b7`).
 - **Pre-merge follow-ups:** G ✅ merged (scenarios+sample persist across tab nav). F ✅ merged (depth + Position/Average mode; LCR position retained; available w/ 2 decks; per-prefix fallback; blend=set-of-contributors → Route CSV joined names + "participation" chart). **OPTIONAL, owner's call (not blocking):** G2 = "Tweak & re-run" recall on Decks tab (deck metadata now carries depth+mode, so the recipe is available); a known-answer TestDataLoader fixture for hand-verifying decks in the UI.
 - **NEXT (owner-gated):** full end-to-end gut-check on :5173 (incl. new Average mode + scenario persistence) → merge `feat/rate-gen-studio` → `main` → manual Coolify deploy → Switchboard reskin.
 - **🎉 ALL 5 FUNCTIONAL SLICES DONE — studio functionally COMPLETE on `feat/rate-gen-studio` @ `daf979c`** (dev server running on :5173 for owner gut-check). Final regression-check GREEN + 110 unit tests.
