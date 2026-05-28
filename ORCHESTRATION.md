@@ -208,9 +208,19 @@ tokenized to Switchboard (theme-aware via `data-theme`, NOT forced-light): `bg-c
 headings, Inter body, accent eyebrow + slab rule; fake "BoltIcon + VOIP Accelerator" pill → `VoipLogo` mark
 (first real consumer of VoipLogo); in-content "View Privacy Policy" button → in-app `RouterLink` (was a prod
 absolute URL + new tab); prose `<style>` blocks scoped + retokenized, dropped `prose-invert` + the raw
-`text-white` that broke light mode. Verified both themes, regression GREEN. Remaining Pass-2: **Admin** (`/admin`
-+ user-mgmt comps, masthead V + reskin), auth pages (login/signup — BoltIcon still emerald), `AppMobileNav`,
-App.vue shell + the deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+`text-white` that broke light mode. Verified both themes, regression GREEN. ✅ **Admin route reskinned `fb94850`** — `/admin`: AdminView got the
+standardized PageMasthead (Section V — Admin); `UnifiedNANPManagement` + `UserManagement`/`UserTable`/
+`UserRoleSelector`/`UserStatusToggle` tokenized (admin comps used raw `gray-*`/`white` that DON'T retheme → broke
+in light mode; ~150 swaps). Off-palette → portal: LERG category stats (green/blue/amber/violet) → mono `text-fg`;
+status boxes success→warn, info→`info`(blue), error→down; category badge `violet`→`neutral`; user avatar →
+`bg-accent-soft` + accent ring/initials (matches dashboard avatar); Active status dot/toggle green→warn; admin
+role=warn, user=neutral. Verified BOTH themes, regression GREEN. **Dead code left untouched (flagged):**
+`NANPDiagnostics.vue` + `PerformanceComparison.vue` are imported NOWHERE; `AdminView`'s `edgeStatusClass`/`dbStatus`
+computeds are unused (still hold `bg-gray-500`/`bg-red-500`). **Pre-existing runtime BUG (NOT mine, flagged):**
+`UnifiedNANPManagement.vue:765` logs `lergStore.allNPAs.length` but `lergStore` is never defined/imported in that
+component → `ReferenceError: lergStore is not defined` on the LERG-refresh path (visible in console on /admin mount).
+Out of scope for the visual reskin. Remaining Pass-2: auth pages (login/signup — BoltIcon still emerald),
+`AppMobileNav`, App.vue shell + the deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
 **Two known-out-of-scope items seen during rate-gen verify (NOT fixed):** (a) `TestDataLoader.vue` still uses
 yellow/gray literals — dev-only (`?testMode=true` / `VITE_ENABLE_TEST_DATA`), never ships to prod; (b) a
 pre-existing Vue dev warning — `variant="destructive"` passed to the reskinned `ConfirmationModal` (now a
