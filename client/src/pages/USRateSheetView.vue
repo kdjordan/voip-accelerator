@@ -52,6 +52,13 @@
           </button>
 
           <button
+            @click="sendToAnalyzer"
+            class="inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-2 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
+          >
+            <ArrowRightCircleIcon class="h-4 w-4" /> Send to Analyzer
+          </button>
+
+          <button
             @click="requestReset"
             class="inline-flex items-center gap-2 border border-down bg-down-soft px-3 py-2 font-display text-[11px] uppercase tracking-[0.06em] text-down hover:opacity-80 transition-opacity"
           >
@@ -236,6 +243,7 @@
 
 <script setup lang="ts">
   import { computed, ref, onMounted, watch } from 'vue';
+  import { useRouter } from 'vue-router';
   import InfoModal from '@/components/shared/InfoModal.vue';
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
@@ -251,6 +259,7 @@
   } from '@heroicons/vue/24/outline';
   import {
     ArrowDownTrayIcon,
+    ArrowRightCircleIcon,
     ChevronDownIcon,
     CheckCircleIcon,
     ExclamationTriangleIcon,
@@ -267,12 +276,14 @@
   import { useHandoffStore } from '@/stores/handoff-store';
   import { usePricingStudioStore } from '@/stores/pricing-studio-store';
   import type { RateDeckHandoff } from '@/types/domains/handoff-types';
+  import { buildHandoffFromRateSheet } from '@/utils/deck-handoff';
   import { computeReadiness, type ReadinessStats } from '@/utils/pricing-engine';
   import { useDragDrop } from '@/composables/useDragDrop';
 
   const store = useUsRateSheetStore();
   const handoffStore = useHandoffStore();
   const psStore = usePricingStudioStore();
+  const router = useRouter();
   const usRateSheetService = new USRateSheetService();
   const isLocallyStored = computed(() => store.getHasUsRateSheetData);
   const uploadError = ref<string | null>(store.getError);
@@ -631,6 +642,18 @@
   function handleExportPackage() {
     // Workspace owns the export logic (rate deck CSV + branded audit PDF); wired in Phase 5.
     (tableRef.value as unknown as { exportPackage?: () => void } | null)?.exportPackage?.();
+  }
+
+  // Hand-off: snapshot the current (applied) rate sheet and push it into the Analyzer.
+  // Payload is built from the live Dexie rows before navigation so it survives the route change.
+  // See docs/adr/0009-cross-module-rate-deck-handoff.md.
+  async function sendToAnalyzer() {
+    const entries = await usRateSheetService.getData();
+    if (!entries.length) return;
+    handoffStore.setPending(
+      buildHandoffFromRateSheet(entries, { name: 'Adjusted rate sheet', target: 'analyzer' })
+    );
+    router.push('/usview');
   }
 
   function openInfoModal() {
