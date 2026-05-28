@@ -242,7 +242,7 @@
       <!-- Section III-C — Compose (Rate Composition Studio) -->
       <section class="pb-[60px]">
         <RunningHead left="Section III-C — Five decks into one" right="Compose · blend & generate" />
-        <div class="mt-3 border-y-2 border-line-strong px-8 pb-10 pt-9">
+        <div class="mt-3 border-b-2 border-line-strong px-8 pb-10 pt-9">
           <div class="mb-3.5 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
             Section III-C
           </div>
