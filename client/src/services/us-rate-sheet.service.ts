@@ -7,6 +7,8 @@ import type { DexieDBBase } from '@/composables/useDexieDB';
 import Dexie, { type Table } from 'dexie';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { UploadStage, UPLOAD_STAGE_WEIGHTS } from '@/types/components/upload-progress-types';
+import type { RateDeckHandoffRow } from '@/types/domains/handoff-types';
+import { mapHandoffRowsToEntries } from '@/utils/handoff-landing-us';
 
 // Define the structure for column mapping indices
 interface USRateSheetColumnMapping {
@@ -284,6 +286,49 @@ export class USRateSheetService {
         },
       });
     });
+  }
+
+  /**
+   * Ingests a rate deck hand-off (Compose → Adjust, or Adjust ← Compare edge) directly into
+   * the Adjuster's Dexie store, bypassing the CSV upload + column-mapping UI. Produces the
+   * identical end-state as a successful upload of the same rows: same LERG-derived stateCode,
+   * same chunked write. The Adjuster holds exactly ONE sheet, so this OVERWRITES existing data
+   * (storeDataInOptimizedChunks clears on its first chunk via replaceExisting). The store layer
+   * applies the default effective date via handleUploadSuccess afterwards.
+   * See docs/adr/0009-cross-module-rate-deck-handoff.md.
+   */
+  async ingestHandoff(
+    rows: RateDeckHandoffRow[],
+    progressCallback?: (
+      progress: number,
+      stage: UploadStage,
+      rowsProcessed: number,
+      totalRows?: number
+    ) => void
+  ): Promise<{ recordCount: number }> {
+    // Same guard as processFile — without LERG we cannot derive state codes.
+    if (!this.lergStore.isInitialized) {
+      const errorMsg =
+        'LERG data is not loaded. Cannot process rate sheet without state information.';
+      console.error(`[USRateSheetService] ${errorMsg}`);
+      return Promise.reject(new Error(errorMsg));
+    }
+
+    const entries = mapHandoffRowsToEntries(
+      rows,
+      (npa) => this.lergStore.getNPAInfo(npa)?.state_province_code || undefined
+    );
+
+    if (entries.length === 0) {
+      // No rows: still clear the existing sheet (a hand-off overwrites).
+      await this.storeInDexieDB([], this.dbName, 'entries', { replaceExisting: true });
+      return { recordCount: 0 };
+    }
+
+    // Reuse the upload write helper — chunked bulkPut, clears existing data on the first chunk.
+    await this.storeDataInOptimizedChunks(entries, progressCallback);
+
+    return { recordCount: entries.length };
   }
 
   // Process a single row of data

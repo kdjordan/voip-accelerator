@@ -61,6 +61,13 @@
       </template>
     </PageMasthead>
 
+    <!-- Hand-off provenance — quiet one-liner when a deck was landed from another module -->
+    <div v-if="store.getProvenance" class="mb-3 px-1">
+      <p class="font-display text-[10px] uppercase tracking-wider text-fg-dim">
+        Loaded from {{ store.getProvenance }}
+      </p>
+    </div>
+
     <!-- Readiness summary — one calm line; expands to the full metric strip -->
     <div v-if="isLocallyStored" class="mb-5 px-1">
       <button
@@ -214,6 +221,16 @@
       confirmation-phrase="RESET"
       @confirm="confirmReset"
     />
+
+    <!-- Hand-off overwrite confirmation — landing a deck replaces the current sheet -->
+    <ConfirmationModal
+      v-model="showHandoffOverwriteConfirm"
+      title="Overwrite current rate sheet?"
+      message="A rate deck is being sent into the Pricing Studio. Loading it will replace the current rate sheet and clear all session changes (frozen scopes and operations). This cannot be undone."
+      confirm-button-text="Overwrite & Load"
+      @confirm="confirmHandoffOverwrite"
+      @cancel="cancelHandoffOverwrite"
+    />
   </div>
 </template>
 
@@ -247,11 +264,14 @@
   import { USRateSheetService } from '@/services/us-rate-sheet.service';
   import { USColumnRole } from '@/types/domains/us-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
+  import { useHandoffStore } from '@/stores/handoff-store';
   import { usePricingStudioStore } from '@/stores/pricing-studio-store';
+  import type { RateDeckHandoff } from '@/types/domains/handoff-types';
   import { computeReadiness, type ReadinessStats } from '@/utils/pricing-engine';
   import { useDragDrop } from '@/composables/useDragDrop';
 
   const store = useUsRateSheetStore();
+  const handoffStore = useHandoffStore();
   const psStore = usePricingStudioStore();
   const usRateSheetService = new USRateSheetService();
   const isLocallyStored = computed(() => store.getHasUsRateSheetData);
@@ -292,6 +312,11 @@
   // Workspace child exposes exportPackage()/resetAll() (added in Phase 5).
   const tableRef = ref<InstanceType<typeof USRateSheetTable> | null>(null);
   const showResetConfirm = ref(false);
+
+  // Hand-off landing state (Compose → Adjust, Compare → Adjust). Holds the consumed hand-off
+  // while the overwrite confirmation is open.
+  const showHandoffOverwriteConfirm = ref(false);
+  const pendingHandoff = ref<RateDeckHandoff | null>(null);
 
   // Preview Modal state
   const showPreviewModal = ref(false);
@@ -336,7 +361,74 @@
 
   onMounted(async () => {
     store.setLoading(false);
+
+    // A rate deck hand-off targeting the Adjuster lands here, bypassing the upload/mapping UI.
+    // consume() is one-shot — it returns and clears the pending hand-off so a remount/HMR
+    // won't re-fire it. See docs/adr/0009-cross-module-rate-deck-handoff.md.
+    if (handoffStore.pending?.target === 'adjuster') {
+      const handoff = handoffStore.consume();
+      if (!handoff) return;
+
+      if (store.getHasUsRateSheetData) {
+        // Existing sheet present — confirm the overwrite before ingesting.
+        pendingHandoff.value = handoff;
+        showHandoffOverwriteConfirm.value = true;
+      } else {
+        await landHandoff(handoff);
+      }
+    }
   });
+
+  // Ingests a hand-off into the Adjuster, driving the same upload-progress UI + post-success
+  // store update as a CSV upload — so the end-state is identical, minus parse + mapping.
+  async function landHandoff(handoff: RateDeckHandoff) {
+    // A landed deck overwrites the current sheet — clear any prior sculpting session.
+    psStore.reset();
+
+    store.setLoading(true);
+    store.setError(null);
+    store.setUploadInProgress(true);
+    uploadError.value = null;
+
+    try {
+      store.startUploadProgress(handoff.rows.length);
+
+      const { recordCount } = await usRateSheetService.ingestHandoff(
+        handoff.rows,
+        (progress, stage, rowsProcessed, totalRows) => {
+          store.setUploadProgress(progress, stage, rowsProcessed, totalRows);
+        }
+      );
+
+      // No invalid rows for a hand-off — source decks are clean.
+      await store.handleUploadSuccess({ recordCount, invalidRows: [] });
+      store.setProvenance(handoff.provenance);
+
+      store.completeUploadProgress();
+      store.setUploadInProgress(false);
+    } catch (error: any) {
+      uploadError.value = `Error loading rate deck: ${error.message || 'Unknown error'}`;
+      await store.clearUsRateSheetData();
+      store.resetUploadProgress();
+    } finally {
+      store.setLoading(false);
+    }
+  }
+
+  async function confirmHandoffOverwrite() {
+    showHandoffOverwriteConfirm.value = false;
+    const handoff = pendingHandoff.value;
+    pendingHandoff.value = null;
+    if (handoff) {
+      await landHandoff(handoff);
+    }
+  }
+
+  function cancelHandoffOverwrite() {
+    // User declined — leave the existing sheet untouched; the hand-off was already consumed.
+    showHandoffOverwriteConfirm.value = false;
+    pendingHandoff.value = null;
+  }
 
   async function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
