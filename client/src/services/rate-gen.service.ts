@@ -33,6 +33,15 @@ interface RateGenStore {
 }
 
 /**
+ * Reason recorded for rows rejected at upload because the deck must be fully priced:
+ * either the interstate or intrastate rate is missing/zero/negative.
+ */
+export const INCOMPLETE_RATE_REASON = 'Missing or non-positive interstate/intrastate rate';
+
+/** Reason recorded for rows rejected at upload because the prefix is missing/invalid. */
+export const INVALID_PREFIX_REASON = 'Invalid or missing NPANXX prefix';
+
+/**
  * Resolve a record's provider name to the CURRENT store name (so post-upload renames
  * flow into generated output), falling back to the name baked into the record.
  */
@@ -132,21 +141,21 @@ export class RateGenService {
               indeterminateDefinition
             );
             
-            if (processedRow) {
+            if (typeof processedRow === 'string') {
+              invalidRows.push({
+                rowNumber: totalRows,
+                data: row,
+                reason: processedRow
+              });
+            } else {
               allProcessedData.push(processedRow);
               totalRecords++;
-              
+
               // Sum rates for averages
               sumInterRate += processedRow.rateInter;
               sumIntraRate += processedRow.rateIntra;
               sumIndeterminateRate += processedRow.rateIndeterminate;
               distinctNpas.add(processedRow.prefix.slice(0, 3));
-            } else {
-              invalidRows.push({
-                rowNumber: totalRows,
-                data: row,
-                reason: 'Invalid prefix or rate data'
-              });
             }
 
           } catch (error) {
@@ -257,7 +266,8 @@ export class RateGenService {
   }
 
   /**
-   * Transform a CSV row into a RateGenRecord
+   * Transform a CSV row into a RateGenRecord.
+   * Returns the record on success, or a rejection-reason string when the row is invalid.
    */
   private transformRow(
     row: string[],
@@ -266,7 +276,7 @@ export class RateGenService {
     providerName: string,
     fileName: string,
     indeterminateDefinition?: string
-  ): RateGenRecord | null {
+  ): RateGenRecord | string {
     // Helper function to get data from row
     const getData = (index: number) => index >= 0 ? (row[index] || '').toString().trim() : '';
     
@@ -298,7 +308,7 @@ export class RateGenService {
     
     // Validate prefix
     if (!prefix || prefix.length !== 6) {
-      return null;
+      return INVALID_PREFIX_REASON;
     }
     
     // Extract rates
@@ -328,9 +338,10 @@ export class RateGenService {
       rateIndeterminate = rateInter;
     }
 
-    // Validate rates
-    if (rateInter === 0 && rateIntra === 0) {
-      return null;
+    // Validate rates — the deck must be fully priced, so reject any row where
+    // either the interstate or intrastate rate is missing, zero, or negative.
+    if (rateInter <= 0 || rateIntra <= 0) {
+      return INCOMPLETE_RATE_REASON;
     }
 
     return {
