@@ -1,6 +1,7 @@
 <template>
   <div v-if="items && items.length > 0" class="-mx-6 px-6">
     <div
+      v-if="!hideHeader"
       @click="toggleDetails"
       class="w-full py-3 cursor-pointer flex items-center justify-between"
     >
@@ -11,7 +12,7 @@
       <component :is="showDetails ? ChevronUpIcon : ChevronDownIcon" class="w-4 h-4 text-down" />
     </div>
 
-    <div v-if="showDetails" class="transition-all duration-300 ease-in-out mt-1">
+    <div v-if="hideHeader || showDetails" class="transition-all duration-300 ease-in-out mt-1">
       <div class="py-3">
         <div class="border border-line bg-surface overflow-hidden">
           <table class="w-full min-w-full">
@@ -61,12 +62,13 @@
   interface Props {
     items: InvalidRowEntry[];
     title: string;
-    /** Render the details table expanded on mount (e.g. when an outer toggle already reveals this). */
-    startExpanded?: boolean;
+    /** Hide the built-in title/toggle header (and always render the table) — for when an
+     *  outer control already labels and reveals this list. */
+    hideHeader?: boolean;
   }
-  const props = defineProps<Props>();
+  defineProps<Props>();
 
-  const showDetails = ref(props.startExpanded ?? false);
+  const showDetails = ref(false);
 
   function toggleDetails() {
     showDetails.value = !showDetails.value;
