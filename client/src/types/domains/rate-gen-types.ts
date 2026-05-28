@@ -58,6 +58,23 @@ export interface GeneratedRateDeck {
   exportFormat?: 'csv' | 'excel';
 }
 
+/**
+ * Lean generated record held in memory (session-only, never persisted).
+ * The heavy per-record `debug` block of GeneratedRateRecord is dropped after
+ * aggregation; only the three per-rate-type winner names are kept (they feed
+ * the Route Distribution CSV). Rates are post-markup.
+ */
+export interface LeanGeneratedRecord {
+  prefix: string;
+  rate: number;             // Final interstate rate (post-markup)
+  intrastate: number;       // Final intrastate rate (post-markup)
+  indeterminate: number;    // Final indeterminate rate (post-markup)
+  interProvider: string;    // Provider name selected for interstate
+  intraProvider: string;    // Provider name selected for intrastate
+  indetProvider: string;    // Provider name selected for indeterminate
+  appliedMarkup: number;    // Markup value applied (fixed amount or percentage)
+}
+
 export interface GeneratedRateRecord {
   prefix: string;
   rate: number;             // Final interstate rate with markup
@@ -122,18 +139,39 @@ export interface EnhancedGeneratedRate extends GeneratedRateRecord {
   generatedDate?: Date;   // When rate was generated
 }
 
+/**
+ * Per-provider win count + share for a single rate type (interstate /
+ * intrastate / indeterminate). `percentage` is 0–100, share of priced prefixes.
+ */
+export interface ProviderWinStat {
+  provider: string;
+  count: number;
+  percentage: number;
+}
+
+/**
+ * Win rate by rate type — for each jurisdiction, the per-provider counts and
+ * shares of prefixes where that provider is the selected (winning) source.
+ * LCR selects each rate type independently, so winners can differ by type.
+ */
+export interface WinRateByType {
+  interstate: ProviderWinStat[];
+  intrastate: ProviderWinStat[];
+  indeterminate: ProviderWinStat[];
+}
+
+/**
+ * Aggregate analytics over a set of lean generated records (a scenario sample
+ * or a committed deck). Pure-function output — see utils/rate-gen-aggregates.ts.
+ */
 export interface RateGenAnalytics {
-  generationId: string;
-  strategy: LCRStrategy;
-  markupPercentage: number;
-  providerStats: {
-    providerId: string;
-    providerName: string;
-    codesSelected: number;
-    percentageOfTotal: number;
-  }[];
-  generatedDate: Date;
-  totalCodes: number;
+  totalPrefixes: number;            // number of priced lean records
+  winRateByType: WinRateByType;     // primary signal
+  singleSourcedCount: number;       // prefixes only one selected provider quotes
+  providersUsed: string[];          // distinct providers winning >= 1 selection
+  avgInterstate: number;            // post-markup mean
+  avgIntrastate: number;            // post-markup mean
+  avgIndeterminate: number;         // post-markup mean
 }
 
 export interface InvalidRateGenRow {
