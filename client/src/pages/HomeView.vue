@@ -239,6 +239,49 @@
         </div>
       </section>
 
+      <!-- Section III-C — Compose (Rate Composition Studio) -->
+      <section class="pb-[60px]">
+        <RunningHead left="Section III-C — Five decks into one" right="Compose · blend & generate" />
+        <div class="mt-3 border-y-2 border-line-strong px-8 pb-10 pt-9">
+          <div class="mb-3.5 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
+            Section III-C
+          </div>
+          <div class="mb-4 flex items-center gap-3.5">
+            <span
+              class="inline-grid h-11 w-11 place-items-center border border-accent-ring bg-accent-soft text-accent"
+            >
+              <Square3Stack3DIcon class="h-[22px] w-[22px]" />
+            </span>
+            <h3 class="m-0 font-display text-4xl font-semibold tracking-[-0.03em] text-fg">
+              Compose
+            </h3>
+          </div>
+          <p class="mb-6 max-w-[560px] font-sans text-[15px] text-fg-dim">
+            Blend up to five carrier decks into one — least-cost and jurisdiction-aware, in seconds.
+          </p>
+          <div class="grid grid-cols-1 gap-[18px] md:grid-cols-2">
+            <div class="border-l-2 border-accent pl-3.5">
+              <div class="font-display text-[11px] uppercase tracking-[0.12em] text-fg">
+                Least-cost routing
+              </div>
+              <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">
+                Pick the cheapest, the Nth-cheapest, or a blend of the top N — chosen independently
+                for interstate, intrastate, and indeterminate.
+              </p>
+            </div>
+            <div class="border-l-2 border-accent pl-3.5">
+              <div class="font-display text-[11px] uppercase tracking-[0.12em] text-fg">
+                Simulate, then generate
+              </div>
+              <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">
+                Compare strategy scenarios against a sample before you commit, then generate a
+                switch-ready deck plus a route-distribution map and a build summary.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Section IV — How it works -->
       <section id="how" class="py-[60px]">
         <RunningHead left="Section IV — How it works" right="3 steps · no spreadsheet" />
@@ -338,6 +381,7 @@
     MapPinIcon,
     DocumentArrowUpIcon,
     TableCellsIcon,
+    Square3Stack3DIcon,
   } from '@heroicons/vue/24/outline';
   import { BoltIcon as BoltSolidIcon } from '@heroicons/vue/24/solid';
   import TheFooter from '@/components/shared/TheFooter.vue';
