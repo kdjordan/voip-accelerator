@@ -8,9 +8,6 @@
       subtitle="All processing is done locally in your browser."
       :ticker-items="tickerItems"
     >
-      <template #title-icon>
-        <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
-      </template>
       <template #title-suffix>
         <span
           v-if="isLocallyStored"
@@ -231,7 +228,6 @@
 
   import {
     ArrowUpTrayIcon,
-    BoltIcon,
     LockClosedIcon,
     QuestionMarkCircleIcon,
   } from '@heroicons/vue/24/outline';

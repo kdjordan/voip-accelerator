@@ -8,11 +8,7 @@
         section="Section I — Overview"
         right="Account overview"
         subtitle="Here's what's happening with your account."
-      >
-        <template #title-suffix>
-          <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
-        </template>
-      </PageMasthead>
+      />
 
       <!-- Two Column Account Section -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -269,7 +265,6 @@
     ArrowRightIcon,
     TrashIcon
   } from '@heroicons/vue/24/outline';
-  import { BoltIcon } from '@heroicons/vue/24/solid';
   import { useRouter } from 'vue-router';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 
