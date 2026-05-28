@@ -16,6 +16,7 @@ interface USRateSheetState {
   invalidRateSheetRows: InvalidUsRow[]; // Updated type usage
   isUploadInProgress: boolean; // GATE to block table loading during upload
   uploadProgress: UploadProgressState; // Real upload progress tracking
+  provenance: string | null; // Hand-off origin line, set when a deck is landed from another module
 }
 
 // Instantiate simple service outside the store definition (singleton pattern)
@@ -43,7 +44,8 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
       stage: UploadStage.PARSING,
       rowsProcessed: 0,
       totalRows: undefined
-    }
+    },
+    provenance: null, // No hand-off origin until a deck is landed
   }),
 
   getters: {
@@ -56,6 +58,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     hasInvalidRateSheetRows: (state): boolean => state.invalidRateSheetRows.length > 0, // Added getter
     getIsUploadInProgress: (state): boolean => state.isUploadInProgress, // Gate getter
     getUploadProgress: (state): UploadProgressState => state.uploadProgress, // Real progress getter
+    getProvenance: (state): string | null => state.provenance, // Hand-off origin line getter
   },
 
   actions: {
@@ -70,6 +73,13 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     setUploadInProgress(inProgress: boolean) {
       this.isUploadInProgress = inProgress;
       console.log(`[us-rate-sheet-store] Upload gate ${inProgress ? 'OPENED' : 'CLOSED'}`);
+    },
+
+    /**
+     * Sets the hand-off provenance line (origin of a landed deck). Pass null to clear.
+     */
+    setProvenance(provenance: string | null) {
+      this.provenance = provenance;
     },
 
     /**
@@ -150,6 +160,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.currentEffectiveDate = null; // Clear effective date
         this.totalRecords = 0;
         this.invalidRateSheetRows = []; // Clear invalid rows state
+        this.provenance = null; // Clear hand-off origin line
         console.log('[us-rate-sheet-store] Cleared rate sheet data and reset state.');
       } catch (err) {
         console.error('[us-rate-sheet-store] Error clearing rate sheet data:', err);
