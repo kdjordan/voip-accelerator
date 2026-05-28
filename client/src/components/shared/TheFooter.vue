@@ -54,7 +54,6 @@
             >
               <RouterLink
                 to="/terms-and-conditions"
-                target="_blank"
                 class="hover:text-fg transition-colors"
               >
                 Terms of Service
@@ -62,7 +61,6 @@
               <span class="text-fg-mute">·</span>
               <RouterLink
                 to="/privacy-policy"
-                target="_blank"
                 class="hover:text-fg transition-colors"
               >
                 Privacy Policy
