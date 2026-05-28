@@ -72,41 +72,102 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-- **Conductor:** sits on `main` @ `4baca0e` (Rate Composition Studio rework MERGED + PUSHED 2026-05-28;
-  owner gut-check passed). Integration branch `feat/rate-gen-studio` merged & deleted.
-- **`main` = `origin/main` = `4baca0e`** (the studio). **Last prod deploy still `8b696b7`** — ⚠️ a push does
-  NOT auto-deploy; **owner is redeploying via Coolify manually.** Tag the commit once deploy is confirmed.
-- **Active tasks:** none. **✅ SHIPPED TO `main` (pushed `4baca0e`, 2026-05-28).** All 7 slices (A–G) — studio + both refinements. Owner gut-check passed; cross-tool validation by owner tomorrow. Final regression-check GREEN + **132 unit tests**. **Awaiting owner manual Coolify redeploy** (prod still `8b696b7`).
-- **Pre-merge follow-ups:** G ✅ merged (scenarios+sample persist across tab nav). F ✅ merged (depth + Position/Average mode; LCR position retained; available w/ 2 decks; per-prefix fallback; blend=set-of-contributors → Route CSV joined names + "participation" chart). **OPTIONAL, owner's call (not blocking):** G2 = "Tweak & re-run" recall on Decks tab (deck metadata now carries depth+mode, so the recipe is available); a known-answer TestDataLoader fixture for hand-verifying decks in the UI.
-- **NEXT (owner-gated):** full end-to-end gut-check on :5173 (incl. new Average mode + scenario persistence) → merge `feat/rate-gen-studio` → `main` → manual Coolify deploy → Switchboard reskin.
-- **🎉 ALL 5 FUNCTIONAL SLICES DONE — studio functionally COMPLETE on `feat/rate-gen-studio` @ `daf979c`** (dev server running on :5173 for owner gut-check). Final regression-check GREEN + 110 unit tests.
+**TRACK: Switchboard reskin — PASS 1** (sitewide visual/typographic overhaul to the "Switchboard" design
+system; business logic stays 100% intact). Source of truth: repo-root `VoIP Accelerator Design System/`
+(`colors_and_type.css` = tokens; `ui_kits/{landing,portal}/page.jsx` = visual targets). See auto-memory
+`switchboard-reskin`. Geist Mono headlines + Inter body, arterial-red accent (NO emerald), radius 0,
+ticker bar, editorial running heads, light+dark peer themes.
 
-  | wave | slice | status |
-  |------|-------|--------|
-  | 1 | A — upload validation | ✅ merged |
-  | 1 | B — engine core (in-mem `selectLeanRecords`, no IDB persist, aggregates) | ✅ merged |
-  | 2 | C — 3-tab shell | ✅ merged |
-  | 3 | D — Simulation Preview sandbox (cmux, owner gut-checked) | ✅ merged |
-  | 3 | E — Generated Decks tab + Final/Route CSV + Build Summary PDF; retired 7 legacy comps (+ orphaned RateGenConfiguration) | ✅ merged |
+- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `df0640b` (integration branch, off
+  `main` @ `6cbb28d`). `main` is UNTOUCHED/clean and stays that way until the whole Pass-1 reskin passes owner
+  gut-check; then ONE merge integration→`main` with owner OK. **`main` = `origin/main` = `6cbb28d`;
+  PROD = `8b696b7`** (push ≠ deploy; owner deploys via Coolify manually). NEVER merge to main / push /
+  deploy without explicit owner OK.
+- **Locked decisions (owner, 2026-05-28):** (1) **token bridge** — Tailwind color names point at CSS vars
+  + legacy aliases retained, so existing classes re-theme automatically. (2) **Ticker ships in Pass 1**,
+  wired to real session KPIs on portal (quiet state when no comparison); landing ticker uses --up/--down.
+  (3) **Theme = localStorage only** via `useTheme` (light/dark/system), default dark, **landing forced
+  light**; visible selector lands in P2 (SideNav bottom-left).
+- **Pass-1 scope = 4 views:** `HomeView.vue` (→ landing kit, light) + `UsView.vue` / `USInsights.vue` /
+  `USRateSheetView.vue` (→ portal kit). **DEFERRED to Pass 2 (do NOT touch now):** Rate Composition
+  Studio `/rate-gen/us` (will look rough after P1 token swap — EXPECTED), dashboard, admin, auth, footer,
+  AppMobileNav, full App.vue shell restructure.
 
-- **NEXT (owner):** FULL end-to-end gut-check of the whole studio on `feat/rate-gen-studio` (run dev in the MAIN dir on :5173 — it's the complete studio). Flow: upload ≥2 decks → Simulation Preview (build/compare scenarios) → commit → Generated Decks (summary/preview/rename/delete) → download all 3 outputs. **THEN** (owner OK each): merge `feat/rate-gen-studio` → `main`, then manual Coolify deploy, then the **Switchboard reskin** track.
-- **Cleanup pending:** D's worktree `../va-wt-rg-sandbox` (+ branch `feat/rg-sandbox`) still present — cmux dev server (pid 12863) holds :5173. Remove once owner closes that tab. Dev-auth origin is `localhost:5173` ONLY.
-- **Known non-blocking:** `RateGenGeneratedDecks.vue` has the same pre-existing `lergStore.getNPAInfo(...)` Pinia-getter TS typing error as `USExport*`/`USRateSheetTable` — typecheck is non-blocking, build passes.
+### Staged plan
+- **P1 — Foundation** *(✅ MERGED `a9786d4`, regression GREEN, ✅ OWNER-APPROVED 2026-05-28 — "let it go").
+  Gotcha resolved: a stale Vite (started pre-P1) was serving old CSS → killed + restarted fresh on :5173,
+  `.vite` cache cleared. Also confirmed the landing looks unchanged BY DESIGN (HomeView = 29 `emerald-*`
+  literals + `rounded-full` pills, zero `accent` tokens — migrated in P3-V1; P1 leaves literals alone).*
+  Delivered: `tailwind.config.js` token bridge (a `v()`
+  helper wraps each var in `color-mix` so existing `/opacity` classes like `bg-accent/20` keep working AND
+  re-theme — better than the planned `-soft` migration, zero churn); all Switchboard tokens + Geist
+  Mono/Inter `@import` + helper classes into `client/src/assets/index.css` (THE real CSS entry — `main.css`
+  is DEAD, left untouched); `useTheme.ts` (localStorage `va-theme`, light/dark/system, default dark);
+  FOUC boot script in `index.html`; `initTheme()` in `main.ts`; radius flattened to 0 (`full` circles
+  kept). Worktree + branch removed. **Note: `color-mix` is a runtime CSS dep** (modern browsers 2023+, fine
+  for this audience). Expect the app to look HALF-restyled now — that's correct for this slice. On owner OK → P2.
+- **P2 — Shared components & signature patterns** *(✅ COMPLETE — both slices merged to
+  `feat/switchboard-reskin` @ `5c93469`; combined P1+P2a+P2b regression-check GREEN; ✅ OWNER-APPROVED
+  2026-05-28 — chrome gut-check passed (SideNav/theme-toggle/buttons/modals read as Switchboard in both
+  themes). View BODIES are still old — that's P3.)*:
+  - **P2a** — `../va-wt-sb-primitives` / `feat/sb-primitives`: restyle `BaseButton`, `BaseBadge`,
+    `ReportsTabButton`, `VoipLogo`, modals (`Confirmation`/`Info`/`Notice`/`Preview`/`InvalidRows`),
+    `ReportTable`. API/props/emits PRESERVED (visual-only).
+  - **P2b** *(✅ MERGED `619ca93`, worktree+branch removed; diff reviewed — SideNav API/collapse/widths
+    preserved)*: SideNav reskin + theme selector (segmented when expanded / cycle button when collapsed,
+    wired to `useTheme`); NEW presentational `RunningHead.vue`, `KpiTile.vue`, `SlabRule.vue`,
+    `TheTicker.vue`. **Prop APIs for P3:** `TickerItem = { sym; value; dir?: 'up'|'down'|'warn'|'accent'|
+    'neutral' }`; `TheTicker(items, variant:'landing'|'portal'=portal, live?)` empty→quiet state;
+    `RunningHead(left, right?, leftAccent?=true, #right slot)`; `KpiTile(label, value, sub?, tone?:'text'|
+    'accent'|'warn'|'down'|'up'='text')`; `SlabRule(size?:1|2|3=1)`. TheTicker is NOT store-coupled — P3
+    wires data (V2 portal KPIs / V1 landing mock crawl).
+  - **P2a** *(✅ MERGED `5c93469`, worktree+branch removed; diff reviewed — APIs preserved across all 10
+    files: BaseButton variants `primary`/`secondary`/`secondary-outline`/`destructive` + `small`/`standard`
+    sizes intact; BaseBadge 7 variants; modals keep v-model/props/emits; visual-only)*: restyled
+    `BaseButton`/`BaseBadge`/`ReportsTabButton`/`VoipLogo`/5 modals/`ReportTable`. Note: badge
+    `success`/`warning`→amber `warn`, `violet` kept as legacy public variant; VoipLogo has ZERO call sites
+    (markup change has no downstream impact).
+  - Both frozen out of `tailwind.config.js`/`index.css`/`main.ts`/`App.vue`. P2 re-themes deferred surfaces
+    too (expected, not divergence).
+  - **⚠️ Pass-2 flag (pre-existing, NOT touched):** SideNav collapsed width is `80px` but `App.vue` offsets
+    content `md:ml-[64px]` when collapsed (16px mismatch). App.vue is deferred → fix in Pass 2 shell rework.
+- **P3 — Reskin the views** *(EXECUTION CHANGED 2026-05-28: owner chose the CONDUCTOR does it LIVE,
+  view-by-view, with the chrome-devtools MCP at :5173 — NOT 3 parallel blind sub-agents. Reason: a visual
+  reskin's real acceptance test is "looks right in both themes", which only the conductor/owner can see;
+  sub-agents in worktrees can't run a dev server, so they'd reskin blind → expensive post-merge round-trips.
+  Commit EACH view as finished (owner OK'd per-view commits to the integration branch).)*:
+  - **V1 `HomeView`** (landing, forced light) — ✅ DONE + committed `df0640b`; regression-check GREEN;
+    visually verified in chrome-devtools (ticker / running heads / dropcaps / accent rails; forced light via
+    a `data-theme="light"` wrapper div). Screenshot carousel + shared `TheFooter` (deferred) preserved.
+  - **V2 `UsView` + `USInsights`** (portal analyzer; → `ui_kits/portal/page.jsx`) — **NEXT.** Coupled
+    children also need reskinning: `USContentHeader` (tabs), `USOpportunityTable` (`accent` prop
+    emerald/violet → amber/red), `USFileUploads` + the stepper (upload state), `USCodeSummary`,
+    `USPricingReport`. Portal palette: `warn` (amber)=Sell/positive, `accent` (red)=Buy/negative, NO
+    green/violet; chart fills are hardcoded hex (`#34d399`/`#a78bfa`) → retoken to amber/red.
+  - **V3 `USRateSheetView`** (pricing studio body) — after V2.
+  - **VERIFY (portal):** views are AUTH-GATED (`/usview` → `/login?redirect=/usview`). chrome-devtools is a
+    FRESH browser session — the conductor must LOG IN (owner supplies local dev creds). Dev server must be
+    running on :5173 in the conductor's main dir (`npm --prefix client run dev`); API :3000 confirmed up.
+    `USInsights` only renders with uploaded decks + LERG loaded → **owner gut-checks the data-populated
+    states**; conductor verifies the chrome / upload state / theme-flip.
 
-  | wave | task | status |
-  |------|------|--------|
-  | 1 | A — upload validation (reject inter/intra ≤0) | ✅ merged |
-  | 1 | B — engine core (pure in-mem `selectLeanRecords`, drop IDB persist, `rate-gen-aggregates.ts`) | ✅ merged |
-  | 2 | C — `RateGenUSView` → 3 free-nav tabs (`activeTab` ref; Upload wired, Sim/Decks placeholders; effective-date ref + How-LCR `<details>` on Sim tab; strategy/markup + RateGenResults/RateGenConfiguration UNWIRED, files intact) | ✅ merged |
-  | 3 | D — Simulation Preview sandbox (sample, scenarios ≤4, compare, commit) | ⬜ READY (C done) |
-  | 3 | E — Generated Decks tab + 3 outputs (Final CSV dialog, Route CSV, Summary PDF) | ⬜ READY (B done) |
+### Token vocabulary for P2/P3 workers (from the P1 bridge)
+- surfaces: `bg-canvas` (--bg) · `bg-surface` (--bg-elev) · `bg-row` · `bg-row-hover` · `bg-input`
+- text: `text-fg` · `text-fg-dim` · `text-fg-faint` · `text-fg-mute`
+- borders/rules: `border-line` · `border-line-strong` · `border-line-divider` · `rule`
+- accent: `accent`/`accent-strong`/`accent-text`/`accent-soft`/`accent-mid`/`accent-ring`/`accent-ink`
+- direction: `up`/`down`/`warn`/`info`/`violet` (+ `-soft`); legacy `fbBlack`/`fbWhite`/`ink`/etc auto-retheme.
+- **RULE:** no `/opacity` modifiers on var() colors → use the pre-baked `-soft`/`-mid`/`-ring` tokens.
+- **PORTAL:** positive/"Sell To" = `warn` (amber); negative/"Buy From" = `accent` (red); NO green/violet;
+  destructive = `down`. **LANDING:** ticker uses `up`/`down` (green/red).
+- fonts: headlines/data/labels/buttons = `font-display`/`font-mono` (Geist Mono); paragraphs = `font-sans`
+  (Inter). Helper classes available in index.css: `.h-display/.h1/.h2/.h3/.eyebrow/.label/.kpi-value/
+  .dropcap/.slab-rule{,-2,-3}/.brand-chip`.
 
-- **Wave-3 mode decision pending owner:** run **D** as a live cmux tab (steer sandbox UX) or bg sub-agent? E = bg sub-agent. D & E both edit `RateGenUSView` (tab bodies) → if parallel, watch for conflict; safer to run D then E, or split cleanly (D owns Sim tab body, E owns Decks tab body).
-- **Hooks for D/E:** sandbox runs `selectLeanRecords(sample, …)`; Decks read `service.getGeneratedRecords(deckId)`; aggregates in `utils/rate-gen-aggregates.ts`; effective-date ref already on the Sim tab. Orphan to retire in D/E: `RateGenHeader.vue` (now unused).
-
-- **⚠️ Interim state after Wave 1:** generation now holds rates IN MEMORY only (`service.getGeneratedRecords(deckId)`) and no longer writes IndexedDB. The LEGACY `RateGenResults` + `RateGenExportModal` still read the now-unwritten IDB tables → they show/export EMPTY at runtime. **Expected** — those are retired/replaced in slices D/E. Don't gut-check generation output until D/E land. Slice E reads from `getGeneratedRecords(deckId)`.
-
-- **Waves:** 1 = A+B (running). 2 = C (tab shell). 3 = D (sandbox) + E (decks/outputs). Visual reskin
-  (Switchboard) deferred until functionality baked — separate track/chat.
-- **Merge note:** A & B touch the SAME file (`rate-gen.service.ts`) in different regions — merge A first,
-  then B, watch for a small conflict.
+### Resume (if conductor tab dies / new chat)
+Confirm main dir on `feat/switchboard-reskin` @ `df0640b`; `git log --oneline -3`; read this board; continue
+from the ACTIVE slice (**V2 next**). For P3 the conductor edits views directly in the main dir (no worktrees)
+and verifies via chrome-devtools at :5173. Ensure the dev server is up (`npm --prefix client run dev`); API
+on :3000. Portal views need login — get local dev creds from the owner and log into the chrome-devtools
+browser. Dev-auth origin is `localhost:5173` ONLY. **Owner is moving to a fresh YOLO-mode chat** (auto-accept
+permissions) to cut prompt friction — that new chat IS the resuming conductor.
