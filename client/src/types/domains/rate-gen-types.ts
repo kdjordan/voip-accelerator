@@ -45,6 +45,19 @@ export interface LCRConfig {
   effectiveDate?: Date;
 }
 
+/**
+ * A simulation-sandbox scenario (ADR-0008): one {LCR strategy, markup} candidate
+ * compared against the shared sample. Persisted in the rate-gen store so the
+ * inputs survive leaving/returning to the Simulation Preview tab.
+ */
+export interface Scenario {
+  id: string;
+  name: string;
+  strategy: LCRStrategy;
+  markupType: 'percentage' | 'fixed';
+  markupValue: number;
+}
+
 export interface GeneratedRateDeck {
   id: string;
   name: string;

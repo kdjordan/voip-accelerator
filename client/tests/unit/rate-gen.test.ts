@@ -10,6 +10,7 @@ import type {
   ProviderInfo,
   RateGenColumnMapping,
   RateGenRecord,
+  Scenario,
 } from '@/types/domains/rate-gen-types';
 
 const provider = (over: Partial<ProviderInfo> = {}): ProviderInfo => ({
@@ -104,6 +105,62 @@ describe('rate-gen upload validation — transformRow rejects incomplete rows', 
 
   it('rejects when both rates are zero (existing behavior preserved)', () => {
     expect(run(['201555', '0', '0'])).toBe(INCOMPLETE_RATE_REASON);
+  });
+});
+
+const scenario = (over: Partial<Scenario> = {}): Scenario => ({
+  id: 'scn-1',
+  name: 'Scenario 1',
+  strategy: 'LCR1',
+  markupType: 'percentage',
+  markupValue: 0,
+  ...over,
+});
+
+describe('rate-gen store — simulation sandbox inputs (persist across tab nav)', () => {
+  beforeEach(() => setActivePinia(createPinia()));
+
+  it('adds, updates, and removes scenarios in order', () => {
+    const store = useRateGenStore();
+    store.addScenario(scenario());
+    store.addScenario(scenario({ id: 'scn-2', name: 'Scenario 2', strategy: 'LCR2' }));
+    expect(store.scenarios.map((s) => s.id)).toEqual(['scn-1', 'scn-2']);
+
+    store.updateScenario('scn-1', { markupType: 'fixed', markupValue: 0.0025 });
+    expect(store.scenarios[0]).toMatchObject({
+      strategy: 'LCR1',
+      markupType: 'fixed',
+      markupValue: 0.0025,
+    });
+
+    store.removeScenario('scn-1');
+    expect(store.scenarios.map((s) => s.id)).toEqual(['scn-2']);
+  });
+
+  it('updateScenario is a no-op for an unknown id', () => {
+    const store = useRateGenStore();
+    store.addScenario(scenario());
+    expect(() => store.updateScenario('ghost', { markupValue: 9 })).not.toThrow();
+    expect(store.scenarios[0].markupValue).toBe(0);
+  });
+
+  it('setScenarios and setSimulationSample replace state wholesale', () => {
+    const store = useRateGenStore();
+    store.setScenarios([scenario(), scenario({ id: 'scn-2' })]);
+    store.setSimulationSample(['201555', '212555']);
+
+    expect(store.scenarios).toHaveLength(2);
+    expect(store.simulationSample).toEqual(['201555', '212555']);
+  });
+
+  it('clearSimulation resets both scenarios and the drawn sample', () => {
+    const store = useRateGenStore();
+    store.setScenarios([scenario()]);
+    store.setSimulationSample(['201555']);
+
+    store.clearSimulation();
+    expect(store.scenarios).toEqual([]);
+    expect(store.simulationSample).toEqual([]);
   });
 });
 

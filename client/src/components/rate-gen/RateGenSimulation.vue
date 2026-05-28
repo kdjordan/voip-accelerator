@@ -16,6 +16,7 @@ import {
   type LCRConfig,
   type LCRStrategy,
   type RateGenRecord,
+  type Scenario,
   type WinRateByType,
 } from '@/types/domains/rate-gen-types';
 import BaseButton from '@/components/shared/BaseButton.vue';
@@ -38,14 +39,6 @@ const MAX_DECKS = 3;
 // Stable per-provider colors (mirrors the upload/strategy cards' slot order).
 const PALETTE = ['#a78bfa', '#38bdf8', '#fbbf24', '#fb7185', '#34d399'];
 
-interface Scenario {
-  id: string;
-  name: string;
-  strategy: LCRStrategy;
-  markupType: 'percentage' | 'fixed';
-  markupValue: number;
-}
-
 interface ScenarioResult {
   id: string;
   sampleSize: number;
@@ -66,10 +59,9 @@ const universe = shallowRef<string[]>([]); // union of all provider prefixes
 const totalPrefixes = ref(0);
 const singleSourced = ref(0);
 
-// The fixed sample reused across every scenario in the comparison.
-const sample = shallowRef<string[]>([]);
-
-const scenarios = ref<Scenario[]>([]);
+// The fixed sample (store.simulationSample) and the scenarios (store.scenarios)
+// are persisted in the rate-gen store so they survive leaving/returning to this
+// tab (which unmounts the component). Derived results stay local.
 const results = shallowRef<ScenarioResult[]>([]);
 const committingId = ref<string | null>(null);
 
@@ -86,7 +78,7 @@ const allProviderIds = computed(() => providers.value.map((p) => p.id));
 const namesById = computed(() => new Map(providers.value.map((p) => [p.id, p.name])));
 const canSimulate = computed(() => providers.value.length >= 2);
 const availableStrategies = computed(() => store.availableLCRStrategies as LCRStrategy[]);
-const atScenarioCap = computed(() => scenarios.value.length >= MAX_SCENARIOS);
+const atScenarioCap = computed(() => store.scenarios.length >= MAX_SCENARIOS);
 const atDeckCap = computed(() => store.generatedDecks.length >= MAX_DECKS);
 const singleSourcedPct = computed(() =>
   totalPrefixes.value > 0 ? (singleSourced.value / totalPrefixes.value) * 100 : 0
@@ -105,11 +97,12 @@ const providerColor = (name: string): string => {
 const strategyLabel = (s: LCRStrategy): string =>
   LCR_STRATEGIES.find((o) => o.value === s)?.label ?? s;
 
-// --- Sampling: fixed random subset of the universe (partial Fisher–Yates). ---
+// --- Sampling: fixed random subset of the universe (partial Fisher–Yates).
+// Draws a fresh sample and stores it (persisted across tab navigation). ---
 function drawSample(): void {
   const pool = universe.value;
   if (pool.length <= SAMPLE_SIZE) {
-    sample.value = pool.slice();
+    store.setSimulationSample(pool.slice());
     return;
   }
   const arr = pool.slice();
@@ -117,7 +110,7 @@ function drawSample(): void {
     const j = i + Math.floor(Math.random() * (arr.length - i));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  sample.value = arr.slice(0, SAMPLE_SIZE);
+  store.setSimulationSample(arr.slice(0, SAMPLE_SIZE));
 }
 
 function scenarioConfig(s: Scenario): LCRConfig {
@@ -133,12 +126,13 @@ function scenarioConfig(s: Scenario): LCRConfig {
 
 // Re-run every scenario against the SAME sample (fast: ≤4 × 5k selections).
 function recompute(): void {
-  if (!sample.value.length || !scenarios.value.length) {
+  const sample = store.simulationSample;
+  if (!sample.length || !store.scenarios.length) {
     results.value = [];
     return;
   }
-  results.value = scenarios.value.map((s) => {
-    const records = selectLeanRecords(sample.value, dataByPrefix.value, scenarioConfig(s), namesById.value);
+  results.value = store.scenarios.map((s) => {
+    const records = selectLeanRecords(sample, dataByPrefix.value, scenarioConfig(s), namesById.value);
     return {
       id: s.id,
       sampleSize: records.length,
@@ -161,9 +155,9 @@ function newScenarioId(): string {
 
 function addScenario(): void {
   if (atScenarioCap.value || !availableStrategies.value.length) return;
-  scenarios.value.push({
+  store.addScenario({
     id: newScenarioId(),
-    name: `Scenario ${scenarios.value.length + 1}`,
+    name: `Scenario ${store.scenarios.length + 1}`,
     strategy: availableStrategies.value[0],
     markupType: 'percentage',
     markupValue: 0,
@@ -171,7 +165,7 @@ function addScenario(): void {
 }
 
 function removeScenario(id: string): void {
-  scenarios.value = scenarios.value.filter((s) => s.id !== id);
+  store.removeScenario(id);
 }
 
 function reroll(): void {
@@ -222,8 +216,11 @@ async function loadData(): Promise<void> {
     universe.value = Array.from(map.keys());
     totalPrefixes.value = universe.value.length;
     singleSourced.value = singleSourcedCount(universe.value, map, allProviderIds.value);
-    drawSample();
-    if (scenarios.value.length === 0) addScenario();
+    // Reuse persisted inputs when returning to the tab: only draw a fresh sample
+    // / seed the first scenario on first visit (store empty). recompute() then
+    // re-derives results from the reused sample + scenarios — same comparison.
+    if (store.simulationSample.length === 0) drawSample();
+    if (store.scenarios.length === 0) addScenario();
     recompute();
   } catch (e) {
     loadError.value = (e as Error).message || 'Failed to load provider data.';
@@ -233,13 +230,13 @@ async function loadData(): Promise<void> {
 }
 
 // Recompute on any scenario edit (add/remove/strategy/markup) or a fresh sample.
-watch(scenarios, recompute, { deep: true });
-watch(sample, recompute);
+watch(() => store.scenarios, recompute, { deep: true });
+watch(() => store.simulationSample, recompute);
 
 // If a scenario's strategy stops being available (decks changed), snap to the first valid one.
 watch(availableStrategies, (strategies) => {
   if (!strategies.length) return;
-  for (const s of scenarios.value) {
+  for (const s of store.scenarios) {
     if (!strategies.includes(s.strategy)) s.strategy = strategies[0];
   }
 });
@@ -302,7 +299,7 @@ onMounted(loadData);
             <div>
               <p class="text-[10px] uppercase tracking-wider text-zinc-500">Simulation sample</p>
               <p class="font-secondary text-2xl font-semibold text-white">
-                {{ sample.length.toLocaleString() }}
+                {{ store.simulationSample.length.toLocaleString() }}
               </p>
               <p class="text-xs text-zinc-500">
                 {{ isFullUniverse ? 'full universe · no sampling' : 'prefixes · shared across scenarios' }}
@@ -350,7 +347,7 @@ onMounted(loadData);
       <!-- Scenario cards (side-by-side compare) -->
       <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
         <div
-          v-for="(s, i) in scenarios"
+          v-for="(s, i) in store.scenarios"
           :key="s.id"
           class="flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
         >
@@ -509,7 +506,7 @@ onMounted(loadData);
         >
           <PlusIcon class="h-6 w-6" />
           <span class="text-sm font-medium">Add scenario</span>
-          <span class="text-xs text-zinc-500">{{ scenarios.length }} / {{ MAX_SCENARIOS }}</span>
+          <span class="text-xs text-zinc-500">{{ store.scenarios.length }} / {{ MAX_SCENARIOS }}</span>
         </button>
       </div>
 
