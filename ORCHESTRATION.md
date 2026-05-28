@@ -192,8 +192,10 @@ masthead/dashboard/rate-gen-studio/legal/admin reskins + fixes. ⚠️ PROD stil
 pending; next deploy ships studio + reskin together). **Auth screens ✅ reskinned on branch `feat/switchboard-auth`
 (off `main` @ `a919455`, tip `26433d0`) — NOT merged, awaiting owner gut-check** (LoginPage/SignUpPage/SignInForm/
 SignUpForm → VoipLogo mark, mono headings, tokenized inputs, theme-aware; verified dark+light, regression GREEN;
-better-auth flows untouched). **Remaining Switchboard work: `AppMobileNav` + the App.vue shell / SideNav-width
-(80px vs `md:ml-[64px]`) + deferred ticker placement.** New branches go off `a919455`, NOT the old pass2 tip.
+better-auth flows untouched). **Remaining Switchboard work: (1) `USExportOptionsModal.vue` — LIVE (opens from Pricing Studio export via
+`USRateSheetTable`) but MISSED in Pass-1, still ~10 emerald spots incl. `accent-emerald-400` checkboxes;
+(2) `AppMobileNav` (small — ~3 legacy spots); (3) App.vue shell / SideNav-width (80px collapsed vs content
+`md:ml-[64px]`) + deferred ticker placement.** New branches go off `a919455`, NOT the old pass2 tip.
 History below is pre-merge (kept for reference).
 
 **Pass-1 is DONE and MERGED to `main` @ `43cc3cd`** (foundation + shared + 4 views + Explorer body; owner
