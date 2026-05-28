@@ -39,6 +39,10 @@ A fixed random subset of the uploaded NPANXX universe (the union of all provider
 The full, committed output of running one chosen scenario's LCR selection over **every** uploaded prefix. Held **in memory for the current session only** (not persisted) — cheap to regenerate, so it clears on reload. Multiple generated rate decks can coexist (e.g. one per chosen strategy); exportable as a Final Rate Deck CSV, a Route Distribution CSV, and a Build Summary PDF. Distinct from a **Scenario**, which is only ever simulated against a sample.
 _Avoid_: "deck" alone when a provider deck is meant — say **provider deck** vs **generated rate deck**.
 
+### Rate deck hand-off
+The act (and the unit) of moving a US rate table from one module into another — Composition Studio, Adjuster (Pricing Studio), or Analyzer (comparison). The portable unit is reduced to its common denominator: **NPANXX-keyed interstate / intrastate / indeterminate rates** (`npa`/`nxx`/`stateCode` re-derived from the LERG on landing). It is a **snapshot of effective rates at the moment of transfer**, decoupled from the source — if the source is later regenerated or re-adjusted, the landed copy is stale and does **not** auto-update.
+The rates carried are **materialized**: any LCR strategy, global/fixed markup, or per-state/metro adjustment is already baked into the numbers, so no re-appliable markup/strategy/rule metadata travels — only the resulting rates. (Consequence: a deck generated with markup lands already marked-up.)
+
 ### Total prefixes
 The union of all selected provider decks' prefixes — the universe a generated deck prices. The denominator for the studio's coverage figures. There is no larger reference set (the LERG is NPA-level; the app cannot enumerate all valid NPANXX), so a generated deck covers this universe by definition — hence there is no "uncovered" figure.
 

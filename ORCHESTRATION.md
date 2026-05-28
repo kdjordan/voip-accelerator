@@ -72,20 +72,39 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-**✅ ALL TRACKS COMPLETE + DEPLOYED (2026-05-28) — board idle, ready for the next feature.**
-The Rate Composition Studio + the full sitewide Switchboard reskin (Pass 1 + Pass 2 + auth/mobile/App-shell)
-+ favicon + tabbed hero/Compose + the deep-link / invalid-rows / LERG-on-boot fixes are ALL on `main` and
-LIVE in prod. **Authoritative current main/prod state = auto-memory `MEMORY.md` (the START-HERE line):
-`origin/main` = `fb810da` (new og-image, 1 ahead of prod), PROD = `a645c97` (tagged `prod-2026-05-28`).**
+**🟢 ACTIVE FEATURE: Cross-module rate deck hand-off** (2026-05-28). Scope LOCKED + documented:
+glossary term **Rate deck hand-off** in `CONTEXT.md`; decision in **`docs/adr/0009-cross-module-rate-deck-handoff.md`**.
+Push a deck from one US module into another as a decoupled, materialized snapshot. v1 edges: (1) Composition
+Studio generated deck → Adjuster, (2) Adjuster current sheet → Analyzer, (3) Composition Studio generated deck
+→ Analyzer. Push + auto-navigate. Lossy (rates only, no re-appliable markup metadata). Bypasses upload/mapping
+UI. Adjuster overwrites its 1 sheet (confirm); Analyzer fills 1 of 2 slots. Edges 4/5 (re-inject as provider
+deck) + Analyzer-as-source DEFERRED.
+**Authoritative main/prod state = auto-memory `MEMORY.md`:** `origin/main` = `fb810da` (1 ahead of prod),
+PROD = `a645c97` (tagged `prod-2026-05-28`). Base for all hand-off branches = `main` @ `625ae56`.
 
-- **Conductor:** idle on `main`. No active tasks, no worktrees, no feature branches. Repo clean.
-- **NEXT:** a new feature is being scoped in a FRESH conductor chat (the chat that carried the studio+reskin
-  arc is being retired). To scope it, that chat should read `MEMORY.md` + this file, then drive
-  `/grill-with-docs` (or `/grill-me`) like the studio kickoff did.
+### Slices (order: 1 → (2 ∥ 3) → 4; each merges only after owner :5173 gut-check + regression-check green)
+- **Slice 1 — Hand-off foundation** *(🔵 IN PROGRESS — background sub-agent, worktree, test-first)*: `RateDeckHandoff`
+  payload type + pure builder utils (`buildHandoffFromGenerated` / `buildHandoffFromRateSheet`: strip leading `1`,
+  split npa/nxx, map rate field names) + carrier Pinia store (holds pending hand-off across auto-nav) + unit
+  tests. NO UI, NO LERG dep (stateCode derived at landing in Slice 2). Spine — merge first.
+- **Slice 2 — Adjuster destination** *(blocked on 1; ∥ with 3)*: direct-ingest `USRateSheetEntry[]`→Dexie
+  (bulkPut + store meta + default effectiveDate + stateCode via LERG `'N/A'` on miss + provenance), bypass
+  CSV/mapping; `USRateSheetView` consumes pending hand-off on mount → overwrite-confirm → existing progress UX.
+  Conductor-live at :5173 (chrome-devtools).
+- **Slice 3 — Analyzer destination** *(blocked on 1; ∥ with 2)*: direct-load `USStandardizedData[]` into a slot
+  (no upload) → fill empty or pick-which-to-replace when both full; `USView` consumes on mount; comparison runs
+  under existing `isFull`. Conductor-live.
+- **Slice 4 — Source "Send to…" triggers** *(blocked on 1; demoable once 2&3 land)*: generated-deck cards →
+  Send to Adjuster / Send to Analyzer; Adjuster → Send to Analyzer; build payload, stash in carrier, router.push.
+  Conductor-live.
+
+- **Conductor:** on `main`, Slice 1 sub-agent running in background. Feature is entirely client-side (no
+  server/API/installer/migration changes — ships via normal Vite build).
 - Proven mechanics to reuse: worktree per slice + **symlink node_modules** (skip `npm ci`/the install gate);
   sub-agents for clean chunks / cmux tab when the owner wants to steer live (esp. visual work);
   **`:5173`-only auth origin** (workers don't run dev on other ports); **`chrome-devtools` MCP** available
-  for visual verification; **push ≠ deploy** (manual Coolify); tag every deploy.
+  for visual verification; **push ≠ deploy** (manual Coolify); tag every deploy. Owner supplies local dev login
+  creds + loads sample decks (UStest.csv + TestDataLoader "3 Providers") for the Slice 2/3/4 gut-checks.
 
 --- (historical — Switchboard reskin Pass 1/2/3 execution log, kept for reference) ---
 - **Locked decisions (owner, 2026-05-28):** (1) **token bridge** — Tailwind color names point at CSS vars
