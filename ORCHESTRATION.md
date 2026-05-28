@@ -193,8 +193,13 @@ gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show
 (1) manual **Coolify deploy** — PROD still `8b696b7` (push ≠ deploy); (2) delete the merged
 `feat/switchboard-reskin` branch. **PASS-2 IN PROGRESS** on branch **`feat/switchboard-pass2`** (off `main`
 @ `73a65a3`; conductor commits per-surface live, merge after owner gut-check). Done: ✅ **`TheFooter` `e1eabf5`**
-(full-width flat editorial footer). Remaining Pass-2 surfaces (still legacy emerald, look rough — expected):
-`/rate-gen/us` Rate Composition Studio (biggest), dashboard, admin, auth, `AppMobileNav`, App.vue shell + the
+(full-width flat editorial footer); ✅ **standardized `PageMasthead` `020a885`** — NEW
+`components/shared/PageMasthead.vue` (ticker strip + RunningHead `SECTION N — TITLE` + mono h1 + subtitle +
+slots), applied to every route with owner-chosen numbering **I–V** (I Overview/Dashboard, II US NPANXX, III
+Repricing, IV Composition, V Admin-pending); **DashBoard fully de-greened** + USRateSheetView gained a live
+pricing-session ticker. Remaining Pass-2: **`/rate-gen/us` tab BODIES** (`RateGenFileUploads`/`RateGenSimulation`/
+`RateGenGeneratedDecks`, ~1700 lines, ~48 green spots — the biggest; shell+masthead done, bodies still emerald),
+**Admin** (`/admin` + user-mgmt comps, masthead V + reskin), auth pages, `AppMobileNav`, App.vue shell + the
 deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
 Reusable reskin facts: `rounded-*` already resolves to 0 globally (P1 config) + `font-secondary` auto-upgrades
 to Geist Mono, so a reskin is mostly color/surface/border token swaps; portal palette = warn(amber)=positive/
