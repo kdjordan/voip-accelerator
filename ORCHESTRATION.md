@@ -197,10 +197,23 @@ gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show
 `components/shared/PageMasthead.vue` (ticker strip + RunningHead `SECTION N — TITLE` + mono h1 + subtitle +
 slots), applied to every route with owner-chosen numbering **I–V** (I Overview/Dashboard, II US NPANXX, III
 Repricing, IV Composition, V Admin-pending); **DashBoard fully de-greened** + USRateSheetView gained a live
-pricing-session ticker. Remaining Pass-2: **`/rate-gen/us` tab BODIES** (`RateGenFileUploads`/`RateGenSimulation`/
-`RateGenGeneratedDecks`, ~1700 lines, ~48 green spots — the biggest; shell+masthead done, bodies still emerald),
-**Admin** (`/admin` + user-mgmt comps, masthead V + reskin), auth pages, `AppMobileNav`, App.vue shell + the
-deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+pricing-session ticker. ✅ **Rate Composition Studio tab BODIES `1e711d9`** — `RateGenFileUploads` /
+`RateGenSimulation` / `RateGenGeneratedDecks` retoken'd (visual-only). **Owner decision: provider identity =
+mono/single-accent** — dropped the 5-colour rainbow (AVATAR_STYLES + simulation PALETTE): avatars are numbered
+mono slabs, win-rate bars use one `bg-accent` fill (theme-aware). Section/scenario badges + active mode toggle
++ drag-active + focus rings + primary actions = accent; "uploaded" counter = warn; remove/error = down.
+Verified in chrome-devtools both themes with 3 loaded test providers + a generated deck; regression-check GREEN.
+**NOT-MERGED yet (awaits owner gut-check).** Remaining Pass-2: **Admin** (`/admin` + user-mgmt comps, masthead V
++ reskin), auth pages (login/signup — BoltIcon still emerald), `AppMobileNav`, App.vue shell + the deferred
+ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+**Two known-out-of-scope items seen during rate-gen verify (NOT fixed):** (a) `TestDataLoader.vue` still uses
+yellow/gray literals — dev-only (`?testMode=true` / `VITE_ENABLE_TEST_DATA`), never ships to prod; (b) a
+pre-existing Vue dev warning — `variant="destructive"` passed to the reskinned `ConfirmationModal` (now a
+teleport root) in `RateGenFileUploads`; benign, predates this reskin (that block untouched).
+**Verify tip:** to reach populated rate-gen states, SPA-nav with the router (`#app.__vue_app__.config.
+globalProperties.$router.push('/rate-gen/us?testMode=true')`) AFTER the dashboard mounts LERG — a full reload to
+that URL bounces to /dashboard (guard runs before LERG loads). Then the dev TestDataLoader's "3 Providers" button
+populates everything in-memory.
 Reusable reskin facts: `rounded-*` already resolves to 0 globally (P1 config) + `font-secondary` auto-upgrades
 to Geist Mono, so a reskin is mostly color/surface/border token swaps; portal palette = warn(amber)=positive/
 Sell/done, accent(red)=negative/Buy/active, info(blue)=frozen/locked, down=destructive, NO green/violet.
