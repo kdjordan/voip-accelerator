@@ -72,13 +72,41 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-- **Conductor:** sits on `main` @ `8b696b7`.
-- **Last prod deploy:** `8b696b7` (2026-05-27).
-- **Active tasks:** none in flight.
+- **Conductor:** sits on `feat/rate-gen-studio` @ `a468719` (integration branch for the Rate Composition
+  Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
+  stays pristine at `a4d137d` until the whole studio is done + gut-checked).
+- **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
+- **Active tasks:** none. **ALL 7 SLICES (A–G) MERGED — studio + both refinements COMPLETE on `feat/rate-gen-studio` @ `0a4d577`.** Final regression-check GREEN + **132 unit tests**. Dev server running on :5173 (integration branch) for owner gut-check.
+- **Pre-merge follow-ups:** G ✅ merged (scenarios+sample persist across tab nav). F ✅ merged (depth + Position/Average mode; LCR position retained; available w/ 2 decks; per-prefix fallback; blend=set-of-contributors → Route CSV joined names + "participation" chart). **OPTIONAL, owner's call (not blocking):** G2 = "Tweak & re-run" recall on Decks tab (deck metadata now carries depth+mode, so the recipe is available); a known-answer TestDataLoader fixture for hand-verifying decks in the UI.
+- **NEXT (owner-gated):** full end-to-end gut-check on :5173 (incl. new Average mode + scenario persistence) → merge `feat/rate-gen-studio` → `main` → manual Coolify deploy → Switchboard reskin.
+- **🎉 ALL 5 FUNCTIONAL SLICES DONE — studio functionally COMPLETE on `feat/rate-gen-studio` @ `daf979c`** (dev server running on :5173 for owner gut-check). Final regression-check GREEN + 110 unit tests.
 
-  | task | branch | worktree | mode | status |
-  |------|--------|----------|------|--------|
-  | _(none)_ | | | | |
+  | wave | slice | status |
+  |------|-------|--------|
+  | 1 | A — upload validation | ✅ merged |
+  | 1 | B — engine core (in-mem `selectLeanRecords`, no IDB persist, aggregates) | ✅ merged |
+  | 2 | C — 3-tab shell | ✅ merged |
+  | 3 | D — Simulation Preview sandbox (cmux, owner gut-checked) | ✅ merged |
+  | 3 | E — Generated Decks tab + Final/Route CSV + Build Summary PDF; retired 7 legacy comps (+ orphaned RateGenConfiguration) | ✅ merged |
 
-- **In progress elsewhere:** rate-gen rework continues on `feat/rate-gen-studio` (see `rate-gen-rework`
-  memory) — owner-driven, step-wise.
+- **NEXT (owner):** FULL end-to-end gut-check of the whole studio on `feat/rate-gen-studio` (run dev in the MAIN dir on :5173 — it's the complete studio). Flow: upload ≥2 decks → Simulation Preview (build/compare scenarios) → commit → Generated Decks (summary/preview/rename/delete) → download all 3 outputs. **THEN** (owner OK each): merge `feat/rate-gen-studio` → `main`, then manual Coolify deploy, then the **Switchboard reskin** track.
+- **Cleanup pending:** D's worktree `../va-wt-rg-sandbox` (+ branch `feat/rg-sandbox`) still present — cmux dev server (pid 12863) holds :5173. Remove once owner closes that tab. Dev-auth origin is `localhost:5173` ONLY.
+- **Known non-blocking:** `RateGenGeneratedDecks.vue` has the same pre-existing `lergStore.getNPAInfo(...)` Pinia-getter TS typing error as `USExport*`/`USRateSheetTable` — typecheck is non-blocking, build passes.
+
+  | wave | task | status |
+  |------|------|--------|
+  | 1 | A — upload validation (reject inter/intra ≤0) | ✅ merged |
+  | 1 | B — engine core (pure in-mem `selectLeanRecords`, drop IDB persist, `rate-gen-aggregates.ts`) | ✅ merged |
+  | 2 | C — `RateGenUSView` → 3 free-nav tabs (`activeTab` ref; Upload wired, Sim/Decks placeholders; effective-date ref + How-LCR `<details>` on Sim tab; strategy/markup + RateGenResults/RateGenConfiguration UNWIRED, files intact) | ✅ merged |
+  | 3 | D — Simulation Preview sandbox (sample, scenarios ≤4, compare, commit) | ⬜ READY (C done) |
+  | 3 | E — Generated Decks tab + 3 outputs (Final CSV dialog, Route CSV, Summary PDF) | ⬜ READY (B done) |
+
+- **Wave-3 mode decision pending owner:** run **D** as a live cmux tab (steer sandbox UX) or bg sub-agent? E = bg sub-agent. D & E both edit `RateGenUSView` (tab bodies) → if parallel, watch for conflict; safer to run D then E, or split cleanly (D owns Sim tab body, E owns Decks tab body).
+- **Hooks for D/E:** sandbox runs `selectLeanRecords(sample, …)`; Decks read `service.getGeneratedRecords(deckId)`; aggregates in `utils/rate-gen-aggregates.ts`; effective-date ref already on the Sim tab. Orphan to retire in D/E: `RateGenHeader.vue` (now unused).
+
+- **⚠️ Interim state after Wave 1:** generation now holds rates IN MEMORY only (`service.getGeneratedRecords(deckId)`) and no longer writes IndexedDB. The LEGACY `RateGenResults` + `RateGenExportModal` still read the now-unwritten IDB tables → they show/export EMPTY at runtime. **Expected** — those are retired/replaced in slices D/E. Don't gut-check generation output until D/E land. Slice E reads from `getGeneratedRecords(deckId)`.
+
+- **Waves:** 1 = A+B (running). 2 = C (tab shell). 3 = D (sandbox) + E (decks/outputs). Visual reskin
+  (Switchboard) deferred until functionality baked — separate track/chat.
+- **Merge note:** A & B touch the SAME file (`rate-gen.service.ts`) in different regions — merge A first,
+  then B, watch for a small conflict.

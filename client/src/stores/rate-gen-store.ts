@@ -5,7 +5,8 @@ import type {
   GeneratedRateDeck,
   RateGenComponentId,
   InvalidRateGenRow,
-  RateGenRecord
+  RateGenRecord,
+  Scenario
 } from '@/types/domains/rate-gen-types';
 
 export const useRateGenStore = defineStore('rateGen', {
@@ -29,7 +30,12 @@ export const useRateGenStore = defineStore('rateGen', {
     // Data management
     tempFiles: {} as Record<string, File>,
     invalidRows: {} as Record<string, InvalidRateGenRow[]>,
-    
+
+    // Simulation sandbox inputs (ADR-0008) — persisted so they survive leaving
+    // and returning to the Simulation Preview tab (which unmounts the component).
+    scenarios: [] as Scenario[],
+    simulationSample: [] as string[], // drawn sample of prefixes, shared across scenarios
+
     // UI states
     showUploadComponents: true,
     errors: [] as string[],
@@ -75,18 +81,9 @@ export const useRateGenStore = defineStore('rateGen', {
     },
     
     
-    // Configuration getters
-    availableLCRStrategies: (state) => {
-      const count = Object.keys(state.providers).length;
-      const strategies = [];
-      
-      if (count >= 2) strategies.push('LCR1');
-      if (count >= 2) strategies.push('LCR2'); 
-      if (count >= 3) strategies.push('LCR3');
-      if (count >= 3) strategies.push('Average');
-      
-      return strategies;
-    },
+    // Max selection depth = number of uploaded provider decks (2 decks → depths {1,2}).
+    // Per-prefix fallback handles prefixes quoted by fewer providers than the depth.
+    maxLcrDepth: (state): number => Object.keys(state.providers).length,
     
     // Generation getters
     isProcessing: (state): boolean =>
@@ -177,8 +174,37 @@ export const useRateGenStore = defineStore('rateGen', {
     clearInvalidRowsForProvider(providerId: string) {
       delete this.invalidRows[providerId];
     },
-    
-    
+
+
+    // Simulation sandbox actions (scenario inputs + shared sample)
+    addScenario(scenario: Scenario) {
+      this.scenarios.push(scenario);
+    },
+
+    updateScenario(id: string, patch: Partial<Scenario>) {
+      const idx = this.scenarios.findIndex(s => s.id === id);
+      if (idx === -1) return;
+      this.scenarios[idx] = { ...this.scenarios[idx], ...patch };
+    },
+
+    removeScenario(id: string) {
+      this.scenarios = this.scenarios.filter(s => s.id !== id);
+    },
+
+    setScenarios(scenarios: Scenario[]) {
+      this.scenarios = scenarios;
+    },
+
+    setSimulationSample(sample: string[]) {
+      this.simulationSample = sample;
+    },
+
+    clearSimulation() {
+      this.scenarios = [];
+      this.simulationSample = [];
+    },
+
+
     // Configuration actions
     setConfig(config: LCRConfig) {
       this.currentConfig = config;
