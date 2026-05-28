@@ -78,7 +78,7 @@ system; business logic stays 100% intact). Source of truth: repo-root `VoIP Acce
 `switchboard-reskin`. Geist Mono headlines + Inter body, arterial-red accent (NO emerald), radius 0,
 ticker bar, editorial running heads, light+dark peer themes.
 
-- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `df0640b` (integration branch, off
+- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `c8e8204` (integration branch, off
   `main` @ `6cbb28d`). `main` is UNTOUCHED/clean and stays that way until the whole Pass-1 reskin passes owner
   gut-check; then ONE merge integration→`main` with owner OK. **`main` = `origin/main` = `6cbb28d`;
   PROD = `8b696b7`** (push ≠ deploy; owner deploys via Coolify manually). NEVER merge to main / push /
@@ -139,12 +139,22 @@ ticker bar, editorial running heads, light+dark peer themes.
   - **V1 `HomeView`** (landing, forced light) — ✅ DONE + committed `df0640b`; regression-check GREEN;
     visually verified in chrome-devtools (ticker / running heads / dropcaps / accent rails; forced light via
     a `data-theme="light"` wrapper div). Screenshot carousel + shared `TheFooter` (deferred) preserved.
-  - **V2 `UsView` + `USInsights`** (portal analyzer; → `ui_kits/portal/page.jsx`) — **NEXT.** Coupled
-    children also need reskinning: `USContentHeader` (tabs), `USOpportunityTable` (`accent` prop
-    emerald/violet → amber/red), `USFileUploads` + the stepper (upload state), `USCodeSummary`,
-    `USPricingReport`. Portal palette: `warn` (amber)=Sell/positive, `accent` (red)=Buy/negative, NO
-    green/violet; chart fills are hardcoded hex (`#34d399`/`#a78bfa`) → retoken to amber/red.
-  - **V3 `USRateSheetView`** (pricing studio body) — after V2.
+  - **V2 `UsView` + `USInsights`** (portal analyzer) — ✅ DONE + committed `c8e8204`; regression-check
+    GREEN (build + integration; TS debt non-blocking). Coupled children all reskinned: `USContentHeader`
+    (tab bar), `USOpportunityTable` (`accent` prop emerald/violet → warn/accent), `USFileUploads` +
+    stepper (emerald Deck A / violet Deck B DROPPED → symmetric neutral dropzones, accent browse/drag,
+    warn "uploaded", down "remove"), `USCodeSummary` (surfaces/borders/inputs/country tags), `USPricingReport`
+    fallback. UsView gained portal `TheTicker` (live session KPIs, quiet pre-comparison) + `RunningHead` +
+    kit 3-col stepper. USInsights: connected KPI slab grid (sign-based warn/accent tones), **coverage donut
+    DROPPED**, distribution `Bar` chart fills `#34d399`/`#a78bfa` → theme-aware CSS-var reads (`--warn`/
+    `--accent`/`--border`/`--text-faint`, recompute on theme flip). **Verified in chrome-devtools: UPLOAD
+    state, dark + light, zero console errors.** ⚠️ Insights + Explorer **data-populated** states need
+    UPLOADED DECKS + LERG → **OWNER gut-check pending** (conductor can't populate without test decks).
+  - ⚠️ **Explorer body NOT yet reskinned** (out of V2's named scope): `USPricingReport` → `USDetailedComparisonTable.vue`
+    (1690 lines) renders the granular Explorer grid + filter rail and is still emerald/zinc (legacy literals
+    don't auto-retheme). The Explorer **tab** will read half-old until this lands. Recommend a **V2b** slice
+    (or fold into V3) — flagged to owner.
+  - **V3 `USRateSheetView`** (pricing studio body) — after V2; consider bundling `USDetailedComparisonTable` here.
   - **VERIFY (portal):** views are AUTH-GATED (`/usview` → `/login?redirect=/usview`). chrome-devtools is a
     FRESH browser session — the conductor must LOG IN (owner supplies local dev creds). Dev server must be
     running on :5173 in the conductor's main dir (`npm --prefix client run dev`); API :3000 confirmed up.
@@ -165,8 +175,9 @@ ticker bar, editorial running heads, light+dark peer themes.
   .dropcap/.slab-rule{,-2,-3}/.brand-chip`.
 
 ### Resume (if conductor tab dies / new chat)
-Confirm main dir on `feat/switchboard-reskin` @ `df0640b`; `git log --oneline -3`; read this board; continue
-from the ACTIVE slice (**V2 next**). For P3 the conductor edits views directly in the main dir (no worktrees)
+Confirm main dir on `feat/switchboard-reskin` @ `c8e8204`; `git log --oneline -3`; read this board; continue
+from the ACTIVE slice (**V2b `USDetailedComparisonTable` (Explorer body) or V3 `USRateSheetView` next**). For
+P3 the conductor edits views directly in the main dir (no worktrees)
 and verifies via chrome-devtools at :5173. Ensure the dev server is up (`npm --prefix client run dev`); API
 on :3000. Portal views need login — get local dev creds from the owner and log into the chrome-devtools
 browser. Dev-auth origin is `localhost:5173` ONLY. **Owner is moving to a fresh YOLO-mode chat** (auto-accept
