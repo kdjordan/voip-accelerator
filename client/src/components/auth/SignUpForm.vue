@@ -2,7 +2,7 @@
   <!-- Account Creation Form -->
   <form class="space-y-6" @submit.prevent="handleSignUp">
     <div>
-      <label for="email" class="block text-sm font-medium leading-6 text-zinc-300"
+      <label for="email" class="block text-sm font-medium leading-6 text-fg-dim"
         >Email address</label
       >
       <div class="mt-2">
@@ -13,14 +13,14 @@
           type="email"
           autocomplete="email"
           required
-          class="block w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white placeholder-zinc-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 sm:text-sm"
+          class="block w-full rounded-lg border border-line bg-input px-3 py-2 text-fg placeholder-fg-mute shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent sm:text-sm"
           @input="clearMessages"
         />
       </div>
     </div>
 
     <div>
-      <label for="password" class="block text-sm font-medium leading-6 text-zinc-300"
+      <label for="password" class="block text-sm font-medium leading-6 text-fg-dim"
         >Password</label
       >
       <div class="mt-2">
@@ -31,14 +31,14 @@
           type="password"
           autocomplete="new-password"
           required
-          class="block w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white placeholder-zinc-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 sm:text-sm"
+          class="block w-full rounded-lg border border-line bg-input px-3 py-2 text-fg placeholder-fg-mute shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent sm:text-sm"
           @input="clearMessages"
         />
       </div>
     </div>
 
     <div>
-      <label for="confirm-password" class="block text-sm font-medium leading-6 text-zinc-300"
+      <label for="confirm-password" class="block text-sm font-medium leading-6 text-fg-dim"
         >Confirm Password</label
       >
       <div class="mt-2">
@@ -49,7 +49,7 @@
           type="password"
           autocomplete="new-password"
           required
-          class="block w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white placeholder-zinc-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 sm:text-sm"
+          class="block w-full rounded-lg border border-line bg-input px-3 py-2 text-fg placeholder-fg-mute shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent sm:text-sm"
           @input="clearMessages"
         />
       </div>
@@ -57,7 +57,7 @@
 
     <div
       v-if="errorMessage"
-      class="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-300"
+      class="mt-4 rounded-lg border border-down bg-down-soft p-3 text-sm text-down"
     >
       {{ errorMessage }}
     </div>
