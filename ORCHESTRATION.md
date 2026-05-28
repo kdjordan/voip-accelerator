@@ -76,7 +76,9 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** none. **🎉 ALL 5 FUNCTIONAL SLICES DONE — studio functionally COMPLETE on `feat/rate-gen-studio` @ `daf979c`.** Final regression-check GREEN + 110 unit tests.
+- **Active tasks:** **G running** (`feat/rg-scenario-store`, worktree `../va-wt-rg-scenario-store`, **cmux tab — owner-dispatched**) — persist sandbox scenarios + sample in the store so they survive tab nav (fixes "scenarios reset when you leave Simulation Preview"). Worker does NOT run dev server (owner's :5173 is up; auth breaks on other ports).
+- **Pre-merge follow-ups (owner-requested, before `main` merge):** G (scenario persistence — running). **G2** = "Tweak & re-run" recall on Generated Decks tab (load a deck's recipe back as a scenario — depends on G). **F (PARKED)** = "Average" selection semantics — owner deciding between (1) mean-of-all-providers [current], (2) mean-of-top-N where N=LCR depth [modifier], (3) other; + whether Average should be offered with 2 providers (currently ≥3 only).
+- **🎉 ALL 5 FUNCTIONAL SLICES DONE — studio functionally COMPLETE on `feat/rate-gen-studio` @ `daf979c`** (dev server running on :5173 for owner gut-check). Final regression-check GREEN + 110 unit tests.
 
   | wave | slice | status |
   |------|-------|--------|
