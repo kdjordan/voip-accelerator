@@ -1,93 +1,32 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
-import { RateGenService } from '@/services/rate-gen.service';
 
 // Components
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
-import RateGenConfiguration from '@/components/rate-gen/RateGenConfiguration.vue';
-import RateGenResults from '@/components/rate-gen/RateGenResults.vue';
-import BaseButton from '@/components/shared/BaseButton.vue';
+import ReportTabButton from '@/components/shared/ReportsTabButton.vue';
 
 const store = useRateGenStore();
-const service = new RateGenService();
 
-// State
-const activeTab = ref<'upload' | 'settings' | 'results'>('upload');
-const showExportModal = ref(false);
+type StudioTab = 'upload' | 'simulation' | 'decks';
+const TABS: { value: StudioTab; label: string }[] = [
+  { value: 'upload', label: 'Upload' },
+  { value: 'simulation', label: 'Simulation Preview' },
+  { value: 'decks', label: 'Generated Decks' },
+];
 
-// Computed
-const canGenerate = computed(() =>
-  store.providerList.length >= 2 &&
-  store.currentConfig !== null &&
-  !store.isProcessing
-);
+// Free-navigation tab state — any tab is clickable at any time.
+const activeTab = ref<StudioTab>('upload');
 
-// Methods
-const handleGenerateRates = async () => {
-  if (!store.currentConfig) return;
-
-  try {
-    await service.generateRateDeck(store.currentConfig);
-
-    const successMessage = `Successfully generated ${store.generatedDeck?.rowCount.toLocaleString()} rates using ${store.generatedDeck?.lcrStrategy} strategy`;
-    console.log('[RateGenUSView]', successMessage);
-
-    activeTab.value = 'results';
-  } catch (error) {
-    console.error('[RateGenUSView] Generation failed:', error);
-  }
+// Global effective date for the generated decks. Lives here so the future
+// Simulation Preview sandbox (slice D) can read/lift it. Default: today + 7 days.
+const getDefaultEffectiveDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().split('T')[0];
 };
-
-const handleExport = async (format: 'csv' | 'excel') => {
-  if (!store.generatedDeck) return;
-
-  try {
-    const blob = await service.exportRateDeck(store.generatedDeck.id, format);
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rate-deck-${store.generatedDeck.lcrStrategy}-${Date.now()}.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showExportModal.value = false;
-  } catch (error) {
-    store.addError(`Failed to export: ${(error as Error).message}`);
-  }
-};
-
-// Lifecycle
-onMounted(async () => {
-  console.log('[RateGenUSView] Component mounted');
-
-  try {
-    const existingDecks = await service.getAllDecks();
-    if (existingDecks.length > 0) {
-      store.setGeneratedDecks(existingDecks.map(d => ({
-        id: d.id,
-        name: d.name,
-        lcrStrategy: d.strategy,
-        markupPercentage: d.markupType === 'percentage' ? d.markupValue : 0,
-        markupFixed: d.markupType === 'fixed' ? d.markupValue : 0,
-        providerIds: [],
-        generatedDate: new Date(d.generatedAt),
-        effectiveDate: d.effectiveDate ? new Date(d.effectiveDate) : undefined,
-        rowCount: d.rowCount
-      })));
-      console.log(`[RateGenUSView] Loaded ${existingDecks.length} existing decks`);
-    }
-  } catch (error) {
-    console.error('[RateGenUSView] Failed to load existing decks:', error);
-  }
-});
-
-onUnmounted(() => {
-  console.log('[RateGenUSView] Component unmounted');
-});
+const effectiveDate = ref(getDefaultEffectiveDate());
+const minDate = new Date().toISOString().split('T')[0];
 </script>
 
 <template>
@@ -95,56 +34,100 @@ onUnmounted(() => {
   <div class="flex flex-col w-full bg-ink text-zinc-300">
     <!-- Page Title -->
     <div class="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
-      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-white" role="heading" aria-level="1">Rate Composition Studio</h1>
+      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-white" role="heading" aria-level="1">
+        Rate Composition Studio
+      </h1>
     </div>
 
-    <!-- Step Content - Full Width -->
+    <!-- Tab Navigation -->
+    <div class="px-4 sm:px-6 lg:px-8 pt-4">
+      <div class="flex items-center border-b border-white/10">
+        <ReportTabButton
+          v-for="tab in TABS"
+          :key="tab.value"
+          :label="tab.label"
+          :is-active="activeTab === tab.value"
+          @click="activeTab = tab.value"
+        />
+      </div>
+    </div>
+
+    <!-- Tab Content -->
     <div class="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1">
-      <!-- Upload — bare on the ink canvas; cards are self-contained -->
+      <!-- Upload -->
       <div v-if="activeTab === 'upload'" class="pt-6">
         <RateGenFileUploads />
+      </div>
 
-        <div v-if="store.providerCount >= 2" class="mt-6 flex justify-end">
-          <BaseButton variant="primary" @click="activeTab = 'settings'">
-            Continue to Configuration
-          </BaseButton>
+      <!-- Simulation Preview (placeholder body + global options) -->
+      <div v-else-if="activeTab === 'simulation'" class="pt-6 space-y-6">
+        <!-- Placeholder -->
+        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center">
+          <h2 class="text-lg font-semibold text-white">Scenario sandbox — coming next</h2>
+          <p class="mt-2 text-sm text-zinc-400">
+            Build and compare scenarios against a sample of your uploaded prefixes here.
+          </p>
+        </div>
+
+        <!-- Global options -->
+        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 space-y-4">
+          <!-- Effective Date -->
+          <div>
+            <label for="effective-date" class="mb-2 block text-sm font-medium text-zinc-300">
+              Effective Date
+            </label>
+            <input
+              id="effective-date"
+              v-model="effectiveDate"
+              type="date"
+              :min="minDate"
+              class="w-full max-w-xs rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 [color-scheme:dark]"
+            />
+            <p class="mt-1.5 text-xs text-zinc-500">Applies to every generated rate deck.</p>
+          </div>
+
+          <!-- How LCR Works (expandable disclosure — no native dialog) -->
+          <details class="rounded-lg border border-white/[0.07] bg-white/[0.02]">
+            <summary
+              class="cursor-pointer select-none px-3 py-2 text-sm font-medium text-emerald-300 hover:text-emerald-200"
+            >
+              How LCR works
+            </summary>
+            <div class="border-t border-white/[0.07] px-3 py-3 text-sm leading-relaxed text-zinc-400 space-y-2">
+              <p>
+                LCR (Least Cost Routing) picks a rate per prefix by ranking your selected provider
+                decks from lowest to highest and choosing one by depth:
+              </p>
+              <ul class="list-disc list-inside space-y-1 pl-1">
+                <li><span class="text-zinc-300">LCR 1</span> — the lowest-cost route.</li>
+                <li><span class="text-zinc-300">LCR 2</span> — the 2nd lowest, and so on.</li>
+                <li><span class="text-zinc-300">Average</span> — the mean of all selected rates.</li>
+              </ul>
+              <p>
+                Interstate, intrastate, and indeterminate rates are selected independently, so the
+                winning provider can differ by jurisdiction within a single prefix.
+              </p>
+            </div>
+          </details>
         </div>
       </div>
 
-      <!-- Configuration — bare on the ink canvas (component owns its sections) -->
-      <div v-else-if="activeTab === 'settings'" class="pt-6">
-        <button
-          type="button"
-          class="mb-4 inline-flex items-center gap-1 rounded text-sm text-zinc-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
-          @click="activeTab = 'upload'"
-        >
-          ← Back to uploads
-        </button>
-
-        <RateGenConfiguration @generate-rates="handleGenerateRates" />
-      </div>
-
-      <!-- Results keeps the legacy panel until its redesign slice -->
-      <div v-else class="bg-gray-800 rounded-lg p-4 sm:p-6">
-        <button
-          type="button"
-          class="mb-4 inline-flex items-center gap-1 rounded text-sm text-zinc-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
-          @click="activeTab = 'upload'"
-        >
-          ← Back to uploads
-        </button>
-
-        <h2 class="text-xl font-semibold text-fbWhite mb-6">Rate Generation History</h2>
-        <RateGenResults @generate-new="activeTab = 'settings'" />
+      <!-- Generated Decks (placeholder) -->
+      <div v-else class="pt-6">
+        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center">
+          <h2 class="text-lg font-semibold text-white">No generated decks yet</h2>
+          <p class="mt-2 text-sm text-zinc-400">Generated decks will appear here.</p>
+        </div>
       </div>
     </div>
 
-
     <!-- Error Display -->
     <div v-if="store.errors.length > 0" class="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
-      <div v-for="(error, index) in store.errors" :key="index"
-           class="bg-red-500/20 border border-red-500/30 text-red-400 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2
-                  flex items-center justify-between text-sm sm:text-base">
+      <div
+        v-for="(error, index) in store.errors"
+        :key="index"
+        class="bg-red-500/20 border border-red-500/30 text-red-400 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2 flex items-center justify-between text-sm sm:text-base"
+      >
         <span class="flex-1 mr-2">{{ error }}</span>
         <button
           @click="store.removeError(index)"
@@ -154,32 +137,6 @@ onUnmounted(() => {
         >
           ×
         </button>
-      </div>
-    </div>
-
-    <!-- Export Modal Placeholder -->
-    <div v-if="showExportModal && store.generatedDeck"
-         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-semibold text-fbWhite mb-4">Export Rate Deck</h3>
-
-        <div class="space-y-3">
-          <button
-            @click="handleExport('csv')"
-            class="w-full px-4 py-2 bg-accent text-fbBlack rounded-lg hover:bg-accent/80
-                   transition-colors font-medium"
-          >
-            Export as CSV
-          </button>
-
-          <button
-            @click="showExportModal = false"
-            class="w-full px-4 py-2 bg-gray-600 text-fbWhite rounded-lg hover:bg-gray-500
-                   transition-colors font-medium"
-          >
-            Cancel
-          </button>
-        </div>
       </div>
     </div>
   </div>
