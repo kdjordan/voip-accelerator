@@ -10,7 +10,7 @@ into a changelog.
 - Agents run in **cmux** (cmux.com) — a terminal app with a vertical tab per task (shows git branch /
   working dir / ports / notifications) and split panes. cmux is only the UI: it does **not** manage
   worktrees, git, or merging. That's the CONDUCTOR's job.
-- Dev/test commands, stack, and conventions: `.claude/CLAUDE.md`. Design system: `client/DESIGN.md`. Prod/deploy
+- Dev/test commands, stack, and conventions: `.claude/CLAUDE.md`. Design system: `DESIGN.md`. Prod/deploy
   state: auto-memory (`MEMORY.md`).
 
 ## Roles
@@ -35,7 +35,7 @@ this file, takes the role, and resumes from the Current State board.** Responsib
   logic). Report status.
 - **Do NOT:** merge, push, touch `main`, create/remove worktrees, edit this file, or run the dev server
   (ports collide across worktrees — verify via tests, not a live server).
-- Read `.claude/CLAUDE.md` + `client/DESIGN.md` before coding. Stay in scope — one task, one branch.
+- Read `.claude/CLAUDE.md` + `DESIGN.md` before coding. Stay in scope — one task, one branch.
 
 ### OWNER
 - States goals; pastes conductor-written prompts into cmux tabs (tab-mode workers); gut-checks at
@@ -54,7 +54,7 @@ this file, takes the role, and resumes from the Current State board.** Responsib
 
 ```
 You're a WORKER in this repo's multi-agent flow. First read ORCHESTRATION.md (your role),
-.claude/CLAUDE.md, and client/DESIGN.md.
+.claude/CLAUDE.md, and DESIGN.md.
 Worktree: cd <ABS PATH>    Branch: feat/<task>  (already created — don't create others)
 Task: <scoped, single-concern description>
 Rules: <visual-only | test-first>; no native alert/confirm/prompt (use shared modals); be surgical.
