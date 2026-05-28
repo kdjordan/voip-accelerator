@@ -695,6 +695,16 @@ export class RateGenService {
   }
 
   /**
+   * Read-only accessor for the Simulation sandbox: load provider uploads from
+   * IndexedDB and build the same `Map<prefix, RateGenRecord[]>` that
+   * generateRateDeck uses. The prefix universe is `Array.from(map.keys())`.
+   * Pass it to selectLeanRecords / singleSourcedCount; does not mutate state.
+   */
+  async getProviderDataByPrefix(): Promise<Map<string, RateGenRecord[]>> {
+    return this.loadProviderDataByPrefix();
+  }
+
+  /**
    * Lean records for a committed deck, held in memory for the session.
    * Returns undefined if the deck was never generated this session (e.g. after reload).
    */
