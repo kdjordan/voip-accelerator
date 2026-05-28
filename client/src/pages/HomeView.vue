@@ -90,44 +90,54 @@
         </div>
       </section>
 
-      <!-- Product shot — auto-crossfading screenshots in an editorial frame -->
+      <!-- Product shot — user-driven tabbed view in an editorial frame -->
       <SlabRule :size="2" />
       <section class="py-[22px]">
         <RunningHead
           :left-accent="false"
-          left="Fig. 1 — Insights view"
-          right="87.02% match · 194,281 opportunities surfaced"
+          :left="`Fig. 1 — ${heroTabs[activeTab].fig}`"
+          :right="heroTabs[activeTab].metric"
         />
-        <div class="border border-line-strong bg-surface">
+        <!-- Tab strip — mono uppercase, accent underline on active (no rounding) -->
+        <div
+          role="tablist"
+          aria-label="Product tour"
+          class="flex items-stretch overflow-x-auto border-b border-line-strong"
+        >
+          <button
+            v-for="(tab, i) in heroTabs"
+            :key="tab.key"
+            type="button"
+            role="tab"
+            :aria-selected="i === activeTab"
+            @click="activeTab = i"
+            class="relative -mb-px shrink-0 px-5 py-3 font-display text-xs font-semibold uppercase tracking-[0.12em] transition-colors focus:outline-none"
+            :class="i === activeTab ? 'text-accent' : 'text-fg-faint hover:text-fg'"
+          >
+            {{ tab.label }}
+            <span
+              v-if="i === activeTab"
+              class="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
+            />
+          </button>
+        </div>
+        <div class="border-x border-b border-line-strong bg-surface">
           <div class="relative aspect-[7/5] overflow-hidden sm:aspect-[16/11]">
             <img
-              v-for="(shot, i) in heroShots"
-              :key="i"
-              :src="shot.src"
-              :alt="shot.alt"
-              class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-1000 ease-in-out"
-              :class="i === activeShot ? 'opacity-100' : 'opacity-0'"
+              v-for="(tab, i) in heroTabs"
+              :key="tab.key"
+              :src="tab.src"
+              :alt="tab.alt"
+              class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-300 ease-in-out"
+              :class="i === activeTab ? 'opacity-100' : 'opacity-0'"
             />
           </div>
         </div>
-        <div class="mt-3 flex items-center justify-between">
-          <Transition name="caption-fade" mode="out-in">
-            <p :key="activeShot" class="m-0 font-sans text-[13px] text-fg-faint">
-              {{ heroShots[activeShot].caption }}
-            </p>
-          </Transition>
-          <div class="flex items-center gap-2">
-            <button
-              v-for="(shot, i) in heroShots"
-              :key="i"
-              type="button"
-              @click="selectShot(i)"
-              :aria-label="shot.alt"
-              class="h-1.5 transition-all"
-              :class="i === activeShot ? 'w-6 bg-accent' : 'w-1.5 bg-fg/20 hover:bg-fg/40'"
-            />
-          </div>
-        </div>
+        <Transition name="caption-fade" mode="out-in">
+          <p :key="activeTab" class="mt-3 m-0 font-sans text-[13px] text-fg-faint">
+            {{ heroTabs[activeTab].caption }}
+          </p>
+        </Transition>
       </section>
       <SlabRule :size="2" />
 
@@ -315,7 +325,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted, onBeforeUnmount, type Component } from 'vue';
+  import { ref, type Component } from 'vue';
   import { RouterLink } from 'vue-router';
   import {
     BoltIcon,
@@ -364,45 +374,37 @@
     { sym: 'ROWS', value: '223,267', dir: 'up' },
   ];
 
-  // --- Hero screenshot carousel (auto-crossfade) ---
-  const heroShots = [
+  // --- Hero product tour — user-driven tabs (no auto-advance) ---
+  const heroTabs = [
     {
+      key: 'compare',
+      label: 'Compare',
       src: compareShot,
+      fig: 'Deck Analyzer',
+      metric: '87.02% match · 194,281 opportunities surfaced',
       alt: 'Comparing two US NPANXX rate decks — coverage match, margin deltas, and top buy/sell opportunities',
       caption: 'Drop in two decks — see where you win and where they beat you, in seconds.',
     },
     {
+      key: 'explore',
+      label: 'Explore',
       src: explorerShot,
+      fig: 'NPANXX Explorer',
+      metric: 'Per-code deltas · interstate · intrastate · indeterminate',
       alt: 'Per-NPANXX pricing comparison between two US rate decks — interstate, intrastate, and indeterminate deltas',
       caption: 'Drill to the exact NPANXX. Nothing stays buried.',
     },
     {
+      key: 'adjust',
+      label: 'Adjust',
       src: wizardShot,
+      fig: 'Pricing Studio',
+      metric: '223,267 rows repriced · effective-dated',
       alt: 'Pricing Studio repricing 223,267 US NPANXX rows by percentage with an effective date, in the browser',
       caption: 'Reprice with a scalpel — by code, NPA, state, or metro. Try that in Excel.',
     },
   ];
-  const activeShot = ref(0);
-  let shotTimer: ReturnType<typeof setInterval> | undefined;
-
-  function startShotRotation() {
-    if (heroShots.length < 2) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    shotTimer = setInterval(() => {
-      activeShot.value = (activeShot.value + 1) % heroShots.length;
-    }, 5000);
-  }
-
-  function selectShot(i: number) {
-    activeShot.value = i;
-    if (shotTimer) clearInterval(shotTimer);
-    startShotRotation();
-  }
-
-  onMounted(startShotRotation);
-  onBeforeUnmount(() => {
-    if (shotTimer) clearInterval(shotTimer);
-  });
+  const activeTab = ref(0);
 
   interface PanelItem {
     label: string;
@@ -515,7 +517,7 @@
 </script>
 
 <style scoped>
-  /* Caption crossfade — synced with the hero carousel. */
+  /* Caption crossfade — swaps with the active hero tab (click-driven). */
   .caption-fade-enter-active,
   .caption-fade-leave-active {
     transition: opacity 0.3s ease;
