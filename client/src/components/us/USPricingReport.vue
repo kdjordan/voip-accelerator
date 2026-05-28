@@ -6,7 +6,7 @@
   </div>
 
   <!-- Fallback message if NO enhanced report data is available -->
-  <div v-else class="text-center text-xl text-zinc-500 p-10">
+  <div v-else class="text-center font-sans text-xl text-fg-faint p-10">
     Pricing report data is being generated or is unavailable. Please upload files first.
   </div>
 </template>

@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
     <!-- Report Type Tabs -->
-    <div class="bg-white/[0.02] border border-white/[0.07] border-b-0 px-6 pb-0 rounded-t-2xl">
-      <div class="flex items-center border-b border-white/10">
+    <div class="bg-surface border border-line border-b-0 px-6 pb-0">
+      <div class="flex items-center border-b border-line-strong">
         <ReportTabButton
           v-for="type in availableReportTypes"
           :key="type"
