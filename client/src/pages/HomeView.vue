@@ -345,7 +345,7 @@
   import RunningHead from '@/components/shared/RunningHead.vue';
   import SlabRule from '@/components/shared/SlabRule.vue';
   import compareShot from '@/assets/screenshots/compare.png';
-  import explorerShot from '@/assets/screenshots/explorer.png';
+  import compositionShot from '@/assets/screenshots/composition.png';
   import wizardShot from '@/assets/screenshots/wizard.png';
 
   // Shared Switchboard CTA classes (primary red fill / outline ghost).
@@ -386,13 +386,13 @@
       caption: 'Drop in two decks — see where you win and where they beat you, in seconds.',
     },
     {
-      key: 'explore',
-      label: 'Explore',
-      src: explorerShot,
-      fig: 'NPANXX Explorer',
-      metric: 'Per-code deltas · interstate · intrastate · indeterminate',
-      alt: 'Per-NPANXX pricing comparison between two US rate decks — interstate, intrastate, and indeterminate deltas',
-      caption: 'Drill to the exact NPANXX. Nothing stays buried.',
+      key: 'compose',
+      label: 'Compose',
+      src: compositionShot,
+      fig: 'Rate Composition',
+      metric: '225,034 prefixes · LCR scenarios simulated',
+      alt: 'Rate Composition Studio simulating sell decks from multiple carrier feeds — LCR depth, markup, and win rate by jurisdiction',
+      caption: 'Build a sell deck from up to five carrier feeds — least-cost routed, marked up, and simulated before you commit.',
     },
     {
       key: 'adjust',
