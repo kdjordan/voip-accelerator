@@ -2,31 +2,33 @@
   <div class="w-full pb-4">
     <!-- Dashboard Content -->
     <div class="flex flex-col gap-6 px-4">
-      <!-- Header -->
-      <header class="pt-2">
-        <p class="text-xs font-secondary uppercase tracking-wider text-emerald-400">Dashboard</p>
-        <h1 class="mt-1 flex items-center gap-2 text-2xl md:text-3xl font-semibold text-white">
-          Welcome back, {{ displayName }}
-          <BoltIcon class="h-6 w-6 text-emerald-400" aria-hidden="true" />
-        </h1>
-        <p class="mt-1 text-sm text-zinc-400">Here's what's happening with your account.</p>
-      </header>
+      <!-- Standardized masthead -->
+      <PageMasthead
+        :title="`Welcome back, ${displayName}`"
+        section="Section I — Overview"
+        right="Account overview"
+        subtitle="Here's what's happening with your account."
+      >
+        <template #title-suffix>
+          <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" />
+        </template>
+      </PageMasthead>
 
       <!-- Two Column Account Section -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Account Information -->
-        <section class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 flex flex-col">
+        <section class="border border-line bg-surface p-5 flex flex-col">
           <div class="flex items-start justify-between mb-5">
-            <h2 class="text-base font-semibold text-white">Account Information</h2>
-            <div class="w-10 h-10 rounded-full bg-emerald-400/10 ring-1 ring-emerald-400/30 flex items-center justify-center shrink-0">
-              <span class="text-xs font-medium text-emerald-300">{{ userInitials }}</span>
+            <h2 class="font-display text-base font-semibold text-fg">Account Information</h2>
+            <div class="w-10 h-10 rounded-full bg-accent-soft ring-1 ring-accent-ring flex items-center justify-center shrink-0">
+              <span class="text-xs font-medium text-accent">{{ userInitials }}</span>
             </div>
           </div>
 
           <!-- Email -->
           <div class="mb-5">
-            <span class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Email</span>
-            <span class="text-sm text-zinc-200">{{ displayEmail }}</span>
+            <span class="block font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Email</span>
+            <span class="text-sm text-fg">{{ displayEmail }}</span>
           </div>
 
           <!-- Email Edit Form -->
@@ -35,7 +37,7 @@
               v-model="newEmail"
               type="email"
               placeholder="Enter new email"
-              class="w-full bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent text-sm"
+              class="w-full bg-input border border-line-strong px-3 py-2 text-fg placeholder-fg-mute focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent text-sm"
               @keyup.enter="updateEmail(newEmail)"
               @keyup.escape="cancelEmailEdit"
             />
@@ -59,10 +61,10 @@
                 Cancel
               </BaseButton>
             </div>
-            <div v-if="emailSuccessMessage" class="text-emerald-400 text-xs">
+            <div v-if="emailSuccessMessage" class="text-warn text-xs">
               {{ emailSuccessMessage }}
             </div>
-            <div v-if="emailErrorMessage" class="text-rose-400 text-xs">
+            <div v-if="emailErrorMessage" class="text-down text-xs">
               {{ emailErrorMessage }}
             </div>
           </div>
@@ -92,130 +94,130 @@
         </section>
 
         <!-- Activity -->
-        <section class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <section class="border border-line bg-surface p-5">
           <div class="flex items-start justify-between mb-5">
-            <h2 class="text-base font-semibold text-white">Activity</h2>
-            <div class="w-10 h-10 rounded-full bg-emerald-400/10 ring-1 ring-emerald-400/30 flex items-center justify-center shrink-0">
-              <ClockIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+            <h2 class="font-display text-base font-semibold text-fg">Activity</h2>
+            <div class="w-10 h-10 rounded-full bg-accent-soft ring-1 ring-accent-ring flex items-center justify-center shrink-0">
+              <ClockIcon class="w-5 h-5 text-accent" aria-hidden="true" />
             </div>
           </div>
 
           <div class="flex flex-col gap-4">
             <!-- Last Login -->
             <div>
-              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Last Login</span>
-              <span class="text-sm text-zinc-200 font-secondary">{{ formattedLastLogin }}</span>
+              <span class="block font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Last Login</span>
+              <span class="text-sm text-fg font-secondary">{{ formattedLastLogin }}</span>
             </div>
 
             <!-- Member Since -->
             <div>
-              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Member Since</span>
-              <span class="text-sm text-zinc-200 font-secondary">{{ formattedCreatedAt }}</span>
+              <span class="block font-display text-[10px] uppercase tracking-wider text-fg-faint mb-1">Member Since</span>
+              <span class="text-sm text-fg font-secondary">{{ formattedCreatedAt }}</span>
             </div>
           </div>
         </section>
       </div>
 
       <!-- Quick Actions -->
-      <section class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
-        <h2 class="text-lg font-semibold text-white mb-5">Quick Actions</h2>
+      <section class="border border-line bg-surface p-6">
+        <h2 class="font-display text-lg font-semibold text-fg mb-5">Quick Actions</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- US Reporting -->
           <button
             @click="$router.push('/usview')"
-            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+            class="group text-left rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent hover:bg-row focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
-                  <GlobeAmericasIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                <div class="w-11 h-11 border border-line-strong bg-row flex items-center justify-center">
+                  <GlobeAmericasIcon class="w-5 h-5 text-accent" aria-hidden="true" />
                 </div>
-                <h3 class="text-base font-semibold text-white">US Reporting</h3>
+                <h3 class="font-display text-base font-semibold text-fg">US Reporting</h3>
               </div>
               <ArrowRightIcon
-                class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+                class="w-5 h-5 text-accent transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
                 aria-hidden="true"
               />
             </div>
-            <p class="text-sm text-zinc-400">Compare and analyze NPANXX rate decks</p>
+            <p class="text-sm text-fg-faint">Compare and analyze NPANXX rate decks</p>
           </button>
 
           <!-- AZ Reporting — HIDDEN for US-NPANXX focus (reversible). To restore: uncomment. -->
           <!--
           <button
             @click="$router.push('/azview')"
-            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+            class="group text-left rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent hover:bg-row focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
-                  <GlobeAltIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                <div class="w-11 h-11 border border-line-strong bg-row flex items-center justify-center">
+                  <GlobeAltIcon class="w-5 h-5 text-accent" aria-hidden="true" />
                 </div>
-                <h3 class="text-base font-semibold text-white">AZ Reporting</h3>
+                <h3 class="font-display text-base font-semibold text-fg">AZ Reporting</h3>
               </div>
-              <ArrowRightIcon class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true" />
+              <ArrowRightIcon class="w-5 h-5 text-accent transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true" />
             </div>
-            <p class="text-sm text-zinc-400">Compare and analyze AZ rate decks</p>
+            <p class="text-sm text-fg-faint">Compare and analyze AZ rate decks</p>
           </button>
           -->
 
           <!-- US Rate Wizard -->
           <button
             @click="$router.push('/us-rate-sheet')"
-            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+            class="group text-left rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent hover:bg-row focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
-                  <AdjustmentsVerticalIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                <div class="w-11 h-11 border border-line-strong bg-row flex items-center justify-center">
+                  <AdjustmentsVerticalIcon class="w-5 h-5 text-accent" aria-hidden="true" />
                 </div>
-                <h3 class="text-base font-semibold text-white">US Rate Wizard</h3>
+                <h3 class="font-display text-base font-semibold text-fg">US Rate Wizard</h3>
               </div>
               <ArrowRightIcon
-                class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+                class="w-5 h-5 text-accent transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
                 aria-hidden="true"
               />
             </div>
-            <p class="text-sm text-zinc-400">Fine tune NPANXX rate decks</p>
+            <p class="text-sm text-fg-faint">Fine tune NPANXX rate decks</p>
           </button>
 
           <!-- AZ Rate Wizard — HIDDEN for US-NPANXX focus (reversible). To restore: uncomment. -->
           <!--
           <button
             @click="$router.push('/az-rate-sheet')"
-            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+            class="group text-left rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent hover:bg-row focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
-                  <AdjustmentsVerticalIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                <div class="w-11 h-11 border border-line-strong bg-row flex items-center justify-center">
+                  <AdjustmentsVerticalIcon class="w-5 h-5 text-accent" aria-hidden="true" />
                 </div>
-                <h3 class="text-base font-semibold text-white">AZ Rate Wizard</h3>
+                <h3 class="font-display text-base font-semibold text-fg">AZ Rate Wizard</h3>
               </div>
-              <ArrowRightIcon class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true" />
+              <ArrowRightIcon class="w-5 h-5 text-accent transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true" />
             </div>
-            <p class="text-sm text-zinc-400">Fine tune AZ rate decks</p>
+            <p class="text-sm text-fg-faint">Fine tune AZ rate decks</p>
           </button>
           -->
 
           <!-- Rate Generation -->
           <button
             @click="$router.push('/rate-gen/us')"
-            class="group text-left rounded-xl border border-emerald-500/15 bg-white/[0.02] p-5 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+            class="group text-left rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent hover:bg-row focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-lg border border-emerald-400/30 bg-emerald-400/[0.08] flex items-center justify-center">
-                  <SparklesIcon class="w-5 h-5 text-emerald-300" aria-hidden="true" />
+                <div class="w-11 h-11 border border-line-strong bg-row flex items-center justify-center">
+                  <SparklesIcon class="w-5 h-5 text-accent" aria-hidden="true" />
                 </div>
-                <h3 class="text-base font-semibold text-white">Rate Generation</h3>
+                <h3 class="font-display text-base font-semibold text-fg">Rate Generation</h3>
               </div>
               <ArrowRightIcon
-                class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+                class="w-5 h-5 text-accent transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
                 aria-hidden="true"
               />
             </div>
-            <p class="text-sm text-zinc-400">Generate NPANXX rate decks from up to 5 providers</p>
+            <p class="text-sm text-fg-faint">Generate NPANXX rate decks from up to 5 providers</p>
           </button>
         </div>
       </section>
@@ -255,6 +257,7 @@
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
   import { useLergOperations } from '@/composables/useLergOperations';
   import BaseButton from '@/components/shared/BaseButton.vue';
+  import PageMasthead from '@/components/shared/PageMasthead.vue';
   import {
     GlobeAmericasIcon,
     GlobeAltIcon, // retained for the hidden AZ Reporting quick action (see template)
