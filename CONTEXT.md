@@ -26,6 +26,31 @@ Any rate-sheet entry under the +1 country code. The system filters these per rat
 ### Free forever
 The product is offered with no billing. All Stripe / subscription / tier logic has been removed from product surfaces (footer pricing link gone, signup copy updated) and is being removed from the codebase as part of the Hetzner port.
 
+### Provider deck
+A single vendor's uploaded US rate sheet inside the Rate Composition Studio (`/rate-gen/us`). Up to five provider decks are held in memory at once; users add, remove, and swap them on the Upload tab. Each carries per-prefix interstate / intrastate / indeterminate rates.
+
+### Scenario
+A candidate rate-deck configuration: one **LCR strategy** paired with one **markup**. Scenarios are *simulated*, not persisted — users build several in the Simulation Preview tab and compare their outcomes before committing one (or more) to a full generate. Distinct from a **Generated rate deck**.
+
+### Simulation sample
+A fixed random subset of the uploaded NPANXX universe (the union of all provider decks' prefixes) used to preview a scenario's outcome cheaply, without a full generate. The *same* sample is reused across every scenario in a comparison so their results are directly comparable.
+
+### Generated rate deck
+The full, committed output of running one chosen scenario's LCR selection over **every** uploaded prefix. Held **in memory for the current session only** (not persisted) — cheap to regenerate, so it clears on reload. Multiple generated rate decks can coexist (e.g. one per chosen strategy); exportable as a Final Rate Deck CSV, a Route Distribution CSV, and a Build Summary PDF. Distinct from a **Scenario**, which is only ever simulated against a sample.
+_Avoid_: "deck" alone when a provider deck is meant — say **provider deck** vs **generated rate deck**.
+
+### Total prefixes
+The union of all selected provider decks' prefixes — the universe a generated deck prices. The denominator for the studio's coverage figures. There is no larger reference set (the LERG is NPA-level; the app cannot enumerate all valid NPANXX), so a generated deck covers this universe by definition — hence there is no "uncovered" figure.
+
+### Single-sourced prefix
+A prefix that only **one** of the selected providers quotes — it is priced and appears in the deck, but there is no LCR competition for it. Surfaced as a coverage-quality signal (a count) in the Simulation Preview; not a per-provider gap matrix. This is the studio's headline coverage signal (an "uncovered" count would always be 0 — see **Total prefixes**).
+
+### Win rate (by rate type)
+For a scenario, the share of priced prefixes for which a given provider is the **selected** source (lowest per the LCR strategy), reported **separately** for interstate, intrastate, and indeterminate — because LCR selects each rate type independently, so the winner can differ by jurisdiction within one prefix. This is the studio's **primary** simulation signal ("how the rates will work" — which provider dominates each jurisdiction). A single per-prefix "selected provider" (used for the route map) is attributed to the **interstate** winner.
+
+### Complete deck (rate completeness)
+A valid provider-deck row must have a positive **interstate** and **intrastate** rate; **indeterminate** derives from interstate when absent. A row missing either inter or intra is **corrupt input**, rejected at upload (routed to the invalid-rows error list) — never rendered with a 0 and never handled at generation time. Consequence: every prefix in the generated deck is fully priced (no unpriced/"None" rows).
+
 ## Architecture context
 
 ### Hetzner port (in progress)
