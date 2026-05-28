@@ -2,15 +2,17 @@ import Papa from 'papaparse';
 import { DBName } from '@/types/app-types';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import useDexieDB from '@/composables/useDexieDB';
-import type {
-  RateGenRecord,
-  RateGenColumnMapping,
-  ProviderInfo,
-  LCRConfig,
-  GeneratedRateDeck,
-  InvalidRateGenRow,
-  LCRStrategy,
-  LeanGeneratedRecord
+import {
+  selectionLabel,
+  type RateGenRecord,
+  type RateGenColumnMapping,
+  type ProviderInfo,
+  type LCRConfig,
+  type GeneratedRateDeck,
+  type InvalidRateGenRow,
+  type LCRStrategy,
+  type SelectionMode,
+  type LeanGeneratedRecord
 } from '@/types/domains/rate-gen-types';
 
 interface RateGenStore {
@@ -49,13 +51,23 @@ export function currentProviderName(
 }
 
 /**
- * PURE: pick a single rate + provider from a set of provider rates per LCR strategy.
- * Ignores zero/negative rates. LCRn falls back to the deepest available when fewer
- * providers quote than n. 'Average' returns the mean rate with all providers joined.
+ * PURE: pick an output rate + provider attribution from a set of provider rates,
+ * at a given DEPTH and MODE. Ignores zero/negative rates (filter first).
+ *
+ * - `position`: the depth-th cheapest rate (1-indexed) — one winning provider.
+ *   This is exactly today's LCR1/2/3 behaviour.
+ * - `average`: the mean of the cheapest `depth` rates — provider attribution is
+ *   the joined set of contributors (e.g. "Alpha, Bravo").
+ *
+ * Per-prefix fallback for sparse coverage: depth is clamped to the number of
+ * positive rates available, so depth never fails — it degrades to the deepest
+ * available (position) / the available subset's mean (average). With depth 1 +
+ * average this collapses to LCR1.
  */
-export function selectByStrategy(
+export function selectRate(
   rates: Array<{ rate: number; provider: string }>,
-  strategy: LCRStrategy
+  depth: number,
+  mode: SelectionMode
 ): { rate: number; provider: string } {
   const sorted = rates.filter((r) => r.rate > 0).sort((a, b) => a.rate - b.rate);
 
@@ -63,26 +75,33 @@ export function selectByStrategy(
     return { rate: 0, provider: 'None' };
   }
 
-  switch (strategy) {
-    case 'LCR1':
-      return sorted[0];
-    case 'LCR2':
-      return sorted[1] || sorted[0];
-    case 'LCR3':
-      return sorted[2] || sorted[1] || sorted[0];
-    case 'LCR4':
-      return sorted[3] || sorted[2] || sorted[1] || sorted[0];
-    case 'LCR5':
-      return sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
-    case 'LCR6':
-      return sorted[5] || sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
-    case 'Average': {
-      const avgRate = sorted.reduce((sum, r) => sum + r.rate, 0) / sorted.length;
-      return { rate: avgRate, provider: sorted.map((r) => r.provider).join(', ') };
-    }
-    default:
-      return sorted[0];
+  const effectiveDepth = Math.min(Math.max(1, Math.floor(depth)), sorted.length);
+
+  if (mode === 'average') {
+    const top = sorted.slice(0, effectiveDepth);
+    const avgRate = top.reduce((sum, r) => sum + r.rate, 0) / top.length;
+    return { rate: avgRate, provider: top.map((r) => r.provider).join(', ') };
   }
+
+  // position: the effectiveDepth-th cheapest.
+  return sorted[effectiveDepth - 1];
+}
+
+/**
+ * PURE compat wrapper over {@link selectRate} mapping the legacy LCR strategy
+ * enum onto a depth+mode pair (LCRn → depth n position; Average → mean of all).
+ * Retained so the legacy enum stays a valid selection input.
+ */
+export function selectByStrategy(
+  rates: Array<{ rate: number; provider: string }>,
+  strategy: LCRStrategy
+): { rate: number; provider: string } {
+  if (strategy === 'Average') {
+    // Mean of ALL positive rates — depth is clamped down to the available count.
+    return selectRate(rates, Number.MAX_SAFE_INTEGER, 'average');
+  }
+  const depth = Number(strategy.slice(3)) || 1; // 'LCR3' → 3
+  return selectRate(rates, depth, 'position');
 }
 
 /**
@@ -134,9 +153,9 @@ export function selectLeanRecords(
 
     if (inter.length === 0) continue;
 
-    const selInter = selectByStrategy(inter, config.strategy);
-    const selIntra = selectByStrategy(intra, config.strategy);
-    const selIndet = selectByStrategy(indet, config.strategy);
+    const selInter = selectRate(inter, config.depth, config.mode);
+    const selIntra = selectRate(intra, config.depth, config.mode);
+    const selIndet = selectRate(indet, config.depth, config.mode);
 
     results.push({
       prefix,
@@ -613,7 +632,7 @@ export class RateGenService {
       // Current provider names so post-upload renames flow into generated output.
       const namesById = new Map(this.store.providerList.map(p => [p.id, p.name]));
 
-      console.log(`[RateGenService] Starting in-memory LCR generation for ${totalPrefixes} prefixes with strategy: ${config.strategy}`);
+      console.log(`[RateGenService] Starting in-memory LCR generation for ${totalPrefixes} prefixes with selection: ${selectionLabel(config.depth, config.mode)}`);
 
       // Pure in-memory selection pass (no IndexedDB writes).
       const leanRecords = selectLeanRecords(allPrefixes, dataByPrefix, config, namesById);
@@ -622,7 +641,8 @@ export class RateGenService {
       const deck: GeneratedRateDeck = {
         id: `rate-deck-${Date.now()}`,
         name: config.name || `Generated Deck ${new Date().toLocaleString()}`,
-        lcrStrategy: config.strategy,
+        depth: config.depth,
+        mode: config.mode,
         markupPercentage: config.markupPercentage,
         markupFixed: config.markupFixed,
         providerIds: config.providerIds,
@@ -638,7 +658,7 @@ export class RateGenService {
 
       this.store.setGeneratedDeck(deck);
 
-      console.log(`[RateGenService] Generated ${leanRecords.length} lean records using ${config.strategy} strategy (in memory, not persisted)`);
+      console.log(`[RateGenService] Generated ${leanRecords.length} lean records using ${selectionLabel(config.depth, config.mode)} (in memory, not persisted)`);
 
       // Log a few sample selections for validation
       console.log('[RateGenService] Sample LCR selections:', leanRecords.slice(0, 3).map(r => ({
@@ -751,10 +771,14 @@ export class RateGenService {
       console.log('[RateGenService] Running LCR validation tests...');
       let passedTests = 0;
       let totalTests = 0;
-      
+
+      // Legacy test cases are keyed by the old strategy enum; map the current
+      // depth+mode selection back onto it (position depth n → LCRn; average → Average).
+      const legacyStrategy = config.mode === 'average' ? 'Average' : `LCR${config.depth}`;
+
       for (const testCase of LCR_TEST_CASES) {
-        // Skip tests that don't match current strategy
-        if (testCase.strategy !== config.strategy) continue;
+        // Skip tests that don't match current selection
+        if (testCase.strategy !== legacyStrategy) continue;
         
         totalTests++;
         const manual = manualLCRCalculation(testCase);

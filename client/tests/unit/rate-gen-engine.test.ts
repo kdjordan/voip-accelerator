@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   selectLeanRecords,
+  selectRate,
   selectByStrategy,
   applyMarkup,
 } from '@/services/rate-gen.service';
@@ -74,14 +75,100 @@ const allPrefixes = ['100000', '200000', '300000'];
 const allProviderIds = ['A', 'B', 'C'];
 
 const config = (over: Partial<LCRConfig> = {}): LCRConfig => ({
-  strategy: 'LCR1',
+  depth: 1,
+  mode: 'position',
   markupPercentage: 0,
   providerIds: allProviderIds,
   ...over,
 });
 
 // ---------------------------------------------------------------------------
-// selectByStrategy — pure LCR pick
+// selectRate — pure depth+mode pick (the new primitive)
+// ---------------------------------------------------------------------------
+
+describe('selectRate', () => {
+  const rates = [
+    { rate: 0.03, provider: 'Charlie' },
+    { rate: 0.01, provider: 'Alpha' },
+    { rate: 0.02, provider: 'Bravo' },
+  ];
+
+  it('position depth 1 picks the cheapest', () => {
+    expect(selectRate(rates, 1, 'position')).toEqual({ rate: 0.01, provider: 'Alpha' });
+  });
+
+  it('position depth 2 picks the second cheapest', () => {
+    expect(selectRate(rates, 2, 'position')).toEqual({ rate: 0.02, provider: 'Bravo' });
+  });
+
+  it('position depth 3 picks the third cheapest', () => {
+    expect(selectRate(rates, 3, 'position')).toEqual({ rate: 0.03, provider: 'Charlie' });
+  });
+
+  it('position falls back to the deepest available when depth > providers', () => {
+    const two = [
+      { rate: 0.02, provider: 'Bravo' },
+      { rate: 0.01, provider: 'Alpha' },
+    ];
+    // depth 3 over two rates → clamp to 2 → second (deepest available).
+    expect(selectRate(two, 3, 'position')).toEqual({ rate: 0.02, provider: 'Bravo' });
+  });
+
+  it('average depth 2 returns the mean of the 2 cheapest + joined contributors', () => {
+    const result = selectRate(rates, 2, 'average');
+    expect(result.rate).toBeCloseTo((0.01 + 0.02) / 2, 10);
+    expect(result.provider).toBe('Alpha, Bravo');
+  });
+
+  it('average depth 3 returns the mean of the 3 cheapest + joined contributors', () => {
+    const result = selectRate(rates, 3, 'average');
+    expect(result.rate).toBeCloseTo((0.01 + 0.02 + 0.03) / 3, 10);
+    expect(result.provider).toBe('Alpha, Bravo, Charlie');
+  });
+
+  it('average falls back to the available subset when depth > providers', () => {
+    const two = [
+      { rate: 0.02, provider: 'Bravo' },
+      { rate: 0.01, provider: 'Alpha' },
+    ];
+    // depth 5 over two rates → clamp to 2 → mean of both.
+    const result = selectRate(two, 5, 'average');
+    expect(result.rate).toBeCloseTo((0.01 + 0.02) / 2, 10);
+    expect(result.provider).toBe('Alpha, Bravo');
+  });
+
+  it('average depth 1 equals position depth 1 (LCR1)', () => {
+    expect(selectRate(rates, 1, 'average')).toEqual(selectRate(rates, 1, 'position'));
+  });
+
+  it('ignores zero/negative rates in position mode', () => {
+    const withZeros = [
+      { rate: 0, provider: 'Zero' },
+      { rate: -0.01, provider: 'Neg' },
+      { rate: 0.05, provider: 'Real' },
+    ];
+    expect(selectRate(withZeros, 1, 'position')).toEqual({ rate: 0.05, provider: 'Real' });
+  });
+
+  it('ignores zero/negative rates in average mode', () => {
+    const withZeros = [
+      { rate: 0, provider: 'Zero' },
+      { rate: 0.05, provider: 'Real' },
+      { rate: 0.02, provider: 'Cheap' },
+    ];
+    const result = selectRate(withZeros, 2, 'average');
+    expect(result.rate).toBeCloseTo((0.02 + 0.05) / 2, 10);
+    expect(result.provider).toBe('Cheap, Real');
+  });
+
+  it('returns the None sentinel when no positive rates exist (both modes)', () => {
+    expect(selectRate([{ rate: 0, provider: 'X' }], 1, 'position')).toEqual({ rate: 0, provider: 'None' });
+    expect(selectRate([{ rate: 0, provider: 'X' }], 3, 'average')).toEqual({ rate: 0, provider: 'None' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// selectByStrategy — legacy enum compat wrapper over selectRate
 // ---------------------------------------------------------------------------
 
 describe('selectByStrategy', () => {
@@ -108,11 +195,10 @@ describe('selectByStrategy', () => {
       { rate: 0.02, provider: 'Bravo' },
       { rate: 0.01, provider: 'Alpha' },
     ];
-    // LCR3 with only two rates falls back to the second (deepest available).
     expect(selectByStrategy(two, 'LCR3')).toEqual({ rate: 0.02, provider: 'Bravo' });
   });
 
-  it('Average returns the mean rate and joined provider list', () => {
+  it('Average returns the mean of ALL rates and joined provider list', () => {
     const result = selectByStrategy(rates, 'Average');
     expect(result.rate).toBeCloseTo((0.01 + 0.02 + 0.03) / 3, 10);
     expect(result.provider).toBe('Alpha, Bravo, Charlie');
@@ -171,8 +257,8 @@ describe('applyMarkup', () => {
 // ---------------------------------------------------------------------------
 
 describe('selectLeanRecords', () => {
-  it('selects LCR1 winners per rate type, independently', () => {
-    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ strategy: 'LCR1' }));
+  it('position depth 1 selects winners per rate type, independently', () => {
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 1, mode: 'position' }));
     const p1 = records.find((r) => r.prefix === '100000')!;
 
     expect(p1.interProvider).toBe('Alpha'); // inter cheapest
@@ -183,8 +269,8 @@ describe('selectLeanRecords', () => {
     expect(p1.indeterminate).toBeCloseTo(0.07, 10);
   });
 
-  it('selects LCR2 winners per rate type', () => {
-    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ strategy: 'LCR2' }));
+  it('position depth 2 selects winners per rate type', () => {
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 2, mode: 'position' }));
     const p1 = records.find((r) => r.prefix === '100000')!;
 
     expect(p1.interProvider).toBe('Bravo'); // 2nd cheapest inter
@@ -192,8 +278,8 @@ describe('selectLeanRecords', () => {
     expect(p1.indetProvider).toBe('Charlie'); // 2nd cheapest indet
   });
 
-  it('selects LCR3 winners per rate type', () => {
-    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ strategy: 'LCR3' }));
+  it('position depth 3 selects winners per rate type', () => {
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 3, mode: 'position' }));
     const p1 = records.find((r) => r.prefix === '100000')!;
 
     expect(p1.interProvider).toBe('Charlie'); // 3rd cheapest inter
@@ -201,19 +287,54 @@ describe('selectLeanRecords', () => {
     expect(p1.indetProvider).toBe('Alpha'); // 3rd cheapest indet
   });
 
-  it('Average strategy averages and joins providers', () => {
-    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ strategy: 'Average' }));
+  it('position depth 3 falls back to deepest available for sparse prefixes', () => {
+    // 200000 has only 2 providers → depth 3 clamps to 2 (deepest available).
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 3, mode: 'position' }));
+    const p2 = records.find((r) => r.prefix === '200000')!;
+    expect(p2.interProvider).toBe('Alpha'); // 2nd cheapest inter (0.012)
+  });
+
+  it('average depth 2 averages the 2 cheapest and joins contributors PER JURISDICTION', () => {
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 2, mode: 'average' }));
+    const p1 = records.find((r) => r.prefix === '100000')!;
+
+    // Contributor sets differ per jurisdiction (computed independently).
+    expect(p1.interProvider).toBe('Alpha, Bravo');
+    expect(p1.intraProvider).toBe('Charlie, Alpha');
+    expect(p1.indetProvider).toBe('Bravo, Charlie');
+
+    expect(p1.rate).toBeCloseTo((0.01 + 0.02) / 2, 10);
+    expect(p1.intrastate).toBeCloseTo((0.04 + 0.05) / 2, 10);
+    expect(p1.indeterminate).toBeCloseTo((0.07 + 0.08) / 2, 10);
+  });
+
+  it('average depth 3 averages all three (mean-of-all)', () => {
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 3, mode: 'average' }));
     const p1 = records.find((r) => r.prefix === '100000')!;
 
     expect(p1.rate).toBeCloseTo((0.01 + 0.02 + 0.03) / 3, 10);
     expect(p1.interProvider).toBe('Alpha, Bravo, Charlie');
   });
 
+  it('average falls back to the available subset for sparse prefixes', () => {
+    // 200000 has only A+B → depth 3 average clamps to mean of both.
+    const records = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 3, mode: 'average' }));
+    const p2 = records.find((r) => r.prefix === '200000')!;
+    expect(p2.rate).toBeCloseTo((0.011 + 0.012) / 2, 10);
+    expect(p2.interProvider).toBe('Bravo, Alpha');
+  });
+
+  it('average depth 1 equals position depth 1 (LCR1)', () => {
+    const avg = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 1, mode: 'average' }));
+    const pos = selectLeanRecords(allPrefixes, dataByPrefix, config({ depth: 1, mode: 'position' }));
+    expect(avg).toEqual(pos);
+  });
+
   it('applies percentage markup to all three final rates', () => {
     const records = selectLeanRecords(
       allPrefixes,
       dataByPrefix,
-      config({ strategy: 'LCR1', markupPercentage: 10 })
+      config({ depth: 1, mode: 'position', markupPercentage: 10 })
     );
     const p1 = records.find((r) => r.prefix === '100000')!;
 
@@ -223,11 +344,22 @@ describe('selectLeanRecords', () => {
     expect(p1.appliedMarkup).toBe(10);
   });
 
+  it('applies markup AFTER averaging selection', () => {
+    const records = selectLeanRecords(
+      allPrefixes,
+      dataByPrefix,
+      config({ depth: 2, mode: 'average', markupPercentage: 10 })
+    );
+    const p1 = records.find((r) => r.prefix === '100000')!;
+    // mean(0.01, 0.02) = 0.015, then +10% = 0.0165
+    expect(p1.rate).toBeCloseTo(0.0165, 10);
+  });
+
   it('applies fixed markup and records it', () => {
     const records = selectLeanRecords(
       allPrefixes,
       dataByPrefix,
-      config({ strategy: 'LCR1', markupPercentage: 0, markupFixed: 0.001 })
+      config({ depth: 1, mode: 'position', markupPercentage: 0, markupFixed: 0.001 })
     );
     const p1 = records.find((r) => r.prefix === '100000')!;
 
@@ -236,7 +368,7 @@ describe('selectLeanRecords', () => {
   });
 
   it('works on any subset of prefixes', () => {
-    const records = selectLeanRecords(['200000'], dataByPrefix, config({ strategy: 'LCR1' }));
+    const records = selectLeanRecords(['200000'], dataByPrefix, config({ depth: 1, mode: 'position' }));
     expect(records).toHaveLength(1);
     expect(records[0].prefix).toBe('200000');
     expect(records[0].interProvider).toBe('Bravo'); // 0.011 < 0.012
@@ -246,7 +378,7 @@ describe('selectLeanRecords', () => {
     const records = selectLeanRecords(
       ['999999', '100000'],
       dataByPrefix,
-      config({ strategy: 'LCR1' })
+      config({ depth: 1, mode: 'position' })
     );
     expect(records.map((r) => r.prefix)).toEqual(['100000']);
   });
@@ -256,7 +388,7 @@ describe('selectLeanRecords', () => {
     const records = selectLeanRecords(
       allPrefixes,
       dataByPrefix,
-      config({ strategy: 'LCR1', providerIds: ['C'] })
+      config({ depth: 1, mode: 'position', providerIds: ['C'] })
     );
     const p1 = records.find((r) => r.prefix === '100000')!;
     expect(p1.interProvider).toBe('Charlie');
@@ -269,7 +401,7 @@ describe('selectLeanRecords', () => {
     const records = selectLeanRecords(
       ['100000'],
       dataByPrefix,
-      config({ strategy: 'LCR1' }),
+      config({ depth: 1, mode: 'position' }),
       namesById
     );
     expect(records[0].interProvider).toBe('Alpha (renamed)');
@@ -281,11 +413,11 @@ describe('selectLeanRecords', () => {
 // ---------------------------------------------------------------------------
 
 describe('aggregates over lean records', () => {
-  // LCR1 lean records over the full fixture set.
+  // Position depth-1 lean records over the full fixture set.
   const lean: LeanGeneratedRecord[] = selectLeanRecords(
     allPrefixes,
     dataByPrefix,
-    config({ strategy: 'LCR1' })
+    config({ depth: 1, mode: 'position' })
   );
   // Expected LCR1 winners:
   // 100000 → inter Alpha, intra Charlie, indet Bravo
@@ -305,7 +437,7 @@ describe('aggregates over lean records', () => {
     expect(indet).toEqual({ Bravo: 1, Alpha: 1, Charlie: 1 });
   });
 
-  it('winRateByType percentages sum to ~100 per rate type', () => {
+  it('winRateByType percentages sum to ~100 per rate type (position)', () => {
     const w = winRateByType(lean);
     const sum = (arr: { percentage: number }[]) =>
       arr.reduce((acc, s) => acc + s.percentage, 0);
@@ -317,6 +449,22 @@ describe('aggregates over lean records', () => {
     // Charlie wins 2/3 intrastate
     const charlieIntra = w.intrastate.find((s) => s.provider === 'Charlie')!;
     expect(charlieIntra.percentage).toBeCloseTo((2 / 3) * 100, 6);
+  });
+
+  it('winRateByType counts EACH contributor under average (participation, can sum >100%)', () => {
+    const avgLean = selectLeanRecords(
+      allPrefixes,
+      dataByPrefix,
+      config({ depth: 2, mode: 'average' })
+    );
+    // Interstate contributors:
+    // 100000 → Alpha, Bravo ; 200000 → Bravo, Alpha ; 300000 → Charlie (only C)
+    const w = winRateByType(avgLean);
+    const inter = Object.fromEntries(w.interstate.map((s) => [s.provider, s.count]));
+    expect(inter).toEqual({ Alpha: 2, Bravo: 2, Charlie: 1 });
+
+    const sum = w.interstate.reduce((acc, s) => acc + s.percentage, 0);
+    expect(sum).toBeGreaterThan(100); // shares overlap under averaging
   });
 
   it('singleSourcedCount counts prefixes only one selected provider quotes', () => {
@@ -332,8 +480,18 @@ describe('aggregates over lean records', () => {
     expect(singleSourcedCount(allPrefixes, dataByPrefix, ['A'])).toBe(2);
   });
 
-  it('providersUsed lists distinct winners across all rate types', () => {
+  it('providersUsed lists distinct winners across all rate types (position)', () => {
     const used = providersUsed(lean);
+    expect(used.sort()).toEqual(['Alpha', 'Bravo', 'Charlie']);
+  });
+
+  it('providersUsed splits joined contributors under average', () => {
+    const avgLean = selectLeanRecords(
+      allPrefixes,
+      dataByPrefix,
+      config({ depth: 2, mode: 'average' })
+    );
+    const used = providersUsed(avgLean);
     expect(used.sort()).toEqual(['Alpha', 'Bravo', 'Charlie']);
   });
 

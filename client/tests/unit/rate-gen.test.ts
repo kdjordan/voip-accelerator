@@ -111,7 +111,8 @@ describe('rate-gen upload validation — transformRow rejects incomplete rows', 
 const scenario = (over: Partial<Scenario> = {}): Scenario => ({
   id: 'scn-1',
   name: 'Scenario 1',
-  strategy: 'LCR1',
+  depth: 1,
+  mode: 'position',
   markupType: 'percentage',
   markupValue: 0,
   ...over,
@@ -123,12 +124,13 @@ describe('rate-gen store — simulation sandbox inputs (persist across tab nav)'
   it('adds, updates, and removes scenarios in order', () => {
     const store = useRateGenStore();
     store.addScenario(scenario());
-    store.addScenario(scenario({ id: 'scn-2', name: 'Scenario 2', strategy: 'LCR2' }));
+    store.addScenario(scenario({ id: 'scn-2', name: 'Scenario 2', depth: 2, mode: 'position' }));
     expect(store.scenarios.map((s) => s.id)).toEqual(['scn-1', 'scn-2']);
 
     store.updateScenario('scn-1', { markupType: 'fixed', markupValue: 0.0025 });
     expect(store.scenarios[0]).toMatchObject({
-      strategy: 'LCR1',
+      depth: 1,
+      mode: 'position',
       markupType: 'fixed',
       markupValue: 0.0025,
     });

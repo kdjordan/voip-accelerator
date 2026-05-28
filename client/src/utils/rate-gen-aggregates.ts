@@ -11,12 +11,22 @@ import type {
   RateGenAnalytics,
 } from '@/types/domains/rate-gen-types';
 
-/** Count winners for one rate type and turn them into sorted win-stat rows. */
+/**
+ * Split a provider-attribution field into its contributors. In `position` mode
+ * this is a single name; in `average` mode it is the joined set ("Alpha, Bravo"),
+ * so each contributor is counted separately (participation — shares can sum >100%).
+ */
+function contributors(field: string): string[] {
+  return field.split(', ');
+}
+
+/** Count participation for one rate type and turn it into sorted win-stat rows. */
 function countWins(records: LeanGeneratedRecord[], pick: (r: LeanGeneratedRecord) => string): ProviderWinStat[] {
   const counts = new Map<string, number>();
   for (const r of records) {
-    const provider = pick(r);
-    counts.set(provider, (counts.get(provider) ?? 0) + 1);
+    for (const provider of contributors(pick(r))) {
+      counts.set(provider, (counts.get(provider) ?? 0) + 1);
+    }
   }
   const total = records.length;
   return Array.from(counts.entries())
@@ -64,13 +74,13 @@ export function singleSourcedCount(
   return count;
 }
 
-/** Distinct providers that win at least one selection across any rate type. */
+/** Distinct providers that contribute to at least one selection across any rate type. */
 export function providersUsed(records: LeanGeneratedRecord[]): string[] {
   const used = new Set<string>();
   for (const r of records) {
-    used.add(r.interProvider);
-    used.add(r.intraProvider);
-    used.add(r.indetProvider);
+    for (const p of contributors(r.interProvider)) used.add(p);
+    for (const p of contributors(r.intraProvider)) used.add(p);
+    for (const p of contributors(r.indetProvider)) used.add(p);
   }
   return Array.from(used);
 }

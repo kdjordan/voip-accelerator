@@ -15,7 +15,7 @@
  */
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { RateGenAnalytics, GeneratedRateDeck } from '@/types/domains/rate-gen-types';
+import { selectionLabel, type RateGenAnalytics, type GeneratedRateDeck } from '@/types/domains/rate-gen-types';
 
 const EMERALD: [number, number, number] = [52, 211, 153]; // #34d399
 const INK: [number, number, number] = [8, 9, 10]; // #08090A
@@ -44,7 +44,7 @@ export function buildSummaryLines(deck: GeneratedRateDeck, analytics: RateGenAna
     : 'N/A';
   return [
     `Deck name: ${deck.name}`,
-    `LCR strategy: ${deck.lcrStrategy}`,
+    `Selection: ${selectionLabel(deck.depth, deck.mode)}`,
     `Markup: ${fmtMarkup(deck)}`,
     `Effective date: ${effective}`,
     `Total prefixes: ${fmtInt(analytics.totalPrefixes)}`,

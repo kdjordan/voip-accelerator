@@ -81,18 +81,9 @@ export const useRateGenStore = defineStore('rateGen', {
     },
     
     
-    // Configuration getters
-    availableLCRStrategies: (state) => {
-      const count = Object.keys(state.providers).length;
-      const strategies = [];
-      
-      if (count >= 2) strategies.push('LCR1');
-      if (count >= 2) strategies.push('LCR2'); 
-      if (count >= 3) strategies.push('LCR3');
-      if (count >= 3) strategies.push('Average');
-      
-      return strategies;
-    },
+    // Max selection depth = number of uploaded provider decks (2 decks → depths {1,2}).
+    // Per-prefix fallback handles prefixes quoted by fewer providers than the depth.
+    maxLcrDepth: (state): number => Object.keys(state.providers).length,
     
     // Generation getters
     isProcessing: (state): boolean =>

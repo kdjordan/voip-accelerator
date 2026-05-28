@@ -36,9 +36,22 @@ export interface ProviderInfo {
 
 export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5' | 'LCR6' | 'Average';
 
+/**
+ * How a scenario turns the cheapest `depth` rates into a single output rate:
+ * - `position`: the depth-th cheapest rate (today's LCR1/2/3 — one winner).
+ * - `average`: the mean of the cheapest `depth` rates (set of contributors).
+ */
+export type SelectionMode = 'position' | 'average';
+
+/** Human label for a depth+mode pair, e.g. "LCR2 · Position" / "Average top 2". */
+export function selectionLabel(depth: number, mode: SelectionMode): string {
+  return mode === 'average' ? `Average top ${depth}` : `LCR${depth} · Position`;
+}
+
 export interface LCRConfig {
   name?: string;
-  strategy: LCRStrategy;
+  depth: number;            // 1..N — which cheapest rates to consider
+  mode: SelectionMode;      // position (depth-th cheapest) | average (mean of top depth)
   markupPercentage: number;
   markupFixed?: number;
   providerIds: string[];
@@ -46,14 +59,15 @@ export interface LCRConfig {
 }
 
 /**
- * A simulation-sandbox scenario (ADR-0008): one {LCR strategy, markup} candidate
+ * A simulation-sandbox scenario (ADR-0008): one {depth, mode, markup} candidate
  * compared against the shared sample. Persisted in the rate-gen store so the
  * inputs survive leaving/returning to the Simulation Preview tab.
  */
 export interface Scenario {
   id: string;
   name: string;
-  strategy: LCRStrategy;
+  depth: number;
+  mode: SelectionMode;
   markupType: 'percentage' | 'fixed';
   markupValue: number;
 }
@@ -61,7 +75,8 @@ export interface Scenario {
 export interface GeneratedRateDeck {
   id: string;
   name: string;
-  lcrStrategy: LCRStrategy;
+  depth: number;            // selection depth recorded for this committed deck
+  mode: SelectionMode;      // position | average
   markupPercentage: number;
   markupFixed?: number;
   providerIds: string[];
@@ -218,11 +233,3 @@ export type RateGenComponentId = 'provider1' | 'provider2' | 'provider3' | 'prov
 
 // Maximum number of providers allowed (browser holds all decks in memory during generation)
 export const MAX_PROVIDERS = 5;
-
-// Default LCR strategies with descriptions
-export const LCR_STRATEGIES = [
-  { value: 'LCR1' as const, label: 'LCR 1 (Cheapest)', description: 'Select the lowest rate from all providers' },
-  { value: 'LCR2' as const, label: 'LCR 2 (Second Best)', description: 'Select the second-lowest rate' },
-  { value: 'LCR3' as const, label: 'LCR 3 (Third Best)', description: 'Select the third-lowest rate' },
-  { value: 'Average' as const, label: 'Average Top 3', description: 'Calculate average of three lowest rates' }
-] as const;
