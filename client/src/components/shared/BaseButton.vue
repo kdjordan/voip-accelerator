@@ -31,22 +31,23 @@
   // Get slots
   const slots = useSlots();
 
-  // Base classes shared by all buttons
+  // Base classes shared by all buttons — Switchboard: mono UPPERCASE, radius 0,
+  // sharp focus ring (no offset), no scale/shift on hover.
   const baseClasses =
-    'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-ink';
+    'inline-flex items-center justify-center font-display font-semibold uppercase tracking-wide transition-colors focus:outline-none focus:ring-2 focus:ring-accent-ring';
 
   // Classes based on variant
   const variantClasses = computed(() => {
     switch (props.variant) {
       case 'destructive':
-        return 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30 hover:bg-rose-500/25 active:bg-rose-500/30 disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:ring-transparent disabled:cursor-not-allowed focus:ring-rose-400';
-      case 'secondary': // Styles for the standard secondary button (like the current 'Use Highest')
-        return 'border border-white/10 text-zinc-200 hover:bg-white/[0.05] active:bg-white/[0.08] disabled:text-zinc-600 disabled:border-white/5 disabled:cursor-not-allowed focus:ring-white/20';
-      case 'secondary-outline': // Styles for the less prominent outline button (for 'Use Lowest')
-        return 'border border-white/10 bg-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200 active:bg-white/[0.06] disabled:text-zinc-600 disabled:border-white/5 disabled:cursor-not-allowed focus:ring-white/20';
+        return 'bg-down-soft text-down border border-down hover:bg-down/20 active:bg-down/25 disabled:bg-row disabled:text-fg-mute disabled:border-line disabled:cursor-not-allowed';
+      case 'secondary': // Standard secondary/outline button
+        return 'border border-line-strong bg-transparent text-fg hover:bg-row active:bg-row-hover disabled:text-fg-mute disabled:border-line disabled:cursor-not-allowed';
+      case 'secondary-outline': // Less prominent outline button
+        return 'border border-line-strong bg-transparent text-fg-dim hover:bg-row hover:text-fg active:bg-row-hover disabled:text-fg-mute disabled:border-line disabled:cursor-not-allowed';
       case 'primary':
       default:
-        return 'bg-emerald-400 text-ink font-semibold hover:bg-emerald-300 active:bg-emerald-300 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed focus:ring-emerald-400';
+        return 'bg-accent text-accent-ink hover:bg-accent active:bg-accent disabled:bg-row disabled:text-fg-mute disabled:border disabled:border-line disabled:cursor-not-allowed';
     }
   });
 
@@ -54,10 +55,10 @@
   const sizeClasses = computed(() => {
     switch (props.size) {
       case 'small':
-        return 'px-2 py-1 text-xs';
+        return 'px-3 py-1.5 text-[11px]';
       case 'standard':
       default:
-        return 'px-6 py-2 text-sm';
+        return 'px-[18px] py-[11px] text-xs';
     }
   });
 

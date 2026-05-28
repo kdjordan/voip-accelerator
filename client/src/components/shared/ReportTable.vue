@@ -1,9 +1,9 @@
 <template>
-  <div class="overflow-x-auto">
+  <div class="overflow-x-auto border border-line bg-surface">
     <table class="w-full border-collapse">
       <thead>
-        <tr class="border-b border-gray-700">
-          <th v-for="header in headers" :key="header" class="p-3 text-left font-medium text-gray-400">
+        <tr class="bg-row border-b border-line">
+          <th v-for="header in headers" :key="header" class="p-3 text-left font-display text-[11px] font-medium uppercase tracking-wider text-fg-faint">
             {{ header }}
           </th>
         </tr>
@@ -12,12 +12,12 @@
         <tr
           v-for="(item, index) in items"
           :key="index"
-          class="border-b border-gray-700 hover:bg-gray-800 hover:bg-opacity-50"
+          class="border-b border-line-divider hover:bg-row-hover"
         >
-          <td v-for="(value, key) in item" :key="key" class="p-3" :class="{ 'w-48 max-w-xs': key === 'dialCode' }">
+          <td v-for="(value, key) in item" :key="key" class="p-3 tabular-nums text-fg-dim" :class="{ 'w-48 max-w-xs': key === 'dialCode' }">
             <template v-if="key === 'dialCode'">
               <div v-if="value.length > 20">
-                <button @click="toggleDialCodes(index)" class="text-blue-500 hover:underline">
+                <button @click="toggleDialCodes(index)" class="text-accent hover:text-accent-text hover:underline">
                   {{ expandedDialCodes[index] ? 'Hide Codes' : 'Show Codes' }}
                 </button>
                 <div v-if="expandedDialCodes[index]" class="mt-2 overflow-x-auto max-h-40">

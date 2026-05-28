@@ -16,19 +16,19 @@
     >
       <div class="flex min-h-screen items-center justify-center">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="closeModal"></div>
+        <div class="fixed inset-0 bg-black/60" @click="closeModal"></div>
 
         <!-- Modal Content -->
         <div
-          class="relative transform rounded-2xl border border-white/10 bg-ink-raised text-left shadow-xl transition-all m-4 w-full max-w-2xl max-h-[90vh] flex flex-col"
+          class="relative transform border border-line-strong bg-surface text-left transition-all m-4 w-full max-w-2xl max-h-[90vh] flex flex-col"
         >
           <!-- Modal Header -->
           <div
-            class="flex items-center justify-between px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-white/10"
+            class="flex items-center justify-between px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-line"
           >
             <h2
               id="info-modal-title"
-              class="text-lg leading-6 font-medium text-white uppercase tracking-wider font-secondary"
+              class="text-lg leading-6 font-medium text-fg uppercase tracking-wider font-display"
             >
               {{ title }}
             </h2>
@@ -36,20 +36,20 @@
               type="button"
               @click="closeModal"
               aria-label="Close modal"
-              class="rounded-md p-1 text-zinc-400 hover:text-white hover:bg-white/[0.05] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-ink-raised transition-colors"
+              class="p-1 text-fg-faint hover:text-fg hover:bg-row focus:outline-none focus:ring-2 focus:ring-accent-ring transition-colors"
             >
               <XCircleIcon class="h-6 w-6" aria-hidden="true" />
             </button>
           </div>
 
           <!-- Modal Body -->
-          <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 text-zinc-300 overflow-auto">
+          <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 font-sans text-fg-dim overflow-auto">
             <p class="text-base" v-html="message"></p>
           </div>
 
           <!-- Modal Footer -->
           <div
-            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-white/[0.02] border-t border-white/10"
+            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-row border-t border-line"
           >
             <BaseButton size="standard" variant="secondary" @click="closeModal"> Close </BaseButton>
           </div>
@@ -85,10 +85,10 @@ function setContentByType(type: InfoModalContentType) {
         This intuitive wizard streamlines your workflow, saving you time and ensuring pinpoint accuracy.<br><br>
         Simply drag & drop or click to upload your Rate Deck CSV containing:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX(or NPA + NXX)</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Indeterminate Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">NPANXX(or NPA + NXX)</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Interstate Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Intrastate Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Indeterminate Rate</code></li>
         </ul>
         <br>
         Once uploaded, unleash <strong>powerful rate adjustments</strong>: increase or decrease rates by precise percentages or fixed amounts.<br> 
@@ -102,11 +102,11 @@ function setContentByType(type: InfoModalContentType) {
       title.value = 'A-Z Rate Sheet Wizard';
       message.value = `<strong>Effortlessly Manage Global Rates!</strong><br>This tool simplifies managing changes for your international A-Z rate decks.<br><br>Upload your CSV file containing at least these columns:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (or Prefix)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code> (or Destination)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Dial Code</code> (or Prefix)</li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Country Name</code> (or Destination)</li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Rate</code></li>
         </ul>
-        Optionally include columns for <code class="bg-gray-700 px-1 rounded text-accent text-sm">Minimum Duration</code> and <code class="bg-gray-700 px-1 rounded text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>
+        Optionally include columns for <code class="bg-row px-1 rounded-xs text-accent text-sm">Minimum Duration</code> and <code class="bg-row px-1 rounded-xs text-accent text-sm">Billing Increments</code> for enhanced precision.<br><br>
         The system automatically parses your file, validates the data, and stores it locally in your browser for fast access.<br>
         From there you can make changes to the rates, set an effective date, and export your new rate sheet for use in your switch provider's portal.<br>
         Simplify your international pricing strategy today!`;
@@ -117,10 +117,10 @@ function setContentByType(type: InfoModalContentType) {
         <strong>Analyze & Compare US Rate Decks Like Never Before!</strong><br> This powerful tool allows you to upload and compare multiple US rate decks side-by-side.<br><br>
          Simply drag & drop or click to upload your Rate Decks as CSV containing:
        <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">NPANXX(or NPA + NXX)</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Interstate Rate</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Intrastate Rate</code></li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Indeterminate Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">NPANXX(or NPA + NXX)</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Interstate Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Intrastate Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Indeterminate Rate</code></li>
         </ul>
         <br>
         During the upload process, you'll map your columns to ensure accuracy. Once uploaded, the analyzer generates two insightful reports:
@@ -137,9 +137,9 @@ function setContentByType(type: InfoModalContentType) {
         <strong>Deep Dive into A-Z Rate Deck Comparisons!</strong> This analyzer empowers you to upload and meticulously compare two international A-Z rate decks.<br><br>
         Upload your CSV files. Each file should contain:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Dial Code</code> (Prefix)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Country Name</code> (Destination)</li>
-          <li><code class="bg-gray-700 px-1 rounded text-accent text-sm">Rate</code></li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Dial Code</code> (Prefix)</li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Country Name</code> (Destination)</li>
+          <li><code class="bg-row px-1 rounded-xs text-accent text-sm">Rate</code></li>
         </ul>
         Map your columns accurately during the upload preview.<br>Once processed, the tool generates two key reports:
         <ul class="list-disc list-inside my-2 space-y-1 pl-4">

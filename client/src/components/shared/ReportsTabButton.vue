@@ -9,7 +9,7 @@
       <span>{{ props.label }}</span>
     </div>
     <template v-if="props.isActive">
-      <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400" />
+      <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
     </template>
   </button>
 </template>
@@ -31,7 +31,7 @@
 
   const buttonClasses = computed(() => [
     'report-tab-button',
-    props.isActive ? 'text-emerald-300' : 'text-zinc-400',
+    props.isActive ? 'bg-accent-soft text-accent' : 'text-fg-faint',
     props.isLoading ? 'cursor-not-allowed opacity-75' : '',
   ]);
 
@@ -42,6 +42,6 @@
 
 <style scoped>
   .report-tab-button {
-    @apply mr-8 py-4 px-1 relative hover:text-white transition-colors focus:outline-none;
+    @apply mr-8 py-4 px-4 relative font-display font-semibold uppercase tracking-wide text-xs hover:text-fg transition-colors focus:outline-none;
   }
 </style>

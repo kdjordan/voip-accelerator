@@ -10,29 +10,29 @@
     <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-screen items-center justify-center">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="handleCancel"></div>
+        <div class="fixed inset-0 bg-black/60" @click="handleCancel"></div>
 
         <!-- Modal Content -->
         <div
-          class="relative transform rounded-2xl border border-white/10 bg-ink-raised text-left shadow-2xl transition-all m-4 w-full max-w-7xl max-h-[90vh] flex flex-col"
+          class="relative transform border border-line-strong bg-surface text-left transition-all m-4 w-full max-w-7xl max-h-[90vh] flex flex-col"
         >
           <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 overflow-auto">
             <div class="flex justify-between items-center mb-6">
-              <h3 class="text-lg leading-6 font-semibold text-white">Select Column Roles</h3>
+              <h3 class="font-display text-lg leading-6 font-semibold uppercase tracking-wider text-fg">Select Column Roles</h3>
               <div class="flex flex-col items-center gap-2">
                 <Listbox v-model="startLine" as="div" class="w-32">
-                  <ListboxLabel class="block text-sm font-medium text-zinc-400"
+                  <ListboxLabel class="block font-display text-[10px] uppercase tracking-wider font-medium text-fg-faint"
                     >Data starts on line:</ListboxLabel
                   >
                   <div class="relative mt-1">
                     <ListboxButton
-                      class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent sm:text-sm border border-white/10"
+                      class="relative w-full cursor-default bg-input py-2 pl-3 pr-10 text-left focus:outline-none focus:ring-2 focus:ring-accent-ring focus:border-transparent sm:text-sm border border-line-strong"
                     >
-                      <span class="block truncate text-white">{{ startLine }}</span>
+                      <span class="block truncate font-display text-fg">{{ startLine }}</span>
                       <span
                         class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                       >
-                        <ChevronUpDownIcon class="h-5 w-5 text-zinc-500" aria-hidden="true" />
+                        <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
                       </span>
                     </ListboxButton>
 
@@ -42,7 +42,7 @@
                       leave-to-class="opacity-0"
                     >
                       <ListboxOptions
-                        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-white/10 bg-ink-raised py-1 text-base shadow-lg focus:outline-none sm:text-sm"
+                        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border border-line-strong bg-surface py-1 text-base focus:outline-none sm:text-sm"
                       >
                         <ListboxOption
                           v-for="i in 15"
@@ -53,8 +53,8 @@
                         >
                           <li
                             :class="[
-                              active ? 'bg-emerald-400/10 text-emerald-300' : 'text-zinc-300',
-                              'relative cursor-default select-none py-2 pl-10 pr-4',
+                              active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
+                              'relative cursor-default select-none py-2 pl-10 pr-4 font-display',
                             ]"
                           >
                             <span
@@ -97,26 +97,26 @@
 
             <div v-if="isUSFile" class="mb-6">
               <Listbox v-model="indeterminateRateDefinition" as="div" class="w-64">
-                <ListboxLabel class="block text-sm font-medium text-zinc-400 mb-2"
+                <ListboxLabel class="block font-display text-[10px] uppercase tracking-wider font-medium text-fg-faint mb-2"
                   >Indeterminate Rate defined by:</ListboxLabel
                 >
                 <div class="relative mt-1">
                   <ListboxButton
-                    class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent sm:text-sm border"
+                    class="relative w-full cursor-default bg-input py-2 pl-3 pr-10 text-left focus:outline-none focus:ring-2 focus:ring-accent-ring focus:border-transparent sm:text-sm border"
                     :class="[
                       shouldShowIndeterminateError && showValidationErrors
-                        ? 'border-rose-500'
-                        : 'border-white/10',
+                        ? 'border-down'
+                        : 'border-line-strong',
                     ]"
                     @click="handleIndeterminateListboxClick"
                   >
-                    <span class="block truncate text-white">{{
+                    <span class="block truncate font-display text-fg">{{
                       selectedIndeterminateLabel
                     }}</span>
                     <span
                       class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                     >
-                      <ChevronUpDownIcon class="h-5 w-5 text-zinc-500" aria-hidden="true" />
+                      <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
                     </span>
                   </ListboxButton>
 
@@ -126,7 +126,7 @@
                     leave-to-class="opacity-0"
                   >
                     <ListboxOptions
-                      class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-white/10 bg-ink-raised py-1 text-base shadow-lg focus:outline-none sm:text-sm"
+                      class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border border-line-strong bg-surface py-1 text-base focus:outline-none sm:text-sm"
                     >
                       <ListboxOption
                         v-for="option in indeterminateOptions"
@@ -137,8 +137,8 @@
                       >
                         <li
                           :class="[
-                            active ? 'bg-emerald-400/10 text-emerald-300' : 'text-zinc-300',
-                            'relative cursor-default select-none py-2 pl-10 pr-4',
+                            active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
+                            'relative cursor-default select-none py-2 pl-10 pr-4 font-display',
                           ]"
                         >
                           <span
@@ -159,7 +159,7 @@
               </Listbox>
               <p
                 v-if="shouldShowIndeterminateError && showValidationErrors"
-                class="mt-1 text-xs text-rose-400"
+                class="mt-1 font-sans text-xs text-down"
               >
                 Select an Indeterminate Rate column or choose how to calculate it
               </p>
@@ -167,7 +167,7 @@
 
             <!-- Provider Name Input (Rate Gen only) -->
             <div v-if="requireProviderName" class="mb-6">
-              <label class="block text-sm font-medium text-zinc-400 mb-2">
+              <label class="block font-display text-[10px] uppercase tracking-wider font-medium text-fg-faint mb-2">
                 Provider Name (Required)
               </label>
               <input
@@ -175,41 +175,41 @@
                 type="text"
                 maxlength="20"
                 required
-                class="w-full max-w-md px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-white
-                       focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent
-                       placeholder-zinc-500"
+                class="w-full max-w-md px-3 py-2 bg-input border border-line-strong font-display text-fg
+                       focus:outline-none focus:ring-2 focus:ring-accent-ring focus:border-transparent
+                       placeholder-fg-mute"
                 placeholder="Enter provider name (max 20 chars)"
                 @input="handleProviderNameChange"
               />
-              <p class="mt-1 text-xs text-zinc-500">
+              <p class="mt-1 font-sans text-xs text-fg-mute">
                 This name will be used to identify the provider in reports and analysis
               </p>
             </div>
 
             <!-- Column Mapping Section -->
             <div class="mb-8">
-              <div class="mt-2 overflow-auto max-h-80 rounded-xl border border-white/[0.07]">
+              <div class="mt-2 overflow-auto max-h-80 border border-line">
                 <table class="min-w-full">
-                  <thead class="sticky top-0 z-10 bg-ink-raised">
+                  <thead class="sticky top-0 z-10 bg-row">
                     <tr>
-                      <th class="min-w-[80px] p-1 text-left border-b border-white/10">
-                        <div class="text-[11px] uppercase tracking-wider text-zinc-500 pl-3">ROW</div>
+                      <th class="min-w-[80px] p-1 text-left border-b border-line">
+                        <div class="font-display text-[11px] uppercase tracking-wider text-fg-faint pl-3">ROW</div>
                       </th>
                       <th
                         v-for="(column, index) in columns"
                         :key="index"
-                        class="px-6 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-white/10"
+                        class="px-6 py-3 text-left font-display text-[11px] font-medium text-fg-faint uppercase tracking-wider border-b border-line"
                       >
                         <Listbox v-model="mappings[index]" as="div" class="min-w-[200px]">
                           <div class="relative mt-1">
                             <ListboxButton
-                              class="relative w-full cursor-default rounded-lg py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent sm:text-sm transition-colors duration-200 border"
+                              class="relative w-full cursor-default py-2 pl-3 pr-10 text-left focus:outline-none focus:ring-2 focus:ring-accent-ring focus:border-transparent sm:text-sm transition-colors duration-200 border font-display"
                               :class="{
-                                'bg-emerald-400/10 text-emerald-300 border-emerald-400/30': mappings[index] !== '',
-                                'bg-white/[0.03] text-white border-white/10':
+                                'bg-accent-soft text-accent border-accent-ring': mappings[index] !== '',
+                                'bg-input text-fg border-line-strong':
                                   mappings[index] === '' &&
                                   (!allColumnsMapped || props.validateRequired),
-                                'bg-white/[0.02] text-zinc-600 border-white/[0.06] cursor-not-allowed':
+                                'bg-row text-fg-mute border-line cursor-not-allowed':
                                   mappings[index] === '' &&
                                   allColumnsMapped &&
                                   !props.validateRequired &&
@@ -229,7 +229,7 @@
                                 class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                               >
                                 <ChevronUpDownIcon
-                                  class="h-5 w-5 text-zinc-500"
+                                  class="h-5 w-5 text-fg-faint"
                                   aria-hidden="true"
                                 />
                               </span>
@@ -241,13 +241,13 @@
                               leave-to-class="opacity-0"
                             >
                               <ListboxOptions
-                                class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-white/10 bg-ink-raised py-1 text-base shadow-lg focus:outline-none sm:text-sm"
+                                class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border border-line-strong bg-surface py-1 text-base focus:outline-none sm:text-sm"
                               >
                                 <ListboxOption value="" v-slot="{ active, selected }" as="template">
                                   <li
                                     :class="[
-                                      active ? 'bg-emerald-400/10 text-emerald-300' : 'text-zinc-300',
-                                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                                      active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
+                                      'relative cursor-default select-none py-2 pl-10 pr-4 font-display',
                                     ]"
                                   >
                                     <span
@@ -274,8 +274,8 @@
                                 >
                                   <li
                                     :class="[
-                                      active ? 'bg-emerald-400/10 text-emerald-300' : 'text-zinc-300',
-                                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                                      active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
+                                      'relative cursor-default select-none py-2 pl-10 pr-4 font-display',
                                     ]"
                                   >
                                     <span
@@ -305,20 +305,20 @@
                       v-for="row in filteredPreviewData"
                       :key="row.rowNumber"
                       :class="[
-                        'transition-colors hover:bg-white/[0.02]',
-                        row.rowNumber % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]',
+                        'transition-colors hover:bg-row-hover',
+                        row.rowNumber % 2 === 0 ? 'bg-transparent' : 'bg-row',
                       ]"
                     >
-                      <td class="px-4 py-2 font-secondary text-zinc-400">{{ row.rowNumber }}</td>
+                      <td class="px-4 py-2 font-display tabular-nums text-fg-faint">{{ row.rowNumber }}</td>
                       <td
                         v-for="(cell, cellIndex) in row.data"
                         :key="cellIndex"
-                        class="px-6 py-4 whitespace-nowrap text-zinc-300"
+                        class="px-6 py-4 whitespace-nowrap text-fg-dim"
                       >
                         {{ cell }}
                       </td>
                     </tr>
-                    <tr v-if="filteredPreviewData.length === 0" class="text-center text-zinc-500">
+                    <tr v-if="filteredPreviewData.length === 0" class="text-center text-fg-mute">
                       <td :colspan="columns.length + 1" class="px-6 py-4">
                         No preview data available starting from line {{ startLine }}
                       </td>
@@ -331,7 +331,7 @@
 
           <!-- Footer -->
           <div
-            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-white/[0.02] border-t border-white/10"
+            class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse items-center gap-4 bg-row border-t border-line"
           >
             <slot
               name="footer"
@@ -359,14 +359,14 @@
             >
               <label
                 for="effective-date"
-                class="block text-sm font-medium text-zinc-400 whitespace-nowrap"
+                class="block font-display text-[10px] uppercase tracking-wider font-medium text-fg-faint whitespace-nowrap"
                 >Effective Date:</label
               >
               <input
                 type="date"
                 id="effective-date"
                 v-model="effectiveDate"
-                class="input-custom bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+                class="input-custom bg-input border border-line-strong px-3 py-1.5 font-display text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring focus:border-transparent"
               />
             </div>
           </div>

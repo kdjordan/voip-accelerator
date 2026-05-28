@@ -15,27 +15,29 @@
     uppercase: false,
   });
 
-  // Base classes shared by all badges
-  const baseClasses = 'inline-flex items-center font-medium rounded-md';
+  // Base classes shared by all badges — Switchboard: mono, sharp 2px chip radius.
+  const baseClasses =
+    'inline-flex items-center font-display font-medium tracking-wide rounded-xs border';
 
-  // Classes based on variant
+  // Classes based on variant — token-mapped (portal positive axis = warn/amber,
+  // accent = brand red). Each variant stays visually distinct.
   const variantClasses = computed(() => {
     switch (props.variant) {
       case 'accent':
-        return 'bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/30';
+        return 'bg-accent-soft text-accent-text border-accent-ring';
       case 'info':
-        return 'bg-blue-400/10 text-blue-300 ring-1 ring-blue-400/30';
+        return 'bg-info-soft text-info border-info/30';
       case 'success':
-        return 'bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/30';
+        return 'bg-warn-soft text-warn border-warn/30';
       case 'warning':
-        return 'bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/30';
+        return 'bg-warn-soft text-warn border-warn/30';
       case 'destructive':
-        return 'bg-rose-400/10 text-rose-300 ring-1 ring-rose-400/30';
+        return 'bg-down-soft text-down border-down/30';
       case 'violet': // For memory storage example
-        return 'bg-violet-400/10 text-violet-300 ring-1 ring-violet-400/30';
+        return 'bg-violet-soft text-violet border-violet/30';
       case 'neutral':
       default:
-        return 'bg-zinc-400/10 text-zinc-300 ring-1 ring-zinc-400/30';
+        return 'bg-row text-fg-dim border-line';
     }
   });
 
