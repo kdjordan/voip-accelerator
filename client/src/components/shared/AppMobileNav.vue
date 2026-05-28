@@ -51,7 +51,7 @@
                 <RouterLink
                   v-if="!item.children"
                   :to="item.href!"
-                  class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-fg hover:bg-row-hover"
+                  class="-mx-3 block rounded-lg px-3 py-2 font-display text-sm font-semibold uppercase tracking-[0.04em] leading-7 text-fg hover:bg-row-hover"
                   @click="closeMenu"
                 >
                   {{ item.name }}
@@ -61,7 +61,7 @@
                 <div v-else>
                   <button
                     type="button"
-                    class="-mx-3 flex w-full items-center justify-between rounded-lg py-2 px-3 text-base font-semibold leading-7 text-fg hover:bg-row-hover"
+                    class="-mx-3 flex w-full items-center justify-between rounded-lg py-2 px-3 font-display text-sm font-semibold uppercase tracking-[0.04em] leading-7 text-fg hover:bg-row-hover"
                     @click="toggleSection(index)"
                   >
                     {{ item.name }}
@@ -79,7 +79,7 @@
                       v-for="child in item.children"
                       :key="child.name"
                       :to="child.href!"
-                      class="block rounded-lg py-2 pl-3 pr-3 text-sm leading-7 text-fg-faint hover:bg-row-hover hover:text-fg"
+                      class="block rounded-lg py-2 pl-3 pr-3 font-display text-xs uppercase tracking-[0.04em] leading-7 text-fg-faint hover:bg-row-hover hover:text-fg"
                       @click="closeMenu"
                     >
                       {{ child.name }}
