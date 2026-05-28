@@ -80,9 +80,9 @@ ticker bar, editorial running heads, light+dark peer themes.
 
 - **Conductor:** ✅ **Pass-1 MERGED to `main` @ `43cc3cd`** (no-ff merge, owner gut-check passed both themes
   2026-05-28; `regression-check` GREEN on `main`). Working dir now on `main` (`feat/switchboard-reskin` is
-  merged — safe to delete). **`main` (local) = `43cc3cd`; `origin/main` STILL `6cbb28d` (NOT pushed —
-  awaiting owner OK); PROD STILL `8b696b7` (NOT deployed — manual Coolify action).** NEVER push / deploy
-  without explicit owner OK.
+  merged — safe to delete). **`main` = `origin/main` = `651e699` (✅ PUSHED 2026-05-28 w/ owner OK);
+  PROD STILL `8b696b7` (NOT deployed — manual Coolify action, push ≠ deploy).** NEVER deploy without explicit
+  owner OK.
 - **Locked decisions (owner, 2026-05-28):** (1) **token bridge** — Tailwind color names point at CSS vars
   + legacy aliases retained, so existing classes re-theme automatically. (2) **Ticker ships in Pass 1**,
   wired to real session KPIs on portal (quiet state when no comparison); landing ticker uses --up/--down.
