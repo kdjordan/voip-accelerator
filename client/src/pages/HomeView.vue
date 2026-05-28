@@ -90,44 +90,54 @@
         </div>
       </section>
 
-      <!-- Product shot — auto-crossfading screenshots in an editorial frame -->
+      <!-- Product shot — user-driven tabbed view in an editorial frame -->
       <SlabRule :size="2" />
       <section class="py-[22px]">
         <RunningHead
           :left-accent="false"
-          left="Fig. 1 — Insights view"
-          right="87.02% match · 194,281 opportunities surfaced"
+          :left="`Fig. 1 — ${heroTabs[activeTab].fig}`"
+          :right="heroTabs[activeTab].metric"
         />
-        <div class="border border-line-strong bg-surface">
+        <!-- Tab strip — mono uppercase, accent underline on active (no rounding) -->
+        <div
+          role="tablist"
+          aria-label="Product tour"
+          class="flex items-stretch overflow-x-auto border-b border-line-strong"
+        >
+          <button
+            v-for="(tab, i) in heroTabs"
+            :key="tab.key"
+            type="button"
+            role="tab"
+            :aria-selected="i === activeTab"
+            @click="activeTab = i"
+            class="relative -mb-px shrink-0 px-5 py-3 font-display text-xs font-semibold uppercase tracking-[0.12em] transition-colors focus:outline-none"
+            :class="i === activeTab ? 'text-accent' : 'text-fg-faint hover:text-fg'"
+          >
+            {{ tab.label }}
+            <span
+              v-if="i === activeTab"
+              class="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
+            />
+          </button>
+        </div>
+        <div class="border-x border-b border-line-strong bg-surface">
           <div class="relative aspect-[7/5] overflow-hidden sm:aspect-[16/11]">
             <img
-              v-for="(shot, i) in heroShots"
-              :key="i"
-              :src="shot.src"
-              :alt="shot.alt"
-              class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-1000 ease-in-out"
-              :class="i === activeShot ? 'opacity-100' : 'opacity-0'"
+              v-for="(tab, i) in heroTabs"
+              :key="tab.key"
+              :src="tab.src"
+              :alt="tab.alt"
+              class="absolute inset-0 h-full w-full object-contain object-top transition-opacity duration-300 ease-in-out"
+              :class="i === activeTab ? 'opacity-100' : 'opacity-0'"
             />
           </div>
         </div>
-        <div class="mt-3 flex items-center justify-between">
-          <Transition name="caption-fade" mode="out-in">
-            <p :key="activeShot" class="m-0 font-sans text-[13px] text-fg-faint">
-              {{ heroShots[activeShot].caption }}
-            </p>
-          </Transition>
-          <div class="flex items-center gap-2">
-            <button
-              v-for="(shot, i) in heroShots"
-              :key="i"
-              type="button"
-              @click="selectShot(i)"
-              :aria-label="shot.alt"
-              class="h-1.5 transition-all"
-              :class="i === activeShot ? 'w-6 bg-accent' : 'w-1.5 bg-fg/20 hover:bg-fg/40'"
-            />
-          </div>
-        </div>
+        <Transition name="caption-fade" mode="out-in">
+          <p :key="activeTab" class="mt-3 m-0 font-sans text-[13px] text-fg-faint">
+            {{ heroTabs[activeTab].caption }}
+          </p>
+        </Transition>
       </section>
       <SlabRule :size="2" />
 
@@ -195,7 +205,7 @@
       <section id="features" class="pb-[60px]">
         <RunningHead left="Section III — Two sides to every deck" right="Analyze · Adjust" />
         <div
-          class="mt-3 grid grid-cols-1 border-y-2 border-line-strong md:grid-cols-2"
+          class="mt-3 grid grid-cols-1 border-t-2 border-line-strong md:grid-cols-2"
         >
           <div
             v-for="(panel, i) in panels"
@@ -224,6 +234,49 @@
                 </div>
                 <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">{{ item.body }}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section III-C — Compose (Rate Composition Studio) -->
+      <section class="pb-[60px]">
+        <RunningHead left="Section III-C — Five decks into one" right="Compose · blend & generate" />
+        <div class="mt-3 border-b-2 border-line-strong px-8 pb-10 pt-9">
+          <div class="mb-3.5 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
+            Section III-C
+          </div>
+          <div class="mb-4 flex items-center gap-3.5">
+            <span
+              class="inline-grid h-11 w-11 place-items-center border border-accent-ring bg-accent-soft text-accent"
+            >
+              <Square3Stack3DIcon class="h-[22px] w-[22px]" />
+            </span>
+            <h3 class="m-0 font-display text-4xl font-semibold tracking-[-0.03em] text-fg">
+              Compose
+            </h3>
+          </div>
+          <p class="mb-6 max-w-[560px] font-sans text-[15px] text-fg-dim">
+            Blend up to five carrier decks into one — least-cost and jurisdiction-aware, in seconds.
+          </p>
+          <div class="grid grid-cols-1 gap-[18px] md:grid-cols-2">
+            <div class="border-l-2 border-accent pl-3.5">
+              <div class="font-display text-[11px] uppercase tracking-[0.12em] text-fg">
+                Least-cost routing
+              </div>
+              <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">
+                Pick the cheapest, the Nth-cheapest, or a blend of the top N — chosen independently
+                for interstate, intrastate, and indeterminate.
+              </p>
+            </div>
+            <div class="border-l-2 border-accent pl-3.5">
+              <div class="font-display text-[11px] uppercase tracking-[0.12em] text-fg">
+                Simulate, then generate
+              </div>
+              <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">
+                Compare strategy scenarios against a sample before you commit, then generate a
+                switch-ready deck plus a route-distribution map and a build summary.
+              </p>
             </div>
           </div>
         </div>
@@ -315,7 +368,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted, onBeforeUnmount, type Component } from 'vue';
+  import { ref, type Component } from 'vue';
   import { RouterLink } from 'vue-router';
   import {
     BoltIcon,
@@ -328,6 +381,7 @@
     MapPinIcon,
     DocumentArrowUpIcon,
     TableCellsIcon,
+    Square3Stack3DIcon,
   } from '@heroicons/vue/24/outline';
   import { BoltIcon as BoltSolidIcon } from '@heroicons/vue/24/solid';
   import TheFooter from '@/components/shared/TheFooter.vue';
@@ -335,7 +389,7 @@
   import RunningHead from '@/components/shared/RunningHead.vue';
   import SlabRule from '@/components/shared/SlabRule.vue';
   import compareShot from '@/assets/screenshots/compare.png';
-  import explorerShot from '@/assets/screenshots/explorer.png';
+  import compositionShot from '@/assets/screenshots/composition.png';
   import wizardShot from '@/assets/screenshots/wizard.png';
 
   // Shared Switchboard CTA classes (primary red fill / outline ghost).
@@ -364,45 +418,37 @@
     { sym: 'ROWS', value: '223,267', dir: 'up' },
   ];
 
-  // --- Hero screenshot carousel (auto-crossfade) ---
-  const heroShots = [
+  // --- Hero product tour — user-driven tabs (no auto-advance) ---
+  const heroTabs = [
     {
+      key: 'compare',
+      label: 'Compare',
       src: compareShot,
+      fig: 'Deck Analyzer',
+      metric: '87.02% match · 194,281 opportunities surfaced',
       alt: 'Comparing two US NPANXX rate decks — coverage match, margin deltas, and top buy/sell opportunities',
       caption: 'Drop in two decks — see where you win and where they beat you, in seconds.',
     },
     {
-      src: explorerShot,
-      alt: 'Per-NPANXX pricing comparison between two US rate decks — interstate, intrastate, and indeterminate deltas',
-      caption: 'Drill to the exact NPANXX. Nothing stays buried.',
+      key: 'compose',
+      label: 'Compose',
+      src: compositionShot,
+      fig: 'Rate Composition',
+      metric: '225,034 prefixes · LCR scenarios simulated',
+      alt: 'Rate Composition Studio simulating sell decks from multiple carrier feeds — LCR depth, markup, and win rate by jurisdiction',
+      caption: 'Build a sell deck from up to five carrier feeds — least-cost routed, marked up, and simulated before you commit.',
     },
     {
+      key: 'adjust',
+      label: 'Adjust',
       src: wizardShot,
+      fig: 'Pricing Studio',
+      metric: '223,267 rows repriced · effective-dated',
       alt: 'Pricing Studio repricing 223,267 US NPANXX rows by percentage with an effective date, in the browser',
       caption: 'Reprice with a scalpel — by code, NPA, state, or metro. Try that in Excel.',
     },
   ];
-  const activeShot = ref(0);
-  let shotTimer: ReturnType<typeof setInterval> | undefined;
-
-  function startShotRotation() {
-    if (heroShots.length < 2) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    shotTimer = setInterval(() => {
-      activeShot.value = (activeShot.value + 1) % heroShots.length;
-    }, 5000);
-  }
-
-  function selectShot(i: number) {
-    activeShot.value = i;
-    if (shotTimer) clearInterval(shotTimer);
-    startShotRotation();
-  }
-
-  onMounted(startShotRotation);
-  onBeforeUnmount(() => {
-    if (shotTimer) clearInterval(shotTimer);
-  });
+  const activeTab = ref(0);
 
   interface PanelItem {
     label: string;
@@ -515,7 +561,7 @@
 </script>
 
 <style scoped>
-  /* Caption crossfade — synced with the hero carousel. */
+  /* Caption crossfade — swaps with the active hero tab (click-driven). */
   .caption-fade-enter-active,
   .caption-fade-leave-active {
     transition: opacity 0.3s ease;
