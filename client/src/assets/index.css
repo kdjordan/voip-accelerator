@@ -1,10 +1,326 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   Switchboard tokens — ported from VoIP Accelerator Design System/colors_and_type.css
+   Two peer themes: dark (:root default) + light ([data-theme="light"]).
+   ============================================================================ */
+
+/* ============================================================================
+   DARK theme (default)
+   ============================================================================ */
+:root {
+  color-scheme: dark;
+
+  /* Surface ladder */
+  --bg:               #050608;   /* page canvas */
+  --bg-elev:          #0d0f13;   /* raised: header, ticker, panels */
+  --bg-row:           #13161c;   /* table rows, hover, secondary fills */
+  --bg-row-hover:     #181b22;
+  --bg-input:         #0d0f13;
+
+  /* Text ladder */
+  --text:             #ffffff;   /* H1/H2, KPI values, primary text */
+  --text-dim:         #c9ccd1;   /* body */
+  --text-faint:       #7b7f86;   /* secondary, labels */
+  --text-mute:        #50545b;   /* tertiary hints, axis ticks */
+
+  /* Borders */
+  --border:           rgba(255, 255, 255, 0.10);
+  --border-strong:    rgba(255, 255, 255, 0.22);
+  --border-divider:   rgba(255, 255, 255, 0.06);   /* row separators */
+  --rule:             #ffffff;                     /* HR slabs — used at low opacity */
+  --rule-opacity:     0.65;
+
+  /* Accent — arterial red */
+  --accent:           #ef3434;
+  --accent-strong:    #dc2626;
+  --accent-text:      #ff6b6b;       /* accent text on dark fills */
+  --accent-soft:      rgba(239, 52, 52, 0.10);
+  --accent-mid:       rgba(239, 52, 52, 0.20);
+  --accent-ring:      rgba(239, 52, 52, 0.35);
+  --accent-ink:       #ffffff;        /* text color ON solid accent (red button) */
+
+  /* Semantic — direction-of-change.
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ PORTAL — use --warn (amber) for positive · --accent (red) for   │
+     │   negative. The chart "Sell To" axis is amber; "Buy From" is    │
+     │   red. NO green in the portal — analysts stare at it too long.  │
+     │ LANDING — the ticker can use --up (green) / --down (red) for    │
+     │   the classic trading-screen feel. Marketing only.              │
+     └─────────────────────────────────────────────────────────────────┘ */
+  --up:               #4ade80;        /* gain ticker — LANDING ONLY */
+  --up-soft:          rgba(74, 222, 128, 0.14);
+  --down:             #ff7676;        /* loss ticker / destructive button */
+  --down-soft:        rgba(239, 52, 52, 0.16);
+  --warn:             #fbbf24;        /* PORTAL positive axis · "done" · "Sell To" */
+  --warn-soft:        rgba(251, 191, 36, 0.14);
+  --info:             #60a5fa;
+  --info-soft:        rgba(96, 165, 250, 0.14);
+  --violet:           #c4b5fd;        /* legacy — avoid; removed from portal */
+  --violet-soft:      rgba(196, 181, 253, 0.14);
+
+  /* Misc */
+  --selection-bg:     rgba(239, 52, 52, 0.30);
+  --focus-ring:       0 0 0 2px rgba(239, 52, 52, 0.50);
+  --shadow-elev:      0 4px 20px -8px rgba(0, 0, 0, 0.55);
+
+  /* Subtle background texture — fine diagonal hatch */
+  --texture-hatch:    repeating-linear-gradient(135deg, transparent 0 7px, rgba(255,255,255,0.012) 7px 8px);
+}
+
+/* ============================================================================
+   LIGHT theme — opt-in
+   ============================================================================ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:               #ffffff;
+  --bg-elev:          #f7f6f3;       /* warm off-white for raised surfaces */
+  --bg-row:           #f2f0eb;
+  --bg-row-hover:     #ebe9e3;
+  --bg-input:         #ffffff;
+
+  --text:             #050608;
+  --text-dim:         #2a2c30;
+  --text-faint:       #6b6f76;
+  --text-mute:        #9b9fa6;
+
+  --border:           rgba(5, 6, 8, 0.14);
+  --border-strong:    rgba(5, 6, 8, 0.32);
+  --border-divider:   rgba(5, 6, 8, 0.08);
+  --rule:             #050608;
+  --rule-opacity:     1;
+
+  --accent:           #dc2626;
+  --accent-strong:    #b91c1c;
+  --accent-text:      #b91c1c;
+  --accent-soft:      rgba(220, 38, 38, 0.07);
+  --accent-mid:       rgba(220, 38, 38, 0.14);
+  --accent-ring:      rgba(220, 38, 38, 0.30);
+  --accent-ink:       #ffffff;
+
+  --up:               #15803d;
+  --up-soft:          rgba(22, 163, 74, 0.10);
+  --down:             #b91c1c;
+  --down-soft:        rgba(220, 38, 38, 0.10);
+  --warn:             #b45309;
+  --warn-soft:        rgba(180, 83, 9, 0.10);
+  --info:             #1d4ed8;
+  --info-soft:        rgba(29, 78, 216, 0.10);
+  --violet:           #6d28d9;
+  --violet-soft:      rgba(109, 40, 217, 0.10);
+
+  --selection-bg:     rgba(220, 38, 38, 0.18);
+  --focus-ring:       0 0 0 2px rgba(220, 38, 38, 0.40);
+  --shadow-elev:      0 4px 20px -10px rgba(5, 6, 8, 0.16);
+
+  --texture-hatch:    repeating-linear-gradient(135deg, transparent 0 7px, rgba(5,6,8,0.025) 7px 8px);
+}
+
+/* ============================================================================
+   Type tokens
+   ============================================================================ */
+:root {
+  --font-display: 'Geist Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono:    var(--font-display);
+  --font-sans:    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --tracking-tighter:  -0.05em;   /* hero display */
+  --tracking-tight:    -0.025em;  /* H1 / H2 */
+  --tracking-normal:   0;
+  --tracking-wide:     0.04em;    /* mono buttons / labels */
+  --tracking-wider:    0.12em;    /* small caps eyebrows */
+  --tracking-widest:   0.20em;    /* section eyebrows */
+}
+
+/* ============================================================================
+   Spacing, radii, motion
+   ============================================================================ */
+:root {
+  /* No rounded corners by default — slabs.
+     2px is used only on buttons / chips where a sharp corner snags the eye. */
+  --radius-0:   0;
+  --radius-xs:  2px;
+  --radius-sm:  4px;
+  --radius-md:  6px;        /* reserved — almost never used */
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --duration-fast:   120ms;
+  --duration-base:   200ms;
+  --duration-slow:   400ms;
+  --ease-out:        cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   Semantic type roles
+   ============================================================================ */
+
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(56px, 7vw, 92px);
+  line-height: 0.92;
+  letter-spacing: var(--tracking-tighter);
+  color: var(--text);
+}
+
+.h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 48px;
+  line-height: 1.0;
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+.h1-accent { color: var(--accent); }
+
+.h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--text);
+}
+
+.h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.lede {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.body-sm {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-faint);
+}
+
+/* Section eyebrow — "SECTION II · WHAT THIS REPLACES" */
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Label / column header — "NPA" "STATE" "MATCHED CODES" */
+.label {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Numeric — KPI values, ticker deltas, table cells */
+.numeric {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.kpi-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.kpi-value-up   { color: var(--up); }
+.kpi-value-down { color: var(--down); }
+.kpi-value-accent { color: var(--accent); }
+
+/* Dropcap — the big 01 / 02 / 03 on editorial cards */
+.dropcap {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+}
+
+::selection {
+  background: var(--selection-bg);
+}
+
+/* Common building blocks ---------------------------------------------------- */
+
+.slab-rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  opacity: var(--rule-opacity);
+  margin: 0;
+}
+.slab-rule-2 {
+  border: 0;
+  border-top: 2px solid var(--rule);
+  opacity: var(--rule-opacity);
+  margin: 0;
+}
+.slab-rule-3 {
+  border: 0;
+  border-top: 3px solid var(--rule);
+  opacity: var(--rule-opacity);
+  margin: 0;
+}
+
+/* Brand chip — the red square with the white bolt */
+.brand-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 32px; height: 32px;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ============================================================================
+   Existing app base rules (re-tokenized)
+   ============================================================================ */
 @layer base {
   thead th {
-    @apply bg-gray-800;
+    @apply bg-row;
   }
   /* Remove default marker from summary element */
   summary {
@@ -19,18 +335,10 @@
   /* Add other base styles below */
 }
 
-/* 
-.table {
-  @apply min-w-full divide-y divide-gray-200 rounded-xl;
-} */
-/* 
-.table-head {
-  @apply bg-gray-600;
-} */
-
 body,
 html {
-  background-color: hsl(230, 20%, 10%);
+  background: var(--bg);
+  color: var(--text);
   min-height: 100vh;
   margin: 0;
   padding: 0;
