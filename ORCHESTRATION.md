@@ -189,14 +189,16 @@ ticker bar, editorial running heads, light+dark peer themes.
 ### Resume (if conductor tab dies / new chat)
 **▶ LATEST (2026-05-28):** Pass-1 ✅ + **Pass-2 ✅ MERGED to `main` (`origin/main` = `a919455`)** — footer/
 masthead/dashboard/rate-gen-studio/legal/admin reskins + fixes. ⚠️ PROD still `8b696b7` (manual Coolify deploy
-pending; next deploy ships studio + reskin together). **Auth screens ✅ reskinned on branch `feat/switchboard-auth`
-(off `main` @ `a919455`, tip `26433d0`) — NOT merged, awaiting owner gut-check** (LoginPage/SignUpPage/SignInForm/
-SignUpForm → VoipLogo mark, mono headings, tokenized inputs, theme-aware; verified dark+light, regression GREEN;
-better-auth flows untouched). **Remaining Switchboard work: (1) `USExportOptionsModal.vue` — LIVE (opens from Pricing Studio export via
-`USRateSheetTable`) but MISSED in Pass-1, still ~10 emerald spots incl. `accent-emerald-400` checkboxes;
-(2) `AppMobileNav` (small — ~3 legacy spots); (3) App.vue shell / SideNav-width (80px collapsed vs content
-`md:ml-[64px]`) + deferred ticker placement.** New branches go off `a919455`, NOT the old pass2 tip.
-History below is pre-merge (kept for reference).
+pending; next deploy ships studio + reskin together). **Switchboard reskin is now FUNCTIONALLY COMPLETE on branch `feat/switchboard-auth`** (off `main` @ `a919455`,
+tip `6444a86`) — **NOT merged, awaiting owner gut-check.** Contains: auth screens `26433d0` (LoginPage/SignUpPage/
+SignInForm/SignUpForm → VoipLogo mark, mono headings, tokenized inputs, theme-aware; better-auth untouched);
+`USExportOptionsModal` + `AppMobileNav` + App.vue SideNav-offset fix `6444a86` (export modal tokenized — it was
+LIVE from Pricing Studio export but missed in Pass-1; mobile nav → VoipLogo + tokens, was broken in light;
+content offset `md:ml-[64px]`→`md:ml-[80px]` to match the 80px collapsed rail). All verified dark+light,
+regression GREEN. **No known un-reskinned surfaces remain** outside the frozen A-Z code (intentional) + dev-only
+TestDataLoader. Open: owner gut-check → merge `feat/switchboard-auth` to `main` → push → manual Coolify deploy
+(prod still `8b696b7`). Deferred (owner's call): the deep-link redirect race [[deeplink-redirect-race]]. New
+branches go off `a919455` (or the post-merge main). History below is pre-merge (kept for reference).
 
 **Pass-1 is DONE and MERGED to `main` @ `43cc3cd`** (foundation + shared + 4 views + Explorer body; owner
 gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show-current` = `main`,
