@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import type { RateGenService } from '@/services/rate-gen.service';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+import { useHandoffStore } from '@/stores/handoff-store';
+import { buildHandoffFromGenerated } from '@/utils/deck-handoff';
+import type { HandoffTarget } from '@/types/domains/handoff-types';
 import { computeAnalytics } from '@/utils/rate-gen-aggregates';
 import { selectionLabel, type GeneratedRateDeck, type RateGenAnalytics, type LeanGeneratedRecord, type RateGenRecord } from '@/types/domains/rate-gen-types';
 import {
@@ -21,6 +25,23 @@ const props = defineProps<{ service: RateGenService }>();
 
 const store = useRateGenStore();
 const lergStore = useLergStoreV2();
+const handoffStore = useHandoffStore();
+const router = useRouter();
+
+// Hand-off: snapshot a generated deck's rates and push it into another US module.
+// The payload is built at click time (before navigation) so it survives the route change.
+// See docs/adr/0009-cross-module-rate-deck-handoff.md.
+const HANDOFF_PATHS: Record<HandoffTarget, string> = {
+  adjuster: '/us-rate-sheet',
+  analyzer: '/usview',
+};
+
+function sendDeckTo(deck: GeneratedRateDeck, target: HandoffTarget) {
+  const records = props.service.getGeneratedRecords(deck.id);
+  if (!records?.length) return;
+  handoffStore.setPending(buildHandoffFromGenerated(records, { name: deck.name, target }));
+  router.push(HANDOFF_PATHS[target]);
+}
 
 // Per-deck analytics are computed lazily (they scan the in-memory records +
 // provider-data map). Keyed by deck id; null while loading.
@@ -334,6 +355,22 @@ function markupLabel(deck: GeneratedRateDeck): string {
               @click="downloadSummary(deck)"
             >
               Build Summary PDF
+            </BaseButton>
+            <BaseButton
+              variant="secondary-outline"
+              size="small"
+              :disabled="!props.service.getGeneratedRecords(deck.id)?.length"
+              @click="sendDeckTo(deck, 'adjuster')"
+            >
+              Send to Adjuster
+            </BaseButton>
+            <BaseButton
+              variant="secondary-outline"
+              size="small"
+              :disabled="!props.service.getGeneratedRecords(deck.id)?.length"
+              @click="sendDeckTo(deck, 'analyzer')"
+            >
+              Send to Analyzer
             </BaseButton>
           </div>
         </template>
