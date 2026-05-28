@@ -61,10 +61,12 @@
   interface Props {
     items: InvalidRowEntry[];
     title: string;
+    /** Render the details table expanded on mount (e.g. when an outer toggle already reveals this). */
+    startExpanded?: boolean;
   }
-  defineProps<Props>();
+  const props = defineProps<Props>();
 
-  const showDetails = ref(false);
+  const showDetails = ref(props.startExpanded ?? false);
 
   function toggleDetails() {
     showDetails.value = !showDetails.value;
