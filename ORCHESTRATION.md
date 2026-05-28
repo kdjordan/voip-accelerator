@@ -78,7 +78,7 @@ system; business logic stays 100% intact). Source of truth: repo-root `VoIP Acce
 `switchboard-reskin`. Geist Mono headlines + Inter body, arterial-red accent (NO emerald), radius 0,
 ticker bar, editorial running heads, light+dark peer themes.
 
-- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `c8e8204` (integration branch, off
+- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `bc078b5` (integration branch, off
   `main` @ `6cbb28d`). `main` is UNTOUCHED/clean and stays that way until the whole Pass-1 reskin passes owner
   gut-check; then ONE merge integration→`main` with owner OK. **`main` = `origin/main` = `6cbb28d`;
   PROD = `8b696b7`** (push ≠ deploy; owner deploys via Coolify manually). NEVER merge to main / push /
@@ -150,11 +150,15 @@ ticker bar, editorial running heads, light+dark peer themes.
     `--accent`/`--border`/`--text-faint`, recompute on theme flip). **Verified in chrome-devtools: UPLOAD
     state, dark + light, zero console errors.** ⚠️ Insights + Explorer **data-populated** states need
     UPLOADED DECKS + LERG → **OWNER gut-check pending** (conductor can't populate without test decks).
-  - ⚠️ **Explorer body NOT yet reskinned** (out of V2's named scope): `USPricingReport` → `USDetailedComparisonTable.vue`
-    (1690 lines) renders the granular Explorer grid + filter rail and is still emerald/zinc (legacy literals
-    don't auto-retheme). The Explorer **tab** will read half-old until this lands. Recommend a **V2b** slice
-    (or fold into V3) — flagged to owner.
-  - **V3 `USRateSheetView`** (pricing studio body) — after V2; consider bundling `USDetailedComparisonTable` here.
+  - **V2b `USDetailedComparisonTable`** (Explorer body, 1690 lines) — ✅ DONE + committed `bc078b5` (owner
+    chose "reskin now"). Granular grid + filter rail + summary cards retoken'd to Switchboard (visual-only;
+    filter/sort/pagination/export logic untouched). File A pill=warn, File B=accent (matches USInsights);
+    Export Data button → solid accent; sort/active states → accent; inputs/listboxes → bg-input + accent ring.
+    `rounded-*` is already 0 globally (P1) and `font-secondary` auto-upgrades to Geist Mono, so only colors/
+    surfaces/borders changed. regression-check GREEN. **Data-populated Explorer (needs uploaded decks) → OWNER
+    gut-check** (conductor confirmed it compiles + the reskinned PreviewModal renders, but didn't drive a full
+    222K-row upload — too token-heavy/flaky for the MCP).
+  - **V3 `USRateSheetView`** (pricing studio body) — NEXT.
   - **VERIFY (portal):** views are AUTH-GATED (`/usview` → `/login?redirect=/usview`). chrome-devtools is a
     FRESH browser session — the conductor must LOG IN (owner supplies local dev creds). Dev server must be
     running on :5173 in the conductor's main dir (`npm --prefix client run dev`); API :3000 confirmed up.
@@ -175,9 +179,10 @@ ticker bar, editorial running heads, light+dark peer themes.
   .dropcap/.slab-rule{,-2,-3}/.brand-chip`.
 
 ### Resume (if conductor tab dies / new chat)
-Confirm main dir on `feat/switchboard-reskin` @ `c8e8204`; `git log --oneline -3`; read this board; continue
-from the ACTIVE slice (**V2b `USDetailedComparisonTable` (Explorer body) or V3 `USRateSheetView` next**). For
-P3 the conductor edits views directly in the main dir (no worktrees)
+Confirm main dir on `feat/switchboard-reskin` @ `bc078b5`; `git log --oneline -3`; read this board; continue
+from the ACTIVE slice (**V3 `USRateSheetView` next**). Sample US decks for data-state verification live at
+`client/src/data/sample/UStest.csv` + `UStest1.csv` (map prefix→NPANXX, rate(inter)→Inter, the two intrastate
+cols → Intra + Indeterminate). For P3 the conductor edits views directly in the main dir (no worktrees)
 and verifies via chrome-devtools at :5173. Ensure the dev server is up (`npm --prefix client run dev`); API
 on :3000. Portal views need login — get local dev creds from the owner and log into the chrome-devtools
 browser. Dev-auth origin is `localhost:5173` ONLY. **Owner is moving to a fresh YOLO-mode chat** (auto-accept
