@@ -205,7 +205,7 @@
       <section id="features" class="pb-[60px]">
         <RunningHead left="Section III — Two sides to every deck" right="Analyze · Adjust" />
         <div
-          class="mt-3 grid grid-cols-1 border-y-2 border-line-strong md:grid-cols-2"
+          class="mt-3 grid grid-cols-1 border-t-2 border-line-strong md:grid-cols-2"
         >
           <div
             v-for="(panel, i) in panels"
