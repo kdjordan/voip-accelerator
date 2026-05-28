@@ -72,7 +72,7 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-- **Conductor:** sits on `feat/rate-gen-studio` @ `99186e8` (integration branch for the Rate Composition
+- **Conductor:** sits on `feat/rate-gen-studio` @ `55f02ca` (integration branch for the Rate Composition
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
@@ -80,8 +80,10 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
   | task | branch | worktree | mode | status |
   |------|--------|----------|------|--------|
-  | A — upload validation (reject inter/intra ≤0) | `feat/rg-upload-validation` | `../va-wt-rg-upload-validation` | sub-agent (bg) | 🟡 running |
+  | A — upload validation (reject inter/intra ≤0) | `feat/rg-upload-validation` | `../va-wt-rg-upload-validation` | sub-agent (bg) | ✅ merged `55f02ca`; 64 unit green |
   | B — engine core (pure in-mem selection, drop IDB persist, aggregates) | `feat/rg-engine-core` | `../va-wt-rg-engine-core` | sub-agent (bg) | 🟡 running |
+
+  _Combined `regression-check` deferred until B merges (B's node_modules symlinks the main checkout — no concurrent builds). A's worktree can be removed after B lands._
 
 - **Waves:** 1 = A+B (running). 2 = C (tab shell). 3 = D (sandbox) + E (decks/outputs). Visual reskin
   (Switchboard) deferred until functionality baked — separate track/chat.
