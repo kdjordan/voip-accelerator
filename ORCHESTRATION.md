@@ -78,7 +78,7 @@ system; business logic stays 100% intact). Source of truth: repo-root `VoIP Acce
 `switchboard-reskin`. Geist Mono headlines + Inter body, arterial-red accent (NO emerald), radius 0,
 ticker bar, editorial running heads, light+dark peer themes.
 
-- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `bc078b5` (integration branch, off
+- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `3e39d9d` (integration branch, off
   `main` @ `6cbb28d`). `main` is UNTOUCHED/clean and stays that way until the whole Pass-1 reskin passes owner
   gut-check; then ONE merge integration→`main` with owner OK. **`main` = `origin/main` = `6cbb28d`;
   PROD = `8b696b7`** (push ≠ deploy; owner deploys via Coolify manually). NEVER merge to main / push /
@@ -158,7 +158,15 @@ ticker bar, editorial running heads, light+dark peer themes.
     surfaces/borders changed. regression-check GREEN. **Data-populated Explorer (needs uploaded decks) → OWNER
     gut-check** (conductor confirmed it compiles + the reskinned PreviewModal renders, but didn't drive a full
     222K-row upload — too token-heavy/flaky for the MCP).
-  - **V3 `USRateSheetView`** (pricing studio body) — NEXT.
+  - **V3 `USRateSheetView`** (Pricing Studio, `/us-rate-sheet`) — ✅ DONE + committed `3e39d9d`. Page shell +
+    `USRateSheetTable` (recipe builder / command bar / table / filter rail / pagination) + `pricing-studio/`
+    {`PricingStudioMetricStrip`,`PricingOperationsPanel`,`OperationCard`} all retoken'd to the portal
+    PricingStudioView (visual-only; pricing-engine/filters/freeze/pagination/export logic untouched). Palette
+    map: op/Apply+Freeze/active = accent; markup & "modified" & export-ready & "data loaded" = warn;
+    markdown = accent; **frozen/locked = info (blue)** — portal bans violet/green, so the violet "frozen"
+    semantic moved to info. Added a `RunningHead`. **Verified in chrome-devtools: UPLOAD state, dark + light,
+    zero console errors. regression-check GREEN.** ⚠️ Workspace state (recipe/table/operations, needs a loaded
+    deck) → **OWNER gut-check**.
   - **VERIFY (portal):** views are AUTH-GATED (`/usview` → `/login?redirect=/usview`). chrome-devtools is a
     FRESH browser session — the conductor must LOG IN (owner supplies local dev creds). Dev server must be
     running on :5173 in the conductor's main dir (`npm --prefix client run dev`); API :3000 confirmed up.
@@ -179,10 +187,16 @@ ticker bar, editorial running heads, light+dark peer themes.
   .dropcap/.slab-rule{,-2,-3}/.brand-chip`.
 
 ### Resume (if conductor tab dies / new chat)
-Confirm main dir on `feat/switchboard-reskin` @ `bc078b5`; `git log --oneline -3`; read this board; continue
-from the ACTIVE slice (**V3 `USRateSheetView` next**). Sample US decks for data-state verification live at
-`client/src/data/sample/UStest.csv` + `UStest1.csv` (map prefix→NPANXX, rate(inter)→Inter, the two intrastate
-cols → Intra + Indeterminate). For P3 the conductor edits views directly in the main dir (no worktrees)
+Confirm main dir on `feat/switchboard-reskin` @ `3e39d9d`; `git log --oneline -8`; read this board.
+**Pass-1 P3 is COMPLETE — all 4 named views reskinned + the Explorer body (V1 HomeView `df0640b`, V2 Analyzer
+`c8e8204`, V2b Explorer body `bc078b5`, V3 Pricing Studio `3e39d9d`).** NEXT = **full owner gut-check across
+every view in BOTH themes** (esp. the data-populated states the conductor couldn't reach: Insights, Explorer
+grid, Pricing Studio workspace — needs uploaded decks), THEN **ONE merge `feat/switchboard-reskin` → `main`
+with explicit owner OK** + regression-check + (manual Coolify) deploy. Pass-2 deferred items still untouched
+(`/rate-gen/us` Rate Composition Studio, dashboard, admin, auth, `TheFooter`, `AppMobileNav`, App.vue shell +
+the ticker/SideNav-width fixes). Sample US decks for data-state verification: `client/src/data/sample/UStest.csv`
++ `UStest1.csv` (map prefix→NPANXX, rate(inter)→Inter, the two intrastate cols → Intra + Indeterminate). For P3
+the conductor edits views directly in the main dir (no worktrees)
 and verifies via chrome-devtools at :5173. Ensure the dev server is up (`npm --prefix client run dev`); API
 on :3000. Portal views need login — get local dev creds from the owner and log into the chrome-devtools
 browser. Dev-auth origin is `localhost:5173` ONLY. **Owner is moving to a fresh YOLO-mode chat** (auto-accept
