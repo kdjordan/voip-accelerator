@@ -1,28 +1,26 @@
 <template>
-  <div class="flex min-h-screen flex-1 items-center justify-center bg-ink px-6 py-12 text-zinc-300 lg:px-8">
+  <div class="flex min-h-screen flex-1 items-center justify-center bg-canvas px-6 py-12 text-fg-dim lg:px-8">
     <div class="w-full max-w-md">
-      <div class="rounded-2xl border border-white/[0.07] bg-ink-raised p-8 shadow-2xl shadow-emerald-950/20">
+      <div class="border border-line bg-surface p-8">
         <!-- Header -->
         <div class="mb-8 text-center">
-          <span
-            class="mx-auto mb-4 grid h-11 w-11 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/30"
-          >
-            <BoltIcon class="h-6 w-6 text-emerald-400" />
-          </span>
-          <h2 class="text-2xl font-bold text-white">Create Your Free Account</h2>
-          <p class="mt-2 text-sm text-zinc-400">Free forever. No credit card required.</p>
+          <div class="mb-5 flex justify-center">
+            <VoipLogo />
+          </div>
+          <h2 class="font-display text-2xl font-semibold tracking-tight text-fg">Create Your Free Account</h2>
+          <p class="mt-2 text-sm text-fg-faint">Free forever. No credit card required.</p>
         </div>
 
         <!-- Form -->
         <SignUpForm ref="signUpForm" />
 
         <!-- Links -->
-        <p class="mt-6 text-center text-sm text-zinc-400">
+        <p class="mt-6 text-center text-sm text-fg-faint">
           Already a member?
           {{ ' ' }}
           <RouterLink
             :to="{ name: 'Login' }"
-            class="font-semibold leading-6 text-emerald-400 hover:text-emerald-300"
+            class="font-semibold leading-6 text-accent hover:text-accent-text"
             >Sign in here</RouterLink
           >
         </p>
@@ -34,7 +32,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { RouterLink } from 'vue-router';
-  import { BoltIcon } from '@heroicons/vue/24/solid';
+  import VoipLogo from '@/components/shared/VoipLogo.vue';
   import SignUpForm from '@/components/auth/SignUpForm.vue';
 
   // Reference to the SignUpForm component to access its state
