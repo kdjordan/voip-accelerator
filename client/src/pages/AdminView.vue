@@ -107,17 +107,8 @@
     source?: string;
   }
 
-  interface DbStatus {
-    connected: boolean;
-    error: string | null;
-  }
-
   const lergUploadStatus = ref<UploadStatus | null>(null);
   const isLergUploading = ref(false);
-  const dbStatus = computed<DbStatus>(() => ({
-    connected: pingStatus.value?.hasLergTable === true,
-    error: pingStatus.value?.error || null,
-  }));
 
   const showPreviewModal = ref(false);
   const showClearLergModal = ref(false);
@@ -131,7 +122,7 @@
 
   const showCanadianDetails = ref(false);
 
-  const { status: pingStatus, checkPingStatus } = usePingStatus();
+  const { checkPingStatus } = usePingStatus();
   const pingInterval = ref<number | null>(null);
 
   const newRecord = reactive<Pick<LERGRecord, 'npa' | 'state' | 'country'>>({
@@ -149,20 +140,6 @@
       /^[A-Za-z]{2}$/.test(newRecord.country) &&
       Object.values(validationErrors).every((err) => !err)
     );
-  });
-
-  // Edge status computed property
-  const edgeStatusClass = computed(() => {
-    const status = pingStatus.value;
-    if (!status) {
-      return 'bg-gray-500'; // Loading/unknown
-    }
-    
-    if (status.hasLergTable && !status.error) {
-      return 'bg-accent animate-status-pulse-success'; // Green pulsing
-    } else {
-      return 'bg-red-500 animate-status-pulse-error'; // Red pulsing
-    }
   });
 
   onMounted(async () => {

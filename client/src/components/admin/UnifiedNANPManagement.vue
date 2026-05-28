@@ -762,7 +762,7 @@
     console.log('[UnifiedNANPManagement] Refreshing LERG data...');
     try {
       await initializeLergData({ force: true });
-      console.log('[UnifiedNANPManagement] LERG data refreshed, count:', lergStore.allNPAs.length);
+      console.log('[UnifiedNANPManagement] LERG data refreshed, count:', store.allNPAs.length);
     } catch (err) {
       console.error('[UnifiedNANPManagement] Failed to refresh LERG data:', err);
     }
