@@ -78,11 +78,11 @@ system; business logic stays 100% intact). Source of truth: repo-root `VoIP Acce
 `switchboard-reskin`. Geist Mono headlines + Inter body, arterial-red accent (NO emerald), radius 0,
 ticker bar, editorial running heads, light+dark peer themes.
 
-- **Conductor:** main working dir is on **`feat/switchboard-reskin`** @ `3e39d9d` (integration branch, off
-  `main` @ `6cbb28d`). `main` is UNTOUCHED/clean and stays that way until the whole Pass-1 reskin passes owner
-  gut-check; then ONE merge integration→`main` with owner OK. **`main` = `origin/main` = `6cbb28d`;
-  PROD = `8b696b7`** (push ≠ deploy; owner deploys via Coolify manually). NEVER merge to main / push /
-  deploy without explicit owner OK.
+- **Conductor:** ✅ **Pass-1 MERGED to `main` @ `43cc3cd`** (no-ff merge, owner gut-check passed both themes
+  2026-05-28; `regression-check` GREEN on `main`). Working dir now on `main` (`feat/switchboard-reskin` is
+  merged — safe to delete). **`main` (local) = `43cc3cd`; `origin/main` STILL `6cbb28d` (NOT pushed —
+  awaiting owner OK); PROD STILL `8b696b7` (NOT deployed — manual Coolify action).** NEVER push / deploy
+  without explicit owner OK.
 - **Locked decisions (owner, 2026-05-28):** (1) **token bridge** — Tailwind color names point at CSS vars
   + legacy aliases retained, so existing classes re-theme automatically. (2) **Ticker ships in Pass 1**,
   wired to real session KPIs on portal (quiet state when no comparison); landing ticker uses --up/--down.
@@ -187,16 +187,19 @@ ticker bar, editorial running heads, light+dark peer themes.
   .dropcap/.slab-rule{,-2,-3}/.brand-chip`.
 
 ### Resume (if conductor tab dies / new chat)
-Confirm main dir on `feat/switchboard-reskin` @ `3e39d9d`; `git log --oneline -8`; read this board.
-**Pass-1 P3 is COMPLETE — all 4 named views reskinned + the Explorer body (V1 HomeView `df0640b`, V2 Analyzer
-`c8e8204`, V2b Explorer body `bc078b5`, V3 Pricing Studio `3e39d9d`).** NEXT = **full owner gut-check across
-every view in BOTH themes** (esp. the data-populated states the conductor couldn't reach: Insights, Explorer
-grid, Pricing Studio workspace — needs uploaded decks), THEN **ONE merge `feat/switchboard-reskin` → `main`
-with explicit owner OK** + regression-check + (manual Coolify) deploy. Pass-2 deferred items still untouched
-(`/rate-gen/us` Rate Composition Studio, dashboard, admin, auth, `TheFooter`, `AppMobileNav`, App.vue shell +
-the ticker/SideNav-width fixes). Sample US decks for data-state verification: `client/src/data/sample/UStest.csv`
-+ `UStest1.csv` (map prefix→NPANXX, rate(inter)→Inter, the two intrastate cols → Intra + Indeterminate). For P3
-the conductor edits views directly in the main dir (no worktrees)
+**Pass-1 is DONE and MERGED to `main` @ `43cc3cd`** (foundation + shared + 4 views + Explorer body; owner
+gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show-current` = `main`,
+`git log --oneline -5`. **IMMEDIATE open items (need owner OK):** (1) `git push origin main` — origin/main is
+still `6cbb28d`; (2) manual **Coolify deploy** — PROD still `8b696b7`; (3) delete the merged
+`feat/switchboard-reskin` branch. **THEN Pass-2** (deferred surfaces, still on legacy emerald, look rough after
+the token swap — expected): `/rate-gen/us` Rate Composition Studio, dashboard, admin, auth, `TheFooter`,
+`AppMobileNav`, App.vue shell + the deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+Reusable reskin facts: `rounded-*` already resolves to 0 globally (P1 config) + `font-secondary` auto-upgrades
+to Geist Mono, so a reskin is mostly color/surface/border token swaps; portal palette = warn(amber)=positive/
+Sell/done, accent(red)=negative/Buy/active, info(blue)=frozen/locked, down=destructive, NO green/violet.
+Sample US decks for data-state verification: `client/src/data/sample/UStest.csv` + `UStest1.csv` (map
+prefix→NPANXX, rate(inter)→Inter, the two intrastate cols → Intra + Indeterminate). For P3+ the conductor
+edits views directly in the main dir (no worktrees) and verifies via chrome-devtools at :5173
 and verifies via chrome-devtools at :5173. Ensure the dev server is up (`npm --prefix client run dev`); API
 on :3000. Portal views need login — get local dev creds from the owner and log into the chrome-devtools
 browser. Dev-auth origin is `localhost:5173` ONLY. **Owner is moving to a fresh YOLO-mode chat** (auto-accept
