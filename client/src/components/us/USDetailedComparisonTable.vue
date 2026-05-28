@@ -2,16 +2,16 @@
   <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4">
     <!-- ===================== LEFT FILTER RAIL ===================== -->
     <aside
-      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-5 h-max lg:sticky lg:top-4"
+      class="border border-line bg-surface p-4 space-y-5 h-max lg:sticky lg:top-4"
     >
       <!-- Rail header -->
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-white">Filters</h3>
+        <h3 class="font-display text-sm font-semibold text-fg">Filters</h3>
         <button
           type="button"
           @click="handleClearAllFilters"
           :disabled="isLoading || isFiltering || isPageLoading"
-          class="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="text-xs font-medium text-accent hover:text-accent-text transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Reset all
         </button>
@@ -19,7 +19,7 @@
 
       <!-- NPANXX Search -->
       <div>
-        <label for="npanxx-search" class="block text-xs font-medium text-zinc-400 mb-1.5"
+        <label for="npanxx-search" class="block font-display text-[11px] uppercase tracking-wider text-fg-faint mb-1.5"
           >Filter by NPA/NXX</label
         >
         <div class="relative">
@@ -28,10 +28,10 @@
             id="npanxx-search"
             v-model="npanxxSearchInput"
             placeholder="e.g., 201, 301333..."
-            class="bg-white/[0.03] border border-white/10 text-white placeholder-zinc-500 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent block w-full py-2.5 pl-3 pr-9"
+            class="bg-input border border-line-strong text-fg placeholder-fg-mute text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent block w-full py-2.5 pl-3 pr-9"
           />
           <MagnifyingGlassIcon
-            class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500"
+            class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-faint"
           />
         </div>
       </div>
@@ -39,21 +39,21 @@
       <!-- State / Province / Country -->
       <div>
         <Listbox v-model="selectedState" as="div">
-          <ListboxLabel class="block text-xs font-medium text-zinc-400 mb-1.5"
+          <ListboxLabel class="block font-display text-[11px] uppercase tracking-wider text-fg-faint mb-1.5"
             >State / Province / Country</ListboxLabel
           >
           <div class="relative">
             <ListboxButton
-              class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2.5 pl-3 pr-9 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 border border-white/10"
+              class="relative w-full cursor-default rounded-lg bg-input py-2.5 pl-3 pr-9 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent border border-line-strong"
               :disabled="availableStates.length === 0 || isLoading || isFiltering"
             >
-              <span class="block truncate text-white">{{
+              <span class="block truncate text-fg">{{
                 selectedState
                   ? getSelectedStateDisplayName(selectedState)
                   : 'All States/Provinces/Countries'
               }}</span>
               <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                <ChevronUpDownIcon class="h-5 w-5 text-zinc-400" aria-hidden="true" />
+                <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
               </span>
             </ListboxButton>
             <transition
@@ -62,12 +62,12 @@
               leave-to-class="opacity-0"
             >
               <ListboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-ink-raised py-1 text-base shadow-lg ring-1 ring-white/10 focus:outline-none sm:text-sm"
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface py-1 text-base shadow-lg ring-1 ring-line-strong focus:outline-none sm:text-sm"
               >
                 <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
                   <li
                     :class="[
-                      active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                      active ? 'bg-row-hover text-accent-text' : 'text-fg-dim',
                       'relative cursor-default select-none py-2 pl-10 pr-4',
                     ]"
                   >
@@ -76,14 +76,14 @@
                     >
                     <span
                       v-if="selected"
-                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
                     >
                       <CheckIcon class="h-5 w-5" aria-hidden="true" />
                     </span>
                   </li>
                 </ListboxOption>
                 <template v-for="group in groupedAvailableStates" :key="group.label">
-                  <li class="text-zinc-500 px-4 py-2 text-xs uppercase select-none">
+                  <li class="text-fg-faint px-4 py-2 text-xs uppercase select-none">
                     {{ group.label }}
                   </li>
                   <!-- Group-level selection option -->
@@ -94,7 +94,7 @@
                   >
                     <li
                       :class="[
-                        active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                        active ? 'bg-row-hover text-accent-text' : 'text-fg-dim',
                         'relative cursor-default select-none py-2 pl-6 pr-4 font-medium italic',
                       ]"
                     >
@@ -103,7 +103,7 @@
                       >
                       <span
                         v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-1 text-emerald-400"
+                        class="absolute inset-y-0 left-0 flex items-center pl-1 text-accent"
                       >
                         <CheckIcon class="h-5 w-5" aria-hidden="true" />
                       </span>
@@ -119,7 +119,7 @@
                   >
                     <li
                       :class="[
-                        active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                        active ? 'bg-row-hover text-accent-text' : 'text-fg-dim',
                         'relative cursor-default select-none py-2 pl-10 pr-4',
                       ]"
                     >
@@ -128,7 +128,7 @@
                       >
                       <span
                         v-if="selected"
-                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
+                        class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
                       >
                         <CheckIcon class="h-5 w-5" aria-hidden="true" />
                       </span>
@@ -144,22 +144,22 @@
       <!-- Rate Comparison -->
       <div>
         <Listbox v-model="selectedCheaper" as="div">
-          <ListboxLabel class="block text-xs font-medium text-zinc-400 mb-1.5">
+          <ListboxLabel class="block font-display text-[11px] uppercase tracking-wider text-fg-faint mb-1.5">
             Rate Comparison
           </ListboxLabel>
           <div class="relative">
             <ListboxButton
-              class="relative w-full cursor-default rounded-lg bg-white/[0.03] py-2.5 pl-3 pr-9 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 border border-white/10"
+              class="relative w-full cursor-default rounded-lg bg-input py-2.5 pl-3 pr-9 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent border border-line-strong"
               :disabled="isLoading || isFiltering"
             >
-              <span class="block truncate text-white">
+              <span class="block truncate text-fg">
                 {{
                   rateComparisonOptions.find((opt) => opt.value === selectedCheaper)?.label ||
                   'All Comparisons'
                 }}
               </span>
               <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                <ChevronUpDownIcon class="h-5 w-5 text-zinc-400" aria-hidden="true" />
+                <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
               </span>
             </ListboxButton>
             <transition
@@ -168,7 +168,7 @@
               leave-to-class="opacity-0"
             >
               <ListboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-ink-raised py-1 text-base shadow-lg ring-1 ring-white/10 focus:outline-none sm:text-sm"
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface py-1 text-base shadow-lg ring-1 ring-line-strong focus:outline-none sm:text-sm"
               >
                 <ListboxOption
                   v-for="option in rateComparisonOptions"
@@ -179,7 +179,7 @@
                 >
                   <li
                     :class="[
-                      active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                      active ? 'bg-row-hover text-accent-text' : 'text-fg-dim',
                       'relative cursor-default select-none py-2 pl-10 pr-4',
                     ]"
                   >
@@ -188,7 +188,7 @@
                     </span>
                     <span
                       v-if="selected"
-                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400"
+                      class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
                     >
                       <CheckIcon class="h-5 w-5" aria-hidden="true" />
                     </span>
@@ -202,22 +202,22 @@
 
       <!-- Metro Area -->
       <div>
-        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Metro Area</label>
+        <label class="block font-display text-[11px] uppercase tracking-wider text-fg-faint mb-1.5">Metro Area</label>
         <div class="relative">
           <MagnifyingGlassIcon
-            class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500"
+            class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-faint"
           />
           <input
             v-model="metroSearchQuery"
             type="text"
             placeholder="Search metros..."
             @focus="isMetroAreaVisible = true"
-            class="block w-full rounded-lg border border-white/10 py-2.5 pl-9 pr-9 bg-white/[0.03] text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+            class="block w-full rounded-lg border border-line-strong py-2.5 pl-9 pr-9 bg-input text-fg text-sm placeholder:text-fg-mute focus:outline-none focus:ring-2 focus:ring-accent"
           />
           <button
             @click="toggleMetroAreaVisibility"
             type="button"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-fg-faint hover:text-fg"
             title="Toggle metro selection"
           >
             <ChevronDownIcon
@@ -244,7 +244,7 @@
                 type="button"
                 @click="() => selectTopNMetros(n)"
                 :disabled="isLoading || isFiltering || isPageLoading"
-                class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-zinc-300 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+                class="border border-line-strong bg-row px-2 py-1 font-display text-[11px] uppercase tracking-wider text-fg-dim hover:bg-row-hover transition-colors disabled:opacity-40"
               >
                 Top {{ n }}
               </button>
@@ -254,7 +254,7 @@
                 :disabled="
                   isLoading || isFiltering || isPageLoading || filteredMetroOptions.length === 0
                 "
-                class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-zinc-300 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+                class="border border-line-strong bg-row px-2 py-1 font-display text-[11px] uppercase tracking-wider text-fg-dim hover:bg-row-hover transition-colors disabled:opacity-40"
               >
                 {{ areAllMetrosSelected ? 'Deselect' : 'All' }}
               </button>
@@ -263,7 +263,7 @@
                 type="button"
                 @click="clearAllSelectedMetros"
                 :disabled="isLoading || isFiltering || isPageLoading"
-                class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-zinc-400 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+                class="rounded-md border border-line-strong bg-input px-2 py-1 text-xs text-fg-faint hover:bg-row-hover transition-colors disabled:opacity-40"
               >
                 Clear ({{ selectedMetros.length }})
               </button>
@@ -271,38 +271,38 @@
 
             <!-- Metro checklist -->
             <div
-              class="max-h-56 overflow-y-auto rounded-lg border border-white/[0.07] bg-white/[0.02] p-2 space-y-0.5"
+              class="max-h-56 overflow-y-auto rounded-lg border border-line bg-surface p-2 space-y-0.5"
             >
               <template v-if="filteredMetroOptions.length > 0">
                 <label
                   v-for="metro in filteredMetroOptions"
                   :key="metro.key"
                   :for="`metro-checkbox-${metro.key}`"
-                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.05] cursor-pointer transition-colors"
-                  :class="{ 'bg-emerald-400/10': isMetroSelected(metro) }"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-row-hover cursor-pointer transition-colors"
+                  :class="{ 'bg-accent-soft': isMetroSelected(metro) }"
                 >
                   <input
                     :id="`metro-checkbox-${metro.key}`"
                     type="checkbox"
                     :checked="isMetroSelected(metro)"
                     @change="() => toggleMetroSelection(metro)"
-                    class="h-3.5 w-3.5 rounded border-white/20 bg-white/[0.05] text-emerald-400 focus:ring-emerald-400/60 focus:ring-offset-ink"
+                    class="h-3.5 w-3.5 rounded border-line-strong bg-row text-accent focus:ring-accent focus:ring-offset-canvas"
                   />
-                  <span class="text-xs text-zinc-200 truncate flex-1" :title="metro.displayName">{{
+                  <span class="text-xs text-fg truncate flex-1" :title="metro.displayName">{{
                     metro.displayName
                   }}</span>
-                  <span class="text-[10px] text-zinc-500 whitespace-nowrap">{{
+                  <span class="text-[10px] text-fg-faint whitespace-nowrap">{{
                     formatPopulation(metro.population)
                   }}</span>
                 </label>
               </template>
-              <div v-else class="py-3 text-center text-xs text-zinc-500">
+              <div v-else class="py-3 text-center text-xs text-fg-faint">
                 No metro areas match your search.
               </div>
             </div>
 
-            <p v-if="selectedMetros.length > 0" class="text-[11px] text-zinc-500">
-              <span class="text-zinc-300 font-medium">{{ selectedMetros.length }}</span> selected ·
+            <p v-if="selectedMetros.length > 0" class="text-[11px] text-fg-faint">
+              <span class="text-fg-dim font-medium">{{ selectedMetros.length }}</span> selected ·
               {{ totalSelectedPopulation.toLocaleString() }} pop.
             </p>
           </div>
@@ -315,7 +315,7 @@
           type="button"
           @click="handleOpenExportModal"
           :disabled="isLoading || isPageLoading || displayedData.length === 0 || isExporting"
-          class="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 hover:bg-emerald-400/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="w-full inline-flex items-center justify-center gap-2 bg-accent px-4 py-2.5 font-display text-[11px] font-semibold uppercase tracking-wider text-accent-ink hover:bg-accent-strong transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <ArrowPathIcon v-if="isExporting" class="animate-spin w-4 h-4" />
           <ArrowDownTrayIcon v-else class="w-4 h-4" />
@@ -329,15 +329,15 @@
       <!-- Summary cards: File A / File B / Delta (A - B) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- File A -->
-        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+        <div class="border border-line bg-surface p-4">
           <div class="flex items-baseline gap-2">
-            <span class="text-sm font-semibold text-white">File A</span>
-            <span class="text-xs text-emerald-400 truncate" :title="fileName1">{{ fileName1 }}</span>
+            <span class="font-display text-sm font-semibold text-fg">File A</span>
+            <span class="text-xs text-warn truncate" :title="fileName1">{{ fileName1 }}</span>
           </div>
           <div class="mt-3 grid grid-cols-3 gap-2">
             <div v-for="stat in fileAStats" :key="stat.label">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500">{{ stat.label }}</div>
-              <div class="mt-0.5 text-sm font-secondary text-white tabular-nums">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint">{{ stat.label }}</div>
+              <div class="mt-0.5 font-secondary text-sm text-fg tabular-nums">
                 <span v-if="isCalculatingAverages">…</span>
                 <span v-else>{{ fmtMoney(stat.value) }}</span>
               </div>
@@ -346,15 +346,15 @@
         </div>
 
         <!-- File B -->
-        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+        <div class="border border-line bg-surface p-4">
           <div class="flex items-baseline gap-2">
-            <span class="text-sm font-semibold text-white">File B</span>
-            <span class="text-xs text-violet-400 truncate" :title="fileName2">{{ fileName2 }}</span>
+            <span class="font-display text-sm font-semibold text-fg">File B</span>
+            <span class="text-xs text-accent truncate" :title="fileName2">{{ fileName2 }}</span>
           </div>
           <div class="mt-3 grid grid-cols-3 gap-2">
             <div v-for="stat in fileBStats" :key="stat.label">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500">{{ stat.label }}</div>
-              <div class="mt-0.5 text-sm font-secondary text-white tabular-nums">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint">{{ stat.label }}</div>
+              <div class="mt-0.5 font-secondary text-sm text-fg tabular-nums">
                 <span v-if="isCalculatingAverages">…</span>
                 <span v-else>{{ fmtMoney(stat.value) }}</span>
               </div>
@@ -363,14 +363,14 @@
         </div>
 
         <!-- Delta (A - B) -->
-        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+        <div class="border border-line bg-surface p-4">
           <div class="flex items-baseline gap-2">
-            <span class="text-sm font-semibold text-white">Delta (A − B)</span>
+            <span class="font-display text-sm font-semibold text-fg">Delta (A − B)</span>
           </div>
           <div class="mt-3 grid grid-cols-3 gap-2">
             <div v-for="stat in deltaStats" :key="stat.label">
-              <div class="text-[10px] uppercase tracking-wider text-zinc-500">{{ stat.label }}</div>
-              <div class="mt-0.5 text-sm font-secondary text-zinc-300 tabular-nums">
+              <div class="font-display text-[10px] uppercase tracking-wider text-fg-faint">{{ stat.label }}</div>
+              <div class="mt-0.5 font-secondary text-sm text-fg-dim tabular-nums">
                 <span v-if="isCalculatingAverages">…</span>
                 <span v-else>{{ fmtMoney(stat.value) }}</span>
               </div>
@@ -380,14 +380,14 @@
       </div>
 
       <!-- Pricing Comparison panel -->
-      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <div class="border border-line bg-surface overflow-hidden">
         <!-- Panel header -->
         <div
-          class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.06]"
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-line"
         >
           <div>
-            <h3 class="text-base font-semibold text-white">Pricing Comparison</h3>
-            <p class="text-xs text-zinc-500">
+            <h3 class="font-display text-base font-semibold text-fg">Pricing Comparison</h3>
+            <p class="text-xs text-fg-faint">
               Showing {{ displayedData.length.toLocaleString() }} of
               {{ totalFilteredItems.toLocaleString() }} entries
             </p>
@@ -396,11 +396,11 @@
           <!-- Column Presets -->
           <Listbox v-model="columnPreset" as="div" class="relative flex-shrink-0">
             <ListboxButton
-              class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06] transition-colors"
+              class="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-input px-3 py-2 text-sm text-fg-dim hover:bg-row-hover transition-colors"
             >
-              <ViewColumnsIcon class="h-4 w-4 text-zinc-400" />
+              <ViewColumnsIcon class="h-4 w-4 text-fg-faint" />
               {{ columnPresets.find((p) => p.value === columnPreset)?.label }}
-              <ChevronUpDownIcon class="h-4 w-4 text-zinc-400" />
+              <ChevronUpDownIcon class="h-4 w-4 text-fg-faint" />
             </ListboxButton>
             <transition
               leave-active-class="transition duration-100 ease-in"
@@ -408,7 +408,7 @@
               leave-to-class="opacity-0"
             >
               <ListboxOptions
-                class="absolute right-0 z-20 mt-1 w-48 overflow-auto rounded-lg bg-ink-raised py-1 text-sm shadow-lg ring-1 ring-white/10 focus:outline-none"
+                class="absolute right-0 z-20 mt-1 w-48 overflow-auto rounded-lg bg-surface py-1 text-sm shadow-lg ring-1 ring-line-strong focus:outline-none"
               >
                 <ListboxOption
                   v-for="preset in columnPresets"
@@ -419,7 +419,7 @@
                 >
                   <li
                     :class="[
-                      active ? 'bg-white/[0.06] text-emerald-300' : 'text-zinc-300',
+                      active ? 'bg-row-hover text-accent-text' : 'text-fg-dim',
                       'relative cursor-default select-none py-2 pl-9 pr-4',
                     ]"
                   >
@@ -428,7 +428,7 @@
                     }}</span>
                     <span
                       v-if="selected"
-                      class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-emerald-400"
+                      class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-accent"
                     >
                       <CheckIcon class="h-4 w-4" aria-hidden="true" />
                     </span>
@@ -442,23 +442,23 @@
         <!-- Selected metros summary (chips) -->
         <div
           v-if="selectedMetros.length > 0"
-          class="px-5 py-3 border-b border-white/[0.06] flex flex-wrap gap-2 items-center"
+          class="px-5 py-3 border-b border-line flex flex-wrap gap-2 items-center"
         >
-          <span class="text-xs text-zinc-500 mr-1">Metros:</span>
+          <span class="text-xs text-fg-faint mr-1">Metros:</span>
           <span
             v-for="metro in selectedMetros"
             :key="metro.key"
-            class="inline-flex items-center gap-x-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-xs font-medium text-zinc-200 ring-1 ring-inset ring-white/10"
+            class="inline-flex items-center gap-x-1.5 rounded-md bg-row px-2 py-1 text-xs font-medium text-fg ring-1 ring-inset ring-line-strong"
           >
             {{ metro.displayName }}
             <button
               @click="removeSelectedMetro(metro)"
               type="button"
-              class="group -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-white/10"
+              class="group -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-row-hover"
             >
               <span class="sr-only">Remove</span>
               <XCircleIcon
-                class="h-3.5 w-3.5 text-zinc-400 group-hover:text-zinc-200"
+                class="h-3.5 w-3.5 text-fg-faint group-hover:text-fg"
                 aria-hidden="true"
               />
             </button>
@@ -470,15 +470,15 @@
           v-if="isLoading && displayedData.length === 0"
           class="flex flex-col items-center justify-center py-16 min-h-[300px]"
         >
-          <ArrowPathIcon class="animate-spin w-10 h-10 text-emerald-400 mb-3" />
-          <p class="text-zinc-400 text-sm">Loading comparison data...</p>
+          <ArrowPathIcon class="animate-spin w-10 h-10 text-accent mb-3" />
+          <p class="text-fg-faint text-sm">Loading comparison data...</p>
         </div>
-        <div v-else-if="error" class="text-center text-rose-400 py-16">
+        <div v-else-if="error" class="text-center text-down py-16">
           Error loading data: {{ error }}
         </div>
         <div
           v-else-if="displayedData.length === 0 && !isLoading && !isPageLoading"
-          class="flex flex-col items-center justify-center text-zinc-500 py-16 min-h-[300px] w-full text-sm"
+          class="flex flex-col items-center justify-center text-fg-faint py-16 min-h-[300px] w-full text-sm"
         >
           No matching comparison data found. Ensure reports have been generated or adjust filters.
         </div>
@@ -488,22 +488,22 @@
           <!-- Loading overlay for filter changes -->
           <div
             v-if="isFiltering || (isPageLoading && displayedData.length === 0)"
-            class="absolute inset-0 bg-ink/70 backdrop-blur-sm flex items-center justify-center z-20"
+            class="absolute inset-0 bg-canvas/70 backdrop-blur-sm flex items-center justify-center z-20"
           >
-            <ArrowPathIcon class="animate-spin w-8 h-8 text-white" />
+            <ArrowPathIcon class="animate-spin w-8 h-8 text-fg" />
           </div>
           <div ref="scrollContainerRef" class="max-h-[600px] overflow-auto">
             <table class="min-w-full divide-y divide-white/[0.06] text-sm">
-              <thead class="bg-ink-raised sticky top-0 z-10">
+              <thead class="bg-surface sticky top-0 z-10">
                 <tr>
                   <th
                     v-for="header in visibleHeaders"
                     :key="header.key"
                     scope="col"
-                    class="px-4 py-3 text-[11px] uppercase tracking-wider text-zinc-500 align-bottom whitespace-nowrap"
+                    class="px-4 py-3 text-[11px] uppercase tracking-wider text-fg-faint align-bottom whitespace-nowrap"
                     :class="[
                       header.textAlign,
-                      { 'cursor-pointer hover:bg-white/[0.04]': header.sortable },
+                      { 'cursor-pointer hover:bg-row': header.sortable },
                       {
                         'min-w-28': [
                           'file1_inter',
@@ -553,17 +553,17 @@
                         <template v-if="header.sortable">
                           <ArrowUpIcon
                             v-if="currentSortKey === header.key && currentSortDirection === 'asc'"
-                            class="w-3 h-3 ml-1 text-emerald-400"
+                            class="w-3 h-3 ml-1 text-accent"
                           />
                           <ArrowDownIcon
                             v-else-if="
                               currentSortKey === header.key && currentSortDirection === 'desc'
                             "
-                            class="w-3 h-3 ml-1 text-emerald-400"
+                            class="w-3 h-3 ml-1 text-accent"
                           />
                           <ChevronUpDownIcon
                             v-else
-                            class="w-4 h-4 ml-1 text-zinc-600 hover:text-zinc-300"
+                            class="w-4 h-4 ml-1 text-fg-mute hover:text-fg-dim"
                           />
                         </template>
                       </div>
@@ -575,44 +575,44 @@
                 <tr
                   v-for="record in displayedData"
                   :key="record.npanxx"
-                  class="hover:bg-white/[0.02]"
+                  class="hover:bg-row"
                 >
-                  <td class="px-4 py-3 font-secondary text-zinc-200">{{ record.npanxx }}</td>
-                  <td class="px-4 py-3 text-zinc-400">{{ record.stateCode }}</td>
-                  <td class="px-4 py-3 text-zinc-400">{{ record.countryCode }}</td>
+                  <td class="px-4 py-3 font-secondary text-fg">{{ record.npanxx }}</td>
+                  <td class="px-4 py-3 text-fg-faint">{{ record.stateCode }}</td>
+                  <td class="px-4 py-3 text-fg-faint">{{ record.countryCode }}</td>
                   <!-- Inter group -->
                   <template v-if="showInter">
-                    <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.03]">
+                    <td class="px-4 py-3 font-secondary text-fg bg-row">
                       {{ record.file1_inter?.toFixed(6) }}
                     </td>
-                    <td class="px-4 py-3 font-secondary text-zinc-200">
+                    <td class="px-4 py-3 font-secondary text-fg">
                       {{ record.file2_inter?.toFixed(6) }}
                     </td>
-                    <td class="px-4 py-3 font-secondary text-center text-zinc-400">
+                    <td class="px-4 py-3 font-secondary text-center text-fg-faint">
                       {{ record.diff_inter_pct?.toFixed(2) }}%
                     </td>
                   </template>
                   <!-- Intra group -->
                   <template v-if="showIntra">
-                    <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.03]">
+                    <td class="px-4 py-3 font-secondary text-fg bg-row">
                       {{ record.file1_intra?.toFixed(6) }}
                     </td>
-                    <td class="px-4 py-3 font-secondary text-zinc-200">
+                    <td class="px-4 py-3 font-secondary text-fg">
                       {{ record.file2_intra?.toFixed(6) }}
                     </td>
-                    <td class="px-4 py-3 font-secondary text-center text-zinc-400">
+                    <td class="px-4 py-3 font-secondary text-center text-fg-faint">
                       {{ record.diff_intra_pct?.toFixed(2) }}%
                     </td>
                   </template>
                   <!-- Indeterm group -->
                   <template v-if="showIndeterm">
-                    <td class="px-4 py-3 font-secondary text-zinc-200 bg-white/[0.03]">
+                    <td class="px-4 py-3 font-secondary text-fg bg-row">
                       {{ record.file1_indeterm?.toFixed(6) }}
                     </td>
-                    <td class="px-4 py-3 font-secondary text-zinc-200">
+                    <td class="px-4 py-3 font-secondary text-fg">
                       {{ record.file2_indeterm?.toFixed(6) }}
                     </td>
-                    <td class="px-4 py-3 font-secondary text-center text-zinc-400">
+                    <td class="px-4 py-3 font-secondary text-center text-fg-faint">
                       {{ record.diff_indeterm_pct?.toFixed(2) }}%
                     </td>
                   </template>
@@ -625,14 +625,14 @@
         <!-- Pagination footer -->
         <div
           v-if="totalFilteredItems > 0 || isPageLoading"
-          class="flex flex-col md:flex-row items-center justify-between gap-4 px-5 py-3 border-t border-white/[0.06] text-sm text-zinc-400"
+          class="flex flex-col md:flex-row items-center justify-between gap-4 px-5 py-3 border-t border-line text-sm text-fg-faint"
         >
           <!-- Items per page selector -->
           <div class="flex items-center gap-2">
             <span>Show:</span>
             <select
               v-model="itemsPerPage"
-              class="bg-white/[0.03] border border-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent p-1.5"
+              class="bg-input border border-line-strong text-fg text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent p-1.5"
               :disabled="isPageLoading || isFiltering"
             >
               <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
@@ -674,7 +674,7 @@
                 @keyup.enter="() => handleDirectPageInput(createFilters())"
                 min="1"
                 :max="totalPages"
-                class="bg-white/[0.03] border border-white/10 text-white w-14 text-center text-sm rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-transparent"
+                class="bg-input border border-line-strong text-fg w-14 text-center text-sm rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                 :disabled="isPageLoading || isFiltering || totalPages === 1"
               />
               of {{ totalPages.toLocaleString() }}
@@ -709,7 +709,7 @@
             <span>Total: {{ totalFilteredItems.toLocaleString() }} records</span>
             <span
               v-if="isPerformingPageLevelSort && totalFilteredItems > itemsPerPage"
-              class="block text-xs text-amber-400/70"
+              class="block text-xs text-warn"
               >(Sorted current page)</span
             >
           </div>
