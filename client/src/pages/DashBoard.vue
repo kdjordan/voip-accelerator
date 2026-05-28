@@ -1,7 +1,7 @@
 <template>
-  <div class="w-full pb-4">
+  <div class="w-full pt-2 pb-4">
     <!-- Dashboard Content -->
-    <div class="flex flex-col gap-6 px-4">
+    <div class="flex flex-col gap-6">
       <!-- Standardized masthead -->
       <PageMasthead
         :title="`Welcome back, ${displayName}`"
