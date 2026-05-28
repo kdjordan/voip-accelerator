@@ -57,6 +57,15 @@
           </div>
         </div>
 
+        <!-- Quiet provenance line for a landed hand-off deck -->
+        <p
+          v-if="handoffProvenance"
+          class="mb-4 inline-flex items-center gap-1.5 font-display text-[11px] uppercase tracking-[0.08em] text-fg-mute"
+        >
+          <ArrowDownTrayIcon class="h-3.5 w-3.5 text-fg-faint" />
+          Loaded · {{ handoffProvenance }}
+        </p>
+
         <!-- Upload cards (Rate Deck A / VS / Rate Deck B) -->
         <USFileUploads ref="fileUploadsRef" />
 
@@ -130,6 +139,57 @@
       </div>
     </template>
 
+    <!-- Hand-off slot chooser (both comparison slots full — pick which to replace) -->
+    <Teleport to="body">
+      <div
+        v-if="showSlotChooser"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        @click.self="cancelSlotChooser"
+      >
+        <div class="w-full max-w-md border border-line-strong bg-surface p-6">
+          <h3 class="mb-3 font-display text-lg font-semibold uppercase tracking-wider text-fg">
+            Both decks are full
+          </h3>
+          <p class="mb-2 font-sans text-sm text-fg-dim">
+            Choose which comparison slot to replace with the landed deck
+            <span v-if="pendingHandoffName" class="text-fg">“{{ pendingHandoffName }}”</span>.
+          </p>
+          <p class="mb-6 font-sans text-sm text-fg-mute">This replaces the slot's current data.</p>
+          <div class="flex flex-col gap-3">
+            <button
+              type="button"
+              class="flex items-center justify-between border border-line-strong bg-row px-4 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft"
+              @click="chooseSlot('us1')"
+            >
+              <span class="font-display text-sm font-medium text-fg">Replace Rate Deck A</span>
+              <span class="font-display text-[11px] text-fg-faint truncate max-w-[55%]">{{
+                usStore.getFileNameByComponent('us1')
+              }}</span>
+            </button>
+            <button
+              type="button"
+              class="flex items-center justify-between border border-line-strong bg-row px-4 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft"
+              @click="chooseSlot('us2')"
+            >
+              <span class="font-display text-sm font-medium text-fg">Replace Rate Deck B</span>
+              <span class="font-display text-[11px] text-fg-faint truncate max-w-[55%]">{{
+                usStore.getFileNameByComponent('us2')
+              }}</span>
+            </button>
+          </div>
+          <div class="mt-6 flex justify-end">
+            <button
+              type="button"
+              class="border border-line-strong bg-surface px-4 py-2 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim transition-colors hover:bg-row hover:text-fg"
+              @click="cancelSlotChooser"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Info Modal -->
     <InfoModal :show-modal="showInfoModal" :type="'us_comparison'" @close="closeInfoModal" />
   </div>
@@ -149,18 +209,32 @@
     ArrowRightIcon,
     LockClosedIcon,
     CheckIcon,
+    ArrowDownTrayIcon,
   } from '@heroicons/vue/24/outline';
   import { ArrowPathIcon } from '@heroicons/vue/20/solid';
   import { useUsStore } from '@/stores/us-store';
-  import { ReportTypes } from '@/types/app-types';
-  import { onMounted, ref, computed } from 'vue';
+  import { useHandoffStore } from '@/stores/handoff-store';
+  import { ReportTypes, type ComponentId } from '@/types/app-types';
+  import { onMounted, ref, computed, nextTick } from 'vue';
   import { useLergStoreV2 } from '@/stores/lerg-store-v2';
+  import { pickAnalyzerSlot, ASK_WHICH_SLOT } from '@/utils/handoff-landing-analyzer';
+  import type { RateDeckHandoff } from '@/types/domains/handoff-types';
+  import type { USStandardizedData } from '@/types/domains/us-types';
 
   const usStore = useUsStore();
   const lergStore = useLergStoreV2();
+  const handoffStore = useHandoffStore();
 
   const showInfoModal = ref(false);
   const error = ref<string | null>(null);
+
+  // ===== Rate-deck hand-off landing (this view is a destination; see ADR 0009) =====
+  const ANALYZER_SLOTS = ['us1', 'us2'] as const;
+  const handoffProvenance = ref<string | null>(null);
+  const showSlotChooser = ref(false);
+  // The hand-off awaiting a slot choice (both slots full). Consumed only once landed.
+  const chooserHandoff = ref<RateDeckHandoff | null>(null);
+  const pendingHandoffName = computed(() => chooserHandoff.value?.name ?? '');
 
   const steps = [
     { n: 1, label: 'Rate Deck A', desc: 'Upload & map columns' },
@@ -228,6 +302,55 @@
     }
   }
 
+  // Drive USFileUploads' exposed landHandoff with the given deck + slot, then show
+  // the provenance line. Rows are already USStandardizedData-shaped (ADR 0009).
+  async function landInto(handoff: RateDeckHandoff, componentId: ComponentId) {
+    await nextTick(); // ensure USFileUploads is mounted and its ref is set
+    try {
+      await fileUploadsRef.value?.landHandoff(
+        handoff.rows as unknown as USStandardizedData[],
+        handoff.name,
+        componentId
+      );
+      handoffProvenance.value = handoff.provenance;
+    } catch (err) {
+      console.error('[UsView] Failed to land hand-off:', err);
+    }
+  }
+
+  function chooseSlot(componentId: ComponentId) {
+    const handoff = chooserHandoff.value;
+    showSlotChooser.value = false;
+    chooserHandoff.value = null;
+    if (handoff) landInto(handoff, componentId);
+  }
+
+  function cancelSlotChooser() {
+    // User declined to replace a slot — drop the pending hand-off, change nothing.
+    showSlotChooser.value = false;
+    chooserHandoff.value = null;
+    handoffStore.clear();
+  }
+
+  function maybeLandHandoff() {
+    if (!handoffStore.hasPending || handoffStore.pending?.target !== 'analyzer') return;
+
+    const occupied = new Set(ANALYZER_SLOTS.filter((slot) => usStore.isComponentDisabled(slot)));
+    const slot = pickAnalyzerSlot(ANALYZER_SLOTS, occupied);
+
+    if (slot === ASK_WHICH_SLOT) {
+      // Both slots full — hold the deck and ask which to replace. consume() is
+      // deferred until a choice is made (chooseSlot consumes; cancel clears).
+      chooserHandoff.value = handoffStore.consume();
+      showSlotChooser.value = chooserHandoff.value !== null;
+      return;
+    }
+
+    // One-shot consume, then land into the chosen empty slot.
+    const handoff = handoffStore.consume();
+    if (handoff) landInto(handoff, slot as ComponentId);
+  }
+
   function openInfoModal() {
     showInfoModal.value = true;
   }
@@ -246,5 +369,8 @@
       console.error('[UsView] Error pinging LERG service:', err);
       error.value = err instanceof Error ? err.message : 'Failed to ping LERG service';
     }
+
+    // Consume a pending rate-deck hand-off targeting the analyzer (one-shot).
+    maybeLandHandoff();
   });
 </script>
