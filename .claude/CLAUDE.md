@@ -4,6 +4,8 @@ Guidance for Claude Code when working in this repository.
 
 **Be concise** — sacrifice grammar for concision in your responses. **Do not create any `.md` documentation file unless explicitly asked.**
 
+**Multi-agent / parallel work** follows [`ORCHESTRATION.md`](../ORCHESTRATION.md) — conductor + worker roles, the worktree/merge flow, and the live board. Read it if you're orchestrating or running as a worker.
+
 ## Project Overview
 
 **VoIP Accelerator** — web app for managing and analyzing VoIP telecom data (rate sheets, LERG data, pricing comparisons).
