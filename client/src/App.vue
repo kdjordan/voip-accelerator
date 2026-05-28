@@ -69,6 +69,7 @@
   import { clearApplicationDatabases } from '@/utils/cleanup';
   import { RouterView, useRoute, useRouter } from 'vue-router';
   import { computed, watchEffect, nextTick } from 'vue';
+  import { useLergOperations } from '@/composables/useLergOperations';
   import { ArrowPathIcon } from '@heroicons/vue/20/solid'; // Import Heroicon
   // Import relevant stores
   import { useAzStore } from '@/stores/az-store';
@@ -164,6 +165,18 @@
         );
         // Potentially set a global error state if auth listener fails critically even in non-blocking mode
       });
+    // ---------------------------------------------
+
+    // --- Load LERG once on app startup (route-independent; non-blocking). The store's
+    //     own "already loaded" guard dedupes with the dashboard's call, so this is safe
+    //     to call here too. Without it, a cold-load (hard refresh / deep link) of any
+    //     non-dashboard portal route has no LERG and rate-sheet / rate-gen processing
+    //     fails ("LERG data is not loaded"). ---
+    useLergOperations()
+      .initializeLergData()
+      .catch((lergInitError) =>
+        console.error('[App Mount] Error initializing LERG data:', lergInitError)
+      );
     // ---------------------------------------------
   });
 

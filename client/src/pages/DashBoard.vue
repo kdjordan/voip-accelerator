@@ -400,8 +400,9 @@
     console.log('[DashBoard] ========== DASHBOARD MOUNTED: SMART LERG INITIALIZATION ==========');
 
     try {
-      // This is the ONLY place in the app that should call initializeLergData
-      // It will check Pinia first and only download if empty
+      // LERG is loaded on app startup in App.vue (route-independent); this dashboard call
+      // is a redundant safety net. The store's "already loaded" guard makes both idempotent
+      // (checks Pinia first, only downloads if empty).
       console.log('[DashBoard] Calling smart LERG initialization...');
       await initializeLergData();
       console.log('[DashBoard] LERG initialization completed successfully');
