@@ -187,6 +187,15 @@ ticker bar, editorial running heads, light+dark peer themes.
   .dropcap/.slab-rule{,-2,-3}/.brand-chip`.
 
 ### Resume (if conductor tab dies / new chat)
+**▶ LATEST (2026-05-28):** Pass-1 ✅ + **Pass-2 ✅ MERGED to `main` (`origin/main` = `a919455`)** — footer/
+masthead/dashboard/rate-gen-studio/legal/admin reskins + fixes. ⚠️ PROD still `8b696b7` (manual Coolify deploy
+pending; next deploy ships studio + reskin together). **Auth screens ✅ reskinned on branch `feat/switchboard-auth`
+(off `main` @ `a919455`, tip `26433d0`) — NOT merged, awaiting owner gut-check** (LoginPage/SignUpPage/SignInForm/
+SignUpForm → VoipLogo mark, mono headings, tokenized inputs, theme-aware; verified dark+light, regression GREEN;
+better-auth flows untouched). **Remaining Switchboard work: `AppMobileNav` + the App.vue shell / SideNav-width
+(80px vs `md:ml-[64px]`) + deferred ticker placement.** New branches go off `a919455`, NOT the old pass2 tip.
+History below is pre-merge (kept for reference).
+
 **Pass-1 is DONE and MERGED to `main` @ `43cc3cd`** (foundation + shared + 4 views + Explorer body; owner
 gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show-current` = `main`,
 `git log --oneline -5`. Pass-1 ✅ PUSHED (`main` = `origin/main` = `73a65a3`). **Open (need owner OK):**
