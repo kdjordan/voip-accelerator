@@ -175,6 +175,15 @@
     const isAuthenticated = userStore.getIsAuthenticated; // Reactive getter
     const currentPath = route.path;
 
+    // Bail while the INITIAL navigation is still unresolved (fresh deep-link / bookmark /
+    // new-tab / hard refresh). The router guard pauses the initial nav to await auth init,
+    // so the route sits at START_LOCATION ('/', no name, empty matched) until it resolves.
+    // Without this, an authenticated deep-link to a non-dashboard route gets hijacked to
+    // /dashboard because '/' is a transitional route — the guard would have allowed it.
+    if (!route.name || route.matched.length === 0) {
+      return;
+    }
+
     // Routes from which an authenticated user should be redirected
     const transitionalAuthRoutes = ['/', '/home', '/login', '/signup', '/auth/callback'];
 
