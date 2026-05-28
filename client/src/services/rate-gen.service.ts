@@ -12,7 +12,8 @@ import type {
   InvalidRateGenRow,
   LCRStrategy,
   RateGenExportOptions,
-  EnhancedGeneratedRate
+  EnhancedGeneratedRate,
+  LeanGeneratedRecord
 } from '@/types/domains/rate-gen-types';
 
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
@@ -52,11 +53,119 @@ export function currentProviderName(
   return namesById.get(record.providerId) ?? record.providerName;
 }
 
+/**
+ * PURE: pick a single rate + provider from a set of provider rates per LCR strategy.
+ * Ignores zero/negative rates. LCRn falls back to the deepest available when fewer
+ * providers quote than n. 'Average' returns the mean rate with all providers joined.
+ */
+export function selectByStrategy(
+  rates: Array<{ rate: number; provider: string }>,
+  strategy: LCRStrategy
+): { rate: number; provider: string } {
+  const sorted = rates.filter((r) => r.rate > 0).sort((a, b) => a.rate - b.rate);
+
+  if (sorted.length === 0) {
+    return { rate: 0, provider: 'None' };
+  }
+
+  switch (strategy) {
+    case 'LCR1':
+      return sorted[0];
+    case 'LCR2':
+      return sorted[1] || sorted[0];
+    case 'LCR3':
+      return sorted[2] || sorted[1] || sorted[0];
+    case 'LCR4':
+      return sorted[3] || sorted[2] || sorted[1] || sorted[0];
+    case 'LCR5':
+      return sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
+    case 'LCR6':
+      return sorted[5] || sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
+    case 'Average': {
+      const avgRate = sorted.reduce((sum, r) => sum + r.rate, 0) / sorted.length;
+      return { rate: avgRate, provider: sorted.map((r) => r.provider).join(', ') };
+    }
+    default:
+      return sorted[0];
+  }
+}
+
+/**
+ * PURE: apply markup to a rate. Fixed markup (additive) takes precedence over
+ * percentage when present and > 0. Rounds to 6 decimal places (telecom convention).
+ */
+export function applyMarkup(rate: number, config: LCRConfig): number {
+  const finalRate =
+    config.markupFixed && config.markupFixed > 0
+      ? rate + config.markupFixed
+      : rate * (1 + config.markupPercentage / 100);
+  return Math.round(finalRate * 1000000) / 1000000;
+}
+
+/**
+ * PURE in-memory LCR selection over an arbitrary set of prefixes.
+ *
+ * Works for any subset — the Simulation sandbox passes a ~5,000-prefix sample;
+ * a full generate passes every prefix. Provider data is supplied as an
+ * already-built `Map<prefix, RateGenRecord[]>` (loaded once, NOT re-read from
+ * IndexedDB per batch). Returns lean records (post-markup rates + the three
+ * per-rate-type winner names); the heavy debug block is intentionally dropped.
+ */
+export function selectLeanRecords(
+  prefixes: Iterable<string>,
+  dataByPrefix: Map<string, RateGenRecord[]>,
+  config: LCRConfig,
+  namesById: Map<string, string> = new Map()
+): LeanGeneratedRecord[] {
+  const allowed = new Set(config.providerIds);
+  const appliedMarkup = config.markupFixed ? config.markupFixed : config.markupPercentage;
+  const results: LeanGeneratedRecord[] = [];
+
+  for (const prefix of prefixes) {
+    const records = dataByPrefix.get(prefix);
+    if (!records) continue;
+
+    const inter: Array<{ rate: number; provider: string }> = [];
+    const intra: Array<{ rate: number; provider: string }> = [];
+    const indet: Array<{ rate: number; provider: string }> = [];
+
+    for (const record of records) {
+      if (!allowed.has(record.providerId)) continue;
+      const provider = currentProviderName(record, namesById);
+      inter.push({ rate: record.rateInter, provider });
+      intra.push({ rate: record.rateIntra, provider });
+      indet.push({ rate: record.rateIndeterminate, provider });
+    }
+
+    if (inter.length === 0) continue;
+
+    const selInter = selectByStrategy(inter, config.strategy);
+    const selIntra = selectByStrategy(intra, config.strategy);
+    const selIndet = selectByStrategy(indet, config.strategy);
+
+    results.push({
+      prefix,
+      rate: applyMarkup(selInter.rate, config),
+      intrastate: applyMarkup(selIntra.rate, config),
+      indeterminate: applyMarkup(selIndet.rate, config),
+      interProvider: selInter.provider,
+      intraProvider: selIntra.provider,
+      indetProvider: selIndet.provider,
+      appliedMarkup,
+    });
+  }
+
+  return results;
+}
+
 export class RateGenService {
   private store: RateGenStore;
   private dexieDB = useDexieDB();
   private worker: Worker | null = null;
   private temporaryGeneratedRates: GeneratedRateRecord[] = [];
+  // Committed generated decks held IN MEMORY (session-only), keyed by deck id.
+  // Generated output is NO LONGER persisted to IndexedDB — provider uploads stay there.
+  private generatedDeckRecords: Map<string, LeanGeneratedRecord[]> = new Map();
   private progressTimers: Map<string, number> = new Map(); // Store timer IDs by providerId (browser timers return numbers)
 
   constructor() {
@@ -501,22 +610,19 @@ export class RateGenService {
     this.store.setGenerating(true);
 
     try {
-      // Get all unique prefixes across all providers
-      const allPrefixes = await this.getUniquePrefixes();
+      // Load provider data from IndexedDB ONCE and build the prefix map ONCE
+      // (provider uploads stay in IndexedDB; generated output does NOT get persisted).
+      const dataByPrefix = await this.loadProviderDataByPrefix();
+      const allPrefixes = Array.from(dataByPrefix.keys());
       const totalPrefixes = allPrefixes.length;
-      const generatedRates: GeneratedRateRecord[] = [];
 
-      console.log(`[RateGenService] Starting LCR generation for ${totalPrefixes} prefixes with strategy: ${config.strategy}`);
+      // Current provider names so post-upload renames flow into generated output.
+      const namesById = new Map(this.store.providerList.map(p => [p.id, p.name]));
 
-      // Process in batches for better performance
-      const batchSize = 5000;
-      for (let i = 0; i < totalPrefixes; i += batchSize) {
-        const batchPrefixes = allPrefixes.slice(i, i + batchSize);
-        const batchRates = await this.processPrefixBatch(batchPrefixes, config);
-        generatedRates.push(...batchRates);
-        
-        this.store.setGenerationProgress(Math.min((i + batchSize) / totalPrefixes * 100, 100));
-      }
+      console.log(`[RateGenService] Starting in-memory LCR generation for ${totalPrefixes} prefixes with strategy: ${config.strategy}`);
+
+      // Pure in-memory selection pass (no IndexedDB writes).
+      const leanRecords = selectLeanRecords(allPrefixes, dataByPrefix, config, namesById);
 
       // Create generated deck metadata
       const deck: GeneratedRateDeck = {
@@ -528,49 +634,38 @@ export class RateGenService {
         providerIds: config.providerIds,
         generatedDate: new Date(),
         effectiveDate: config.effectiveDate,
-        rowCount: generatedRates.length
+        rowCount: leanRecords.length
       };
 
-      // Set progress to 100% to trigger "Finalizing" message
       this.store.setGenerationProgress(100);
-      
-      // Store deck metadata first
-      console.log(`[RateGenService] Storing deck metadata...`);
-      await this.storeDeckMetadata(deck);
-      
-      // Store generated rates in IndexedDB and temporarily for export
-      console.log(`[RateGenService] Storing ${generatedRates.length} rates to database...`);
-      await this.storeGeneratedRates(deck.id, generatedRates);
-      this.temporaryGeneratedRates = generatedRates;
-      
+
+      // Hold the committed deck's lean records IN MEMORY keyed by deck id.
+      this.generatedDeckRecords.set(deck.id, leanRecords);
+
       this.store.setGeneratedDeck(deck);
-      
-      console.log(`[RateGenService] Generated ${generatedRates.length} rates using ${config.strategy} strategy`);
-      
-      // Log sample calculations for validation
-      const sampleRates = generatedRates.slice(0, 3);
-      console.log('[RateGenService] Sample LCR calculations for validation:', sampleRates.map(r => ({
+
+      console.log(`[RateGenService] Generated ${leanRecords.length} lean records using ${config.strategy} strategy (in memory, not persisted)`);
+
+      // Log a few sample selections for validation
+      console.log('[RateGenService] Sample LCR selections:', leanRecords.slice(0, 3).map(r => ({
         prefix: r.prefix,
-        strategy: r.debug?.strategy,
-        finalRate: r.rate,
-        selectedProvider: r.selectedProvider,
-        providerInputs: r.debug?.providerRates?.map(p => `${p.provider}: $${p.interRate.toFixed(6)}`),
-        selectedRate: r.debug?.selectedRates?.inter,
-        markup: r.debug?.appliedMarkup
+        rate: r.rate,
+        interProvider: r.interProvider,
+        intraProvider: r.intraProvider,
+        indetProvider: r.indetProvider,
+        appliedMarkup: r.appliedMarkup
       })));
-      
+
       // Run validation tests if in development mode
       if (import.meta.env.DEV) {
         this.runLCRValidationTests(config).catch(console.warn);
       }
-      
+
       return deck;
 
     } catch (error) {
       console.error('[RateGenService] Error generating rate deck:', error);
-      const userMessage = (error as Error).message.includes('QuotaExceededError')
-        ? 'Not enough storage space. Please clear some browser data or use a smaller dataset.'
-        : `Rate generation failed: ${(error as Error).message}`;
+      const userMessage = `Rate generation failed: ${(error as Error).message}`;
       this.store.addError(userMessage);
       throw error;
     } finally {
@@ -579,271 +674,32 @@ export class RateGenService {
   }
 
   /**
-   * Get unique prefixes across all providers
+   * Load all provider records from IndexedDB ONCE and build a
+   * `Map<prefix, RateGenRecord[]>` for in-memory selection. Provider uploads
+   * remain the only data persisted in IndexedDB.
    */
-  private async getUniquePrefixes(): Promise<string[]> {
-    const allPrefixes = new Set<string>();
+  private async loadProviderDataByPrefix(): Promise<Map<string, RateGenRecord[]>> {
     const { loadFromDexieDB } = this.dexieDB;
-    
-    // Get all data from IndexedDB
     const allData = await loadFromDexieDB<RateGenRecord>(DBName.RATE_GEN, 'providers');
-    
-    // Get unique prefixes from all providers
-    allData.forEach(record => allPrefixes.add(record.prefix));
-    
-    return Array.from(allPrefixes);
-  }
 
-  /**
-   * Process a batch of prefixes with LCR strategy
-   */
-  private async processPrefixBatch(
-    prefixes: string[], 
-    config: LCRConfig
-  ): Promise<GeneratedRateRecord[]> {
-    const results: GeneratedRateRecord[] = [];
-    const { loadFromDexieDB } = this.dexieDB;
-    
-    // Load all data once for this batch
-    const allData = await loadFromDexieDB<RateGenRecord>(DBName.RATE_GEN, 'providers');
-    
-    // Current provider names (so post-upload renames flow into generated output)
-    const namesById = new Map(this.store.providerList.map(p => [p.id, p.name]));
-
-    // Create a map for quick lookup by prefix
     const dataByPrefix = new Map<string, RateGenRecord[]>();
-    allData.forEach(record => {
-      if (!dataByPrefix.has(record.prefix)) {
-        dataByPrefix.set(record.prefix, []);
+    for (const record of allData) {
+      let bucket = dataByPrefix.get(record.prefix);
+      if (!bucket) {
+        bucket = [];
+        dataByPrefix.set(record.prefix, bucket);
       }
-      dataByPrefix.get(record.prefix)!.push(record);
-    });
-    
-    for (const prefix of prefixes) {
-      // Get rates for this prefix from all providers
-      const records = dataByPrefix.get(prefix) || [];
-      const providerRates: Array<{ rate: number; intraRate: number; indeterminateRate: number; provider: string }> = [];
-      
-      records.forEach(record => {
-        if (config.providerIds.includes(record.providerId)) {
-          providerRates.push({
-            rate: record.rateInter,
-            intraRate: record.rateIntra,
-            indeterminateRate: record.rateIndeterminate,
-            provider: currentProviderName(record, namesById)
-          });
-        }
-      });
-      
-      if (providerRates.length === 0) continue;
-      
-      // Apply LCR strategy for each rate type
-      const selectedInterRate = this.applyLCRStrategy(
-        providerRates.map(r => ({ rate: r.rate, provider: r.provider })),
-        config.strategy
-      );
-      
-      const selectedIntraRate = this.applyLCRStrategy(
-        providerRates.map(r => ({ rate: r.intraRate, provider: r.provider })),
-        config.strategy
-      );
-      
-      const selectedIndeterminateRate = this.applyLCRStrategy(
-        providerRates.map(r => ({ rate: r.indeterminateRate, provider: r.provider })),
-        config.strategy
-      );
-      
-      // Apply markup (either percentage or fixed)
-      const finalInterRate = this.applyMarkupToRate(selectedInterRate.rate, config);
-      const finalIntraRate = this.applyMarkupToRate(selectedIntraRate.rate, config);
-      const finalIndeterminateRate = this.applyMarkupToRate(selectedIndeterminateRate.rate, config);
-      
-      results.push({
-        prefix,
-        rate: finalInterRate,
-        intrastate: finalIntraRate,
-        indeterminate: finalIndeterminateRate,
-        selectedProvider: selectedInterRate.provider,
-        appliedMarkup: config.markupFixed ? config.markupFixed : config.markupPercentage,
-        // Debug information for LCR validation
-        debug: {
-          strategy: config.strategy,
-          providerRates: providerRates.map(p => ({ 
-            provider: p.provider, 
-            interRate: p.rate,
-            intraRate: p.intraRate,
-            indeterminateRate: p.indeterminateRate
-          })),
-          selectedRates: {
-            inter: { rate: selectedInterRate.rate, provider: selectedInterRate.provider },
-            intra: { rate: selectedIntraRate.rate, provider: selectedIntraRate.provider },
-            indeterminate: { rate: selectedIndeterminateRate.rate, provider: selectedIndeterminateRate.provider }
-          },
-          appliedMarkup: {
-            type: config.markupFixed ? 'fixed' : 'percentage',
-            value: config.markupFixed || config.markupPercentage,
-            originalRates: {
-              inter: selectedInterRate.rate,
-              intra: selectedIntraRate.rate,
-              indeterminate: selectedIndeterminateRate.rate
-            }
-          }
-        }
-      });
+      bucket.push(record);
     }
-    
-    return results;
+    return dataByPrefix;
   }
 
   /**
-   * Apply LCR strategy to select rate
+   * Lean records for a committed deck, held in memory for the session.
+   * Returns undefined if the deck was never generated this session (e.g. after reload).
    */
-  private applyLCRStrategy(
-    rates: Array<{ rate: number; provider: string }>,
-    strategy: LCRStrategy
-  ): { rate: number; provider: string } {
-    // Sort rates by value (ascending)
-    const sorted = rates
-      .filter(r => r.rate > 0)
-      .sort((a, b) => a.rate - b.rate);
-    
-    if (sorted.length === 0) {
-      return { rate: 0, provider: 'None' };
-    }
-    
-    switch (strategy) {
-      case 'LCR1':
-        return sorted[0];
-        
-      case 'LCR2':
-        return sorted[1] || sorted[0];
-        
-      case 'LCR3':
-        return sorted[2] || sorted[1] || sorted[0];
-        
-      case 'LCR4':
-        return sorted[3] || sorted[2] || sorted[1] || sorted[0];
-        
-      case 'LCR5':
-        return sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
-
-      case 'LCR6':
-        return sorted[5] || sorted[4] || sorted[3] || sorted[2] || sorted[1] || sorted[0];
-
-      case 'Average':
-        const avgRate = sorted.reduce((sum, r) => sum + r.rate, 0) / sorted.length;
-        return {
-          rate: avgRate,
-          provider: sorted.map(r => r.provider).join(', ')
-        };
-
-      default:
-        return sorted[0];
-    }
-  }
-
-  /**
-   * Apply markup to rate based on config (percentage or fixed)
-   */
-  private applyMarkupToRate(rate: number, config: LCRConfig): number {
-    let finalRate: number;
-    
-    if (config.markupFixed && config.markupFixed > 0) {
-      // Fixed markup - add the fixed amount
-      finalRate = rate + config.markupFixed;
-    } else {
-      // Percentage markup - multiply by percentage
-      finalRate = rate * (1 + config.markupPercentage / 100);
-    }
-    
-    // Round to 6 decimal places (typical for telecom rates)
-    return Math.round(finalRate * 1000000) / 1000000;
-  }
-
-  /**
-   * Apply markup to rate (deprecated - kept for backward compatibility)
-   */
-  private applyMarkup(rate: number, markupMultiplier: number): number {
-    // Round to 6 decimal places (typical for telecom rates)
-    return Math.round(rate * markupMultiplier * 1000000) / 1000000;
-  }
-
-  /**
-   * Store deck metadata in IndexedDB
-   */
-  private async storeDeckMetadata(deck: GeneratedRateDeck): Promise<void> {
-    try {
-      const { storeInDexieDB } = this.dexieDB;
-      
-      // Store deck metadata
-      const deckMetadata = {
-        id: deck.id,
-        name: deck.name,
-        strategy: deck.lcrStrategy,
-        rowCount: deck.rowCount,
-        providerCount: deck.providerIds.length,
-        markupType: deck.markupFixed ? 'fixed' : 'percentage',
-        markupValue: deck.markupFixed || deck.markupPercentage,
-        generatedAt: deck.generatedDate,
-        providerNames: this.store.providerList
-          .filter(p => deck.providerIds.includes(p.id))
-          .map(p => p.name)
-          .join(', ')
-      };
-      
-      await storeInDexieDB(
-        [deckMetadata],
-        DBName.RATE_GEN_DECKS,
-        'rate_decks',
-        { replaceExisting: false }
-      );
-      
-      console.log(`[RateGenService] Stored deck metadata for ${deck.id}`);
-      
-    } catch (error) {
-      console.error('[RateGenService] Error storing deck metadata:', error);
-      throw new Error('Failed to store rate deck metadata');
-    }
-  }
-
-  /**
-   * Store generated rates in IndexedDB
-   */
-  private async storeGeneratedRates(deckId: string, rates: GeneratedRateRecord[]): Promise<void> {
-    try {
-      const { storeInDexieDB } = this.dexieDB;
-      
-      // Transform rates to include deckId and generatedDate
-      const ratesWithMetadata = rates.map(rate => ({
-        ...rate,
-        deckId,
-        generatedDate: new Date()
-      }));
-      
-      // Store in chunks for better performance
-      const CHUNK_SIZE = 5000;
-      const totalChunks = Math.ceil(ratesWithMetadata.length / CHUNK_SIZE);
-      console.log(`[RateGenService] Storing rates in ${totalChunks} chunks of ${CHUNK_SIZE} each...`);
-      
-      for (let i = 0; i < ratesWithMetadata.length; i += CHUNK_SIZE) {
-        const chunk = ratesWithMetadata.slice(i, i + CHUNK_SIZE);
-        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1;
-        console.log(`[RateGenService] Storing chunk ${chunkNumber}/${totalChunks}...`);
-        
-        await storeInDexieDB(
-          chunk,
-          DBName.RATE_GEN_RESULTS,
-          'generated_rates',
-          { replaceExisting: false }
-        );
-      }
-      
-      console.log(`[RateGenService] Stored ${rates.length} generated rates for deck ${deckId}`);
-      
-    } catch (error) {
-      console.error('[RateGenService] Error storing generated rates:', error);
-      throw new Error('Failed to store generated rates');
-    }
+  getGeneratedRecords(deckId: string): LeanGeneratedRecord[] | undefined {
+    return this.generatedDeckRecords.get(deckId);
   }
 
   /**
@@ -1206,6 +1062,9 @@ export class RateGenService {
       if (remainingDecks.length > 0) {
         await storeInDexieDB(remainingDecks, DBName.RATE_GEN_DECKS, 'rate_decks', { replaceExisting: false });
       }
+
+      // Drop the in-memory lean records for this deck (session-only store)
+      this.generatedDeckRecords.delete(deckId);
 
       // Update store
       this.store.removeGeneratedDeck(deckId);
