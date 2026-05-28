@@ -72,17 +72,22 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-**TRACK: Switchboard reskin — PASS 1** (sitewide visual/typographic overhaul to the "Switchboard" design
-system; business logic stays 100% intact). Source of truth: repo-root `VoIP Accelerator Design System/`
-(`colors_and_type.css` = tokens; `ui_kits/{landing,portal}/page.jsx` = visual targets). See auto-memory
-`switchboard-reskin`. Geist Mono headlines + Inter body, arterial-red accent (NO emerald), radius 0,
-ticker bar, editorial running heads, light+dark peer themes.
+**✅ ALL TRACKS COMPLETE + DEPLOYED (2026-05-28) — board idle, ready for the next feature.**
+The Rate Composition Studio + the full sitewide Switchboard reskin (Pass 1 + Pass 2 + auth/mobile/App-shell)
++ favicon + tabbed hero/Compose + the deep-link / invalid-rows / LERG-on-boot fixes are ALL on `main` and
+LIVE in prod. **Authoritative current main/prod state = auto-memory `MEMORY.md` (the START-HERE line):
+`origin/main` = `fb810da` (new og-image, 1 ahead of prod), PROD = `a645c97` (tagged `prod-2026-05-28`).**
 
-- **Conductor:** ✅ **Pass-1 MERGED to `main` @ `43cc3cd`** (no-ff merge, owner gut-check passed both themes
-  2026-05-28; `regression-check` GREEN on `main`). Working dir now on `main` (`feat/switchboard-reskin` is
-  merged — safe to delete). **`main` = `origin/main` = `651e699` (✅ PUSHED 2026-05-28 w/ owner OK);
-  PROD STILL `8b696b7` (NOT deployed — manual Coolify action, push ≠ deploy).** NEVER deploy without explicit
-  owner OK.
+- **Conductor:** idle on `main`. No active tasks, no worktrees, no feature branches. Repo clean.
+- **NEXT:** a new feature is being scoped in a FRESH conductor chat (the chat that carried the studio+reskin
+  arc is being retired). To scope it, that chat should read `MEMORY.md` + this file, then drive
+  `/grill-with-docs` (or `/grill-me`) like the studio kickoff did.
+- Proven mechanics to reuse: worktree per slice + **symlink node_modules** (skip `npm ci`/the install gate);
+  sub-agents for clean chunks / cmux tab when the owner wants to steer live (esp. visual work);
+  **`:5173`-only auth origin** (workers don't run dev on other ports); **`chrome-devtools` MCP** available
+  for visual verification; **push ≠ deploy** (manual Coolify); tag every deploy.
+
+--- (historical — Switchboard reskin Pass 1/2/3 execution log, kept for reference) ---
 - **Locked decisions (owner, 2026-05-28):** (1) **token bridge** — Tailwind color names point at CSS vars
   + legacy aliases retained, so existing classes re-theme automatically. (2) **Ticker ships in Pass 1**,
   wired to real session KPIs on portal (quiet state when no comparison); landing ticker uses --up/--down.
