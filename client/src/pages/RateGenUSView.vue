@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
+import { RateGenService } from '@/services/rate-gen.service';
 
 // Components
 import RateGenFileUploads from '@/components/rate-gen/RateGenFileUploads.vue';
+import RateGenSimulation from '@/components/rate-gen/RateGenSimulation.vue';
 import ReportTabButton from '@/components/shared/ReportsTabButton.vue';
 
 const store = useRateGenStore();
+
+// One RateGenService instance shared across the studio's tabs so committed
+// decks' in-memory (session-only) records are visible to the Generated Decks
+// tab (slice E) — consume THIS instance there, do NOT `new RateGenService()`.
+const service = new RateGenService();
 
 type StudioTab = 'upload' | 'simulation' | 'decks';
 const TABS: { value: StudioTab; label: string }[] = [
@@ -18,15 +25,14 @@ const TABS: { value: StudioTab; label: string }[] = [
 // Free-navigation tab state — any tab is clickable at any time.
 const activeTab = ref<StudioTab>('upload');
 
-// Global effective date for the generated decks. Lives here so the future
-// Simulation Preview sandbox (slice D) can read/lift it. Default: today + 7 days.
+// Global effective date for the generated decks. Owned here, lifted into the
+// Simulation sandbox via v-model. Default: today + 7 days.
 const getDefaultEffectiveDate = () => {
   const date = new Date();
   date.setDate(date.getDate() + 7);
   return date.toISOString().split('T')[0];
 };
 const effectiveDate = ref(getDefaultEffectiveDate());
-const minDate = new Date().toISOString().split('T')[0];
 </script>
 
 <template>
@@ -59,57 +65,9 @@ const minDate = new Date().toISOString().split('T')[0];
         <RateGenFileUploads />
       </div>
 
-      <!-- Simulation Preview (placeholder body + global options) -->
-      <div v-else-if="activeTab === 'simulation'" class="pt-6 space-y-6">
-        <!-- Placeholder -->
-        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center">
-          <h2 class="text-lg font-semibold text-white">Scenario sandbox — coming next</h2>
-          <p class="mt-2 text-sm text-zinc-400">
-            Build and compare scenarios against a sample of your uploaded prefixes here.
-          </p>
-        </div>
-
-        <!-- Global options -->
-        <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 space-y-4">
-          <!-- Effective Date -->
-          <div>
-            <label for="effective-date" class="mb-2 block text-sm font-medium text-zinc-300">
-              Effective Date
-            </label>
-            <input
-              id="effective-date"
-              v-model="effectiveDate"
-              type="date"
-              :min="minDate"
-              class="w-full max-w-xs rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 [color-scheme:dark]"
-            />
-            <p class="mt-1.5 text-xs text-zinc-500">Applies to every generated rate deck.</p>
-          </div>
-
-          <!-- How LCR Works (expandable disclosure — no native dialog) -->
-          <details class="rounded-lg border border-white/[0.07] bg-white/[0.02]">
-            <summary
-              class="cursor-pointer select-none px-3 py-2 text-sm font-medium text-emerald-300 hover:text-emerald-200"
-            >
-              How LCR works
-            </summary>
-            <div class="border-t border-white/[0.07] px-3 py-3 text-sm leading-relaxed text-zinc-400 space-y-2">
-              <p>
-                LCR (Least Cost Routing) picks a rate per prefix by ranking your selected provider
-                decks from lowest to highest and choosing one by depth:
-              </p>
-              <ul class="list-disc list-inside space-y-1 pl-1">
-                <li><span class="text-zinc-300">LCR 1</span> — the lowest-cost route.</li>
-                <li><span class="text-zinc-300">LCR 2</span> — the 2nd lowest, and so on.</li>
-                <li><span class="text-zinc-300">Average</span> — the mean of all selected rates.</li>
-              </ul>
-              <p>
-                Interstate, intrastate, and indeterminate rates are selected independently, so the
-                winning provider can differ by jurisdiction within a single prefix.
-              </p>
-            </div>
-          </details>
-        </div>
+      <!-- Simulation Preview (scenario sandbox) -->
+      <div v-else-if="activeTab === 'simulation'" class="pt-6">
+        <RateGenSimulation v-model:effective-date="effectiveDate" :service="service" />
       </div>
 
       <!-- Generated Decks (placeholder) -->
