@@ -1,15 +1,14 @@
 <template>
   <!-- Pricing Studio — browser-local rate-deck transformation workspace -->
   <div class="text-fg-dim pt-2 w-full">
-    <!-- Running head -->
-    <RunningHead left="Section III — Repricing" right="Browser-local · ephemeral" class="px-1 mb-3" />
-
-    <!-- Header -->
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-5 px-1">
-      <div class="flex items-center gap-3">
-        <h1 class="flex items-center gap-2 font-display text-2xl md:text-3xl font-semibold text-fg tracking-[-0.025em]">
-          <BoltIcon class="h-6 w-6 text-accent" aria-hidden="true" /> Pricing Studio
-        </h1>
+    <PageMasthead
+      section="Section III — Repricing"
+      title="Pricing Studio"
+      right="Browser-local · ephemeral"
+      subtitle="All processing is done locally in your browser."
+      :ticker-items="tickerItems"
+    >
+      <template #title-suffix>
         <span
           v-if="isLocallyStored"
           class="inline-flex items-center gap-1.5 border border-warn bg-warn-soft px-2.5 py-1 font-display text-[10px] uppercase tracking-wider text-warn"
@@ -17,14 +16,8 @@
           <span class="h-1.5 w-1.5 rounded-full bg-warn animate-status-pulse-success"></span>
           Data loaded
         </span>
-      </div>
-
-      <p class="hidden md:flex items-center gap-1.5 text-sm text-fg-faint">
-        <LockClosedIcon class="h-3.5 w-3.5" aria-hidden="true" />
-        All processing is done locally in your browser.
-      </p>
-
-      <div class="ml-auto flex items-center gap-2 md:gap-3">
+      </template>
+      <template #actions>
         <button
           @click="openInfoModal"
           class="inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
@@ -35,7 +28,11 @@
 
         <template v-if="isLocallyStored">
           <div class="flex items-center gap-2">
-            <label for="effective-date" class="font-display text-[10px] uppercase tracking-wider text-fg-faint whitespace-nowrap">Effective Date</label>
+            <label
+              for="effective-date"
+              class="font-display text-[10px] uppercase tracking-wider text-fg-faint whitespace-nowrap"
+              >Effective Date</label
+            >
             <input
               id="effective-date"
               type="date"
@@ -61,8 +58,8 @@
             Reset All
           </button>
         </template>
-      </div>
-    </div>
+      </template>
+    </PageMasthead>
 
     <!-- Readiness summary — one calm line; expands to the full metric strip -->
     <div v-if="isLocallyStored" class="mb-5 px-1">
@@ -225,12 +222,12 @@
   import InvalidRows from '@/components/shared/InvalidRows.vue';
   import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
   import PricingStudioMetricStrip from '@/components/rate-sheet/us/pricing-studio/PricingStudioMetricStrip.vue';
-  import RunningHead from '@/components/shared/RunningHead.vue';
+  import PageMasthead from '@/components/shared/PageMasthead.vue';
+  import { type TickerItem } from '@/components/shared/TheTicker.vue';
   import type { InvalidRowEntry } from '@/types/components/invalid-rows-types';
 
   import {
     ArrowUpTrayIcon,
-    BoltIcon,
     LockClosedIcon,
     QuestionMarkCircleIcon,
   } from '@heroicons/vue/24/outline';
@@ -277,6 +274,19 @@
   const avgInterLabel = computed(() =>
     readiness.value.avgInterRate != null ? `$${readiness.value.avgInterRate.toFixed(6)}` : '—'
   );
+
+  // Masthead ticker — live pricing-session stats once a deck is loaded; quiet otherwise.
+  const tickerItems = computed<TickerItem[]>(() => {
+    if (!isLocallyStored.value) return [];
+    const r = readiness.value;
+    return [
+      { sym: 'RECORDS', value: r.totalRecords.toLocaleString(), dir: 'neutral' },
+      { sym: 'MODIFIED', value: `${r.modifiedRows.toLocaleString()} · ${r.modifiedPct}%`, dir: 'warn' },
+      { sym: 'FROZEN SCOPES', value: r.frozenScopes.toLocaleString(), dir: 'neutral' },
+      { sym: 'AVG INTER', value: avgInterLabel.value, dir: 'neutral' },
+      { sym: 'EXPORT', value: r.exportReady ? 'READY' : 'NOT READY', dir: r.exportReady ? 'warn' : 'neutral' },
+    ];
+  });
 
   // Workspace child exposes exportPackage()/resetAll() (added in Phase 5).
   const tableRef = ref<InstanceType<typeof USRateSheetTable> | null>(null);

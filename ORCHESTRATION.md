@@ -189,11 +189,56 @@ ticker bar, editorial running heads, light+dark peer themes.
 ### Resume (if conductor tab dies / new chat)
 **Pass-1 is DONE and MERGED to `main` @ `43cc3cd`** (foundation + shared + 4 views + Explorer body; owner
 gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show-current` = `main`,
-`git log --oneline -5`. **IMMEDIATE open items (need owner OK):** (1) `git push origin main` — origin/main is
-still `6cbb28d`; (2) manual **Coolify deploy** — PROD still `8b696b7`; (3) delete the merged
-`feat/switchboard-reskin` branch. **THEN Pass-2** (deferred surfaces, still on legacy emerald, look rough after
-the token swap — expected): `/rate-gen/us` Rate Composition Studio, dashboard, admin, auth, `TheFooter`,
+`git log --oneline -5`. Pass-1 ✅ PUSHED (`main` = `origin/main` = `73a65a3`). **Open (need owner OK):**
+(1) manual **Coolify deploy** — PROD still `8b696b7` (push ≠ deploy); (2) delete the merged
+`feat/switchboard-reskin` branch. **PASS-2 IN PROGRESS** on branch **`feat/switchboard-pass2`** (off `main`
+@ `73a65a3`; conductor commits per-surface live, merge after owner gut-check). Done: ✅ **`TheFooter` `e1eabf5`**
+(full-width flat editorial footer); ✅ **standardized `PageMasthead` `020a885`** — NEW
+`components/shared/PageMasthead.vue` (ticker strip + RunningHead `SECTION N — TITLE` + mono h1 + subtitle +
+slots), applied to every route with owner-chosen numbering **I–V** (I Overview/Dashboard, II US NPANXX, III
+Repricing, IV Composition, V Admin-pending); **DashBoard fully de-greened** + USRateSheetView gained a live
+pricing-session ticker. ✅ **Rate Composition Studio tab BODIES `1e711d9`** — `RateGenFileUploads` /
+`RateGenSimulation` / `RateGenGeneratedDecks` retoken'd (visual-only). **Owner decision: provider identity =
+mono/single-accent** — dropped the 5-colour rainbow (AVATAR_STYLES + simulation PALETTE): avatars are numbered
+mono slabs, win-rate bars use one `bg-accent` fill (theme-aware). Section/scenario badges + active mode toggle
++ drag-active + focus rings + primary actions = accent; "uploaded" counter = warn; remove/error = down.
+Verified in chrome-devtools both themes with 3 loaded test providers + a generated deck; regression-check GREEN.
+**NOT-MERGED yet (awaits owner gut-check).** ✅ **Legal pages reskinned `3518e8c`** — `TandCView`/`PrivacyView`
+tokenized to Switchboard (theme-aware via `data-theme`, NOT forced-light): `bg-canvas`/`text-fg`, Geist-Mono
+headings, Inter body, accent eyebrow + slab rule; fake "BoltIcon + VOIP Accelerator" pill → `VoipLogo` mark
+(first real consumer of VoipLogo); in-content "View Privacy Policy" button → in-app `RouterLink` (was a prod
+absolute URL + new tab); prose `<style>` blocks scoped + retokenized, dropped `prose-invert` + the raw
+`text-white` that broke light mode. Verified both themes, regression GREEN. ✅ **Admin route reskinned `fb94850`** — `/admin`: AdminView got the
+standardized PageMasthead (Section V — Admin); `UnifiedNANPManagement` + `UserManagement`/`UserTable`/
+`UserRoleSelector`/`UserStatusToggle` tokenized (admin comps used raw `gray-*`/`white` that DON'T retheme → broke
+in light mode; ~150 swaps). Off-palette → portal: LERG category stats (green/blue/amber/violet) → mono `text-fg`;
+status boxes success→warn, info→`info`(blue), error→down; category badge `violet`→`neutral`; user avatar →
+`bg-accent-soft` + accent ring/initials (matches dashboard avatar); Active status dot/toggle green→warn; admin
+role=warn, user=neutral. Verified BOTH themes, regression GREEN. ✅ **Follow-up cleanup `93a3464`** (owner asked): fixed the
+`lergStore` ReferenceError (UnifiedNANPManagement.loadData used undefined `lergStore` → now `store`; **console on
+/admin is now CLEAN**); deleted dead `NANPDiagnostics.vue` + `PerformanceComparison.vue` (imported nowhere);
+removed AdminView's unused `edgeStatusClass`/`dbStatus` computeds + `DbStatus` interface + the now-unused
+`pingStatus` destructure. regression GREEN, verified in-browser. Remaining Pass-2: auth pages (login/signup — BoltIcon still emerald),
 `AppMobileNav`, App.vue shell + the deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+**Two known-out-of-scope items seen during rate-gen verify (NOT fixed):** (a) `TestDataLoader.vue` still uses
+yellow/gray literals — dev-only (`?testMode=true` / `VITE_ENABLE_TEST_DATA`), never ships to prod; (b) a
+pre-existing Vue dev warning — `variant="destructive"` passed to the reskinned `ConfirmationModal` (now a
+teleport root) in `RateGenFileUploads`; benign, predates this reskin (that block untouched).
+**Two FUNCTIONAL fixes also landed on this branch (owner-requested, NOT reskin — will merge to main with Pass-2):**
+✅ **`0bedf79`** — removed the "Data starts on line" control from the shared `PreviewModal` (affects ALL mapping
+modals: US/rate-gen/AZ/admin-LERG). Safe because upload parsers reject invalid/header rows via `transformRow`
+regardless; `startLine` stays pinned to 1, prop/emit plumbing left intact (avoids churning 5 callers + services).
+✅ **`ba837f9`** — footer Terms/Privacy links now navigate in-app (dropped `target="_blank"` → SPA nav, owner
+chose same-tab over new-tab). **Root cause found + DEFERRED (owner's call):** `<RouterLink target="_blank">`
+forced a fresh full-page load, and on a fresh/deep-link load an *authenticated* user gets bounced to `/dashboard`
+by a redirect race — the nav guard pauses the deep-link while awaiting auth init, and `App.vue`'s `watchEffect`
+redirects the unresolved `/` START_LOCATION (transitional) to dashboard. This breaks ALL deep-links/bookmarks to
+non-dashboard routes for authed users (same root as the known "/usview bounces until LERG loads"). Owner opted for
+the footer workaround now; the App.vue race is the real fix when someone wants deep-linking/bookmarks to work.
+**Verify tip:** to reach populated rate-gen states, SPA-nav with the router (`#app.__vue_app__.config.
+globalProperties.$router.push('/rate-gen/us?testMode=true')`) AFTER the dashboard mounts LERG — a full reload to
+that URL bounces to /dashboard (guard runs before LERG loads). Then the dev TestDataLoader's "3 Providers" button
+populates everything in-memory.
 Reusable reskin facts: `rounded-*` already resolves to 0 globally (P1 config) + `font-secondary` auto-upgrades
 to Geist Mono, so a reskin is mostly color/surface/border token swaps; portal palette = warn(amber)=positive/
 Sell/done, accent(red)=negative/Buy/active, info(blue)=frozen/locked, down=destructive, NO green/violet.

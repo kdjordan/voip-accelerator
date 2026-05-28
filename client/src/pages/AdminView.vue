@@ -1,11 +1,14 @@
 <template>
-  <div class="text-white pt-2 w-full">
-    <h1 class="text-xl md:text-2xl text-accent uppercase rounded-lg px-4 py-2 font-secondary">
-      Admin Dashboard
-    </h1>
+  <div class="text-fg pt-2 w-full pb-4">
+    <div class="flex flex-col gap-6">
+      <!-- Standardized masthead -->
+      <PageMasthead
+        title="Admin Dashboard"
+        section="Section V — Admin"
+        right="System & users"
+        subtitle="Manage LERG data and application users."
+      />
 
-    <!-- Stats Dashboard -->
-    <div class="flex flex-col gap-6 bg-gray-800 pb-6">
       <!-- Unified NANP Management -->
       <UnifiedNANPManagement />
 
@@ -58,6 +61,7 @@
   import type { LERGRecord } from '@/types/domains/lerg-types';
   import { LERG_COLUMN_ROLE_OPTIONS } from '@/types/domains/lerg-types';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
+  import PageMasthead from '@/components/shared/PageMasthead.vue';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
   import { useDragDrop } from '@/composables/useDragDrop';
@@ -103,17 +107,8 @@
     source?: string;
   }
 
-  interface DbStatus {
-    connected: boolean;
-    error: string | null;
-  }
-
   const lergUploadStatus = ref<UploadStatus | null>(null);
   const isLergUploading = ref(false);
-  const dbStatus = computed<DbStatus>(() => ({
-    connected: pingStatus.value?.hasLergTable === true,
-    error: pingStatus.value?.error || null,
-  }));
 
   const showPreviewModal = ref(false);
   const showClearLergModal = ref(false);
@@ -127,7 +122,7 @@
 
   const showCanadianDetails = ref(false);
 
-  const { status: pingStatus, checkPingStatus } = usePingStatus();
+  const { checkPingStatus } = usePingStatus();
   const pingInterval = ref<number | null>(null);
 
   const newRecord = reactive<Pick<LERGRecord, 'npa' | 'state' | 'country'>>({
@@ -145,20 +140,6 @@
       /^[A-Za-z]{2}$/.test(newRecord.country) &&
       Object.values(validationErrors).every((err) => !err)
     );
-  });
-
-  // Edge status computed property
-  const edgeStatusClass = computed(() => {
-    const status = pingStatus.value;
-    if (!status) {
-      return 'bg-gray-500'; // Loading/unknown
-    }
-    
-    if (status.hasLergTable && !status.error) {
-      return 'bg-accent animate-status-pulse-success'; // Green pulsing
-    } else {
-      return 'bg-red-500 animate-status-pulse-error'; // Red pulsing
-    }
   });
 
   onMounted(async () => {

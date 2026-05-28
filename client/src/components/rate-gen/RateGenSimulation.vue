@@ -34,9 +34,6 @@ const SAMPLE_SIZE = 5000;
 const MAX_SCENARIOS = 4;
 const MAX_DECKS = 3;
 
-// Stable per-provider colors (mirrors the upload/strategy cards' slot order).
-const PALETTE = ['#a78bfa', '#38bdf8', '#fbbf24', '#fb7185', '#34d399'];
-
 interface ScenarioResult {
   id: string;
   sampleSize: number;
@@ -91,11 +88,6 @@ const singleSourcedPct = computed(() =>
 const isFullUniverse = computed(() => universe.value.length <= SAMPLE_SIZE);
 const justRerolled = ref(false);
 let rerollTimer: ReturnType<typeof setTimeout> | undefined;
-
-const providerColor = (name: string): string => {
-  const idx = providers.value.findIndex((p) => p.name === name);
-  return idx >= 0 ? PALETTE[idx % PALETTE.length] : '#71717a'; // zinc-500 for joined/unknown
-};
 
 // --- Sampling: fixed random subset of the universe (partial Fisher–Yates).
 // Draws a fresh sample and stores it (persisted across tab navigation). ---
@@ -259,15 +251,15 @@ onMounted(loadData);
 <template>
   <div class="space-y-6">
     <!-- Loading -->
-    <div v-if="loading" class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center">
-      <ArrowPathIcon class="mx-auto h-6 w-6 animate-spin text-emerald-300" />
-      <p class="mt-3 text-sm text-zinc-400">Loading uploaded prefixes…</p>
+    <div v-if="loading" class="rounded-2xl border border-line bg-surface p-8 text-center">
+      <ArrowPathIcon class="mx-auto h-6 w-6 animate-spin text-accent" />
+      <p class="mt-3 text-sm text-fg-dim">Loading uploaded prefixes…</p>
     </div>
 
     <!-- Load error -->
     <div
       v-else-if="loadError"
-      class="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center text-sm text-rose-300"
+      class="rounded-2xl border border-down bg-down-soft p-6 text-center text-sm text-down"
     >
       {{ loadError }}
     </div>
@@ -275,10 +267,10 @@ onMounted(loadData);
     <!-- Needs ≥2 decks -->
     <div
       v-else-if="!canSimulate"
-      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center"
+      class="rounded-2xl border border-line bg-surface p-8 text-center"
     >
-      <h2 class="text-lg font-semibold text-white">Upload at least two provider decks</h2>
-      <p class="mt-2 text-sm text-zinc-400">
+      <h2 class="text-lg font-semibold text-fg">Upload at least two provider decks</h2>
+      <p class="mt-2 text-sm text-fg-dim">
         The simulation compares LCR strategies across your uploaded decks. Add a second deck on the
         Upload tab to start building scenarios.
       </p>
@@ -287,29 +279,29 @@ onMounted(loadData);
     <!-- Sandbox -->
     <template v-else>
       <!-- Universe summary + sample controls (scenario-INDEPENDENT, exact) -->
-      <div class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+      <div class="rounded-2xl border border-line bg-surface p-5">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div class="flex flex-wrap gap-6">
             <div>
-              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Total prefixes</p>
-              <p class="font-secondary text-2xl font-semibold text-white">
+              <p class="text-[10px] uppercase tracking-wider text-fg-faint">Total prefixes</p>
+              <p class="font-secondary text-2xl font-semibold text-fg">
                 {{ totalPrefixes.toLocaleString() }}
               </p>
-              <p class="text-xs text-zinc-500">union of {{ providers.length }} decks · exact</p>
+              <p class="text-xs text-fg-faint">union of {{ providers.length }} decks · exact</p>
             </div>
             <div>
-              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Single-sourced</p>
-              <p class="font-secondary text-2xl font-semibold text-white">
+              <p class="text-[10px] uppercase tracking-wider text-fg-faint">Single-sourced</p>
+              <p class="font-secondary text-2xl font-semibold text-fg">
                 {{ singleSourced.toLocaleString() }}
               </p>
-              <p class="text-xs text-zinc-500">{{ singleSourcedPct.toFixed(1) }}% · one provider only</p>
+              <p class="text-xs text-fg-faint">{{ singleSourcedPct.toFixed(1) }}% · one provider only</p>
             </div>
             <div>
-              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Simulation sample</p>
-              <p class="font-secondary text-2xl font-semibold text-white">
+              <p class="text-[10px] uppercase tracking-wider text-fg-faint">Simulation sample</p>
+              <p class="font-secondary text-2xl font-semibold text-fg">
                 {{ store.simulationSample.length.toLocaleString() }}
               </p>
-              <p class="text-xs text-zinc-500">
+              <p class="text-xs text-fg-faint">
                 {{ isFullUniverse ? 'full universe · no sampling' : 'prefixes · shared across scenarios' }}
               </p>
             </div>
@@ -324,21 +316,21 @@ onMounted(loadData);
             >
               Re-roll sample
             </BaseButton>
-            <span v-if="justRerolled" class="text-xs text-emerald-300">Re-rolled ✓</span>
-            <span v-else-if="isFullUniverse" class="max-w-[12rem] text-right text-xs text-zinc-500">
+            <span v-if="justRerolled" class="text-xs text-warn">Re-rolled ✓</span>
+            <span v-else-if="isFullUniverse" class="max-w-[12rem] text-right text-xs text-fg-faint">
               All {{ totalPrefixes.toLocaleString() }} prefixes fit the sample — nothing to re-roll.
             </span>
           </div>
         </div>
-        <p class="mt-3 text-xs text-zinc-500">
+        <p class="mt-3 text-xs text-fg-faint">
           Win rates &amp; average rates are estimated from the sample; total prefixes and
           single-sourced are exact over the full union and become exact for win rates once a
           scenario is generated.
         </p>
 
         <!-- Effective date (applied to every generated deck) -->
-        <div class="mt-4 border-t border-white/[0.07] pt-4">
-          <label for="effective-date" class="mb-2 block text-sm font-medium text-zinc-300">
+        <div class="mt-4 border-t border-line pt-4">
+          <label for="effective-date" class="mb-2 block text-sm font-medium text-fg-dim">
             Effective Date
           </label>
           <input
@@ -346,9 +338,9 @@ onMounted(loadData);
             v-model="effectiveDate"
             type="date"
             :min="minDate"
-            class="w-full max-w-xs rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60 [color-scheme:dark]"
+            class="w-full max-w-xs rounded-lg border border-line bg-input px-3 py-2 text-fg focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
           />
-          <p class="mt-1.5 text-xs text-zinc-500">Applied to every generated rate deck.</p>
+          <p class="mt-1.5 text-xs text-fg-faint">Applied to every generated rate deck.</p>
         </div>
       </div>
 
@@ -357,12 +349,12 @@ onMounted(loadData);
         <div
           v-for="(s, i) in store.scenarios"
           :key="s.id"
-          class="flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
+          class="flex flex-col rounded-2xl border border-line bg-surface p-4"
         >
           <!-- Header: name + remove -->
           <div class="flex items-center gap-2">
             <span
-              class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-400/15 font-secondary text-xs font-semibold text-emerald-300 ring-1 ring-emerald-400/30"
+              class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-soft font-secondary text-xs font-semibold text-accent ring-1 ring-accent-ring"
             >
               {{ i + 1 }}
             </span>
@@ -370,11 +362,11 @@ onMounted(loadData);
               v-model="s.name"
               type="text"
               placeholder="Scenario name"
-              class="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-sm text-white placeholder-zinc-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+              class="min-w-0 flex-1 rounded-lg border border-line bg-input px-2.5 py-1.5 text-sm text-fg placeholder-fg-mute focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
               type="button"
-              class="shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50"
+              class="shrink-0 rounded-md p-1.5 text-fg-faint transition-colors hover:bg-row hover:text-down focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               :aria-label="`Remove ${s.name}`"
               @click="removeScenario(s.id)"
             >
@@ -385,29 +377,29 @@ onMounted(loadData);
           <!-- Selection: depth + mode -->
           <div class="mt-3 grid grid-cols-2 gap-2">
             <div>
-              <label class="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Depth</label>
+              <label class="mb-1 block text-[10px] uppercase tracking-wider text-fg-faint">Depth</label>
               <select
                 v-model.number="s.depth"
-                class="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-sm text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                class="w-full rounded-lg border border-line bg-input px-2.5 py-1.5 text-sm text-fg focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option v-for="d in depthOptions" :key="d" :value="d">{{ d }}</option>
               </select>
             </div>
             <div>
-              <label class="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Mode</label>
-              <div class="grid grid-cols-2 gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
+              <label class="mb-1 block text-[10px] uppercase tracking-wider text-fg-faint">Mode</label>
+              <div class="grid grid-cols-2 gap-1 rounded-lg border border-line bg-input p-0.5">
                 <button
                   type="button"
-                  class="rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
-                  :class="s.mode === 'position' ? 'bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  class="rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  :class="s.mode === 'position' ? 'bg-accent-soft text-accent ring-1 ring-accent-ring' : 'text-fg-dim hover:text-fg'"
                   @click="s.mode = 'position'"
                 >
                   Position
                 </button>
                 <button
                   type="button"
-                  class="rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
-                  :class="s.mode === 'average' ? 'bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  class="rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  :class="s.mode === 'average' ? 'bg-accent-soft text-accent ring-1 ring-accent-ring' : 'text-fg-dim hover:text-fg'"
                   @click="s.mode = 'average'"
                 >
                   Average
@@ -415,18 +407,18 @@ onMounted(loadData);
               </div>
             </div>
           </div>
-          <p class="mt-1.5 text-[11px] text-zinc-500">{{ selectionHint(s) }}</p>
+          <p class="mt-1.5 text-[11px] text-fg-faint">{{ selectionHint(s) }}</p>
 
           <!-- Markup -->
           <div class="mt-3">
-            <label class="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Markup</label>
-            <div class="mb-2 flex gap-3 text-xs text-zinc-300">
+            <label class="mb-1 block text-[10px] uppercase tracking-wider text-fg-faint">Markup</label>
+            <div class="mb-2 flex gap-3 text-xs text-fg-dim">
               <label class="flex cursor-pointer items-center gap-1.5">
-                <input v-model="s.markupType" type="radio" value="percentage" class="accent-emerald-400" />
+                <input v-model="s.markupType" type="radio" value="percentage" class="accent-accent" />
                 %
               </label>
               <label class="flex cursor-pointer items-center gap-1.5">
-                <input v-model="s.markupType" type="radio" value="fixed" class="accent-emerald-400" />
+                <input v-model="s.markupType" type="radio" value="fixed" class="accent-accent" />
                 Fixed $
               </label>
             </div>
@@ -437,9 +429,9 @@ onMounted(loadData);
                 :step="s.markupType === 'percentage' ? '1' : '0.0001'"
                 :min="0"
                 placeholder="0"
-                class="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 pr-7 font-secondary text-sm text-white placeholder-zinc-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                class="w-full rounded-lg border border-line bg-input px-2.5 py-1.5 pr-7 font-secondary text-sm text-fg placeholder-fg-mute focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
               />
-              <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
+              <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-fg-faint">
                 {{ s.markupType === 'percentage' ? '%' : '$' }}
               </span>
             </div>
@@ -447,38 +439,38 @@ onMounted(loadData);
 
           <!-- KPIs -->
           <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div class="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Providers used</p>
-              <p class="font-secondary text-white">{{ resultFor(s.id)?.providersUsed.length ?? 0 }}</p>
+            <div class="rounded-lg border border-line bg-row px-2.5 py-2">
+              <p class="text-[10px] uppercase tracking-wider text-fg-faint">Providers used</p>
+              <p class="font-secondary text-fg">{{ resultFor(s.id)?.providersUsed.length ?? 0 }}</p>
             </div>
-            <div class="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-              <p class="text-[10px] uppercase tracking-wider text-zinc-500">Markup</p>
-              <p class="font-secondary text-emerald-300">{{ markupLabel(s) }}</p>
+            <div class="rounded-lg border border-line bg-row px-2.5 py-2">
+              <p class="text-[10px] uppercase tracking-wider text-fg-faint">Markup</p>
+              <p class="font-secondary text-accent">{{ markupLabel(s) }}</p>
             </div>
           </div>
 
           <!-- Avg rates after markup (sample) -->
-          <div class="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-            <p class="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Avg rate after markup</p>
+          <div class="mt-2 rounded-lg border border-line bg-row px-2.5 py-2">
+            <p class="mb-1 text-[10px] uppercase tracking-wider text-fg-faint">Avg rate after markup</p>
             <div class="space-y-1 font-secondary text-xs">
               <div class="flex items-center justify-between">
-                <span class="text-zinc-500">Inter</span>
-                <span class="text-white">${{ fmtRate(resultFor(s.id)?.avgInter ?? 0) }}</span>
+                <span class="text-fg-faint">Inter</span>
+                <span class="text-fg">${{ fmtRate(resultFor(s.id)?.avgInter ?? 0) }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-zinc-500">Intra</span>
-                <span class="text-white">${{ fmtRate(resultFor(s.id)?.avgIntra ?? 0) }}</span>
+                <span class="text-fg-faint">Intra</span>
+                <span class="text-fg">${{ fmtRate(resultFor(s.id)?.avgIntra ?? 0) }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-zinc-500">Indet</span>
-                <span class="text-white">${{ fmtRate(resultFor(s.id)?.avgIndet ?? 0) }}</span>
+                <span class="text-fg-faint">Indet</span>
+                <span class="text-fg">${{ fmtRate(resultFor(s.id)?.avgIndet ?? 0) }}</span>
               </div>
             </div>
           </div>
 
           <!-- Win rate / participation by type (PRIMARY) -->
           <div class="mt-3 space-y-3">
-            <p class="text-[10px] uppercase tracking-wider text-zinc-500">
+            <p class="text-[10px] uppercase tracking-wider text-fg-faint">
               {{ anyAverage ? 'Provider participation by rate type' : 'Win rate by rate type' }}
             </p>
             <div
@@ -489,23 +481,23 @@ onMounted(loadData);
               ]"
               :key="grp.key"
             >
-              <p class="mb-1 text-xs font-medium text-zinc-400">{{ grp.label }}</p>
+              <p class="mb-1 text-xs font-medium text-fg-dim">{{ grp.label }}</p>
               <div class="space-y-1">
                 <div
                   v-for="row in (resultFor(s.id)?.winRateByType[grp.key as keyof WinRateByType] ?? [])"
                   :key="row.provider"
                   class="flex items-center gap-2"
                 >
-                  <span class="w-20 shrink-0 truncate text-[11px] text-zinc-400" :title="row.provider">{{
+                  <span class="w-20 shrink-0 truncate text-[11px] text-fg-dim" :title="row.provider">{{
                     row.provider
                   }}</span>
-                  <span class="relative h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                  <span class="relative h-2 flex-1 overflow-hidden rounded-full bg-row">
                     <span
-                      class="absolute inset-y-0 left-0 rounded-full"
-                      :style="{ width: row.percentage + '%', backgroundColor: providerColor(row.provider) }"
+                      class="absolute inset-y-0 left-0 rounded-full bg-accent"
+                      :style="{ width: row.percentage + '%' }"
                     ></span>
                   </span>
-                  <span class="w-10 shrink-0 text-right font-secondary text-[11px] text-zinc-300">{{
+                  <span class="w-10 shrink-0 text-right font-secondary text-[11px] text-fg-dim">{{
                     row.percentage.toFixed(0)
                   }}%</span>
                 </div>
@@ -533,16 +525,16 @@ onMounted(loadData);
         <button
           v-if="!atScenarioCap"
           type="button"
-          class="flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[0.01] p-4 text-zinc-400 transition-colors hover:border-emerald-400/40 hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+          class="flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-line-strong bg-surface p-4 text-fg-dim transition-colors hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           @click="addScenario"
         >
           <PlusIcon class="h-6 w-6" />
           <span class="text-sm font-medium">Add scenario</span>
-          <span class="text-xs text-zinc-500">{{ store.scenarios.length }} / {{ MAX_SCENARIOS }}</span>
+          <span class="text-xs text-fg-faint">{{ store.scenarios.length }} / {{ MAX_SCENARIOS }}</span>
         </button>
       </div>
 
-      <p v-if="atScenarioCap" class="text-xs text-zinc-500">
+      <p v-if="atScenarioCap" class="text-xs text-fg-faint">
         Scenario limit reached ({{ MAX_SCENARIOS }}). Remove one to add another.
       </p>
     </template>

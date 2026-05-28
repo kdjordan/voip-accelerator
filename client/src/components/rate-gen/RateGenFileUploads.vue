@@ -26,15 +26,6 @@ const store = useRateGenStore();
 const lergStore = useLergStoreV2();
 const service = new RateGenService();
 
-// Solid identity color per provider slot (matches the target mock: violet, blue, …).
-const AVATAR_STYLES = [
-  'bg-violet-500/90 text-white',
-  'bg-sky-500/90 text-white',
-  'bg-amber-500/90 text-white',
-  'bg-rose-500/90 text-white',
-  'bg-emerald-500/90 text-white',
-];
-
 const rateGenColumnOptions = [
   { value: USColumnRole.NPANXX, label: 'NPANXX', required: false },
   { value: USColumnRole.NPA, label: 'NPA', required: false },
@@ -76,8 +67,6 @@ const canUpload = computed(
 );
 
 const slotNumber = (p: ProviderInfo): number => parseInt(p.id.replace('provider', ''), 10) || 1;
-const avatarStyle = (p: ProviderInfo): string =>
-  AVATAR_STYLES[(slotNumber(p) - 1) % AVATAR_STYLES.length];
 
 const formatRate = (rate: number | undefined): string =>
   rate === undefined || rate === null ? '0.000000' : rate.toFixed(6);
@@ -280,15 +269,15 @@ const confirmRemove = async () => {
     <div>
       <div class="flex items-center gap-3">
         <span
-          class="grid h-7 w-7 place-items-center rounded-full bg-emerald-400/15 font-secondary text-sm font-semibold text-emerald-300 ring-1 ring-emerald-400/30"
+          class="grid h-7 w-7 place-items-center rounded-full bg-accent-soft font-secondary text-sm font-semibold text-accent ring-1 ring-accent-ring"
         >
           1
         </span>
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Provider Inputs</h2>
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-fg">Provider Inputs</h2>
       </div>
       <div class="mt-2 flex items-center justify-between">
-        <p class="text-sm text-zinc-400">Upload up to {{ MAX_PROVIDERS }} rate decks</p>
-        <p class="font-secondary text-sm text-emerald-300">
+        <p class="text-sm text-fg-dim">Upload up to {{ MAX_PROVIDERS }} rate decks</p>
+        <p class="font-secondary text-sm text-warn">
           {{ store.providerCount }} / {{ MAX_PROVIDERS }} uploaded
         </p>
       </div>
@@ -300,10 +289,10 @@ const confirmRemove = async () => {
       class="relative rounded-2xl border-2 p-8 text-center transition-colors"
       :class="[
         dragOver
-          ? 'border-solid border-emerald-400 bg-emerald-400/[0.07]'
-          : 'border-dashed border-white/15 bg-white/[0.02]',
-        canUpload && !dragOver ? 'hover:border-emerald-400/50 hover:bg-white/[0.02]' : '',
-        dropzoneError ? 'border-solid border-rose-500' : '',
+          ? 'border-solid border-accent bg-accent-soft'
+          : 'border-dashed border-line-strong bg-surface',
+        canUpload && !dragOver ? 'hover:border-accent hover:bg-row' : '',
+        dropzoneError ? 'border-solid border-down' : '',
       ]"
       @dragenter.prevent="canUpload && (dragOver = true)"
       @dragover.prevent
@@ -330,14 +319,14 @@ const confirmRemove = async () => {
       <template v-else>
         <div
           v-if="dropzoneError"
-          class="mx-auto mb-3 inline-block rounded-lg bg-rose-400/10 px-3 py-1.5 text-xs font-medium text-rose-300"
+          class="mx-auto mb-3 inline-block rounded-lg bg-down-soft px-3 py-1.5 text-xs font-medium text-down"
         >
           {{ dropzoneError }}
         </div>
-        <CloudArrowUpIcon class="mx-auto h-10 w-10 text-zinc-500" />
-        <p class="mt-3 font-medium text-white">Drag &amp; drop files here</p>
-        <p class="text-sm text-zinc-400">or click to browse</p>
-        <p class="mt-1 text-xs text-zinc-500">CSV rate decks only</p>
+        <CloudArrowUpIcon class="mx-auto h-10 w-10 text-fg-faint" />
+        <p class="mt-3 font-medium text-fg">Drag &amp; drop files here</p>
+        <p class="text-sm text-fg-dim">or click to browse</p>
+        <p class="mt-1 text-xs text-fg-faint">CSV rate decks only</p>
       </template>
     </div>
 
@@ -345,13 +334,12 @@ const confirmRemove = async () => {
     <div
       v-for="p in store.providerList"
       :key="p.id"
-      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
+      class="rounded-2xl border border-line bg-surface p-4"
     >
       <div class="flex items-start justify-between gap-3">
         <div class="flex min-w-0 items-center gap-3">
           <span
-            class="grid h-9 w-9 shrink-0 place-items-center rounded-full font-secondary text-xs font-semibold"
-            :class="avatarStyle(p)"
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line-strong bg-row font-secondary text-xs font-semibold text-fg"
           >
             P{{ slotNumber(p) }}
           </span>
@@ -363,13 +351,13 @@ const confirmRemove = async () => {
                 v-model="editName"
                 type="text"
                 maxlength="40"
-                class="w-44 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1 text-sm text-white placeholder-zinc-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                class="w-44 rounded-lg border border-line bg-input px-3 py-1 text-sm text-fg placeholder-fg-mute focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
                 @keyup.enter="commitEdit"
                 @keyup.esc="cancelEdit"
               />
               <button
                 type="button"
-                class="rounded-md p-1 text-emerald-300 transition-colors hover:bg-emerald-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                class="rounded-md p-1 text-accent transition-colors hover:bg-accent-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-label="Save name"
                 @click="commitEdit"
               >
@@ -377,7 +365,7 @@ const confirmRemove = async () => {
               </button>
               <button
                 type="button"
-                class="rounded-md p-1 text-zinc-400 transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                class="rounded-md p-1 text-fg-dim transition-colors hover:bg-row focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-label="Cancel"
                 @click="cancelEdit"
               >
@@ -386,8 +374,8 @@ const confirmRemove = async () => {
             </div>
             <!-- Name + uploaded file name -->
             <template v-else>
-              <h3 class="truncate text-base font-semibold leading-tight text-white">{{ p.name }}</h3>
-              <p class="truncate font-secondary text-xs text-zinc-500">{{ p.fileName }}</p>
+              <h3 class="truncate text-base font-semibold leading-tight text-fg">{{ p.name }}</h3>
+              <p class="truncate font-secondary text-xs text-fg-faint">{{ p.fileName }}</p>
             </template>
           </div>
         </div>
@@ -396,14 +384,14 @@ const confirmRemove = async () => {
           <button
             v-if="editingId !== p.id"
             type="button"
-            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-fg-dim transition-colors hover:bg-row hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             @click="startEdit(p)"
           >
             <PencilSquareIcon class="h-4 w-4" /> Edit
           </button>
           <button
             type="button"
-            class="rounded-md p-1 text-zinc-400 transition-colors hover:bg-rose-400/10 hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+            class="rounded-md p-1 text-fg-dim transition-colors hover:bg-down-soft hover:text-down focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Remove provider"
             @click="requestRemove(p)"
           >
@@ -417,10 +405,10 @@ const confirmRemove = async () => {
         <div
           v-for="(s, i) in statsFor(p)"
           :key="s.label"
-          :class="i % 3 === 0 ? 'pr-4' : 'border-l border-white/[0.06] px-4'"
+          :class="i % 3 === 0 ? 'pr-4' : 'border-l border-line px-4'"
         >
-          <dd class="font-secondary text-sm text-white">{{ s.value }}</dd>
-          <dt class="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">{{ s.label }}</dt>
+          <dd class="font-secondary text-sm text-fg">{{ s.value }}</dd>
+          <dt class="mt-0.5 text-[10px] uppercase tracking-wider text-fg-faint">{{ s.label }}</dt>
         </div>
       </dl>
     </div>

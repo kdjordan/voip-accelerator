@@ -170,10 +170,10 @@ function markupLabel(deck: GeneratedRateDeck): string {
     <!-- Empty state -->
     <div
       v-if="decks.length === 0"
-      class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center"
+      class="rounded-2xl border border-line bg-surface p-8 text-center"
     >
-      <h2 class="text-lg font-semibold text-white">No generated decks yet</h2>
-      <p class="mt-2 text-sm text-zinc-400">
+      <h2 class="text-lg font-semibold text-fg">No generated decks yet</h2>
+      <p class="mt-2 text-sm text-fg-dim">
         Commit a scenario from the Simulation Preview tab to generate a deck. Generated decks live
         in memory for this session only.
       </p>
@@ -183,7 +183,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
       <div
         v-for="deck in decks"
         :key="deck.id"
-        class="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5"
+        class="rounded-2xl border border-line bg-surface p-5"
       >
         <!-- Header: name + rename + delete -->
         <div class="flex flex-wrap items-start justify-between gap-3">
@@ -192,27 +192,27 @@ function markupLabel(deck: GeneratedRateDeck): string {
               <input
                 v-model="editingName"
                 type="text"
-                class="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                class="rounded-lg border border-line bg-input px-3 py-1.5 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent"
                 @keyup.enter="commitRename(deck)"
                 @keyup.escape="cancelRename"
               />
-              <button class="text-sm text-emerald-300 hover:text-emerald-200" @click="commitRename(deck)">
+              <button class="text-sm text-accent hover:text-accent-text" @click="commitRename(deck)">
                 Save
               </button>
-              <button class="text-sm text-zinc-400 hover:text-zinc-200" @click="cancelRename">
+              <button class="text-sm text-fg-dim hover:text-fg" @click="cancelRename">
                 Cancel
               </button>
             </div>
             <div v-else class="flex items-center gap-2">
-              <h3 class="truncate text-base font-semibold text-white">{{ deck.name }}</h3>
+              <h3 class="truncate text-base font-semibold text-fg">{{ deck.name }}</h3>
               <button
-                class="text-xs text-zinc-400 hover:text-emerald-300"
+                class="text-xs text-fg-dim hover:text-accent"
                 @click="startRename(deck)"
               >
                 Rename
               </button>
             </div>
-            <p class="mt-1 text-xs text-zinc-500">
+            <p class="mt-1 text-xs text-fg-faint">
               {{ selectionLabel(deck.depth, deck.mode) }} · {{ markupLabel(deck) }} markup ·
               {{ deck.rowCount.toLocaleString() }} prefixes
             </p>
@@ -225,7 +225,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
         <!-- Missing records (session-only deck whose data didn't survive) -->
         <p
           v-if="!props.service.getGeneratedRecords(deck.id)"
-          class="mt-4 text-sm text-amber-300/90"
+          class="mt-4 text-sm text-warn"
         >
           This deck's records are no longer in memory (decks are session-only and clear on reload).
           Regenerate it from the Simulation Preview tab.
@@ -234,35 +234,35 @@ function markupLabel(deck: GeneratedRateDeck): string {
         <template v-else>
           <!-- KPIs -->
           <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-lg bg-white/[0.03] px-3 py-2">
-              <div class="text-xs text-zinc-500">Total prefixes</div>
-              <div class="text-sm font-semibold text-white">
+            <div class="rounded-lg bg-row px-3 py-2">
+              <div class="text-xs text-fg-faint">Total prefixes</div>
+              <div class="text-sm font-semibold text-fg">
                 {{ analyticsByDeck[deck.id]?.totalPrefixes.toLocaleString() ?? '—' }}
               </div>
             </div>
-            <div class="rounded-lg bg-white/[0.03] px-3 py-2">
-              <div class="text-xs text-zinc-500">Single-sourced</div>
-              <div class="text-sm font-semibold text-white">
+            <div class="rounded-lg bg-row px-3 py-2">
+              <div class="text-xs text-fg-faint">Single-sourced</div>
+              <div class="text-sm font-semibold text-fg">
                 {{ analyticsByDeck[deck.id]?.singleSourcedCount.toLocaleString() ?? '—' }}
               </div>
             </div>
-            <div class="rounded-lg bg-white/[0.03] px-3 py-2">
-              <div class="text-xs text-zinc-500">Providers used</div>
-              <div class="text-sm font-semibold text-white">
+            <div class="rounded-lg bg-row px-3 py-2">
+              <div class="text-xs text-fg-faint">Providers used</div>
+              <div class="text-sm font-semibold text-fg">
                 {{ analyticsByDeck[deck.id]?.providersUsed.length ?? '—' }}
               </div>
             </div>
-            <div class="rounded-lg bg-white/[0.03] px-3 py-2">
-              <div class="text-xs text-zinc-500">Markup</div>
-              <div class="text-sm font-semibold text-white">{{ markupLabel(deck) }}</div>
+            <div class="rounded-lg bg-row px-3 py-2">
+              <div class="text-xs text-fg-faint">Markup</div>
+              <div class="text-sm font-semibold text-fg">{{ markupLabel(deck) }}</div>
             </div>
           </div>
 
           <!-- Avg rates -->
-          <div v-if="analyticsByDeck[deck.id]" class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-zinc-400">
-            <span>Avg inter: <span class="text-zinc-200">{{ fmtRate(analyticsByDeck[deck.id]!.avgInterstate) }}</span></span>
-            <span>Avg intra: <span class="text-zinc-200">{{ fmtRate(analyticsByDeck[deck.id]!.avgIntrastate) }}</span></span>
-            <span>Avg indet: <span class="text-zinc-200">{{ fmtRate(analyticsByDeck[deck.id]!.avgIndeterminate) }}</span></span>
+          <div v-if="analyticsByDeck[deck.id]" class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-fg-dim">
+            <span>Avg inter: <span class="text-fg">{{ fmtRate(analyticsByDeck[deck.id]!.avgInterstate) }}</span></span>
+            <span>Avg intra: <span class="text-fg">{{ fmtRate(analyticsByDeck[deck.id]!.avgIntrastate) }}</span></span>
+            <span>Avg indet: <span class="text-fg">{{ fmtRate(analyticsByDeck[deck.id]!.avgIndeterminate) }}</span></span>
           </div>
 
           <!-- Win rate by type -->
@@ -270,9 +270,9 @@ function markupLabel(deck: GeneratedRateDeck): string {
             <div
               v-for="rt in (['interstate', 'intrastate', 'indeterminate'] as const)"
               :key="rt"
-              class="rounded-lg border border-white/[0.06] p-3"
+              class="rounded-lg border border-line p-3"
             >
-              <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-dim">
                 {{ rt }} win rate
               </div>
               <ul class="space-y-1">
@@ -281,8 +281,8 @@ function markupLabel(deck: GeneratedRateDeck): string {
                   :key="stat.provider"
                   class="flex items-center justify-between text-xs"
                 >
-                  <span class="truncate text-zinc-300">{{ stat.provider }}</span>
-                  <span class="text-zinc-400">{{ stat.percentage.toFixed(1) }}%</span>
+                  <span class="truncate text-fg-dim">{{ stat.provider }}</span>
+                  <span class="text-fg-faint">{{ stat.percentage.toFixed(1) }}%</span>
                 </li>
               </ul>
             </div>
@@ -290,12 +290,12 @@ function markupLabel(deck: GeneratedRateDeck): string {
 
           <!-- Preview -->
           <details class="mt-4 group">
-            <summary class="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
+            <summary class="cursor-pointer text-xs text-fg-dim hover:text-fg">
               Preview first {{ Math.min(PREVIEW_ROWS, deck.rowCount) }} rows
             </summary>
-            <div class="mt-2 max-h-64 overflow-auto rounded-lg border border-white/[0.06]">
+            <div class="mt-2 max-h-64 overflow-auto rounded-lg border border-line">
               <table class="w-full text-left text-xs">
-                <thead class="sticky top-0 bg-ink-raised text-zinc-400">
+                <thead class="sticky top-0 bg-surface text-fg-dim">
                   <tr>
                     <th class="px-3 py-1.5 font-medium">Prefix</th>
                     <th class="px-3 py-1.5 font-medium">Inter</th>
@@ -307,7 +307,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
                   <tr
                     v-for="row in previewByDeck[deck.id]"
                     :key="row.prefix"
-                    class="border-t border-white/[0.04] text-zinc-300"
+                    class="border-t border-line text-fg-dim"
                   >
                     <td class="px-3 py-1 font-mono">{{ row.prefix }}</td>
                     <td class="px-3 py-1 font-mono">{{ fmtRate(row.rate) }}</td>
@@ -357,47 +357,47 @@ function markupLabel(deck: GeneratedRateDeck): string {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
         @click.self="formatDialogOpen = false"
       >
-        <div class="w-full max-w-md rounded-2xl border border-white/10 bg-ink-raised p-6 shadow-xl">
-          <h3 class="mb-1 text-lg font-semibold text-white">Final Rate Deck CSV</h3>
-          <p class="mb-4 text-sm text-zinc-400">Choose the export format options.</p>
+        <div class="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl">
+          <h3 class="mb-1 text-lg font-semibold text-fg">Final Rate Deck CSV</h3>
+          <p class="mb-4 text-sm text-fg-dim">Choose the export format options.</p>
 
           <div class="space-y-4">
             <div>
-              <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-dim">
                 NPANXX format
               </div>
-              <div class="flex gap-4 text-sm text-zinc-200">
+              <div class="flex gap-4 text-sm text-fg">
                 <label class="flex items-center gap-2">
-                  <input v-model="formatOptions.npanxxFormat" type="radio" value="combined" class="accent-emerald-400" />
+                  <input v-model="formatOptions.npanxxFormat" type="radio" value="combined" class="accent-accent" />
                   Combined (213555)
                 </label>
                 <label class="flex items-center gap-2">
-                  <input v-model="formatOptions.npanxxFormat" type="radio" value="split" class="accent-emerald-400" />
+                  <input v-model="formatOptions.npanxxFormat" type="radio" value="split" class="accent-accent" />
                   Split (213 | 555)
                 </label>
               </div>
             </div>
 
-            <label class="flex items-center gap-2 text-sm text-zinc-200">
-              <input v-model="formatOptions.includeCountryCode" type="checkbox" class="accent-emerald-400" />
+            <label class="flex items-center gap-2 text-sm text-fg">
+              <input v-model="formatOptions.includeCountryCode" type="checkbox" class="accent-accent" />
               Include +1 prefix
             </label>
 
             <div>
-              <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-dim">
                 Geo columns
               </div>
-              <div class="space-y-2 text-sm text-zinc-200">
+              <div class="space-y-2 text-sm text-fg">
                 <label class="flex items-center gap-2">
-                  <input v-model="formatOptions.includeStateColumn" type="checkbox" class="accent-emerald-400" />
+                  <input v-model="formatOptions.includeStateColumn" type="checkbox" class="accent-accent" />
                   State
                 </label>
                 <label class="flex items-center gap-2">
-                  <input v-model="formatOptions.includeCountryColumn" type="checkbox" class="accent-emerald-400" />
+                  <input v-model="formatOptions.includeCountryColumn" type="checkbox" class="accent-accent" />
                   Country
                 </label>
                 <label class="flex items-center gap-2">
-                  <input v-model="formatOptions.includeRegionColumn" type="checkbox" class="accent-emerald-400" />
+                  <input v-model="formatOptions.includeRegionColumn" type="checkbox" class="accent-accent" />
                   Region
                 </label>
               </div>

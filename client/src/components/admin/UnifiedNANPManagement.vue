@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-gray-900/50">
+  <div class="bg-row">
     <div class="px-6 py-4">
       <div class="flex justify-between items-center">
         <div class="flex items-center space-x-3">
@@ -10,33 +10,33 @@
       </div>
     </div>
 
-    <div class="border-t border-gray-700/50 p-6 space-y-6">
+    <div class="border-t border-line p-6 space-y-6">
       <!-- Statistics Dashboard -->
       <div v-if="stats" class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-2xl font-bold text-white">{{ stats.total }}</div>
-          <div class="text-gray-400 text-sm">Total NPAs</div>
+        <div class="bg-surface p-4 rounded-lg">
+          <div class="text-2xl font-bold text-fg">{{ stats.total }}</div>
+          <div class="text-fg-faint text-sm">Total NPAs</div>
         </div>
-        <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-xl font-bold text-green-400">{{ stats.us_domestic }}</div>
-          <div class="text-gray-400 text-sm">US Domestic</div>
+        <div class="bg-surface p-4 rounded-lg">
+          <div class="text-xl font-bold text-fg">{{ stats.us_domestic }}</div>
+          <div class="text-fg-faint text-sm">US Domestic</div>
         </div>
-        <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-xl font-bold text-blue-400">{{ stats.canadian }}</div>
-          <div class="text-gray-400 text-sm">Canada</div>
+        <div class="bg-surface p-4 rounded-lg">
+          <div class="text-xl font-bold text-fg">{{ stats.canadian }}</div>
+          <div class="text-fg-faint text-sm">Canada</div>
         </div>
-        <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-xl font-bold text-yellow-400">{{ stats.caribbean }}</div>
-          <div class="text-gray-400 text-sm">Caribbean</div>
+        <div class="bg-surface p-4 rounded-lg">
+          <div class="text-xl font-bold text-fg">{{ stats.caribbean }}</div>
+          <div class="text-fg-faint text-sm">Caribbean</div>
         </div>
-        <div class="bg-gray-800/50 p-4 rounded-lg">
-          <div class="text-xl font-bold text-purple-400">{{ stats.pacific }}</div>
-          <div class="text-gray-400 text-sm">Pacific</div>
+        <div class="bg-surface p-4 rounded-lg">
+          <div class="text-xl font-bold text-fg">{{ stats.pacific }}</div>
+          <div class="text-fg-faint text-sm">Pacific</div>
         </div>
       </div>
 
       <!-- Management Tabs -->
-      <div class="border-b border-gray-700">
+      <div class="border-b border-line">
         <nav class="flex space-x-8">
           <button
             v-for="tab in tabs"
@@ -46,7 +46,7 @@
               'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === tab.id
                 ? 'border-accent text-accent'
-                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300',
+                : 'border-transparent text-fg-faint hover:text-fg-dim hover:border-line',
             ]"
           >
             {{ tab.label }}
@@ -65,8 +65,8 @@
             class="border-2 rounded-lg p-8 text-center transition-colors"
             :class="[
               isDragging
-                ? 'border-solid border-emerald-400 bg-emerald-400/[0.07]'
-                : 'border-dashed border-white/15 hover:border-emerald-400/50 hover:bg-white/[0.02]',
+                ? 'border-solid border-accent bg-accent-soft'
+                : 'border-dashed border-line-strong hover:border-accent hover:bg-row',
             ]"
             @dragenter="handleDragEnter"
             @dragleave="handleDragLeave"
@@ -74,10 +74,10 @@
             @drop="handleDrop"
           >
             <div class="space-y-4">
-              <DocumentIcon class="mx-auto h-12 w-12 text-gray-400" />
+              <DocumentIcon class="mx-auto h-12 w-12 text-fg-faint" />
               <div>
-                <h3 class="text-lg font-medium text-white">Drop LERG CSV file here</h3>
-                <p class="text-gray-400 text-sm">or click to browse</p>
+                <h3 class="text-lg font-medium text-fg">Drop LERG CSV file here</h3>
+                <p class="text-fg-faint text-sm">or click to browse</p>
               </div>
               <input
                 type="file"
@@ -129,7 +129,7 @@
           </div>
 
           <!-- Loading Indicator -->
-          <div v-if="isLoading" class="flex items-center justify-center space-x-2 text-gray-400">
+          <div v-if="isLoading" class="flex items-center justify-center space-x-2 text-fg-faint">
             <ArrowPathIcon class="animate-spin h-5 w-5 text-accent" />
             <span>Processing LERG data... Please wait.</span>
           </div>
@@ -137,12 +137,12 @@
 
         <!-- Single Record Add Tab -->
         <div v-if="activeTab === 'add-single'" class="space-y-6">
-          <div class="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+          <div class="bg-row border border-line rounded-lg p-4">
             <div class="flex items-start space-x-3">
               <span class="text-2xl">➕</span>
               <div>
-                <h3 class="text-lg font-medium text-green-400 mb-2">Add Single NPA Record</h3>
-                <p class="text-green-300 text-sm">
+                <h3 class="text-lg font-medium text-fg mb-2">Add Single NPA Record</h3>
+                <p class="text-fg-dim text-sm">
                   Manually add individual NPA records when you discover missing data or need
                   immediate updates.
                 </p>
@@ -155,7 +155,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <!-- NPA Input -->
               <div>
-                <label for="npa" class="block text-sm font-medium text-gray-300 mb-1">NPA *</label>
+                <label for="npa" class="block text-sm font-medium text-fg-dim mb-1">NPA *</label>
                 <input
                   type="text"
                   id="npa"
@@ -164,16 +164,16 @@
                   maxlength="3"
                   pattern="^[0-9]{3}$"
                   placeholder="e.g., 212"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
+                  class="w-full px-3 py-2 bg-input border border-line-strong rounded-md shadow-sm placeholder-fg-mute focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
                 />
-                <p v-if="validationErrors.npa" class="mt-1 text-xs text-red-400">
+                <p v-if="validationErrors.npa" class="mt-1 text-xs text-down">
                   {{ validationErrors.npa }}
                 </p>
               </div>
 
               <!-- State Input -->
               <div>
-                <label for="state" class="block text-sm font-medium text-gray-300 mb-1">
+                <label for="state" class="block text-sm font-medium text-fg-dim mb-1">
                   State/Province *
                 </label>
                 <input
@@ -185,9 +185,9 @@
                   pattern="^[A-Za-z]{2}$"
                   placeholder="e.g., NY, ON"
                   @input="newRecord.state = newRecord.state.toUpperCase()"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
+                  class="w-full px-3 py-2 bg-input border border-line-strong rounded-md shadow-sm placeholder-fg-mute focus:outline-none focus:ring-accent focus:border-accent sm:text-sm"
                 />
-                <p v-if="validationErrors.state" class="mt-1 text-xs text-red-400">
+                <p v-if="validationErrors.state" class="mt-1 text-xs text-down">
                   {{ validationErrors.state }}
                 </p>
               </div>
@@ -195,20 +195,20 @@
               <!-- Country Input -->
               <div>
                 <Listbox v-model="newRecord.country" as="div">
-                  <ListboxLabel class="block text-sm font-medium text-gray-300 mb-1">
+                  <ListboxLabel class="block text-sm font-medium text-fg-dim mb-1">
                     Country *
                   </ListboxLabel>
                   <div class="relative mt-1">
                     <ListboxButton
-                      class="relative w-full cursor-default rounded-md bg-gray-700 py-2.5 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 sm:text-sm border border-gray-600"
+                      class="relative w-full cursor-default rounded-md bg-input py-2.5 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:text-sm border border-line-strong"
                     >
-                      <span class="block truncate text-white">{{
+                      <span class="block truncate text-fg">{{
                         getCountryLabel(newRecord.country)
                       }}</span>
                       <span
                         class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                       >
-                        <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                        <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
                       </span>
                     </ListboxButton>
                     <transition
@@ -217,12 +217,12 @@
                       leave-to-class="opacity-0"
                     >
                       <ListboxOptions
-                        class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                        class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-surface py-1 text-base shadow-lg ring-1 ring-line focus:outline-none sm:text-sm"
                       >
                         <ListboxOption v-slot="{ active, selected }" :value="''" as="template">
                           <li
                             :class="[
-                              active ? 'bg-gray-700 text-accent' : 'text-gray-300',
+                              active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
                               'relative cursor-default select-none py-2 pl-10 pr-4',
                             ]"
                           >
@@ -248,7 +248,7 @@
                         >
                           <li
                             :class="[
-                              active ? 'bg-gray-700 text-accent' : 'text-gray-300',
+                              active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
                               'relative cursor-default select-none py-2 pl-10 pr-4',
                             ]"
                           >
@@ -269,7 +269,7 @@
                     </transition>
                   </div>
                 </Listbox>
-                <p v-if="validationErrors.country" class="mt-1 text-xs text-red-400">
+                <p v-if="validationErrors.country" class="mt-1 text-xs text-down">
                   {{ validationErrors.country }}
                 </p>
               </div>
@@ -279,18 +279,18 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-4">
                 <!-- Success Message -->
-                <p v-if="addSuccessMessage" class="text-sm text-green-400">
+                <p v-if="addSuccessMessage" class="text-sm text-warn">
                   {{ addSuccessMessage }}
                 </p>
                 <!-- Error Message -->
-                <p v-if="error && !isLoading" class="text-sm text-red-400">
+                <p v-if="error && !isLoading" class="text-sm text-down">
                   {{ error }}
                 </p>
               </div>
 
               <div class="flex items-center space-x-3">
                 <!-- Loading Indicator -->
-                <div v-if="isLoading" class="flex items-center space-x-2 text-sm text-gray-400">
+                <div v-if="isLoading" class="flex items-center space-x-2 text-sm text-fg-faint">
                   <ArrowPathIcon class="animate-spin h-4 w-4 text-accent" />
                   <span>Adding...</span>
                 </div>
@@ -318,21 +318,21 @@
                 v-model="searchTerm"
                 type="text"
                 placeholder="Search NPAs, countries, or regions..."
-                class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-accent focus:outline-none"
+                class="w-full bg-input border border-line-strong rounded px-3 py-2 text-fg text-sm focus:border-accent focus:outline-none"
               />
             </div>
             <div class="flex space-x-2">
               <Listbox v-model="selectedCategory" as="div" class="relative">
                 <ListboxButton
-                  class="relative min-w-[160px] cursor-default rounded-md bg-gray-700 py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 text-sm border border-gray-600"
+                  class="relative min-w-[160px] cursor-default rounded-md bg-input py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas text-sm border border-line-strong"
                 >
-                  <span class="block truncate text-white">{{
+                  <span class="block truncate text-fg">{{
                     getCategoryLabel(selectedCategory)
                   }}</span>
                   <span
                     class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
                   >
-                    <ChevronUpDownIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
                   </span>
                 </ListboxButton>
                 <transition
@@ -341,7 +341,7 @@
                   leave-to-class="opacity-0"
                 >
                   <ListboxOptions
-                    class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+                    class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-surface py-1 text-base shadow-lg ring-1 ring-line focus:outline-none sm:text-sm"
                   >
                     <ListboxOption
                       v-for="category in categoryOptions"
@@ -352,7 +352,7 @@
                     >
                       <li
                         :class="[
-                          active ? 'bg-gray-700 text-accent' : 'text-gray-300',
+                          active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
                           'relative cursor-default select-none py-2 pl-10 pr-4',
                         ]"
                       >
@@ -388,29 +388,29 @@
           </div>
 
           <!-- Operation Error -->
-          <p v-if="error && !isLoading" class="text-sm text-red-400">{{ error }}</p>
+          <p v-if="error && !isLoading" class="text-sm text-down">{{ error }}</p>
 
           <!-- Data Table -->
-          <div class="bg-gray-800/50 rounded-lg overflow-hidden">
+          <div class="bg-surface rounded-lg overflow-hidden">
             <div class="max-h-96 overflow-y-auto">
               <table class="w-full text-sm">
-                <thead class="bg-gray-700/50 sticky top-0">
+                <thead class="bg-row sticky top-0">
                   <tr>
-                    <th class="px-4 py-3 text-left text-gray-300">NPA</th>
-                    <th class="px-4 py-3 text-left text-gray-300">Location</th>
-                    <th class="px-4 py-3 text-left text-gray-300">Category</th>
-                    <th class="px-4 py-3 text-right text-gray-300">Actions</th>
+                    <th class="px-4 py-3 text-left text-fg-dim">NPA</th>
+                    <th class="px-4 py-3 text-left text-fg-dim">Location</th>
+                    <th class="px-4 py-3 text-left text-fg-dim">Category</th>
+                    <th class="px-4 py-3 text-right text-fg-dim">Actions</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-700">
-                  <tr v-for="npa in filteredNPAs" :key="npa.npa" class="hover:bg-gray-700/30">
+                <tbody class="divide-y divide-line">
+                  <tr v-for="npa in filteredNPAs" :key="npa.npa" class="hover:bg-row-hover">
                     <td class="px-4 py-3 font-mono text-accent">{{ npa.npa }}</td>
                     <td class="px-4 py-3">
                       <div>
-                        <div class="text-white text-sm">
+                        <div class="text-fg text-sm">
                           {{ npa.state_province_name }}, {{ npa.country_name }}
                         </div>
-                        <div class="text-gray-400 text-xs">
+                        <div class="text-fg-faint text-xs">
                           {{ npa.state_province_code }}, {{ npa.country_code }}
                         </div>
                       </div>
@@ -434,7 +434,7 @@
               </table>
             </div>
 
-            <div v-if="filteredNPAs.length === 0" class="text-center py-8 text-gray-500">
+            <div v-if="filteredNPAs.length === 0" class="text-center py-8 text-fg-mute">
               <div v-if="isLoading">Loading NPAs...</div>
               <div v-else>No NPAs found matching your criteria.</div>
             </div>
@@ -443,7 +443,7 @@
           <!-- Table Footer -->
           <div
             v-if="filteredNPAs.length > 0"
-            class="flex justify-between items-center text-sm text-gray-400"
+            class="flex justify-between items-center text-sm text-fg-faint"
           >
             <span>Showing {{ filteredNPAs.length }} of {{ allNPAs.length }} NPAs</span>
             <span v-if="stats?.last_updated">
@@ -675,13 +675,13 @@
     console.log('Edge status debug:', status); // Debug log
 
     if (!status) {
-      return 'bg-gray-500'; // Loading/unknown
+      return 'bg-fg-mute'; // Loading/unknown
     }
 
     if (status.hasLergTable === true && status.isOnline === true) {
       return 'bg-accent animate-status-pulse-success'; // Green pulsing
     } else {
-      return 'bg-red-500 animate-status-pulse-error'; // Red pulsing
+      return 'bg-down animate-status-pulse-error'; // Red pulsing
     }
   });
 
@@ -762,7 +762,7 @@
     console.log('[UnifiedNANPManagement] Refreshing LERG data...');
     try {
       await initializeLergData({ force: true });
-      console.log('[UnifiedNANPManagement] LERG data refreshed, count:', lergStore.allNPAs.length);
+      console.log('[UnifiedNANPManagement] LERG data refreshed, count:', store.allNPAs.length);
     } catch (err) {
       console.error('[UnifiedNANPManagement] Failed to refresh LERG data:', err);
     }
@@ -904,28 +904,28 @@
   function getStatusClass(type: string) {
     switch (type) {
       case 'success':
-        return 'bg-green-900/20 border border-green-500/30';
+        return 'bg-warn-soft border border-warn';
       case 'error':
-        return 'bg-red-900/20 border border-red-500/30';
+        return 'bg-down-soft border border-down';
       default:
-        return 'bg-blue-900/20 border border-blue-500/30';
+        return 'bg-info-soft border border-info';
     }
   }
 
   function getStatusTextClass(type: string) {
     switch (type) {
       case 'success':
-        return 'text-green-400';
+        return 'text-warn';
       case 'error':
-        return 'text-red-400';
+        return 'text-down';
       default:
-        return 'text-blue-400';
+        return 'text-info';
     }
   }
 
   function getCategoryBadgeVariant(
     category: string
-  ): 'success' | 'info' | 'warning' | 'violet' | 'neutral' {
+  ): 'success' | 'info' | 'warning' | 'neutral' {
     switch (category) {
       case 'us-domestic':
         return 'success';
@@ -934,7 +934,7 @@
       case 'caribbean':
         return 'warning';
       case 'pacific':
-        return 'violet';
+        return 'neutral';
       default:
         return 'neutral';
     }

@@ -1,28 +1,23 @@
 <template>
   <!-- Main Page Content -->
   <div class="text-fg pt-2 w-full">
-    <!-- Portal ticker — live session KPIs (quiet "ephemeral" state before a comparison exists) -->
-    <TheTicker :items="tickerItems" variant="portal" :live="tickerItems.length > 0" class="mb-6" />
-
-    <!-- Running head -->
-    <RunningHead left="Section II — US NPANXX" right="File A vs File B" class="px-1 mb-3" />
-
-    <!-- Header -->
-    <div class="relative px-1 mb-6">
-      <h1 class="font-display text-3xl md:text-4xl font-semibold tracking-[-0.035em] text-fg leading-none">
-        US Rate Deck Analyzer
-      </h1>
-      <p class="mt-2 font-sans text-sm text-fg-dim max-w-2xl">
-        Upload two rate decks to compare coverage and rate aggregates across destinations.
-      </p>
-      <button
-        @click="openInfoModal"
-        class="absolute top-0 right-1 inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
-        aria-label="How the US Rate Deck Analyzer works"
-      >
-        <QuestionMarkCircleIcon class="w-4 h-4" /> How it works
-      </button>
-    </div>
+    <PageMasthead
+      section="Section II — US NPANXX"
+      title="US Rate Deck Analyzer"
+      right="File A vs File B"
+      subtitle="Upload two rate decks to compare coverage and rate aggregates across destinations."
+      :ticker-items="tickerItems"
+    >
+      <template #actions>
+        <button
+          @click="openInfoModal"
+          class="inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-1.5 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
+          aria-label="How the US Rate Deck Analyzer works"
+        >
+          <QuestionMarkCircleIcon class="w-4 h-4" /> How it works
+        </button>
+      </template>
+    </PageMasthead>
 
     <!-- UPLOAD STATE: stepper + upload cards + what's next + start analysis -->
     <template v-if="usStore.activeReportType === ReportTypes.FILES">
@@ -146,8 +141,8 @@
   import USPricingReport from '@/components/us/USPricingReport.vue';
   import USContentHeader from '@/components/us/USContentHeader.vue';
   import InfoModal from '@/components/shared/InfoModal.vue';
-  import TheTicker, { type TickerItem } from '@/components/shared/TheTicker.vue';
-  import RunningHead from '@/components/shared/RunningHead.vue';
+  import PageMasthead from '@/components/shared/PageMasthead.vue';
+  import { type TickerItem } from '@/components/shared/TheTicker.vue';
   import {
     QuestionMarkCircleIcon,
     SparklesIcon,

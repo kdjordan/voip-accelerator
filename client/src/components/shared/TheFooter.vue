@@ -1,100 +1,101 @@
 <template>
-  <footer class="py-8 text-sm text-zinc-500">
-    <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Info card: secure / built-with / learn-more -->
-      <div class="rounded-xl border border-white/10 bg-white/[0.02] px-6 py-5">
-        <div
-          class="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-0 md:divide-x md:divide-white/10"
-        >
-          <!-- Your data is secure -->
-          <div class="flex items-start gap-3 md:pr-6">
-            <ShieldCheckIcon class="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" />
-            <div>
-              <p class="font-medium text-zinc-200">Your data is secure</p>
-              <p class="mt-1 text-xs leading-relaxed text-zinc-500">
-                Files are processed securely and are not stored after analysis.
-              </p>
+  <footer class="w-full border-t-2 border-line-strong text-sm text-fg-faint">
+    <div class="px-6 md:px-10">
+      <!-- Info band: secure / built-with / learn-more (full-width, rule-divided) -->
+      <div class="grid grid-cols-1 border-b border-line md:grid-cols-3">
+        <!-- Your data is secure -->
+        <div class="flex items-start gap-3 py-7 md:pr-8">
+          <ShieldCheckIcon class="w-5 h-5 shrink-0 mt-0.5 text-fg-faint" />
+          <div>
+            <div class="mb-1.5 font-display text-[10px] uppercase tracking-[0.16em] text-accent">
+              Local &amp; secure
             </div>
+            <p class="font-display text-sm font-semibold text-fg">Your data is secure</p>
+            <p class="mt-1 font-sans text-xs leading-relaxed text-fg-faint">
+              Files are processed securely and are not stored after analysis.
+            </p>
           </div>
+        </div>
 
-          <!-- Built with love -->
-          <div class="flex items-start gap-3 md:px-6">
-            <HeartIcon class="w-5 h-5 shrink-0 mt-0.5 text-rose-400" />
-            <div>
-              <p class="font-medium text-zinc-200">
-                Built with <span class="text-rose-400">❤</span> by
-                <a
-                  href="https://kevinjordan.dev"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  Kevin Jordan
-                </a>
-              </p>
-              <p class="mt-1 text-xs leading-relaxed text-zinc-500">
-                VoIP industry tools made for analysts, by an analyst.
-              </p>
+        <!-- Built with love -->
+        <div class="flex items-start gap-3 py-7 border-t border-line md:border-t-0 md:border-l md:px-8">
+          <HeartIcon class="w-5 h-5 shrink-0 mt-0.5 text-accent" />
+          <div>
+            <div class="mb-1.5 font-display text-[10px] uppercase tracking-[0.16em] text-accent">
+              Colophon
             </div>
+            <p class="font-display text-sm font-semibold text-fg">
+              Built with <span class="text-accent">❤</span> by
+              <a
+                href="https://kevinjordan.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-accent hover:text-accent-text transition-colors"
+              >
+                Kevin Jordan
+              </a>
+            </p>
+            <p class="mt-1 font-sans text-xs leading-relaxed text-fg-faint">
+              VoIP industry tools made for analysts, by an analyst.
+            </p>
           </div>
+        </div>
 
-          <!-- Learn more -->
-          <div class="flex items-start gap-3 md:pl-6">
-            <DocumentTextIcon class="w-5 h-5 shrink-0 mt-0.5 text-zinc-400" />
-            <div>
-              <p class="font-medium text-zinc-200">Learn more</p>
-              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-                <RouterLink
-                  to="/terms-and-conditions"
-                  target="_blank"
-                  class="hover:text-zinc-200 transition-colors"
-                >
-                  Terms of Service
-                </RouterLink>
-                <span class="text-zinc-700">|</span>
-                <RouterLink
-                  to="/privacy-policy"
-                  target="_blank"
-                  class="hover:text-zinc-200 transition-colors"
-                >
-                  Privacy Policy
-                </RouterLink>
-                <span class="text-zinc-700">|</span>
-                <a
-                  href="https://kevinjordan.dev"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center hover:text-zinc-200 transition-colors"
-                >
-                  About
-                  <ArrowTopRightOnSquareIcon class="w-3 h-3 ml-1" />
-                </a>
-                <template v-if="isHomePage">
-                  <span class="text-zinc-700">|</span>
-                  <RouterLink to="#hero" class="hover:text-zinc-200 transition-colors">
-                    Top
-                  </RouterLink>
-                </template>
-              </div>
+        <!-- Learn more -->
+        <div class="flex items-start gap-3 py-7 border-t border-line md:border-t-0 md:border-l md:pl-8">
+          <DocumentTextIcon class="w-5 h-5 shrink-0 mt-0.5 text-fg-faint" />
+          <div>
+            <div class="mb-1.5 font-display text-[10px] uppercase tracking-[0.16em] text-accent">
+              Reference
+            </div>
+            <p class="font-display text-sm font-semibold text-fg">Learn more</p>
+            <div
+              class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-display text-[11px] uppercase tracking-wider text-fg-faint"
+            >
+              <RouterLink
+                to="/terms-and-conditions"
+                class="hover:text-fg transition-colors"
+              >
+                Terms of Service
+              </RouterLink>
+              <span class="text-fg-mute">·</span>
+              <RouterLink
+                to="/privacy-policy"
+                class="hover:text-fg transition-colors"
+              >
+                Privacy Policy
+              </RouterLink>
+              <span class="text-fg-mute">·</span>
+              <a
+                href="https://kevinjordan.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center hover:text-fg transition-colors"
+              >
+                About
+                <ArrowTopRightOnSquareIcon class="w-3 h-3 ml-1" />
+              </a>
+              <template v-if="isHomePage">
+                <span class="text-fg-mute">·</span>
+                <RouterLink to="#hero" class="hover:text-fg transition-colors">Top</RouterLink>
+              </template>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Copyright + cross-promo card -->
+      <!-- Bottom bar: copyright + cross-promo -->
       <div
-        class="mt-3 rounded-xl border border-white/10 bg-white/[0.02] px-6 py-3 flex flex-col gap-2 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between"
+        class="flex flex-col gap-2 py-4 font-display text-[11px] uppercase tracking-wider text-fg-mute sm:flex-row sm:items-center sm:justify-between"
       >
-        <div class="text-zinc-600">
-          &copy; {{ new Date().getFullYear() }} VoIP Accelerator. All rights reserved.
-        </div>
-        <div>
+        <div>&copy; {{ new Date().getFullYear() }} VoIP Accelerator. All rights reserved.</div>
+        <div class="text-fg-faint">
           If you like this, you might like
           <a
             href="https://reconcilecdr.com"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium group"
+            class="group inline-flex items-center gap-1 text-accent hover:text-accent-text transition-colors"
           >
             ReconcileCDR
             <ArrowTopRightOnSquareIcon
