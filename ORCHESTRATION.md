@@ -76,14 +76,13 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** none in flight. **Wave 1 ✅ DONE** (A + B merged; worktrees removed; branches deleted).
-  Combined `regression-check` GREEN + 94 unit tests on `a468719`.
+- **Active tasks:** **C running** (`feat/rg-tab-shell` @ base `35e678e`, worktree `../va-wt-rg-tab-shell`, sub-agent bg). Wave 1 ✅ DONE (A+B merged; regression-check GREEN + 94 unit on `a468719`).
 
   | wave | task | status |
   |------|------|--------|
   | 1 | A — upload validation (reject inter/intra ≤0) | ✅ merged |
   | 1 | B — engine core (pure in-mem `selectLeanRecords`, drop IDB persist, `rate-gen-aggregates.ts`) | ✅ merged |
-  | 2 | C — tab-shell rework of `RateGenUSView` (3 tabs) + fold Generation Strategy | ⬜ next |
+  | 2 | C — tab-shell rework of `RateGenUSView` (3 tabs) + fold Generation Strategy | 🟡 running |
   | 3 | D — Simulation Preview sandbox (sample, scenarios ≤4, compare, commit) | ⬜ blocked on C |
   | 3 | E — Generated Decks tab + 3 outputs (Final CSV dialog, Route CSV, Summary PDF) | ⬜ blocked on B(✅) |
 
