@@ -2,20 +2,17 @@
   <div class="block md:hidden">
     <!-- Mobile Header -->
     <header
-      class="fixed top-0 left-0 right-0 z-40 flex h-16 items-center justify-between border-b bg-fbBlack border-accent px-4 shadow-sm"
+      class="fixed top-0 left-0 right-0 z-40 flex h-16 items-center justify-between border-b bg-canvas border-line px-4"
     >
-      <!-- Updated Logo/App Name -->
-      <RouterLink to="/home" class="flex items-center text-accent gap-2">
-        <BoltIcon class="w-8 h-8 flex-shrink-0" />
-        <span class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter">
-          VoIP Accelerator
-        </span>
+      <!-- Logo -->
+      <RouterLink to="/home" class="flex items-center">
+        <VoipLogo />
       </RouterLink>
 
       <!-- Hamburger Button -->
       <button
         type="button"
-        class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-neutral-300"
+        class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-fg-dim"
         @click="toggleMenu"
       >
         <span class="sr-only">Open main menu</span>
@@ -32,24 +29,21 @@
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 translate-y-1"
     >
-      <div v-if="isMobileMenuOpen" class="fixed inset-0 z-50 overflow-y-auto bg-fbBlack p-4">
+      <div v-if="isMobileMenuOpen" class="fixed inset-0 z-50 overflow-y-auto bg-canvas p-4">
         <div class="flex items-center justify-between">
-          <!-- Updated Logo/App Name in Panel -->
-          <RouterLink to="/home" class="flex items-center text-accent gap-2" @click="closeMenu">
-            <BoltIcon class="w-8 h-8 flex-shrink-0" />
-            <span class="font-medium font-secondary text-accent whitespace-nowrap tracking-tighter">
-              VoIP Accelerator
-            </span>
+          <!-- Logo -->
+          <RouterLink to="/home" class="flex items-center" @click="closeMenu">
+            <VoipLogo />
           </RouterLink>
 
           <!-- Close Button -->
-          <button type="button" class="-m-2.5 rounded-md p-2.5 text-neutral-300" @click="closeMenu">
+          <button type="button" class="-m-2.5 rounded-md p-2.5 text-fg-dim" @click="closeMenu">
             <span class="sr-only">Close menu</span>
             <XMarkIcon class="h-6 w-6" aria-hidden="true" />
           </button>
         </div>
         <div class="mt-6 flow-root">
-          <div class="-my-6 divide-y divide-neutral-700">
+          <div class="-my-6 divide-y divide-line">
             <div class="space-y-1 py-6">
               <!-- Loop through navigation items -->
               <div v-for="(item, index) in filteredNavigation" :key="item.name">
@@ -57,7 +51,7 @@
                 <RouterLink
                   v-if="!item.children"
                   :to="item.href!"
-                  class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-white hover:bg-neutral-800"
+                  class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-fg hover:bg-row-hover"
                   @click="closeMenu"
                 >
                   {{ item.name }}
@@ -67,7 +61,7 @@
                 <div v-else>
                   <button
                     type="button"
-                    class="-mx-3 flex w-full items-center justify-between rounded-lg py-2 px-3 text-base font-semibold leading-7 text-white hover:bg-neutral-800"
+                    class="-mx-3 flex w-full items-center justify-between rounded-lg py-2 px-3 text-base font-semibold leading-7 text-fg hover:bg-row-hover"
                     @click="toggleSection(index)"
                   >
                     {{ item.name }}
@@ -85,7 +79,7 @@
                       v-for="child in item.children"
                       :key="child.name"
                       :to="child.href!"
-                      class="block rounded-lg py-2 pl-3 pr-3 text-sm leading-7 text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                      class="block rounded-lg py-2 pl-3 pr-3 text-sm leading-7 text-fg-faint hover:bg-row-hover hover:text-fg"
                       @click="closeMenu"
                     >
                       {{ child.name }}
@@ -104,7 +98,8 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue';
   import { RouterLink } from 'vue-router';
-  import { Bars3Icon, XMarkIcon, BoltIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+  import { Bars3Icon, XMarkIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+  import VoipLogo from '@/components/shared/VoipLogo.vue';
   import { useUserStore } from '@/stores/user-store';
   import { useRouter } from 'vue-router';
   import type { NavigationItem } from '@/types/nav-types';

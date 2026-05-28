@@ -40,7 +40,7 @@
               shouldShowSideNav && userStore.ui.isSideNavOpen
                 ? 'md:ml-[200px]'
                 : shouldShowSideNav
-                  ? 'md:ml-[64px]'
+                  ? 'md:ml-[80px]'
                   : '',
             ]"
           >
