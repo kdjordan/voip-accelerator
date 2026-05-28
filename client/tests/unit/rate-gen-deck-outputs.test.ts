@@ -165,7 +165,8 @@ describe('buildRouteDistributionCsv', () => {
 const deck: GeneratedRateDeck = {
   id: 'rate-deck-1',
   name: 'My LCR1 Deck',
-  lcrStrategy: 'LCR1',
+  depth: 1,
+  mode: 'position',
   markupPercentage: 15,
   providerIds: ['A', 'B'],
   generatedDate: new Date(2026, 5, 1),
@@ -200,7 +201,7 @@ describe('buildSummaryLines', () => {
   it('produces labelled summary lines', () => {
     const lines = buildSummaryLines(deck, analytics);
     expect(lines).toContain('Deck name: My LCR1 Deck');
-    expect(lines).toContain('LCR strategy: LCR1');
+    expect(lines).toContain('Selection: LCR1 · Position');
     expect(lines).toContain('Markup: 15%');
     expect(lines).toContain('Total prefixes: 2');
     expect(lines).toContain('Single-sourced: 1');

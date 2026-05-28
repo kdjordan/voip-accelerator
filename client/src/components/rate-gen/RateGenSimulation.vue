@@ -12,9 +12,7 @@ import {
   avgIndeterminate,
 } from '@/utils/rate-gen-aggregates';
 import {
-  LCR_STRATEGIES,
   type LCRConfig,
-  type LCRStrategy,
   type RateGenRecord,
   type Scenario,
   type WinRateByType,
@@ -77,7 +75,12 @@ const allProviderIds = computed(() => providers.value.map((p) => p.id));
 // Current names (post-upload renames) so sample win-rates match the committed deck.
 const namesById = computed(() => new Map(providers.value.map((p) => [p.id, p.name])));
 const canSimulate = computed(() => providers.value.length >= 2);
-const availableStrategies = computed(() => store.availableLCRStrategies as LCRStrategy[]);
+// Max depth = number of uploaded decks; depth options are 1..maxDepth.
+const maxDepth = computed(() => store.maxLcrDepth);
+const depthOptions = computed(() => Array.from({ length: maxDepth.value }, (_, i) => i + 1));
+// Relabel the win-rate chart as participation when any scenario averages (a
+// contributor can be in multiple selections, so shares can sum past 100%).
+const anyAverage = computed(() => store.scenarios.some((s) => s.mode === 'average'));
 const atScenarioCap = computed(() => store.scenarios.length >= MAX_SCENARIOS);
 const atDeckCap = computed(() => store.generatedDecks.length >= MAX_DECKS);
 const singleSourcedPct = computed(() =>
@@ -93,9 +96,6 @@ const providerColor = (name: string): string => {
   const idx = providers.value.findIndex((p) => p.name === name);
   return idx >= 0 ? PALETTE[idx % PALETTE.length] : '#71717a'; // zinc-500 for joined/unknown
 };
-
-const strategyLabel = (s: LCRStrategy): string =>
-  LCR_STRATEGIES.find((o) => o.value === s)?.label ?? s;
 
 // --- Sampling: fixed random subset of the universe (partial Fisher–Yates).
 // Draws a fresh sample and stores it (persisted across tab navigation). ---
@@ -116,7 +116,8 @@ function drawSample(): void {
 function scenarioConfig(s: Scenario): LCRConfig {
   return {
     name: s.name.trim() || 'Scenario',
-    strategy: s.strategy,
+    depth: s.depth,
+    mode: s.mode,
     markupPercentage: s.markupType === 'percentage' ? s.markupValue : 0,
     markupFixed: s.markupType === 'fixed' ? s.markupValue : 0,
     providerIds: allProviderIds.value,
@@ -154,11 +155,12 @@ function newScenarioId(): string {
 }
 
 function addScenario(): void {
-  if (atScenarioCap.value || !availableStrategies.value.length) return;
+  if (atScenarioCap.value || maxDepth.value < 1) return;
   store.addScenario({
     id: newScenarioId(),
     name: `Scenario ${store.scenarios.length + 1}`,
-    strategy: availableStrategies.value[0],
+    depth: 1,
+    mode: 'position',
     markupType: 'percentage',
     markupValue: 0,
   });
@@ -233,17 +235,23 @@ async function loadData(): Promise<void> {
 watch(() => store.scenarios, recompute, { deep: true });
 watch(() => store.simulationSample, recompute);
 
-// If a scenario's strategy stops being available (decks changed), snap to the first valid one.
-watch(availableStrategies, (strategies) => {
-  if (!strategies.length) return;
+// If decks are removed, clamp any scenario depth that now exceeds the deck count.
+watch(maxDepth, (max) => {
+  if (max < 1) return;
   for (const s of store.scenarios) {
-    if (!strategies.includes(s.strategy)) s.strategy = strategies[0];
+    if (s.depth > max) s.depth = max;
   }
 });
 
 const fmtRate = (n: number): string => n.toFixed(6);
 const markupLabel = (s: Scenario): string =>
   s.markupType === 'percentage' ? `+${s.markupValue || 0}%` : `+$${(s.markupValue || 0).toFixed(4)}`;
+
+// Plain-language explanation of a scenario's depth+mode selection.
+const selectionHint = (s: Scenario): string =>
+  s.mode === 'average'
+    ? `Mean of the ${s.depth} cheapest ${s.depth === 1 ? 'rate' : 'rates'} per jurisdiction`
+    : `The depth-${s.depth} cheapest rate per jurisdiction (LCR${s.depth})`;
 
 onMounted(loadData);
 </script>
@@ -374,18 +382,40 @@ onMounted(loadData);
             </button>
           </div>
 
-          <!-- Strategy -->
-          <div class="mt-3">
-            <label class="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">LCR strategy</label>
-            <select
-              v-model="s.strategy"
-              class="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-sm text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
-            >
-              <option v-for="opt in availableStrategies" :key="opt" :value="opt">
-                {{ strategyLabel(opt) }}
-              </option>
-            </select>
+          <!-- Selection: depth + mode -->
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <div>
+              <label class="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Depth</label>
+              <select
+                v-model.number="s.depth"
+                class="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-sm text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+              >
+                <option v-for="d in depthOptions" :key="d" :value="d">{{ d }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Mode</label>
+              <div class="grid grid-cols-2 gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
+                <button
+                  type="button"
+                  class="rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                  :class="s.mode === 'position' ? 'bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="s.mode = 'position'"
+                >
+                  Position
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                  :class="s.mode === 'average' ? 'bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="s.mode = 'average'"
+                >
+                  Average
+                </button>
+              </div>
+            </div>
           </div>
+          <p class="mt-1.5 text-[11px] text-zinc-500">{{ selectionHint(s) }}</p>
 
           <!-- Markup -->
           <div class="mt-3">
@@ -446,9 +476,11 @@ onMounted(loadData);
             </div>
           </div>
 
-          <!-- Win rate by type (PRIMARY) -->
+          <!-- Win rate / participation by type (PRIMARY) -->
           <div class="mt-3 space-y-3">
-            <p class="text-[10px] uppercase tracking-wider text-zinc-500">Win rate by rate type</p>
+            <p class="text-[10px] uppercase tracking-wider text-zinc-500">
+              {{ anyAverage ? 'Provider participation by rate type' : 'Win rate by rate type' }}
+            </p>
             <div
               v-for="grp in [
                 { key: 'interstate', label: 'Interstate' },

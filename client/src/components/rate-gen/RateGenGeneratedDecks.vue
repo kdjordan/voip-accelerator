@@ -4,7 +4,7 @@ import type { RateGenService } from '@/services/rate-gen.service';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { computeAnalytics } from '@/utils/rate-gen-aggregates';
-import type { GeneratedRateDeck, RateGenAnalytics, LeanGeneratedRecord, RateGenRecord } from '@/types/domains/rate-gen-types';
+import { selectionLabel, type GeneratedRateDeck, type RateGenAnalytics, type LeanGeneratedRecord, type RateGenRecord } from '@/types/domains/rate-gen-types';
 import {
   buildFinalDeckCsv,
   buildRouteDistributionCsv,
@@ -213,7 +213,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
               </button>
             </div>
             <p class="mt-1 text-xs text-zinc-500">
-              {{ deck.lcrStrategy }} · {{ markupLabel(deck) }} markup ·
+              {{ selectionLabel(deck.depth, deck.mode) }} · {{ markupLabel(deck) }} markup ·
               {{ deck.rowCount.toLocaleString() }} prefixes
             </p>
           </div>
