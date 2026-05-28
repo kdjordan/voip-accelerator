@@ -189,11 +189,13 @@ ticker bar, editorial running heads, light+dark peer themes.
 ### Resume (if conductor tab dies / new chat)
 **Pass-1 is DONE and MERGED to `main` @ `43cc3cd`** (foundation + shared + 4 views + Explorer body; owner
 gut-check passed, regression GREEN). On a fresh chat: confirm `git branch --show-current` = `main`,
-`git log --oneline -5`. **IMMEDIATE open items (need owner OK):** (1) `git push origin main` — origin/main is
-still `6cbb28d`; (2) manual **Coolify deploy** — PROD still `8b696b7`; (3) delete the merged
-`feat/switchboard-reskin` branch. **THEN Pass-2** (deferred surfaces, still on legacy emerald, look rough after
-the token swap — expected): `/rate-gen/us` Rate Composition Studio, dashboard, admin, auth, `TheFooter`,
-`AppMobileNav`, App.vue shell + the deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
+`git log --oneline -5`. Pass-1 ✅ PUSHED (`main` = `origin/main` = `73a65a3`). **Open (need owner OK):**
+(1) manual **Coolify deploy** — PROD still `8b696b7` (push ≠ deploy); (2) delete the merged
+`feat/switchboard-reskin` branch. **PASS-2 IN PROGRESS** on branch **`feat/switchboard-pass2`** (off `main`
+@ `73a65a3`; conductor commits per-surface live, merge after owner gut-check). Done: ✅ **`TheFooter` `e1eabf5`**
+(full-width flat editorial footer). Remaining Pass-2 surfaces (still legacy emerald, look rough — expected):
+`/rate-gen/us` Rate Composition Studio (biggest), dashboard, admin, auth, `AppMobileNav`, App.vue shell + the
+deferred ticker placement / SideNav-width (80px vs `md:ml-[64px]`) fix.
 Reusable reskin facts: `rounded-*` already resolves to 0 globally (P1 config) + `font-secondary` auto-upgrades
 to Geist Mono, so a reskin is mostly color/surface/border token swaps; portal palette = warn(amber)=positive/
 Sell/done, accent(red)=negative/Buy/active, info(blue)=frozen/locked, down=destructive, NO green/violet.
