@@ -91,6 +91,11 @@ const atDeckCap = computed(() => store.generatedDecks.length >= MAX_DECKS);
 const singleSourcedPct = computed(() =>
   totalPrefixes.value > 0 ? (singleSourced.value / totalPrefixes.value) * 100 : 0
 );
+// When the whole union fits in the sample, the sample IS the universe — there is
+// nothing random to re-roll (every draw is identical), so re-roll is disabled.
+const isFullUniverse = computed(() => universe.value.length <= SAMPLE_SIZE);
+const justRerolled = ref(false);
+let rerollTimer: ReturnType<typeof setTimeout> | undefined;
 
 const providerColor = (name: string): string => {
   const idx = providers.value.findIndex((p) => p.name === name);
@@ -170,7 +175,11 @@ function removeScenario(id: string): void {
 }
 
 function reroll(): void {
+  if (isFullUniverse.value) return; // identical draw — nothing to do
   drawSample();
+  justRerolled.value = true;
+  if (rerollTimer) clearTimeout(rerollTimer);
+  rerollTimer = setTimeout(() => (justRerolled.value = false), 1400);
 }
 
 async function commitScenario(s: Scenario): Promise<void> {
@@ -295,12 +304,26 @@ onMounted(loadData);
               <p class="font-secondary text-2xl font-semibold text-white">
                 {{ sample.length.toLocaleString() }}
               </p>
-              <p class="text-xs text-zinc-500">prefixes · shared across scenarios</p>
+              <p class="text-xs text-zinc-500">
+                {{ isFullUniverse ? 'full universe · no sampling' : 'prefixes · shared across scenarios' }}
+              </p>
             </div>
           </div>
-          <BaseButton variant="secondary" size="standard" :icon="ArrowPathIcon" @click="reroll">
-            Re-roll sample
-          </BaseButton>
+          <div class="flex flex-col items-end gap-1">
+            <BaseButton
+              variant="secondary"
+              size="standard"
+              :icon="ArrowPathIcon"
+              :disabled="isFullUniverse"
+              @click="reroll"
+            >
+              Re-roll sample
+            </BaseButton>
+            <span v-if="justRerolled" class="text-xs text-emerald-300">Re-rolled ✓</span>
+            <span v-else-if="isFullUniverse" class="max-w-[12rem] text-right text-xs text-zinc-500">
+              All {{ totalPrefixes.toLocaleString() }} prefixes fit the sample — nothing to re-roll.
+            </span>
+          </div>
         </div>
         <p class="mt-3 text-xs text-zinc-500">
           Win rates &amp; average rates are estimated from the sample; total prefixes and
