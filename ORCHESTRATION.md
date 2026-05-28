@@ -76,15 +76,18 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** **C running** (`feat/rg-tab-shell` @ base `35e678e`, worktree `../va-wt-rg-tab-shell`, sub-agent bg). Wave 1 ✅ DONE (A+B merged; regression-check GREEN + 94 unit on `a468719`).
+- **Active tasks:** none in flight. **Waves 1–2 ✅ DONE** (A+B+C merged; worktrees/branches cleaned). HEAD `9ee0662`, regression-check GREEN + 94 unit.
 
   | wave | task | status |
   |------|------|--------|
   | 1 | A — upload validation (reject inter/intra ≤0) | ✅ merged |
   | 1 | B — engine core (pure in-mem `selectLeanRecords`, drop IDB persist, `rate-gen-aggregates.ts`) | ✅ merged |
-  | 2 | C — tab-shell rework of `RateGenUSView` (3 tabs) + fold Generation Strategy | 🟡 running |
-  | 3 | D — Simulation Preview sandbox (sample, scenarios ≤4, compare, commit) | ⬜ blocked on C |
-  | 3 | E — Generated Decks tab + 3 outputs (Final CSV dialog, Route CSV, Summary PDF) | ⬜ blocked on B(✅) |
+  | 2 | C — `RateGenUSView` → 3 free-nav tabs (`activeTab` ref; Upload wired, Sim/Decks placeholders; effective-date ref + How-LCR `<details>` on Sim tab; strategy/markup + RateGenResults/RateGenConfiguration UNWIRED, files intact) | ✅ merged |
+  | 3 | D — Simulation Preview sandbox (sample, scenarios ≤4, compare, commit) | ⬜ READY (C done) |
+  | 3 | E — Generated Decks tab + 3 outputs (Final CSV dialog, Route CSV, Summary PDF) | ⬜ READY (B done) |
+
+- **Wave-3 mode decision pending owner:** run **D** as a live cmux tab (steer sandbox UX) or bg sub-agent? E = bg sub-agent. D & E both edit `RateGenUSView` (tab bodies) → if parallel, watch for conflict; safer to run D then E, or split cleanly (D owns Sim tab body, E owns Decks tab body).
+- **Hooks for D/E:** sandbox runs `selectLeanRecords(sample, …)`; Decks read `service.getGeneratedRecords(deckId)`; aggregates in `utils/rate-gen-aggregates.ts`; effective-date ref already on the Sim tab. Orphan to retire in D/E: `RateGenHeader.vue` (now unused).
 
 - **⚠️ Interim state after Wave 1:** generation now holds rates IN MEMORY only (`service.getGeneratedRecords(deckId)`) and no longer writes IndexedDB. The LEGACY `RateGenResults` + `RateGenExportModal` still read the now-unwritten IDB tables → they show/export EMPTY at runtime. **Expected** — those are retired/replaced in slices D/E. Don't gut-check generation output until D/E land. Slice E reads from `getGeneratedRecords(deckId)`.
 
