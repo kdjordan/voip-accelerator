@@ -72,13 +72,18 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
-- **Conductor:** sits on `main` @ `8b696b7`.
-- **Last prod deploy:** `8b696b7` (2026-05-27).
-- **Active tasks:** none in flight.
+- **Conductor:** sits on `feat/rate-gen-studio` @ `99186e8` (integration branch for the Rate Composition
+  Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
+  stays pristine at `a4d137d` until the whole studio is done + gut-checked).
+- **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
+- **Active tasks:** Wave 1 (functional, test-first) — sub-agents in background.
 
   | task | branch | worktree | mode | status |
   |------|--------|----------|------|--------|
-  | _(none)_ | | | | |
+  | A — upload validation (reject inter/intra ≤0) | `feat/rg-upload-validation` | `../va-wt-rg-upload-validation` | sub-agent (bg) | 🟡 running |
+  | B — engine core (pure in-mem selection, drop IDB persist, aggregates) | `feat/rg-engine-core` | `../va-wt-rg-engine-core` | sub-agent (bg) | 🟡 running |
 
-- **In progress elsewhere:** rate-gen rework continues on `feat/rate-gen-studio` (see `rate-gen-rework`
-  memory) — owner-driven, step-wise.
+- **Waves:** 1 = A+B (running). 2 = C (tab shell). 3 = D (sandbox) + E (decks/outputs). Visual reskin
+  (Switchboard) deferred until functionality baked — separate track/chat.
+- **Merge note:** A & B touch the SAME file (`rate-gen.service.ts`) in different regions — merge A first,
+  then B, watch for a small conflict.
