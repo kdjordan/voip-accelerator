@@ -76,8 +76,19 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
   Studio / Screen-3 rework — scope LOCKED in `docs/adr/0008` + `CONTEXT.md`; slices land here, `main`
   stays pristine at `a4d137d` until the whole studio is done + gut-checked).
 - **Last prod deploy:** `8b696b7` (2026-05-27). `main` = `origin/main` = `a4d137d` (docs only, undeployed).
-- **Active tasks:** **E running** (`feat/rg-decks`, worktree `../va-wt-rg-decks`, bg sub-agent — Generated Decks tab + 3 outputs + retire legacy). Waves 1–2 + D ✅ DONE (A+B+C+D merged; HEAD `68cd282`, regression-check GREEN). D gut-checked + PASSED by owner.
-  - **Cleanup pending:** D's worktree `../va-wt-rg-sandbox` still exists with the owner's cmux dev server on :5173 — remove it once the owner stops/closes that tab (also frees :5173 for the main dir). Auth note: dev origin is `localhost:5173` ONLY (better-auth `trustedOrigins` + client `VITE_SITE_URL`) — serving a worktree on any other port breaks login; use :5173 (stop the main server first).
+- **Active tasks:** none. **🎉 ALL 5 FUNCTIONAL SLICES DONE — studio functionally COMPLETE on `feat/rate-gen-studio` @ `daf979c`.** Final regression-check GREEN + 110 unit tests.
+
+  | wave | slice | status |
+  |------|-------|--------|
+  | 1 | A — upload validation | ✅ merged |
+  | 1 | B — engine core (in-mem `selectLeanRecords`, no IDB persist, aggregates) | ✅ merged |
+  | 2 | C — 3-tab shell | ✅ merged |
+  | 3 | D — Simulation Preview sandbox (cmux, owner gut-checked) | ✅ merged |
+  | 3 | E — Generated Decks tab + Final/Route CSV + Build Summary PDF; retired 7 legacy comps (+ orphaned RateGenConfiguration) | ✅ merged |
+
+- **NEXT (owner):** FULL end-to-end gut-check of the whole studio on `feat/rate-gen-studio` (run dev in the MAIN dir on :5173 — it's the complete studio). Flow: upload ≥2 decks → Simulation Preview (build/compare scenarios) → commit → Generated Decks (summary/preview/rename/delete) → download all 3 outputs. **THEN** (owner OK each): merge `feat/rate-gen-studio` → `main`, then manual Coolify deploy, then the **Switchboard reskin** track.
+- **Cleanup pending:** D's worktree `../va-wt-rg-sandbox` (+ branch `feat/rg-sandbox`) still present — cmux dev server (pid 12863) holds :5173. Remove once owner closes that tab. Dev-auth origin is `localhost:5173` ONLY.
+- **Known non-blocking:** `RateGenGeneratedDecks.vue` has the same pre-existing `lergStore.getNPAInfo(...)` Pinia-getter TS typing error as `USExport*`/`USRateSheetTable` — typecheck is non-blocking, build passes.
 
   | wave | task | status |
   |------|------|--------|
