@@ -19,61 +19,6 @@
           <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 overflow-auto">
             <div class="flex justify-between items-center mb-6">
               <h3 class="font-display text-lg leading-6 font-semibold uppercase tracking-wider text-fg">Select Column Roles</h3>
-              <div class="flex flex-col items-center gap-2">
-                <Listbox v-model="startLine" as="div" class="w-32">
-                  <ListboxLabel class="block font-display text-[10px] uppercase tracking-wider font-medium text-fg-faint"
-                    >Data starts on line:</ListboxLabel
-                  >
-                  <div class="relative mt-1">
-                    <ListboxButton
-                      class="relative w-full cursor-default bg-input py-2 pl-3 pr-10 text-left focus:outline-none focus:ring-2 focus:ring-accent-ring focus:border-transparent sm:text-sm border border-line-strong"
-                    >
-                      <span class="block truncate font-display text-fg">{{ startLine }}</span>
-                      <span
-                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
-                      >
-                        <ChevronUpDownIcon class="h-5 w-5 text-fg-faint" aria-hidden="true" />
-                      </span>
-                    </ListboxButton>
-
-                    <transition
-                      leave-active-class="transition duration-100 ease-in"
-                      leave-from-class="opacity-100"
-                      leave-to-class="opacity-0"
-                    >
-                      <ListboxOptions
-                        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border border-line-strong bg-surface py-1 text-base focus:outline-none sm:text-sm"
-                      >
-                        <ListboxOption
-                          v-for="i in 15"
-                          :key="i"
-                          :value="i"
-                          v-slot="{ active, selected }"
-                          as="template"
-                        >
-                          <li
-                            :class="[
-                              active ? 'bg-accent-soft text-accent' : 'text-fg-dim',
-                              'relative cursor-default select-none py-2 pl-10 pr-4 font-display',
-                            ]"
-                          >
-                            <span
-                              :class="[selected ? 'font-medium' : 'font-normal', 'block truncate']"
-                              >{{ i }}</span
-                            >
-                            <span
-                              v-if="selected"
-                              class="absolute inset-y-0 left-0 flex items-center pl-3 text-accent"
-                            >
-                              <CheckIcon class="h-5 w-5" aria-hidden="true" />
-                            </span>
-                          </li>
-                        </ListboxOption>
-                      </ListboxOptions>
-                    </transition>
-                  </div>
-                </Listbox>
-              </div>
             </div>
 
             <!-- Informational note about auto-generated fields -->
@@ -320,7 +265,7 @@
                     </tr>
                     <tr v-if="filteredPreviewData.length === 0" class="text-center text-fg-mute">
                       <td :colspan="columns.length + 1" class="px-6 py-4">
-                        No preview data available starting from line {{ startLine }}
+                        No preview data available
                       </td>
                     </tr>
                   </tbody>
