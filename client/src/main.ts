@@ -5,6 +5,7 @@ import { createPinia } from 'pinia';
 // @ts-ignore
 import App from './App.vue';
 import router from './router';
+import { initTheme } from './composables/useTheme';
 
 // TEMP: Load test functions for +1 detection (remove after testing)
 // import './utils/test-detection-console';
@@ -25,5 +26,7 @@ router.afterEach((to) => {
     });
   }
 });
+
+initTheme();
 
 app.mount('#app');

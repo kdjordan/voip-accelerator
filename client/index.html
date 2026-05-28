@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Switchboard: set data-theme before first paint to prevent FOUC -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('va-theme') || 'dark';
+          var d =
+            t === 'system'
+              ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+              : t;
+          document.documentElement.setAttribute('data-theme', d);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
     <title>VOIP Accelerator | VOIP Rate Deck Analysis & Customization Tool</title>
     <meta name="title" content="VOIP Accelerator | VOIP Rate Deck Analysis & Customization Tool" />
     <meta
