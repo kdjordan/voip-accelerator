@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildFinalDeckCsv,
+  buildFinalDeckRows,
   buildRouteDistributionCsv,
+  buildRouteDistributionRows,
   formatEffectiveDate,
   DEFAULT_FINAL_DECK_CSV_OPTIONS,
   type FinalDeckCsvOptions,
@@ -155,6 +157,82 @@ describe('buildRouteDistributionCsv', () => {
     // Papa.unparse over no rows yields no output; downloads are gated on records.
     const csv = buildRouteDistributionCsv([]);
     expect(csv).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Format-agnostic row builders (ADR-0010) — what the XLSX/CSV exports route through
+// ---------------------------------------------------------------------------
+
+describe('buildFinalDeckRows', () => {
+  it('default options: headers + positional rows (combined npanxx, numeric rates)', () => {
+    const { headers, rows } = buildFinalDeckRows(
+      records,
+      DEFAULT_FINAL_DECK_CSV_OPTIONS,
+      effectiveDate,
+      npaLookup
+    );
+    expect(headers).toEqual([
+      'npanxx',
+      'interstate',
+      'intrastate',
+      'indeterminate',
+      'effective_date',
+    ]);
+    // rates stay numeric so XLSX writes them as numbers (CSV stringifies the same)
+    expect(rows[0]).toEqual(['201555', 0.01, 0.02, 0.03, '06/01/2026']);
+    expect(rows[1]).toEqual(['310777', 0.011, 0.022, 0.033, '06/01/2026']);
+  });
+
+  it('split format + geo columns line up with headers', () => {
+    const opts: FinalDeckCsvOptions = {
+      ...DEFAULT_FINAL_DECK_CSV_OPTIONS,
+      npanxxFormat: 'split',
+      includeStateColumn: true,
+      includeCountryColumn: true,
+      includeRegionColumn: true,
+    };
+    const { headers, rows } = buildFinalDeckRows(records, opts, effectiveDate, npaLookup);
+    expect(headers).toEqual([
+      'npa',
+      'nxx',
+      'interstate',
+      'intrastate',
+      'indeterminate',
+      'effective_date',
+      'state',
+      'country',
+      'region',
+    ]);
+    expect(rows[0]).toEqual(['201', '555', 0.01, 0.02, 0.03, '06/01/2026', 'NJ', 'US', 'Northeast']);
+    expect(rows[0]).toHaveLength(headers.length);
+  });
+
+  it('CSV wrapper output is consistent with the rows', () => {
+    const csv = buildFinalDeckCsv(records, DEFAULT_FINAL_DECK_CSV_OPTIONS, effectiveDate, npaLookup);
+    const { headers, rows } = buildFinalDeckRows(
+      records,
+      DEFAULT_FINAL_DECK_CSV_OPTIONS,
+      effectiveDate,
+      npaLookup
+    );
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe(headers.join(','));
+    expect(lines[1]).toBe(rows[0].join(','));
+  });
+});
+
+describe('buildRouteDistributionRows', () => {
+  it('emits headers + prefix and the three winner names per row', () => {
+    const { headers, rows } = buildRouteDistributionRows(records);
+    expect(headers).toEqual(['prefix', 'inter', 'intra', 'indet']);
+    expect(rows[0]).toEqual(['201555', 'Alpha', 'Bravo', 'Charlie']);
+    expect(rows[1]).toEqual(['310777', 'Bravo', 'Alpha', 'Alpha']);
+  });
+
+  it('returns an empty rows array for an empty deck', () => {
+    const { rows } = buildRouteDistributionRows([]);
+    expect(rows).toEqual([]);
   });
 });
 

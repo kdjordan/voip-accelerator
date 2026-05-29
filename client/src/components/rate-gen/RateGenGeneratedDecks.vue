@@ -10,16 +10,18 @@ import type { HandoffTarget } from '@/types/domains/handoff-types';
 import { computeAnalytics } from '@/utils/rate-gen-aggregates';
 import { selectionLabel, type GeneratedRateDeck, type RateGenAnalytics, type LeanGeneratedRecord, type RateGenRecord } from '@/types/domains/rate-gen-types';
 import {
-  buildFinalDeckCsv,
-  buildRouteDistributionCsv,
-  downloadCsv,
+  buildFinalDeckRows,
+  buildRouteDistributionRows,
   DEFAULT_FINAL_DECK_CSV_OPTIONS,
   type FinalDeckCsvOptions,
   type NpaGeo,
 } from '@/utils/rate-gen-deck-csv';
 import { downloadBuildSummaryPdf } from '@/utils/rate-gen-summary-pdf';
+import { downloadTabularFile, type TabularFormat } from '@/utils/tabular-io';
+import { defaultExportFormat } from '@/utils/export-format';
 import BaseButton from '@/components/shared/BaseButton.vue';
 import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
+import FormatToggle from '@/components/shared/FormatToggle.vue';
 
 const props = defineProps<{ service: RateGenService }>();
 
@@ -52,6 +54,26 @@ const loadingDeck = ref<Record<string, boolean>>({});
 const PREVIEW_ROWS = 50;
 
 const decks = computed<GeneratedRateDeck[]>(() => store.generatedDecks);
+
+// Per-deck export format for the two TABULAR exports (Final Deck + Route
+// Distribution). Default is inherited from the deck's provider decks' source
+// formats (all-xlsx → xlsx, mixed/unknown → csv — ADR-0010); user-overridable.
+const exportFormatByDeck = ref<Record<string, TabularFormat>>({});
+
+function defaultFormatForDeck(deck: GeneratedRateDeck): TabularFormat {
+  const formats = deck.providerIds
+    .map((id) => store.getProviderById(id)?.sourceFormat)
+    .filter((f): f is TabularFormat => f === 'csv' || f === 'xlsx');
+  return defaultExportFormat(formats);
+}
+
+function exportFormat(deck: GeneratedRateDeck): TabularFormat {
+  return exportFormatByDeck.value[deck.id] ?? defaultFormatForDeck(deck);
+}
+
+function setExportFormat(deck: GeneratedRateDeck, format: TabularFormat): void {
+  exportFormatByDeck.value[deck.id] = format;
+}
 
 // Geo lookup closure for CSV enrichment, backed by the LERG store.
 function npaLookup(npa: string): NpaGeo | null {
@@ -152,21 +174,31 @@ function openFormatDialog(deck: GeneratedRateDeck) {
   formatDialogOpen.value = true;
 }
 
-function downloadFinalDeck() {
+async function downloadFinalDeck() {
   const deck = formatDeck.value;
   if (!deck) return;
   const records = props.service.getGeneratedRecords(deck.id);
   if (!records) return;
-  const csv = buildFinalDeckCsv(records, formatOptions.value, deckEffectiveDate(deck), npaLookup);
-  downloadCsv(csv, `${safeName(deck)}-rate-deck.csv`);
+  const { headers, rows } = buildFinalDeckRows(
+    records,
+    formatOptions.value,
+    deckEffectiveDate(deck),
+    npaLookup
+  );
+  await downloadTabularFile(`${safeName(deck)}-rate-deck`, headers, rows, exportFormat(deck));
   formatDialogOpen.value = false;
 }
 
-function downloadRouteDistribution(deck: GeneratedRateDeck) {
+async function downloadRouteDistribution(deck: GeneratedRateDeck) {
   const records = props.service.getGeneratedRecords(deck.id);
   if (!records) return;
-  const csv = buildRouteDistributionCsv(records);
-  downloadCsv(csv, `${safeName(deck)}-route-distribution.csv`);
+  const { headers, rows } = buildRouteDistributionRows(records);
+  await downloadTabularFile(
+    `${safeName(deck)}-route-distribution`,
+    headers,
+    rows,
+    exportFormat(deck)
+  );
 }
 
 function downloadSummary(deck: GeneratedRateDeck) {
@@ -337,13 +369,24 @@ function markupLabel(deck: GeneratedRateDeck): string {
             </div>
           </details>
 
+          <!-- Export format (controls the two tabular exports below; PDF ignores it) -->
+          <div class="mt-5 flex items-center gap-3">
+            <span class="font-display text-[11px] uppercase tracking-[0.06em] text-fg-faint">
+              Export format
+            </span>
+            <FormatToggle
+              :model-value="exportFormat(deck)"
+              @update:model-value="(f) => setExportFormat(deck, f)"
+            />
+          </div>
+
           <!-- Downloads -->
-          <div class="mt-5 flex flex-wrap gap-3">
+          <div class="mt-3 flex flex-wrap gap-3">
             <BaseButton variant="primary" size="small" @click="openFormatDialog(deck)">
-              Final Rate Deck CSV
+              Final Rate Deck
             </BaseButton>
             <BaseButton variant="secondary" size="small" @click="downloadRouteDistribution(deck)">
-              Route Distribution CSV
+              Route Distribution
             </BaseButton>
             <BaseButton
               variant="secondary"
@@ -384,7 +427,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
       @confirm="confirmDelete"
     />
 
-    <!-- Final Rate Deck CSV — compact format dialog -->
+    <!-- Final Rate Deck — compact format dialog -->
     <Teleport to="body">
       <div
         v-if="formatDialogOpen"
@@ -392,7 +435,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
         @click.self="formatDialogOpen = false"
       >
         <div class="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl">
-          <h3 class="mb-1 text-lg font-semibold text-fg">Final Rate Deck CSV</h3>
+          <h3 class="mb-1 text-lg font-semibold text-fg">Final Rate Deck</h3>
           <p class="mb-4 text-sm text-fg-dim">Choose the export format options.</p>
 
           <div class="space-y-4">
@@ -440,7 +483,9 @@ function markupLabel(deck: GeneratedRateDeck): string {
 
           <div class="mt-6 flex justify-end gap-3">
             <BaseButton variant="secondary" @click="formatDialogOpen = false">Cancel</BaseButton>
-            <BaseButton variant="primary" @click="downloadFinalDeck">Download CSV</BaseButton>
+            <BaseButton variant="primary" @click="downloadFinalDeck">
+              Download {{ formatDeck ? exportFormat(formatDeck).toUpperCase() : '' }}
+            </BaseButton>
           </div>
         </div>
       </div>

@@ -41,17 +41,25 @@ export function formatEffectiveDate(date: Date): string {
   return `${mm}/${dd}/${date.getFullYear()}`;
 }
 
+/** Headers + positional rows for a tabular export (format-agnostic — ADR-0010). */
+export interface TabularData {
+  headers: string[];
+  rows: (string | number)[][];
+}
+
 /**
- * PURE: build the Final Rate Deck CSV string — prefix + the three post-markup
- * rates + effective date, plus the optional geo columns. NPANXX is emitted
- * combined (one column) or split (npa/nxx), with an optional "1" country code.
+ * PURE: build the Final Rate Deck as { headers, rows } — prefix + the three
+ * post-markup rates + effective date, plus the optional geo columns. NPANXX is
+ * emitted combined (one column) or split (npa/nxx), with an optional "1" country
+ * code. Format-agnostic so the component can route it through the tabular-IO
+ * layer for CSV or XLSX (ADR-0010).
  */
-export function buildFinalDeckCsv(
+export function buildFinalDeckRows(
   records: LeanGeneratedRecord[],
   options: FinalDeckCsvOptions,
   effectiveDate: Date,
   npaLookup: NpaLookup
-): string {
+): TabularData {
   const needsGeo =
     options.includeStateColumn || options.includeCountryColumn || options.includeRegionColumn;
 
@@ -68,53 +76,67 @@ export function buildFinalDeckCsv(
 
   const dateStr = formatEffectiveDate(effectiveDate);
 
-  const rows = records.map((r) => {
-    const row: Record<string, unknown> = {};
+  const rows: (string | number)[][] = records.map((r) => {
+    const row: (string | number)[] = [];
 
     const npa = r.prefix.substring(0, 3);
     const nxx = r.prefix.substring(3, 6);
     if (options.npanxxFormat === 'split') {
-      row.npa = options.includeCountryCode ? `1${npa}` : npa;
-      row.nxx = nxx;
+      row.push(options.includeCountryCode ? `1${npa}` : npa, nxx);
     } else {
-      row.npanxx = options.includeCountryCode ? `1${r.prefix}` : r.prefix;
+      row.push(options.includeCountryCode ? `1${r.prefix}` : r.prefix);
     }
 
-    row.interstate = r.rate;
-    row.intrastate = r.intrastate;
-    row.indeterminate = r.indeterminate;
-    row.effective_date = dateStr;
+    row.push(r.rate, r.intrastate, r.indeterminate, dateStr);
 
     if (needsGeo) {
       const geo = npaLookup(npa);
-      if (options.includeStateColumn) row.state = geo?.state ?? '';
-      if (options.includeCountryColumn) row.country = geo?.country ?? 'US';
-      if (options.includeRegionColumn) row.region = geo?.region ?? '';
+      if (options.includeStateColumn) row.push(geo?.state ?? '');
+      if (options.includeCountryColumn) row.push(geo?.country ?? 'US');
+      if (options.includeRegionColumn) row.push(geo?.region ?? '');
     }
 
     return row;
   });
 
-  return Papa.unparse(rows, { columns: headers, header: true, newline: '\n' });
+  return { headers, rows };
 }
 
 /**
- * PURE: build the Route Distribution CSV string — one row per prefix with the
- * three per-rate-type winner provider names.
+ * PURE: build the Final Rate Deck CSV string. Thin wrapper over
+ * buildFinalDeckRows for CSV-only callers (and the unit tests).
+ */
+export function buildFinalDeckCsv(
+  records: LeanGeneratedRecord[],
+  options: FinalDeckCsvOptions,
+  effectiveDate: Date,
+  npaLookup: NpaLookup
+): string {
+  const { headers, rows } = buildFinalDeckRows(records, options, effectiveDate, npaLookup);
+  return Papa.unparse([headers, ...rows], { header: false, newline: '\n' });
+}
+
+/**
+ * PURE: build the Route Distribution as { headers, rows } — one row per prefix
+ * with the three per-rate-type winner provider names. Format-agnostic.
+ */
+export function buildRouteDistributionRows(records: LeanGeneratedRecord[]): TabularData {
+  return {
+    headers: ['prefix', 'inter', 'intra', 'indet'],
+    rows: records.map((r) => [r.prefix, r.interProvider, r.intraProvider, r.indetProvider]),
+  };
+}
+
+/**
+ * PURE: build the Route Distribution CSV string. Thin wrapper over
+ * buildRouteDistributionRows for CSV-only callers (and the unit tests).
  */
 export function buildRouteDistributionCsv(records: LeanGeneratedRecord[]): string {
-  const rows = records.map((r) => ({
-    prefix: r.prefix,
-    inter: r.interProvider,
-    intra: r.intraProvider,
-    indet: r.indetProvider,
-  }));
-
-  return Papa.unparse(rows, {
-    columns: ['prefix', 'inter', 'intra', 'indet'],
-    header: true,
-    newline: '\n',
-  });
+  const { headers, rows } = buildRouteDistributionRows(records);
+  // Empty deck → no output (preserves the prior Papa.unparse-over-objects
+  // behavior and matches the download gate in the component).
+  if (rows.length === 0) return '';
+  return Papa.unparse([headers, ...rows], { header: false, newline: '\n' });
 }
 
 /** Trigger a browser download of a CSV string. */
