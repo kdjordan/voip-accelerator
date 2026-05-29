@@ -439,7 +439,6 @@ const confirmRemove = async () => {
       :message="`Are you sure you want to remove '${removingProvider?.name ?? ''}'? This action cannot be undone.`"
       confirm-button-text="Remove"
       cancel-button-text="Cancel"
-      variant="destructive"
       @confirm="confirmRemove"
     />
   </div>
