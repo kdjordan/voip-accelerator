@@ -90,7 +90,10 @@ export class USService {
     // For XLSX, the caller may have already parsed the file (e.g. to count rows
     // for the progress indicator). Pass those rows here to avoid a SECOND full
     // parse + 200K-row transfer back to the main thread (the source of the lag).
-    preParsedRows?: string[][]
+    preParsedRows?: string[][],
+    // Real write-progress callback — fired after each stored chunk so the upload
+    // indicator climbs 0→99% in real time (CSV + XLSX) instead of a time estimate.
+    onProgress?: (stored: number, total: number) => void
   ): Promise<{ fileName: string; records: USStandardizedData[]; tableName: string }> {
     // Phase 1 Performance Timing
     const performanceStart = performance.now();
@@ -183,7 +186,7 @@ export class USService {
       }
 
       if (allProcessedData.length > 0) {
-        await this.storeDataInOptimizedChunks(allProcessedData, tableName, file.name);
+        await this.storeDataInOptimizedChunks(allProcessedData, tableName, file.name, onProgress);
       }
       await this.finalizeProcessedUpload(file, invalidRows, performanceStart, totalRecords);
       return { fileName: file.name, records: allProcessedData, tableName };
@@ -263,7 +266,7 @@ export class USService {
           if (allProcessedData.length > 0) {
             const storeStartTime = performance.now();
             try {
-              await this.storeDataInOptimizedChunks(allProcessedData, tableName, file.name);
+              await this.storeDataInOptimizedChunks(allProcessedData, tableName, file.name, onProgress);
               const storeEndTime = performance.now();
               const storeDuration = (storeEndTime - storeStartTime) / 1000;
               console.log(`[PERF] IndexedDB storage completed in ${storeDuration.toFixed(2)}s for ${allProcessedData.length} records`);
@@ -455,7 +458,7 @@ export class USService {
   }
 
   // Store data in optimized chunks - copied from USRateSheetService
-  private async storeDataInOptimizedChunks(data: USStandardizedData[], tableName: string, fileName: string): Promise<void> {
+  private async storeDataInOptimizedChunks(data: USStandardizedData[], tableName: string, fileName: string, onProgress?: (stored: number, total: number) => void): Promise<void> {
     const OPTIMAL_CHUNK_SIZE = 2500;
     const chunks = [];
     
@@ -476,7 +479,9 @@ export class USService {
         
         const chunkEndTime = performance.now();
         const chunkDuration = chunkEndTime - chunkStartTime;
-        
+
+        onProgress?.(Math.min((i + 1) * OPTIMAL_CHUNK_SIZE, data.length), data.length);
+
         if (chunkDuration > 500) {
           console.log(`[PERF] Chunk ${i + 1}/${chunks.length}: ${chunkDuration.toFixed(2)}ms for ${chunks[i].length} records`);
         }
