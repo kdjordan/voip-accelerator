@@ -122,10 +122,10 @@ Notes (PRE-EXISTING, not this feature): (a) the `useDexieDB` "empty schema strin
 **main = `ef60e1a`** (LOCAL, not pushed). PROD still `277f1ea`/`prod-2026-05-28b` (hand-off + studio session-only fix live). `origin/main` is behind local (3 undeployed commits from the hand-off arc + these XLSX-prep commits).
 
 ### Slices (order: Slice 1 → bundle gate → (2 ∥ 3 ∥ 4))
-- **Slice 1 — Foundation** *(🔵 IN PROGRESS — sub-agent, test-first)*: `utils/tabular-io.ts` (`parseTabularFile`→string[][] + `writeTabularFile` + `detectFormat`) + xlsx parse web worker + cell-normalization + empty-sheet error + unit tests. No surface wiring. Conductor runs the bundle-exclusion gate after it lands.
-- **Slice 2 — Analyzer** *(blocked on 1+gate)*: accept .xlsx both slots, per-file format tracking, CSV|XLSX export toggle w/ derived default.
-- **Slice 3 — Adjuster** *(blocked on 1+gate)*: same; handoff-deck defaults CSV.
-- **Slice 4 — Rate Composition Studio** *(blocked on 1+gate)*: same; generated-deck export default inherits provider formats.
+- **Slice 1 — Foundation** *(✅ DONE — merged `main` `ab92fa1`, regression GREEN, worktree removed)*: `utils/tabular-io.ts` (`parseTabularFile`/`downloadTabularFile`/`detectFormat`/`normalizeCell`); xlsx via `read-excel-file/web-worker` `readSheet` (off-thread, no hand-rolled worker) + `write-excel-file/browser`; cells normalized→strings; empty-sheet error; 16 tests. **✅ BUNDLE GATE PASS** (conductor-verified: tabular-io bundles — MIME literal in main chunk — but zero `unzipper`/`archiver-node`/`bluebird`/`compress-commons`/`tar-stream`/`node-int64` in `dist`; fflate-based entries only).
+- **Slice 2 — Analyzer** *(🔵 IN PROGRESS — sub-agent; creates the shared `FormatToggle.vue` that 3&4 reuse)*: accept .xlsx both slots (route through `parseTabularFile`, empty-sheet error in drop zone), per-file format tracking, `CSV|XLSX` export toggle w/ derived default on comparison/code-report + Explorer exports (route through `downloadTabularFile`).
+- **Slice 3 — Adjuster** *(blocked on Slice 2's FormatToggle)*: same; handoff-deck defaults CSV.
+- **Slice 4 — Rate Composition Studio** *(blocked on Slice 2's FormatToggle)*: same; generated-deck export default inherits provider formats.
 
 --- (historical — cross-module hand-off feature, SHIPPED + DEPLOYED `prod-2026-05-28b`) ---
 **✅ Cross-module hand-off + rate-gen session-only UX: live in prod `277f1ea`.** Conductor was idle; authoritative state = auto-memory `MEMORY.md`.
