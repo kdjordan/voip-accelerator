@@ -1,11 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock the xlsx web-worker entry so the xlsx path is testable in jsdom (the
-// real worker-based parse can't run here — the conductor verifies it live).
-const readSheetMock = vi.fn();
+// `parseTabularFile`'s xlsx branch now spawns `xlsx-parse.worker?worker`, which
+// jsdom/Vitest can't instantiate. Mock that worker module with a fake Worker
+// that runs the SAME readSheet → empty-check → normalize logic the real worker
+// runs, driven by readSheetMock — so the xlsx-path assertions still exercise
+// parseTabularFile end-to-end. (vi.hoisted lets the hoisted factories share the
+// mock fn.) The conductor verifies the real off-thread parse live.
+const { readSheetMock } = vi.hoisted(() => ({ readSheetMock: vi.fn() }));
+
 vi.mock('read-excel-file/web-worker', () => ({
   readSheet: (...args: unknown[]) => readSheetMock(...args),
 }));
+
+vi.mock('@/workers/xlsx-parse.worker?worker', async () => {
+  const { normalizeCell } = await import('@/utils/xlsx-cell');
+  class FakeXlsxParseWorker {
+    onmessage: ((ev: MessageEvent) => void) | null = null;
+    onerror: ((ev: unknown) => void) | null = null;
+    async postMessage(file: File) {
+      try {
+        const raw = await readSheetMock(file, 1);
+        const hasData =
+          Array.isArray(raw) && raw.some((r: unknown[]) => r.some((c) => c != null));
+        if (!hasData) {
+          this.onmessage?.({
+            data: {
+              error:
+                "This workbook's first sheet has no data. Put your rate data on the first sheet and re-upload.",
+            },
+          } as MessageEvent);
+          return;
+        }
+        const rows = raw.map((r: unknown[]) => r.map((c) => normalizeCell(c)));
+        this.onmessage?.({ data: { rows } } as MessageEvent);
+      } catch (err) {
+        this.onmessage?.({
+          data: { error: err instanceof Error ? err.message : String(err) },
+        } as MessageEvent);
+      }
+    }
+    terminate() {}
+  }
+  return { default: FakeXlsxParseWorker };
+});
+
 // write-excel-file/browser is import-only here (download path not unit-tested),
 // but stub it so the module imports cleanly under jsdom.
 vi.mock('write-excel-file/browser', () => ({

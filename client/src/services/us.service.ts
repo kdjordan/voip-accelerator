@@ -136,13 +136,19 @@ export class USService {
         );
       }
 
-      for (const row of rows) {
+      // CSV streams via papaparse so the tab stays responsive; the xlsx rows
+      // arrive as one in-memory array, so a tight for-loop over a 200K-row deck
+      // would block the main thread (jank / frozen indicator). Yield to the
+      // event loop every YIELD_EVERY rows so the UploadProgressIndicator's
+      // rAF animation keeps running and the tab stays interactive.
+      const YIELD_EVERY = 2000;
+      for (let i = 0; i < rows.length; i++) {
         totalRows++;
         // Skip header rows based on user input
         if (totalRows < startLine) continue;
         try {
           const processedRow = this.processRow(
-            row,
+            rows[i],
             totalRows,
             columnMapping,
             indeterminateDefinition,
@@ -164,6 +170,10 @@ export class USService {
             indetermRate: '-',
             reason: `Row processing error: ${(error as Error).message}`,
           });
+        }
+
+        if ((i + 1) % YIELD_EVERY === 0) {
+          await new Promise((r) => setTimeout(r, 0));
         }
       }
 
