@@ -201,6 +201,12 @@ function markupLabel(deck: GeneratedRateDeck): string {
     </div>
 
     <div v-else class="space-y-6">
+      <!-- Session-only reminder (decks live in memory only; persisting was rejected — ADR-0008) -->
+      <div class="border-l-2 border-info bg-info-soft px-4 py-3 text-sm text-fg-dim">
+        <span class="font-display text-xs uppercase tracking-wider text-info">Session-only</span>
+        — leaving this page or reloading clears generated decks. Send one to the Adjuster or
+        Analyzer, or export it, before you go.
+      </div>
       <div
         v-for="deck in decks"
         :key="deck.id"
@@ -243,16 +249,7 @@ function markupLabel(deck: GeneratedRateDeck): string {
           </BaseButton>
         </div>
 
-        <!-- Missing records (session-only deck whose data didn't survive) -->
-        <p
-          v-if="!props.service.getGeneratedRecords(deck.id)"
-          class="mt-4 text-sm text-warn"
-        >
-          This deck's records are no longer in memory (decks are session-only and clear on reload).
-          Regenerate it from the Simulation Preview tab.
-        </p>
-
-        <template v-else>
+        <template v-if="props.service.getGeneratedRecords(deck.id)">
           <!-- KPIs -->
           <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div class="rounded-lg bg-row px-3 py-2">

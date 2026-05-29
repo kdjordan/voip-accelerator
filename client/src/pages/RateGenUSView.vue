@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import { RateGenService } from '@/services/rate-gen.service';
 
@@ -35,6 +35,16 @@ const getDefaultEffectiveDate = () => {
   return date.toISOString().split('T')[0];
 };
 const effectiveDate = ref(getDefaultEffectiveDate());
+
+// Generated decks are session-only: their records live in THIS service instance,
+// which is fresh on every view mount. So any deck metadata carried over in the
+// store from a previous visit has no records behind it — drop it on mount so the
+// user returns to a clean slate instead of stale "no longer in memory" cards they'd
+// have to delete by hand. (Persisting decks was deliberately rejected — see ADR-0008.)
+onMounted(() => {
+  store.setGeneratedDecks([]);
+  store.clearGeneratedDeck();
+});
 </script>
 
 <template>
