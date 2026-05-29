@@ -32,6 +32,7 @@ export interface ProviderInfo {
   avgIntraRate: number;     // Average intrastate rate
   avgIndeterminateRate: number; // Average indeterminate rate
   npaCount: number;         // Distinct NPAs in this deck (for LERG coverage %)
+  sourceFormat?: 'csv' | 'xlsx'; // Uploaded file format — feeds the generated-deck export default (ADR-0010)
 }
 
 export type LCRStrategy = 'LCR1' | 'LCR2' | 'LCR3' | 'LCR4' | 'LCR5' | 'LCR6' | 'Average';

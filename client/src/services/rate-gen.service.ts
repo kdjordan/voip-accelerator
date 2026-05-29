@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import { DBName } from '@/types/app-types';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import useDexieDB from '@/composables/useDexieDB';
+import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
 import {
   selectionLabel,
   type RateGenRecord,
@@ -194,7 +195,11 @@ export class RateGenService {
     providerName: string,
     columnMapping: RateGenColumnMapping,
     startLine: number = 1,
-    indeterminateDefinition?: string
+    indeterminateDefinition?: string,
+    // For XLSX, the caller (RateGenFileUploads) has already parsed the workbook
+    // once for the preview. Pass those rows here to avoid a SECOND full parse +
+    // transfer (mirrors USService.processFile's preParsedRows).
+    preParsedRows?: string[][]
   ): Promise<void> {
     const performanceStart = performance.now();
     const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
@@ -215,7 +220,7 @@ export class RateGenService {
     }
     
     // Set initial progress to show immediate feedback
-    setTimeout(() => {
+    const initialProgressTimer = setTimeout(() => {
       this.store.setUploadProgress(providerId, 5);
     }, 100);
 
@@ -235,9 +240,113 @@ export class RateGenService {
     // Distinct NPAs (first 3 digits) for LERG coverage %
     const distinctNpas = new Set<string>();
 
-    // Start approximated progress timer
+    const sourceFormat = detectFormat(file);
+
+    // --- XLSX path ---
+    // XLSX can't stream (it's a zip that must be fully decompressed + XML-parsed),
+    // so parse off the main thread via parseTabularFile (reusing the caller's
+    // preview parse when provided), then run the SAME transformRow + chunked-store
+    // logic the CSV path uses. Yield every YIELD_EVERY rows so the tab stays
+    // responsive, and drive REAL progress off the row index (no approximated timer).
+    if (sourceFormat === 'xlsx') {
+      // The xlsx path drives its own real progress; cancel the CSV-oriented
+      // immediate-feedback timer so it can't clobber a completed upload at 5%.
+      clearTimeout(initialProgressTimer);
+      let rows: string[][];
+      try {
+        rows = preParsedRows ?? (await parseTabularFile(file));
+      } catch (parseError) {
+        this.store.setComponentUploading(providerId as any, false);
+        this.store.setUploadProgress(providerId, 0);
+        const userMessage = this.getUserFriendlyError(parseError as Error, 'parse');
+        this.store.setUploadError(providerId, userMessage);
+        throw parseError instanceof Error ? parseError : new Error(String(parseError));
+      }
+
+      const YIELD_EVERY = 2000;
+      // Reserve the 0→90% band for the parse/transform loop; chunked store finishes it.
+      const dataRowCount = Math.max(0, rows.length - (startLine - 1));
+      try {
+        for (let i = 0; i < rows.length; i++) {
+          totalRows++;
+          // Skip header rows based on user input
+          if (totalRows < startLine) continue;
+
+          try {
+            const processedRow = this.transformRow(
+              rows[i],
+              columnMapping,
+              providerId,
+              providerName,
+              file.name,
+              indeterminateDefinition
+            );
+
+            if (typeof processedRow === 'string') {
+              invalidRows.push({ rowNumber: totalRows, data: rows[i], reason: processedRow });
+            } else {
+              allProcessedData.push(processedRow);
+              totalRecords++;
+              sumInterRate += processedRow.rateInter;
+              sumIntraRate += processedRow.rateIntra;
+              sumIndeterminateRate += processedRow.rateIndeterminate;
+              distinctNpas.add(processedRow.prefix.slice(0, 3));
+            }
+          } catch (error) {
+            invalidRows.push({
+              rowNumber: totalRows,
+              data: rows[i],
+              reason: `Processing error: ${(error as Error).message}`,
+            });
+          }
+
+          if ((i + 1) % YIELD_EVERY === 0) {
+            if (dataRowCount > 0) {
+              this.store.setUploadProgress(
+                providerId,
+                Math.min(90, Math.round((totalRecords / dataRowCount) * 90))
+              );
+            }
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+
+        // Chunked store carries 90→100%.
+        this.store.setUploadProgress(providerId, 90);
+        await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name);
+
+        invalidRows.forEach((row) => this.store.addInvalidRow(providerId, row));
+        this.finalizeProviderUpload(
+          providerId,
+          providerName,
+          file.name,
+          totalRecords,
+          invalidRows.length,
+          sumInterRate,
+          sumIntraRate,
+          sumIndeterminateRate,
+          distinctNpas.size,
+          sourceFormat
+        );
+
+        const totalTime = (performance.now() - performanceStart) / 1000;
+        console.log(
+          `[RateGenService] Successfully processed ${totalRecords} XLSX records for ${providerName} in ${totalTime.toFixed(2)}s`
+        );
+        return;
+      } catch (error) {
+        console.error('[RateGenService] Error during XLSX processing:', error);
+        this.store.setComponentUploading(providerId as any, false);
+        this.store.setUploadProgress(providerId, 0);
+        const userMessage = this.getUserFriendlyError(error as Error, 'storage');
+        this.store.setUploadError(providerId, userMessage);
+        throw error;
+      }
+    }
+
+    // Start approximated progress timer (CSV streams, so no real per-row count)
     this.startApproximatedProgress(providerId, fileSizeMB);
-    
+
     return new Promise((resolve, reject) => {
       console.log('[RateGenService] Starting PapaParse streaming...');
       console.log(`[RateGenService] File size: ${fileSizeMB}MB`);
@@ -305,32 +414,20 @@ export class RateGenService {
             invalidRows.forEach(row => {
               this.store.addInvalidRow(providerId, row);
             });
-            
-            // Calculate averages
-            const avgInterRate = totalRecords > 0 ? sumInterRate / totalRecords : 0;
-            const avgIntraRate = totalRecords > 0 ? sumIntraRate / totalRecords : 0;
-            const avgIndeterminateRate = totalRecords > 0 ? sumIndeterminateRate / totalRecords : 0;
-            
-            // Update store with provider info
-            const providerInfo = {
-              id: providerId,
-              name: providerName,
-              fileName: file.name,
-              rowCount: totalRecords,
-              invalidRowCount: invalidRows.length,
-              uploadDate: new Date(),
-              avgInterRate: Math.round(avgInterRate * 1000000) / 1000000, // Round to 6 decimal places
-              avgIntraRate: Math.round(avgIntraRate * 1000000) / 1000000,
-              avgIndeterminateRate: Math.round(avgIndeterminateRate * 1000000) / 1000000,
-              npaCount: distinctNpas.size
-            };
-            
-            // Complete the process - set progress beyond 100% to show "Processing complete!"
-            this.store.setUploadProgress(providerId, 110); // Beyond 100% to indicate true completion
-            console.log('[DEBUG] Adding provider info:', providerInfo);
-            this.store.addProvider(providerInfo);
-            this.store.setComponentUploading(providerId as any, false);
-            
+
+            this.finalizeProviderUpload(
+              providerId,
+              providerName,
+              file.name,
+              totalRecords,
+              invalidRows.length,
+              sumInterRate,
+              sumIntraRate,
+              sumIndeterminateRate,
+              distinctNpas.size,
+              sourceFormat
+            );
+
             const performanceEnd = performance.now();
             const totalTime = (performanceEnd - performanceStart) / 1000;
             console.log(`[RateGenService] Successfully processed ${totalRecords} records for ${providerName} in ${totalTime.toFixed(2)}s`);
@@ -385,6 +482,48 @@ export class RateGenService {
         }
       });
     });
+  }
+
+  /**
+   * Shared post-store finalize for both the CSV and XLSX paths: compute averages,
+   * register the provider (carrying its sourceFormat for the export default), and
+   * push progress past 100% to flip the indicator to "complete".
+   */
+  private finalizeProviderUpload(
+    providerId: string,
+    providerName: string,
+    fileName: string,
+    totalRecords: number,
+    invalidRowCount: number,
+    sumInterRate: number,
+    sumIntraRate: number,
+    sumIndeterminateRate: number,
+    npaCount: number,
+    sourceFormat: 'csv' | 'xlsx'
+  ): void {
+    const avgInterRate = totalRecords > 0 ? sumInterRate / totalRecords : 0;
+    const avgIntraRate = totalRecords > 0 ? sumIntraRate / totalRecords : 0;
+    const avgIndeterminateRate = totalRecords > 0 ? sumIndeterminateRate / totalRecords : 0;
+
+    const providerInfo: ProviderInfo = {
+      id: providerId,
+      name: providerName,
+      fileName,
+      rowCount: totalRecords,
+      invalidRowCount,
+      uploadDate: new Date(),
+      avgInterRate: Math.round(avgInterRate * 1000000) / 1000000, // Round to 6 decimal places
+      avgIntraRate: Math.round(avgIntraRate * 1000000) / 1000000,
+      avgIndeterminateRate: Math.round(avgIndeterminateRate * 1000000) / 1000000,
+      npaCount,
+      sourceFormat,
+    };
+
+    // Beyond 100% to flip the indicator to "Processing complete!"
+    this.store.setUploadProgress(providerId, 110);
+    console.log('[DEBUG] Adding provider info:', providerInfo);
+    this.store.addProvider(providerInfo);
+    this.store.setComponentUploading(providerId as any, false);
   }
 
   /**
