@@ -16,12 +16,20 @@ export interface XlsxParseFailure {
 }
 export type XlsxParseResponse = XlsxParseSuccess | XlsxParseFailure;
 
+export interface XlsxParseRequest {
+  file: File;
+  // Cap rows returned (header + sample) for the column-mapping preview, so a huge
+  // deck doesn't serialize 200K rows back to the main thread. Omit for full ingest.
+  maxRows?: number;
+}
+
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
-ctx.onmessage = async (e: MessageEvent<File>) => {
+ctx.onmessage = async (e: MessageEvent<XlsxParseRequest>) => {
   try {
+    const { file, maxRows } = e.data;
     // sheet `1` → first sheet. Cells arrive typed (string | number | boolean | Date | null).
-    const raw = await readSheet(e.data, 1);
+    const raw = await readSheet(file, 1);
 
     const hasData =
       Array.isArray(raw) && raw.some((r) => r.some((c) => c != null));
@@ -33,7 +41,8 @@ ctx.onmessage = async (e: MessageEvent<File>) => {
       return;
     }
 
-    const rows = raw.map((r) => r.map((c) => normalizeCell(c)));
+    const limited = maxRows && maxRows > 0 ? raw.slice(0, maxRows) : raw;
+    const rows = limited.map((r) => r.map((c) => normalizeCell(c)));
     ctx.postMessage({ rows } satisfies XlsxParseResponse);
   } catch (err) {
     ctx.postMessage({

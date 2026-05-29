@@ -1074,17 +1074,20 @@ This action cannot be undone.`"
     usStore.setTempFile(componentId, file);
     // Track this slot's source format so the export default can be derived from it.
     usStore.setFileFormat(componentId, detectFormat(file));
-    console.log('[USFileUploads] is launching preview modal');
+    console.log(`[USFileUploads] parsing preview for "${file.name}" (${detectFormat(file)})`);
     try {
       // Format-transparent parse (CSV via papaparse, XLSX off-thread); row 0 =
-      // columns, the rest = preview data. The mapping modal downstream is unchanged.
-      const rows = await parseTabularFile(file);
+      // columns, the rest = preview data. CAP to a sample (header + 100 rows):
+      // the mapping modal only needs to show column structure, and an uncapped
+      // parse would dump every row of a large deck into a reactive ref → freeze.
+      const rows = await parseTabularFile(file, { maxRows: 101 });
+      console.log(`[USFileUploads] preview parsed: ${rows.length} rows (capped), launching modal`);
       previewData.value = rows.slice(1);
       columns.value = rows[0] ?? [];
       activeComponent.value = componentId;
       showPreviewModal.value = true;
     } catch (error) {
-      console.error('Error parsing file:', error);
+      console.error('[USFileUploads] Error parsing preview:', error);
       usStore.clearTempFile(componentId);
       usStore.clearFileFormat(componentId);
       uploadError[componentId] =

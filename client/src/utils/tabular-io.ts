@@ -55,8 +55,16 @@ export function detectFormat(file: File): TabularFormat {
  * XLSX → parsed + normalized off the main thread in `xlsx-parse.worker.ts`
  *   (first sheet only; cells normalized to strings via normalizeCell there).
  *   Empty first sheet → the worker reports an actionable error we reject with.
+ *
+ * `options.maxRows` caps the rows returned (header + sample) — pass it for the
+ * column-mapping PREVIEW so a huge deck doesn't load every row into a reactive
+ * ref / serialize 200K rows out of the worker. Omit it for the full ingest.
  */
-export async function parseTabularFile(file: File): Promise<string[][]> {
+export async function parseTabularFile(
+  file: File,
+  options?: { maxRows?: number }
+): Promise<string[][]> {
+  const maxRows = options?.maxRows;
   if (detectFormat(file) === 'xlsx') {
     // Spawn the worker so the heavy unzip + XML parse never blocks the UI.
     return new Promise<string[][]>((resolve, reject) => {
@@ -73,15 +81,17 @@ export async function parseTabularFile(file: File): Promise<string[][]> {
         worker.terminate();
         reject(err instanceof ErrorEvent ? new Error(err.message) : err);
       };
-      worker.postMessage(file);
+      worker.postMessage({ file, maxRows });
     });
   }
 
   // CSV — preserve the inline papaparse options used across the surfaces.
+  // `preview: 0` (papaparse default) = all rows; `preview: N` caps to N.
   return new Promise<string[][]>((resolve, reject) => {
     Papa.parse<string[]>(file, {
       header: false,
       skipEmptyLines: true,
+      preview: maxRows && maxRows > 0 ? maxRows : 0,
       complete: (results) => resolve(results.data as string[][]),
       error: (error) => reject(error),
     });
