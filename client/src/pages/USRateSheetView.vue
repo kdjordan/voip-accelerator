@@ -181,10 +181,8 @@
           </div>
         </template>
         <template v-else>
-          <RealTimeProgressIndicator
-            :is-uploading="store.getUploadProgress.isUploading"
+          <ProgressIndicator
             :progress="store.getUploadProgress.progress"
-            :stage="store.getUploadProgress.stage"
             :rows-processed="store.getUploadProgress.rowsProcessed"
             :total-rows="store.getUploadProgress.totalRows"
           />
@@ -278,7 +276,7 @@
   } from '@heroicons/vue/20/solid';
   import USRateSheetTable from '@/components/rate-sheet/us/USRateSheetTable.vue';
   import PreviewModal from '@/components/shared/PreviewModal.vue';
-  import RealTimeProgressIndicator from '@/components/shared/RealTimeProgressIndicator.vue';
+  import ProgressIndicator from '@/components/shared/ProgressIndicator.vue';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';

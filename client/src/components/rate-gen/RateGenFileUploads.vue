@@ -11,7 +11,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 import PreviewModal from '@/components/shared/PreviewModal.vue';
-import RateGenProgressIndicator from '@/components/rate-gen/RateGenProgressIndicator.vue';
+import ProgressIndicator from '@/components/shared/ProgressIndicator.vue';
 import TestDataLoader from '@/components/rate-gen/TestDataLoader.vue';
 import ConfirmationModal from '@/components/shared/ConfirmationModal.vue';
 import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
@@ -360,7 +360,7 @@ const confirmRemove = async () => {
 
       <!-- Uploading -->
       <template v-else-if="isUploading">
-        <RateGenProgressIndicator
+        <ProgressIndicator
           :total-rows="pendingRowCount"
           :progress="currentZoneId ? store.getUploadProgress(currentZoneId) : 0"
         />

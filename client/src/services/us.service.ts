@@ -147,8 +147,8 @@ export class USService {
       // CSV streams via papaparse so the tab stays responsive; the xlsx rows
       // arrive as one in-memory array, so a tight for-loop over a 200K-row deck
       // would block the main thread (jank / frozen indicator). Yield to the
-      // event loop every YIELD_EVERY rows so the UploadProgressIndicator's
-      // rAF animation keeps running and the tab stays interactive.
+      // event loop every YIELD_EVERY rows so the ProgressIndicator keeps
+      // updating and the tab stays interactive.
       const YIELD_EVERY = 2000;
       for (let i = 0; i < rows.length; i++) {
         totalRows++;
@@ -620,7 +620,8 @@ export class USService {
   async ingestHandoffRows(
     rows: USStandardizedData[],
     fileName: string,
-    componentId: string
+    componentId: string,
+    onProgress?: (stored: number, total: number) => void
   ): Promise<{ fileName: string; tableName: string }> {
     if (!this.lergStore.isInitialized) {
       const errorMsg =
@@ -633,7 +634,7 @@ export class USService {
 
     // Same Dexie write path as a real upload (chunked bulkPut with sourceFile).
     if (rows.length > 0) {
-      await this.storeDataInOptimizedChunks(rows, tableName, fileName);
+      await this.storeDataInOptimizedChunks(rows, tableName, fileName, onProgress);
     }
 
     // Register the file with its slot, then compute + store the same file stats.

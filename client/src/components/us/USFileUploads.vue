@@ -79,10 +79,9 @@
             <div class="flex flex-col items-center justify-center w-full h-full text-center">
               <!-- Uploading State -->
               <template v-if="usStore.isComponentUploading('us1')">
-                <UploadProgressIndicator
+                <ProgressIndicator
                   :total-rows="uploadingFileRowCount.us1"
-                  :rows-per-second="14000"
-                  ref="progressIndicators.us1"
+                  :progress="uploadProgress.us1"
                 />
               </template>
 
@@ -203,10 +202,9 @@
             <div class="flex flex-col items-center justify-center w-full h-full text-center">
               <!-- Uploading State -->
               <template v-if="usStore.isComponentUploading('us2')">
-                <UploadProgressIndicator
+                <ProgressIndicator
                   :total-rows="uploadingFileRowCount.us2"
-                  :rows-per-second="14000"
-                  ref="progressIndicators.us2"
+                  :progress="uploadProgress.us2"
                 />
               </template>
 
@@ -316,7 +314,7 @@ This action cannot be undone.`"
   import Papa from 'papaparse';
   import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
   import USComparisonWorker from '@/workers/us-comparison.worker?worker';
-  import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
+  import ProgressIndicator from '@/components/shared/ProgressIndicator.vue';
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDragDrop } from '@/composables/useDragDrop';
@@ -385,11 +383,14 @@ This action cannot be undone.`"
     az1: 0,
     az2: 0,
   });
-  const progressIndicators = reactive<Record<ComponentId, InstanceType<typeof UploadProgressIndicator> | null>>({
-    us1: null,
-    us2: null,
-    az1: null,
-    az2: null,
+  // Reactive 0–110 progress per slot, fed by the real chunked Dexie write
+  // (and bumped to 100 for the post-write metadata/report phase). Drives the
+  // shared ProgressIndicator; 100–110 shows its "Gathering metadata…" spinner.
+  const uploadProgress = reactive<Record<ComponentId, number>>({
+    us1: 0,
+    us2: 0,
+    az1: 0,
+    az2: 0,
   });
 
   // Replace the existing handleFileSelected function to work with our composable
@@ -642,13 +643,20 @@ This action cannot be undone.`"
     // convention stays collision-free against the other slot.
     const fileName = deriveHandoffFileName(name, usStore.getFileNames);
 
-    // Feed the slot's UploadProgressIndicator a real total so it animates during
-    // the Dexie write + enhanced-report worker (otherwise it renders against 0).
+    // Feed the slot's ProgressIndicator a real total + reset progress so the bar
+    // tracks the Dexie write, then the metadata band covers the report worker.
     uploadingFileRowCount[componentId] = rows.length;
+    uploadProgress[componentId] = 0;
     usStore.setComponentUploading(componentId, true);
     uploadError[componentId] = null;
     try {
-      await service.ingestHandoffRows(rows, fileName, componentId);
+      await service.ingestHandoffRows(rows, fileName, componentId, (stored, total) => {
+        uploadProgress[componentId] =
+          total > 0 ? Math.min(99, Math.round((stored / total) * 100)) : 0;
+      });
+
+      // Write done — bar full; "Gathering metadata…" spinner while the report runs.
+      uploadProgress[componentId] = 100;
 
       // Per-file enhanced code report — same worker path as a real upload.
       // Post PLAIN objects to the worker (rows may arrive as reactive proxies).
@@ -676,6 +684,7 @@ This action cannot be undone.`"
       }`;
       throw error;
     } finally {
+      uploadProgress[componentId] = 0;
       usStore.setComponentUploading(componentId, false);
     }
   }
@@ -876,9 +885,14 @@ This action cannot be undone.`"
         xlsxRows, // reuse the single xlsx parse (undefined for CSV → streams as before)
         // Real write-progress → drives the indicator's bar (0→99%) as chunks land.
         (stored, total) => {
-          progressIndicators[activeComponent.value]?.setProgress(stored, total);
+          uploadProgress[activeComponent.value] =
+            total > 0 ? Math.min(99, Math.round((stored / total) * 100)) : 0;
         }
       );
+
+      // Write done — bar full; the indicator now shows its "Gathering metadata…"
+      // spinner (100–110 band) while we poll Dexie + run the enhanced-report worker.
+      uploadProgress[activeComponent.value] = 100;
       // console.log(`[DEBUG] service.processFile finished for ${processResult.fileName}.`);
 
       // --- Polling for Dexie Data --- //
@@ -979,9 +993,9 @@ This action cannot be undone.`"
         error instanceof Error ? error.message : String(error)
       }`;
     } finally {
-      // Complete progress indicator if it exists
-      progressIndicators[activeComponent.value]?.complete();
-      
+      // Reset progress; the indicator unmounts as setComponentUploading flips off.
+      uploadProgress[activeComponent.value] = 0;
+
       usStore.setComponentUploading(activeComponent.value, false);
       usStore.clearTempFile(activeComponent.value);
       xlsxRowsCache.delete(activeComponent.value); // free the cached full rows (~200K)
