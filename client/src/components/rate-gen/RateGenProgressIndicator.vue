@@ -4,7 +4,12 @@
     <div class="w-full max-w-md space-y-2">
       <!-- Status Text -->
       <div class="flex justify-between items-center text-sm">
-        <span class="text-gray-400">{{ progressText }}</span>
+        <span class="flex items-center gap-2 text-gray-400">
+          <!-- Bar is full at 100%+ but the metadata routine runs a few more
+               seconds — a spinner shows it's still working, not done. -->
+          <ArrowPathIcon v-if="isGatheringMeta" class="h-4 w-4 animate-spin text-accent" />
+          {{ progressText }}
+        </span>
         <span class="font-medium text-accent">{{ Math.min(100, Math.round(progress)) }}%</span>
       </div>
       
@@ -15,11 +20,10 @@
           :style="`width: ${Math.min(100, progress)}%;`"
         />
       </div>
-      
-      <!-- Details Row -->
-      <div class="flex justify-between items-center text-xs text-gray-500">
-        <span>{{ formattedRowsProcessed }} of {{ formattedTotalRows }} rows</span>
-        <span v-if="timeRemaining">{{ timeRemaining }} remaining</span>
+
+      <!-- Row count (no time estimate — just rows processed of total) -->
+      <div class="text-xs text-gray-500">
+        {{ formattedRowsProcessed }} of {{ formattedTotalRows }} rows
       </div>
     </div>
     
@@ -27,7 +31,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import { computed } from 'vue';
+import { ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 interface Props {
   totalRows: number;
@@ -36,16 +41,19 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Track start time for time estimates
-const startTime = ref<number>(0);
+// 100–110 = post-store metadata gathering: bar is full but a stats routine is
+// still running, so show a spinner.
+const isGatheringMeta = computed(() => props.progress >= 100 && props.progress < 110);
 
-// Track when we hit 90% for metadata detection
-const timeAt90 = ref<number>(0);
+// Rows processed (derived from progress, clamped to the total at 100%+).
+const formattedRowsProcessed = computed(() =>
+  Math.floor((props.totalRows * Math.min(100, props.progress)) / 100).toLocaleString()
+);
+const formattedTotalRows = computed(() => props.totalRows.toLocaleString());
 
-// Computed values
 const progressText = computed(() => {
   if (props.progress < 30) {
-    return 'Reading CSV file...';
+    return 'Reading file...';
   } else if (props.progress < 70) {
     return 'Validating data...';
   } else if (props.progress < 100) {
@@ -58,49 +66,6 @@ const progressText = computed(() => {
     return 'Processing complete!';
   }
 });
-
-const estimatedRowsProcessed = computed(() => {
-  const progressRatio = props.progress / 100;
-  return Math.floor(props.totalRows * progressRatio);
-});
-
-const formattedRowsProcessed = computed(() => 
-  estimatedRowsProcessed.value.toLocaleString()
-);
-
-const formattedTotalRows = computed(() => 
-  props.totalRows.toLocaleString()
-);
-
-const timeRemaining = computed(() => {
-  if (props.progress === 0 || props.progress >= 110) return null;
-  
-  // Don't show time estimates during metadata gathering (100%+)
-  if (props.progress >= 100) return null;
-  
-  const elapsed = (Date.now() - startTime.value) / 1000;
-  if (elapsed < 1) return null; // Not enough data yet
-  
-  const rate = props.progress / elapsed;
-  const remaining = (100 - props.progress) / rate;
-  
-  if (remaining < 1) return 'Less than 1s';
-  if (remaining < 60) return `${Math.round(remaining)}s`;
-  
-  const minutes = Math.floor(remaining / 60);
-  const seconds = Math.round(remaining % 60);
-  return `${minutes}m ${seconds}s`;
-});
-
-// Lifecycle
-onMounted(() => {
-  startTime.value = Date.now();
-});
-
-// Watch progress changes
-watch(() => props.progress, (newProgress, oldProgress) => {
-  // Progress monitoring for component updates
-}, { immediate: true });
 
 // Public method to mark as complete (for API compatibility with UploadProgressIndicator)
 defineExpose({

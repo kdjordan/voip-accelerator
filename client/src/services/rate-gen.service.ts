@@ -264,7 +264,7 @@ export class RateGenService {
       }
 
       const YIELD_EVERY = 2000;
-      // Reserve the 0→90% band for the parse/transform loop; chunked store finishes it.
+      // Transform loop = the 0→50% band; the slow chunked store gets 50→100%.
       const dataRowCount = Math.max(0, rows.length - (startLine - 1));
       try {
         for (let i = 0; i < rows.length; i++) {
@@ -304,16 +304,21 @@ export class RateGenService {
             if (dataRowCount > 0) {
               this.store.setUploadProgress(
                 providerId,
-                Math.min(90, Math.round((totalRecords / dataRowCount) * 90))
+                Math.min(50, Math.round((totalRecords / dataRowCount) * 50))
               );
             }
             await new Promise((r) => setTimeout(r, 0));
           }
         }
 
-        // Chunked store carries 90→100%.
-        this.store.setUploadProgress(providerId, 90);
-        await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name);
+        // The transform loop is fast; the chunked Dexie store is the slow phase,
+        // so give it the bigger 50→100 band (updated per chunk) — otherwise the
+        // bar sits frozen while the store runs.
+        this.store.setUploadProgress(providerId, 50);
+        await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name, {
+          from: 50,
+          to: 100,
+        });
 
         invalidRows.forEach((row) => this.store.addInvalidRow(providerId, row));
         this.finalizeProviderUpload(
@@ -686,27 +691,31 @@ export class RateGenService {
    * Store data in optimized chunks - revert to working approach
    */
   private async storeDataInOptimizedChunks(
-    data: RateGenRecord[], 
-    providerId: string, 
-    fileName: string
+    data: RateGenRecord[],
+    providerId: string,
+    fileName: string,
+    // When given, advance the upload progress across this band as chunks land.
+    // The XLSX path passes it (its store is the slow phase that otherwise sits
+    // frozen); CSV omits it and keeps its time-estimate timer.
+    progressRange?: { from: number; to: number }
   ): Promise<void> {
     console.log('[DEBUG] Starting optimized chunk storage for', data.length, 'records');
     const OPTIMAL_CHUNK_SIZE = 10000; // Larger chunks for better performance
     const totalChunks = Math.ceil(data.length / OPTIMAL_CHUNK_SIZE);
     const { storeInDexieDB } = this.dexieDB;
-    
+
     for (let i = 0; i < totalChunks; i++) {
       const chunkStart = i * OPTIMAL_CHUNK_SIZE;
       const chunkEnd = Math.min(chunkStart + OPTIMAL_CHUNK_SIZE, data.length);
       const chunk = data.slice(chunkStart, chunkEnd);
-      
+
       try {
         // Use the existing storeInDexieDB which properly handles the database
         await storeInDexieDB(
           chunk,
           DBName.RATE_GEN,
           'providers',
-          { 
+          {
             replaceExisting: false,
             sourceFile: `${providerId}:${fileName}`
           }
@@ -715,7 +724,16 @@ export class RateGenService {
         console.error(`[DEBUG] Storage failed for chunk ${i + 1}:`, error);
         throw error; // Propagate error to handle it properly
       }
-      
+
+      // Advance the bar within the given band so the (slow) store isn't frozen.
+      if (progressRange) {
+        const { from, to } = progressRange;
+        this.store.setUploadProgress(
+          providerId,
+          from + Math.round(((i + 1) / totalChunks) * (to - from))
+        );
+      }
+
       // Minimal yield for UI responsiveness
       if (i % 2 === 0) {
         await new Promise(resolve => setTimeout(resolve, 1));
