@@ -315,6 +315,7 @@ This action cannot be undone.`"
   import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
   import USComparisonWorker from '@/workers/us-comparison.worker?worker';
   import ProgressIndicator from '@/components/shared/ProgressIndicator.vue';
+  import { reportWriteProgress } from '@/utils/upload-progress';
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
   import { useLergStore } from '@/stores/lerg-store';
   import { useDragDrop } from '@/composables/useDragDrop';
@@ -651,8 +652,7 @@ This action cannot be undone.`"
     uploadError[componentId] = null;
     try {
       await service.ingestHandoffRows(rows, fileName, componentId, (stored, total) => {
-        uploadProgress[componentId] =
-          total > 0 ? Math.min(99, Math.round((stored / total) * 100)) : 0;
+        uploadProgress[componentId] = reportWriteProgress(stored, total, { from: 0, to: 99 });
       });
 
       // Write done — bar full; "Gathering metadata…" spinner while the report runs.
@@ -885,8 +885,10 @@ This action cannot be undone.`"
         xlsxRows, // reuse the single xlsx parse (undefined for CSV → streams as before)
         // Real write-progress → drives the indicator's bar (0→99%) as chunks land.
         (stored, total) => {
-          uploadProgress[activeComponent.value] =
-            total > 0 ? Math.min(99, Math.round((stored / total) * 100)) : 0;
+          uploadProgress[activeComponent.value] = reportWriteProgress(stored, total, {
+            from: 0,
+            to: 99,
+          });
         }
       );
 

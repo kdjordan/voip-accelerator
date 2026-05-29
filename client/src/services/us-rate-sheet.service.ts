@@ -8,6 +8,7 @@ import Dexie, { type Table } from 'dexie';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { UploadStage, UPLOAD_STAGE_WEIGHTS } from '@/types/components/upload-progress-types';
 import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
+import { reportWriteProgress } from '@/utils/upload-progress';
 import type { RateDeckHandoffRow } from '@/types/domains/handoff-types';
 import { mapHandoffRowsToEntries } from '@/utils/handoff-landing-us';
 
@@ -592,9 +593,9 @@ export class USRateSheetService {
         await this.storeInDexieDB(chunks[i], this.dbName, 'entries', { replaceExisting: i === 0 });
         
         // Real chunked-write progress drives the dominant 40%→99% band.
-        const storageProgress = 40 + ((i + 1) / chunks.length) * 59;
-        const recordsStored = (i + 1) * OPTIMAL_CHUNK_SIZE;
-        progressCallback?.(storageProgress, UploadStage.STORING, Math.min(recordsStored, data.length), data.length);
+        const recordsStored = Math.min((i + 1) * OPTIMAL_CHUNK_SIZE, data.length);
+        const storageProgress = reportWriteProgress(recordsStored, data.length, { from: 40, to: 99 });
+        progressCallback?.(storageProgress, UploadStage.STORING, recordsStored, data.length);
         
         const chunkEndTime = performance.now();
         const chunkDuration = chunkEndTime - chunkStartTime;

@@ -3,6 +3,7 @@ import { DBName } from '@/types/app-types';
 import { useRateGenStore } from '@/stores/rate-gen-store';
 import useDexieDB from '@/composables/useDexieDB';
 import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
+import { reportWriteProgress } from '@/utils/upload-progress';
 import {
   selectionLabel,
   type RateGenRecord,
@@ -406,12 +407,21 @@ export class RateGenService {
           try {
             console.log(`[RateGenService] *** PAPA PARSE COMPLETE *** Processing ${totalRecords} valid records...`);
             
-            // Don't clear the timer - let it finish naturally and override with our progress
-            // Just make sure we wait for smooth transition
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+            // Transform done (the approximated timer covered the 0→50 band);
+            // stop it and let the REAL chunked store drive the 50→100 band, same
+            // as the xlsx path — otherwise the bar froze where the timer stopped.
+            const transformTimer = this.progressTimers.get(providerId);
+            if (transformTimer) {
+              clearInterval(transformTimer);
+              this.progressTimers.delete(providerId);
+            }
+            this.store.setUploadProgress(providerId, 50);
+
             // Store all data using optimized chunks
-            await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name);
+            await this.storeDataInOptimizedChunks(allProcessedData, providerId, file.name, {
+              from: 50,
+              to: 100,
+            });
             
             console.log('[DEBUG] Data storage completed');
             
@@ -633,7 +643,9 @@ export class RateGenService {
     const estimatedSeconds = Math.max(3, Math.min(fileSizeNum * 0.5, 15));
     const incrementInterval = 200; // Update every 200ms
     const totalIncrements = (estimatedSeconds * 1000) / incrementInterval;
-    const progressIncrement = 85 / totalIncrements; // Go from 5% to 90%
+    // CSV streaming has no per-row total, so approximate the 5→50 TRANSFORM band;
+    // the real chunked store then drives 50→100 (see the complete handler).
+    const progressIncrement = 45 / totalIncrements;
     
     console.log(`[RateGenService] Starting approximated progress timer for ${providerId}:`, {
       fileSizeMB,
@@ -646,15 +658,15 @@ export class RateGenService {
       currentProgress += progressIncrement;
       console.log(`[RateGenService] Timer tick for ${providerId}: ${currentProgress.toFixed(1)}%`);
       
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        console.log(`[RateGenService] Timer reached 100% for ${providerId}, clearing timer`);
+      if (currentProgress >= 50) {
+        // Cap at the transform-band ceiling; the store phase takes over at 50→100.
+        currentProgress = 50;
         clearInterval(timer);
         this.progressTimers.delete(providerId); // Clean up timer reference
       }
-      
+
       try {
-        this.store.setUploadProgress(providerId, Math.min(currentProgress, 100));
+        this.store.setUploadProgress(providerId, Math.min(currentProgress, 50));
       } catch (error) {
         console.error(`[RateGenService] Error updating progress for ${providerId}:`, error);
       }
@@ -695,8 +707,9 @@ export class RateGenService {
     providerId: string,
     fileName: string,
     // When given, advance the upload progress across this band as chunks land.
-    // The XLSX path passes it (its store is the slow phase that otherwise sits
-    // frozen); CSV omits it and keeps its time-estimate timer.
+    // Both the CSV and XLSX paths pass it so the slow store (which otherwise
+    // sits frozen) drives real progress; the band math goes through the shared
+    // reportWriteProgress helper.
     progressRange?: { from: number; to: number }
   ): Promise<void> {
     console.log('[DEBUG] Starting optimized chunk storage for', data.length, 'records');
@@ -727,10 +740,9 @@ export class RateGenService {
 
       // Advance the bar within the given band so the (slow) store isn't frozen.
       if (progressRange) {
-        const { from, to } = progressRange;
         this.store.setUploadProgress(
           providerId,
-          from + Math.round(((i + 1) / totalChunks) * (to - from))
+          reportWriteProgress(chunkEnd, data.length, progressRange)
         );
       }
 
