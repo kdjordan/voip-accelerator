@@ -116,16 +116,17 @@ function withExtension(filename: string, ext: TabularFormat): string {
 }
 
 /**
- * Build a tabular file from headers + rows and trigger its download in the
- * chosen format. XLSX content is identical to the CSV (same headers/rows),
- * single sheet. The correct extension is appended if missing.
+ * Build a tabular Blob from headers + rows in the chosen format WITHOUT
+ * triggering a download. XLSX content is identical to the CSV (same
+ * headers/rows), single sheet. Use this when the bytes need to be embedded
+ * elsewhere (e.g. zipped into a package); for a direct download use
+ * `downloadTabularFile`.
  */
-export async function downloadTabularFile(
-  filename: string,
+export async function buildTabularBlob(
   headers: string[],
   rows: (string | number)[][],
   format: TabularFormat
-): Promise<void> {
+): Promise<Blob> {
   if (format === 'xlsx') {
     // write-excel-file cells: { value, type }. Strings stay strings; numbers
     // stay numeric so Excel treats them as numbers.
@@ -139,13 +140,25 @@ export async function downloadTabularFile(
         )
       ),
     ];
-    const blob = await writeXlsxFile(sheetData as never).toBlob();
-    triggerDownload(blob, withExtension(filename, 'xlsx'));
-    return;
+    return writeXlsxFile(sheetData as never).toBlob();
   }
 
   // CSV — same Papa.unparse shape used by the existing exporters.
   const csv = Papa.unparse([headers, ...rows], { header: false, newline: '\n' });
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  triggerDownload(blob, withExtension(filename, 'csv'));
+  return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+}
+
+/**
+ * Build a tabular file from headers + rows and trigger its download in the
+ * chosen format. XLSX content is identical to the CSV (same headers/rows),
+ * single sheet. The correct extension is appended if missing.
+ */
+export async function downloadTabularFile(
+  filename: string,
+  headers: string[],
+  rows: (string | number)[][],
+  format: TabularFormat
+): Promise<void> {
+  const blob = await buildTabularBlob(headers, rows, format);
+  triggerDownload(blob, withExtension(filename, format));
 }
