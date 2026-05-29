@@ -310,7 +310,13 @@
       </div>
 
       <!-- Export Data -->
-      <div class="pt-1">
+      <div class="pt-1 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-display text-[10px] uppercase tracking-[0.12em] text-fg-mute">
+            Format
+          </span>
+          <FormatToggle v-model="exportFormat" />
+        </div>
         <button
           type="button"
           @click="handleOpenExportModal"
@@ -775,6 +781,9 @@
   import USExportModal from '@/components/exports/USExportModal.vue';
   import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
   import type { USExportFilters, USExportFormatOptions } from '@/types/exports';
+  import FormatToggle from '@/components/shared/FormatToggle.vue';
+  import { defaultExportFormat } from '@/utils/export-format';
+  import type { TabularFormat } from '@/utils/tabular-io';
 
   // Money formatter for the summary cards (handles negative deltas).
   function fmtMoney(v: number): string {
@@ -1275,6 +1284,10 @@
   const exportData = ref<USPricingComparisonRecord[]>([]);
   const totalExportRecords = ref(0);
 
+  // Export file format (ADR-0010). Default derived from the two slots' tracked
+  // source formats (all-xlsx → xlsx, else csv); user-overridable via FormatToggle.
+  const exportFormat = ref<TabularFormat>(defaultExportFormat(usStore.getFileFormats));
+
   // Export filters for modal
   const exportFilters = computed<USExportFilters>(() => ({
     states: selectedState.value ? [selectedState.value] : [],
@@ -1594,6 +1607,7 @@
         additionalNameParts: filenameParts,
         quoteFields: true,
         exportContext: 'comparison',
+        format: exportFormat.value,
       });
     } catch (error) {
       console.error('Export failed:', error);
@@ -1621,6 +1635,9 @@
 
   // --- Lifecycle and Watchers ---
   onMounted(async () => {
+    // Re-derive the export-format default from the uploaded slots' source formats
+    // (the table mounts after both files are uploaded + analyzed).
+    exportFormat.value = defaultExportFormat(usStore.getFileFormats);
     isPageLoading.value = true; // Start with page loading true
     try {
       // Initialize DB first if needed

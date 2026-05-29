@@ -2,6 +2,7 @@ import { type USStandardizedData, type InvalidUsRow } from '@/types/domains/us-t
 import { DBName } from '@/types/app-types';
 import { useUsStore } from '@/stores/us-store';
 import Papa from 'papaparse';
+import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
 import useDexieDB from '@/composables/useDexieDB'; // Direct import of Dexie composable
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { COUNTRY_CODES } from '@/types/constants/country-codes';
@@ -121,6 +122,58 @@ export class USService {
     let totalRecords = 0;
     let totalRows = 0;
 
+    // --- XLSX path ---
+    // XLSX can't stream (it's a zip that must be fully decompressed + XML-parsed),
+    // so parse off the main thread via parseTabularFile, then run the SAME
+    // processRow + chunked-store + finalize logic the CSV path uses below.
+    if (detectFormat(file) === 'xlsx') {
+      let rows: string[][];
+      try {
+        rows = await parseTabularFile(file);
+      } catch (parseError) {
+        return Promise.reject(
+          parseError instanceof Error ? parseError : new Error(String(parseError))
+        );
+      }
+
+      for (const row of rows) {
+        totalRows++;
+        // Skip header rows based on user input
+        if (totalRows < startLine) continue;
+        try {
+          const processedRow = this.processRow(
+            row,
+            totalRows,
+            columnMapping,
+            indeterminateDefinition,
+            invalidRows
+          );
+          if (processedRow) {
+            allProcessedData.push(processedRow);
+            totalRecords++;
+          }
+        } catch (error) {
+          console.error(`[USService] Error processing row ${totalRows}:`, error);
+          this.store.addInvalidRow(file.name, {
+            rowIndex: totalRows,
+            npanxx: '-',
+            npa: '-',
+            nxx: '-',
+            interRate: '-',
+            intraRate: '-',
+            indetermRate: '-',
+            reason: `Row processing error: ${(error as Error).message}`,
+          });
+        }
+      }
+
+      if (allProcessedData.length > 0) {
+        await this.storeDataInOptimizedChunks(allProcessedData, tableName, file.name);
+      }
+      await this.finalizeProcessedUpload(file, invalidRows, performanceStart, totalRecords);
+      return { fileName: file.name, records: allProcessedData, tableName };
+    }
+
     return new Promise((resolve, reject) => {
       // Show progress indicators
       let lastProgressUpdate = Date.now();
@@ -205,35 +258,7 @@ export class USService {
             }
           }
 
-          // Register file with component
-          let componentId = '';
-          const currentUs1File = this.store.getFileNameByComponent('us1');
-          const currentUs2File = this.store.getFileNameByComponent('us2');
-
-          if (currentUs1File === file.name) {
-            componentId = 'us1';
-          } else if (currentUs2File === file.name) {
-            componentId = 'us2';
-          } else {
-            componentId = !currentUs1File ? 'us1' : 'us2';
-          }
-
-          this.store.addFileUploaded(componentId, file.name);
-
-          // Add invalid rows to the store
-          invalidRows.forEach(invalidRow => {
-            this.store.addInvalidRow(file.name, invalidRow);
-          });
-
-          // Calculate and store file stats
-          await this.calculateFileStats(componentId, file.name);
-
-          // Phase 1.3 Performance Timing - End
-          const performanceEnd = performance.now();
-          const duration = (performanceEnd - performanceStart) / 1000;
-          const recordsPerSecond = duration > 0 ? Math.round(totalRecords / duration) : 0;
-          console.log(`[PERF] US Service - Total upload completed in ${duration.toFixed(2)}s`);
-          console.log(`[PERF] US Service - Processed ${totalRecords} records at ${recordsPerSecond} records/sec`);
+          await this.finalizeProcessedUpload(file, invalidRows, performanceStart, totalRecords);
 
           // Resolve with fileName, records, and tableName - return in-memory data
           resolve({ fileName: file.name, records: allProcessedData, tableName });
@@ -246,6 +271,47 @@ export class USService {
         },
       });
     });
+  }
+
+  // Shared post-parse finalize: register the file with a slot, push invalid rows,
+  // compute stats, and log timing. Used by both the CSV-streaming and XLSX paths.
+  private async finalizeProcessedUpload(
+    file: File,
+    invalidRows: InvalidUsRow[],
+    performanceStart: number,
+    totalRecords: number
+  ): Promise<void> {
+    // Register file with component
+    let componentId = '';
+    const currentUs1File = this.store.getFileNameByComponent('us1');
+    const currentUs2File = this.store.getFileNameByComponent('us2');
+
+    if (currentUs1File === file.name) {
+      componentId = 'us1';
+    } else if (currentUs2File === file.name) {
+      componentId = 'us2';
+    } else {
+      componentId = !currentUs1File ? 'us1' : 'us2';
+    }
+
+    this.store.addFileUploaded(componentId, file.name);
+
+    // Add invalid rows to the store
+    invalidRows.forEach((invalidRow) => {
+      this.store.addInvalidRow(file.name, invalidRow);
+    });
+
+    // Calculate and store file stats
+    await this.calculateFileStats(componentId, file.name);
+
+    // Performance Timing - End
+    const performanceEnd = performance.now();
+    const duration = (performanceEnd - performanceStart) / 1000;
+    const recordsPerSecond = duration > 0 ? Math.round(totalRecords / duration) : 0;
+    console.log(`[PERF] US Service - Total upload completed in ${duration.toFixed(2)}s`);
+    console.log(
+      `[PERF] US Service - Processed ${totalRecords} records at ${recordsPerSecond} records/sec`
+    );
   }
 
   // Process a single row of data - copied from USRateSheetService

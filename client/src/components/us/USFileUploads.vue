@@ -66,7 +66,7 @@
             <!-- File Input (overlays the whole zone — keeps click-anywhere-to-upload) -->
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
               :disabled="
                 usStore.isComponentUploading('us1') ||
@@ -96,7 +96,7 @@
               <!-- Default/Empty State -->
               <template v-else>
                 <CloudArrowUpIcon class="h-10 w-10 text-accent" />
-                <p class="mt-3 font-sans text-sm text-fg-dim">Drag &amp; drop your CSV file here</p>
+                <p class="mt-3 font-sans text-sm text-fg-dim">Drag &amp; drop your CSV or XLSX file here</p>
                 <p class="mt-1 font-display text-xs text-fg-mute">or</p>
                 <span
                   class="mt-3 inline-flex items-center border border-line-strong bg-row px-4 py-2 font-display text-[11px] font-medium uppercase tracking-[0.06em] text-fg"
@@ -112,7 +112,7 @@
           <!-- Footer -->
           <div class="mt-3 flex items-center gap-1.5 font-display text-[11px] text-fg-faint">
             <DocumentIcon class="h-3.5 w-3.5" />
-            CSV files only (max 50MB)
+            CSV or XLSX files (max 50MB)
           </div>
         </template>
       </div>
@@ -190,7 +190,7 @@
             <!-- File Input (overlays the whole zone — keeps click-anywhere-to-upload) -->
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
               :disabled="
                 usStore.isComponentUploading('us2') ||
@@ -220,7 +220,7 @@
               <!-- Default/Empty State -->
               <template v-else>
                 <CloudArrowUpIcon class="h-10 w-10 text-accent" />
-                <p class="mt-3 font-sans text-sm text-fg-dim">Drag &amp; drop your CSV file here</p>
+                <p class="mt-3 font-sans text-sm text-fg-dim">Drag &amp; drop your CSV or XLSX file here</p>
                 <p class="mt-1 font-display text-xs text-fg-mute">or</p>
                 <span
                   class="mt-3 inline-flex items-center border border-line-strong bg-row px-4 py-2 font-display text-[11px] font-medium uppercase tracking-[0.06em] text-fg"
@@ -236,7 +236,7 @@
           <!-- Footer -->
           <div class="mt-3 flex items-center gap-1.5 font-display text-[11px] text-fg-faint">
             <DocumentIcon class="h-3.5 w-3.5" />
-            CSV files only (max 50MB)
+            CSV or XLSX files (max 50MB)
           </div>
         </template>
       </div>
@@ -314,6 +314,7 @@ This action cannot be undone.`"
   } from '@/types/domains/us-types';
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
+  import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
   import USComparisonWorker from '@/workers/us-comparison.worker?worker';
   import UploadProgressIndicator from '@/components/shared/UploadProgressIndicator.vue';
   import USCodeReportWorker from '@/workers/us-code-report.worker?worker';
@@ -426,7 +427,7 @@ This action cannot be undone.`"
     handleDragOver: handleDragOverUs1,
     handleDrop: handleDropUs1,
   } = useDragDrop({
-    acceptedExtensions: ['.csv'],
+    acceptedExtensions: ['.csv', '.xlsx'],
     fileValidator: (file) => {
       // Check if OTHER component is uploading (not this one)
       const otherComponent = 'us2';
@@ -455,7 +456,7 @@ This action cannot be undone.`"
     handleDragOver: handleDragOverUs2,
     handleDrop: handleDropUs2,
   } = useDragDrop({
-    acceptedExtensions: ['.csv'],
+    acceptedExtensions: ['.csv', '.xlsx'],
     fileValidator: (file) => {
       // Check if OTHER component is uploading (not this one)
       const otherComponent = 'us1';
@@ -797,21 +798,28 @@ This action cannot be undone.`"
     const file = usStore.getTempFile(activeComponent.value);
     if (!file) return;
 
-    // Count rows for progress tracking FIRST
-    let rowCount = 0;
-    await new Promise<void>((resolve) => {
-      Papa.parse(file, {
-        step: (results) => {
-          rowCount++;
-        },
-        complete: () => {
-          // Subtract header row(s) based on startLine
-          uploadingFileRowCount[activeComponent.value] = Math.max(0, rowCount - startLine.value);
-          resolve();
-        },
-        skipEmptyLines: true,
+    // Count rows for progress tracking FIRST.
+    // CSV streams (papaparse step) so the tab stays responsive on big files;
+    // XLSX can't stream, so derive the count from the already-parsed array.
+    if (detectFormat(file) === 'xlsx') {
+      const rows = await parseTabularFile(file);
+      uploadingFileRowCount[activeComponent.value] = Math.max(0, rows.length - startLine.value);
+    } else {
+      let rowCount = 0;
+      await new Promise<void>((resolve) => {
+        Papa.parse(file, {
+          step: () => {
+            rowCount++;
+          },
+          complete: () => {
+            // Subtract header row(s) based on startLine
+            uploadingFileRowCount[activeComponent.value] = Math.max(0, rowCount - startLine.value);
+            resolve();
+          },
+          skipEmptyLines: true,
+        });
       });
-    });
+    }
 
     showPreviewModal.value = false;
     usStore.setComponentUploading(activeComponent.value, true);
@@ -1044,8 +1052,9 @@ This action cannot be undone.`"
     uploadError[componentId] = null;
 
     // Validate file extension
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      uploadError[componentId] = 'Only CSV files are accepted';
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.xlsx')) {
+      uploadError[componentId] = 'Only CSV or XLSX files are accepted';
       return;
     }
 
@@ -1063,22 +1072,24 @@ This action cannot be undone.`"
     }
 
     usStore.setTempFile(componentId, file);
+    // Track this slot's source format so the export default can be derived from it.
+    usStore.setFileFormat(componentId, detectFormat(file));
     console.log('[USFileUploads] is launching preview modal');
-    Papa.parse(file, {
-      preview: 100, // Preview for column mapping only
-      complete: (results) => {
-        // Proceed directly to preview modal - comprehensive +1 analysis moved to USCodeReport
-        previewData.value = results.data.slice(1) as string[][];
-        columns.value = results.data[0] as string[];
-        activeComponent.value = componentId;
-        showPreviewModal.value = true;
-      },
-      error: (error) => {
-        console.error('Error parsing CSV:', error);
-        usStore.clearTempFile(componentId);
-        uploadError[componentId] = 'Error parsing CSV file. Please check the file format.';
-      },
-    });
+    try {
+      // Format-transparent parse (CSV via papaparse, XLSX off-thread); row 0 =
+      // columns, the rest = preview data. The mapping modal downstream is unchanged.
+      const rows = await parseTabularFile(file);
+      previewData.value = rows.slice(1);
+      columns.value = rows[0] ?? [];
+      activeComponent.value = componentId;
+      showPreviewModal.value = true;
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      usStore.clearTempFile(componentId);
+      usStore.clearFileFormat(componentId);
+      uploadError[componentId] =
+        error instanceof Error ? error.message : 'Error parsing file. Please check the file format.';
+    }
   }
   
   // Plus One Modal Handlers - REMOVED: Analysis moved to USCodeReport
