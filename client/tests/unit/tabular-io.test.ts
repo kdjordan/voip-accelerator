@@ -50,7 +50,7 @@ vi.mock('write-excel-file/browser', () => ({
   default: () => ({ toBlob: async () => new Blob() }),
 }));
 
-import { detectFormat, normalizeCell, parseTabularFile } from '@/utils/tabular-io';
+import { buildTabularBlob, detectFormat, normalizeCell, parseTabularFile } from '@/utils/tabular-io';
 
 function csvFile(name: string, content: string): File {
   return new File([content], name, { type: 'text/csv' });
@@ -162,5 +162,29 @@ describe('parseTabularFile — XLSX path', () => {
     await expect(parseTabularFile(new File([''], 'blank.xlsx'))).rejects.toThrow(
       'has no data'
     );
+  });
+});
+
+describe('buildTabularBlob — CSV path', () => {
+  it('returns a text/csv Blob with header + rows (Papa.unparse, header:false, \\n)', async () => {
+    const blob = await buildTabularBlob(
+      ['NPANXX', 'Rate'],
+      [
+        ['201201', 0.0123],
+        ['201202', 0.0456],
+      ],
+      'csv'
+    );
+    expect(blob.type).toBe('text/csv;charset=utf-8;');
+    const text = await blob.text();
+    expect(text).toBe('NPANXX,Rate\n201201,0.0123\n201202,0.0456');
+  });
+});
+
+describe('buildTabularBlob — XLSX path', () => {
+  it('returns the writer Blob (no download trigger)', async () => {
+    const blob = await buildTabularBlob(['NPANXX', 'Rate'], [['201201', 0.0123]], 'xlsx');
+    // write-excel-file/browser is mocked to resolve an empty Blob via toBlob().
+    expect(blob).toBeInstanceOf(Blob);
   });
 });

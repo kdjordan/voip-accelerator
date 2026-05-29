@@ -84,7 +84,7 @@
 
           <p v-if="mode === 'package'" class="flex items-start gap-2 text-xs text-fg-faint">
             <DocumentArrowDownIcon class="h-4 w-4 flex-shrink-0 mt-0.5" />
-            Downloads the rate deck (<span class="font-secondary text-fg-dim">{{ exportFormat.toUpperCase() }}</span>) and the branded change-audit PDF.
+            Downloads a single <span class="font-secondary text-fg-dim">.zip</span> with the rate deck (<span class="font-secondary text-fg-dim">{{ exportFormat.toUpperCase() }}</span>) and the branded change-audit PDF.
           </p>
         </div>
 

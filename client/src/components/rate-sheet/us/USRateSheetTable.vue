@@ -479,7 +479,8 @@
   import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
   import USExportOptionsModal from '@/components/exports/USExportOptionsModal.vue';
   import type { USExportFormatOptions } from '@/types/exports';
-  import { downloadTabularFile, type TabularFormat } from '@/utils/tabular-io';
+  import { buildTabularBlob, downloadTabularFile, type TabularFormat } from '@/utils/tabular-io';
+  import { zipSync } from 'fflate';
   import { defaultExportFormat } from '@/utils/export-format';
   import UsRateAdjusterWorker from '@/workers/us-rate-adjuster.worker?worker';
   import type {
@@ -1172,10 +1173,10 @@
 
   // Modal confirm → load the whole deck, then write the rate-deck via the
   // format-transparent tabular-IO layer (CSV or XLSX, per exportFormat). The
-  // audit PDF (package mode only) always stays PDF. The rate-deck write goes
-  // through downloadTabularFile, which downloads directly — so the package's
-  // PDF is a separate download alongside it (no zip wrapper; downloadTabularFile
-  // has no bytes-return for zipping, and the foundation isn't ours to extend).
+  // audit PDF (package mode only) always stays PDF. "Rates" mode downloads the
+  // rate-deck file directly; "package" mode zips the rate-deck bytes + the
+  // branded audit PDF into ONE .zip (via fflate) so the package is a single
+  // download, not two separate files.
   async function handleExportConfirm(options: USExportFormatOptions) {
     if (isExportBusy.value) return;
     if (!dbInstance.value) await initializeDB();
@@ -1195,11 +1196,10 @@
       const stamp = exportStamp();
       const fmt = exportFormat.value;
 
-      // Write the whole-deck rate file (CSV or XLSX; identical content).
-      // downloadTabularFile appends the right extension.
-      await downloadTabularFile(`us-rate-deck-${stamp}`, headers, rows, fmt);
-
       if (exportMode.value === 'rates') {
+        // Direct download of the whole-deck rate file (CSV or XLSX; identical
+        // content). downloadTabularFile appends the right extension.
+        await downloadTabularFile(`us-rate-deck-${stamp}`, headers, rows, fmt);
         showExportModal.value = false;
         showNoticeModal(
           'Export Ready',
@@ -1209,7 +1209,11 @@
         return;
       }
 
-      // Package: also download the branded change-audit PDF (always PDF).
+      // Package: whole-deck rate file (CSV or XLSX) + branded change-audit PDF
+      // (always PDF), zipped into ONE download.
+      const deckBlob = await buildTabularBlob(headers, rows, fmt);
+      const deckBytes = new Uint8Array(await deckBlob.arrayBuffer());
+
       const readiness = computeReadiness({
         totalRecords: store.getTotalRecords,
         operations: psStore.operations,
@@ -1223,12 +1227,18 @@
         frozenScopes: readiness.frozenScopes,
         effectiveDate: store.getCurrentEffectiveDate,
       }).output('blob');
-      triggerDownload(pdfBlob, `change-audit-${stamp}.pdf`);
+      const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
+
+      const archive = zipSync({
+        [`us-rate-deck-${stamp}.${fmt}`]: deckBytes,
+        [`change-audit-${stamp}.pdf`]: pdfBytes,
+      });
+      triggerDownload(new Blob([archive], { type: 'application/zip' }), `pricing-studio-export-${stamp}.zip`);
 
       showExportModal.value = false;
       showNoticeModal(
         'Export Package Ready',
-        `Downloaded the full rate deck (${allRecords.length.toLocaleString()} rows, ${fmt.toUpperCase()}) and the change-audit PDF.`,
+        `Downloaded one .zip: the full rate deck (${allRecords.length.toLocaleString()} rows, ${fmt.toUpperCase()}) and the change-audit PDF.`,
         'success'
       );
     } catch (err: any) {
