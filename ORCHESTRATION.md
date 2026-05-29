@@ -117,7 +117,7 @@ collision branches with a real 29,528-prefix generated deck (TestDataLoader 3 pr
 
 Notes (PRE-EXISTING, not this feature): (a) the `useDexieDB` "empty schema string for us_rate_deck_db" warning is by-design (US analyzer DB has no static tables; dynamic per-file tables) and fires on any first US-DB write incl. normal uploads — benign; (b) generated-deck records clear on studio view remount (session-only) → Send-to buttons correctly hide (same as the existing export buttons); (c) regenerating spawns duplicate deck cards.
 
-**FEATURE FUNCTIONALLY COMPLETE on `main` (local). NEXT = owner sign-off → owner decides push + manual Coolify deploy (push ≠ deploy; tag the deploy).** Consider folding ADR-0009 + CONTEXT term are already committed.
+**✅ SHIPPED + DEPLOYED + VERIFIED. Board idle, ready for the next feature.** `origin/main` = PROD = **`277f1ea`** (manual Coolify deploy 2026-05-28, tagged **`prod-2026-05-28b`**, verified live `/api/ping` 200 + lergCount 450). Plus a post-merge follow-up (also live): rate-gen studio session-only UX — generated decks clear cleanly on return (no stale tombstone cards) + a blue "session-only" banner; NO persistence added (ADR-0008 stands). Conductor idle on `main`, no worktrees/branches. Authoritative state = auto-memory `MEMORY.md`.
 
 - **Conductor:** on `main`, Slice 1 sub-agent running in background. Feature is entirely client-side (no
   server/API/installer/migration changes — ships via normal Vite build).
