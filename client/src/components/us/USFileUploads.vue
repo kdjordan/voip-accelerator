@@ -345,6 +345,11 @@ This action cannot be undone.`"
 
   // Preview state
   const previewData = ref<string[][]>([]);
+  // Full parsed rows per xlsx slot, held NON-reactively (a plain Map — never a
+  // ref/reactive, or 200K rows would choke Vue). Parsed once at preview time and
+  // reused by the ingest so we don't parse the workbook twice (~2s each). Cleared
+  // after ingest / on remove. CSV isn't cached (it re-streams cheaply at ingest).
+  const xlsxRowsCache = new Map<string, string[][]>();
   const columns = ref<string[]>([]);
   const startLine = ref(1);
   const activeComponent = ref<ComponentId>('us1');
@@ -805,7 +810,8 @@ This action cannot be undone.`"
     // rows to the main thread twice (that double-parse was the post-mapping lag).
     let xlsxRows: string[][] | undefined;
     if (detectFormat(file) === 'xlsx') {
-      xlsxRows = await parseTabularFile(file);
+      // Reuse the full rows parsed at preview time — no second ~2s parse on confirm.
+      xlsxRows = xlsxRowsCache.get(activeComponent.value) ?? (await parseTabularFile(file));
       uploadingFileRowCount[activeComponent.value] = Math.max(0, xlsxRows.length - startLine.value);
     } else {
       let rowCount = 0;
@@ -978,6 +984,7 @@ This action cannot be undone.`"
       
       usStore.setComponentUploading(activeComponent.value, false);
       usStore.clearTempFile(activeComponent.value);
+      xlsxRowsCache.delete(activeComponent.value); // free the cached full rows (~200K)
       uploadingFileRowCount[activeComponent.value] = 0; // Reset row count
       // console.log(`[DEBUG] Finished handleModalConfirm for component ${activeComponent.value}`);
     }
@@ -986,6 +993,7 @@ This action cannot be undone.`"
   function handleModalCancel() {
     showPreviewModal.value = false;
     usStore.clearTempFile(activeComponent.value);
+    xlsxRowsCache.delete(activeComponent.value); // free the cached rows on cancel
     uploadingFileRowCount[activeComponent.value] = 0; // Reset row count on cancel
     activeComponent.value = 'us1';
   }
@@ -1084,13 +1092,19 @@ This action cannot be undone.`"
     usStore.setFileFormat(componentId, detectFormat(file));
     console.log(`[USFileUploads] parsing preview for "${file.name}" (${detectFormat(file)})`);
     try {
-      // Format-transparent parse (CSV via papaparse, XLSX off-thread); row 0 =
-      // columns, the rest = preview data. CAP to a sample (header + 100 rows):
-      // the mapping modal only needs to show column structure, and an uncapped
-      // parse would dump every row of a large deck into a reactive ref → freeze.
-      const rows = await parseTabularFile(file, { maxRows: 101 });
-      console.log(`[USFileUploads] preview parsed: ${rows.length} rows (capped), launching modal`);
-      previewData.value = rows.slice(1);
+      // XLSX must be fully unzipped+parsed to read anything (no partial read), so
+      // parse it ONCE here — FULL — and stash the rows (non-reactively) to reuse at
+      // ingest, avoiding a second ~2s parse on confirm. CSV is cheap to re-read (it
+      // streams at ingest), so just grab a capped sample. Either way, only a
+      // 100-row sample goes into the reactive previewData (a full deck there → freeze).
+      const fmt = detectFormat(file);
+      const rows =
+        fmt === 'xlsx'
+          ? await parseTabularFile(file)
+          : await parseTabularFile(file, { maxRows: 101 });
+      if (fmt === 'xlsx') xlsxRowsCache.set(componentId, rows);
+      console.log(`[USFileUploads] preview parsed: ${rows.length} rows (${fmt}), launching modal`);
+      previewData.value = rows.slice(1, 101);
       columns.value = rows[0] ?? [];
       activeComponent.value = componentId;
       showPreviewModal.value = true;
@@ -1098,6 +1112,7 @@ This action cannot be undone.`"
       console.error('[USFileUploads] Error parsing preview:', error);
       usStore.clearTempFile(componentId);
       usStore.clearFileFormat(componentId);
+      xlsxRowsCache.delete(componentId);
       uploadError[componentId] =
         error instanceof Error ? error.message : 'Error parsing file. Please check the file format.';
     }

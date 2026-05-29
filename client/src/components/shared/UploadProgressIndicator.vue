@@ -1,7 +1,14 @@
 <template>
   <div class="flex-1 flex flex-col items-center justify-center w-full space-y-4 px-8">
+    <!-- Indeterminate: still parsing (e.g. unzipping an .xlsx) and the row count
+         isn't known yet — show a spinner, not a frozen-looking 0% / 0-of-0 bar. -->
+    <div v-if="indeterminate" class="flex flex-col items-center gap-3">
+      <ArrowPathIcon class="h-8 w-8 animate-spin text-accent" />
+      <span class="text-sm text-gray-400">{{ progressText }}</span>
+    </div>
+
     <!-- Progress Bar Container -->
-    <div class="w-full max-w-md space-y-2">
+    <div v-else class="w-full max-w-md space-y-2">
       <!-- Status Text -->
       <div class="flex justify-between items-center text-sm">
         <span class="text-gray-400">{{ progressText }}</span>
@@ -28,6 +35,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 interface Props {
   totalRows: number;
@@ -61,6 +69,12 @@ let animationFrame: number | null = null;
 // (overrides the time-estimate animation below).
 const realProcessed = ref<number | null>(null);
 const realTotal = ref(0);
+
+// Indeterminate while we're still parsing (no row count yet and no real
+// write-progress) — drives the spinner instead of a misleading 0% bar.
+const indeterminate = computed(
+  () => !isComplete.value && realProcessed.value === null && (!props.totalRows || props.totalRows <= 0)
+);
 
 // Computed values
 const percentage = computed(() => {
