@@ -95,12 +95,16 @@ const coverage = (p: ProviderInfo): string => {
   return pct >= 99.95 ? '100%' : `${pct.toFixed(1)}%`;
 };
 
-const statsFor = (p: ProviderInfo) => [
+// Top line = scope (how much of the deck / our LERG it covers).
+const scopeStatsFor = (p: ProviderInfo) => [
   { label: 'Prefixes', value: p.rowCount.toLocaleString() },
+  { label: 'Coverage', value: coverage(p) },
+];
+// Bottom line = the three rates.
+const rateStatsFor = (p: ProviderInfo) => [
   { label: 'Avg Inter Rate', value: formatRate(p.avgInterRate) },
   { label: 'Avg Intra Rate', value: formatRate(p.avgIntraRate) },
   { label: 'Avg Indet Rate', value: formatRate(p.avgIndeterminateRate) },
-  { label: 'Coverage', value: coverage(p) },
 ];
 
 // ── Upload flow ──
@@ -451,12 +455,22 @@ const confirmRemove = async () => {
         </div>
       </div>
 
-      <!-- Stats -->
+      <!-- Stats: scope on the top line, rates on the bottom line -->
       <dl class="mt-4 grid grid-cols-3 gap-y-3">
         <div
-          v-for="(s, i) in statsFor(p)"
+          v-for="(s, i) in scopeStatsFor(p)"
           :key="s.label"
-          :class="i % 3 === 0 ? 'pr-4' : 'border-l border-line px-4'"
+          :class="i === 0 ? 'pr-4' : 'border-l border-line px-4'"
+        >
+          <dd class="font-secondary text-sm text-fg">{{ s.value }}</dd>
+          <dt class="mt-0.5 text-[10px] uppercase tracking-wider text-fg-faint">{{ s.label }}</dt>
+        </div>
+      </dl>
+      <dl class="mt-3 grid grid-cols-3 gap-y-3">
+        <div
+          v-for="(s, i) in rateStatsFor(p)"
+          :key="s.label"
+          :class="i === 0 ? 'pr-4' : 'border-l border-line px-4'"
         >
           <dd class="font-secondary text-sm text-fg">{{ s.value }}</dd>
           <dt class="mt-0.5 text-[10px] uppercase tracking-wider text-fg-faint">{{ s.label }}</dt>
