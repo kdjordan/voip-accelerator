@@ -57,10 +57,20 @@ const stageProgress = ref(0);
 const isComplete = ref(false);
 let animationFrame: number | null = null;
 
+// Real-progress state — when set, reflects ACTUAL chunked-write progress
+// (overrides the time-estimate animation below).
+const realProcessed = ref<number | null>(null);
+const realTotal = ref(0);
+
 // Computed values
 const percentage = computed(() => {
   if (isComplete.value) return 100;
-  
+
+  // Real progress takes over once setProgress() has fired.
+  if (realProcessed.value !== null) {
+    return Math.min(99, Math.round((realProcessed.value / Math.max(1, realTotal.value)) * 100));
+  }
+
   let totalProgress = 0;
   
   // Add completed stages
@@ -82,12 +92,15 @@ const currentStage = computed(() =>
 );
 
 const progressText = computed(() => {
+  // Once real write-progress kicks in, we're in the storing phase.
+  if (realProcessed.value !== null) return 'Storing on your browser...';
+
   const stageLabels = {
     parsing: 'Reading file...',
     validating: 'Validating data...',
     storing: 'Storing on your browser...'
   };
-  
+
   return stageLabels[currentStage.value.name] || 'Processing...';
 });
 
@@ -99,8 +112,10 @@ const estimatedRowsProcessed = computed(() => {
   return Math.min(props.totalRows, Math.floor(elapsed * adjustedRate * (percentage.value / 100)));
 });
 
-const formattedRowsProcessed = computed(() => 
-  estimatedRowsProcessed.value.toLocaleString()
+const formattedRowsProcessed = computed(() =>
+  realProcessed.value !== null
+    ? realProcessed.value.toLocaleString()
+    : estimatedRowsProcessed.value.toLocaleString()
 );
 
 const formattedTotalRows = computed(() => 
@@ -170,6 +185,15 @@ defineExpose({
     isComplete.value = true;
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
+    }
+  },
+  // Switch to real-progress mode, driven by the chunked IndexedDB write.
+  setProgress(processed: number, total: number) {
+    realProcessed.value = processed;
+    realTotal.value = total;
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame); // stop the estimate; real progress takes over
+      animationFrame = null;
     }
   }
 });

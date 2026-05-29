@@ -867,7 +867,11 @@ This action cannot be undone.`"
         columnMapping,
         startLine.value,
         indeterminateDefinition,
-        xlsxRows // reuse the single xlsx parse (undefined for CSV → streams as before)
+        xlsxRows, // reuse the single xlsx parse (undefined for CSV → streams as before)
+        // Real write-progress → drives the indicator's bar (0→99%) as chunks land.
+        (stored, total) => {
+          progressIndicators[activeComponent.value]?.setProgress(stored, total);
+        }
       );
       // console.log(`[DEBUG] service.processFile finished for ${processResult.fileName}.`);
 
