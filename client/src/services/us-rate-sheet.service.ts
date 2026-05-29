@@ -221,9 +221,9 @@ export class USRateSheetService {
         }
       }
 
-      progressCallback?.(70, UploadStage.VALIDATING, totalRecords, totalRecords);
+      progressCallback?.(40, UploadStage.VALIDATING, totalRecords, totalRecords);
       if (allProcessedData.length > 0) {
-        progressCallback?.(85, UploadStage.STORING, totalRecords, totalRecords);
+        progressCallback?.(40, UploadStage.STORING, totalRecords, totalRecords);
         await this.storeDataInOptimizedChunks(allProcessedData, progressCallback);
       }
       progressCallback?.(100, UploadStage.FINALIZING, totalRecords, totalRecords);
@@ -258,9 +258,11 @@ export class USRateSheetService {
           if (now - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
             lastProgressUpdate = now;
             
-            // Calculate parsing progress (first 60% of total progress)
-            // We don't know total rows yet, so estimate based on file size and time
-            const parsingProgress = Math.min(60, (totalChunks / 1000) * 10); // Rough estimate
+            // Parse occupies the first 40% of the bar; the real chunked write
+            // drives 40→99 (the dominant, granular phase) so the bar climbs
+            // smoothly instead of pre-jumping. We don't know total rows yet, so
+            // estimate from rows-seen over time.
+            const parsingProgress = Math.min(40, (totalChunks / 1000) * 8); // Rough estimate
             progressCallback?.(parsingProgress, UploadStage.PARSING, totalChunks);
             
             // console.log(`[USRateSheetService] Processing progress: Row ${totalChunks}...`); // Progress log
@@ -314,14 +316,14 @@ export class USRateSheetService {
           console.log(`[PERF] CSV parsing complete. Storing ${allProcessedData.length} records to IndexedDB...`);
           
           // Update progress to validation stage
-          progressCallback?.(70, UploadStage.VALIDATING, totalRecords, totalRecords);
+          progressCallback?.(40, UploadStage.VALIDATING, totalRecords, totalRecords);
           
           // Phase 1.3: Store in optimized chunks for better IndexedDB performance
           if (allProcessedData.length > 0) {
             const storeStartTime = performance.now();
             try {
               // Update progress to storing stage
-              progressCallback?.(85, UploadStage.STORING, totalRecords, totalRecords);
+              progressCallback?.(40, UploadStage.STORING, totalRecords, totalRecords);
               
               await this.storeDataInOptimizedChunks(allProcessedData, progressCallback);
               const storeEndTime = performance.now();
@@ -589,8 +591,8 @@ export class USRateSheetService {
       try {
         await this.storeInDexieDB(chunks[i], this.dbName, 'entries', { replaceExisting: i === 0 });
         
-        // Update storage progress (85% to 98%)
-        const storageProgress = 85 + ((i + 1) / chunks.length) * 13;
+        // Real chunked-write progress drives the dominant 40%→99% band.
+        const storageProgress = 40 + ((i + 1) / chunks.length) * 59;
         const recordsStored = (i + 1) * OPTIMAL_CHUNK_SIZE;
         progressCallback?.(storageProgress, UploadStage.STORING, Math.min(recordsStored, data.length), data.length);
         
