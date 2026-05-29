@@ -83,7 +83,7 @@ const currentStage = computed(() =>
 
 const progressText = computed(() => {
   const stageLabels = {
-    parsing: 'Reading CSV file...',
+    parsing: 'Reading file...',
     validating: 'Validating data...',
     storing: 'Storing on your browser...'
   };

@@ -10,17 +10,26 @@
 // because `parseTabularFile` returns the same shape as today's
 // `Papa.parse(file, { header: false })` output: `string[][]`, row 0 = headers.
 //
-// Worker note: `read-excel-file/web-worker` manages its own Web Worker
-// internally (every export of the package already does so under the hood — see
-// its README), so no hand-rolled worker file is needed here.
+// Worker note: NONE of `read-excel-file`'s ESM exports actually spawn a Worker
+// (`readSheetBrowser`/`readSheetWebWorker` all `unpackXlsxFile().then(parse())`
+// on the CALLING thread — only the prebuilt UMD bundle uses a Worker, which
+// Vite doesn't pull in). So calling `readSheet` directly here would freeze the
+// tab on a real-sized .xlsx. Instead the xlsx branch spawns a dedicated worker
+// (`xlsx-parse.worker.ts`) that imports `read-excel-file/web-worker` and does
+// the unzip + XML parse + cell-normalization off the main thread.
 
 import Papa from 'papaparse';
-// XLSX parse — web-worker entry parses off the main thread. `readSheet(input,
-// sheet)` returns one sheet's rows directly; sheet `1` is the first sheet.
-import { readSheet } from 'read-excel-file/web-worker';
 // XLSX write — browser entry returns { toBlob, toFile }; we use toBlob + the
 // shared anchor-download pattern below.
 import writeXlsxFile from 'write-excel-file/browser';
+// XLSX parse runs off-thread via a dedicated worker (see file header).
+import XlsxParseWorker from '@/workers/xlsx-parse.worker?worker';
+import type { XlsxParseResponse } from '@/workers/xlsx-parse.worker';
+
+// Re-export the pure cell normalizer (moved to its own module so the worker can
+// import it without dragging in papaparse/DOM). Keeps the existing
+// `tabular-io` import path working for callers and tests.
+export { normalizeCell } from '@/utils/xlsx-cell';
 
 export type TabularFormat = 'csv' | 'xlsx';
 
@@ -39,60 +48,33 @@ export function detectFormat(file: File): TabularFormat {
 }
 
 /**
- * PURE: normalize one xlsx cell value to the string form papaparse would have
- * produced. xlsx cells arrive typed (number / boolean / Date), so:
- *  - null / undefined → ''
- *  - number → a plain decimal string, NO scientific notation and NO float
- *    precision drift (0.008 stays "0.008"; 213555 stays "213555"; 1e-7 →
- *    "0.0000001", never "1e-7")
- *  - Date → ISO date "YYYY-MM-DD"
- *  - string / boolean / everything else → String(value)
- */
-export function normalizeCell(value: unknown): string {
-  if (value === null || value === undefined) return '';
-
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return String(value); // NaN / Infinity — leave as-is
-    if (Number.isInteger(value)) return String(value);
-    // Non-integer: avoid both scientific notation (e.g. "1e-7") and binary
-    // float drift (e.g. "0.007999999..."). maximumFractionDigits caps the tail;
-    // useGrouping:false drops thousands separators.
-    return value.toLocaleString('en-US', {
-      useGrouping: false,
-      maximumFractionDigits: 20,
-    });
-  }
-
-  if (value instanceof Date) {
-    // ISO date only (no time component). xlsx dates are date-typed cells.
-    return value.toISOString().slice(0, 10);
-  }
-
-  return String(value);
-}
-
-/**
  * Parse a tabular file into rows of strings, row 0 = header row — matching the
  * shape of today's `Papa.parse(file, { header: false })` `results.data`.
  *
  * CSV → papaparse (`header:false`, `skipEmptyLines:true`).
- * XLSX → first sheet only, every cell normalized to a string via normalizeCell.
- * Empty first sheet → throws an actionable error (callers surface it).
+ * XLSX → parsed + normalized off the main thread in `xlsx-parse.worker.ts`
+ *   (first sheet only; cells normalized to strings via normalizeCell there).
+ *   Empty first sheet → the worker reports an actionable error we reject with.
  */
 export async function parseTabularFile(file: File): Promise<string[][]> {
   if (detectFormat(file) === 'xlsx') {
-    // `readSheet(input, 1)` → the first sheet's rows. Cells are typed
-    // (string | number | boolean | Date | null) — normalize each to a string.
-    const rows = await readSheet(file, 1);
-
-    const hasData = Array.isArray(rows) && rows.some((row) => row.some((cell) => cell != null));
-    if (!hasData) {
-      throw new Error(
-        "This workbook's first sheet has no data. Put your rate data on the first sheet and re-upload."
-      );
-    }
-
-    return rows.map((row) => row.map((cell) => normalizeCell(cell)));
+    // Spawn the worker so the heavy unzip + XML parse never blocks the UI.
+    return new Promise<string[][]>((resolve, reject) => {
+      const worker = new XlsxParseWorker();
+      worker.onmessage = (ev: MessageEvent<XlsxParseResponse>) => {
+        worker.terminate();
+        if ('error' in ev.data) {
+          reject(new Error(ev.data.error));
+        } else {
+          resolve(ev.data.rows);
+        }
+      };
+      worker.onerror = (err) => {
+        worker.terminate();
+        reject(err instanceof ErrorEvent ? new Error(err.message) : err);
+      };
+      worker.postMessage(file);
+    });
   }
 
   // CSV — preserve the inline papaparse options used across the surfaces.
