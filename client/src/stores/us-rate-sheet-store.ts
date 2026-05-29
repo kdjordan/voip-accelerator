@@ -4,6 +4,7 @@ import type { USRateSheetEntry, InvalidUsRow } from '@/types/domains/us-types'; 
 // Add date-fns for default date calculation
 import { addDays, format } from 'date-fns';
 import { UploadStage, type UploadProgressState } from '@/types/components/upload-progress-types';
+import type { TabularFormat } from '@/utils/tabular-io';
 
 interface USRateSheetState {
   hasUsRateSheetData: boolean;
@@ -17,6 +18,10 @@ interface USRateSheetState {
   isUploadInProgress: boolean; // GATE to block table loading during upload
   uploadProgress: UploadProgressState; // Real upload progress tracking
   provenance: string | null; // Hand-off origin line, set when a deck is landed from another module
+  // Source format of the loaded deck ('csv' | 'xlsx'), set on upload via detectFormat.
+  // A hand-off deck has no source file and never sets this → stays null → export
+  // default falls to CSV (ADR-0010). null when no deck is loaded.
+  sourceFormat: TabularFormat | null;
 }
 
 // Instantiate simple service outside the store definition (singleton pattern)
@@ -46,6 +51,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
       totalRows: undefined
     },
     provenance: null, // No hand-off origin until a deck is landed
+    sourceFormat: null, // No loaded deck yet
   }),
 
   getters: {
@@ -59,6 +65,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
     getIsUploadInProgress: (state): boolean => state.isUploadInProgress, // Gate getter
     getUploadProgress: (state): UploadProgressState => state.uploadProgress, // Real progress getter
     getProvenance: (state): string | null => state.provenance, // Hand-off origin line getter
+    getSourceFormat: (state): TabularFormat | null => state.sourceFormat, // Loaded deck's source format
   },
 
   actions: {
@@ -80,6 +87,14 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
      */
     setProvenance(provenance: string | null) {
       this.provenance = provenance;
+    },
+
+    /**
+     * Records the loaded deck's source format ('csv' | 'xlsx'); feeds the export
+     * toggle's derived default. Pass null to clear. Hand-off decks never set this.
+     */
+    setSourceFormat(format: TabularFormat | null) {
+      this.sourceFormat = format;
     },
 
     /**
@@ -161,6 +176,7 @@ export const useUsRateSheetStore = defineStore('usRateSheet', {
         this.totalRecords = 0;
         this.invalidRateSheetRows = []; // Clear invalid rows state
         this.provenance = null; // Clear hand-off origin line
+        this.sourceFormat = null; // Clear loaded deck's source format
         console.log('[us-rate-sheet-store] Cleared rate sheet data and reset state.');
       } catch (err) {
         console.error('[us-rate-sheet-store] Error clearing rate sheet data:', err);

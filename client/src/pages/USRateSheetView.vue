@@ -147,13 +147,21 @@
       >
         <input
           type="file"
-          accept=".csv"
+          accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           class="absolute inset-0 opacity-0 w-full h-full"
-          :class="{ 'pointer-events-none': isProcessing || showPreviewModal }"
-          :disabled="isProcessing || showPreviewModal"
+          :class="{ 'pointer-events-none': isProcessing || isParsingPreview || showPreviewModal }"
+          :disabled="isProcessing || isParsingPreview || showPreviewModal"
           @change="handleFileChange"
         />
-        <template v-if="!isProcessing">
+        <!-- Parsing an XLSX preview takes ~6s (full unzip) and there's no row count
+             yet — show a spinner so the zone doesn't look frozen. -->
+        <template v-if="isParsingPreview">
+          <div class="flex flex-col items-center gap-3 text-center">
+            <ArrowPathIcon class="h-8 w-8 animate-spin text-accent" />
+            <p class="text-sm text-fg-faint">Reading file…</p>
+          </div>
+        </template>
+        <template v-else-if="!isProcessing">
           <div class="text-center">
             <ArrowUpTrayIcon
               class="w-12 h-12 mx-auto rounded-full p-3 border"
@@ -168,7 +176,7 @@
               <template v-else>Drag &amp; drop a rate deck to upload, or click to select</template>
             </p>
             <p class="mt-1 text-sm text-fg-faint">
-              {{ uploadError ? 'Please try again with a CSV file' : 'CSV rate sheet — parsed locally, never uploaded' }}
+              {{ uploadError ? 'Please try again with a CSV or XLSX file' : 'CSV or XLSX rate sheet — parsed locally, never uploaded' }}
             </p>
           </div>
         </template>
@@ -274,6 +282,7 @@
   import { US_COLUMN_ROLE_OPTIONS } from '@/types/domains/us-types';
   import Papa from 'papaparse';
   import type { ParseResult } from 'papaparse';
+  import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
   import { USRateSheetService } from '@/services/us-rate-sheet.service';
   import { USColumnRole } from '@/types/domains/us-types';
   import { useUsRateSheetStore } from '@/stores/us-rate-sheet-store';
@@ -344,6 +353,14 @@
   const columnMappings = ref<Record<string, string>>({});
   const isValid = ref(false);
   const selectedFile = ref<File | null>(null);
+  // True while an XLSX preview is being parsed (full unzip, ~6s) — drives the
+  // drop-zone "Reading file…" spinner so it doesn't look frozen.
+  const isParsingPreview = ref(false);
+  // Full xlsx rows parsed ONCE at preview, stashed NON-reactively (a plain
+  // module-style ref, never reactive — a 200K-row deck in a reactive ref would
+  // choke Vue) and reused at ingest so the workbook isn't parsed twice. CSV
+  // isn't cached (it re-streams cheaply). Cleared after ingest / cancel / error.
+  let xlsxRowsCache: string[][] | null = null;
 
   // Progress tracking
   const uploadingFileRowCount = ref(0);
@@ -365,7 +382,7 @@
   // Drag and Drop Setup
   const { isDragging, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, clearError } =
     useDragDrop({
-      acceptedExtensions: ['.csv'],
+      acceptedExtensions: ['.csv', '.xlsx'],
       onDropCallback: async (file: File) => {
         uploadError.value = null;
         clearError();
@@ -458,41 +475,52 @@
     processFile(file);
   }
 
-  function processFile(file: File) {
+  async function processFile(file: File) {
     selectedFile.value = file;
+    xlsxRowsCache = null;
 
+    // XLSX must be fully unzipped+parsed to read anything (no partial read), so
+    // parse it ONCE here — FULL — and stash the rows (non-reactively) to reuse at
+    // ingest, avoiding a second ~6s parse on confirm. CSV is cheap to re-read (it
+    // streams at ingest), so just grab a capped 101-row sample. Either way, only a
+    // 100-row sample feeds the reactive previewData (a full deck there → freeze).
+    const fmt = detectFormat(file);
+    if (fmt === 'xlsx') isParsingPreview.value = true;
     try {
-      Papa.parse(file, {
-        preview: 20,
-        skipEmptyLines: true,
-        complete: (results: ParseResult<string[]>) => {
-          if (results.data.length === 0) {
-            const emptyErrorMessage = 'CSV file appears to be empty or invalid.';
-            uploadError.value = emptyErrorMessage;
-            store.setError(emptyErrorMessage);
-            showPreviewModal.value = false;
-            return;
-          }
-          columns.value = results.data[0].map((h) => h?.trim() || '');
-          previewData.value = results.data
-            .slice(0, 11)
-            .map((row) => (Array.isArray(row) ? row.map((cell) => cell?.trim() || '') : []));
-          startLine.value = 1;
-          showPreviewModal.value = true;
-        },
-        error: (error) => {
-          const parseErrorMessage = 'Failed to parse CSV file: ' + error.message;
-          uploadError.value = parseErrorMessage;
-          store.setError(parseErrorMessage);
-          showPreviewModal.value = false;
-        },
-      });
+      const rows =
+        fmt === 'xlsx'
+          ? await parseTabularFile(file)
+          : await parseTabularFile(file, { maxRows: 101 });
+
+      if (rows.length === 0) {
+        const emptyErrorMessage = `${fmt === 'xlsx' ? 'XLSX' : 'CSV'} file appears to be empty or invalid.`;
+        uploadError.value = emptyErrorMessage;
+        store.setError(emptyErrorMessage);
+        showPreviewModal.value = false;
+        selectedFile.value = null;
+        return;
+      }
+
+      if (fmt === 'xlsx') xlsxRowsCache = rows;
+      // Track the loaded deck's source format so the export default can derive from it.
+      store.setSourceFormat(fmt);
+
+      columns.value = (rows[0] ?? []).map((h) => h?.trim() || '');
+      previewData.value = rows
+        .slice(0, 11)
+        .map((row) => (Array.isArray(row) ? row.map((cell) => cell?.trim() || '') : []));
+      startLine.value = 1;
+      showPreviewModal.value = true;
     } catch (error) {
       const processErrorMessage =
         'Failed to process file: ' + (error instanceof Error ? error.message : String(error));
       uploadError.value = processErrorMessage;
       store.setError(processErrorMessage);
       showPreviewModal.value = false;
+      selectedFile.value = null;
+      xlsxRowsCache = null;
+    } finally {
+      isParsingPreview.value = false;
     }
   }
 
@@ -520,20 +548,28 @@
     try {
       const fileToProcess = selectedFile.value;
 
-      // Count rows for progress tracking
-      let rowCount = 0;
-      await new Promise<void>((resolve) => {
-        Papa.parse(fileToProcess, {
-          step: () => {
-            rowCount++;
-          },
-          complete: () => {
-            uploadingFileRowCount.value = Math.max(0, rowCount - startLine.value);
-            resolve();
-          },
-          skipEmptyLines: true,
+      // Count rows for progress tracking. XLSX can't stream — reuse the full rows
+      // parsed at preview (cached non-reactively) so we don't parse the workbook a
+      // second time. CSV streams cheaply, so just count via papaparse as before.
+      const fmt = detectFormat(fileToProcess);
+      const xlsxRows = fmt === 'xlsx' ? (xlsxRowsCache ?? (await parseTabularFile(fileToProcess))) : undefined;
+      if (xlsxRows) {
+        uploadingFileRowCount.value = Math.max(0, xlsxRows.length - startLine.value);
+      } else {
+        let rowCount = 0;
+        await new Promise<void>((resolve) => {
+          Papa.parse(fileToProcess, {
+            step: () => {
+              rowCount++;
+            },
+            complete: () => {
+              uploadingFileRowCount.value = Math.max(0, rowCount - startLine.value);
+              resolve();
+            },
+            skipEmptyLines: true,
+          });
         });
-      });
+      }
 
       showPreviewModal.value = false;
 
@@ -594,7 +630,8 @@
         effectiveDate,
         (progress, stage, rowsProcessed, totalRows) => {
           store.setUploadProgress(progress, stage, rowsProcessed, totalRows);
-        }
+        },
+        xlsxRows // reuse the single xlsx parse (undefined for CSV → streams as before)
       );
 
       await store.handleUploadSuccess(processedData);
@@ -603,6 +640,7 @@
 
       store.setUploadInProgress(false);
       selectedFile.value = null;
+      xlsxRowsCache = null; // free the cached full rows (~200K)
       uploadingFileRowCount.value = 0;
       rfUploadStatus.value = { type: 'success', message: 'File processed successfully!' };
     } catch (error: any) {
@@ -610,6 +648,7 @@
       await store.clearUsRateSheetData();
       store.resetUploadProgress();
       selectedFile.value = null;
+      xlsxRowsCache = null;
       uploadingFileRowCount.value = 0;
       rfUploadStatus.value = { type: 'error', message: 'File processing failed.' };
     } finally {
@@ -620,6 +659,7 @@
   function handleModalCancel() {
     showPreviewModal.value = false;
     selectedFile.value = null;
+    xlsxRowsCache = null; // free the cached rows on cancel
     uploadingFileRowCount.value = 0;
     store.resetUploadProgress();
   }
