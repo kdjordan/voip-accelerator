@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import Papa from 'papaparse';
+import { downloadTabularFile, type TabularFormat } from '@/utils/tabular-io';
 
 /**
  * CSV Export Options for configuring the export behavior
@@ -13,6 +13,24 @@ export interface CSVExportOptions {
   exportContext?: 'rate-sheet' | 'comparison' | 'generic';
   customHeaders?: string[];
   fieldTransformations?: Record<string, (value: any) => string>;
+  // Output format (ADR-0010). Defaults to 'csv'; XLSX content is identical.
+  format?: TabularFormat;
+}
+
+/**
+ * Build the final header + row arrays from CSVData (rows may be objects keyed
+ * by header, or already-arrays), matching the shape both CSV and XLSX writers
+ * consume. Centralized so every export path constructs identical content.
+ */
+function buildHeadersAndRows(
+  headers: string[],
+  rows: any[]
+): { headers: string[]; rows: (string | number)[][] } {
+  const rowArrays = rows.map((row) => {
+    if (Array.isArray(row)) return row as (string | number)[];
+    return headers.map((header) => row[header] ?? '');
+  });
+  return { headers, rows: rowArrays };
 }
 
 /**
@@ -39,6 +57,8 @@ export function useCSVExport() {
     return new Date().toISOString().replace(/[:.]/g, '-');
   }
 
+  // Returns a base filename WITHOUT extension; downloadTabularFile appends the
+  // correct one (.csv / .xlsx) for the chosen format.
   function buildFilename(options: CSVExportOptions): string {
     const parts = [options.filename];
 
@@ -50,7 +70,7 @@ export function useCSVExport() {
       parts.push(formatTimestamp());
     }
 
-    return `${parts.join('-')}.csv`;
+    return parts.join('-');
   }
 
   async function exportToCSV(data: CSVData, options: CSVExportOptions): Promise<void> {
@@ -65,36 +85,10 @@ export function useCSVExport() {
         throw new Error('No data to export');
       }
 
-      // Prepare data with headers
-      const csvData = [data.headers, ...data.rows.map(row => {
-        if (Array.isArray(row)) return row;
-        return data.headers.map(header => row[header] || '');
-      })];
-
-      // Generate CSV content using Papa Parse
-      const csv = Papa.unparse(
-        csvData,
-        {
-          quotes: options.quoteFields ?? true, // Default to true for safety
-          header: false, // We handle headers manually in rows
-          newline: '\n', // Force Unix line endings for Excel compatibility
-        }
-      );
-
-      // Create and trigger download
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-
-      link.href = url;
-      link.setAttribute('download', buildFilename(options));
-      link.style.visibility = 'hidden';
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.URL.revokeObjectURL(url);
+      // Route the write through the format-transparent tabular-IO layer.
+      // XLSX content is identical to the CSV (same headers/rows).
+      const { headers, rows } = buildHeadersAndRows(data.headers, data.rows);
+      await downloadTabularFile(buildFilename(options), headers, rows, options.format ?? 'csv');
     } catch (error: any) {
       console.error('Error exporting CSV:', error);
       exportError.value = error.message || 'Failed to export CSV file';
@@ -240,35 +234,15 @@ async function handleRateSheetExport(data: CSVData, options: CSVExportOptions): 
     }
 
     // Use custom headers if provided, otherwise use data headers
-    const headers = options.customHeaders || data.headers;
-    
-    // Prepare data with headers
-    const csvData = [headers, ...processedRows.map(row => {
-      if (Array.isArray(row)) return row;
-      return headers.map(header => row[header] || '');
-    })];
+    const baseHeaders = options.customHeaders || data.headers;
 
-    // Generate CSV content using Papa Parse
-    const csv = Papa.unparse(csvData, {
-      quotes: options.quoteFields ?? true,
-      header: false,
-      newline: '\n', // Force Unix line endings for Excel compatibility
-    });
-
-    // Create and trigger download with rate-sheet specific filename handling
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.setAttribute('download', buildRateSheetFilename(options, data.metadata));
-    link.style.visibility = 'hidden';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    window.URL.revokeObjectURL(url);
+    const { headers, rows } = buildHeadersAndRows(baseHeaders, processedRows);
+    await downloadTabularFile(
+      buildRateSheetFilename(options, data.metadata),
+      headers,
+      rows,
+      options.format ?? 'csv'
+    );
   } catch (error: any) {
     console.error('Error exporting rate sheet CSV:', error);
     exportError.value = error.message || 'Failed to export rate sheet CSV file';
@@ -313,35 +287,15 @@ async function handleComparisonExport(data: CSVData, options: CSVExportOptions):
     }
 
     // Use custom headers if provided, otherwise use data headers
-    const headers = options.customHeaders || data.headers;
-    
-    // Prepare data with headers
-    const csvData = [headers, ...processedRows.map(row => {
-      if (Array.isArray(row)) return row;
-      return headers.map(header => row[header] || '');
-    })];
+    const baseHeaders = options.customHeaders || data.headers;
 
-    // Generate CSV content using Papa Parse
-    const csv = Papa.unparse(csvData, {
-      quotes: options.quoteFields ?? true,
-      header: false,
-      newline: '\n', // Force Unix line endings for Excel compatibility
-    });
-
-    // Create and trigger download with comparison specific filename handling
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.setAttribute('download', buildComparisonFilename(options, data.metadata));
-    link.style.visibility = 'hidden';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    window.URL.revokeObjectURL(url);
+    const { headers, rows } = buildHeadersAndRows(baseHeaders, processedRows);
+    await downloadTabularFile(
+      buildComparisonFilename(options, data.metadata),
+      headers,
+      rows,
+      options.format ?? 'csv'
+    );
   } catch (error: any) {
     console.error('Error exporting comparison CSV:', error);
     exportError.value = error.message || 'Failed to export comparison CSV file';
@@ -370,7 +324,7 @@ function buildRateSheetFilename(options: CSVExportOptions, metadata?: CSVData['m
     parts.push(new Date().toISOString().replace(/[:.]/g, '-'));
   }
 
-  return `${parts.join('-')}.csv`;
+  return parts.join('-');
 }
 
 /**
@@ -392,5 +346,5 @@ function buildComparisonFilename(options: CSVExportOptions, metadata?: CSVData['
     parts.push(new Date().toISOString().replace(/[:.]/g, '-'));
   }
 
-  return `${parts.join('-')}.csv`;
+  return parts.join('-');
 }

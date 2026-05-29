@@ -8,6 +8,7 @@ import type {
 } from '../types/domains/us-types';
 import type { ReportType } from '@/types';
 import type { UsInsightsSummary } from '@/utils/us-insights';
+import type { TabularFormat } from '@/utils/tabular-io';
 
 export const useUsStore = defineStore('us', {
   state: () => ({
@@ -25,6 +26,8 @@ export const useUsStore = defineStore('us', {
     tempFiles: new Map<string, File>(),
     invalidRows: new Map<string, InvalidUsRow[]>(),
     inMemoryData: new Map<string, USStandardizedData[]>(),
+    // Per-slot uploaded source format ('csv' | 'xlsx') — feeds the export default (ADR-0010).
+    fileFormats: new Map<string, TabularFormat>(),
     fileStats: new Map<
       string,
       {
@@ -55,6 +58,9 @@ export const useUsStore = defineStore('us', {
 
     getFileNames: (state): string[] =>
       Array.from(state.filesUploaded.values()).map((file) => file.fileName),
+
+    // Tracked source formats of the currently-uploaded slots (ADR-0010).
+    getFileFormats: (state): TabularFormat[] => Array.from(state.fileFormats.values()),
 
     getActiveReportType: (state): ReportType => state.activeReportType,
 
@@ -200,6 +206,7 @@ export const useUsStore = defineStore('us', {
       this.invalidRows.clear();
       this.inMemoryData.clear();
       this.fileStats.clear();
+      this.fileFormats.clear();
       this.activeReportType = 'files';
     },
 
@@ -252,6 +259,7 @@ export const useUsStore = defineStore('us', {
       this.filesUploaded.delete(componentName);
 
       this.clearFileStats(componentName);
+      this.clearFileFormat(componentName);
 
       if (fileName) {
         this.invalidRows.delete(fileName);
@@ -339,6 +347,19 @@ export const useUsStore = defineStore('us', {
 
     clearAllFileStats() {
       this.fileStats.clear();
+    },
+
+    // Per-slot source format tracking (ADR-0010) — feeds the export default.
+    setFileFormat(componentId: string, format: TabularFormat) {
+      this.fileFormats.set(componentId, format);
+    },
+
+    getFileFormat(componentId: string): TabularFormat | undefined {
+      return this.fileFormats.get(componentId);
+    },
+
+    clearFileFormat(componentId: string) {
+      this.fileFormats.delete(componentId);
     },
 
     clearEnhancedCodeReports() {
