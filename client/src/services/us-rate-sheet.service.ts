@@ -7,6 +7,7 @@ import type { DexieDBBase } from '@/composables/useDexieDB';
 import Dexie, { type Table } from 'dexie';
 import { useLergStoreV2 } from '@/stores/lerg-store-v2';
 import { UploadStage, UPLOAD_STAGE_WEIGHTS } from '@/types/components/upload-progress-types';
+import { parseTabularFile, detectFormat } from '@/utils/tabular-io';
 import type { RateDeckHandoffRow } from '@/types/domains/handoff-types';
 import { mapHandoffRowsToEntries } from '@/utils/handoff-landing-us';
 
@@ -123,7 +124,11 @@ export class USRateSheetService {
     startLine: number,
     indeterminateDefinition: string | undefined,
     effectiveDate?: string, // Added effectiveDate parameter
-    progressCallback?: (progress: number, stage: import('@/types/components/upload-progress-types').UploadStage, rowsProcessed: number, totalRows?: number) => void
+    progressCallback?: (progress: number, stage: import('@/types/components/upload-progress-types').UploadStage, rowsProcessed: number, totalRows?: number) => void,
+    // For XLSX, the caller may have already parsed the file (e.g. for the preview
+    // + row count). Pass those rows here to avoid a SECOND full parse + 200K-row
+    // transfer back to the main thread (the source of the lag).
+    preParsedRows?: string[][]
   ): Promise<ProcessFileResult> {
     // Phase 1 Performance Timing
     const performanceStart = performance.now();
@@ -154,10 +159,80 @@ export class USRateSheetService {
     let processingBatch: USRateSheetEntry[] = []; // Local batch for this run
     let totalRecords = 0;
     let totalChunks = 0; // Renamed from totalChunks for clarity, represents rows read
-    
+
     // Phase 1.2: Optimize storage strategy
     const BATCH_SIZE = 5000; // Larger batches = fewer storage operations
     const allProcessedData: USRateSheetEntry[] = []; // Store all data in memory first
+
+    // --- XLSX path ---
+    // XLSX can't stream (it's a zip that must be fully decompressed + XML-parsed),
+    // so parse off the main thread via parseTabularFile (reusing the caller's parse
+    // when provided), then run the SAME processRow + chunked-store logic the CSV
+    // path uses. The chunked write drives the SAME progressCallback the CSV path
+    // uses → real progress for free.
+    if (detectFormat(file) === 'xlsx') {
+      progressCallback?.(0, UploadStage.PARSING, 0);
+      let rows: string[][];
+      try {
+        // Reuse the caller's parse if provided (no second parse/transfer).
+        rows = preParsedRows ?? (await parseTabularFile(file));
+      } catch (parseError) {
+        return Promise.reject(
+          parseError instanceof Error ? parseError : new Error(String(parseError))
+        );
+      }
+
+      // CSV streams via papaparse so the tab stays responsive; the xlsx rows arrive
+      // as one in-memory array, so a tight for-loop over a 200K-row deck would block
+      // the main thread (jank / frozen indicator). Yield to the event loop every
+      // YIELD_EVERY rows so the progress indicator's animation keeps running.
+      const YIELD_EVERY = 2000;
+      for (let i = 0; i < rows.length; i++) {
+        totalChunks++;
+        // Skip header rows based on user input
+        if (totalChunks < startLine) continue;
+        try {
+          const processedRow = this.processRow(
+            rows[i],
+            totalChunks,
+            columnMapping,
+            indeterminateDefinition,
+            invalidRows
+          );
+          if (processedRow) {
+            allProcessedData.push(processedRow);
+            totalRecords++;
+          }
+        } catch (error) {
+          invalidRows.push({
+            rowIndex: totalChunks,
+            npanxx: '-',
+            npa: '-',
+            nxx: '-',
+            interRate: '-',
+            intraRate: '-',
+            indetermRate: '-',
+            reason: `Row processing error: ${(error as Error).message}`,
+          });
+        }
+
+        if ((i + 1) % YIELD_EVERY === 0) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
+      }
+
+      progressCallback?.(70, UploadStage.VALIDATING, totalRecords, totalRecords);
+      if (allProcessedData.length > 0) {
+        progressCallback?.(85, UploadStage.STORING, totalRecords, totalRecords);
+        await this.storeDataInOptimizedChunks(allProcessedData, progressCallback);
+      }
+      progressCallback?.(100, UploadStage.FINALIZING, totalRecords, totalRecords);
+
+      return {
+        recordCount: totalRecords,
+        invalidRows: invalidRows.slice(0, 100),
+      };
+    }
 
     return new Promise((resolve, reject) => {
       // Start progress tracking

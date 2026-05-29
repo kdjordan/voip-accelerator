@@ -425,6 +425,7 @@
 
     <USExportOptionsModal
       v-model:open="showExportModal"
+      v-model:export-format="exportFormat"
       :mode="exportMode"
       :record-count="store.getTotalRecords"
       :busy="isExportBusy"
@@ -478,8 +479,8 @@
   import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
   import USExportOptionsModal from '@/components/exports/USExportOptionsModal.vue';
   import type { USExportFormatOptions } from '@/types/exports';
-  import Papa from 'papaparse';
-  import { zipSync, strToU8 } from 'fflate';
+  import { downloadTabularFile, type TabularFormat } from '@/utils/tabular-io';
+  import { defaultExportFormat } from '@/utils/export-format';
   import UsRateAdjusterWorker from '@/workers/us-rate-adjuster.worker?worker';
   import type {
     UsRateAdjusterRequest,
@@ -1108,8 +1109,17 @@
   const exportMode = ref<'package' | 'rates'>('package');
   const isExportBusy = ref(false);
 
+  // CSV | XLSX toggle for the rate-deck file. Default derived from the loaded
+  // deck's source format (ADR-0010): xlsx upload → XLSX; csv upload or hand-off
+  // deck (no source file → null) → CSV. User-overridable in the export modal.
+  const exportFormat = ref<TabularFormat>(
+    defaultExportFormat(store.getSourceFormat ? [store.getSourceFormat] : [])
+  );
+
   function openExportModal(mode: 'package' | 'rates') {
     if (!store.getHasUsRateSheetData) return;
+    // Re-derive the default each time the modal opens (the loaded deck may have changed).
+    exportFormat.value = defaultExportFormat(store.getSourceFormat ? [store.getSourceFormat] : []);
     exportMode.value = mode;
     showExportModal.value = true;
   }
@@ -1141,8 +1151,12 @@
     URL.revokeObjectURL(url);
   }
 
-  // Build the rate-deck CSV string for the whole deck in the chosen column format.
-  function buildDeckCsv(records: USRateSheetEntry[], options: USExportFormatOptions): string {
+  // Build the whole-deck table (headers + matrix rows) in the chosen column
+  // format, ready for downloadTabularFile (CSV or XLSX, identical content).
+  function buildDeckTable(
+    records: USRateSheetEntry[],
+    options: USExportFormatOptions
+  ): { headers: string[]; rows: (string | number)[][] } {
     const effectiveDate = store.getCurrentEffectiveDate || 'N/A';
     const withDate = records.map((r) => ({ ...r, effectiveDate }));
     // selectedCountries [] → no country filtering (whole deck regardless of UI filters).
@@ -1151,16 +1165,17 @@
       { ...options, selectedCountries: [] },
       'rate-sheet'
     );
-    // Excel text guard so split NXX keeps leading zeros (matches legacy export).
-    const data =
-      options.npanxxFormat === 'split'
-        ? rows.map((row) => ({ ...row, NXX: `="${row.NXX}"` }))
-        : rows;
-    return Papa.unparse({ fields: headers, data }, { quotes: true });
+    // Map the object-rows to a header-ordered matrix for the tabular writer.
+    const matrix = rows.map((row) => headers.map((h) => (row as Record<string, string | number>)[h] ?? ''));
+    return { headers, rows: matrix };
   }
 
-  // Modal confirm → load the whole deck, build the CSV, then download (rates) or
-  // zip CSV + audit PDF into a single archive (package).
+  // Modal confirm → load the whole deck, then write the rate-deck via the
+  // format-transparent tabular-IO layer (CSV or XLSX, per exportFormat). The
+  // audit PDF (package mode only) always stays PDF. The rate-deck write goes
+  // through downloadTabularFile, which downloads directly — so the package's
+  // PDF is a separate download alongside it (no zip wrapper; downloadTabularFile
+  // has no bytes-return for zipping, and the foundation isn't ours to extend).
   async function handleExportConfirm(options: USExportFormatOptions) {
     if (isExportBusy.value) return;
     if (!dbInstance.value) await initializeDB();
@@ -1176,17 +1191,25 @@
         showNoticeModal('Nothing to Export', 'No rate deck data to export.', 'info');
         return;
       }
-      const csv = buildDeckCsv(allRecords, options);
+      const { headers, rows } = buildDeckTable(allRecords, options);
       const stamp = exportStamp();
+      const fmt = exportFormat.value;
+
+      // Write the whole-deck rate file (CSV or XLSX; identical content).
+      // downloadTabularFile appends the right extension.
+      await downloadTabularFile(`us-rate-deck-${stamp}`, headers, rows, fmt);
 
       if (exportMode.value === 'rates') {
-        triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `us-rate-deck-${stamp}.csv`);
         showExportModal.value = false;
-        showNoticeModal('Export Ready', `Exported the full deck (${allRecords.length.toLocaleString()} rows).`, 'success');
+        showNoticeModal(
+          'Export Ready',
+          `Exported the full deck (${allRecords.length.toLocaleString()} rows) as ${fmt.toUpperCase()}.`,
+          'success'
+        );
         return;
       }
 
-      // Package: whole-deck CSV + branded change-audit PDF, zipped into one file.
+      // Package: also download the branded change-audit PDF (always PDF).
       const readiness = computeReadiness({
         totalRecords: store.getTotalRecords,
         operations: psStore.operations,
@@ -1200,17 +1223,12 @@
         frozenScopes: readiness.frozenScopes,
         effectiveDate: store.getCurrentEffectiveDate,
       }).output('blob');
-      const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
+      triggerDownload(pdfBlob, `change-audit-${stamp}.pdf`);
 
-      const archive = zipSync({
-        [`us-rate-deck-${stamp}.csv`]: strToU8(csv),
-        [`change-audit-${stamp}.pdf`]: pdfBytes,
-      });
-      triggerDownload(new Blob([archive], { type: 'application/zip' }), `pricing-studio-export-${stamp}.zip`);
       showExportModal.value = false;
       showNoticeModal(
         'Export Package Ready',
-        `Downloaded one .zip: the full rate deck (${allRecords.length.toLocaleString()} rows) and the change-audit PDF.`,
+        `Downloaded the full rate deck (${allRecords.length.toLocaleString()} rows, ${fmt.toUpperCase()}) and the change-audit PDF.`,
         'success'
       );
     } catch (err: any) {

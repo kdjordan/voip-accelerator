@@ -27,6 +27,15 @@
             filters don't affect the export. Choose your column format.
           </p>
 
+          <!-- File format (CSV | XLSX) -->
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-[10px] uppercase tracking-wider text-fg-faint">File Format</label>
+            <FormatToggle
+              :model-value="exportFormat"
+              @update:model-value="(v) => emit('update:exportFormat', v)"
+            />
+          </div>
+
           <!-- NPANXX format -->
           <div>
             <label class="block text-[10px] uppercase tracking-wider text-fg-faint mb-1.5">NPANXX Format</label>
@@ -75,7 +84,7 @@
 
           <p v-if="mode === 'package'" class="flex items-start gap-2 text-xs text-fg-faint">
             <DocumentArrowDownIcon class="h-4 w-4 flex-shrink-0 mt-0.5" />
-            Downloads a single <span class="font-secondary text-fg-dim">.zip</span> with the rate-deck CSV and the branded change-audit PDF.
+            Downloads the rate deck (<span class="font-secondary text-fg-dim">{{ exportFormat.toUpperCase() }}</span>) and the branded change-audit PDF.
           </p>
         </div>
 
@@ -107,16 +116,20 @@
   import { computed } from 'vue';
   import { ArrowDownTrayIcon, XMarkIcon, ArrowPathIcon, DocumentArrowDownIcon } from '@heroicons/vue/20/solid';
   import { useUSExportConfig } from '@/composables/exports/useUSExportConfig';
+  import FormatToggle from '@/components/shared/FormatToggle.vue';
+  import type { TabularFormat } from '@/utils/tabular-io';
 
   const props = defineProps<{
     open: boolean;
     mode: 'package' | 'rates';
     recordCount: number;
     busy?: boolean;
+    exportFormat: TabularFormat;
   }>();
 
   const emit = defineEmits<{
     'update:open': [value: boolean];
+    'update:exportFormat': [value: TabularFormat];
     confirm: [options: ReturnType<typeof useUSExportConfig>['formatOptions']['value']];
   }>();
 
