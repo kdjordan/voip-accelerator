@@ -185,14 +185,15 @@
       <div class="rounded-2xl border border-line bg-surface p-4">
         <h3 class="text-xs font-secondary uppercase tracking-wider text-fg-faint mb-3">Create Pricing Adjustment</h3>
 
-        <!-- Declarative sentence -->
-        <p class="mb-4 text-sm text-fg-faint leading-relaxed">
+        <!-- Declarative sentence (flex + gap for reliable spacing — in-span
+             whitespace gets condensed away by Vue, jamming the words together) -->
+        <p class="mb-4 flex flex-wrap items-baseline gap-x-1.5 text-sm text-fg-faint leading-relaxed">
           <span class="font-secondary font-semibold uppercase text-accent">{{ adjustmentType }}</span>
-          <span class="font-secondary text-fg"> {{ valuePhrase }} </span>
+          <span class="font-secondary text-fg">{{ valuePhrase }}</span>
           <span class="text-fg-faint">on</span>
-          <span class="text-fg"> {{ targetLabel(adjustmentTargetRate) }} </span>
+          <span class="text-fg">{{ targetLabel(adjustmentTargetRate) }}</span>
           <span class="text-fg-faint">for</span>
-          <span class="text-fg"> {{ scopeLabel }}</span>
+          <span class="text-fg">{{ scopeLabel }}</span>
         </p>
 
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
