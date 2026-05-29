@@ -86,7 +86,11 @@ export class USService {
     file: File,
     columnMapping: Record<string, number>,
     startLine: number,
-    indeterminateDefinition?: string
+    indeterminateDefinition?: string,
+    // For XLSX, the caller may have already parsed the file (e.g. to count rows
+    // for the progress indicator). Pass those rows here to avoid a SECOND full
+    // parse + 200K-row transfer back to the main thread (the source of the lag).
+    preParsedRows?: string[][]
   ): Promise<{ fileName: string; records: USStandardizedData[]; tableName: string }> {
     // Phase 1 Performance Timing
     const performanceStart = performance.now();
@@ -129,7 +133,8 @@ export class USService {
     if (detectFormat(file) === 'xlsx') {
       let rows: string[][];
       try {
-        rows = await parseTabularFile(file);
+        // Reuse the caller's parse if provided (no second parse/transfer).
+        rows = preParsedRows ?? (await parseTabularFile(file));
       } catch (parseError) {
         return Promise.reject(
           parseError instanceof Error ? parseError : new Error(String(parseError))

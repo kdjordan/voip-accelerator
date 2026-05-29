@@ -800,10 +800,13 @@ This action cannot be undone.`"
 
     // Count rows for progress tracking FIRST.
     // CSV streams (papaparse step) so the tab stays responsive on big files;
-    // XLSX can't stream, so derive the count from the already-parsed array.
+    // XLSX can't stream — parse it ONCE here (off-thread) and reuse the rows for
+    // BOTH the count and the ingest below, so we don't parse + transfer ~200K
+    // rows to the main thread twice (that double-parse was the post-mapping lag).
+    let xlsxRows: string[][] | undefined;
     if (detectFormat(file) === 'xlsx') {
-      const rows = await parseTabularFile(file);
-      uploadingFileRowCount[activeComponent.value] = Math.max(0, rows.length - startLine.value);
+      xlsxRows = await parseTabularFile(file);
+      uploadingFileRowCount[activeComponent.value] = Math.max(0, xlsxRows.length - startLine.value);
     } else {
       let rowCount = 0;
       await new Promise<void>((resolve) => {
@@ -863,7 +866,8 @@ This action cannot be undone.`"
         file,
         columnMapping,
         startLine.value,
-        indeterminateDefinition
+        indeterminateDefinition,
+        xlsxRows // reuse the single xlsx parse (undefined for CSV → streams as before)
       );
       // console.log(`[DEBUG] service.processFile finished for ${processResult.fileName}.`);
 
