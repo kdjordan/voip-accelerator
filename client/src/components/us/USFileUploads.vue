@@ -636,6 +636,9 @@ This action cannot be undone.`"
     // convention stays collision-free against the other slot.
     const fileName = deriveHandoffFileName(name, usStore.getFileNames);
 
+    // Feed the slot's UploadProgressIndicator a real total so it animates during
+    // the Dexie write + enhanced-report worker (otherwise it renders against 0).
+    uploadingFileRowCount[componentId] = rows.length;
     usStore.setComponentUploading(componentId, true);
     uploadError[componentId] = null;
     try {

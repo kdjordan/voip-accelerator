@@ -83,20 +83,41 @@ deck) + Analyzer-as-source DEFERRED.
 PROD = `a645c97` (tagged `prod-2026-05-28`). Base for all hand-off branches = `main` @ `625ae56`.
 
 ### Slices (order: 1 → (2 ∥ 3) → 4; each merges only after owner :5173 gut-check + regression-check green)
-- **Slice 1 — Hand-off foundation** *(🔵 IN PROGRESS — background sub-agent, worktree, test-first)*: `RateDeckHandoff`
-  payload type + pure builder utils (`buildHandoffFromGenerated` / `buildHandoffFromRateSheet`: strip leading `1`,
-  split npa/nxx, map rate field names) + carrier Pinia store (holds pending hand-off across auto-nav) + unit
-  tests. NO UI, NO LERG dep (stateCode derived at landing in Slice 2). Spine — merge first.
-- **Slice 2 — Adjuster destination** *(blocked on 1; ∥ with 3)*: direct-ingest `USRateSheetEntry[]`→Dexie
-  (bulkPut + store meta + default effectiveDate + stateCode via LERG `'N/A'` on miss + provenance), bypass
-  CSV/mapping; `USRateSheetView` consumes pending hand-off on mount → overwrite-confirm → existing progress UX.
-  Conductor-live at :5173 (chrome-devtools).
-- **Slice 3 — Analyzer destination** *(blocked on 1; ∥ with 2)*: direct-load `USStandardizedData[]` into a slot
-  (no upload) → fill empty or pick-which-to-replace when both full; `USView` consumes on mount; comparison runs
-  under existing `isFull`. Conductor-live.
-- **Slice 4 — Source "Send to…" triggers** *(blocked on 1; demoable once 2&3 land)*: generated-deck cards →
-  Send to Adjuster / Send to Analyzer; Adjuster → Send to Analyzer; build payload, stash in carrier, router.push.
-  Conductor-live.
+- **Slice 1 — Hand-off foundation** *(✅ DONE — merged `main` `4ae054b`, regression GREEN, worktree+branch removed.
+  LOCAL only, not pushed.)*: `handoff-types.ts` (`RateDeckHandoff`/`RateDeckHandoffRow`/`HandoffSource`/`HandoffTarget`),
+  `utils/deck-handoff.ts` (pure `normalizeNpanxx`/`splitNpaNxx`/`buildHandoffFromGenerated`/`buildHandoffFromRateSheet`),
+  `stores/handoff-store.ts` (carrier: `setPending`/`consume` one-shot/`hasPending`/`clear`), 10 unit tests. Row mirrors
+  `USStandardizedData`; stateCode/effectiveDate derived at landing. **Slices 2-4 import these — don't re-edit deck-handoff.ts.**
+- **Slice 2 — Adjuster destination** *(✅ DONE — merged `main` `2e7a388`, regression GREEN, worktree+branch removed.
+  INERT until Slice 4 — consume-on-mount only fires when handoffStore.pending.target==='adjuster')*: `ingestHandoff`
+  (chunked Dexie write reusing upload path, LERG stateCode, OVERWRITES single sheet) + `USRateSheetView` consume-on-mount
+  → overwrite `ConfirmationModal` (resets pricing-studio session) → existing progress UX + provenance line + pure
+  mapper `handoff-landing-us.ts` (6 tests). Live-verify deferred to the end-to-end pass.
+- **Slice 3 — Analyzer destination** *(✅ DONE — merged `main` `3e4db3f`, regression GREEN, worktree+branch removed.
+  INERT until Slice 4 — fires only when pending.target==='analyzer')*: `ingestHandoffRows` (reuses post-parse upload
+  machinery — Dexie write, addFileUploaded, calculateFileStats, enhanced-report worker) + `UsView` consume-on-mount →
+  slot-fill (`us1`/`us2`) or both-full Teleport replace-chooser → provenance; reports under existing "Start Analysis"
+  trigger. Pure slot-selector `handoff-landing-analyzer.ts` (7 tests). Live-verify deferred to end-to-end.
+- **Slice 4 — Source "Send to…" triggers** *(✅ DONE — merged `main` `1d3bf43`, regression GREEN, worktree+branch removed)*:
+  `RateGenGeneratedDecks` per-card Send to Adjuster (→/us-rate-sheet) / Send to Analyzer (→/usview) via
+  `buildHandoffFromGenerated(service.getGeneratedRecords(deck.id), {name, target})` (two `BaseButton secondary-outline`
+  in the Downloads row, guarded by record presence); Adjuster command-bar Send to Analyzer via
+  `buildHandoffFromRateSheet(await service.getData(), {name:'Adjusted rate sheet', target:'analyzer'})`. Both stash
+  `useHandoffStore().setPending` + `router.push`.
+
+### ✅ END-TO-END LIVE VERIFICATION PASSED (conductor via chrome-devtools at :5173, 2026-05-28)
+All 4 slices merged to `main` (HEAD after polish commit, LOCAL — NOT pushed, NOT deployed). Drove all 3 edges + all
+collision branches with a real 29,528-prefix generated deck (TestDataLoader 3 providers → generate):
+- **Compose→Adjuster** ✅ rates (avg inter $0.024144 matched), provenance line, stateCode (NJ/DC, N/A for non-LERG NPAs), effective date today+7.
+- **Compose→Adjuster overwrite** ✅ `ConfirmationModal` "Overwrite current rate sheet?" appears + completes, no errors.
+- **Adjuster→Analyzer** ✅ fills slot A, provenance line, START ANALYSIS gated until both slots present.
+- **Compose→Analyzer** ✅ fills slot B + provenance; **Start Analysis computes end-to-end** on two handed-off decks (100% coverage, 0 margin — identical decks, correct).
+- **Compose→Analyzer both-full** ✅ replace-chooser ("BOTH DECKS ARE FULL", Replace A/B/Cancel) appears + Replace B completes, no errors.
+- Polish fixes landed (conductor-live, post-merge): adjuster "Sending…" button state + analyzer slot progress fed real row count; provenance lines render in both destinations. No console errors throughout.
+
+Notes (PRE-EXISTING, not this feature): (a) the `useDexieDB` "empty schema string for us_rate_deck_db" warning is by-design (US analyzer DB has no static tables; dynamic per-file tables) and fires on any first US-DB write incl. normal uploads — benign; (b) generated-deck records clear on studio view remount (session-only) → Send-to buttons correctly hide (same as the existing export buttons); (c) regenerating spawns duplicate deck cards.
+
+**FEATURE FUNCTIONALLY COMPLETE on `main` (local). NEXT = owner sign-off → owner decides push + manual Coolify deploy (push ≠ deploy; tag the deploy).** Consider folding ADR-0009 + CONTEXT term are already committed.
 
 - **Conductor:** on `main`, Slice 1 sub-agent running in background. Feature is entirely client-side (no
   server/API/installer/migration changes — ships via normal Vite build).

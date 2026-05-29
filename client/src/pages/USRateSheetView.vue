@@ -53,9 +53,12 @@
 
           <button
             @click="sendToAnalyzer"
-            class="inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-2 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors"
+            :disabled="isSendingToAnalyzer"
+            class="inline-flex items-center gap-2 border border-line-strong bg-surface px-3 py-2 font-display text-[11px] uppercase tracking-[0.06em] text-fg-dim hover:bg-row hover:text-fg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <ArrowRightCircleIcon class="h-4 w-4" /> Send to Analyzer
+            <ArrowPathIcon v-if="isSendingToAnalyzer" class="h-4 w-4 animate-spin" />
+            <ArrowRightCircleIcon v-else class="h-4 w-4" />
+            {{ isSendingToAnalyzer ? 'Sending…' : 'Send to Analyzer' }}
           </button>
 
           <button
@@ -260,6 +263,7 @@
   import {
     ArrowDownTrayIcon,
     ArrowRightCircleIcon,
+    ArrowPathIcon,
     ChevronDownIcon,
     CheckCircleIcon,
     ExclamationTriangleIcon,
@@ -328,6 +332,9 @@
   // while the overwrite confirmation is open.
   const showHandoffOverwriteConfirm = ref(false);
   const pendingHandoff = ref<RateDeckHandoff | null>(null);
+  // "Sending…" state for the Send-to-Analyzer command-bar button while the
+  // (possibly large) Dexie read runs before navigation.
+  const isSendingToAnalyzer = ref(false);
 
   // Preview Modal state
   const showPreviewModal = ref(false);
@@ -648,12 +655,18 @@
   // Payload is built from the live Dexie rows before navigation so it survives the route change.
   // See docs/adr/0009-cross-module-rate-deck-handoff.md.
   async function sendToAnalyzer() {
-    const entries = await usRateSheetService.getData();
-    if (!entries.length) return;
-    handoffStore.setPending(
-      buildHandoffFromRateSheet(entries, { name: 'Adjusted rate sheet', target: 'analyzer' })
-    );
-    router.push('/usview');
+    if (isSendingToAnalyzer.value) return;
+    isSendingToAnalyzer.value = true;
+    try {
+      const entries = await usRateSheetService.getData();
+      if (!entries.length) return;
+      handoffStore.setPending(
+        buildHandoffFromRateSheet(entries, { name: 'Adjusted rate sheet', target: 'analyzer' })
+      );
+      router.push('/usview');
+    } finally {
+      isSendingToAnalyzer.value = false;
+    }
   }
 
   function openInfoModal() {
