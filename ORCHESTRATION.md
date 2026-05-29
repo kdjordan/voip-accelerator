@@ -72,6 +72,8 @@ touch main / run the dev server. Flag anything you hit that's out of scope.
 
 ## Current State  *(CONDUCTOR rewrites this — live board, not history)*
 
+**✅ LATEST: SEO/SSG marketing surface DEPLOYED 2026-05-30 — PROD = `de3b691`, tagged `prod-2026-05-30`.** (supersedes `prod-2026-05-29`/`7189ff0`). `vite-ssg` prerenders the 4 marketing routes + per-route meta/JSON-LD (`useMarketingSeo`/@unhead) + robots/sitemap/llms.txt + Features/Pricing/Contact pages + **apex→www 301 origin redirect** in `server/src/index.ts`. **Build pipeline changed:** `npm run build` = `vite-ssg build && node scripts/create-spa-fallback.mjs`. Verified live (301 single-hop no-loop, /pricing 3× JSON-LD + www canonical, /llms.txt, robots Disallows, /api/ping 200 lergCount 450, /usview spa.html fallback 200, app boots + sign-in + deck upload). Full detail = auto-memory [[seo-ssg]]. Branch `feat/seo-ssg` merged (FF) + deleted. Board otherwise idle.
+
 **🟢 ACTIVE FEATURE: Cross-module rate deck hand-off** (2026-05-28). Scope LOCKED + documented:
 glossary term **Rate deck hand-off** in `CONTEXT.md`; decision in **`docs/adr/0009-cross-module-rate-deck-handoff.md`**.
 Push a deck from one US module into another as a decoupled, materialized snapshot. v1 edges: (1) Composition
