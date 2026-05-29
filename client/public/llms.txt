@@ -1,0 +1,21 @@
+# VOIP Accelerator
+
+> Local-first rate deck analysis and comparison for VOIP operators, wholesale carriers, and telecom pricing/LCR teams. Compare US NPANXX rate decks, enrich with LERG data, reprice down to the NPA, and export reports — entirely in the browser. Free.
+
+VOIP Accelerator is a web app for telecom pricing and least-cost-routing teams. Rate decks are parsed locally in the browser and never uploaded to a server, so carrier pricing stays private. It focuses on US NPANXX rate decks: compare two decks to find coverage gaps and cherry-picked margin, enrich numbers with LERG (state / jurisdiction) context, reprice with markup/markdown rules, and export reports — in minutes instead of a day in Excel.
+
+Key facts:
+- Local-first: decks are parsed in the browser; nothing is uploaded to a server.
+- Focus: US NPANXX, LERG-enriched and jurisdiction-aware (interstate / intrastate / indeterminate).
+- Accepts both CSV and XLSX rate decks.
+- Free to use; no deck upload and no sales call required to try it.
+
+## Pages
+- [Home](https://www.voipaccelerator.com/): Product overview and primary entry point.
+- [Features](https://www.voipaccelerator.com/features): What the analyzer, repricer, and rate composition tools do.
+- [Pricing](https://www.voipaccelerator.com/pricing): Free local-first analyzer; team licensing available via contact.
+- [Contact](https://www.voipaccelerator.com/contact): Sales and walkthrough requests.
+
+## Legal
+- [Terms and Conditions](https://www.voipaccelerator.com/terms-and-conditions)
+- [Privacy Policy](https://www.voipaccelerator.com/privacy-policy)

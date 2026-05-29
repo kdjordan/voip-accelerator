@@ -8,7 +8,7 @@ import tailwind from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   base: '/',
   css: {
     postcss: {
@@ -29,13 +29,15 @@ export default defineConfig({
     target: 'esnext',
     minify: 'terser',
     cssCodeSplit: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vue: ['vue', 'vue-router', 'pinia'],
+    rollupOptions: isSsrBuild
+      ? undefined
+      : {
+          output: {
+            manualChunks: {
+              vue: ['vue', 'vue-router', 'pinia'],
+            },
+          },
         },
-      },
-    },
   },
   server: {
     proxy: {
@@ -61,4 +63,4 @@ export default defineConfig({
       },
     ],
   },
-});
+}));

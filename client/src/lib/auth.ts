@@ -1,7 +1,9 @@
 import { createAuthClient } from 'better-auth/vue';
 import { adminClient } from 'better-auth/client/plugins';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? window.location.origin;
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (typeof window === 'undefined' ? 'http://localhost:3000' : window.location.origin);
 
 export const authClient = createAuthClient({
   baseURL,

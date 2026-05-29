@@ -2,7 +2,7 @@
   <div id="app" class="min-h-screen bg-fbBlack text-fbWhite font-sans">
     <!-- Full-screen Loading Overlay -->
     <div
-      v-if="!userStore.getAuthIsInitialized"
+      v-if="!isMarketingPage && !userStore.getAuthIsInitialized"
       class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-fbBlack"
     >
       <ArrowPathIcon class="animate-spin h-10 w-10 text-accent mb-4" />
@@ -90,6 +90,9 @@
     '/',
     '/home',
     '/about',
+    '/features',
+    '/pricing',
+    '/contact',
     '/login',
     '/signup',
     '/terms-and-conditions',
@@ -102,6 +105,9 @@
     '/',
     '/home',
     '/about',
+    '/features',
+    '/pricing',
+    '/contact',
     '/login',
     '/signup',
     '/terms-and-conditions',

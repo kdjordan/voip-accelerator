@@ -54,22 +54,13 @@
             <h1
               class="font-display text-[clamp(48px,8vw,84px)] font-semibold leading-[0.92] tracking-[-0.05em] text-fg"
             >
-              Buy and sell <span class="text-accent">US</span><br />minutes
-              <span
-                style="
-                  text-decoration: underline;
-                  text-decoration-color: var(--accent);
-                  text-underline-offset: 12px;
-                  text-decoration-thickness: 6px;
-                "
-                >smarter</span
-              >.
+              Rate deck analysis<br />for <span class="text-accent">VOIP</span> carriers.
             </h1>
             <div class="mt-7 flex flex-wrap items-center gap-3.5">
               <RouterLink to="/signup" :class="ctaPrimary">
                 Sign up — free forever <ArrowRightIcon class="h-3.5 w-3.5" />
               </RouterLink>
-              <a href="#how" :class="ctaGhost">How it works</a>
+              <RouterLink to="/features" :class="ctaGhost">See features</RouterLink>
             </div>
           </div>
           <div class="border-l border-line pl-8">
@@ -78,8 +69,8 @@
             </div>
             <p class="m-0 font-sans text-[17px] leading-[1.55] text-fg-dim">
               Compare NPANXX rate decks, catch the margin a partner is quietly cherry-picking, and
-              reprice down to the NPA — in minutes, not a day in Excel. LERG-enriched,
-              jurisdiction-aware, and free.
+              reprice down to the NPA in minutes, not a day in Excel. LERG-enriched,
+              jurisdiction-aware, and local-first.
             </p>
             <div
               class="mt-[22px] border-l-[3px] border-accent bg-surface px-[18px] py-3.5 font-display text-[12.5px] leading-[1.55] text-fg"
@@ -176,9 +167,7 @@
             lands.
           </p>
         </div>
-        <div
-          class="grid grid-cols-1 border-y border-line-strong md:grid-cols-3"
-        >
+        <div class="grid grid-cols-1 border-y border-line-strong md:grid-cols-3">
           <div
             v-for="(p, i) in problems"
             :key="p.title"
@@ -187,7 +176,9 @@
           >
             <div class="dropcap mb-3.5">{{ String(i + 1).padStart(2, '0') }}</div>
             <div class="mb-2.5 text-fg-faint"><component :is="p.icon" class="h-5 w-5" /></div>
-            <h3 class="m-0 font-display text-[19px] font-semibold leading-[1.22] tracking-[-0.015em] text-fg">
+            <h3
+              class="m-0 font-display text-[19px] font-semibold leading-[1.22] tracking-[-0.015em] text-fg"
+            >
               {{ p.title }}
             </h3>
             <p class="mt-2.5 font-sans text-sm leading-[1.55] text-fg-dim">{{ p.body }}</p>
@@ -196,17 +187,15 @@
         <p
           class="mx-auto mt-12 max-w-[720px] text-center font-display text-[22px] leading-[1.3] tracking-[-0.015em] text-fg"
         >
-          <span class="text-accent">—</span> You don't need a faster spreadsheet. You need to see the
-          deck for what it is. <span class="text-accent">—</span>
+          <span class="text-accent">—</span> You don't need a faster spreadsheet. You need to see
+          the deck for what it is. <span class="text-accent">—</span>
         </p>
       </section>
 
       <!-- Section III — Analyze + Adjust -->
       <section id="features" class="pb-[60px]">
         <RunningHead left="Section III — Two sides to every deck" right="Analyze · Adjust" />
-        <div
-          class="mt-3 grid grid-cols-1 border-t-2 border-line-strong md:grid-cols-2"
-        >
+        <div class="mt-3 grid grid-cols-1 border-t-2 border-line-strong md:grid-cols-2">
           <div
             v-for="(panel, i) in panels"
             :key="panel.title"
@@ -228,11 +217,17 @@
             </div>
             <p class="mb-6 max-w-[460px] font-sans text-[15px] text-fg-dim">{{ panel.tagline }}</p>
             <div class="flex flex-col gap-[18px]">
-              <div v-for="item in panel.items" :key="item.label" class="border-l-2 border-accent pl-3.5">
+              <div
+                v-for="item in panel.items"
+                :key="item.label"
+                class="border-l-2 border-accent pl-3.5"
+              >
                 <div class="font-display text-[11px] uppercase tracking-[0.12em] text-fg">
                   {{ item.label }}
                 </div>
-                <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">{{ item.body }}</p>
+                <p class="mt-1.5 font-sans text-[13.5px] leading-[1.55] text-fg-dim">
+                  {{ item.body }}
+                </p>
               </div>
             </div>
           </div>
@@ -241,7 +236,10 @@
 
       <!-- Section III-C — Compose (Rate Composition Studio) -->
       <section class="pb-[60px]">
-        <RunningHead left="Section III-C — Five decks into one" right="Compose · blend & generate" />
+        <RunningHead
+          left="Section III-C — Five decks into one"
+          right="Compose · blend & generate"
+        />
         <div class="mt-3 border-b-2 border-line-strong px-8 pb-10 pt-9">
           <div class="mb-3.5 font-display text-[11px] uppercase tracking-[0.20em] text-accent">
             Section III-C
@@ -331,9 +329,9 @@
               class="m-0 font-display text-[28px] font-medium leading-[1.25] tracking-[-0.02em] text-fg"
             >
               A partner sends a new rate deck — or quietly cherry-picks the traffic to where your
-              margin is thinnest. The answer is buried in <span class="text-accent">+200k rows</span>.
-              We surface it in minutes, down to the NPA, so you respond surgically instead of
-              rebuilding a deck.
+              margin is thinnest. The answer is buried in
+              <span class="text-accent">+200k rows</span>. We surface it in minutes, down to the
+              NPA, so you respond surgically instead of rebuilding a deck.
             </p>
           </div>
         </div>
@@ -351,13 +349,13 @@
           The cheat code for buying<br />and selling smarter.
         </h2>
         <p class="mx-auto mt-5 max-w-[480px] font-sans text-base text-fg-dim">
-          Free forever. Local-first. Your rates never leave your browser.
+          Free forever. Your rate decks never leave your machine.
         </p>
         <div class="mt-8 flex flex-wrap justify-center gap-3.5">
           <RouterLink to="/signup" :class="ctaPrimary">
             Sign up — free forever <ArrowRightIcon class="h-3.5 w-3.5" />
           </RouterLink>
-          <a href="#features" :class="ctaGhost">See a sample deck</a>
+          <RouterLink to="/pricing" :class="ctaGhost">View pricing</RouterLink>
         </div>
       </section>
     </div>
@@ -388,9 +386,17 @@
   import TheTicker, { type TickerItem } from '@/components/shared/TheTicker.vue';
   import RunningHead from '@/components/shared/RunningHead.vue';
   import SlabRule from '@/components/shared/SlabRule.vue';
+  import { useMarketingSeo } from '@/composables/useMarketingSeo';
   import compareShot from '@/assets/screenshots/compare.png';
   import compositionShot from '@/assets/screenshots/composition.png';
   import wizardShot from '@/assets/screenshots/wizard.png';
+
+  useMarketingSeo({
+    path: '/',
+    title: 'Rate Deck Analysis Tool for VOIP Carriers - VOIP Accelerator',
+    description:
+      'Compare US NPANXX rate decks, enrich with LERG, and export reports entirely on your machine. Local-first analysis for telecom pricing teams.',
+  });
 
   // Shared Switchboard CTA classes (primary red fill / outline ghost).
   const ctaPrimary =
@@ -399,9 +405,9 @@
     'inline-flex items-center gap-2 border border-line-strong px-[18px] py-[11px] font-display text-xs font-medium uppercase tracking-[0.06em] text-fg no-underline transition-colors hover:bg-row';
 
   const navLinks = [
-    { label: 'Product', href: '#features' },
-    { label: 'How it works', href: '#how' },
-    { label: 'Why it exists', href: '#why' },
+    { label: 'Features', href: '/features' },
+    { label: 'Pricing', href: '/pricing' },
+    { label: 'Contact', href: '/contact' },
   ];
 
   // Landing ticker — green/red trading-screen palette (marketing only).
@@ -436,7 +442,8 @@
       fig: 'Rate Composition',
       metric: '225,034 prefixes · LCR scenarios simulated',
       alt: 'Rate Composition Studio simulating sell decks from multiple carrier feeds — LCR depth, markup, and win rate by jurisdiction',
-      caption: 'Build a sell deck from up to five carrier feeds — least-cost routed, marked up, and simulated before you commit.',
+      caption:
+        'Build a sell deck from up to five carrier feeds — least-cost routed, marked up, and simulated before you commit.',
     },
     {
       key: 'adjust',
