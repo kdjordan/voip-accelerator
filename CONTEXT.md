@@ -5,9 +5,11 @@ A web application for managing and analyzing VoIP telecommunications data: rate 
 ## Glossary
 
 ### Rate sheet
-A CSV/Excel file of telecom destinations and pricing uploaded by a user. Two flavors:
+A CSV or XLSX file of telecom destinations and pricing uploaded by a user. Two flavors:
 - **AZ rate sheet** — international destinations. Stored in-memory only, optimized with `markRaw()`. Complex effective-date semantics per destination.
 - **US rate sheet** — domestic/NANP destinations. Persisted to IndexedDB via Dexie in 1000-record bulk batches.
+
+**Spreadsheet format is transparent**: CSV and XLSX are accepted interchangeably on any upload (a CSV and an XLSX can be compared side-by-side); both normalize to the same rows before mapping/validation. Exports offer a CSV/XLSX choice whose default is inferred from what was uploaded. See [[docs/adr/0010-xlsx-upload-export]]. (PDF outputs — audit/build summaries — are a separate, non-tabular concern.)
 
 ### LERG
 Local Exchange Routing Guide. The authoritative North American telephone numbering dataset. In this app, "the LERG" refers to the enhanced LERG database (450 NPAs with geographic context) which is the single source of truth for all NANP categorization. Lives in Postgres; loaded into a Pinia store on app start.
