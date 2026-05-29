@@ -117,7 +117,18 @@ collision branches with a real 29,528-prefix generated deck (TestDataLoader 3 pr
 
 Notes (PRE-EXISTING, not this feature): (a) the `useDexieDB` "empty schema string for us_rate_deck_db" warning is by-design (US analyzer DB has no static tables; dynamic per-file tables) and fires on any first US-DB write incl. normal uploads — benign; (b) generated-deck records clear on studio view remount (session-only) → Send-to buttons correctly hide (same as the existing export buttons); (c) regenerating spawns duplicate deck cards.
 
-**✅ SHIPPED + DEPLOYED + VERIFIED. Board idle, ready for the next feature.** `origin/main` = PROD = **`277f1ea`** (manual Coolify deploy 2026-05-28, tagged **`prod-2026-05-28b`**, verified live `/api/ping` 200 + lergCount 450). Plus a post-merge follow-up (also live): rate-gen studio session-only UX — generated decks clear cleanly on return (no stale tombstone cards) + a blue "session-only" banner; NO persistence added (ADR-0008 stands). Conductor idle on `main`, no worktrees/branches. Authoritative state = auto-memory `MEMORY.md`.
+**🟢 ACTIVE FEATURE: XLSX upload + export** (2026-05-29). Scope LOCKED via `/grill-with-docs` → **`docs/adr/0010-xlsx-upload-export.md`** + CONTEXT "format-transparent" note. Accept `.xlsx` anywhere `.csv` is + export `.xlsx` alongside CSV, across the 3 active US surfaces (Analyzer/Adjuster/Rate Composition Studio). A-Z + admin-LERG deferred. **Deps installed + pinned** (`read-excel-file@9.0.9` + `write-excel-file@4.0.6`, --ignore-scripts, GuardDog-vetted; committed `ef60e1a`). Locked decisions: shared `utils/tabular-io.ts` (format-transparent, normalizes xlsx cells→strings so the downstream mapping/validation/Dexie pipeline is untouched); first-sheet only (+ empty-sheet → actionable drop-zone error); **worker-parsed xlsx** (UI never freezes); export `CSV|XLSX` toggle whose default is inferred from source formats (all-X→X, mixed/unknown→CSV; generated-deck inherits providers; handoff-deck→CSV). **⚠️ Bundle-check GATE:** the Node zip trees (unzipper/archiver-node/minimatch/bluebird) must NOT reach the prod browser bundle (browser/worker entries use fflate) — verified before Slice 2.
+
+**main = `ef60e1a`** (LOCAL, not pushed). PROD still `277f1ea`/`prod-2026-05-28b` (hand-off + studio session-only fix live). `origin/main` is behind local (3 undeployed commits from the hand-off arc + these XLSX-prep commits).
+
+### Slices (order: Slice 1 → bundle gate → (2 ∥ 3 ∥ 4))
+- **Slice 1 — Foundation** *(🔵 IN PROGRESS — sub-agent, test-first)*: `utils/tabular-io.ts` (`parseTabularFile`→string[][] + `writeTabularFile` + `detectFormat`) + xlsx parse web worker + cell-normalization + empty-sheet error + unit tests. No surface wiring. Conductor runs the bundle-exclusion gate after it lands.
+- **Slice 2 — Analyzer** *(blocked on 1+gate)*: accept .xlsx both slots, per-file format tracking, CSV|XLSX export toggle w/ derived default.
+- **Slice 3 — Adjuster** *(blocked on 1+gate)*: same; handoff-deck defaults CSV.
+- **Slice 4 — Rate Composition Studio** *(blocked on 1+gate)*: same; generated-deck export default inherits provider formats.
+
+--- (historical — cross-module hand-off feature, SHIPPED + DEPLOYED `prod-2026-05-28b`) ---
+**✅ Cross-module hand-off + rate-gen session-only UX: live in prod `277f1ea`.** Conductor was idle; authoritative state = auto-memory `MEMORY.md`.
 
 - **Conductor:** on `main`, Slice 1 sub-agent running in background. Feature is entirely client-side (no
   server/API/installer/migration changes — ships via normal Vite build).
